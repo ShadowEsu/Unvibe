@@ -126,7 +126,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="quickstart">
           <div className="resources-section__head">
             <span className="paper-meta">Quickstart</span>
-            <h2>Get started in <em>about a minute.</em></h2>
+            <h2>Get started in about a minute.</h2>
             <p className="paper-lead">
               Unvibe is a desktop app that opens a panel beside Cursor, VS Code, or any app where you can select code. It reads only what you select and never uploads your repo.
             </p>
@@ -174,7 +174,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="depths">
           <div className="resources-section__head">
             <span className="paper-meta">Explanation depths</span>
-            <h2>Five explanation <em>depths.</em></h2>
+            <h2>Five explanation depths.</h2>
             <p className="paper-lead">
               The same code, explained five ways. Pick the depth that matches what you already know. New through Advanced are free; Expert is Pro. The sample below is written by hand to show the range. It is not live model output.
             </p>
@@ -214,7 +214,7 @@ export function ResourcesHub() {
               </div>
 
               {/* Sample Code Display */}
-              <div className="resources-code-window">
+              <div className="resources-code-window code-window">
                 <div className="resources-code-window__bar">
                   <div className="resources-code-dots">
                     <span />
@@ -271,7 +271,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="privacy">
           <div className="resources-section__head">
             <span className="paper-meta">What leaves your machine</span>
-            <h2>How your code is <em>handled.</em></h2>
+            <h2>How your code is handled.</h2>
             <p className="paper-lead">
               Unvibe is not a local-only tool. Your selected code is sent to a cloud model to write the explanation. A secret scanner runs on your machine first, and anything that looks like a key or token is blocked or held for your confirmation.
             </p>
@@ -298,7 +298,7 @@ export function ResourcesHub() {
 
               <div className="resources-arch-node">
                 <div className="resources-arch-badge">Step 3 · Cloud model</div>
-                <h3>Filtered snippet</h3>
+                <h3>Checked snippet</h3>
                 <p>Sent over HTTPS to the model provider, and the answer streams back</p>
               </div>
 
@@ -334,7 +334,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="shortcuts">
           <div className="resources-section__head">
             <span className="paper-meta">Shortcuts</span>
-            <h2>Keyboard <em>shortcuts.</em></h2>
+            <h2>Keyboard shortcuts.</h2>
             <p className="paper-lead">
               One shortcut starts a review. Everything after that works from the keyboard too.
             </p>
@@ -349,8 +349,8 @@ export function ResourcesHub() {
             </div>
             {SHORTCUT_ROWS.map((s, idx) => (
               <div key={idx} className="resources-table-row">
-                <span className="resources-key-pill">{s.mac}</span>
-                <span className="resources-key-pill">{s.win}</span>
+                <kbd className="resources-key-pill">{s.mac}</kbd>
+                <kbd className="resources-key-pill">{s.win}</kbd>
                 <span className="resources-action-text">{s.action}</span>
                 <span className="resources-context-text">{s.context}</span>
               </div>
@@ -364,7 +364,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="brand">
           <div className="resources-section__head">
             <span className="paper-meta">Brand</span>
-            <h2>Brand colors and <em>type.</em></h2>
+            <h2>Brand colors and type.</h2>
             <p className="paper-lead">
               Writing about Unvibe? Copy the colors below and use the fonts as listed.
             </p>
@@ -377,13 +377,12 @@ export function ResourcesHub() {
               <p>The colors used on this site.</p>
               <div className="resources-swatches">
                 {[
+                  { name: "Paper (sheets and cards)", hex: "#FFFDF6" },
+                  { name: "Sky (page ground)", hex: "#D6ECFB" },
                   { name: "Ink", hex: "#141414" },
-                  { name: "Lime", hex: "#D6F45A" },
-                  { name: "Sky", hex: "#9FD8FF" },
-                  { name: "Sun", hex: "#FFD84D" },
-                  { name: "Lilac", hex: "#B8A6FF" },
-                  { name: "Coral", hex: "#FF9A76" },
-                  { name: "Paper", hex: "#F3EEF8" },
+                  { name: "Lime (main buttons)", hex: "#D6F45A" },
+                  { name: "Lilac (Vibe only)", hex: "#B8A6FF" },
+                  { name: "Sky accent", hex: "#9FD8FF" },
                 ].map((color) => (
                   <button
                     key={color.hex}
@@ -406,15 +405,15 @@ export function ResourcesHub() {
               <div className="resources-typography-guide">
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Headings</span>
-                  <p className="resources-display-demo">Bricolage Grotesque, bold and tight.</p>
+                  <p className="resources-display-demo">Inter 700, tight, for every heading.</p>
                 </div>
                 <div className="resources-type-sample">
-                  <span className="resources-type-label">Accents</span>
-                  <p className="resources-serif-demo">Instrument Serif Italic, for the one word that matters.</p>
+                  <span className="resources-type-label">Emphasis</span>
+                  <p>Inter 700 for the <strong>one word</strong> that matters. No italics.</p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Code</span>
-                  <p className="resources-mono-demo">JetBrains Mono for code and shortcuts.</p>
+                  <p className="resources-mono-demo"><samp>JetBrains Mono for code and shortcuts.</samp></p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Body</span>

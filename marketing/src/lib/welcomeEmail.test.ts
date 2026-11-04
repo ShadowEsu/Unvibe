@@ -68,3 +68,16 @@ describe("reward links", () => {
     assert.match(feedbackRewardUrl("friend@example.com"), new RegExp(`t=${token}`));
   });
 });
+
+// Moved here from the deleted beta email test: Design's detect pass and Preston's no-italics rule (4 Nov).
+describe("welcome email: no emoji, upright type", () => {
+  const html = welcomeHtml(input);
+  const text = welcomeText(input);
+  it("has no emoji or pictographs in the subject, text or HTML", () => {
+    const pictograph = new RegExp("\\p{Extended_Pictographic}", "u");
+    for (const part of [WELCOME_SUBJECT, text, html]) assert.doesNotMatch(part, pictograph);
+  });
+  it("sets nothing in italics: no <em>, <i> or italic style in the HTML", () => {
+    assert.doesNotMatch(html, /<(em|i)\b|font-style:\s*italic/i);
+  });
+});

@@ -1,30 +1,11 @@
+/* Flat sky ground, the same #d6ecfb as the glass backdrop's base: no photo (Design, 4 Nov). */
 .activate-root {
   position: fixed;
   inset: 0;
   z-index: 80;
   overflow: auto;
-  background: transparent;
+  background: #d6ecfb;
   color: var(--ink);
-}
-
-.activate-root::before {
-  content: "";
-  position: fixed;
-  inset: -18%;
-  z-index: 0;
-  background: var(--page-photo) 62% 40% / cover no-repeat;
-  transform: scale(1.22);
-  filter: blur(36px) saturate(1.55) contrast(1.08) brightness(1.05);
-  pointer-events: none;
-}
-
-.activate-root::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: var(--dusk-veil);
-  pointer-events: none;
 }
 
 .activate-shell {
@@ -44,21 +25,21 @@
   gap: 0.7rem;
   margin-bottom: 1.4rem;
   font-size: 1.2rem;
-  font-weight: 750;
+  font-weight: 800;
   letter-spacing: -0.04em;
 }
 
+/* Account and consent step: a solid card with a hairline, never glass. */
 .activate-card {
   width: min(100%, 32rem);
   padding: 2rem;
-  border: 1px solid var(--glass-edge);
+  border: 1px solid var(--u-line);
   border-radius: var(--radius-card);
-  background: var(--paper-raised);
-  box-shadow: var(--shadow-key);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: #fffdf6;
+  box-shadow: none;
 }
 
+/* avoid-ai-design-ignore: K4 the amber stripe marks a real warning (approving a code someone else sent hands over the account), Design detect pass 4 Nov */
 .activate-check {
   margin: 0 0 1.4rem;
   padding: 0.9rem 1rem;
@@ -104,7 +85,7 @@
   max-width: 22rem;
   margin: 0;
   font-size: clamp(2rem, 5vw, 2.8rem);
-  font-weight: 760;
+  font-weight: 700;
   letter-spacing: -0.06em;
   line-height: 1.02;
 }
@@ -275,6 +256,7 @@
   line-height: 1.45;
 }
 
+/* avoid-ai-design-ignore: K4 the red stripe marks a real error message (role="alert"), Design detect pass 4 Nov */
 .activate-note--error {
   padding-left: 0.6rem;
   border-left: 3px solid #b3261e;

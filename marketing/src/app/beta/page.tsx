@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { Reveal } from "@/components/redesign/Reveal";
+import { GlassPlate } from "@/components/glass/GlassPlate";
+import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
+import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
+import { proSentence } from "@/lib/proOffer";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -20,28 +25,22 @@ const { mac, windows } = SHORTCUTS;
 export default function BetaDownloadsPage() {
   return (
     <article className="beta-page">
-      <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
-        <div className="paper-hero__veil" />
-        <div className="paper-photo-band__copy">
-          <p className="paper-meta">Free for Mac and Windows</p>
-          <h1>Download <em>Unvibe.</em></h1>
-          <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
-        </div>
+      {/* No photo band and no eyebrow (Design, ledger 443): the heading, then the download card on the backdrop. */}
+      <header className="beta-page__head paper-wrap paper-center">
+        <h1>Download Unvibe.</h1>
+        <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
       </header>
 
       <section className="paper-section" id="install">
-        {/* The primary download paints at once: no Reveal here (motion spec). */}
         <div className="paper-wrap paper-center">
-          {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
           <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
         </div>
       </section>
 
       <section className="paper-section">
-        <Reveal className="paper-wrap">
-          <div className="beta-page__steps paper-glass">
-            <h2>Get started in <em>three steps.</em></h2>
+        <div className="paper-wrap">
+          <div className="beta-page__steps">
+            <h2>Get started in 3 steps.</h2>
             <ol className="beta-page__steps-list">
               <li>
                 <span className="beta-page__step-badge">1</span>
@@ -53,9 +52,14 @@ export default function BetaDownloadsPage() {
                     your Mac password.
                   </p>
                   <p>
-                    On Windows, keep the download if your browser warns, then run the portable .exe. If you see
-                    “Windows protected your PC”, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
+                    On Windows: {WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected
+                    your PC, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
                     <a className="paper-text-link" href="/install-help">Show me how</a>
+                  </p>
+                  <p>
+                    Check your download against its SHA-256:{" "}
+                    <a className="paper-text-link" href={MAC_SHA256_URL}>Mac</a>,{" "}
+                    <a className="paper-text-link" href={WINDOWS_SHA256_URL}>Windows</a>.
                   </p>
                 </div>
               </li>
@@ -79,13 +83,12 @@ export default function BetaDownloadsPage() {
               </li>
             </ol>
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section" id="help">
-        <Reveal className="paper-wrap paper-center">
-          <p className="paper-meta">Troubleshooting</p>
-          <h2 className="mt-3">Stuck? <em>Quick fixes.</em></h2>
+        <div className="paper-wrap paper-center">
+          <h2>Stuck? Quick fixes.</h2>
           <div className="paper-faq mt-8">
             <details>
               <summary>The app says “Waiting for Google sign-in…”</summary>
@@ -100,7 +103,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>macOS won’t open Unvibe the first time</summary>
               <p>
-                Unvibe is not notarized by Apple yet, so macOS blocks the first open. Do this once:
+                Unvibe is not verified by Apple yet, so macOS blocks the first open. Do this once:
               </p>
               <ol>
                 <li>Press <strong>Done</strong> on the warning.</li>
@@ -146,26 +149,30 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>You can start without signing in</summary>
               <p>
-                Skip sign-in on the first screen and you get 50 free explanations in your first 30 days. Signing in gives you a free allowance every month, syncs your history across devices, and starts a new account with a free month of Pro.
+                Skip sign-in on the first screen and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices. {proSentence()}
               </p>
+              {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
             </details>
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section">
-        <Reveal className="paper-wrap paper-center">
+        <div className="paper-wrap paper-center">
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
+              <GlassPlate />
               <ShieldIcon />
-              <p>Keys and tokens in your code are filtered on your device before it is sent. Your repo is never uploaded.</p>
+              <p>Unvibe checks your code for keys and tokens on your device and stops a known key before anything is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
+              <GlassPlate />
               <MonitorIcon />
               <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
-        </Reveal>
+          <BetaFeedbackAsk />
+        </div>
       </section>
     </article>
   );

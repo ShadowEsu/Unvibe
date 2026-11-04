@@ -5,7 +5,7 @@ import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { storedRef } from "@/lib/referral";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
-import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
+import { GIFT_LINK_NOTE } from "@/lib/giftOffer";
 
 /** Get a personal link to share Unvibe. Gift months come from the app's gift code (app 0.1.44 and later), never from the link. */
 export function InviteFriend() {
@@ -63,9 +63,10 @@ export function InviteFriend() {
     <div className="invite">
       <div className="invite__copy">
         <p className="paper-meta">Bring a friend</p>
-        <h2 id="invite-title">Send a friend <em>your invite link.</em></h2>
-        <p className="paper-lead">{GIFT_OFFER} Months stack up to 12 ahead and never apply to an active paid subscription.</p>
-        <p className="invite__fine">{GIFT_LINK_NOTE} The link below brings your friend to Unvibe.</p>
+        <h2 id="invite-title">Send a friend your invite link.</h2>
+        <p className="paper-lead">Pro isn&apos;t on sale yet. New accounts get a free month of Pro, and each friend you invite adds one.</p>
+        <p className="paper-lead">Your friend signs in to the Unvibe app (0.1.44 or later) and enters the code from your Share page. Up to five friends; months stack up to 12 ahead.</p>
+        <p className="invite__fine">{GIFT_LINK_NOTE} Gift months never apply to an active paid subscription.</p>
       </div>
       {link ? (
         <div className="invite__result" role="status">

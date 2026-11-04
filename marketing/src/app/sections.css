@@ -9,8 +9,20 @@
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 .sec-head > .paper-lead .paper-text-link { font-size: inherit; }
 /* Home: the language pages under Try it. Underlined, since the links sit inside a sentence. */
-.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-wrap: pretty; }
+.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-align: center; text-wrap: pretty; }
 .home-langs .paper-text-link { font-size: inherit; text-decoration: underline; text-underline-offset: 0.18em; }
+
+/* Standalone text links get a 32 px tall target (Design W21): the language links, which wrap as whole
+   items instead of breaking mid-name, /beta's "Show me how", the download card's "Show me how" and
+   the closing card's "Install steps and requirements". */
+.home-langs .paper-text-link,
+.beta-page__steps-list p > a.paper-text-link,
+.paper-beta__update > a,
+.paper-invite__card .paper-caption > a {
+  display: inline-block;
+  padding-block: 6px;
+  line-height: 20px;
+}
 
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
@@ -28,45 +40,57 @@
 .try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
 .try__consent input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--v-lime); }
 .try__consent label { cursor: pointer; }
+/* Why Explain it didn't send, under the unticked box (W18). Empty until a press; stays in the page so
+   role="alert" announces it, and takes back the grid gap while empty. */
+.try__foot .try__why { padding-left: 30px; color: #ffe08a; font-weight: 600; }
+.try__foot .try__why:empty { margin-top: -0.55rem; }
 .try__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 .try__panel { border-left: 1px solid var(--u-line); background: #fff; color: #141414; min-height: 26rem; }
 .try__head { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1.5px solid #ece8de; }
 .try__head p { display: grid; margin: 0; line-height: 1.2; }
-.try__head b { font: 800 1.1rem var(--font-display); letter-spacing: -0.02em; }
+.try__head b { font: 800 1.1rem var(--font-sans); letter-spacing: -0.02em; }
 .try__head span { color: #55524b; font: 500 0.85rem var(--font-mono); }
 
 /* Overrides vibe.css `.try__levels` / `.try__levels button` (written for the old dark input card). */
 .try__levels { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.8rem 1.1rem; border-bottom: 1.5px solid #ece8de; background: #faf8f3; }
 .try__levels button { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.75rem; padding: 0 0.95rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font: 650 0.92rem var(--font-sans); cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
 .try__levels button:hover:not(:disabled) { transform: translateY(-1px); }
-.try__levels button[aria-pressed="true"] { background: var(--v-lime); box-shadow: 0 2px 0 var(--v-ink); }
+.try__levels button[aria-pressed="true"] { background: var(--v-lime); }
 .try__levels button:disabled { cursor: wait; opacity: 0.6; }
 .try__levels button:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
-.try__levels small { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--v-ink); color: #fff; font: 700 max(13px, 0.68rem) var(--font-mono); letter-spacing: 0.02em; }
+.try__levels small { padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--v-ink); color: #fff; font: 700 max(13px, 0.68rem) var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 
 .try__body { display: flex; flex: 1; }
 .try__state { display: grid; place-items: center; align-content: center; gap: 1rem; width: 100%; padding: 2rem 1.5rem; text-align: center; font-size: 1.08rem; line-height: 1.5; }
 .try__state p { max-width: 24rem; margin: 0; }
-.try__state--thinking p { color: #3c2fb8; font: italic 400 1.5rem var(--font-serif); animation: vWrite 400ms ease-out both; }
-.try__state--thinking > i { display: block; width: min(320px, 80%); height: 10px; border-radius: 6px; background: linear-gradient(90deg, #f1eee6, #e4dfd3, #f1eee6); background-size: 200% 100%; animation: vShimmer 1.3s linear infinite; }
+.try__state--thinking p { color: #3c2fb8; font: 400 1.5rem var(--font-sans); animation: mFade var(--m-fast) var(--m-ease-sharp) both; }
+/* Skeleton bars (motion spec §2): laid out under the step line from the start, so nothing shifts, and shown
+   only once the wait passes 200 ms (.is-slow, set by TryIt). One highlight sweep at 100deg, +6 % lightness,
+   1.4 s, transform only, looping only while the request is out. */
+.try__state--thinking > i { position: relative; display: block; overflow: hidden; width: min(320px, 80%); height: 10px; border-radius: 6px; background: #ebe7dd; opacity: 0; }
 .try__state--thinking > i:nth-of-type(2) { width: min(260px, 65%); }
 .try__state--thinking > i:nth-of-type(3) { width: min(200px, 50%); }
-.try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; box-shadow: 0 3px 0 var(--v-ink); }
+.try__state--thinking.is-slow > i { opacity: 1; transition: opacity var(--m-fast) var(--m-ease-sharp); }
+.try__state--thinking.is-slow > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #f6f5f0 50%, transparent 80%); transform: translateX(-100%); animation: mSweep 1.4s linear infinite; }
+@keyframes mSweep { to { transform: translateX(100%); } }
+/* The answer crossfades in as it lands. */
+.try__answer { animation: mFade var(--m-fast) var(--m-ease-sharp) both; }
+.try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 .try__after p { margin: 0 0 0.9rem; }
 /* Right after the answer: the measured time, then this visitor's download (or the emailed link on a phone). */
-.try__after p.try__took { margin-bottom: 0.7rem; color: #141414; font: 800 1.1rem/1.35 var(--font-display); }
+.try__after p.try__took { margin-bottom: 0.7rem; color: #141414; font: 800 1.1rem/1.35 var(--font-sans); }
 .try__after .get-unvibe { margin-bottom: 1rem; }
 .try__after p.try__again { margin: 0; color: #4a4740; font-size: 0.95rem; }
 
 /* Download buttons inside the always-light panel: fixed ink colours so they read in both themes. */
 .try .paper-join-row { justify-content: flex-start; }
 .try__state .paper-join-row { justify-content: center; }
-.try .paper-join { min-height: 2.9rem; border: 1.5px solid #141414; border-radius: 12px; box-shadow: 0 3px 0 #141414; font-weight: 700; }
+.try .paper-join { min-height: 2.9rem; border: 1.5px solid #141414; border-radius: 12px; font-weight: 700; }
 .try .paper-join--mac { background: var(--v-lime); color: #141414; }
 .try .paper-join--win { background: #141414; color: #fff; }
-.try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-display); text-decoration: none; box-shadow: 0 3px 0 #141414; }
+.try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-sans); text-decoration: none; }
 
 @media (max-width: 520px) {
   .try__editor textarea { min-height: 12rem; font-size: 0.88rem; }
@@ -77,12 +101,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .try__state--thinking p, .try__state--thinking > i { animation: none; }
+  .try__state--thinking p, .try__state--thinking > i::after, .try__answer { animation: none; }
   .try__levels button { transition: none; }
   .try__levels button:hover:not(:disabled) { transform: none; }
 }
 html[data-performance="lite"] .try__state--thinking p,
-html[data-performance="lite"] .try__state--thinking > i { animation: none; }
+html[data-performance="lite"] .try__state--thinking > i::after,
+html[data-performance="lite"] .try__answer { animation: none; }
 
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
@@ -124,21 +149,20 @@ html[data-performance="lite"] .try__state--thinking > i { animation: none; }
 
 /* ── GetUnvibe: the download for this computer, the other system as a pill; phones get the emailed link ── */
 .get-unvibe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-.get-unvibe .paper-join { min-height: 3rem; padding: 0 1.3rem; border: 1.5px solid #141414; border-radius: 12px; box-shadow: 0 3px 0 #141414; font-size: 1rem; font-weight: 700; }
+.get-unvibe .paper-join { min-height: 3rem; padding: 0 1.3rem; border: 1.5px solid #141414; border-radius: 12px; font-size: 1rem; font-weight: 700; }
 .get-unvibe .paper-join--mac { background: var(--v-lime); color: #141414; }
 .get-unvibe .paper-join--win { background: #141414; color: #fff; }
 .get-unvibe .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 
 /* A secondary download (the other system, the Intel build): a real target, not a 20 px inline link. */
-a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; box-shadow: 0 2px 0 #141414; }
+a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: 12px; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; }
 a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
 /* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
 .paper-beta__builds { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.6rem; }
-/* The home hero's other-system download ("Get it for Windows" on a Mac) gets the same 32 px+ pill. Styled
-   here, not in hero.css or PhotoHero.tsx, so the hero's own files stay untouched. */
-.vhero__trust a { display: inline-flex; align-items: center; min-height: 2rem; margin-block: 0.15rem; padding: 0 0.8rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: #fff; color: var(--v-ink); font-weight: 700; text-decoration: none; box-shadow: 0 2px 0 var(--v-ink); }
-.vhero__trust a:hover { background: #f4f1ea; }
+/* The home hero's other-system download ("Get it for Windows" on a Mac) is a plain inline link in the
+   trust line (Security, 2026-11-04); hero.css underlines it. */
+.vhero__trust a { font-weight: 700; }
 
 /* ── Demo video: its native controls are several Tab stops inside the video. Each one shows the same ring,
    on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
@@ -148,14 +172,14 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    Without autoplay (lite visitors, refused autoplay) it stays under the player, so the native controls show. */
 .vtour__media.is-auto:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
 .vtour__media.is-playing .vtour__poster { visibility: hidden; }
-/* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. Filled when sound is on. */
+/* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. The pill is the
+   switch's label; the Glisse Switch inside shows whether sound is on. */
 .vtour__sound {
-  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.4rem;
-  min-height: 2.5rem; padding: 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
-  font: 700 0.9rem var(--font-sans); box-shadow: 0 2px 0 #141414; cursor: pointer;
+  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.5rem;
+  min-height: 2.5rem; padding: 0 0.7rem 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
+  font: 700 0.9rem var(--font-sans); cursor: pointer;
 }
-.vtour__sound[aria-pressed="true"] { background: var(--v-lime); }
-.vtour__sound:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
+.vtour__sound .lg-switch:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 
 /* ── Newsletter signup (footer, /about, homepage): field and button on one row, the consent box under them. ── */
 .newsletter { display: grid; gap: 0.6rem; width: min(30rem, 100%); }

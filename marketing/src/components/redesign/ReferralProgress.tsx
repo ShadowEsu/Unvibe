@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Gift, Loader2 } from "lucide-react";
+import { CountUp } from "@/components/paper/CountUp";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
 
 type Progress = { joinedReferrals: number };
@@ -47,15 +48,15 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
 
   return <div className="reward-page"><section className="reward-panel">
     <p className="pixel-label">Referral rewards</p>
-    <h1>Your Pro months, <em>kept simple.</em></h1>
+    <h1>Your Pro months, kept simple.</h1>
     <p className="reward-lead">{GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. {GIFT_LINK_NOTE} This page shows how many friends joined with your invite link.</p>
     <form className="reward-code" onSubmit={(event) => { event.preventDefault(); void load(); }}>
       <label htmlFor="referral-code">Your invite link code</label>
-      <div><input id="referral-code" value={code} maxLength={8} size={8} autoCapitalize="none" spellCheck={false} onChange={(event) => setCode(event.target.value)} placeholder="8 characters" /><button type="submit" disabled={state === "loading"}>{state === "loading" ? <Loader2 className="spin" size={17} /> : "Check link"}</button></div>
+      <div><input id="referral-code" className="code-input" value={code} maxLength={8} size={8} autoCapitalize="none" spellCheck={false} onChange={(event) => setCode(event.target.value)} placeholder="8 characters" /><button type="submit" disabled={state === "loading"}>{state === "loading" ? <Loader2 className="spin" size={17} /> : "Check link"}</button></div>
     </form>
     {state === "error" && <p className="reward-error" role="alert">{message}</p>}
     {progress && <div className="reward-progress" aria-live="polite">
-      <div className="reward-review"><Gift size={18} /><span><strong>{progress.joinedReferrals} friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>Joining with a link does not add Pro by itself. The month comes when your friend enters your gift code in the app (version 0.1.44 or later).</small></span></div>
+      <div className="reward-review"><Gift size={18} /><span><strong><CountUp name="rewards-friends-joined" value={progress.joinedReferrals} arrived /> friend{progress.joinedReferrals === 1 ? "" : "s"} joined with your link</strong><small>Joining with a link does not add Pro by itself. The month comes when your friend enters your gift code in the app (version 0.1.44 or later).</small></span></div>
       <button className="reward-copy" type="button" onClick={copyLink}>{copied ? <><Check size={16} /> Link copied</> : <><Copy size={16} /> Copy my invite link</>}</button>
     </div>}
     <p className="reward-note">No names or emails are shown here. Questions about eligibility? <a href="mailto:support@unvibe.site?subject=Unvibe%20referral%20rewards">Contact support</a>.</p>

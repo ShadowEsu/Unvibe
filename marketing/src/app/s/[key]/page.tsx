@@ -34,7 +34,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
     <article className={`pstats ${REPLAY_BLOCK_CLASS}`}>
       <header className="pstats__head">
         <p className="pstats__eyebrow">Private · only you have this link</p>
-        <h1>Unvibe, <em>by the numbers.</em></h1>
+        <h1>Unvibe, by the numbers.</h1>
         <p className="pstats__updated">Live as of {updated} Pacific. Refresh for new numbers.</p>
       </header>
 
@@ -101,8 +101,8 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
           <ul className="pstats__feedback">
             {s.feedback.recent.map((f) => (
               <li key={f.createdAt}>
-                <span className="pstats__stars">{"★".repeat(f.rating)}<em>{"★".repeat(5 - f.rating)}</em></span>
-                <p>{f.message || <i>No words, just stars.</i>}</p>
+                <span className="pstats__stars">{"★".repeat(f.rating)}<span className="pstats__stars-off">{"★".repeat(5 - f.rating)}</span></span>
+                <p>{f.message || "No words, just stars."}</p>
                 <small>{f.source} · {new Date(f.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</small>
               </li>
             ))}
