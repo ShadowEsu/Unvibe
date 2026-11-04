@@ -794,6 +794,70 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   color: var(--brand);
 }
 
+/* /releases: older entries fold into one closed group per month, so a phone does not scroll the whole history. */
+.paper-log-archive {
+  padding: 0.6rem 1.4rem 1rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.paper-log-archive__title {
+  margin: 1rem 0 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.paper-log-archive details {
+  border-top: 1px solid var(--hairline);
+}
+
+.paper-log-archive summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 44px;
+  padding: 1rem 0;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+  font-weight: 400;
+}
+
+.paper-log-archive summary::-webkit-details-marker {
+  display: none;
+}
+
+.paper-log-archive summary span {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.paper-log-archive summary span::after {
+  content: " +";
+}
+
+.paper-log-archive details[open] summary span::after {
+  content: " -";
+}
+
+.paper-log-archive summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.paper-log-archive .paper-log {
+  padding: 0;
+}
+
 .paper-faq {
   max-width: 48rem;
   margin-inline: auto;

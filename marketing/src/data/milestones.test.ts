@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { milestones } from "./milestones";
+import { changelogArchive, changelogEntries, milestones } from "./milestones";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
@@ -14,5 +14,18 @@ describe("milestones", () => {
       assert.ok(time <= previous, `${title} (${date}) is newer than the entry above it`);
       previous = time;
     }
+  });
+
+  it("fold on /releases without losing or reordering an entry, one group per month", () => {
+    const entries = changelogEntries();
+    const { recent, months } = changelogArchive(entries, 12);
+    assert.equal(recent.length, 12);
+    assert.deepEqual([...recent, ...months.flatMap((month) => month.items)], entries);
+    assert.equal(new Set(months.map((month) => month.label)).size, months.length, "a month appears twice");
+    for (const month of months) {
+      for (const item of month.items) assert.ok(month.label.endsWith(item.date.slice(-4)), `${item.title} under ${month.label}`);
+      assert.match(month.label, /^[A-Z][a-z]+ \d{4}$/);
+    }
+    assert.deepEqual(changelogArchive(entries.slice(0, 3), 12), { recent: entries.slice(0, 3), months: [] });
   });
 });

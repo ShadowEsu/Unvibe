@@ -1014,3 +1014,26 @@ export function changelogEntries(): Milestone[] {
 export function changelogPreview(limit = 5): Milestone[] {
   return changelogEntries().slice(0, limit);
 }
+
+const MONTH_NAMES: Record<string, string> = {
+  JAN: "January", FEB: "February", MAR: "March", APR: "April", MAY: "May", JUN: "June",
+  JUL: "July", AUG: "August", SEP: "September", OCT: "October", NOV: "November", DEC: "December",
+};
+
+export interface ChangelogMonth {
+  label: string;
+  items: Milestone[];
+}
+
+/** /releases: the first `expanded` entries stay open; older ones fold into one group per month, newest month first. */
+export function changelogArchive(entries: Milestone[], expanded: number): { recent: Milestone[]; months: ChangelogMonth[] } {
+  const months: ChangelogMonth[] = [];
+  for (const item of entries.slice(expanded)) {
+    const [, mon = "", year = ""] = item.date.split(" ");
+    const label = `${MONTH_NAMES[mon] ?? mon} ${year}`;
+    const last = months[months.length - 1];
+    if (last?.label === label) last.items.push(item);
+    else months.push({ label, items: [item] });
+  }
+  return { recent: entries.slice(0, expanded), months };
+}

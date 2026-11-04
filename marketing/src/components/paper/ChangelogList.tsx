@@ -1,8 +1,10 @@
-import { changelogEntries, type Milestone } from "@/data/milestones";
+import { changelogArchive, changelogEntries, type Milestone } from "@/data/milestones";
 
 interface ChangelogListProps {
   items?: Milestone[];
   limit?: number;
+  /** Keep this many entries open and fold the older ones into one closed group per month. */
+  expanded?: number;
 }
 
 function StarMark() {
@@ -16,30 +18,62 @@ function StarMark() {
   );
 }
 
-export function ChangelogList({ items, limit }: ChangelogListProps) {
-  const list = items ?? (limit ? changelogEntries().slice(0, limit) : changelogEntries());
+function Entry({ item }: { item: Milestone }) {
   return (
-    <div className="paper-log">
-      {list.map((item) => (
-        <article key={`${item.date}-${item.title}`} className={item.pinned ? "is-pinned" : undefined}>
-          <div>
-            <p className="paper-meta">{item.category}</p>
-            <h3>
-              {item.pinned ? (
-                <span className="paper-log__star" role="img" aria-label="Highlighted">
-                  <StarMark />
-                </span>
-              ) : null}
-              {item.title}
-            </h3>
-            <p className="paper-lead">{item.summary}</p>
-          </div>
-          <aside>
-            {item.figure ? <strong>{item.figure}</strong> : null}
-            <time>{item.date}</time>
-          </aside>
-        </article>
-      ))}
-    </div>
+    <article className={item.pinned ? "is-pinned" : undefined}>
+      <div>
+        <p className="paper-meta">{item.category}</p>
+        <h3>
+          {item.pinned ? (
+            <span className="paper-log__star" role="img" aria-label="Highlighted">
+              <StarMark />
+            </span>
+          ) : null}
+          {item.title}
+        </h3>
+        <p className="paper-lead">{item.summary}</p>
+      </div>
+      <aside>
+        {item.figure ? <strong>{item.figure}</strong> : null}
+        <time>{item.date}</time>
+      </aside>
+    </article>
+  );
+}
+
+const key = (item: Milestone) => `${item.date}-${item.title}`;
+
+export function ChangelogList({ items, limit, expanded }: ChangelogListProps) {
+  const list = items ?? (limit ? changelogEntries().slice(0, limit) : changelogEntries());
+  if (expanded === undefined) {
+    return (
+      <div className="paper-log">
+        {list.map((item) => <Entry key={key(item)} item={item} />)}
+      </div>
+    );
+  }
+  const { recent, months } = changelogArchive(list, expanded);
+  return (
+    <>
+      <div className="paper-log">
+        {recent.map((item) => <Entry key={key(item)} item={item} />)}
+      </div>
+      {months.length ? (
+        <div className="paper-log-archive">
+          <h3 className="paper-log-archive__title">Earlier</h3>
+          {months.map((month) => (
+            <details key={month.label}>
+              <summary>
+                {month.label}
+                <span>{month.items.length === 1 ? "1 entry" : `${month.items.length} entries`}</span>
+              </summary>
+              <div className="paper-log">
+                {month.items.map((item) => <Entry key={key(item)} item={item} />)}
+              </div>
+            </details>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
