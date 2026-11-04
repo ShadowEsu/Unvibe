@@ -199,7 +199,7 @@ p { font-size: 17px; }
   .vhero__kicker { font-size: 1.05rem !important; }
 }
 
-/* Home sections sit on the backdrop with clear sheets (glass.css); only cards and panels are glass. */
+/* Home sections are tinted glass plates over the backdrop (glass.css); cards inside them are frosted panes. */
 .home-page > .paper-section { padding-block: clamp(1rem, 2.5vw, 2rem) !important; }
 .vhero__email input::placeholder { color: var(--u-text-2); opacity: 1; }
 .vhero__error { padding: 0.6rem 0.8rem; border-radius: 10px; background: #fff; }

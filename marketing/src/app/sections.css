@@ -9,7 +9,7 @@
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 .sec-head > .paper-lead .paper-text-link { font-size: inherit; }
 /* Home: the language pages under Try it. Underlined, since the links sit inside a sentence. */
-.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-wrap: pretty; }
+.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-align: center; text-wrap: pretty; }
 .home-langs .paper-text-link { font-size: inherit; text-decoration: underline; text-underline-offset: 0.18em; }
 
 /* Standalone text links get a 32 px tall target (Design W21): the language links, which wrap as whole
