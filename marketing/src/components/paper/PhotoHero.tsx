@@ -116,7 +116,7 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
       <p className="vhero__trust">
         <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
         <span className="vhero__trust-item">No API key.</span>{" "}
-        <span className="vhero__trust-item">Keys and tokens filtered on your computer.</span>{" "}
+        <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>{" "}
         <span className="vhero__trust-item">
           <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
             {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
@@ -179,7 +179,7 @@ export function PhotoHero() {
             <p className="vhero__fine">
               <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
               <span className="vhero__trust-item">No API key.</span>{" "}
-              <span className="vhero__trust-item">Keys and tokens filtered on your computer.</span>
+              <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
             </p>
             <TryInBrowser device={device} />
           </>

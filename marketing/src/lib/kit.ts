@@ -107,7 +107,7 @@ export function kitSections(): KitSection[] {
         "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Pro ranks the diff so you know where to look first.",
         "Working developers: own the code in your repo, even the parts you did not type.",
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
-        "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
+        "Objection: \"Is my code safe?\" Answer: Unvibe checks the code for secrets on your machine first, a known key stops the request, and you choose what is sent. From app 0.1.44, typed questions and Chat are checked too; older versions don't check them, so say so if asked.",
         "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
         AI_MAINTENANCE
           ? `Call to action: ${SITE} (download).`

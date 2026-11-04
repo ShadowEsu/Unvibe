@@ -298,7 +298,7 @@ export function ResourcesHub() {
 
               <div className="resources-arch-node">
                 <div className="resources-arch-badge">Step 3 · Cloud model</div>
-                <h3>Filtered snippet</h3>
+                <h3>Checked snippet</h3>
                 <p>Sent over HTTPS to the model provider, and the answer streams back</p>
               </div>
 

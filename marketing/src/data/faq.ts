@@ -64,7 +64,7 @@ export const faqItems: FaqItem[] = [
     id: "app-or-extension",
     question: "Is it an extension or an app?",
     answer:
-      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection. It sends that with its language and, when Unvibe knows them, the file's path inside your project and your project folder's name. Briefs read the git changes of a project on your computer. Keys and tokens in that code are filtered on your computer before it is sent.",
+      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection. It sends that with its language and, when Unvibe knows them, the file's path inside your project and your project folder's name. Briefs read the git changes of a project on your computer. Unvibe checks that code for keys and tokens on your computer before it is sent, and a known key stops the request.",
     category: "product",
   },
   {
@@ -78,7 +78,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Ask Vibe chat messages. Your repo is never uploaded.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded.",
     category: "privacy",
   },
   {
@@ -99,7 +99,7 @@ export const faqItems: FaqItem[] = [
     id: "local-mode",
     question: "Is there a local-only mode?",
     answer:
-      "Not yet. Explanations come from a cloud AI provider, after keys and tokens in your code are filtered on your computer.",
+      "Not yet. Explanations come from a cloud AI provider. Before anything is sent, Unvibe checks your code for keys and tokens on your computer and stops a known key.",
     category: "privacy",
   },
   {

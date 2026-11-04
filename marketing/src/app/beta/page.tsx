@@ -178,7 +178,7 @@ export default function BetaDownloadsPage() {
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
               <ShieldIcon />
-              <p>Keys and tokens in your code are filtered on your device before it is sent. Your repo is never uploaded.</p>
+              <p>Unvibe checks your code for keys and tokens on your device and stops a known key before anything is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />

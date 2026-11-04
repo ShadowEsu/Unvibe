@@ -10,7 +10,7 @@ import { track } from "@/lib/analytics";
 const guarantees = [
   {
     Icon: EyeOff,
-    title: "Secrets filtered on your computer",
+    title: "Checked for secrets on your computer",
     body: "The code you send is checked for keys, tokens, and passwords first. A known credential blocks the request. A string that only looks random waits for your OK. From version 0.1.44, your typed questions and Ask Vibe chat messages are checked too.",
   },
   {
