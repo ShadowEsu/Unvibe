@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel, QuizMode } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
-import { Buddy, setBuddyMood } from '../shared/buddy';
+import { Buddy, setBuddyMood, type BuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
-import { ShortAnswer } from '../shared/shortAnswer';
+import { AnswerWait, EXIT_MS, ShortAnswer, answerArriving, offersMoreDetail, splitUnsure, waitingStatus } from '../shared/shortAnswer';
 import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
@@ -113,32 +113,6 @@ const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'expert', label: 'Expert' },
 ];
 
-/** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
-function ThinkingCard({ hasCode }: { hasCode: boolean }) {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const a = window.setTimeout(() => setStep(1), 700);
-    const b = window.setTimeout(() => setStep(2), 1700);
-    return () => { window.clearTimeout(a); window.clearTimeout(b); };
-  }, []);
-  const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
-  const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
-  return (
-    <div className="thinking" role="status" aria-live="polite" aria-label="Generating explanation">
-      <div className="thinking__vibe"><Buddy mood={step === 2 ? 'reading' : 'thinking'} size={46} label="Vibe is thinking" /></div>
-      <div className="thinking__main">
-        <p className="thinking__note" key={step}>{notes[step]}</p>
-        <ol className="thinking__steps">
-          {steps.map((label, i) => (
-            <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}><i aria-hidden="true" />{label}</li>
-          ))}
-        </ol>
-        <div className="thinking__lines" aria-hidden="true"><i /><i /><i /></div>
-      </div>
-    </div>
-  );
-}
-
 function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' }) {
   const paths = {
     explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
@@ -153,6 +127,33 @@ function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'libr
 }
 
 const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+
+/** Where the short answer starts in the body's scroll coordinates, or null when there is none. */
+function shortAnswerTop(body: HTMLElement): number | null {
+  const answer = body.querySelector<HTMLElement>('.short-answer');
+  return answer ? answer.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop : null;
+}
+
+/** The bottom of each rendered text line in `el`, top to bottom, in `body`'s scroll coordinates. */
+function lineBottoms(el: HTMLElement, body: HTMLElement): number[] {
+  // Text nodes only: a range over the element would also return the boxes of the blocks inside it.
+  const range = document.createRange();
+  const origin = body.getBoundingClientRect().top - body.scrollTop;
+  const rects: DOMRect[] = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) if (r.height > 0) rects.push(r);
+  }
+  rects.sort((a, b) => a.top - b.top);
+  const bottoms: number[] = [];
+  for (const r of rects) {
+    const last = bottoms[bottoms.length - 1];
+    if (last === undefined || r.top >= last + origin - 2) bottoms.push(r.bottom - origin);
+    else bottoms[bottoms.length - 1] = Math.max(last, r.bottom - origin);
+  }
+  return bottoms;
+}
 
 function newTab(id: string, label: string): TabState {
   return {
@@ -439,21 +440,30 @@ function Widget() {
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   /**
-   * When a short answer arrives (its More detail block mounts once typing ends), scroll the body just
+   * When a short answer arrives (its More detail block mounts once the whole answer is shown), scroll the body just
    * enough to show the button plus 12 px, never past the top of the short answer (Design, 2 Nov). Instant,
-   * once per answer; showing or hiding the detail later never scrolls.
+   * once per answer; showing the detail later never scrolls (Less detail may snap back, see toggleDetail).
    */
   const revealMoreDetail = useCallback((block: HTMLDivElement | null) => {
     const body = bodyRef.current;
     if (!block || !body) return;
-    const bodyBox = body.getBoundingClientRect();
     const toggle = block.querySelector<HTMLElement>('.more-detail__toggle') ?? block;
-    const hidden = toggle.getBoundingClientRect().bottom + 12 - bodyBox.bottom;
+    const hidden = toggle.getBoundingClientRect().bottom + 12 - body.getBoundingClientRect().bottom;
     if (hidden <= 0) return;
-    const answer = body.querySelector<HTMLElement>('.short-answer');
-    const answerTop = answer ? answer.getBoundingClientRect().top - bodyBox.top + body.scrollTop : Number.POSITIVE_INFINITY;
+    const answerTop = shortAnswerTop(body) ?? Number.POSITIVE_INFINITY;
     body.scrollTop = Math.min(body.scrollTop + hidden, Math.max(body.scrollTop, answerTop));
   }, []);
+  /** The tab whose More detail content is fading out after Less detail, for EXIT_MS. */
+  const [detailLeaving, setDetailLeaving] = useState<string | null>(null);
+  const detailLeaveTimer = useRef(0);
+  /** Less detail was pressed while the reader was below the top of the short answer. */
+  const snapToAnswer = useRef(false);
+  /**
+   * More detail was just opened: show its first 3 lines above the action bar if its first line would be below the
+   * visible bottom (Design, amended spec §4, 2 Nov). `target` is the scrollTop that shows them; null until measured.
+   */
+  const revealDetail = useRef<{ target: number | null } | null>(null);
+  const revealFrame = useRef(0);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -645,9 +655,10 @@ function Widget() {
     window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
-  // ChatGPT-style progressive reveal: catch displayed text up to the streamed buffer.
+  // Full answers type in, catching the displayed text up to the streamed buffer. Short answers show
+  // whole sentences instead (ShortAnswer), so they skip this.
   useEffect(() => {
-    if (active.phase !== 'streaming' && active.phase !== 'done') {
+    if (active.short || (active.phase !== 'streaming' && active.phase !== 'done')) {
       setRevealedText('');
       return;
     }
@@ -673,14 +684,14 @@ function Widget() {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [active.text, active.phase, activeTabId]);
+  }, [active.text, active.phase, active.short, activeTabId]);
 
   // Autoscroll while streaming on the active tab.
   useEffect(() => {
     if (active.phase === 'streaming' && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [revealedText, active.phase]);
+  }, [revealedText, active.text, active.phase]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -714,10 +725,25 @@ function Widget() {
    */
   const toggleDetail = () => {
     const detail = active.detail;
+    window.clearTimeout(detailLeaveTimer.current);
+    setDetailLeaving(null);
     if (detail.phase === 'done' || detail.phase === 'streaming') {
+      if (detail.open) {
+        // Less detail: the content fades out, then the body snaps back to the short answer if the
+        // reader was below its top (Design motion spec §4).
+        const body = bodyRef.current;
+        const answerTop = body ? shortAnswerTop(body) : null;
+        snapToAnswer.current = Boolean(body && answerTop !== null && body.scrollTop > answerTop);
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          setDetailLeaving(activeRef.current);
+          detailLeaveTimer.current = window.setTimeout(() => setDetailLeaving(null), EXIT_MS);
+        }
+      }
+      if (!detail.open) revealDetail.current = { target: null };
       setTabs((prev) => patchTab(prev, activeRef.current, { detail: { ...detail, open: !detail.open } }));
       return;
     }
+    revealDetail.current = { target: null };
     setTabs((prev) => patchTab(prev, activeRef.current, { detail: { phase: 'streaming', text: '', error: '', open: true } }));
     // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
     // allowance must not replace the answer on screen; a refusal shows under the short answer.
@@ -789,11 +815,57 @@ function Widget() {
     </span>
   );
 
-  const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
-  const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
+  const showText = active.short ? active.text : phase === 'streaming' || phase === 'done' ? revealedText : active.text;
+  const stillTyping = answerArriving(phase, active.short, revealedText.length, active.text.length);
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
+  // Vibe changes on events only: thinking while the answer comes, done (one squish) or unsure when it ends.
+  const vibeMood: BuddyMood = phase === 'streaming' ? 'thinking'
+    : phase === 'done' ? (active.short && splitUnsure(active.text).unsure ? 'unsure' : 'done')
+    : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle';
+  const detailShown = active.detail.open || detailLeaving === active.id;
+  useLayoutEffect(() => {
+    if (detailShown || !snapToAnswer.current) return;
+    snapToAnswer.current = false;
+    const body = bodyRef.current;
+    const answerTop = body ? shortAnswerTop(body) : null;
+    if (body && answerTop !== null) body.scrollTop = Math.min(body.scrollTop, answerTop);
+  }, [detailShown]);
+  // More detail opens below a short answer; when it would start out of sight, bring its first 3 lines into view.
+  useLayoutEffect(() => {
+    const reveal = revealDetail.current;
+    const body = bodyRef.current;
+    if (!reveal || !body || !active.detail.open) return;
+    const detail = body.querySelector<HTMLElement>('.more-detail__body');
+    const lines = detail ? lineBottoms(detail, body) : [];
+    if (!lines.length) return;
+    const visibleBottom = body.scrollTop + body.clientHeight;
+    if (reveal.target === null && lines[0]! <= visibleBottom) {
+      revealDetail.current = null; // its first line is already in view: no scroll
+      return;
+    }
+    // The bottom of its third rendered line (or the last so far while it streams), 12 px above the action bar.
+    const complete = lines.length >= 3 || active.detail.phase !== 'streaming';
+    reveal.target = lines[Math.min(3, lines.length) - 1]! + 12 - body.clientHeight;
+    const goal = Math.min(reveal.target, body.scrollHeight - body.clientHeight);
+    if (complete) revealDetail.current = null;
+    if (goal <= body.scrollTop) return;
+    cancelAnimationFrame(revealFrame.current);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      body.scrollTop = goal;
+      return;
+    }
+    const from = body.scrollTop;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / 240);
+      body.scrollTop = from + (goal - from) * (1 - (1 - t) ** 3);
+      if (t < 1) revealFrame.current = requestAnimationFrame(step);
+    };
+    revealFrame.current = requestAnimationFrame(step);
+  }, [active.detail.open, active.detail.text, active.detail.phase]);
+  useEffect(() => () => cancelAnimationFrame(revealFrame.current), []);
   useEffect(() => {
     if (!pmfReady || pmf || pmfClosed.current) return;
     let live = true;
@@ -868,7 +940,7 @@ function Widget() {
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
-          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={26} label="Vibe" />
+          <Buddy mood={vibeMood} size={26} label="Vibe" />
         </span>
         <div className="head__context">
           <span className="head__product">Unvibe</span>
@@ -1170,12 +1242,12 @@ function Widget() {
                   <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
-              {showText
-                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
-                : (
-                  <ThinkingCard hasCode={Boolean(active.meta.preview)} />
-                )}
-              {active.short && phase === 'done' && !stillTyping ? (
+              {active.short
+                ? <ShortAnswer key={active.id} text={showText} streaming={stillTyping} status={waitingStatus(active.meta.lines, active.meta.language)} />
+                : showText
+                  ? renderRich(showText, stillTyping)
+                  : <AnswerWait status={waitingStatus(active.meta.lines, active.meta.language)} />}
+              {offersMoreDetail(phase, active.short, revealedText.length, active.text.length) ? (
                 <div className="more-detail" ref={revealMoreDetail}>
                   <button
                     type="button"
@@ -1187,8 +1259,8 @@ function Widget() {
                     {active.detail.open ? 'Less detail' : 'More detail'}
                     <svg className="more-detail__chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
                   </button>
-                  {active.detail.open ? (
-                    <div className="more-detail__body" id={`more-detail-${active.id}`}>
+                  {detailShown ? (
+                    <div className={`more-detail__body${active.detail.open ? '' : ' more-detail__body--leaving'}`} id={`more-detail-${active.id}`}>
                       {active.detail.text
                         ? renderRich(active.detail.text, active.detail.phase === 'streaming')
                         : active.detail.phase === 'streaming' ? <p className="more-detail__wait" role="status">Writing more detail…</p> : null}

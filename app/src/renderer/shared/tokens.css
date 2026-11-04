@@ -30,8 +30,16 @@
   --uv-fast: 140ms;
   --uv-normal: 200ms;
   --uv-slow: 280ms;
+  /* Motion (Design motion spec, 2 Nov 2026): one set for the site and the app. Hovers and presses use
+     micro, enters at most standard, exits exit. Story is the site hero's single "answer arrives" beat. */
+  --dur-micro: 150ms;
+  --dur-standard: 240ms;
+  --dur-story: 600ms;
+  --dur-exit: 150ms;
+  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
   --uv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  /* Newsreader when the companion has loaded it, otherwise the macOS system serif. */
+  /* Newsreader and JetBrains Mono are bundled (shared/fonts.css); the rest are fallbacks. */
   --uv-display: "Newsreader", ui-serif, "New York", Georgia, serif;
   --uv-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
 }

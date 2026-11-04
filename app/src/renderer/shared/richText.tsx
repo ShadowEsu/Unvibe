@@ -26,22 +26,41 @@ function highlight(code: string): ReactNode[] {
   return out;
 }
 
+/** How long a Copy control reads "Copied" (Design motion spec §4). */
+export const COPIED_MS = 1600;
+
+/** A Copy control's label: "Copy", then a check and "Copied". Each swap remounts, so the panel can fade it in. */
+export function CopyLabel({ copied }: { copied: boolean }) {
+  return copied ? (
+    <span key="copied" className="copy-label copy-label--done">
+      <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-6" /></svg>
+      Copied
+    </span>
+  ) : (
+    <span key="copy" className="copy-label">Copy</span>
+  );
+}
+
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="codeblock">
       <div className="cb-head">
         <span>{lang || 'code'}</span>
+        {/* The name stays "Copy code" while the visible label swaps; "Copied" is announced by the status
+            region below, so a screen reader hears the result without the control being renamed. */}
         <button
           type="button"
+          aria-label="Copy code"
           onClick={() => {
             void navigator.clipboard.writeText(code);
             setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
+            setTimeout(() => setCopied(false), COPIED_MS);
           }}
         >
-          {copied ? 'copied' : 'copy'}
+          <CopyLabel copied={copied} />
         </button>
+        <span className="sr-only" role="status" aria-live="polite">{copied ? 'Copied' : ''}</span>
       </div>
       <pre>{highlight(code)}</pre>
     </div>

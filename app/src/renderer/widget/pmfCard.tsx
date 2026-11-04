@@ -7,6 +7,7 @@ import {
   type PmfDraft,
   type PmfTextKey,
 } from '../../core/pmf';
+import { COPIED_MS, CopyLabel } from '../shared/richText';
 
 /** `form`: answering (a failed send shows `error` and a retry); `sending`; `thanks`: sent. */
 export interface PmfCardModel {
@@ -36,7 +37,7 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
   onClose: () => void;
 }) {
   const { draft, stage, error, errorField, retry } = model;
-  // Same clipboard call and "copied" timing as CodeBlock in shared/richText.tsx.
+  // Same clipboard call, label and "Copied" timing as CodeBlock in shared/richText.tsx.
   const [copied, setCopied] = useState(false);
   if (stage === 'thanks') {
     return (
@@ -51,10 +52,10 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
             onClick={() => {
               void navigator.clipboard.writeText(model.installId);
               setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
+              setTimeout(() => setCopied(false), COPIED_MS);
             }}
           >
-            {copied ? 'Copied' : 'Copy'}
+            <CopyLabel copied={copied} />
           </button>
         </p>
         <button type="button" className="pmf-card__close" aria-label="Close" title="Close" onClick={onClose}>×</button>

@@ -48,7 +48,7 @@ button { font: inherit; }
 .island__tool {
   width: 21px; height: 21px; padding: 0; border-radius: 50%;
   border: 1px solid rgba(255,255,255,.13); background: #111114; color: #8d8d96;
-  display: grid; place-items: center; cursor: pointer; transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+  display: grid; place-items: center; cursor: pointer; transition: color var(--dur-micro) ease, border-color var(--dur-micro) ease, background var(--dur-micro) ease;
 }
 .island__tool:hover { color: #fff; border-color: rgba(167,139,250,.5); background: #17151e; }
 .island__left { display: flex; align-items: baseline; gap: 4px; font-size: 13px; font-weight: 650; white-space: nowrap; }
@@ -56,7 +56,9 @@ button { font: inherit; }
 .island--small .island__status { font-size: 11px; }
 .island--large .island__status { font-size: 14px; }
 .island__dots { display: inline-flex; align-items: center; gap: 2px; width: 18px; }
-.island__dots i { width: 2px; height: 2px; border-radius: 50%; background: #8b5cf6; opacity: .26; animation: island-dot 1.3s ease-in-out infinite; }
+.island__dots i { width: 2px; height: 2px; border-radius: 50%; background: #8b5cf6; opacity: .85; }
+/* The dots pulse only while Unvibe is working; a result (ready, understood, issue, offline) holds them still in its colour. */
+.island:is(.island--phase-loading, .island--phase-working, .island--phase-analyzing, .island--phase-searching, .island--phase-thinking, .island--phase-generating, .island--phase-contextualizing, .island--phase-finalizing) .island__dots i { opacity: .26; animation: island-dot 1.3s ease-in-out infinite; }
 .island__dots i:nth-child(2) { animation-delay: 130ms; }
 .island__dots i:nth-child(3) { animation-delay: 260ms; }
 .island__dots i:nth-child(4) { animation-delay: 390ms; }
@@ -73,10 +75,10 @@ button { font: inherit; }
   flex-direction: column;
   opacity: 0;
   transform: translateY(-5px);
-  animation: island-reveal 220ms cubic-bezier(.22,.8,.24,1) forwards;
+  animation: island-reveal var(--dur-standard) var(--ease-emphatic) forwards;
 }
 @keyframes island-reveal { to { opacity: 1; transform: translateY(0); } }
-.island--closing .island__overview { opacity: 0; transform: translateY(-6px); transition: opacity 120ms ease, transform 160ms ease; }
+.island--closing .island__overview { opacity: 0; transform: translateY(-6px); transition: opacity var(--dur-exit) var(--ease-calm), transform var(--dur-exit) var(--ease-calm); }
 .island__header { min-height: 34px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .island__header > div:first-child { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
 .island__header strong { font-size: 17px; line-height: 25px; font-weight: 650; letter-spacing: 0; }
@@ -104,7 +106,7 @@ button { font: inherit; }
 .island__actions button {
   height: 29px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18);
   background: #0e0e10; color: #f3f3f4; font-size: 12px; font-weight: 600; letter-spacing: 0;
-  cursor: pointer; transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
+  cursor: pointer; transition: background var(--dur-micro) ease, border-color var(--dur-micro) ease, transform var(--dur-micro) ease;
 }
 .island__actions button:hover { background: #17151d; border-color: rgba(167,139,250,.5); }
 .island__actions button:active { transform: translateY(1px); }
@@ -156,8 +158,8 @@ button { font: inherit; }
 .island__actions button:active { transform: translateY(2px); box-shadow: none; }
 .island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #d6f45a; }
 
-/* Vibe Island life: a hop when an answer lands. */
-.island--phase-ready .island__mark, .island--phase-understood .island__mark { animation: island-hop .7s cubic-bezier(.3,1.6,.5,1) 2; }
+/* Vibe Island life: one hop when an answer lands. */
+.island--phase-ready .island__mark, .island--phase-understood .island__mark { animation: island-hop var(--dur-standard) cubic-bezier(.3,1.6,.5,1); }
 .island--phase-thinking .island__mark, .island--phase-generating .island__mark, .island--phase-analyzing .island__mark, .island--phase-contextualizing .island__mark { animation: island-think 1.2s ease-in-out infinite; }
 @keyframes island-hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 60% { transform: translateY(0) scale(.94, 1.06); } }
 @keyframes island-think { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }

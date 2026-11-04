@@ -255,6 +255,12 @@ export function Chat({
     endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [messages, busy]);
 
+  // Motion spec §4: the dusk drift rests while an answer is being written.
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-writing', busy);
+    return () => document.documentElement.classList.remove('is-writing');
+  }, [busy]);
+
   useEffect(() => {
     const area = areaRef.current;
     if (!area) return;

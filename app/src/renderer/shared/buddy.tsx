@@ -4,17 +4,19 @@ import { playTone } from './tones';
 /**
  * Vibe, the face of Unvibe's AI. A flat, sticker-style blob with an ink outline, two black eyes and no mouth.
  *
- * Moods map to what the AI is doing:
- * - idle: blinks and glances around (follows the pointer when `follow` is set)
- * - thinking: eyes look up, the blob wobbles faster, thought dots rise (waiting for the first token)
- * - reading: pupils sweep left to right like reading lines (tokens streaming)
- * - happy: smiling arc eyes and a small bounce (answer finished, quiz correct)
- * - celebrate: happy plus sparkles (milestones, onboarding done)
+ * Moods map to what the AI is doing, and change on events only:
+ * - idle: blinks now and then, only while the window has focus (follows the pointer when `follow` is set)
+ * - thinking: eyes on the code, the blob wobbles, thought dots rise (the AI is working)
+ * - reading: pupils sweep left to right like reading lines (an answer arriving in the companion)
+ * - done: smiling arc eyes and one squish (an answer finished)
+ * - unsure: a head tilt that stays (the answer says "Not sure:")
+ * - happy: smiling arc eyes and a small hop (quiz correct)
+ * - celebrate: a few hops plus sparkles (milestones, onboarding done)
  * - confused: squint and a tilt (errors, limits)
- * - sleepy: heavy lids and a slow breath (long idle, offline)
+ * - sleepy: heavy lids and a slow breath (long idle, offline), only while the window has focus
  * - wave: a friendly hello bounce (greetings)
  */
-export type BuddyMood = 'idle' | 'thinking' | 'reading' | 'happy' | 'celebrate' | 'confused' | 'sleepy' | 'wave';
+export type BuddyMood = 'idle' | 'thinking' | 'reading' | 'done' | 'unsure' | 'happy' | 'celebrate' | 'confused' | 'sleepy' | 'wave';
 
 interface BuddyProps {
   mood?: BuddyMood;
@@ -62,7 +64,7 @@ export function buddyMoodForPhase(phase: string): BuddyMood {
     case 'ready':
     case 'understood':
     case 'done':
-      return 'happy';
+      return 'done';
     case 'error':
       return 'confused';
     case 'offline':
@@ -74,6 +76,19 @@ export function buddyMoodForPhase(phase: string): BuddyMood {
 
 export function Buddy({ mood = 'idle', size = 40, follow = false, className = '', label }: BuddyProps) {
   const rootRef = useRef<HTMLSpanElement>(null);
+  // Idle loops stop while this window is in the background (Design motion spec §4).
+  const [focused, setFocused] = useState(() => typeof document === 'undefined' || document.hasFocus());
+  useEffect(() => {
+    const onFocus = () => setFocused(true);
+    const onBlur = () => setFocused(false);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
+    setFocused(document.hasFocus());
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // Pupils follow the pointer gently while idle.
   useEffect(() => {
@@ -104,12 +119,12 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
     };
   }, [follow, mood]);
 
-  const happy = mood === 'happy' || mood === 'celebrate' || mood === 'wave';
+  const happy = mood === 'happy' || mood === 'done' || mood === 'celebrate' || mood === 'wave';
 
   return (
     <span
       ref={rootRef}
-      className={`buddy buddy--${mood} ${className}`.trim()}
+      className={`buddy buddy--${mood}${focused ? '' : ' buddy--away'} ${className}`.trim()}
       style={{ width: size, height: size }}
       role="img"
       aria-label={label ?? `Vibe is ${mood === 'idle' ? 'here' : mood}`}

@@ -44,6 +44,10 @@ function loadAppEnv(): void {
 loadAppEnv();
 
 export const BACKEND = resolveBackendUrl();
+const requestedBackend = process.env.UNVIBE_BACKEND?.trim().replace(/\/+$/, '');
+if (requestedBackend && BACKEND.replace(/\/+$/, '') !== requestedBackend) {
+  console.warn('[backend] UNVIBE_BACKEND ignored: this build only talks to its own service');
+}
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /**

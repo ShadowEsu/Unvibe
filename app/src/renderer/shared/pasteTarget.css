@@ -4,7 +4,7 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-sizing: border-box;
   width: 100%; min-height: 190px; padding: 22px; border: 2px dashed rgb(28 24 20 / 0.32); border-radius: 16px;
   background: #fbfaf7; color: #141414; text-align: center; cursor: text; outline: none;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  transition: border-color var(--dur-micro) ease, box-shadow var(--dur-micro) ease;
 }
 .paste-target__box:focus, .paste-target__box:focus-visible { border-style: solid; border-color: #141414; box-shadow: 0 0 0 4px rgb(214 244 90 / 0.65); }
 .paste-target__box.is-compact { min-height: 150px; padding: 18px; }
