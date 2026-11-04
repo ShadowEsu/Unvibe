@@ -810,16 +810,24 @@ html body {
 
 /* Staggered arrival (motion spec §2). components/paper/Arrive.tsx marks the first 8 items and sets
    data-arrive only for a list that starts below the fold, so the server HTML, no JS and reduced motion
-   all show every item where it is. Opacity and transform only: nothing around the list moves. */
+   all show every item where it is. Opacity and transform only: nothing around the list moves.
+   Items rise --m-dist-sm; an .arrive--plate list (the home glass plates and the How it works steps,
+   ledger 466 SPEC §3) rises --m-dist-md with the same timing. */
+[data-arrive] > [data-arrive-item] {
+  --arrive-dist: var(--m-dist-sm);
+}
+.arrive--plate[data-arrive] > [data-arrive-item] {
+  --arrive-dist: var(--m-dist-md);
+}
 [data-arrive="wait"] > [data-arrive-item] {
   opacity: 0;
-  transform: translateY(var(--m-dist-sm));
+  transform: translateY(var(--arrive-dist));
 }
 [data-arrive="go"] > [data-arrive-item] {
   animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--arrive-i) * var(--m-stagger)) backwards;
 }
 @keyframes mArrive {
-  from { opacity: 0; transform: translateY(var(--m-dist-sm)); }
+  from { opacity: 0; transform: translateY(var(--arrive-dist)); }
 }
 @keyframes mFade {
   from { opacity: 0; }

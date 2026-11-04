@@ -19,9 +19,9 @@ html body {
   color: var(--ink);
 }
 
-/* The page backdrop (Design, ledger 443; agents/design/unvibe-site-glass-redesign-2026-11-04.md §1). Sections are
-   clear over it; only cards, panels, the hero still and the bars are glass.
-   A "Selected code" (default): the demo's own debounce.ts with lime and sky selection bands on a sky ground.
+/* The page backdrop (Design, ledger 443; agents/design/unvibe-site-glass-redesign-2026-11-04.md §1; ledger 466
+   picks it): the demo's own debounce.ts with lime and sky selection bands on a sky ground. The home sections'
+   tinted glass plates, cards, panels, the hero still and the bars blur it (glass.css).
    No blur is baked in; the glass does the blur. Phones and narrow windows get the 1200 px copy. */
 body::before {
   content: "";
@@ -36,14 +36,6 @@ body::before {
   body::before {
     background-image: url("/backdrop/code-field-1200.webp");
   }
-}
-
-/* BRANCH-ONLY B "Brand shapes" (?glass=b, lib/glassBackdrop.ts): hard-edged lime and sky discs on cream, no blur. */
-html[data-glass="b"] body::before {
-  background:
-    radial-gradient(circle at 6% 10%, #d6f45a 0 31vmax, transparent calc(31vmax + 1px)),
-    radial-gradient(circle at 97% 92%, #9fd8ff 0 27vmax, transparent calc(27vmax + 1px)),
-    #fffdf6;
 }
 
 .paper-logo__word {

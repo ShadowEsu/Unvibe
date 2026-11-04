@@ -2,21 +2,20 @@
    Liquid Glass with Glisse 0.5.0 (ledgers 436 and 443; Design: agents/design/unvibe-site-glass-redesign-2026-11-04.md).
    Loads after the site's own CSS.
 
-   One glass layer only. Section sheets are clear (no plate, no fill); glass sits on cards, panels, the hero
-   still frame and the floating chrome (top bar, phone download bar, Feedback, the ⌘K sheet). Never glass on
-   glass: controls inside a glass card are outlined, not frosted.
+   Two glass layers, never stacked: the home section sheets are tinted glass plates (ledger 466 SPEC §1: lime, sky
+   and lilac by section), and glass sits on the cards, panels, the hero still frame and the floating chrome (top
+   bar, phone download bar, Feedback, the ⌘K sheet) that are not inside a plate. Never glass on glass: a card inside
+   a plate is a 0.55 white pane with no blur, and controls inside a glass surface are outlined, not frosted.
 
-   Two backdrops, both shippable, on <html data-glass> (paper.css paints them; the BRANCH-ONLY
-   GlassBackdropSwitch reads ?glass=a|b, lib/glassBackdrop.ts):
-   - "a" (default): the selected-code field. Cards 0.62 white with an 18 px blur, pricing cards 0.72,
-     the lime Pro card 0.80 with a 2 px ink border.
-   - "b": hard-edged lime and sky discs on cream, no blur in the backdrop. Cards 0.78 with a 12 px blur.
+   The backdrop is the selected-code field (paper.css). Cards 0.62 cream with an 18 px blur, pricing cards 0.72,
+   the lime Pro card 0.80 with a 2 px ink border.
 
-   A surface turns glass with a <GlassPlate> (Glisse's Glass) as its first child, shown only where the card
-   list below names the surface, so moving a selector in or out of that list is the whole change.
+   A card turns glass with a <GlassPlate> (Glisse's Glass) as its first child, shown only where the card list
+   below names the surface, so moving a selector in or out of that list is the whole change.
 
    Always solid (Design §1, Security finding 3): the analytics consent bar and the newsletter sheet (consent),
-   What leaves your computer, the FAQ, the pricing disclosure, Terms, Privacy and the footer.
+   the pricing disclosure, Terms, Privacy and the footer. The text-dense home plates (Try it, What leaves your
+   computer, Pricing, the FAQ) are 0.90 tint.
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -29,7 +28,7 @@
   --glass-bar: rgb(255 253 246 / 0.72);
   --glass-sheet: rgb(255 253 246 / 0.88);
 
-  /* Backdrop A cards: cream glass. Text on them stays >= 4.5:1: ink #141414 and #4a4a46 on 0.62 cream over the blurred field. */
+  /* Cards outside the plates: cream glass. Text on them stays >= 4.5:1: ink #141414 and #4a4a46 on 0.62 cream over the blurred field. */
   --glass-card: rgb(255 253 246 / 0.62);
   --glass-card-strong: rgb(255 253 246 / 0.72);
   --glass-card-lime: rgb(214 244 90 / 0.8);
@@ -41,13 +40,6 @@
 
   /* The site's opaque surface, for the solid sheets and the fallbacks at the end. */
   --surface-solid: var(--u-sheet);
-}
-
-/* Backdrop B: flat discs, so the cards carry more fill and a lighter blur. */
-html[data-glass="b"] {
-  --glass-card: rgb(255 253 246 / 0.78);
-  --glass-card-strong: rgb(255 253 246 / 0.78);
-  --glass-card-blur: 12px;
 }
 
 /* ── Plates ─────────────────────────────────────────────────────────────── */
@@ -75,8 +67,8 @@ html[data-glass="b"] {
 }
 
 /* Nothing that holds glass isolates (WebKit backdrop root, see above); this covers the cards, sections and page
-   wrappers that isolate in other sheets. */
-:has(.lg-glass) {
+   wrappers that isolate in other sheets, and every ancestor of a home plate (.u-sheet). */
+:has(.lg-glass, .u-sheet) {
   isolation: auto !important;
 }
 
@@ -86,18 +78,101 @@ html[data-glass="b"] {
   display: none;
 }
 
-/* ── Sheets: clear on the home page, solid where they hold consent or long reading ── */
+/* ── Plates: every home section sheet is tinted glass (ledger 466 SPEC §1) ── */
 
-.home-page .u-sheet:not(.u-solid) {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+/* One alpha token. The tints are declared on each sheet too, so a sheet that sets --u-glass-a resolves its own. */
+:root,
+.u-sheet {
+  --u-glass-lime: rgb(236 250 190 / var(--u-glass-a, 0.80));
+  --u-glass-sky: rgb(214 236 252 / var(--u-glass-a, 0.80));
+  --u-glass-lilac: rgb(232 224 255 / var(--u-glass-a, 0.80));
 }
 
-.u-sheet.u-solid {
-  border: 1px solid var(--u-line);
-  background: var(--surface-solid);
-  box-shadow: none;
+:root {
+  --u-glass-edge: rgb(255 255 255 / 0.70);
+  --u-glass-blur: blur(22px) saturate(1.8);
+}
+
+/* No ancestor of a plate may carry opacity, filter, isolation, mask or transform (WebKit backdrop root); the reveal
+   (globals.css, .arrive--plate) and the hover lift below move the plate itself. Text stays ink and #4a4a46: on the
+   worst case, 0.80 sky over the blurred field (about #cfe3f3), that is 15:1 and 6.9:1. */
+.u-sheet {
+  /* Inner cards (pricing columns, the What leaves panels, plated panels) are frosted panes on the tint with no
+     blur of their own; a plated card shows this fill instead of its plate (see "Cards and panels"). */
+  --u-card: rgb(255 255 255 / 0.55);
+  --u-plate-host-fill: var(--u-card);
+  border: 1px solid var(--u-glass-edge);
+  background: var(--u-sheet-tint, var(--u-glass-sky));
+  -webkit-backdrop-filter: var(--u-glass-blur);
+  backdrop-filter: var(--u-glass-blur);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), var(--u-lift-1);
+}
+
+/* The page reads lime, sky, lilac down the sections. --u-sheet-solid is each tint's opaque fallback; the marker
+   word turns sky on the lime plate. */
+.home-page .paper-section:nth-of-type(3n+1) .u-sheet {
+  --u-sheet-tint: var(--u-glass-lime);
+  --u-sheet-solid: #eefad0;
+  --u-sheet-mark: #9fd8ff;
+}
+
+.home-page .paper-section:nth-of-type(3n+2) .u-sheet {
+  --u-sheet-tint: var(--u-glass-sky);
+  --u-sheet-solid: #e2f1fd;
+}
+
+.home-page .paper-section:nth-of-type(3n) .u-sheet {
+  --u-sheet-tint: var(--u-glass-lilac);
+  --u-sheet-solid: #eee8ff;
+}
+
+/* Text-dense plates (glass spec §3: fill at least 0.88): Try it, What leaves your computer, Pricing, the FAQ. */
+.u-sheet.u-solid,
+#try-it .u-sheet,
+#what-leaves .u-sheet,
+#pricing .u-sheet,
+.u-sheet:has(#faq-title) {
+  --u-glass-a: 0.90;
+}
+
+/* One word per heading on the marker: lime, or sky on the lime plate. Upright, the heading's own ink. */
+.u-mark {
+  padding-inline: 0.08em;
+  border-radius: 0.12em;
+  background: var(--u-sheet-mark, var(--u-mark));
+  color: inherit;
+  font-style: normal;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* The Vibe buddy violet appears once: the lilac plate's eyebrow dot. */
+.home-page .paper-section:nth-of-type(3n) .u-sheet :is(.sec-head, .hiw__head) > .paper-meta::before {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: #b8a6ff;
+  vertical-align: 0.08em;
+}
+
+/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .u-sheet {
+    transition: transform var(--m-fast) var(--m-ease-sharp);
+  }
+
+  .u-sheet:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* The backing band was a pale wash behind its plate: on the home page the plate sits on the field like the rest. */
+.home-page .paper-backing {
+  border-bottom: 0;
+  background: none;
 }
 
 /* The /beta troubleshooting list: one solid container with hairline rows, like the home FAQ. */
@@ -133,10 +208,6 @@ html[data-glass="b"] {
 .vhero__kicker,
 .vhero__trust,
 .vhero .vhero__claims,
-.home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
-.home-page .hiw__note,
-.home-page .plans-strip__foot,
-.home-page .home-langs,
 .pricing-plans__intro > p,
 .beta-page__head > p {
   justify-self: center;
@@ -191,7 +262,9 @@ html[data-glass="b"] {
   border-radius: 20px !important;
 }
 
-/* Every glass card: the element drops its own fill and blur, keeps a hairline edge, and shows its plate. */
+/* Every glass card: the element drops its own fill and blur, keeps a hairline edge, and shows its plate. Inside a
+   home plate (.u-sheet) the card takes the plate's 0.55 white pane fill instead and its plate stays off
+   (.u-sheet .glass-plate below): never glass on glass. */
 :is(
   .who-panel,
   .backing-panel,
@@ -207,7 +280,7 @@ html[data-glass="b"] {
   .beta-page__trust-item
 ):has(> .glass-plate) {
   border: 1px solid var(--glass-edge) !important;
-  background: transparent !important;
+  background: var(--u-plate-host-fill, transparent) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   box-shadow: none !important;
@@ -230,6 +303,10 @@ html[data-glass="b"] {
   --lg-glass: var(--glass-card);
   --lg-blur: var(--glass-card-blur);
   display: block;
+}
+
+.u-sheet .glass-plate {
+  display: none !important;
 }
 
 /* Stronger fill where the text is dense or the card is the one in focus: the open step, prices, the video's
@@ -279,9 +356,10 @@ html[data-glass="b"] {
   background: rgb(20 20 20 / 0.06) !important;
 }
 
-/* Never glass in glass (glass-spec §3): a Glisse control or switch thumb inside a glass surface (a Glisse Glass or a
-   plated card or bar) keeps its fill but not its own blur. Glisse's segmented lens is part of its bar and keeps it. */
-:is(.lg-glass, :has(> .glass-plate)) :is(.lg-glass:not(.glass-plate, .lg-tab-lens), .lg-switch-thumb, .lg-slider-thumb) {
+/* Never glass in glass (glass-spec §3): a Glisse control or switch thumb inside a glass surface (a Glisse Glass, a
+   plated card or bar, or a home plate) keeps its fill but not its own blur. Glisse's segmented lens is part of its
+   bar and keeps it. */
+:is(.lg-glass, :has(> .glass-plate), .u-sheet) :is(.lg-glass:not(.glass-plate, .lg-tab-lens), .lg-switch-thumb, .lg-slider-thumb) {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -394,10 +472,9 @@ html[data-glass="b"] {
 /* ── Solid fallbacks (Design §2; Glisse has none) ───────────────────────── */
 
 /* Less transparency or more contrast asked for: the backdrop goes flat cream and every glass surface turns
-   opaque, with a visible ink edge and no blur or refraction. */
+   opaque, with a visible ink edge and no blur or refraction. The home plates keep their tint, solid. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root,
-  html[data-glass="b"] {
+  :root {
     --lg-glass: var(--surface-solid);
     --lg-surface: var(--surface-solid);
     --lg-edge: var(--u-line-strong);
@@ -410,8 +487,7 @@ html[data-glass="b"] {
     --glass-highlight: none;
   }
 
-  html body::before,
-  html[data-glass="b"] body::before {
+  html body::before {
     background: var(--surface-solid);
   }
 
@@ -420,21 +496,24 @@ html[data-glass="b"] {
   .vhero__kicker,
   .vhero__trust,
   .vhero .vhero__claims,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
-  .home-page .hiw__note,
-  .home-page .plans-strip__foot,
-  .home-page .home-langs,
   .pricing-plans__intro > p,
   .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background-image: none !important;
   }
+
+  .u-sheet {
+    --u-card: #ffffff;
+    border-color: var(--u-line-strong);
+    background: var(--u-sheet-solid, #e2f1fd);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 @media (forced-colors: active) {
-  html body::before,
-  html[data-glass="b"] body::before {
+  html body::before {
     background: Canvas;
   }
 
@@ -443,16 +522,18 @@ html[data-glass="b"] {
   .vhero__kicker,
   .vhero__trust,
   .vhero .vhero__claims,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
-  .home-page .hiw__note,
-  .home-page .plans-strip__foot,
-  .home-page .home-langs,
   .pricing-plans__intro > p,
   .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background: Canvas !important;
     border: 1px solid CanvasText;
+  }
+
+  .u-sheet {
+    border: 1px solid CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   :is(
@@ -473,10 +554,10 @@ html[data-glass="b"] {
   }
 }
 
-/* No backdrop-filter support: the glass fills turn opaque instead of showing the page through. */
+/* No backdrop-filter support: the glass fills turn opaque instead of showing the page through, and each home plate
+   takes its tint solid (lime #eefad0, sky #e2f1fd, lilac #eee8ff). */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root,
-  html[data-glass="b"] {
+  :root {
     --lg-glass: var(--surface-solid);
     --lg-surface: var(--surface-solid);
     --glass-bar: var(--surface-solid);
@@ -486,12 +567,15 @@ html[data-glass="b"] {
     --glass-card-lime: var(--v-lime);
     --glass-edge: var(--u-line-strong);
   }
+
+  .u-sheet {
+    background: var(--u-sheet-solid, #e2f1fd);
+  }
 }
 
 /* The lite experience (lib/performanceMode: low-end devices) already drops the site's blurs; glass is the
-   heaviest of them, so it gets the solid surfaces and the flat cream backdrop too. */
-html[data-performance="lite"],
-html[data-performance="lite"][data-glass="b"] {
+   heaviest of them, so it gets the solid surfaces, the solid plate tints and the flat cream backdrop too. */
+html[data-performance="lite"] {
   --lg-glass: var(--surface-solid);
   --lg-surface: var(--surface-solid);
   --glass-bar: var(--surface-solid);
@@ -502,8 +586,7 @@ html[data-performance="lite"][data-glass="b"] {
   --glass-edge: var(--u-line-strong);
 }
 
-html[data-performance="lite"] body::before,
-html[data-performance="lite"][data-glass="b"] body::before {
+html[data-performance="lite"] body::before {
   background: var(--surface-solid);
 }
 
@@ -513,14 +596,16 @@ html[data-performance="lite"] :is(
   .vhero__kicker,
   .vhero__trust,
   .vhero .vhero__claims,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
-  .home-page .hiw__note,
-  .home-page .plans-strip__foot,
-  .home-page .home-langs,
   .pricing-plans__intro > p,
   .beta-page__head > p
 ) {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   background-image: none !important;
+}
+
+html[data-performance="lite"] .u-sheet {
+  background: var(--u-sheet-solid, #e2f1fd);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
