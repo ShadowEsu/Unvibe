@@ -27,6 +27,12 @@ import { CONSENT_PROVIDERS } from '../../core/consent';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
+// Branch-only (app/glass): Glisse and the glass layers. The bundler emits this CSS as companion.glass.css.
+import 'glisse/styles.css';
+import '../shared/glass.css';
+import './glass.css';
+import { Button, SegmentedControl, Slider, Switch } from 'glisse';
+import { GlassField, GlassLayer, loadGlassLevel } from '../shared/glass';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -1032,6 +1038,7 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
       <div className="today-cols">
         {upNext.length ? (
           <section className="today-sec">
+            <GlassLayer from="full" kind="card" />
             <header><h2>Up next</h2><span>{completedSteps} of {learningSteps.length} done</span></header>
             <ol className="rows">
               {upNext.map((step) => (
@@ -1047,6 +1054,7 @@ function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan
           </section>
         ) : null}
         <section className="today-sec">
+          <GlassLayer from="full" kind="card" />
           <header><h2>Recently understood</h2><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>See all</button></header>
           {saved.length ? (
             <ul className="rows">
@@ -1085,6 +1093,7 @@ function GoalCheck({ done }: { done: boolean }) {
 function TodayGoalCard({ goal }: { goal: TodayGoal }) {
   return (
     <section className="today-goal" aria-label="Today's goal">
+      <GlassLayer from="full" kind="card" />
       <p className="today-goal__line">
         Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
       </p>
@@ -1397,8 +1406,9 @@ function Explainer({ page, shortcut }: { page: PageDef; shortcut: string }) {
   );
 }
 
+/** Every on/off setting is a Glisse Switch (L1). A drag that ends where it began changes nothing. */
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
-  return <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={label} onClick={onClick}><span className="knob" /></button>;
+  return <Switch className="toggle-switch" checked={on} aria-label={label} onCheckedChange={(next) => { if (next !== on) onClick(); }} />;
 }
 
 /**
@@ -1462,11 +1472,11 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
         <div className="setrow setrow--stack">
           <div className="sl">Erase learning on this {deviceName}</div>
           <div className="sd" style={{ marginBottom: 12 }}>Removes every saved explanation on this {deviceName}. This cannot be undone.</div>
-          {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Erase everything…</button> : (
+          {!confirming ? <Button destructive className="act danger" onClick={() => setConfirming(true)}>Erase everything…</Button> : (
             <div className="danger-row">
               <input className="field delete-confirm" aria-label="Type DELETE to confirm" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
-              <button className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Erasing…' : 'Erase everything'}</button>
-              <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+              <Button destructive className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Erasing…' : 'Erase everything'}</Button>
+              <Button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</Button>
             </div>
           )}
           {err && <div className="field-err">{err}</div>}
@@ -1479,21 +1489,21 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
       <PlanUsageBoard compact signedIn onSignedIn={onChange} />
       <div className="settings-section-label">ACCOUNT</div>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
-        <button className="act" onClick={async () => {
+        <Button className="act" onClick={async () => {
           const result = (await window.unvibe.signOut()) as { ok: boolean; error?: string; warning?: string };
           onChange();
           onNotice(result.ok
             ? result.warning ? `Signed out locally. ${result.warning}` : 'Signed out securely.'
             : result.error ?? `Sign-out could not be saved on this ${deviceName}.`);
-        }}>Sign out</button></div>
+        }}>Sign out</Button></div>
       <div className="setrow setrow--stack">
         <div className="sl sl--danger">Delete account</div>
         <div className="sd" style={{ marginBottom: 12 }}>Permanently deletes your Unvibe account and your learning data (every review and concept) on this {deviceName} and on our servers. This also removes the API key you saved in Unvibe on this {deviceName}, if there is one, plus the name, email and last project folder saved in Unvibe. This cannot be undone.</div>
-        {!confirming ? <button className="act danger" onClick={() => setConfirming(true)}>Delete my account…</button> : (
+        {!confirming ? <Button destructive className="act danger" onClick={() => setConfirming(true)}>Delete my account…</Button> : (
           <div className="danger-row">
             <input className="field delete-confirm" aria-label="Type DELETE to confirm account deletion" value={phrase} placeholder="Type DELETE to confirm" onChange={(e) => setPhrase(e.target.value)} />
-            <button className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Deleting…' : 'Delete everything'}</button>
-            <button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+            <Button destructive className="act danger" disabled={busy || phrase !== 'DELETE'} onClick={del}>{busy ? 'Deleting…' : 'Delete everything'}</Button>
+            <Button className="act" disabled={busy} onClick={() => setConfirming(false)}>Cancel</Button>
           </div>
         )}
         {err && <div className="field-err">{err}</div>}
@@ -1558,7 +1568,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
           Works with Gemini, OpenAI, Anthropic, Grok, DeepSeek, or Kimi. The key stays encrypted on this {deviceName} and is never sent to Unvibe.
         </div>
         <div className="ai-key-row">
-          <input
+          <GlassField
             className="field"
             aria-label="API key"
             type="password"
@@ -1566,10 +1576,10 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
             spellCheck={false}
             placeholder={present ? `Key on file (${hint})` : 'Paste any supported API key'}
             value={keyDraft}
-            onChange={(e) => setKeyDraft(e.target.value)}
+            onValueChange={setKeyDraft}
           />
-          <button className="act" disabled={busy || !keyDraft.trim()} onClick={() => void saveKey()}>{busy ? 'Saving…' : 'Save key'}</button>
-          {present && <button className="act" disabled={busy} onClick={() => void clearKey()}>Remove</button>}
+          <Button className="act" disabled={busy || !keyDraft.trim()} onClick={() => void saveKey()}>{busy ? 'Saving…' : 'Save key'}</Button>
+          {present && <Button className="act" disabled={busy} onClick={() => void clearKey()}>Remove</Button>}
         </div>
         {err && <div className="field-err">{err}</div>}
       </div>
@@ -1691,14 +1701,13 @@ function IntegrationsPanel() {
                   <small>{item.blurb}</small>
                   <p>{item.detail}</p>
                   {(item.id === 'cursor' || item.id === 'vscode') && item.state === 'detected' && !item.bridgeInstalled ? (
-                    <button
-                      type="button"
+                    <Button
                       className="act integ-card__action"
                       disabled={Boolean(installing) || !item.bridgeAvailable}
                       onClick={() => void installBridge(item.id, item.name)}
                     >
                       {installing === item.id ? 'Installing…' : item.bridgeAvailable ? 'Install Desktop Bridge' : 'Bridge package unavailable'}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </article>
@@ -1710,7 +1719,9 @@ function IntegrationsPanel() {
   );
 }
 
-const SETTINGS_FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+// Glisse segmented controls keep unselected segments at tabindex -1 (arrow keys move between them),
+// so those are not Tab stops for the trap's first and last item.
+const SETTINGS_FOCUSABLE = 'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 function Settings({ info, account, settings, onAccountChange, onSettings, onClose, onAccountDeleted, onNotice, initialTab = 'General' }: {
   info: { version: string; sendsSetupProgress?: boolean }; account: Account; settings: Settings;
@@ -1788,9 +1799,8 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Settings" onClick={onClose}>
       <div className="modal" ref={modalRef} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="settings-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose}>
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10 M15 5L5 15" /></svg>
-        </button>
+        <GlassLayer kind="sheet" />
+        <Button className="settings-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose} icon={<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10 M15 5L5 15" /></svg>} />
         <div className="mside">
           <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
@@ -1810,10 +1820,10 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'General' && (
             <>
-              <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
-              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
+              <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><GlassField className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onValueChange={(value) => void onSettings({ displayName: value })} autoComplete="given-name" /></div>
+              <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><GlassField className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onValueChange={(value) => void onSettings({ profileEmail: value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
+              <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isWindows ? '' : ' Control+U is always registered as well.'}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><Button className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</Button></div>
               <PermRow compact />
             </>
           )}
@@ -1823,26 +1833,26 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="settings-section-label">OVERLAY PREVIEW</div>
               <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
-                <div className="location-grid" role="group" aria-label="Island location">
-                  {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
-                </div>
+                <SegmentedControl className="glass-seg glass-seg--4" aria-label="Island location" value={settings.barPosition}
+                  items={[{ value: 'top-center', label: 'Top' }, { value: 'top-right', label: 'Right' }, { value: 'bottom-center', label: 'Bottom' }, { value: 'bottom-right', label: 'Corner' }]}
+                  onValueChange={(position) => void onSettings({ barPosition: position })} />
               </div>
               <div className="setrow settings-location"><div><div className="sl">Island size</div><div className="sd">{isWindows ? 'Medium is the default size.' : 'Medium matches the Mac notch.'} Change it if you want a smaller or larger pill.</div></div>
-                <div className="location-grid" role="group" aria-label="Island size">
-                  {([['small', 'Small'], ['medium', 'Notch'], ['large', 'Large']] as const).map(([size, label]) => <button key={size} type="button" className={settings.barSize === size ? 'on' : ''} onClick={() => void onSettings({ barSize: size })}>{label}</button>)}
-                </div>
+                <SegmentedControl className="glass-seg glass-seg--3" aria-label="Island size" value={settings.barSize}
+                  items={[{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Notch' }, { value: 'large', label: 'Large' }]}
+                  onValueChange={(size) => void onSettings({ barSize: size as Settings['barSize'] })} />
               </div>
-              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Always available keeps the Island at the edge of your screen between reviews. During reviews only hides it until you press {prettyAccel(settings.shortcut)}.</div></div><select className="sel-input" aria-label="Quiet Island visibility" value={settings.barVisibility} onChange={(e) => onSettings({ barVisibility: e.target.value as Settings['barVisibility'] })}><option value="always">Always available</option><option value="during-review">During reviews only</option></select></div>
+              <div className="setrow"><div><div className="sl">Quiet Island visibility</div><div className="sd">Always available keeps the Island at the edge of your screen between reviews. During reviews only hides it until you press {prettyAccel(settings.shortcut)}.</div></div><SegmentedControl className="glass-seg glass-seg--wide" aria-label="Quiet Island visibility" value={settings.barVisibility} items={[{ value: 'always', label: 'Always available' }, { value: 'during-review', label: 'During reviews only' }]} onValueChange={(value) => onSettings({ barVisibility: value as Settings['barVisibility'] })} /></div>
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
-              {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
+              {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><Slider className="range" aria-label="Hover delay" min={120} max={600} step={20} value={settings.barHoverDelayMs} onValueChange={(value) => onSettings({ barHoverDelayMs: value })} /></div>}
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
               <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
-                <select className="sel-input" aria-label="Inactive widget" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
-                  <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
-                </select>
+                <SegmentedControl className="glass-seg glass-seg--wide" aria-label="Inactive widget" value={settings.inactiveBehavior}
+                  items={[{ value: 'dim', label: 'Dim (keep size)' }, { value: 'stay', label: 'Stay solid' }]}
+                  onValueChange={(value) => onSettings({ inactiveBehavior: value })} />
               </div>
               <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
-                <input className="range" aria-label="Dimmed opacity" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
+                <Slider className="range" aria-label="Dimmed opacity" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onValueChange={(value) => onSettings({ widgetOpacityInactive: value / 100 })} />
               </div>
             </>
           )}
@@ -1851,8 +1861,8 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
             <>
               <div className="settings-section-label">LOCAL SOUND</div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
-              <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
+              <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><SegmentedControl className="glass-seg glass-seg--2" aria-label="Sound character" aria-disabled={!settings.soundEffects} inert={!settings.soundEffects} value={settings.soundStyle} items={[{ value: 'soft', label: 'Soft' }, { value: 'pixel', label: 'Pixel' }]} onValueChange={(value) => onSettings({ soundStyle: value as Settings['soundStyle'] })} /></div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><Slider className="range" aria-label="Sound volume" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onValueChange={(value) => onSettings({ soundVolume: value })} /><Button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</Button></div></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
@@ -1861,7 +1871,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           )}
 
           {tab === 'Learning' && <>
-            <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
+            <div className="setrow setrow--stack"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><SegmentedControl className="glass-seg glass-seg--level" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} items={STUDY_LEVELS.map((item) => ({ value: item.id, label: item.label }))} onValueChange={(value) => onSettings({ defaultExplanationLevel: value as Settings['defaultExplanationLevel'] })} /></div>
             <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open Learn to search, revisit, or remove a lesson.</div></div></div>
             <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Change Brief" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
             <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
@@ -1870,7 +1880,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
                 ? 'To talk: click any question box, press Win+H, speak, then press Enter. It uses Windows voice typing, so Unvibe never records in the background.'
                 : <>To talk: click any question box, press fn twice (or 🌐), speak, press fn, then Return. It uses Mac Dictation, so Unvibe never records in the background. <button type="button" className="link-btn" onClick={() => void window.unvibe.openDictation()}>Dictation settings</button></>}</div></div><Toggle label="Voice questions" on={Boolean(settings.features?.voice)} onClick={() => onSettings({ features: { ...settings.features, voice: !settings.features?.voice } })} /></div>
             <div className="setrow"><div><div className="sl">Live change watch</div><div className="sd">Quiet Island notes after meaningful git edits settle. Debounced, grouped, and silent during quiet hours.</div></div><Toggle label="Live change watch" on={Boolean(settings.features?.live)} onClick={() => onSettings({ features: { ...settings.features, live: !settings.features?.live } })} /></div>
-            {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</button></div> : null}
+            {settings.features?.live ? <div className="setrow"><div><div className="sl">Snooze Live</div><div className="sd">Mute Live notices for two hours.</div></div><Button className="act" onClick={() => void window.unvibe.snoozeLive(2)}>Snooze 2h</Button></div> : null}
           </>}
 
           {tab === 'Integrations' && <IntegrationsPanel />}
@@ -1882,14 +1892,14 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
               <div className="setrow"><div><div className="sl">Include nearby files (Pro)</div><div className="sd">Also sends parts of up to 2 files that the selected code imports from the same project, for better explanations. Off unless you turn it on.</div></div><Toggle label="Include nearby files" on={settings.nearbyFiles === true} onClick={() => onSettings({ nearbyFiles: settings.nearbyFiles !== true })} /></div>
               {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
-              <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
-              <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
-              <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div>
+              <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><Button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</Button></div>
+              <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><Button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</Button></div>
+              <div className="setrow"><div><div className="sl">Support</div><div className="sd">support@unvibe.site</div></div><Button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</Button></div>
             </>
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">support@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">support@unvibe.site</div></div><Button className="act" onClick={() => void window.open('mailto:support@unvibe.site')}>Email →</Button></div></>}
         </div>
       </div>
     </div>
@@ -2222,7 +2232,9 @@ function App() {
           <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = 204; setSideWidth(204); void applySettings({ sidebarWidth: 204 }); }} />
         </aside>
         <main className="content">
+          <GlassLayer from="full" kind="shell" />
           <header className="topbar">
+            <GlassLayer kind="bar" />
             <button type="button" className="nav-toggle" aria-label="Open menu" onClick={() => setNavOpen(true)}>
               <Icon d="M3 6h14 M3 10h14 M3 14h14" />
             </button>
@@ -2231,12 +2243,12 @@ function App() {
             </button>
             <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
             <span className="topbar__spacer" />
-            <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-              <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
-            </button>
-            <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
+            <Button className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search" icon={<Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />}>
+              <kbd>{modKey}K</kbd>
+            </Button>
+            <Button variant="filled" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
-            </button>
+            </Button>
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
@@ -2280,9 +2292,10 @@ function App() {
               setAskDraft('');
               setPage('Chat');
             }}>
+              <GlassLayer kind="bar" />
               <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
-              <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
-              <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
+              <GlassField aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onValueChange={setAskDraft} />
+              <Button type="submit" variant="filled">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</Button>
             </form>
           )}
         </main>
@@ -2302,9 +2315,10 @@ function App() {
       )}
       <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {toast && <div className="toast" role="status"><GlassLayer kind="bar" />{toast}</div>}
     </>
   );
 }
 
+loadGlassLevel();
 createRoot(document.getElementById('root')!).render(<App />);

@@ -7,6 +7,8 @@ import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
 import { linesLabel } from '../../core/linesLabel';
+import { SearchField, SegmentedControl } from 'glisse';
+import { GlassLayer } from '../shared/glass';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -392,6 +394,7 @@ export function Learn({
     return (
       <div className={`learn-page learn-page--lesson${survey ? ' learn-page--survey' : ''}`}>
         <header className="lesson-bar">
+          <GlassLayer kind="bar" />
           <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
           <div className="lesson-bar__meta">
             <span>{open.file || open.project || open.meta || 'Saved lesson'}</span>
@@ -401,23 +404,9 @@ export function Learn({
           {intent === 'quiz' ? (
             <span className="survey-cleared">{cleared} cleared this sitting</span>
           ) : (
-            <div className="lesson-modes" role="group" aria-label="Lesson mode">
-              {([
-                ['read', 'Read'],
-                ['restudy', 'Restudy'],
-                ['check', 'Check'],
-              ] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={mode === id}
-                  className={mode === id ? 'on' : ''}
-                  onClick={() => setMode(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl className="glass-seg glass-seg--3 lesson-modes-seg" aria-label="Lesson mode" value={mode}
+              items={[{ value: 'read', label: 'Read' }, { value: 'restudy', label: 'Restudy' }, { value: 'check', label: 'Check' }]}
+              onValueChange={(next) => setMode(next as typeof mode)} />
           )}
           <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
         </header>
@@ -482,11 +471,9 @@ export function Learn({
               )}
               <div className="study-levels">
                 <span className="learning-kicker">Restudy level</span>
-                <div className="level-row">
-                  {STUDY_LEVELS.map((opt) => (
-                    <button key={opt.id} type="button" className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
-                  ))}
-                </div>
+                <SegmentedControl className="glass-seg glass-seg--level" aria-label="Restudy level" value={level}
+                  items={STUDY_LEVELS.map((opt) => ({ value: opt.id, label: opt.label }))}
+                  onValueChange={setLevel} />
                 <button className="primary-btn" type="button" onClick={() => void onRestudy(open, level)}>Explain again at this level</button>
               </div>
               <div className="study-assistant">
@@ -632,23 +619,13 @@ export function Learn({
           ) : null}
         </div>
         {catalog.length > 0 && intent !== 'quiz' ? (
-          <div className="learn-filters" role="group" aria-label="Filter lessons">
-            {([
+          <SegmentedControl className="glass-seg glass-seg--filters learn-filters-seg" aria-label="Filter lessons" value={filter}
+            items={([
               ['all', 'All', counts.all],
               ['understood', 'Understood', counts.understood],
               ['needs_review', 'Revisit', counts.needs_review],
-            ] as const).map(([id, label, n]) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={filter === id}
-                className={filter === id ? 'on' : ''}
-                onClick={() => setFilter(id)}
-              >
-                {label}<em>{n}</em>
-              </button>
-            ))}
-          </div>
+            ] as const).map(([id, label, n]) => ({ value: id, label: <>{label}<em>{n}</em></> }))}
+            onValueChange={(next) => setFilter(next as typeof filter)} />
         ) : null}
       </div>
 
@@ -656,7 +633,7 @@ export function Learn({
         <div className="history-tools">
           <label className="history-search">
             <span className="sr-only">Search your explanations</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search explanations, files, concepts…" />
+            <SearchField className="history-search__field" value={query} onValueChange={setQuery} placeholder="Search explanations, files, concepts…" />
           </label>
           {continueItem ? (
             <button type="button" className="history-continue" onClick={() => openLesson(continueItem, intent === 'quiz' ? 'check' : continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
@@ -687,6 +664,7 @@ export function Learn({
             <section key={label} className="lib-group">
               <h2 className="lib-group__label">{label}</h2>
               <div className="lib-group__rows">
+                <GlassLayer from="full" kind="card" />
                 {items.map((item) => (
                   <div key={item.id} className={intent === 'quiz' ? 'survey-line' : 'lib-line'}>
                     <button

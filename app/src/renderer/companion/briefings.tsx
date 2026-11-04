@@ -7,6 +7,8 @@ import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
+import { Button, SegmentedControl } from 'glisse';
+import { GlassLayer } from '../shared/glass';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -102,27 +104,15 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
         </div>
         {needsRepo && !busy ? null : (
           <div className="briefings__actions">
-            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
-            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</button>
+            <Button className="soft-btn" disabled={busy} onClick={() => void build(true)}>Choose repo</Button>
+            <Button className="soft-btn" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</Button>
           </div>
         )}
       </div>
 
-      <div className="briefings__scopes" role="tablist" aria-label="Git scope">
-        {SCOPES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            disabled={busy}
-            aria-selected={scope === item.id}
-            className={scope === item.id ? 'on' : ''}
-            onClick={() => setScope(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl className="glass-seg glass-seg--scopes" aria-label="Git scope" aria-disabled={busy} inert={busy} value={scope}
+        items={SCOPES.map((item) => ({ value: item.id, label: item.label }))}
+        onValueChange={(next) => setScope(next as BriefScope)} />
 
       {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
       {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
@@ -148,6 +138,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
 
       {brief && !brief.empty ? (
         <article className="briefings__card">
+          <GlassLayer from="full" kind="card" />
           <div className="briefings__meta">
             {repoLabel ? <span>{repoLabel}</span> : null}
             {branch ? <span>{branch}</span> : null}
@@ -186,6 +177,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       ) : null}
 
       <section className="briefings__knowledge">
+        <GlassLayer from="full" kind="card" />
         <div className="briefings__head">
           <div>
             <div className="kicker">Saved knowledge</div>
@@ -255,6 +247,7 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
   const done = review.reviewFirst.length > 0 && checked.length >= review.reviewFirst.length;
   return (
     <article className="agent-review" aria-label="After-agent review">
+      <GlassLayer from="full" kind="card" />
       <header className="agent-review__head">
         <Buddy mood={done ? 'happy' : 'reading'} size={44} label="Vibe" />
         <div>

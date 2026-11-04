@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { Button } from 'glisse';
 import { Buddy, setBuddyMood, useBuddyMood } from '../shared/buddy';
+import { useGlassFrom } from '../shared/glass';
 
 const GREETED_KEY = 'unvibe.vibe.greetedOn';
 const SLEEP_AFTER_MS = 120_000;
@@ -20,6 +22,8 @@ export function FloatingBuddy({ userName, onOpenChat, hidden }: { userName?: str
   const mood = useBuddyMood('idle');
   const [bubble, setBubble] = useState('');
   const lastActive = useRef(Date.now());
+  // Branch-only (app/glass): the floating Vibe button is a Glisse Button at the full level.
+  const glass = useGlassFrom('full');
 
   // Once-a-day greeting.
   useEffect(() => {
@@ -66,9 +70,13 @@ export function FloatingBuddy({ userName, onOpenChat, hidden }: { userName?: str
   return (
     <div className={`vibe-float vibe-float--${mood}`}>
       {bubble ? <div className="vibe-float__bubble" role="status">{bubble}</div> : null}
-      <button type="button" className="vibe-float__btn" onClick={onOpenChat} aria-label="Ask Vibe" title="Ask Vibe">
-        <Buddy mood={mood} size={46} follow />
-      </button>
+      {glass
+        ? <Button className="vibe-float__btn" onClick={onOpenChat} aria-label="Ask Vibe" title="Ask Vibe" icon={<Buddy mood={mood} size={46} follow />} />
+        : (
+          <button type="button" className="vibe-float__btn" onClick={onOpenChat} aria-label="Ask Vibe" title="Ask Vibe">
+            <Buddy mood={mood} size={46} follow />
+          </button>
+        )}
     </div>
   );
 }

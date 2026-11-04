@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { isMac } from '../shared/platform';
+import { GlassLayer } from '../shared/glass';
 
 interface AccountMenuProps {
   name: string;
@@ -98,6 +99,7 @@ export function AccountMenu(props: AccountMenuProps) {
     <div className="acct" ref={rootRef}>
       {open ? (
         <div className="acct-menu" role="menu" aria-label="Account" onKeyDown={onMenuKey} style={{ left: pos.left, bottom: pos.bottom }}>
+          <GlassLayer kind="sheet" />
           <div className="acct-menu__head">
             <span className="acct-avatar acct-avatar--lg" aria-hidden="true">{initials(name)}</span>
             <div className="acct-menu__who">

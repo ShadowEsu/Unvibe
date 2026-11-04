@@ -7,6 +7,8 @@ import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { Menu } from 'glisse';
+import { GlassLayer } from '../shared/glass';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -70,49 +72,23 @@ function AiPicker({
   usingOwnAi: boolean;
   onOpenSettings: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('pointerdown', onPointer);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('pointerdown', onPointer);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
+  // Glisse Menu (L1): it owns open state, outside click, Escape and arrow keys. The trigger keeps
+  // the provider name visible; the accessible name starts with it.
   return (
-    <div className="chat-ai" ref={rootRef}>
-      <button
-        type="button"
-        className="chat-ai__btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <small>{label}</small>
-        <em aria-hidden="true">▾</em>
-      </button>
-      {open ? (
-        <div className="chat-ai__menu" role="menu">
-          <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpenSettings(); }}>
-            Change AI
-            <span>Open settings to pick Unvibe AI or another provider.</span>
-          </button>
-          <button type="button" role="menuitem" onClick={() => { setOpen(false); onOpenSettings(); }}>
-            {usingOwnAi ? 'Manage API key' : 'Use an API key'}
-            <span>{usingOwnAi ? `Update or remove the key kept on this ${deviceName}.` : `Keep a provider key on this ${deviceName} if you want your own model.`}</span>
-          </button>
-        </div>
-      ) : null}
+    <div className="chat-ai">
+      <Menu
+        className="chat-ai__glass"
+        aria-label={`${label}: AI options`}
+        align="start"
+        icon={<span className="chat-ai__label"><small>{label}</small><em aria-hidden="true">▾</em></span>}
+        items={[
+          { label: <span className="chat-ai__item">Change AI<span>Open settings to pick Unvibe AI or another provider.</span></span>, onSelect: onOpenSettings },
+          {
+            label: <span className="chat-ai__item">{usingOwnAi ? 'Manage API key' : 'Use an API key'}<span>{usingOwnAi ? `Update or remove the key kept on this ${deviceName}.` : `Keep a provider key on this ${deviceName} if you want your own model.`}</span></span>,
+            onSelect: onOpenSettings,
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -404,6 +380,7 @@ export function Chat({
           }}
         >
           <div className="chat-composer">
+            <GlassLayer kind="bar" />
             <label className="sr-only" htmlFor="chatDraft">Message</label>
             <textarea
               id="chatDraft"

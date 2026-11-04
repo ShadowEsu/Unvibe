@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Buddy } from '../shared/buddy';
 import { playTone } from '../shared/tones';
+import { GlassLayer } from '../shared/glass';
 
 /** A small card when a newer Unvibe exists. One click downloads it, swaps the app and reopens. */
 export function UpdateCard() {
@@ -31,6 +32,7 @@ export function UpdateCard() {
 
   return (
     <div className="update-card" role="status" aria-live="polite">
+      <GlassLayer kind="bar" />
       <Buddy mood={state === 'working' ? 'thinking' : 'wave'} size={44} label="Vibe" />
       <div className="update-card__body">
         <strong>Unvibe {latest} is ready</strong>

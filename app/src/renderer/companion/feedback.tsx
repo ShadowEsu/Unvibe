@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
+import { Button } from 'glisse';
+import { GlassLayer } from '../shared/glass';
 
 const MAX_WORDS = 100;
 export const FEEDBACK_ASKED_KEY = 'unvibe.feedbackAsked';
@@ -55,6 +57,7 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
   return (
     <div className="fbk-overlay" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fbk" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="fbk-title">
+        <GlassLayer kind="sheet" />
         <button type="button" className="fbk__close" aria-label="Close feedback" onClick={onClose}>
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10 M15 5L5 15" /></svg>
         </button>
@@ -85,7 +88,7 @@ export function FeedbackCard({ onClose }: { onClose: () => void }) {
             <p className={`fbk__count${tooLong ? ' is-over' : ''}`}>{count}/{MAX_WORDS} words</p>
             {state === 'error' ? <p className="field-err" role="alert">{error}</p> : null}
             <div className="fbk__actions">
-              <button type="button" className="soft-btn" onClick={onClose}>Maybe later</button>
+              <Button className="soft-btn" onClick={onClose}>Maybe later</Button>
               <button type="submit" className="primary-btn" disabled={!rating || tooLong || state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send'}</button>
             </div>
           </form>

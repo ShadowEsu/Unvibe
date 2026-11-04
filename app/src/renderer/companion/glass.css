@@ -1,0 +1,117 @@
+/* BRANCH-ONLY (app/glass, ledger 436). The companion's Liquid Glass, over the v7 paper-and-ink layer.
+   This file loads before companion.css (it ships in companion.glass.css with Glisse's CSS), so
+   rules start with :root[data-ui][data-v7][data-glass], one attribute more than v7's own, or use
+   !important where v7 sets the same property on hover. Which surfaces are glass: the GlassLayer
+   `from` props in the TSX. Consent, legal and reading text never sit on glass:
+   ConsentDialog, sign-in, onboarding, .mbody and .lesson-doc keep their solid paper. */
+
+:root[data-glass] {
+  --surface-solid: #ffffff;
+  --border-strong: #141414;
+  --glass-ring: #141414;
+  --lg-ring: #141414;
+  /* Filled (primary) Glisse buttons take the lime accent with ink text; v7 colours them already. */
+  --lg-fill: #d6f45a;
+  /* Switch "on": v7's green, 4.6:1 on white, so the control passes 3:1 (Design §3). */
+  --lg-on: #1f8a4c;
+}
+
+/* ── Glisse controls inside v7 ───────────────────────────────────────────── */
+/* Secondary buttons are glass. v7 paints .act, .soft-btn, .topbar__search and friends white, so
+   the fill comes back here; v7 keeps their size, border and type, so layout does not move. */
+:root[data-ui][data-v7][data-glass] .lg-button:not([data-variant]):not([data-destructive]) {
+  background-color: var(--lg-glass) !important;
+  background-image: var(--lg-rim, none) !important;
+}
+:root[data-ui][data-v7][data-glass] .lg-button:not([data-variant]):not([data-destructive]):is(:hover:not(:disabled), :active, [data-pressed]) {
+  background-color: var(--lg-glass-active) !important;
+}
+/* companion.css presses every button down 1px; Glisse controls have their own press. */
+:root[data-glass] :is(.lg-switch, .lg-tab, .lg-menu-item, .lg-input-clear):not(:disabled):active { transform: none; }
+:root[data-glass] .lg-input input:focus-visible { outline: none; }
+
+/* Segmented controls: v7 type, a fixed segment width per control so labels never clip. */
+:root[data-glass] .glass-seg {
+  --lg-tab-height: 30px;
+  --lg-tab-width: 64px;
+  flex: none;
+  font: 600 12.5px var(--font-sans);
+}
+:root[data-glass] .glass-seg .lg-tab-text { white-space: nowrap; }
+:root[data-glass] .glass-seg--2 { --lg-tab-width: 72px; }
+:root[data-glass] .glass-seg--wide { --lg-tab-width: 136px; }
+:root[data-glass] .glass-seg--level { --lg-tab-width: 96px; margin: 10px 0 14px; }
+:root[data-glass] .glass-seg--filters { --lg-tab-width: 108px; }
+:root[data-glass] .glass-seg--scopes { --lg-tab-width: 118px; }
+:root[data-glass] .glass-seg[aria-disabled="true"] { opacity: 0.45; }
+:root[data-glass] .learn-filters-seg em { margin-left: 5px; font: normal 600 11px var(--font-mono); color: var(--v-faint); }
+:root[data-glass] .lesson-modes-seg { margin-left: auto; }
+
+/* Search: the field fills the palette head; the clear button is not one of the head's pills. */
+:root[data-glass] .search-palette__field { flex: 1; max-width: none; }
+:root[data-glass] .search-palette__head .lg-input-clear { padding: 0; border: 0; background: none; }
+:root[data-glass] .search-palette__head .lg-input-clear svg { width: 14px; height: 14px; }
+:root[data-glass] .history-search__field { max-width: none; height: 38px; }
+
+/* Chat's AI menu: the trigger shows the provider; in the composer the menu opens upward. */
+:root[data-glass] .chat-ai .lg-button[data-icon="only"] { width: auto; height: 32px; padding: 0 12px; }
+:root[data-glass] .chat-ai__label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+:root[data-glass] .chat-ai__label em { font-style: normal; color: var(--v-faint); }
+:root[data-glass] .chat-ai__item { display: grid; gap: 2px; text-align: left; }
+:root[data-glass] .chat-ai__item > span { color: var(--v-muted); font-size: 12px; }
+:root[data-glass] .chat-ai .lg-menu-card { width: 280px; }
+:root[data-glass] .chat-composer__bar .chat-ai .lg-menu-card { top: auto; bottom: 0; transform-origin: 20px calc(100% - 16px); }
+
+/* Inputs are L2 only (GlassField renders a plain input below full). */
+:root[data-glass="full"] .ask-dock .glass-field { flex: 1; max-width: none; height: 38px; }
+:root[data-glass="full"] .setrow .glass-field { max-width: 240px; }
+:root[data-glass="full"] .ai-key-row .glass-field { flex: 1; max-width: none; }
+
+/* ── L1 floating chrome ──────────────────────────────────────────────────── */
+/* No 6px or 3px ink offset "sticker" shadow under glass; a soft drop keeps the lift. */
+:root[data-ui][data-v7][data-glass] :is(.ask-dock, .chat-composer, .modal, .search-palette, .acct-menu, .toast, .update-card, .fbk):has(> .glass-layer) {
+  box-shadow: 0 18px 50px -22px rgb(20 20 20 / 0.42);
+}
+:root[data-ui][data-v7][data-glass] :is(.ask-dock, .chat-composer):has(> .glass-layer):focus-within {
+  box-shadow: 0 18px 50px -22px rgb(20 20 20 / 0.42), 0 0 0 4px rgb(214 244 90 / 0.55);
+}
+/* The toast was ink on paper; on glass it is ink text (9:1 or more over the darkest backdrop). */
+:root[data-ui][data-v7][data-glass] .toast:has(> .glass-layer) { color: var(--v-ink); border-color: var(--v-ink); }
+/* Settings: the nav column shows the glass sheet; the reading pane (.mbody, which holds the
+   consent and privacy rows) stays solid white. */
+:root[data-ui][data-v7][data-glass] .modal:has(> .glass-layer) .mside { background: transparent; }
+/* A backdrop-filter on the dimming overlay would make it the sheet's backdrop root, so the sheet
+   could only blur the overlay's tint. The overlay keeps its dim; the sheet does the blurring. */
+:root[data-ui][data-v7][data-glass] :is(.overlay, .search-overlay):has(.glass-layer) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ── L2 panel shell and cards ────────────────────────────────────────────── */
+/* Cards drop the sticker shadow and take a 1.5px ink edge (Design, 4 Nov). */
+:root[data-ui][data-v7][data-glass="full"] :is(.agent-review, .briefings__card, .briefings__knowledge, .today-goal):has(> .glass-layer) {
+  border: 1.5px solid var(--v-ink);
+  box-shadow: none;
+}
+/* Borderless lists: the pane bleeds past the rows and draws the ink edge itself, so no box moves. */
+:root[data-ui][data-v7][data-glass="full"] :is(.today-sec, .lib-group__rows) > .glass-layer.glass-layer {
+  inset: -10px !important;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1.5px var(--v-ink);
+}
+:root[data-ui][data-v7][data-glass="full"] .lib-group__rows:has(> .glass-layer) :is(.lib-line, .survey-line) { background: transparent; }
+:root[data-ui][data-v7][data-glass="full"] .lib-group__rows:has(> .glass-layer) :is(.lib-line, .survey-line):hover { background: rgb(255 255 255 / 0.6); }
+/* The floating Vibe button is a Glisse Button at L2: v7 keeps its 60px circle and ink edge; the fill
+   is glass, the sticker shadow goes, and the endless bob stops so the blur is not re-filtered every
+   frame (no infinite animation on glass). */
+:root[data-ui][data-v7][data-glass="full"] .vibe-float__btn.lg-button {
+  background-color: var(--lg-glass) !important;
+  background-image: var(--lg-rim, none) !important;
+  padding: 0;
+  border: 1.5px solid var(--v-ink);
+  box-shadow: 0 14px 30px -14px rgb(20 20 20 / 0.45);
+  animation: none;
+}
+/* Reading text stays near-solid (0.94 or more) inside the glass shell. Lessons sit on their own
+   white .lesson-doc; chat answers have no card of their own, so the shell turns near-solid on Chat. */
+:root[data-ui][data-v7][data-glass="full"] .content:has(.chat-assistant) > .glass-layer { --lg-glass: rgb(255 255 255 / 0.95); }

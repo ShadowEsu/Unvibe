@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { Button, SearchField } from 'glisse';
+import { GlassLayer } from '../shared/glass';
 
 export interface SearchPaletteItem {
   id: string;
@@ -77,17 +79,17 @@ export function SearchPalette({ groups, query, onQuery, onClose }: {
           }
         }}
       >
+        <GlassLayer kind="sheet" />
         <div className="search-palette__head">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m12.5 12.5 4 4" /></svg>
-          <input
+          <SearchField
             ref={inputRef}
-            type="search"
+            className="search-palette__field"
             aria-label="Search lessons and pages"
             placeholder="Search lessons, concepts, or pages"
             value={query}
-            onChange={(event) => onQuery(event.target.value)}
+            onValueChange={onQuery}
           />
-          <button type="button" onClick={onClose} aria-label="Close search">Esc</button>
+          <Button className="search-palette__close" onClick={onClose} aria-label="Close search">Esc</Button>
         </div>
         <div className="search-palette__body">
           {groups.length === 0 ? (
