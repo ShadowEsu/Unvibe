@@ -12,6 +12,8 @@ import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
+import { WhatLeaves } from "@/components/paper/WhatLeaves";
+import { HomePricing } from "@/components/paper/HomePricing";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -90,12 +92,16 @@ export default function HomePage() {
         </div>
       </section>
 
+      <WhatLeaves />
+
+      <HomePricing />
+
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
         <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Download</p>
             <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>
-            <p className="paper-lead">Pick your computer, open the app, then press the shortcut in any app.</p>
+            <p className="paper-lead">Download, open the app, then press the shortcut in any app.</p>
           </div>
           <BetaInstall tone="page" surface="home_install" showFeedback={false} title={null} />
         </div>

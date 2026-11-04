@@ -110,14 +110,17 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
 
   const load = useCallback(async () => {
     try {
+      // Without a saved token the two admin routes can only answer 401, so they are not called (QA P3, 2 Nov).
+      const hasToken = Boolean(readFounderToken());
       const [statsResponse, waitlistResponse, metricsResponse] = await Promise.all([
         fetch("/api/stats?include=waitlist", { cache: "no-store" }),
-        fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }),
-        fetch("/api/founder/metrics", { cache: "no-store", headers: founderHeaders() }),
+        hasToken ? fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }) : null,
+        hasToken ? fetch("/api/founder/metrics", { cache: "no-store", headers: founderHeaders() }) : null,
       ]);
-      setLocked(waitlistResponse.status === 401 || metricsResponse.status === 401);
-      const metrics = await metricsResponse.json().catch(() => null) as { ok?: true; appUsers?: AppUserStats } | null;
-      setAppUsers(metricsResponse.ok && metrics?.appUsers ? metrics.appUsers : null);
+      const waitlistLocked = !waitlistResponse || waitlistResponse.status === 401;
+      setLocked(waitlistLocked || !metricsResponse || metricsResponse.status === 401);
+      const metrics = metricsResponse ? await metricsResponse.json().catch(() => null) as { ok?: true; appUsers?: AppUserStats } | null : null;
+      setAppUsers(metricsResponse?.ok && metrics?.appUsers ? metrics.appUsers : null);
       const payload = await statsResponse.json().catch(() => null) as AnalyticsPayload | { error?: string } | null;
       if (!statsResponse.ok || !payload || !("ok" in payload) || payload.ok !== true) {
         throw new Error(payload && "error" in payload ? payload.error || "Analytics are unavailable." : "Analytics are unavailable.");
@@ -126,11 +129,11 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
       setError(null);
       setUpdatedAt(new Date());
 
-      const roster = await waitlistResponse.json().catch(() => null) as { ok?: true; entries?: WaitlistPerson[]; error?: string } | null;
-      if (waitlistResponse.status === 401) {
+      const roster = waitlistResponse ? await waitlistResponse.json().catch(() => null) as { ok?: true; entries?: WaitlistPerson[]; error?: string } | null : null;
+      if (waitlistLocked) {
         setPeople([]);
         setPeopleError("Enter the admin token above to see names and emails.");
-      } else if (!waitlistResponse.ok || !roster?.ok || !roster.entries) {
+      } else if (!waitlistResponse?.ok || !roster?.ok || !roster.entries) {
         setPeople([]);
         setPeopleError(roster && "error" in roster ? roster.error || "Waitlist names could not load." : "Waitlist names could not load.");
       } else {

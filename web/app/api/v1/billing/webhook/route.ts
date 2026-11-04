@@ -2,7 +2,7 @@ import { errorSummary } from '@/billing/http';
 import { getBillingStore } from '@/billing/store';
 import { getStripe, paymentsLocked } from '@/billing/stripe';
 import { stripeKeyMode, webhookSecretValid } from '@/billing/stripeKey';
-import { processStripeEvent } from '@/billing/webhooks';
+import { otherProductOf, processStripeEvent } from '@/billing/webhooks';
 
 export const runtime = 'nodejs';
 // A claim is a 5-minute lease (claim_billing_webhook). Cap the run well below it so a re-claimed
@@ -29,6 +29,18 @@ function idempotencyKeyInUse(error: unknown): boolean {
   return typeof error === 'object' && error !== null
     && 'statusCode' in error && error.statusCode === 409
     && 'code' in error && error.code === 'idempotency_key_in_use';
+}
+
+// Security MUST-J1: another product's object on the shared Stripe account is acknowledged with a 200,
+// so Stripe stops retrying it, logged and audited, and nothing is granted, written or failed for it.
+async function ignoredOtherProduct(store: ReturnType<typeof getBillingStore>, event: { id: string; type: string }, product: string): Promise<Response> {
+  console.error(`[billing] webhook ${event.type} ${event.id} ignored: product ${product}`);
+  try {
+    await store.recordAudit(null, null, 'webhook.ignored_other_product', { eventId: event.id, eventType: event.type, product });
+  } catch (error) {
+    console.error(`[billing] webhook ${event.id} other-product audit failed: ${errorSummary(error)}`);
+  }
+  return Response.json({ ignored: 'other_product' });
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -58,6 +70,10 @@ export async function POST(req: Request): Promise<Response> {
     }
     return Response.json({ ignored: 'livemode_mismatch' });
   }
+  // Before the lock and the claim: with purchases locked a live subscription or invoice event still
+  // runs revoke-only, and another product's object must reach neither.
+  const otherProduct = otherProductOf(event);
+  if (otherProduct) return ignoredOtherProduct(store, event, otherProduct);
   let revokeOnly = false;
   if (paymentsLocked() && !revokesAccess(event.type)) {
     const downgrades = event.type === 'customer.subscription.updated' || event.type === 'invoice.paid' || event.type === 'invoice.payment_failed';
@@ -71,7 +87,7 @@ export async function POST(req: Request): Promise<Response> {
   // Another delivery holds the lease and may still die; a non-2xx makes Stripe retry later.
   if (claim === 'in_progress') return Response.json({ error: 'webhook_in_progress' }, { status: 409 });
   try {
-    await processStripeEvent(store, event, {
+    const outcome = await processStripeEvent(store, event, {
       retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
       retrieveCheckoutSession: (id) => stripe.checkout.sessions.retrieve(id, { expand: ['line_items.data.price'] }),
       invoicesForPaymentIntent: async (paymentIntent) => {
@@ -101,6 +117,8 @@ export async function POST(req: Request): Promise<Response> {
       refundPayment: async (target, idempotencyKey) => (await stripe.refunds.create(target, { idempotencyKey })).id,
     }, { revokeOnly });
     await store.completeWebhook(event.id);
+    // The subscription Stripe returned carried another product's tag: completed, so a replay is a duplicate.
+    if (outcome?.ignored === 'other_product') return ignoredOtherProduct(store, event, outcome.product);
     return Response.json({ received: true });
   } catch (error) {
     const summary = errorSummary(error);

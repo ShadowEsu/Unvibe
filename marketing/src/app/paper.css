@@ -128,8 +128,7 @@ h2 {
 
 .paper-beta__title,
 .paper-beta__version,
-.paper-beta__offer,
-.paper-beta__os {
+.paper-beta__offer {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
@@ -147,56 +146,6 @@ h2 {
   font-size: clamp(0.88rem, 1.7vw, 1.08rem);
   font-weight: 600;
   letter-spacing: -0.02em;
-}
-
-.paper-beta__os {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
-  width: min(100%, 22rem);
-  margin-top: 0.35rem;
-  margin-inline: auto;
-  justify-self: center;
-}
-
-.paper-beta__os button {
-  appearance: none;
-  margin: 0;
-  display: grid;
-  gap: 0.12rem;
-  justify-items: center;
-  text-align: center;
-  padding: 0.72rem 0.9rem;
-  border: 1.5px solid currentColor;
-  border-radius: 0.7rem;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  letter-spacing: -0.02em;
-  cursor: pointer;
-  transition: background-color 140ms ease, border-width 140ms ease, transform 140ms ease;
-}
-
-.paper-beta__os button.is-on {
-  /* Selection shows through fill and border, not fading the other tab (its meta line failed 4.5:1). */
-  border-width: 2.5px;
-  background: rgb(255 255 255 / 0.42);
-  transform: translateY(-1px);
-}
-
-.paper-beta__os-name {
-  font-family: var(--font-sans);
-  font-size: clamp(0.98rem, 2vw, 1.08rem);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.paper-beta__os-meta {
-  font-family: var(--font-mono);
-  font-size: max(13px, 0.68rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  opacity: 0.72;
 }
 
 .paper-beta__blurb,
@@ -383,7 +332,6 @@ h2 {
 .paper-beta--page .paper-beta__cmd,
 .paper-beta--page .paper-beta__error,
 .paper-beta--page .paper-beta__term button,
-.paper-beta--page .paper-beta__os button,
 .paper-beta--page .paper-beta__survey {
   color: var(--ink);
   text-shadow: none;
@@ -631,7 +579,7 @@ h2 {
   align-items: end;
   justify-content: center;
   gap: 1rem;
-  animation: paperKeysBreathe 6.4s var(--ease-calm) infinite;
+  animation: paperKeysBreathe 6.4s var(--ease-calm) 3;
 }
 
 .paper-key {
@@ -728,7 +676,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   align-items: center;
   justify-content: center;
   gap: 0.9rem 1.05rem;
-  animation: paperKeysBreathe 6.4s var(--ease-calm) infinite;
+  animation: paperKeysBreathe 6.4s var(--ease-calm) 3;
 }
 
 .paper-follow__mark {
@@ -962,7 +910,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-invite.is-armed.is-lit .paper-invite__card {
-  animation: paperInviteRise 450ms var(--ease-emphatic) both;
+  animation: paperInviteRise var(--dur-standard) var(--ease-emphatic) both;
 }
 
 .paper-invite__card h2 {
@@ -1237,8 +1185,21 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   font-size: 0.82rem;
 }
 
-.paper-listings__links a:hover {
+.paper-listings__links a:hover,
+.paper-listings__pending a:hover {
   color: var(--brand);
+}
+
+.paper-listings__pending {
+  margin: 0.6rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.paper-listings__pending a {
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .launch-subpage .marketing-plan-price,
@@ -1755,7 +1716,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   height: 100%;
   background: var(--hero-type);
   transform-origin: left center;
-  animation: paperMeterFill 1.6s var(--ease-emphatic) both;
+  animation: paperMeterFill 400ms var(--ease-emphatic) both;
 }
 
 .paper-meter strong {
@@ -1813,7 +1774,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__lane {
-  animation: paperMapDraw 2.4s var(--ease-emphatic) both;
+  animation: paperMapDraw 400ms var(--ease-emphatic) both;
 }
 
 .paper-map__dash {
@@ -1826,7 +1787,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__dash {
-  animation: paperMapDash 0.5s 2.1s var(--ease-calm) both;
+  animation: paperMapDash var(--dur-standard) 400ms var(--ease-calm) both;
 }
 
 @keyframes paperMapDraw {
@@ -1899,21 +1860,15 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-map.is-drawn .paper-map__node {
-  animation: paperMapNode 0.85s var(--ease-emphatic) both;
+  animation: paperMapNode var(--dur-standard) var(--ease-emphatic) both;
 }
 
-.paper-map.is-drawn .paper-map__node:nth-child(1) { animation-delay: 0.12s; }
-.paper-map.is-drawn .paper-map__node:nth-child(2) { animation-delay: 0.28s; }
-.paper-map.is-drawn .paper-map__node:nth-child(3) { animation-delay: 0.44s; }
-.paper-map.is-drawn .paper-map__node:nth-child(4) { animation-delay: 0.6s; }
-.paper-map.is-drawn .paper-map__node:nth-child(5) { animation-delay: 0.76s; }
-.paper-map.is-drawn .paper-map__node:nth-child(6) { animation-delay: 0.92s; }
-.paper-map.is-drawn .paper-map__node:nth-child(7) { animation-delay: 1.08s; }
-.paper-map.is-drawn .paper-map__node:nth-child(8) { animation-delay: 1.24s; }
-.paper-map.is-drawn .paper-map__node:nth-child(9) { animation-delay: 1.4s; }
-.paper-map.is-drawn .paper-map__node:nth-child(10) { animation-delay: 1.56s; }
-.paper-map.is-drawn .paper-map__node:nth-child(11) { animation-delay: 1.72s; }
-.paper-map.is-drawn .paper-map__node:nth-child(12) { animation-delay: 1.88s; }
+/* 60 ms apart, capped at the 6th, so the whole map is in by 0.6 s. */
+.paper-map.is-drawn .paper-map__node:nth-child(2) { animation-delay: 60ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(3) { animation-delay: 120ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(4) { animation-delay: 180ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(5) { animation-delay: 240ms; }
+.paper-map.is-drawn .paper-map__node:nth-child(n + 6) { animation-delay: 300ms; }
 
 @keyframes paperMapNode {
   to {
@@ -1925,10 +1880,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 .paper-map__node.is-now strong,
 .paper-map__node.is-live strong {
   color: var(--brand);
-}
-
-.paper-map.is-drawn .paper-map__node.is-live strong {
-  animation: paperLivePulse 2.2s var(--ease-calm) infinite;
 }
 
 .paper-live {
@@ -2103,9 +2054,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   opacity: 0;
 }
 
-.paper-beta__download-btn:focus-visible,
-.paper-beta__os button:focus-visible,
-.paper-beta__term-toggle:focus-visible {
+.paper-beta__download-btn:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
@@ -2116,100 +2065,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 
 .paper-beta__download-btn svg {
   flex-shrink: 0;
-}
-
-/* ── OS tab icons ── */
-
-.paper-beta__os-icon {
-  display: flex;
-  align-items: center;
-}
-
-.paper-beta__os button {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 0.55rem;
-  row-gap: 0.08rem;
-  align-items: center;
-}
-
-.paper-beta__os button .paper-beta__os-icon {
-  grid-column: 1;
-  grid-row: 1 / -1;
-}
-
-.paper-beta__os button .paper-beta__os-name {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.paper-beta__os button .paper-beta__os-meta {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-/* ── Spec pills ── */
-
-.paper-beta__specs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  margin-top: 0.2rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  opacity: 0.72;
-}
-
-.paper-beta--page .paper-beta__specs {
-  color: var(--ink);
-}
-
-/* ── Terminal toggle ── */
-
-.paper-beta__term-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  width: fit-content;
-  margin: 0.25rem auto 0;
-  padding: 0.45rem 0.85rem;
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-pill);
-  background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  color: inherit;
-  font-family: var(--font-mono);
-  font-size: max(13px, 0.74rem);
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-
-.paper-beta__term-toggle:hover {
-  background: var(--glass-field);
-  border-color: rgb(255 255 255 / 0.5);
-  transform: translateY(-1px);
-}
-
-.paper-beta--page .paper-beta__term-toggle {
-  color: var(--u-text);
-  border-color: var(--u-line);
-  background: var(--u-raise);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.paper-beta--page .paper-beta__term-toggle:hover {
-  background: var(--u-card);
-  border-color: var(--u-line-strong);
 }
 
 .paper-beta__term-drawer {
@@ -2276,23 +2131,10 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   white-space: nowrap;
 }
 
-.paper-beta__step-arrow {
-  font-size: 0.82rem;
-  opacity: 0.55;
-}
-
-.paper-beta--page .paper-beta__step-arrow {
-  color: var(--ink);
-}
-
 @media (max-width: 520px) {
   .paper-beta__quickstart {
     flex-direction: column;
     gap: 0.35rem;
-  }
-
-  .paper-beta__step-arrow {
-    transform: rotate(90deg);
   }
 }
 

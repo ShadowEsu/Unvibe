@@ -163,10 +163,6 @@ body:has(.paper-pricing) .fb-tab {
   font-size: clamp(1.7rem, 3.2vw, 2.3rem) !important;
 }
 
-.beta-page .paper-beta__os-meta {
-  color: var(--u-text-2);
-}
-
 .beta-page__trust-item {
   border: 1.5px solid var(--v-ink);
   background: var(--u-card);

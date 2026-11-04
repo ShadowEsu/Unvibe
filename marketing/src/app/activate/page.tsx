@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { ACCOUNT_POLICY_VERSION, ACTIVATE_AGREEMENT_KEY, saveAgreement, storedAgreement } from "@/lib/accountAgreement";
 import { clearDeviceCode, opensForSignIn, pendingDeviceCode, saveDeviceCode } from "@/lib/deviceApproval";
+import { SIGN_IN_DID_NOT_FINISH, signInReturnFailed } from "@/lib/oauthReturn";
 
 function sessionStore(): Storage | null {
   try {
@@ -41,6 +42,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
   const [emailError, setEmailError] = useState("");
   const emailField = useRef<HTMLInputElement>(null);
   const [authMessage, setAuthMessage] = useState("");
+  const [signInFailed, setSignInFailed] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [terms, setTerms] = useState(false);
@@ -106,13 +108,19 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
     let cancelled = false;
 
     async function bootstrap() {
+      // Cancel at Google or any sign-in error comes back as error= in the query or hash: say so, show none of it.
+      if (signInReturnFailed(window.location.search, window.location.hash)) {
+        if (!cancelled) {
+          setSignInFailed(true);
+          setFirstVisit(false); // an error only in the hash still lands on the sign-in view, not the first-visit intro
+        }
+        window.history.replaceState({}, "", activateOrigin());
+      }
       const params = new URLSearchParams(window.location.search);
       const oauthCode = params.get("code");
       if (oauthCode && oauthCode.length > 16) {
         const { error } = await client!.auth.exchangeCodeForSession(oauthCode);
-        if (error && !cancelled) {
-          setAuthMessage("Google sign-in did not finish. Try Continue with Google again.");
-        }
+        if (error && !cancelled) setSignInFailed(true);
         window.history.replaceState({}, "", activateOrigin());
       }
 
@@ -173,6 +181,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
     if (!client || needsAgreement()) return;
     setAuthBusy(true);
     setAuthMessage("");
+    setSignInFailed(false);
     try {
       saveDeviceCode(code, codeFromLink, sessionStore());
       const { error } = await client.auth.signInWithOAuth({
@@ -275,6 +284,14 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
             {authBusy ? "Opening Google…" : "Continue with Google"}
           </button>
           {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
+          {signInFailed && (
+            <p className="activate-note activate-note--error" role="alert">
+              {SIGN_IN_DID_NOT_FINISH}{" "}
+              <button className="activate-retry" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
+                Try again with Google
+              </button>
+            </p>
+          )}
           <div className="activate-divider">or email a link</div>
           <form noValidate onSubmit={submitMagicLink}>
             <label className="activate-label" htmlFor="activate-email">Email</label>

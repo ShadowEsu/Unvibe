@@ -45,10 +45,11 @@ export default function BetaDownloadsPage() {
       </header>
 
       <section className="paper-section" id="install">
-        <Reveal className="paper-wrap paper-center">
+        {/* The primary download paints at once: no Reveal here (motion spec). */}
+        <div className="paper-wrap paper-center">
           {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
           <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section">

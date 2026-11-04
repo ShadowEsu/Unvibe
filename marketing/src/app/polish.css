@@ -195,7 +195,7 @@
 .paper-join:hover::after,
 .paper-beta__download-btn:hover::after {
   transform: translateX(120%);
-  transition: transform 800ms var(--ease-out-soft);
+  transition: transform 400ms var(--ease-out-soft);
 }
 
 .paper-join:hover {
@@ -297,7 +297,7 @@
   .paper-faq details::details-content {
     height: 0;
     overflow: hidden;
-    transition: height 420ms var(--ease-out-soft), content-visibility 420ms allow-discrete;
+    transition: height var(--dur-standard) var(--ease-out-soft), content-visibility var(--dur-standard) allow-discrete;
   }
 
   .paper-faq details[open]::details-content {
@@ -638,7 +638,7 @@ html[data-performance="lite"] .paper-hero > img {
 }
 
 .marketing-plan-price {
-  animation: priceIn 0.45s var(--ease-out-soft) both;
+  animation: priceIn var(--dur-standard) var(--ease-out-soft) both;
 }
 
 .marketing-plan-per {
@@ -678,7 +678,7 @@ html[data-performance="lite"] .paper-hero > img {
     box-shadow: var(--u-lift-1);
     font-size: 0.85rem;
     transform: translateY(160%);
-    transition: transform 420ms var(--ease-out-soft);
+    transition: transform var(--dur-standard) var(--ease-out-soft);
   }
 
   .mobile-dl.is-in {
@@ -821,7 +821,7 @@ html[data-performance="lite"] .paper-hero > img {
   border-radius: 50%;
   background: #28c840;
   box-shadow: 0 0 10px rgb(40 200 64 / 0.7);
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 2s ease-in-out 3;
 }
 
 .paper-log > * {
