@@ -92,6 +92,19 @@ const accountMenu = (s) => s.companion.locator('.acct-trigger').or(s.companion.l
 // so a state that did not take is visible instead of silently measured.
 const focusApp = async (s) => { execFileSync('open', ['-a', s.bundle]); await sleep(1500); };
 const blurApp = async () => { execFileSync('open', ['-a', 'Finder']); await sleep(1500); };
+/**
+ * Playwright (1.48 here) turns on CDP focus emulation for every page it attaches to, so document.hasFocus() is
+ * always true and the app never sees a blur (run 41786725662: every "blurred" state read focused=true). For the
+ * loop states, switch it off on every window, including ones opened later, so focus follows the real OS focus.
+ * It's page-level state, so a second session's `false` wins.
+ */
+function realFocus(s) {
+  s.app.onWindow((page) => {
+    void s.app.context.newCDPSession(page)
+      .then((cdp) => cdp.send('Emulation.setFocusEmulationEnabled', { enabled: false }))
+      .catch((e) => console.log(`focus emulation not switched off on ${page.url()}: ${String(e).slice(0, 100)}`));
+  });
+}
 
 // ---- measuring ----------------------------------------------------------------------------------------------
 function kind(cmd) {
@@ -154,7 +167,9 @@ async function m3() {
   const cases = [
     ['500', /temporarily unavailable/i, '.state[role="alert"]'],
     ['drop', /could not reach its explanation service|appear to be offline/i, '.state[role="alert"]'],
-    ['429', /paused|limit/i, '.state--limit'],
+    // 0.1.50 turns a used-up trial into the "Session paused" view (.state--limit); older builds show the server's
+    // message as an error. Either replaces the skeleton.
+    ['429', /paused|limit|used all of your free explanations/i, '.state[role="alert"], .state--limit'],
   ];
   for (const [mode, message, selector] of cases) {
     let s;
@@ -190,7 +205,9 @@ async function m4() {
     const panel = await firstRunSample(s);
     await reduce(panel);
     check(await panel.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), 'M4: the panel reports reduced motion');
-    await panel.locator('.answer-wait').waitFor({ timeout: 20000 });
+    // 0.1.50 shows the skeleton (.answer-wait) while waiting; older builds only mark the card streaming.
+    await panel.locator('.answer-wait, .card--streaming').first().waitFor({ timeout: 20000 });
+    note(`M4: waiting shows ${await panel.locator('.answer-wait').count() ? 'the skeleton' : 'no skeleton (pre-0.1.50 build)'}`);
     const frames = [];
     const frame = () => panel.evaluate(() => ({ running: document.getAnimations().filter((a) => a.playState === 'running').map((a) => `${a.animationName}`), leaving: !!document.querySelector('.answer-wait--leaving'), sentences: document.querySelectorAll('.short-answer__sentence').length, done: !!document.querySelector('.card--done') }));
     for (let i = 0; i < 15; i++) { frames.push({ phase: 'waiting', ...(await frame()) }); await sleep(100); }
@@ -275,6 +292,8 @@ async function loopStates(exe, label) {
   try {
     await setMode('stream');
     s = await launch(exe, `loops-${label}`, `qa-motion-mock-loops-${label}-${Date.now()}`, mockEnv());
+    realFocus(s);
+    await sleep(500);
     await s.companion.locator('.ob2__count').first().waitFor({ timeout: 30000 });
     await hold('onboarding', true); await hold('onboarding', false);
     await focusApp(s);
