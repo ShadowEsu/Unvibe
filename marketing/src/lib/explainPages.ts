@@ -236,6 +236,7 @@ ORDER BY spend_rank, c.name;`,
       "`COALESCE(SUM(o.total), 0)` turns the `NULL` sum of a customer with no orders into 0, both in the output and in the ranking.",
       "Use `DENSE_RANK()` to number ties 1, 1, 2 instead of 1, 1, 3.",
       "On a large `orders` table, an index on `orders (customer_id, created_at)` lets the database find each customer's recent orders without reading the whole table.",
+      "This page is about what a query returns. A database's own `EXPLAIN` command answers a different question: it shows the plan the database will use to run the query, such as which index it reads and the order it joins the tables in.",
     ],
     watchOut:
       "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
@@ -863,6 +864,56 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
     ],
     watchOut:
       "`?:` only steps in for `null`. A note of three spaces trims to an empty string, which isn't null, so a 20 g `ENV` parcel with that note gets the label `ENV: 20 g ()`. `note?.trim()?.ifBlank { null } ?: \"no note\"` gives `no note` for it.",
+  },
+  {
+    id: "regex",
+    fileName: "access_log.py",
+    lead: "Paste a regular expression and Vibe explains what each part of it matches.",
+    description:
+      "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
+    sampleSummary: "Pulling the fields out of a web server's access log line with one commented Python regex.",
+    sample: String.raw`import re
+
+# One line of a web server's access log in the common log format, for example:
+# 203.0.113.7 - - [04/Nov/2026:06:12:09 +0000] "GET /pricing HTTP/2.0" 200 5123
+ACCESS_LINE = re.compile(r"""
+    ^(?P<ip>\d{1,3}(?:\.\d{1,3}){3})   # client IPv4 address
+    \s-\s(?P<user>\S+)\s               # "-" when nobody is signed in
+    \[(?P<time>[^\]]+)\]\s             # everything up to the closing bracket
+    "(?P<method>[A-Z]+)\s(?P<path>\S+)\sHTTP/[\d.]+"\s
+    (?P<status>[1-5]\d{2})\s
+    (?P<bytes>\d+|-)$                  # "-" when no body was sent
+""", re.VERBOSE)
+
+line = '203.0.113.7 - - [04/Nov/2026:06:12:09 +0000] "GET /pricing HTTP/2.0" 200 5123'
+m = ACCESS_LINE.match(line)
+print(m.group("path"), m.group("status"), m.group("bytes"))`,
+    shows: [
+      {
+        concept: "groups",
+        text: "`(?P<ip>...)` is a named group: after a match, `m.group(\"ip\")` returns just that part of the line. `(?:\\.\\d{1,3})` groups without capturing, so `{3}` can repeat it without adding a group.",
+      },
+      {
+        concept: "quantifiers",
+        text: "`\\d{1,3}` takes one to three digits and `\\S+` takes one or more characters that aren't spaces. `(?P<bytes>\\d+|-)` takes either a number or a single `-`.",
+      },
+      {
+        concept: "character classes",
+        text: "`[^\\]]+` is a negated class: a run of anything except `]`. It stops at the first closing bracket, so the time can't run on into the rest of the line.",
+      },
+      {
+        concept: "flags",
+        text: "`re.VERBOSE` ignores spaces in the pattern and lets each line end in a `#` comment, which is why the pattern can be laid out one field per line. A real space has to be written as `\\s`.",
+      },
+    ],
+    notes: [
+      "Run on the sample line, the script prints `/pricing 200 5123`.",
+      "`\\d{1,3}` checks the shape of an address, not its value: `999.999.999.999` matches. Pass the `ip` group to Python's `ipaddress.ip_address()` when the address has to be real.",
+      "The pattern only knows IPv4. A line from an IPv6 client, such as `2001:db8::1`, doesn't match at all.",
+      "`match()` already starts at the beginning of the string, so the `^` is there for the reader. The `$` at the end is what makes the whole line required.",
+    ],
+    watchOut:
+      "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
   },
 ];
 
