@@ -1,7 +1,10 @@
 import { Fragment, useState } from 'react';
 import {
   PMF_CONSENT_LINE,
+  PMF_HEARD_OPTIONS,
+  PMF_HEARD_QUESTION,
   PMF_MAX_ANSWER_CHARS,
+  PMF_MAX_HEARD_OTHER_CHARS,
   PMF_Q1_OPTIONS,
   PMF_QUESTIONS,
   type PmfDraft,
@@ -62,12 +65,13 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
     );
   }
   const sending = stage === 'sending';
+  const otherFlagged = Boolean(error) && errorField === 'heardOther';
   return (
     <section className="pmf-card" aria-label="Unvibe survey" aria-live="off">
       <div className="pmf-card__head">
         <div>
           <div className="quiz__kicker">Help shape Unvibe</div>
-          <p className="pmf-card__sub">4 short questions. Only the first one is needed.</p>
+          <p className="pmf-card__sub">5 short questions. Only the first one is needed.</p>
         </div>
         <button type="button" className="pmf-card__close" aria-label="Close survey" title="Not now" disabled={sending} onClick={onDismiss}>×</button>
       </div>
@@ -114,6 +118,42 @@ export function PmfCard({ model, onChange, onSend, onDismiss, onClose }: {
           </Fragment>
         );
       })}
+      <fieldset className="pmf-card__q" disabled={sending}>
+        <legend>{PMF_HEARD_QUESTION}</legend>
+        <div className="pmf-card__options" role="radiogroup">
+          {PMF_HEARD_OPTIONS.map((option) => (
+            <label key={option.id} className={`opt${draft.heard === option.id ? ' sel' : ''}`}>
+              <input
+                type="radio"
+                name="pmf-heard"
+                value={option.id}
+                checked={draft.heard === option.id}
+                onChange={() => onChange({ ...draft, heard: option.id })}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+        {draft.heard === 'other' ? (
+          <input
+            type="text"
+            className="pmf-card__field"
+            aria-label="Where, in a few words"
+            placeholder="Where, in a few words"
+            maxLength={PMF_MAX_HEARD_OTHER_CHARS}
+            value={draft.heardOther}
+            aria-invalid={otherFlagged || undefined}
+            aria-describedby={otherFlagged ? 'pmf-error-heardOther' : undefined}
+            onChange={(e) => onChange({ ...draft, heardOther: e.target.value })}
+          />
+        ) : null}
+      </fieldset>
+      {otherFlagged ? (
+        <p id="pmf-error-heardOther" className="pmf-card__error pmf-card__error--field" role="alert">
+          <span className="pmf-card__error-icon" aria-hidden="true">!</span>
+          {error}
+        </p>
+      ) : null}
       <p className="pmf-card__consent">{PMF_CONSENT_LINE}</p>
       {error && !errorField ? <p className="pmf-card__error" role="alert">{error}</p> : null}
       <div className="quiz__actions">

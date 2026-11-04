@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/feedback/pmf/route';
-import { pmfInstallKey, recordPmfAnswer } from '../src/lib/pmfSurvey';
+import { pmfExportRows, pmfInstallKey, recordPmfAnswer } from '../src/lib/pmfSurvey';
 import { trialInstallKey } from '../src/lib/trialAccess';
 
 // The real route runs; only the Supabase HTTP boundary is local, as in trialProgress.test.ts. The
@@ -21,6 +21,8 @@ interface Row {
   q2: string;
   q3: string;
   q4: string;
+  heard: string;
+  heard_other: string;
   app_version: string;
 }
 
@@ -56,6 +58,8 @@ beforeEach(() => {
       rows.push({
         install_key: key, created_at: new Date().toISOString(), q1: String(body.p_q1), q2: String(body.p_q2),
         q3: String(body.p_q3), q4: String(body.p_q4), app_version: String(body.p_app_version),
+        // The migration's defaults for an answer that skipped the optional question.
+        heard: String(body.p_heard ?? ''), heard_other: String(body.p_heard_other ?? ''),
       });
       return Response.json('ok');
     }
@@ -212,7 +216,7 @@ test('the 90-day rule itself: 89 days later is refused, 91 days later is stored 
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   const key = 'a'.repeat(64);
-  const answer = { q1: 'somewhat' as const, q2: '', q3: '', q4: '', appVersion: '0.1.47' };
+  const answer = { q1: 'somewhat' as const, q2: '', q3: '', q4: '', heard: '' as const, heardOther: '', appVersion: '0.1.47' };
   const first = new Date('2027-01-01T00:00:00Z');
   assert.equal(await recordPmfAnswer(key, answer, first), 'stored');
   assert.equal(await recordPmfAnswer(key, answer, new Date(first.getTime() + 89 * DAY)), 'duplicate');
@@ -267,4 +271,59 @@ test('a storage failure is a 503 and no log line holds answer text', async () =>
   assert.equal((await send('pmf-install-503-abc', valid)).status, 503);
   assert.ok(logged.length > 0);
   for (const line of logged) assert.equal(line.includes(valid.q3), false, line);
+});
+
+test('the optional "where did you first hear" answer: every choice is stored, and skipping it sends no heard arguments', async () => {
+  const choices = ['search', 'friend', 'reddit', 'hacker_news', 'x', 'youtube_tiktok', 'directory', 'other'];
+  for (const [i, heard] of choices.entries()) {
+    assert.equal((await send(`pmf-install-heard-${i}-abc`, { ...valid, heard })).status, 201, heard);
+  }
+  assert.deepEqual(rows.map((r) => r.heard), choices);
+  assert.deepEqual(Object.keys(rpcBodies[0]!).sort(), ['p_app_version', 'p_heard', 'p_heard_other', 'p_install_key', 'p_q1', 'p_q2', 'p_q3', 'p_q4']);
+  for (const body of [valid, { ...valid, heard: '' }, { ...valid, heard: '', heardOther: '' }]) {
+    rpcBodies = [];
+    rows = [];
+    assert.equal((await send('pmf-install-heard-skip-1', body)).status, 201, JSON.stringify(body));
+    assert.equal('p_heard' in rpcBodies[0]!, false, 'works with the function from before the migration');
+    assert.equal(rows[0]!.heard, '');
+  }
+});
+
+test('the Other note is trimmed, capped at 80 characters, and only allowed with Other', async () => {
+  assert.equal((await send('pmf-install-other-ok-1', { ...valid, heard: 'other', heardOther: `  ${'a'.repeat(80)}  ` })).status, 201);
+  assert.equal(rows[0]!.heard_other, 'a'.repeat(80));
+  const refused: Array<[string, Record<string, unknown>]> = [
+    ['heardOther', { heard: 'other', heardOther: 'a'.repeat(81) }],
+    ['heardOther', { heard: 'reddit', heardOther: 'a podcast' }],
+    ['heardOther', { heardOther: 'a podcast' }],
+    ['heardOther', { heard: 'other', heardOther: 5 }],
+    ['heard', { heard: 'Reddit' }],
+    ['heard', { heard: 'tiktok' }],
+    ['heard', { heard: null }],
+    ['heard', { heard: ['reddit'] }],
+  ];
+  for (const [field, patch] of refused) {
+    const response = await send('pmf-install-other-no-1', { ...valid, ...patch });
+    assert.equal(response.status, 400, JSON.stringify(patch));
+    assert.equal((await json(response)).field, field);
+  }
+  const secret = await send('pmf-install-other-no-1', { ...valid, heard: 'other', heardOther: 'AKIAIOSFODNN7EXAMPLE' });
+  assert.deepEqual(await json(secret), { error: 'secret_detected', field: 'heardOther' });
+  assert.equal(rows.length, 1);
+});
+
+test('the export carries the heard answer, empty when skipped (process-memory store)', async () => {
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const answered = 'b'.repeat(64);
+  const skipped = 'c'.repeat(64);
+  const base = { q1: 'very' as const, q2: '', q3: '', q4: '', appVersion: '0.1.48' };
+  assert.equal(await recordPmfAnswer(answered, { ...base, heard: 'other', heardOther: 'A podcast' }), 'stored');
+  assert.equal(await recordPmfAnswer(skipped, { ...base, heard: '', heardOther: '' }), 'stored');
+  const exported = (await pmfExportRows()) ?? [];
+  const byKey = new Map(exported.map((row) => [row.install_key, row]));
+  assert.equal(byKey.get(answered)?.heard, 'other');
+  assert.equal(byKey.get(answered)?.heard_other, 'A podcast');
+  assert.equal(byKey.get(skipped)?.heard, '');
+  assert.equal(byKey.get(skipped)?.heard_other, '');
 });

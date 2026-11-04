@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PMF_CONSENT_LINE,
+  PMF_HEARD_OPTIONS,
+  PMF_HEARD_QUESTION,
   PMF_QUESTIONS,
   PMF_Q1_OPTIONS,
   PMF_SECRET_BLOCKED,
@@ -16,7 +18,7 @@ import { netCalls } from './electronStub';
 
 const DAY = 86_400_000;
 const NOW = new Date('2026-11-10T12:00:00.000Z');
-const EMPTY: PmfDraft = { q1: '', q2: '', q3: '', q4: '' };
+const EMPTY: PmfDraft = { q1: '', q2: '', q3: '', q4: '', heard: '', heardOther: '' };
 
 /**
  * A fake install: `saved` stands in for unvibe-store.json (drafts are ignored once sent or closed,
@@ -50,7 +52,7 @@ function fakeInstall(options: { explanations?: number; firstRunDaysAgo?: number;
   return { deps, saved, run, posts, reply: (next: number | null | 'throw') => { answer = next; } };
 }
 
-const answers: PmfDraft = { q1: 'very', q2: '  Bootcamp students ', q3: 'I can read what the AI wrote', q4: '' };
+const answers: PmfDraft = { q1: 'very', q2: '  Bootcamp students ', q3: 'I can read what the AI wrote', q4: '', heard: '', heardOther: '' };
 
 test('the card shows only when eligible and the build can send, with the saved draft', () => {
   assert.deepEqual(pmfCardState(fakeInstall({ draft: answers }).deps), { show: true, draft: answers });
@@ -76,7 +78,7 @@ test('shown in one run only: still shown later in the same run, never after a re
 test('nothing is sent before Send: showing the card and typing only save on this computer', () => {
   const install = fakeInstall();
   pmfCardState(install.deps);
-  savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: '' }, install.deps);
+  savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: '', heard: '', heardOther: '' }, install.deps);
   savePmfDraft({ ...answers }, install.deps);
   assert.deepEqual(install.saved.draft, answers);
   assert.equal(install.posts.length, 0);
@@ -210,4 +212,38 @@ test('the card copy is the spec wording with Unvibe, Security\'s consent line, a
   const copy = [...Object.values(PMF_QUESTIONS), ...PMF_Q1_OPTIONS.map((o) => o.label), PMF_CONSENT_LINE, PMF_SEND_FAILED, PMF_SECRET_BLOCKED].join(' ');
   assert.equal(/[\u2013\u2014]/.test(copy), false);
   assert.equal(/partner|official|trusted by/i.test(copy), false);
+});
+
+test('the optional "where did you first hear" question: sent only when answered, the note only with Other', async () => {
+  assert.equal(PMF_HEARD_QUESTION, 'Where did you first hear about Unvibe?');
+  assert.deepEqual(PMF_HEARD_OPTIONS.map((o) => o.label), [
+    'Search', 'A friend or colleague', 'Reddit', 'Hacker News', 'X', 'YouTube or TikTok', 'A directory or list', 'Other',
+  ]);
+  assert.equal(/[\u2013\u2014]/.test([PMF_HEARD_QUESTION, ...PMF_HEARD_OPTIONS.map((o) => o.label)].join(' ')), false);
+
+  const picked = fakeInstall();
+  await sendPmfAnswer({ ...answers, heard: 'reddit', heardOther: 'left over from Other' }, picked.deps);
+  assert.equal(picked.posts[0]!.heard, 'reddit');
+  assert.equal('heardOther' in picked.posts[0]!, false, 'a note typed under Other is dropped once another choice is picked');
+
+  const other = fakeInstall();
+  await sendPmfAnswer({ ...answers, heard: 'other', heardOther: '  a podcast  ' }, other.deps);
+  assert.equal(other.posts[0]!.heard, 'other');
+  assert.equal(other.posts[0]!.heardOther, 'a podcast');
+
+  const skipped = fakeInstall();
+  await sendPmfAnswer({ ...answers, heard: 'Reddit', heardOther: 'x' }, skipped.deps);
+  assert.deepEqual(Object.keys(skipped.posts[0]!).sort(), ['appVersion', 'consent', 'q1', 'q2', 'q3', 'q4'], 'unknown or no choice sends what earlier versions sent');
+
+  assert.equal(cleanPmfDraft({ heard: 'other', heardOther: 'y'.repeat(81) }).heardOther.length, 80);
+});
+
+test('the secret filter covers the Other note, but only when it would be sent', async () => {
+  const note = `my key is sk-proj-${'a1B2'.repeat(12)}`;
+  const blocked = fakeInstall();
+  assert.deepEqual(await sendPmfAnswer({ ...answers, heard: 'other', heardOther: note }, blocked.deps), { ok: false, error: PMF_SECRET_BLOCKED, field: 'heardOther' });
+  assert.equal(blocked.posts.length, 0);
+  const notSent = fakeInstall();
+  assert.equal((await sendPmfAnswer({ ...answers, heard: 'search', heardOther: note }, notSent.deps)).ok, true);
+  assert.equal(JSON.stringify(notSent.posts).includes('sk-proj-'), false);
 });

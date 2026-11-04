@@ -1,13 +1,14 @@
 /**
  * The in-app product-market-fit survey (Sean Ellis / Superhuman, ledger 361, backlog FE-09), built to
  * Security's requirements (boss-handoff security/20261030-0728). The desktop app sends only the
- * answers (Q1 enum and 3 texts) and its version, with its random install ID in the trial header,
+ * answers (Q1 enum and 3 texts, plus the optional "where did you first hear about Unvibe" choice and
+ * its short Other note) and its version, with its random install ID in the trial header,
  * and only when the person presses Send. Each install answers at most once per 90 days, enforced
  * here atomically (`submit_pmf_response`); a repeat is a 409 and the first answer is kept.
  *
- * Rows live in `public.pmf_responses` (migration 20261030120000) for 12 months. The install ID is
- * stored only as an HMAC keyed by a server secret, the same secret and fallback as the try_requests
- * IP hashes (`hashVisitor`), so a leaked table can't be matched to install IDs without the key.
+ * Rows live in `public.pmf_responses` (migrations 20261030120000 and 20261104120000) for 12 months.
+ * The install ID is stored only as an HMAC keyed by a server secret, the same secret and fallback as
+ * the try_requests IP hashes (`hashVisitor`), so a leaked table can't be matched to install IDs without the key.
  * Answer text is never logged. Process memory stands in only outside production without Supabase.
  */
 import { createHmac, randomBytes } from 'node:crypto';
@@ -17,6 +18,11 @@ import { hashVisitor, looksSecret } from '@/lib/tryDemo';
 export const PMF_CONSENT = 'pmf-v1';
 export const PMF_Q1 = ['very', 'somewhat', 'not', 'na'] as const;
 export type PmfQ1 = (typeof PMF_Q1)[number];
+/** "Where did you first hear about Unvibe?" Optional; '' when unanswered. Same values as the table's check. */
+export const PMF_HEARD = ['search', 'friend', 'reddit', 'hacker_news', 'x', 'youtube_tiktok', 'directory', 'other'] as const;
+export type PmfHeard = (typeof PMF_HEARD)[number];
+/** The short note under Other, after trimming; the table's check allows no more. */
+export const PMF_MAX_HEARD_OTHER_CHARS = 80;
 
 /** Per text answer, in UTF-16 units like the app's textarea maxLength; the table's check counts code points, which is never more. */
 export const PMF_MAX_TEXT_CHARS = 2000;
@@ -27,7 +33,7 @@ export const PMF_GLOBAL_PER_DAY = 1000;
 const REPEAT_WINDOW_MS = 90 * 86_400_000;
 const EXPORT_PAGE = 1000;
 
-const BODY_KEYS: Record<string, true> = { q1: true, q2: true, q3: true, q4: true, appVersion: true, consent: true };
+const BODY_KEYS: Record<string, true> = { q1: true, q2: true, q3: true, q4: true, heard: true, heardOther: true, appVersion: true, consent: true };
 const TEXT_KEYS = ['q2', 'q3', 'q4'] as const;
 const APP_VERSION_RE = /^[0-9A-Za-z.+-]{1,40}$/;
 
@@ -36,6 +42,9 @@ export interface PmfAnswer {
   q2: string;
   q3: string;
   q4: string;
+  heard: PmfHeard | '';
+  /** '' unless `heard` is 'other'. */
+  heardOther: string;
   appVersion: string;
 }
 
@@ -47,6 +56,8 @@ export interface PmfExportRow {
   q2: string;
   q3: string;
   q4: string;
+  heard: PmfHeard | '';
+  heard_other: string;
   app_version: string;
 }
 
@@ -72,8 +83,10 @@ export function pmfInstallKey(installId: string): string | null {
 /**
  * Strict validation: a JSON object with only the known keys, `consent: 'pmf-v1'`, q1 from the enum
  * (the same 4 values as the table's check), q2 to q4 strings of at most 2,000 characters after
- * trimming (missing means empty) and a plain app version. A text that looks like a key or password
- * (the shared detector the Try it box uses) is refused. Field names only, never values, come back.
+ * trimming (missing means empty), `heard` missing, empty or one of PMF_HEARD, `heardOther` at most 80
+ * characters after trimming and only with `heard: 'other'`, and a plain app version. A text that
+ * looks like a key or password (the shared detector the Try it box uses) is refused. Field names
+ * only, never values, come back.
  */
 export function parsePmfAnswer(body: unknown): { answer: PmfAnswer } | { invalid: string } | { secret: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { invalid: 'body' };
@@ -92,9 +105,16 @@ export function parsePmfAnswer(body: unknown): { answer: PmfAnswer } | { invalid
     if (looksSecret(trimmed)) return { secret: key };
     texts[key] = trimmed;
   }
+  const heard = 'heard' in b ? b.heard : '';
+  if (heard !== '' && (typeof heard !== 'string' || !(PMF_HEARD as readonly string[]).includes(heard))) return { invalid: 'heard' };
+  const other = 'heardOther' in b ? b.heardOther : '';
+  if (typeof other !== 'string') return { invalid: 'heardOther' };
+  const heardOther = other.trim();
+  if (heardOther.length > PMF_MAX_HEARD_OTHER_CHARS || (heardOther && heard !== 'other')) return { invalid: 'heardOther' };
+  if (looksSecret(heardOther)) return { secret: 'heardOther' };
   const appVersion = typeof b.appVersion === 'string' ? b.appVersion.trim() : '';
   if (!APP_VERSION_RE.test(appVersion)) return { invalid: 'appVersion' };
-  return { answer: { q1: b.q1 as PmfQ1, ...texts, appVersion } };
+  return { answer: { q1: b.q1 as PmfQ1, ...texts, heard: heard as PmfHeard | '', heardOther, appVersion } };
 }
 
 function memory(): { rows: StoredRow[]; hits: Map<string, number[]> } {
@@ -141,8 +161,10 @@ export async function reservePmfRequest(ip: string, now = new Date()): Promise<'
 /**
  * Store one answer unless this install answered in the last 90 days ('duplicate'; the first answer
  * is untouched). In Supabase this is one call to `submit_pmf_response`, which checks and inserts
- * under a per-install advisory lock and deletes answers older than 12 months. 'unavailable' is a
- * storage failure, logged by error code only: a check-constraint message would hold answer text.
+ * under a per-install advisory lock and deletes answers older than 12 months. The heard arguments
+ * go only when that question was answered, so unanswered ones also work with the function from
+ * before migration 20261104120000. 'unavailable' is a storage failure, logged by error code only:
+ * a check-constraint message would hold answer text.
  */
 export async function recordPmfAnswer(installKey: string, answer: PmfAnswer, now = new Date()): Promise<'stored' | 'duplicate' | 'unavailable'> {
   const db = serviceSupabase();
@@ -151,7 +173,10 @@ export async function recordPmfAnswer(installKey: string, answer: PmfAnswer, now
     const { rows } = memory();
     const since = new Date(now.getTime() - REPEAT_WINDOW_MS).toISOString();
     if (rows.some((r) => r.install_key === installKey && r.created_at >= since)) return 'duplicate';
-    rows.push({ install_key: installKey, created_at: now.toISOString(), q1: answer.q1, q2: answer.q2, q3: answer.q3, q4: answer.q4, app_version: answer.appVersion });
+    rows.push({
+      install_key: installKey, created_at: now.toISOString(), q1: answer.q1, q2: answer.q2, q3: answer.q3, q4: answer.q4,
+      heard: answer.heard, heard_other: answer.heardOther, app_version: answer.appVersion,
+    });
     return 'stored';
   }
   const { data, error } = await db.rpc('submit_pmf_response', {
@@ -161,6 +186,7 @@ export async function recordPmfAnswer(installKey: string, answer: PmfAnswer, now
     p_q3: answer.q3,
     p_q4: answer.q4,
     p_app_version: answer.appVersion,
+    ...(answer.heard ? { p_heard: answer.heard, p_heard_other: answer.heardOther } : {}),
   });
   if (error) {
     console.error('pmf answer store failed', error.code);
@@ -178,6 +204,8 @@ function exportRow(row: StoredRow): PmfExportRow {
     q2: row.q2,
     q3: row.q3,
     q4: row.q4,
+    heard: row.heard,
+    heard_other: row.heard_other,
     app_version: row.app_version,
   };
 }
@@ -198,7 +226,7 @@ export async function pmfExportRows(now = new Date()): Promise<PmfExportRow[] | 
   for (let from = 0; ; from += EXPORT_PAGE) {
     const { data, error } = await db
       .from('pmf_responses')
-      .select('install_key, created_at, q1, q2, q3, q4, app_version')
+      .select('install_key, created_at, q1, q2, q3, q4, heard, heard_other, app_version')
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })

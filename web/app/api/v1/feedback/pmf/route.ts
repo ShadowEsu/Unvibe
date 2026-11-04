@@ -13,7 +13,7 @@ const reply = (body: unknown, status: number) => Response.json(body, { status, h
  * The in-app PMF survey (FE-09; see src/lib/pmfSurvey.ts). Desktop app only: trial token + install
  * ID headers, as the app's other anonymous calls, and no CORS headers, so a web page can't read or
  * preflight it; a request carrying a web Origin is refused outright (403).
- * Body (JSON, at most 16 KB, no other keys): `{ q1, q2, q3, q4, appVersion, consent: 'pmf-v1' }`.
+ * Body (JSON, at most 16 KB, no other keys): `{ q1, q2, q3, q4, heard?, heardOther?, appVersion, consent: 'pmf-v1' }`.
  * 201 `{ ok: true }`: stored. 400: invalid body or field, or a text that looks like a key or
  * password (only the field name comes back). 409: this install answered in the last 90 days; the
  * first answer is kept. 401 / 413 / 415 / 429 / 503 otherwise. Never a 500; answers are never logged.

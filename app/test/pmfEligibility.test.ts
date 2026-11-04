@@ -96,18 +96,19 @@ test('store: the first run is persisted once, from the oldest record when missin
 test('store: the draft stays until the survey is sent or closed, and a closed survey survives a wipe', () => {
   const s = store();
   assert.equal(s.pmfStatus(), undefined);
-  s.savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' });
-  assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' });
+  s.savePmfDraft({ q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster', heard: 'other', heardOther: 'A podcast' });
+  assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster', heard: 'other', heardOther: 'A podcast' });
   s.setPmfStatus('shown');
-  assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster' }, 'shown keeps the draft for this run');
-  s.savePmfDraft({ q1: 'very', q2: 'Students', q3: '', q4: 'Faster' });
+  assert.deepEqual(s.pmfDraft(), { q1: 'somewhat', q2: 'Students', q3: '', q4: 'Faster', heard: 'other', heardOther: 'A podcast' }, 'shown keeps the draft for this run');
+  s.savePmfDraft({ q1: 'very', q2: 'Students', q3: '', q4: 'Faster', heard: '', heardOther: '' });
   assert.equal(s.pmfStatus(), 'shown');
   assert.equal(s.pmfDraft().q1, 'very', 'typing while shown still saves');
   s.setPmfStatus('dismissed');
   assert.equal(s.pmfStatus(), 'dismissed');
-  assert.deepEqual(s.pmfDraft(), { q1: '', q2: '', q3: '', q4: '' }, 'closing deletes the draft');
-  s.savePmfDraft({ q1: 'very', q2: '', q3: '', q4: '' });
-  assert.deepEqual(s.pmfDraft(), { q1: '', q2: '', q3: '', q4: '' }, 'a closed survey keeps no new draft');
+  const empty = { q1: '', q2: '', q3: '', q4: '', heard: '', heardOther: '' };
+  assert.deepEqual(s.pmfDraft(), empty, 'closing deletes the draft');
+  s.savePmfDraft({ q1: 'very', q2: '', q3: '', q4: '', heard: 'x', heardOther: '' });
+  assert.deepEqual(s.pmfDraft(), empty, 'a closed survey keeps no new draft');
   s.wipeEverything();
   assert.equal(s.pmfStatus(), 'dismissed');
 });

@@ -15,6 +15,8 @@ export const PMF_CONSENT = 'pmf-v1';
 export const PMF_MAX_ANSWER_CHARS = 2000;
 /** The server's body limit; ordinary text never comes close, but a full page of emoji could. */
 export const PMF_MAX_BODY_BYTES = 16_384;
+/** The short note under Other in the "where did you first hear" question; the server refuses more. */
+export const PMF_MAX_HEARD_OTHER_CHARS = 80;
 const DAY_MS = 86_400_000;
 
 export const PMF_Q1_OPTIONS = [
@@ -32,6 +34,20 @@ export const PMF_QUESTIONS = {
   q3: 'What is the main benefit you receive from Unvibe?',
   q4: 'How can we improve Unvibe for you?',
 } as const;
+
+/** One optional question after the four (attribution, ledger 453). Fixed choices, ids as the server's. */
+export const PMF_HEARD_QUESTION = 'Where did you first hear about Unvibe?';
+export const PMF_HEARD_OPTIONS = [
+  { id: 'search', label: 'Search' },
+  { id: 'friend', label: 'A friend or colleague' },
+  { id: 'reddit', label: 'Reddit' },
+  { id: 'hacker_news', label: 'Hacker News' },
+  { id: 'x', label: 'X' },
+  { id: 'youtube_tiktok', label: 'YouTube or TikTok' },
+  { id: 'directory', label: 'A directory or list' },
+  { id: 'other', label: 'Other' },
+] as const;
+export type PmfHeard = (typeof PMF_HEARD_OPTIONS)[number]['id'];
 
 /** Security's wording, next to Send. */
 export const PMF_CONSENT_LINE =
@@ -51,9 +67,13 @@ export interface PmfDraft {
   q2: string;
   q3: string;
   q4: string;
+  /** Optional; '' when unanswered. */
+  heard: PmfHeard | '';
+  /** The note under Other; kept in the draft if the choice changes, but sent only with Other. */
+  heardOther: string;
 }
 
-export const EMPTY_PMF_DRAFT: PmfDraft = { q1: '', q2: '', q3: '', q4: '' };
+export const EMPTY_PMF_DRAFT: PmfDraft = { q1: '', q2: '', q3: '', q4: '', heard: '', heardOther: '' };
 
 export interface PmfEligibilityInput {
   explanations: number;
@@ -100,8 +120,8 @@ export function earliestFirstRun(candidates: ReadonlyArray<string | undefined>, 
   return new Date(earliest).toISOString();
 }
 
-function cappedText(value: unknown): string {
-  return typeof value === 'string' ? value.slice(0, PMF_MAX_ANSWER_CHARS) : '';
+function cappedText(value: unknown, max = PMF_MAX_ANSWER_CHARS): string {
+  return typeof value === 'string' ? value.slice(0, max) : '';
 }
 
 /** A draft from the renderer or the store file, with anything unexpected dropped. */
@@ -110,32 +130,48 @@ export function cleanPmfDraft(input: unknown): PmfDraft {
   // Every field is read as unknown and checked below, so the cast claims nothing about values.
   const raw = input as Partial<Record<keyof PmfDraft, unknown>>;
   const q1 = PMF_Q1_OPTIONS.find((option) => option.id === raw.q1)?.id ?? '';
-  return { q1, q2: cappedText(raw.q2), q3: cappedText(raw.q3), q4: cappedText(raw.q4) };
+  const heard = PMF_HEARD_OPTIONS.find((option) => option.id === raw.heard)?.id ?? '';
+  return {
+    q1,
+    q2: cappedText(raw.q2),
+    q3: cappedText(raw.q3),
+    q4: cappedText(raw.q4),
+    heard,
+    heardOther: cappedText(raw.heardOther, PMF_MAX_HEARD_OTHER_CHARS),
+  };
 }
 
-/** The 3 free-text answers, in the order the card shows them. */
-export type PmfTextKey = 'q2' | 'q3' | 'q4';
+/** The free-text answers, in the order the card shows them: the 3 questions, then the Other note. */
+export type PmfTextKey = 'q2' | 'q3' | 'q4' | 'heardOther';
 
 /**
- * The app's secret filter (the one explanations and typed questions go through) over the 3 text
- * answers. Any finding, a known credential or a high-entropy string, blocks Send, as for Chat.
- * Returns the first flagged answer, so the card can show the message under it, or null.
+ * The app's secret filter (the one explanations and typed questions go through) over the text
+ * answers, the Other note included when it would be sent. Any finding, a known credential or a
+ * high-entropy string, blocks Send, as for Chat. Returns the first flagged answer, so the card can
+ * show the message under it, or null.
  */
 export function pmfSecretField(draft: PmfDraft): PmfTextKey | null {
   const findings = scanBlocks([
     { file: 'q2', text: draft.q2 },
     { file: 'q3', text: draft.q3 },
     { file: 'q4', text: draft.q4 },
+    { file: 'heardOther', text: draft.heard === 'other' ? draft.heardOther : '' },
   ]);
-  return (['q2', 'q3', 'q4'] as const).find((key) => findings.some((f) => f.file === key)) ?? null;
+  return (['q2', 'q3', 'q4', 'heardOther'] as const).find((key) => findings.some((f) => f.file === key)) ?? null;
 }
 
-/** Only the answers and the app version; the install ID travels in the trial header. */
+/**
+ * Only the answers and the app version; the install ID travels in the trial header. `heard` is
+ * present only when that question was answered, and `heardOther` only with Other and a note, so a
+ * skipped question sends exactly what earlier versions sent.
+ */
 export interface PmfRequestBody {
   q1: PmfQ1;
   q2: string;
   q3: string;
   q4: string;
+  heard?: PmfHeard;
+  heardOther?: string;
   appVersion: string;
   consent: typeof PMF_CONSENT;
 }
@@ -143,11 +179,14 @@ export interface PmfRequestBody {
 /** The POST /api/v1/feedback/pmf body, or null when Q1 is unanswered (Send stays disabled). */
 export function pmfRequestBody(draft: PmfDraft, appVersion: string): PmfRequestBody | null {
   if (!draft.q1) return null;
+  const heardOther = draft.heard === 'other' ? draft.heardOther.trim() : '';
   return {
     q1: draft.q1,
     q2: draft.q2.trim(),
     q3: draft.q3.trim(),
     q4: draft.q4.trim(),
+    ...(draft.heard ? { heard: draft.heard } : {}),
+    ...(heardOther ? { heardOther } : {}),
     appVersion,
     consent: PMF_CONSENT,
   };

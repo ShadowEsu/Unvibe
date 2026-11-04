@@ -9,7 +9,7 @@ const noop = () => {};
 
 function markup(model: Partial<PmfCardModel>): string {
   const full: PmfCardModel = {
-    draft: { q1: 'very', q2: '', q3: 'sk-proj-flagged', q4: '' },
+    draft: { q1: 'very', q2: '', q3: 'sk-proj-flagged', q4: '', heard: '', heardOther: '' },
     stage: 'form',
     error: '',
     installId: '',
@@ -44,4 +44,21 @@ test('a network failure shows the message by the buttons and offers Try again', 
 test('any other refusal keeps the button as Send', () => {
   assert.equal(sendLabel(markup({ error: 'Your answers are a little too long. Shorten them and try again.' })), 'Send');
   assert.equal(sendLabel(markup({})), 'Send');
+});
+
+test('the "where did you first hear" question has its 8 choices; the Other box shows only with Other', () => {
+  const skipped = markup({});
+  assert.match(skipped, /<legend>Where did you first hear about Unvibe\?<\/legend>/);
+  assert.equal((skipped.match(/name="pmf-heard"/g) ?? []).length, 8);
+  assert.doesNotMatch(skipped, /placeholder="Where, in a few words"/);
+  assert.match(skipped, /5 short questions\. Only the first one is needed\./);
+  const other = markup({ draft: { q1: 'very', q2: '', q3: '', q4: '', heard: 'other', heardOther: 'A podcast' } });
+  assert.match(other, /<input type="text" class="pmf-card__field"[^>]*maxlength="80"[^>]*value="A podcast"/i);
+});
+
+test('a secret block on the Other note shows the message under that box', () => {
+  const html = markup({ draft: { q1: 'very', q2: '', q3: '', q4: '', heard: 'other', heardOther: 'flagged' }, error: PMF_SECRET_BLOCKED, errorField: 'heardOther' });
+  assert.match(html, /<input type="text"[^>]*aria-invalid="true"[^>]*aria-describedby="pmf-error-heardOther"/);
+  assert.doesNotMatch(html, /<textarea[^>]*aria-invalid/);
+  assert.ok(html.indexOf('id="pmf-error-heardOther"') < html.indexOf('pmf-card__consent'));
 });
