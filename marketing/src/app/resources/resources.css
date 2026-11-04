@@ -300,7 +300,7 @@
   border-radius: 50%;
   background: var(--brand);
   box-shadow: 0 0 8px var(--brand);
-  animation: pulse-dot 2s infinite ease-in-out;
+  animation: pulse-dot 2s 3 ease-in-out;
 }
 
 .resources-explanation-text p {

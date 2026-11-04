@@ -6,10 +6,29 @@ import { useReducedMotion } from "framer-motion";
 interface RevealProps {
   children: React.ReactNode;
   className?: string;
-  delay?: number;
 }
 
-export function Reveal({ children, className, delay = 0 }: RevealProps) {
+/** Blocks that come into view together enter 60 ms apart, capped at the 6th (Design motion spec). */
+const STAGGER_MS = 60;
+const STAGGER_CAP = 5;
+let batch = 0;
+let batchFrame = 0;
+
+function nextDelay(): number {
+  if (!batchFrame) {
+    batchFrame = requestAnimationFrame(() => {
+      batch = 0;
+      batchFrame = 0;
+    });
+  }
+  return Math.min(batch++, STAGGER_CAP) * STAGGER_MS;
+}
+
+/**
+ * Fades a block in once, the first time it reaches 90 % of the viewport: opacity and a 16 px rise over
+ * 400 ms. Never wrap a page's h1, kicker or primary CTA, which paint at once. Reduced motion: no motion.
+ */
+export function Reveal({ children, className }: RevealProps) {
   const reducedMotion = useReducedMotion();
   const elementRef = useRef<HTMLDivElement>(null);
 
@@ -20,12 +39,12 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
     const reveal = () => {
       element.animate(
         [
-          { opacity: 0, transform: "translate3d(0, 22px, 0)", filter: "blur(8px)" },
-          { opacity: 1, transform: "translate3d(0, 0, 0)", filter: "blur(0)" },
+          { opacity: 0, transform: "translate3d(0, 16px, 0)" },
+          { opacity: 1, transform: "translate3d(0, 0, 0)" },
         ],
         {
-          duration: 1400,
-          delay: delay * 1000,
+          duration: 400,
+          delay: nextDelay(),
           easing: "cubic-bezier(0.16, 1, 0.3, 1)",
           fill: "both",
         },
@@ -43,12 +62,12 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
         reveal();
         observer.disconnect();
       },
-      { rootMargin: "0px 0px -8%", threshold: 0.08 },
+      { rootMargin: "0px 0px -10%", threshold: 0 },
     );
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [delay, reducedMotion]);
+  }, [reducedMotion]);
 
   return (
     <div

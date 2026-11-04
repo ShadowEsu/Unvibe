@@ -241,7 +241,7 @@ pre, code, kbd, samp, textarea, .font-mono {
 .founder-analytics__bars > div { height: 100%; display: grid; grid-template-rows: 18px minmax(0, 1fr) 22px; gap: .4rem; align-items: end; min-width: 0; }
 .founder-analytics__bar-value { color: #817489; text-align: center; font: .58rem var(--font-mono); }
 .founder-analytics__bar-track { position: relative; height: 100%; display: flex; align-items: flex-end; overflow: hidden; border-radius: 7px; background: rgba(255,255,255,.035); }
-.founder-analytics__bar-track > span { width: 100%; min-height: 2px; border-radius: 7px; background: linear-gradient(180deg, #ba9cff, #7040d5); transition: height 420ms cubic-bezier(.2,.8,.2,1); }
+.founder-analytics__bar-track > span { width: 100%; min-height: 2px; border-radius: 7px; background: linear-gradient(180deg, #ba9cff, #7040d5); transition: height var(--dur-standard) cubic-bezier(.2,.8,.2,1); }
 .founder-analytics__bars small { overflow: hidden; color: #63596a; font: .52rem var(--font-mono); text-align: center; white-space: nowrap; }
 .founder-analytics__sources ol { margin: 1.5rem 0 0; padding: 0; list-style: none; }
 .founder-analytics__sources li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; border-top: 1px solid rgba(255,255,255,.07); color: #9d92a5; font-size: .78rem; text-transform: capitalize; }
@@ -401,9 +401,11 @@ pre, code, kbd, samp, textarea, .font-mono {
   --font-mono: var(--font-mono-face, var(--font-mono-fallback)), var(--font-mono-fallback), ui-monospace, monospace;
   --font-clean: var(--font-sans);
 
+  /* Motion tokens (Design motion spec, 2 Nov 2026): nothing runs over 400 ms except the one --dur-story beat. */
   --dur-micro: 150ms;
-  --dur-standard: 320ms;
-  --dur-story: 900ms;
+  --dur-standard: 240ms;
+  --dur-story: 600ms;
+  --dur-exit: 150ms;
   --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
   --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -891,6 +893,11 @@ html body {
 #main {
   min-height: 100vh;
   background: transparent;
+}
+
+/* Focus lands on <main> only as a target (skip link, after the analytics answer); its first link shows the ring. */
+#main:focus {
+  outline: none;
 }
 
 :is(
