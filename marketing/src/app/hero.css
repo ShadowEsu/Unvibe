@@ -27,6 +27,34 @@
 .vhero a:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 3px; }
 .vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
 
+/* Three hard brand discs behind the hero plate, so its glass blurs real colour (Design, ledger 466). They have no
+   blur of their own, never move, and sit under the plate. They're pseudo-elements, never ancestors of the plate,
+   so nothing here can become a WebKit backdrop root. */
+.home-page .vhero::before,
+.home-page .vhero::after,
+.home-page .vhero__copy::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: var(--disc);
+  height: var(--disc);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.home-page .vhero::before { --disc: clamp(280px, 34vw, 520px); left: calc(18% - var(--disc) / 2); top: calc(30% - var(--disc) / 2); background: #d6f45a; }
+.home-page .vhero::after { --disc: clamp(240px, 28vw, 440px); left: calc(82% - var(--disc) / 2); top: calc(22% - var(--disc) / 2); background: #b8a6ff; }
+.home-page .vhero__copy::before { --disc: 180px; left: calc(70% - var(--disc) / 2); top: calc(78% - var(--disc) / 2); background: #7cc6ff; z-index: -1; }
+/* The copy (and its plate) and the still paint above the discs. */
+.home-page .vhero__copy, .home-page .vhero__still { position: relative; z-index: 1; }
+@media (max-width: 720px) {
+  .home-page .vhero::before { --disc: calc(clamp(280px, 34vw, 520px) * 0.6); left: calc(var(--disc) / -4); top: 4.5rem; }
+  .home-page .vhero::after { --disc: calc(clamp(240px, 28vw, 440px) * 0.6); left: auto; right: calc(var(--disc) / -4); top: 38%; }
+  .home-page .vhero__copy::before { --disc: 108px; }
+}
+@media (forced-colors: active) {
+  .home-page .vhero::before, .home-page .vhero::after, .home-page .vhero__copy::before { display: none; }
+}
+
 @media (max-width: 520px) {
   .home-page .vhero { padding: 5.25rem 1.25rem 1.25rem; }
   .vhero__copy { gap: 0.75rem; }
