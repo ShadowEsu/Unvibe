@@ -915,6 +915,114 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
     watchOut:
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
   },
+  {
+    id: "dart",
+    fileName: "track.dart",
+    lead: "Paste Dart, Flutter app code included, and Vibe explains where null is allowed, what a constructor does with its arguments and what each type cast checks.",
+    description:
+      "Paste Dart code and get a plain English explanation, free online. The sample reads a JSON list of music tracks into a model class with null safety.",
+    sampleSummary: "A model class for music tracks with a fromJson factory, the kind a Flutter app parses an API response into, and one optional field.",
+    sample: `import 'dart:convert';
+
+class Track {
+  final String id;
+  final String title;
+  final int seconds;
+  final String? artist;
+
+  const Track({required this.id, required this.title, required this.seconds, this.artist});
+
+  factory Track.fromJson(Map<String, dynamic> json) => Track(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        seconds: (json['seconds'] as num?)?.toInt() ?? 0,
+        artist: json['artist'] as String?,
+      );
+
+  String get length => '\${seconds ~/ 60}:\${(seconds % 60).toString().padLeft(2, '0')}';
+  String label() => '$title by \${artist ?? 'unknown artist'}, $length';
+}
+
+List<Track> parseTracks(String body) {
+  final items = jsonDecode(body) as List<dynamic>;
+  return items.map((item) => Track.fromJson(item as Map<String, dynamic>)).toList();
+}`,
+    shows: [
+      {
+        concept: "null safety",
+        text: "`String? artist` may be null and the other three fields may not. `json['artist'] as String?` lets a missing or `null` artist through, and `artist ?? 'unknown artist'` fills in for it in the label. Write `track.artist.toUpperCase()` and the program doesn't compile: Method 'toUpperCase' cannot be called on 'String?' because it is potentially null.",
+      },
+      {
+        concept: "constructors",
+        text: "`const Track({required this.id, ...})` takes named arguments and puts each one straight into its field. Leave out a `required` one and the call doesn't compile, while `this.artist` can be left out and stays `null`. `factory Track.fromJson` is a constructor that runs code first: it reads the map, then calls the main constructor.",
+      },
+      {
+        concept: "collections",
+        text: "`jsonDecode` returns `dynamic`, so `as List<dynamic>` says the body is a list. `items.map(...)` builds nothing yet: it is a lazy `Iterable` that makes each `Track` only when it is read. `.toList()` makes all of them at once into a `List<Track>`.",
+      },
+    ],
+    notes: [
+      "Run on `[{\"id\":\"t1\",\"title\":\"Night Drive\",\"seconds\":215,\"artist\":\"Lumen\"},{\"id\":\"t2\",\"title\":\"Intro\",\"seconds\":9}]`, `parseTracks` gives two tracks labelled `Night Drive by Lumen, 3:35` and `Intro by unknown artist, 0:09`.",
+      "`seconds ~/ 60` divides and drops the remainder, 3 for 215, and `% 60` is the 35 left over. `padLeft(2, '0')` turns 9 into `09`, so the label reads `0:09`, not `0:9`.",
+      "A missing `seconds` becomes 0. A decimal like `95.9` is cut to 95 by `toInt()`, not rounded, so that track shows as `1:35`.",
+      "`Track` doesn't define `==`, so two tracks parsed from the same JSON are not equal. Two `const Track(...)` written with the same values are the same object.",
+      "The file imports only `dart:convert`, not Flutter, so it was run with the plain Dart SDK, and a Flutter app can use it as it is.",
+    ],
+    watchOut:
+      "`as` checks the type when the code runs and throws if it's wrong. An API that sends `\"seconds\": \"215\"` as text makes `parseTracks` throw `type 'String' is not a subtype of type 'num?' in type cast`, and one track with no `id` gives `type 'Null' is not a subtype of type 'String' in type cast`. Either way the whole list fails, not just that track.",
+  },
+  {
+    id: "lua",
+    fileName: "Leaderboard.lua",
+    lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
+    description:
+      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use too.",
+    sampleSummary: "A game leaderboard built from a table and a metatable, with a method that adds points and one that lists the top players.",
+    sample: `local Leaderboard = {}
+Leaderboard.__index = Leaderboard
+
+function Leaderboard.new()
+  return setmetatable({ scores = {} }, Leaderboard)
+end
+
+function Leaderboard:add(name, points)
+  self.scores[name] = (self.scores[name] or 0) + points
+end
+
+function Leaderboard:top(count)
+  local rows = {}
+  for name, score in pairs(self.scores) do
+    table.insert(rows, { name = name, score = score })
+  end
+  table.sort(rows, function(a, b)
+    return a.score > b.score or (a.score == b.score and a.name < b.name)
+  end)
+  local lines = {}
+  for i = 1, math.min(count, #rows) do
+    lines[i] = i .. ". " .. rows[i].name .. ": " .. rows[i].score
+  end
+  return lines
+end`,
+    shows: [
+      {
+        concept: "tables",
+        text: "The table is Lua's one data structure, and the sample uses it three ways: `scores` maps names to points, each `{ name = name, score = score }` is a record, and `rows` and `lines` are lists numbered from 1. Reading a missing key gives `nil`, so `self.scores[name] or 0` starts a new player at 0.",
+      },
+      {
+        concept: "metatables",
+        text: "`setmetatable({ scores = {} }, Leaderboard)` makes a board that looks up any key it doesn't have in `Leaderboard`, because `Leaderboard.__index` is `Leaderboard` itself. The board holds only `scores`, so `board:add` finds `add` on `Leaderboard`. `board:add(\"nova\", 30)` is short for `board.add(board, \"nova\", 30)`, and that first argument is `self`.",
+      },
+    ],
+    notes: [
+      "With `nova` adding 30 and then 20, `blitz` 45 and `echo` 50, `board:top(3)` returns `1. echo: 50`, `2. nova: 50` and `3. blitz: 45`.",
+      "`pairs` visits keys in no set order, so `table.sort` decides the order: higher scores first, and a tie goes by name, which is why `echo` comes before `nova` on 50 every time.",
+      "Names are compared as text, and in this run capital letters sorted before lowercase ones: three players tied on 10 come out as `Bolt`, `Zed`, `alpha`. Compare `a.name:lower() < b.name:lower()` to ignore case.",
+      "`math.min(count, #rows)` stops at the players there are: `top(10)` with three players returns three lines, and an empty board returns an empty table.",
+      "The sample uses only standard Lua, no Roblox APIs, and was run with Lua 5.5. In Roblox it would usually sit in a ModuleScript that ends with `return Leaderboard`, which other scripts load with `require`.",
+    ],
+    watchOut:
+      "Methods need the colon. `board.add(\"nova\", 5)` with a dot passes `\"nova\"` as `self` and 5 as the name, and fails with `attempt to index a nil value (field 'scores')`. Leaving out the points fails too, with `attempt to perform arithmetic on a nil value (local 'points')`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

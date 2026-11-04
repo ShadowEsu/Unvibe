@@ -217,6 +217,26 @@ export const languages: Language[] = [
     learningPath: ["Literals and classes", "Quantifiers", "Groups", "Anchors and flags"],
     sample: String.raw`^\d{3}-\d{4}$`,
   },
+  {
+    id: "dart",
+    name: "Dart",
+    categories: ["mobile", "web"],
+    blurb: "Google's language behind Flutter apps.",
+    concepts: ["null safety", "constructors", "collections", "async/await", "widgets"],
+    frameworks: ["Flutter", "Provider", "Riverpod", "http"],
+    learningPath: ["Types and null safety", "Classes and constructors", "Futures and async", "Flutter widgets"],
+    sample: `final names = users.map((u) => u.name).toList();`,
+  },
+  {
+    id: "lua",
+    name: "Lua",
+    categories: ["scripting"],
+    blurb: "Small scripting language built into games and tools, and the root of Roblox's Luau.",
+    concepts: ["tables", "metatables", "closures", "coroutines"],
+    frameworks: ["Roblox (Luau)", "LÖVE", "Neovim", "Defold"],
+    learningPath: ["Tables", "Functions", "Metatables", "Modules"],
+    sample: `for i, name in ipairs(players) do print(i, name) end`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
