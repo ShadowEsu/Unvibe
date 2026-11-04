@@ -2,7 +2,7 @@
  * What /activate and /redeem ask before any sign-in starts: the Terms and Privacy Policy, and 18
  * or older (Unvibe's Terms are 18+), as two separate unticked boxes. The API refuses an approve or
  * a redemption without both and this version (web/src/lib/accountConsent.ts, which marketing can't
- * import; accountAgreement.test.ts checks the two match. The app's consent screen uses the same one).
+ * import; accountAgreement.test.ts checks the two match). The app's consent screen has its own version.
  */
 export const ACCOUNT_POLICY_VERSION = "2026-11-05";
 
