@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ListingBadges } from "@/components/paper/ListingBadges";
 import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
+import { PreferredSourceLink } from "@/components/paper/PreferredSource";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { Logo } from "@/components/Logo";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
@@ -52,6 +53,7 @@ export function Footer() {
           <p className="mb-2 mt-5 text-sm font-semibold text-[color:var(--ink)]">Get the newsletter. One email when something ships.</p>
           <NewsletterSignup id="footer" />
           <SocialFollowLinks includeMail />
+          <PreferredSourceLink className="mt-5" />
         </div>
         <FooterLinks heading="Product" links={product} />
         <FooterLinks heading="Company" links={company}>

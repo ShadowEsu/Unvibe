@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { DownloadRow } from "@/components/paper/DownloadLink";
+import { PreferredSourceLink } from "@/components/paper/PreferredSource";
 import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
 import { pageMetadata } from "@/lib/pageMeta";
@@ -40,6 +41,7 @@ export default async function ReleasesPage() {
       <section className="paper-section">
         <div className="paper-wrap paper-log-wrap paper-glass">
           <h2 className="sr-only">Release notes</h2>
+          <PreferredSourceLink className="mb-8" />
           <ChangelogList items={changelogEntries()} />
         </div>
       </section>

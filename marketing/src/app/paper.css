@@ -1202,6 +1202,19 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   text-underline-offset: 2px;
 }
 
+/* Google's own badge, kept in its colours (not a listing, so not greyed like the badges above). 44 px tall: a full touch target. */
+.paper-preferred-source {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 10px;
+}
+
+.paper-preferred-source img {
+  display: block;
+  height: 44px;
+  width: auto;
+}
+
 .launch-subpage .marketing-plan-price,
 .launch-subpage .marketing-plan-card h3 {
   color: var(--ink);
