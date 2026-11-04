@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="2 November 2026"
+      updated="4 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -228,6 +228,13 @@ export default function PrivacyPage() {
           <li>
             <strong>Tool Index (toolindex.net)</strong> serves its verification badge in the footer,
             only after you press Allow on the analytics bar.
+          </li>
+          <li>
+            <strong>Google Fonts.</strong> Desktop app versions 0.1.49 and earlier load their fonts from Google
+            (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion opens. That
+            request gives Google your IP address and your device&apos;s browser details, such as the operating
+            system and app version. From version 0.1.50 (coming soon), the fonts are built into the app, so it
+            makes no request to Google.
           </li>
         </ul>
       </LegalSection>
