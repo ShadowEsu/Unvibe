@@ -47,7 +47,7 @@ export function ReferralProgress({ initialCode }: { initialCode: string }) {
 
   return <div className="reward-page"><section className="reward-panel">
     <p className="pixel-label">Referral rewards</p>
-    <h1>Your Pro months, <em>kept simple.</em></h1>
+    <h1>Your Pro months, kept simple.</h1>
     <p className="reward-lead">{GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. {GIFT_LINK_NOTE} This page shows how many friends joined with your invite link.</p>
     <form className="reward-code" onSubmit={(event) => { event.preventDefault(); void load(); }}>
       <label htmlFor="referral-code">Your invite link code</label>

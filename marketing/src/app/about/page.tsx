@@ -25,7 +25,7 @@ export default function AboutPage() {
         </div>
         <div>
           <p className="founder-about__eyebrow">About</p>
-          <h1>We build Unvibe <em>so you understand the code AI writes.</em></h1>
+          <h1>We build Unvibe so you understand the code AI writes.</h1>
           <p className="founder-about__lead">
             AI writes code faster than anyone can read it. Unvibe sits beside your editor, explains the exact code you select at your level, checks that you got it, and keeps the lesson. Free for Mac and Windows.
           </p>

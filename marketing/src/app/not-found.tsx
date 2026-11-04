@@ -14,7 +14,7 @@ export default function NotFound() {
         <p className="paper-meta">Error 404</p>
         <h1>This page was vibe coded out of existence.</h1>
         <p className="nf__code">
-          <span>const</span> page = routes.find(r =&gt; r.path === <em>&quot;here&quot;</em>); <span>{"// undefined"}</span>
+          <span>const</span> page = routes.find(r =&gt; r.path === <span className="nf__str">&quot;here&quot;</span>); <span>{"// undefined"}</span>
         </p>
         <p>Let us take you somewhere that exists.</p>
         <div className="nf__actions">

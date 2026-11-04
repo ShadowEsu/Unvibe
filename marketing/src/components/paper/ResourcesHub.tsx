@@ -126,7 +126,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="quickstart">
           <div className="resources-section__head">
             <span className="paper-meta">Quickstart</span>
-            <h2>Get started in <em>about a minute.</em></h2>
+            <h2>Get started in about a minute.</h2>
             <p className="paper-lead">
               Unvibe is a desktop app that opens a panel beside Cursor, VS Code, or any app where you can select code. It reads only what you select and never uploads your repo.
             </p>
@@ -174,7 +174,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="depths">
           <div className="resources-section__head">
             <span className="paper-meta">Explanation depths</span>
-            <h2>Five explanation <em>depths.</em></h2>
+            <h2>Five explanation depths.</h2>
             <p className="paper-lead">
               The same code, explained five ways. Pick the depth that matches what you already know. New through Advanced are free; Expert is Pro. The sample below is written by hand to show the range. It is not live model output.
             </p>
@@ -271,7 +271,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="privacy">
           <div className="resources-section__head">
             <span className="paper-meta">What leaves your machine</span>
-            <h2>How your code is <em>handled.</em></h2>
+            <h2>How your code is handled.</h2>
             <p className="paper-lead">
               Unvibe is not a local-only tool. Your selected code is sent to a cloud model to write the explanation. A secret scanner runs on your machine first, and anything that looks like a key or token is blocked or held for your confirmation.
             </p>
@@ -334,7 +334,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="shortcuts">
           <div className="resources-section__head">
             <span className="paper-meta">Shortcuts</span>
-            <h2>Keyboard <em>shortcuts.</em></h2>
+            <h2>Keyboard shortcuts.</h2>
             <p className="paper-lead">
               One shortcut starts a review. Everything after that works from the keyboard too.
             </p>
@@ -364,7 +364,7 @@ export function ResourcesHub() {
         <section className="resources-section" id="brand">
           <div className="resources-section__head">
             <span className="paper-meta">Brand</span>
-            <h2>Brand colors and <em>type.</em></h2>
+            <h2>Brand colors and type.</h2>
             <p className="paper-lead">
               Writing about Unvibe? Copy the colors below and use the fonts as listed.
             </p>

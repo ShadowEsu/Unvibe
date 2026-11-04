@@ -678,7 +678,7 @@ html[data-performance="lite"] .paper-hero > img {
 }
 
 .nf__code span { color: #c4a4ff; }
-.nf__code em { color: #f5b68a; font-style: normal; }
+.nf__code .nf__str { color: #f5b68a; }
 
 .nf__actions {
   display: flex;
