@@ -16,6 +16,7 @@ const product = [
   ["Explain code", "/explain"],
   ["Code explainer for Mac", "/code-explainer-mac"],
   ["Code explainer for Windows", "/code-explainer-windows"],
+  ["Use cases", "/use-cases"],
   ["Download", "/beta"],
   ["Pricing", "/pricing"],
   ["Change log", "/releases"],
