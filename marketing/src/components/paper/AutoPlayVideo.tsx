@@ -19,6 +19,8 @@ interface AutoPlayVideoProps {
   height?: number;
   /** English WebVTT captions, off until chosen in the player (they repeat the burned-in text). */
   captions?: string;
+  /** Id of the element that describes the video (its caption), for aria-describedby. */
+  describedBy?: string;
   /** Told whether the video will autoplay: false for lite visitors and when the browser refuses even muted play. */
   onAutoplayChange?: (autoplays: boolean) => void;
 }
@@ -40,6 +42,7 @@ export function AutoPlayVideo({
   width,
   height,
   captions,
+  describedBy,
   onAutoplayChange,
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -152,6 +155,7 @@ export function AutoPlayVideo({
         controls={controls}
         preload={preload}
         aria-label={label}
+        aria-describedby={describedBy}
       >
         {captions ? <track kind="captions" srcLang="en" label="English" src={captions} /> : null}
       </video>
