@@ -2,6 +2,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { get, list, put } from "@vercel/blob";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { INSTALL_SOURCES, parseInstallSource, type InstallSource } from "@/lib/installSource";
+import { dayKey, lastNDates } from "@/lib/siteStatsStore";
 import {
   findWaitlistEntry,
   saveWaitlistEntry,
@@ -263,6 +265,22 @@ export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
   return null;
 }
 
+/**
+ * A body POSTed to /api/install/event: `{ event }`, plus `source` (a label from INSTALL_SOURCES)
+ * only with `copied`. `fetched` is counted by the install script route, never here. Null when
+ * anything else is in it, so a bad label is refused, never stored.
+ */
+export function parseSiteInstallEvent(body: unknown): { event: Exclude<BetaInstallEvent, "fetched">; source: InstallSource | null } | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const { event: rawEvent, source: rawSource, ...rest } = body as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return null;
+  const event = parseBetaInstallEvent(rawEvent);
+  if (!event || event === "fetched") return null;
+  if (rawSource === undefined) return { event, source: null };
+  const source = parseInstallSource(rawSource);
+  return source && event === "copied" ? { event, source } : null;
+}
+
 export function isBetaInstallStatsEmail(email: string | null | undefined): boolean {
   return (email ?? "").trim().toLowerCase() === BETA_INSTALL_STATS_EMAIL;
 }
@@ -307,7 +325,12 @@ export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<B
   }
 }
 
-export async function getBetaInstallCounts(): Promise<BetaInstallCounts> {
+/** The counts plus where install command copies came from (founder stats only, never the event reply). */
+export interface BetaInstallStats extends BetaInstallCounts {
+  copiedBySource: CopySourceBreakdown;
+}
+
+export async function getBetaInstallCounts(now = new Date()): Promise<BetaInstallStats> {
   let best = emptyCounts();
 
   if (supabaseConfigured()) {
@@ -334,5 +357,104 @@ export async function getBetaInstallCounts(): Promise<BetaInstallCounts> {
   } catch {
     // Ignore local read failures.
   }
-  return best;
+  return { ...best, copiedBySource: summarizeCopySources(await readCopySourceRows(now), now) };
+}
+
+/**
+ * Install command copies per first-touch source label (installSource.ts), per Pacific day: one row
+ * per day and label holding only a count, no ID, IP address, page or time (migration 0012). Kept
+ * 12 months; the write deletes older days.
+ */
+export interface CopySourceRow {
+  day: string;
+  source: InstallSource;
+  copied: number;
+}
+
+export interface CopySourceBreakdown {
+  /** Last 14 Pacific days, oldest first; each lists only labels with a copy that day, largest first. */
+  daily: Array<{ date: string; sources: Array<{ source: InstallSource; copied: number }> }>;
+  /** Those 14 days added up, largest first. */
+  totals: Array<{ source: InstallSource; copied: number }>;
+  timezone: "America/Los_Angeles";
+}
+
+const COPY_SOURCE_DAYS = 14;
+
+function bySize(counts: Map<InstallSource, number>): Array<{ source: InstallSource; copied: number }> {
+  return Array.from(counts)
+    .map(([source, copied]) => ({ source, copied }))
+    .sort((a, b) => b.copied - a.copied || INSTALL_SOURCES.indexOf(a.source) - INSTALL_SOURCES.indexOf(b.source));
+}
+
+export function summarizeCopySources(rows: readonly CopySourceRow[], now = new Date()): CopySourceBreakdown {
+  const dates = lastNDates(COPY_SOURCE_DAYS, now).reverse();
+  const perDay = new Map(dates.map((date) => [date, new Map<InstallSource, number>()]));
+  const totals = new Map<InstallSource, number>();
+  for (const row of rows) {
+    const day = perDay.get(row.day);
+    const source = parseInstallSource(row.source);
+    const copied = Number(row.copied) || 0;
+    if (!day || !source || copied <= 0) continue;
+    day.set(source, (day.get(source) ?? 0) + copied);
+    totals.set(source, (totals.get(source) ?? 0) + copied);
+  }
+  return {
+    daily: dates.map((date) => ({ date, sources: bySize(perDay.get(date) ?? new Map()) })),
+    totals: bySize(totals),
+    timezone: "America/Los_Angeles",
+  };
+}
+
+async function copySourcesFile(): Promise<string> {
+  return path.join(path.dirname(await resolveDataFile()), "beta-install-sources.json");
+}
+
+async function readLocalCopySources(): Promise<CopySourceRow[]> {
+  try {
+    const parsed: unknown = JSON.parse(await fs.readFile(await copySourcesFile(), "utf8"));
+    return Array.isArray(parsed) ? (parsed as CopySourceRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Adds one copy to today's count for `source`. Supabase when configured (the
+ * `record_beta_install_copy_source` function); a local file only where Supabase isn't configured
+ * (development and tests). Best effort: a failure is logged without the label and never fails the
+ * copy count itself.
+ */
+export async function recordBetaInstallCopySource(source: InstallSource, now = new Date()): Promise<void> {
+  const day = dayKey(now);
+  if (supabaseConfigured()) {
+    const { error } = await supabaseClient().rpc("record_beta_install_copy_source", { p_day: day, p_source: source });
+    if (error) console.error("install copy source count failed", error.code);
+    return;
+  }
+  try {
+    const rows = await readLocalCopySources();
+    const row = rows.find((item) => item.day === day && item.source === source);
+    if (row) row.copied += 1;
+    else rows.push({ day, source, copied: 1 });
+    const file = await copySourcesFile();
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, JSON.stringify(rows));
+  } catch (error) {
+    console.error("local install copy source count failed", error instanceof Error ? error.name : "error");
+  }
+}
+
+async function readCopySourceRows(now: Date): Promise<CopySourceRow[]> {
+  if (!supabaseConfigured()) return readLocalCopySources();
+  const since = lastNDates(COPY_SOURCE_DAYS, now).at(-1) ?? dayKey(now);
+  const { data, error } = await supabaseClient()
+    .from("beta_install_copy_sources")
+    .select("day,source,copied")
+    .gte("day", since);
+  if (error) {
+    console.error("install copy source read failed", error.code);
+    return [];
+  }
+  return (data ?? []) as CopySourceRow[];
 }

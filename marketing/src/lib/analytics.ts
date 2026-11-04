@@ -31,6 +31,7 @@ import {
   type ReplayState,
 } from "@/lib/analyticsPrivacy";
 import { storeAnalyticsConsent, type AnalyticsChoice } from "@/lib/analyticsConsent";
+import { firstSource, forgetFirstSource, rememberFirstSource } from "@/lib/installSource";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 export type { AnalyticsEvent };
@@ -147,13 +148,16 @@ function sendMixpanel(event: AnalyticsEvent, props: Props): void {
   }
 }
 
-/** Count copy and survey clicks in founder stats. Best effort only. */
+/**
+ * Count copy and survey clicks in founder stats. Best effort only. Sent only after Allow, like every
+ * other analytics path; a copy carries the visitor's first-touch source label (installSource.ts).
+ */
 export function recordBetaSiteEvent(event: "copied" | "survey"): void {
   if (typeof window === "undefined" || browserTrackingDisabled()) return;
   void fetch("/api/install/event", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event }),
+    body: JSON.stringify(event === "copied" ? { event, source: firstSource() } : { event }),
     keepalive: true,
   }).catch(() => undefined);
 }
@@ -237,18 +241,24 @@ function removeStoredMixpanelBatches(): void {
   }
 }
 
-/** Load the Mixpanel browser SDK when its token is present. */
+/**
+ * Load the Mixpanel browser SDK when its token is present, and keep the first-touch source label
+ * (installSource.ts); both only after Allow.
+ */
 export function initAnalytics(): void {
   if (analyticsOff()) return;
+  rememberFirstSource();
   startMixpanel();
 }
 
 /**
  * The analytics bar's buttons. Allow loads the SDK. No thanks after an earlier Allow turns its
- * capture and replay off at once (the same opt-out calls `?notrack=1` makes).
+ * capture and replay off at once (the same opt-out calls `?notrack=1` makes) and removes the stored
+ * source label.
  */
 export function setAnalyticsConsent(choice: AnalyticsChoice): void {
   storeAnalyticsConsent(choice);
+  if (choice === "deny") forgetFirstSource();
   initAnalytics();
   syncSessionRecording();
 }

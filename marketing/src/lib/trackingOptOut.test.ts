@@ -2,8 +2,9 @@
 import { ANALYTICS_KEYS, restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { analyticsEnabled, recordBetaSiteEvent, setAnalyticsConsent, track } from "./analytics";
+import { analyticsEnabled, initAnalytics, recordBetaSiteEvent, setAnalyticsConsent, track } from "./analytics";
 import { ANALYTICS_CONSENT_KEY, analyticsConsentRecord } from "./analyticsConsent";
+import { FIRST_SOURCE_KEY } from "./installSource";
 import { NOTRACK_STORAGE_KEY, trackingDisabled, type OptOutStorage } from "./trackingOptOut";
 
 after(restoreAnalyticsKeys);
@@ -151,5 +152,72 @@ describe("analytics respects the opt-out", () => {
     track("beta_install_copied");
     recordBetaSiteEvent("survey");
     assert.deepEqual(calls, []);
+  });
+});
+
+describe("the install copy source label follows the analytics answer", () => {
+  const realWindow: unknown = Reflect.get(globalThis, "window");
+  const realFetch = globalThis.fetch;
+  let bodies: unknown[] = [];
+
+  function installWindow(search: string, storage: FakeStorage) {
+    Reflect.set(globalThis, "window", {
+      navigator: { webdriver: false },
+      location: { href: `https://unvibe.site/${search}`, pathname: "/", search },
+      localStorage: storage,
+      dispatchEvent: () => true,
+    });
+  }
+
+  beforeEach(() => {
+    bodies = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "/api/install/event") bodies.push(JSON.parse(String(init?.body)));
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    Reflect.set(globalThis, "window", realWindow);
+    globalThis.fetch = realFetch;
+  });
+
+  it("before an answer, a tagged visit stores no label and a copy sends nothing", () => {
+    const storage = fakeStorage();
+    installWindow("?utm_source=reddit", storage);
+    initAnalytics();
+    recordBetaSiteEvent("copied");
+    assert.equal(storage.data.has(FIRST_SOURCE_KEY), false);
+    assert.deepEqual(bodies, []);
+  });
+
+  it("after Allow, the first label is kept across pages and sent only with a copy", () => {
+    const storage = fakeStorage();
+    installWindow("?utm_source=reddit&utm_campaign=launch", storage);
+    setAnalyticsConsent("allow");
+    assert.equal(storage.data.get(FIRST_SOURCE_KEY), "reddit");
+    installWindow("?utm_source=twitter", storage);
+    initAnalytics();
+    assert.equal(storage.data.get(FIRST_SOURCE_KEY), "reddit", "first touch wins");
+    recordBetaSiteEvent("copied");
+    recordBetaSiteEvent("survey");
+    assert.deepEqual(bodies, [{ event: "copied", source: "reddit" }, { event: "survey" }]);
+  });
+
+  it("No thanks removes the stored label and stops the copy count", () => {
+    const storage = fakeStorage();
+    installWindow("?utm_source=reddit", storage);
+    setAnalyticsConsent("allow");
+    setAnalyticsConsent("deny");
+    assert.equal(storage.data.has(FIRST_SOURCE_KEY), false);
+    recordBetaSiteEvent("copied");
+    assert.deepEqual(bodies, []);
+  });
+
+  it("a visitor who allowed before this change sends the current page's label", () => {
+    const storage = fakeStorage({ [ANALYTICS_CONSENT_KEY]: analyticsConsentRecord("allow", new Date("2026-10-28T09:00:00Z")) });
+    installWindow("", storage);
+    recordBetaSiteEvent("copied");
+    assert.deepEqual(bodies, [{ event: "copied", source: "direct" }]);
   });
 });
