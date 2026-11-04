@@ -214,7 +214,7 @@ export function ResourcesHub() {
               </div>
 
               {/* Sample Code Display */}
-              <div className="resources-code-window">
+              <div className="resources-code-window code-window">
                 <div className="resources-code-window__bar">
                   <div className="resources-code-dots">
                     <span />
@@ -349,8 +349,8 @@ export function ResourcesHub() {
             </div>
             {SHORTCUT_ROWS.map((s, idx) => (
               <div key={idx} className="resources-table-row">
-                <span className="resources-key-pill">{s.mac}</span>
-                <span className="resources-key-pill">{s.win}</span>
+                <kbd className="resources-key-pill">{s.mac}</kbd>
+                <kbd className="resources-key-pill">{s.win}</kbd>
                 <span className="resources-action-text">{s.action}</span>
                 <span className="resources-context-text">{s.context}</span>
               </div>
@@ -413,7 +413,7 @@ export function ResourcesHub() {
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Code</span>
-                  <p className="resources-mono-demo">JetBrains Mono for code and shortcuts.</p>
+                  <p className="resources-mono-demo"><samp>JetBrains Mono for code and shortcuts.</samp></p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Body</span>

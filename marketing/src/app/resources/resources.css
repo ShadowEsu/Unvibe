@@ -170,7 +170,8 @@
 }
 
 .resources-depth-tab__badge {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.68rem);
   opacity: 0.7;
 }
@@ -191,7 +192,8 @@
 
 .resources-depth-badge {
   display: inline-block;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.72rem);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -365,7 +367,8 @@
 }
 
 .resources-arch-badge {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.68rem);
   font-weight: 700;
   text-transform: uppercase;
@@ -388,7 +391,8 @@
 .resources-arch-tag {
   display: inline-block;
   margin-top: 0.3rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.68rem);
   font-weight: 700;
   color: var(--brand);
@@ -442,7 +446,8 @@
   gap: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--hairline);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.74rem);
   font-weight: 700;
   text-transform: uppercase;
@@ -586,7 +591,8 @@
 }
 
 .resources-type-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(13px, 0.68rem);
   text-transform: uppercase;
   letter-spacing: 0.05em;

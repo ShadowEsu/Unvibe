@@ -75,7 +75,7 @@ h2 {
 }
 
 .paper-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -765,7 +765,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 
 .paper-log time {
   display: block;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -781,7 +782,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .paper-log aside strong {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -1893,7 +1895,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 .paper-live__stats span {
   display: block;
   color: var(--ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: max(12px, 0.72rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1904,6 +1907,7 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   margin-top: 0.4rem;
   color: var(--ink);
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 1.35rem;
   font-weight: 400;
 }
