@@ -6,7 +6,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/privacy",
   title: "Privacy",
   description:
-    "How Unvibe handles code and learning data during the beta, including on-device secret filtering and cloud-provider disclosure.",
+    "How Unvibe handles code and learning data during the beta, including an on-device check for secrets and cloud-provider disclosure.",
 });
 
 export default function PrivacyPage() {
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection heading="Secret filtering, before code is sent">
+      <LegalSection heading="Secret check, before code is sent">
         <p>
           The code you select, the nearby code Pro adds to it, and the git changes in a
           Brief are scanned on your computer before they are sent: API keys, tokens, private
