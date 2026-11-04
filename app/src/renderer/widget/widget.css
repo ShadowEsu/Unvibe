@@ -1150,6 +1150,8 @@ code.inline {
 .card .body li::marker { color: var(--p-violet); }
 .card .body a { color: var(--p-blue); }
 .card .body :not(pre) > code { padding: 1px 5px; border-radius: 5px; background: var(--p-raised); color: #ffd7a8; font-size: 0.86em; }
+/* Code inside bold stays at 700, as it rendered with Google's static JetBrains Mono faces (650 snapped to 700). */
+.card .body strong code { font-weight: 700; }
 .card .code-context, .card .cb { margin: 0 0 12px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-code); box-shadow: none; backdrop-filter: none; overflow: hidden; }
 .card .code-context__head, .card .cb-head { padding: 6px 10px; border-bottom: 1px solid var(--p-line); color: var(--p-faint); font-size: 11px; font-weight: 550; text-transform: none; letter-spacing: 0; background: transparent; }
 .card .code-context pre, .card .cb pre { padding: 10px 12px; color: #e6e6ee; font-size: calc(var(--p-fs) * 0.78); line-height: 1.55; }
