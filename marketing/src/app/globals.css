@@ -180,10 +180,29 @@ pre, code, kbd, samp, textarea, .font-mono {
   --font-mono: var(--font-mono-face, var(--font-mono-fallback)), var(--font-mono-fallback), ui-monospace, monospace;
   --font-clean: var(--font-sans);
 
-  /* Motion tokens (Design motion spec, 2 Nov 2026): nothing runs over 400 ms except the one --dur-story beat. */
+  /* Motion tokens, the one set shared by every product (Design motion spec, 4 Nov 2026, §1). New motion
+     uses only these. */
+  --m-instant: 80ms;
+  --m-fast: 180ms;
+  --m-exit: 150ms;
+  --m-normal: 350ms;
+  --m-slow: 600ms;
+  --m-crawl: 1000ms;
+  --m-stagger: 70ms;
+  --m-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --m-ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);
+  --m-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --m-dist-sm: 8px;
+  --m-dist-md: 16px;
+  --m-scale-press: 0.95;
+  --m-scale-pop: 1.04;
+
+  /* The site's state-motion tokens (Design motion spec, 2 Nov 2026). The two values the shared set also
+     has are aliases of it; the rest keep their own values. */
   --dur-micro: 150ms;
   --dur-standard: 240ms;
-  --dur-exit: 150ms;
+  --dur-story: var(--m-slow);
+  --dur-exit: var(--m-exit);
   --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
   --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -787,6 +806,26 @@ html body {
     linear-gradient(145deg, rgba(118, 78, 205, .07), transparent 38%),
     linear-gradient(325deg, rgba(196, 93, 49, .055), transparent 42%),
     #fbf8fc;
+}
+
+/* Staggered arrival (motion spec §2). components/paper/Arrive.tsx marks the first 8 items and sets
+   data-arrive only for a list that starts below the fold, so the server HTML, no JS and reduced motion
+   all show every item where it is. Opacity and transform only: nothing around the list moves. */
+[data-arrive="wait"] > [data-arrive-item] {
+  opacity: 0;
+  transform: translateY(var(--m-dist-sm));
+}
+[data-arrive="go"] > [data-arrive-item] {
+  animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--arrive-i) * var(--m-stagger)) backwards;
+}
+@keyframes mArrive {
+  from { opacity: 0; transform: translateY(var(--m-dist-sm)); }
+}
+@keyframes mFade {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce), print {
+  [data-arrive] > [data-arrive-item] { opacity: 1; transform: none; animation: none; }
 }
 
 /* Respect reduced motion everywhere. */

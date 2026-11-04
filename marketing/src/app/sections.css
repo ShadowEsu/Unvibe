@@ -64,10 +64,18 @@
 .try__body { display: flex; flex: 1; }
 .try__state { display: grid; place-items: center; align-content: center; gap: 1rem; width: 100%; padding: 2rem 1.5rem; text-align: center; font-size: 1.08rem; line-height: 1.5; }
 .try__state p { max-width: 24rem; margin: 0; }
-.try__state--thinking p { color: #3c2fb8; font: 400 1.5rem var(--font-sans); animation: vWrite 400ms ease-out both; }
-.try__state--thinking > i { display: block; width: min(320px, 80%); height: 10px; border-radius: 6px; background: linear-gradient(90deg, #f1eee6, #e4dfd3, #f1eee6); background-size: 200% 100%; animation: vShimmer 1.3s linear infinite; }
+.try__state--thinking p { color: #3c2fb8; font: 400 1.5rem var(--font-sans); animation: mFade var(--m-fast) var(--m-ease-sharp) both; }
+/* Skeleton bars (motion spec §2): laid out under the step line from the start, so nothing shifts, and shown
+   only once the wait passes 200 ms (.is-slow, set by TryIt). One highlight sweep at 100deg, +6 % lightness,
+   1.4 s, transform only, looping only while the request is out. */
+.try__state--thinking > i { position: relative; display: block; overflow: hidden; width: min(320px, 80%); height: 10px; border-radius: 6px; background: #ebe7dd; opacity: 0; }
 .try__state--thinking > i:nth-of-type(2) { width: min(260px, 65%); }
 .try__state--thinking > i:nth-of-type(3) { width: min(200px, 50%); }
+.try__state--thinking.is-slow > i { opacity: 1; transition: opacity var(--m-fast) var(--m-ease-sharp); }
+.try__state--thinking.is-slow > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #f6f5f0 50%, transparent 80%); transform: translateX(-100%); animation: mSweep 1.4s linear infinite; }
+@keyframes mSweep { to { transform: translateX(100%); } }
+/* The answer crossfades in as it lands. */
+.try__answer { animation: mFade var(--m-fast) var(--m-ease-sharp) both; }
 .try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 .try__after p { margin: 0 0 0.9rem; }
@@ -93,12 +101,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .try__state--thinking p, .try__state--thinking > i { animation: none; }
+  .try__state--thinking p, .try__state--thinking > i::after, .try__answer { animation: none; }
   .try__levels button { transition: none; }
   .try__levels button:hover:not(:disabled) { transform: none; }
 }
 html[data-performance="lite"] .try__state--thinking p,
-html[data-performance="lite"] .try__state--thinking > i { animation: none; }
+html[data-performance="lite"] .try__state--thinking > i::after,
+html[data-performance="lite"] .try__answer { animation: none; }
 
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
