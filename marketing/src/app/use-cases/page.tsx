@@ -4,7 +4,7 @@ import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
-import { USE_CASES_INDEX, useCasePath, useCases } from "@/lib/useCases";
+import { USE_CASES_INDEX, pathForUseCase, useCases } from "@/lib/useCases";
 import { explainMono } from "../explain/mono";
 import "../explain/explain.css";
 import "../code-explainer.css";
@@ -42,7 +42,7 @@ export default function UseCasesPage() {
         <ul className="explain-langs">
           {useCases.map((entry) => (
             <li key={entry.slug}>
-              <Link href={useCasePath(entry)}>{entry.name}</Link>
+              <Link href={pathForUseCase(entry)}>{entry.name}</Link>
               <span>{entry.summary}</span>
             </li>
           ))}

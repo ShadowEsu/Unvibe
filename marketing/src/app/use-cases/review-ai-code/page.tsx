@@ -4,17 +4,17 @@ import { UseCaseFacts, UseCaseHead, UseCaseMore, UseCaseSample, UseCaseSteps } f
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { SHORTCUTS } from "@/lib/shortcuts";
-import { useCase, useCasePath } from "@/lib/useCases";
+import { findUseCase, pathForUseCase } from "@/lib/useCases";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
 import "../../code-explainer.css";
 
-const page = useCase("review-ai-code");
+const page = findUseCase("review-ai-code");
 
 /** Re-read the payments status at most every 5 minutes, as /pricing does, for the Free and Pro card. */
 export const revalidate = 300;
 
-export const metadata: Metadata = pageMetadata({ path: useCasePath(page), title: page.title, description: page.description });
+export const metadata: Metadata = pageMetadata({ path: pathForUseCase(page), title: page.title, description: page.description });
 
 const DIFF = ` export async function fetchUser(id: string): Promise<User> {
 -  const res = await fetch(\`/api/users/\${id}\`);

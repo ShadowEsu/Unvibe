@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import sitemap from "@/app/sitemap";
-import { USE_CASE_PATHS, USE_CASES_INDEX, useCasePath, useCases } from "@/lib/useCases";
+import { USE_CASE_PATHS, USE_CASES_INDEX, pathForUseCase, useCases } from "@/lib/useCases";
 
 const appDir = path.resolve("src/app/use-cases");
 const sources = [
@@ -21,7 +21,7 @@ describe("use-case pages", () => {
 
   it("are all in the sitemap, once each", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
-    assert.deepEqual(USE_CASE_PATHS, [USE_CASES_INDEX.path, ...useCases.map(useCasePath)]);
+    assert.deepEqual(USE_CASE_PATHS, [USE_CASES_INDEX.path, ...useCases.map(pathForUseCase)]);
     for (const route of USE_CASE_PATHS) assert.equal(urls.filter((url) => url === route).length, 1, `${route} in the sitemap`);
   });
 

@@ -3,17 +3,17 @@ import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { UseCaseFacts, UseCaseHead, UseCaseMore, UseCaseSample, UseCaseSteps } from "@/components/paper/UseCaseParts";
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
-import { useCase, useCasePath } from "@/lib/useCases";
+import { findUseCase, pathForUseCase } from "@/lib/useCases";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
 import "../../code-explainer.css";
 
-const page = useCase("inherited-code");
+const page = findUseCase("inherited-code");
 
 /** Re-read the payments status at most every 5 minutes, as /pricing does, for the Free and Pro card. */
 export const revalidate = 300;
 
-export const metadata: Metadata = pageMetadata({ path: useCasePath(page), title: page.title, description: page.description });
+export const metadata: Metadata = pageMetadata({ path: pathForUseCase(page), title: page.title, description: page.description });
 
 const FUNCTION = `export function normalizeEmail(raw) {
   const email = raw.trim().toLowerCase();

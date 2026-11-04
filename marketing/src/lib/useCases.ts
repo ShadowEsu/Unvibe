@@ -47,11 +47,11 @@ export const useCases: readonly UseCase[] = [
   },
 ];
 
-export const useCasePath = (useCase: UseCase): string => `${USE_CASES_INDEX.path}/${useCase.slug}`;
+export const pathForUseCase = (useCase: UseCase): string => `${USE_CASES_INDEX.path}/${useCase.slug}`;
 
-export const USE_CASE_PATHS: readonly string[] = [USE_CASES_INDEX.path, ...useCases.map(useCasePath)];
+export const USE_CASE_PATHS: readonly string[] = [USE_CASES_INDEX.path, ...useCases.map(pathForUseCase)];
 
-export function useCase(slug: string): UseCase {
+export function findUseCase(slug: string): UseCase {
   const found = useCases.find((entry) => entry.slug === slug);
   if (!found) throw new Error(`No use case "${slug}"`);
   return found;

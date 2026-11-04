@@ -5,7 +5,7 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { PRICING } from "@/lib/pricing";
 import { pricingCopy } from "@/lib/pricingCopy";
 import { SHORTCUTS } from "@/lib/shortcuts";
-import { USE_CASES_INDEX, useCasePath, useCases, type UseCase } from "@/lib/useCases";
+import { USE_CASES_INDEX, pathForUseCase, useCases, type UseCase } from "@/lib/useCases";
 
 /**
  * The parts every /use-cases/<slug> page shares. Every product sentence here is the site's own:
@@ -27,7 +27,7 @@ export function UseCaseHead({ useCase, heading, children }: { useCase: UseCase; 
             breadcrumbJsonLd([
               { name: "Home", path: "/" },
               { name: "Use cases", path: USE_CASES_INDEX.path },
-              { name: useCase.name, path: useCasePath(useCase) },
+              { name: useCase.name, path: pathForUseCase(useCase) },
             ]),
           ),
         }}
@@ -131,7 +131,7 @@ export function UseCaseMore({ current, explain }: { current: UseCase; explain: {
           .filter((entry) => entry.slug !== current.slug)
           .map((entry) => (
             <li key={entry.slug}>
-              <Link className="paper-text-link" href={useCasePath(entry)}>{entry.name}</Link>
+              <Link className="paper-text-link" href={pathForUseCase(entry)}>{entry.name}</Link>
             </li>
           ))}
         <li>
