@@ -114,11 +114,10 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
         <TryInBrowser device={device} />
       </div>
       <p className="vhero__trust">
-        <span className="vhero__trust-item">Free for Mac + Windows</span>{" "}
-        <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>No API key</span>{" "}
-        <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>Keys and tokens filtered on your computer</span>{" "}
+        <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
+        <span className="vhero__trust-item">No API key.</span>{" "}
+        <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>{" "}
         <span className="vhero__trust-item">
-          <span className="vhero__trust-separator">· </span>
           <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
             {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
           </a>
@@ -178,9 +177,9 @@ export function PhotoHero() {
           <>
             <EmailMeLink />
             <p className="vhero__fine">
-              <span className="vhero__trust-item">Free for Mac + Windows</span>{" "}
-              <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>No API key</span>{" "}
-              <span className="vhero__trust-item"><span className="vhero__trust-separator">· </span>Keys and tokens filtered on your computer</span>
+              <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
+              <span className="vhero__trust-item">No API key.</span>{" "}
+              <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
             </p>
             <TryInBrowser device={device} />
           </>
@@ -190,7 +189,7 @@ export function PhotoHero() {
         <p className="vhero__backing">
           <a href="/investors#backing">
             <b>{compensationTotalLabel()} {compensationTotalPhrase()}</b>
-            <span className="vhero__backing-separator"> · </span>
+            <span className="vhero__backing-separator">. </span>
             <span className="vhero__backing-programs">{compensationProgramCount()} programs, including {startupPrograms[0].program}</span>
           </a>
         </p>

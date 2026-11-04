@@ -9,6 +9,20 @@ export const TRY_CONSENT_KEY = "unvibe.tryConsent";
 
 export type TryConsentTicks = { aiSend: boolean; age18: boolean };
 
+/** Why Explain it didn't send: shown next to each box still unticked, only after a press (Design W18). */
+export const TRY_CONSENT_REASONS: Record<keyof TryConsentTicks, string> = {
+  aiSend: "Tick this box to send the code. Nothing is sent until you do.",
+  age18: "Tick this box to confirm you're 18 or older.",
+};
+
+/** The reason for each unticked box once Explain it was pressed; nothing before a press. */
+export function tryConsentReasons(ticks: TryConsentTicks, pressed: boolean): Record<keyof TryConsentTicks, string> {
+  return {
+    aiSend: pressed && !ticks.aiSend ? TRY_CONSENT_REASONS.aiSend : "",
+    age18: pressed && !ticks.age18 ? TRY_CONSENT_REASONS.age18 : "",
+  };
+}
+
 /** The stored ticks: each box counts as ticked only if the version matches and its flag is exactly `true`. */
 export function storedTryConsent(raw: string | null): TryConsentTicks {
   let value: unknown = null;

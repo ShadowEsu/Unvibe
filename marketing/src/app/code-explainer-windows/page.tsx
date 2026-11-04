@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { BETA_WINDOWS_DIRECT_DOWNLOAD, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
+import { WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -69,8 +70,8 @@ export default function CodeExplainerWindowsPage() {
       <section className="explain-card" aria-labelledby="win-which">
         <h2 id="win-which">Which Windows</h2>
         <p>
-          Windows 10 or Windows 11, on a 64-bit (x64) PC. The download is a single portable file, {BETA_WINDOWS_ASSET},
-          that runs from wherever you save it.
+          {WINDOWS_META} The download is a single portable file, {BETA_WINDOWS_ASSET}, that runs from wherever you save
+          it. <a href={WINDOWS_SHA256_URL}>Its SHA-256 checksum</a> is on the release.
         </p>
         <p>
           To have Unvibe in your Start menu instead, open Windows PowerShell (not Command Prompt), paste this line and

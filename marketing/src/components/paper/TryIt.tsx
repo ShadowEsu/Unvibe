@@ -6,10 +6,10 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
-import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 import { answerTimeLine } from "@/lib/tryTiming";
-import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
+import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, tryConsentReasons, type TryConsentTicks } from "@/lib/tryConsent";
 import type { DownloadSurface } from "@/lib/downloadTracking";
 
 const API = (process.env.NEXT_PUBLIC_UNVIBE_API ?? "https://api.unvibe.site").replace(/\/$/, "");
@@ -32,9 +32,6 @@ const SAMPLE = `function debounce(fn, ms) {
 
 const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
-/** While the outage switch is on (see aiMaintenance.ts) the box says so and sends nothing. */
-const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
-
 /** Turn the model's light markdown into safe HTML: escape first, then bold, code and bullets. */
 function render(text: string): string {
   const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -105,6 +102,10 @@ export function TryIt({
   // Both boxes start unticked; a tick of the current consent version is remembered in localStorage.
   const [ticks, setTicks] = useState<TryConsentTicks>({ aiSend: false, age18: false });
   const consented = ticks.aiSend && ticks.age18;
+  // Explain it stays enabled: a press with a box unticked sends nothing and says why next to that box.
+  const [pressed, setPressed] = useState(false);
+  const reasons = tryConsentReasons(ticks, pressed);
+  const boxes = { aiSend: useRef<HTMLInputElement>(null), age18: useRef<HTMLInputElement>(null) };
   const timer = useRef<number | null>(null);
   // Group sessions: opened as unvibe.site/?room, Try it shows a room code field. The host says the code
   // out loud, so it is never in a page address, a referrer or analytics.
@@ -202,10 +203,20 @@ export function TryIt({
     if (state === "done") void explain(next);
   };
 
+  /** Explain it, Try again and Cmd/Ctrl+Enter: send when both boxes are ticked, else show why and focus the first unticked box. */
+  const press = () => {
+    if (!consented) {
+      setPressed(true);
+      boxes[ticks.aiSend ? "age18" : "aiSend"].current?.focus();
+      return;
+    }
+    void explain();
+  };
+
   const onEditorKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim() && consented) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && state !== "thinking" && code.trim() && !AI_MAINTENANCE) {
       event.preventDefault();
-      void explain();
+      press();
     }
   };
 
@@ -233,13 +244,31 @@ export function TryIt({
         />
         <div className="try__foot">
           <p className="try__fine try__consent">
-            <input type="checkbox" id="try-consent-send" checked={ticks.aiSend} onChange={(e) => tick("aiSend", e.target.checked)} />
+            <input
+              ref={boxes.aiSend}
+              type="checkbox"
+              id="try-consent-send"
+              checked={ticks.aiSend}
+              aria-invalid={reasons.aiSend ? true : undefined}
+              aria-describedby={reasons.aiSend ? "try-consent-send-why" : undefined}
+              onChange={(e) => tick("aiSend", e.target.checked)}
+            />
             <label htmlFor="try-consent-send">Send this code to Anthropic&apos;s Claude API to explain it</label>
           </p>
+          <p className="try__fine try__why" id="try-consent-send-why" role="alert">{reasons.aiSend}</p>
           <p className="try__fine try__consent">
-            <input type="checkbox" id="try-consent-age" checked={ticks.age18} onChange={(e) => tick("age18", e.target.checked)} />
+            <input
+              ref={boxes.age18}
+              type="checkbox"
+              id="try-consent-age"
+              checked={ticks.age18}
+              aria-invalid={reasons.age18 ? true : undefined}
+              aria-describedby={reasons.age18 ? "try-consent-age-why" : undefined}
+              onChange={(e) => tick("age18", e.target.checked)}
+            />
             <label htmlFor="try-consent-age">I&apos;m 18 or older</label>
           </p>
+          <p className="try__fine try__why" id="try-consent-age-why" role="alert">{reasons.age18}</p>
           {roomField ? (
             <p className="try__fine try__room">
               <label htmlFor="try-room">Room code</label>{" "}
@@ -262,13 +291,10 @@ export function TryIt({
             type="button"
             className="try__go"
             disabled={AI_MAINTENANCE || state === "thinking" || !code.trim()}
-            aria-disabled={consented ? undefined : true}
-            aria-describedby={consented ? undefined : "try-consent-hint"}
-            onClick={() => void explain()}
+            onClick={press}
           >
             {AI_MAINTENANCE ? "Paused for maintenance" : state === "thinking" ? "Vibe is thinking…" : `Explain it · ${depthLabel}`}
           </button>
-          {consented ? null : <p className="try__fine" id="try-consent-hint">Tick both boxes to explain.</p>}
           <p className="try__fine" id="try-fine">
             Up to 1,500 characters (about 60 lines). Your code is sent to Unvibe and Anthropic to write the
             explanation. Don&apos;t paste keys or passwords. Common key formats are refused.
@@ -317,9 +343,7 @@ export function TryIt({
               <button
                 type="button"
                 className="try__retry"
-                aria-disabled={consented ? undefined : true}
-                aria-describedby={consented ? undefined : "try-consent-hint"}
-                onClick={() => void explain()}
+                onClick={press}
               >
                 Try again
               </button>

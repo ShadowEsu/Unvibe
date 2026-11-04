@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { Reveal } from "@/components/redesign/Reveal";
+import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
+import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
+import { proSentence } from "@/lib/proOffer";
+import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -21,7 +26,16 @@ export default function BetaDownloadsPage() {
   return (
     <article className="beta-page">
       <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
+        {/* The band is about 208 px tall at 1440, so it gets a 1440x420 crop (78 KB) and a 780 wide copy for phones
+            (57 KB) instead of the 367 KB 1600 px photo. It is the first thing on the page, so it loads first. React 18
+            only passes the lowercase attribute through. */}
+        <img
+          src="/hero/golden-gate-band-1440x420.webp"
+          srcSet="/hero/golden-gate-band-780x545.webp 780w, /hero/golden-gate-band-1440x420.webp 1440w"
+          sizes="100vw"
+          alt=""
+          {...{ fetchpriority: "high" }}
+        />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
           <p className="paper-meta">Free for Mac and Windows</p>
@@ -53,9 +67,14 @@ export default function BetaDownloadsPage() {
                     your Mac password.
                   </p>
                   <p>
-                    On Windows, keep the download if your browser warns, then run the portable .exe. If you see
-                    “Windows protected your PC”, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
+                    On Windows: {WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected
+                    your PC, choose <b>More info</b>, then <b>Run anyway</b>.{" "}
                     <a className="paper-text-link" href="/install-help">Show me how</a>
+                  </p>
+                  <p>
+                    Check your download against its SHA-256:{" "}
+                    <a className="paper-text-link" href={MAC_SHA256_URL}>Mac</a>,{" "}
+                    <a className="paper-text-link" href={WINDOWS_SHA256_URL}>Windows</a>.
                   </p>
                 </div>
               </li>
@@ -100,7 +119,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>macOS won’t open Unvibe the first time</summary>
               <p>
-                Unvibe is not notarized by Apple yet, so macOS blocks the first open. Do this once:
+                Unvibe is not verified by Apple yet, so macOS blocks the first open. Do this once:
               </p>
               <ol>
                 <li>Press <strong>Done</strong> on the warning.</li>
@@ -146,8 +165,9 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>You can start without signing in</summary>
               <p>
-                Skip sign-in on the first screen and you get 50 free explanations in your first 30 days. Signing in gives you a free allowance every month, syncs your history across devices, and starts a new account with a free month of Pro.
+                Skip sign-in on the first screen and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices. {proSentence()}
               </p>
+              {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
             </details>
           </div>
         </Reveal>
@@ -158,13 +178,14 @@ export default function BetaDownloadsPage() {
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
               <ShieldIcon />
-              <p>Keys and tokens in your code are filtered on your device before it is sent. Your repo is never uploaded.</p>
+              <p>Unvibe checks your code for keys and tokens on your device and stops a known key before anything is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
               <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
+          <BetaFeedbackAsk />
         </Reveal>
       </section>
     </article>
