@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="4 November 2026"
+      updated="5 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -42,6 +42,10 @@ export default function PrivacyPage() {
             <strong>Account data:</strong> your email for sign-in, your name from Google if you
             sign in with Google, and an authentication token. Before you sign in, the sign-in page
             asks you to agree to the Terms and this policy and to confirm you&apos;re 18 or older.
+            If you sign in, we may email you a few getting-started tips over your first two weeks,
+            and notices about your account, such as when a free Pro month ends. To choose which tip
+            to send, we look at whether your account has run an explanation and on how many days,
+            never at your code. You can unsubscribe any time with the link in each email.
             If you start a Google or email sign-in but never approve the app, our sign-in provider
             (Supabase) still keeps that email and name as a sign-in record, with no Unvibe account
             and no app access. Email support@unvibe.site to have it deleted.

@@ -4,7 +4,7 @@
  * a redemption without both and this version (web/src/lib/accountConsent.ts, which marketing can't
  * import; accountAgreement.test.ts checks the two match. The app's consent screen uses the same one).
  */
-export const ACCOUNT_POLICY_VERSION = "2026-10-28";
+export const ACCOUNT_POLICY_VERSION = "2026-11-05";
 
 /** Each page keeps its own ticks: a box ticked on one page never comes back ticked on the other. */
 export const ACTIVATE_AGREEMENT_KEY = "unvibe_activate_agreement";
