@@ -95,7 +95,7 @@ export function offersMoreDetail(phase: string, short: boolean, shownLength: num
   return short && phase === 'done' && !answerArriving(phase, short, shownLength, textLength);
 }
 
-/** How the waiting line names the selection's language (ids from core/language.ts). */
+/** How the panel names a selection's language (ids from core/language.ts). */
 const LANGUAGE_NAMES: Record<string, string> = {
   c: 'C', cpp: 'C++', csharp: 'C#', go: 'Go', html: 'HTML', java: 'Java', javascript: 'JavaScript',
   javascriptreact: 'JavaScript', json: 'JSON', 'objective-c': 'Objective-C', 'objective-cpp': 'Objective-C++',
@@ -103,18 +103,28 @@ const LANGUAGE_NAMES: Record<string, string> = {
   typescript: 'TypeScript', typescriptreact: 'TypeScript', yaml: 'YAML',
 };
 
+/** The reader-facing name of a language id, or undefined for plain text and ids it does not know. */
+export function languageName(language?: string): string | undefined {
+  return language ? LANGUAGE_NAMES[language] : undefined;
+}
+
 /** The quiet line under the waiting skeleton, saying what Unvibe is reading: "Reading 24 lines of TypeScript…". */
 export function waitingStatus(lines?: number, language?: string): string {
   if (!lines || lines < 1) return 'Reading your request…';
-  return `Reading ${linesLabel(lines)} of ${(language && LANGUAGE_NAMES[language]) || 'code'}…`;
+  return `Reading ${linesLabel(lines)} of ${languageName(language) ?? 'code'}…`;
 }
 
-/** Before the first words: three skeleton lines at the answer's line height, and what is happening. No spinner. */
-export function AnswerWait({ status, leaving = false }: { status: string; leaving?: boolean }) {
+/**
+ * Before the first words: the step line saying what is really happening, then three skeleton lines at the answer's
+ * line height once the wait has lasted SKELETON_DELAY_MS (`skeleton`). No spinner. The region around it carries
+ * aria-busy; the one visually hidden "Loading explanation" names the wait for screen readers.
+ */
+export function AnswerWait({ status, skeleton = false, leaving = false }: { status: string; skeleton?: boolean; leaving?: boolean }) {
   return (
-    <div className={`answer-wait${leaving ? ' answer-wait--leaving' : ''}`} role={leaving ? undefined : 'status'} aria-hidden={leaving || undefined}>
-      <div className="answer-skeleton" aria-hidden="true"><i /><i /><i /></div>
+    <div className={`answer-wait${leaving ? ' answer-wait--leaving' : ''}`} aria-hidden={leaving || undefined}>
+      {leaving ? null : <span className="sr-only">Loading explanation</span>}
       <p className="answer-wait__status">{status}</p>
+      {skeleton ? <div className="answer-skeleton" aria-hidden="true"><i /><i /><i /></div> : null}
     </div>
   );
 }
@@ -135,16 +145,20 @@ function renderSentences(sentences: Sentence[]): ReactNode[] {
 
 /**
  * The short default answer (Preston 2026-11-02): one plain paragraph, then the "Not sure:" line in the quiet style.
- * One that streams here waits with the skeleton and `status`, crossfades to its first sentence, then shows each
- * sentence as it completes (never a partial one, never a caret); the "Not sure:" line follows when the stream ends.
+ * One that streams here waits with `status` (and the skeleton once `skeleton` is set), crossfades to its first
+ * sentence, then shows each sentence as it completes (never a partial one, never a caret); the "Not sure:" line
+ * follows when the stream ends.
  */
-export function ShortAnswer({ text, streaming = false, status = 'Reading your selection…' }: { text: string; streaming?: boolean; status?: string }) {
+export function ShortAnswer({ text, streaming = false, status = 'Reading your selection…', skeleton = false }: { text: string; streaming?: boolean; status?: string; skeleton?: boolean }) {
   // An answer that streamed in this view keeps its sentence spans when it ends, so its last sentence fades in too.
   const arrived = useRef(streaming);
   if (streaming) arrived.current = true;
   const { sentences, unsure } = revealShortAnswer(text, streaming);
   const waiting = streaming && sentences.length === 0;
   const leaving = useSkeletonExit(waiting);
+  // The crossfade out keeps the skeleton only if it was on screen.
+  const hadSkeleton = useRef(false);
+  if (waiting) hadSkeleton.current = skeleton;
   const { main } = splitUnsure(text);
 
   if (!arrived.current) {
@@ -159,7 +173,7 @@ export function ShortAnswer({ text, streaming = false, status = 'Reading your se
   const shown = BLOCK_MARKDOWN.test(main) ? (last ? renderRich(main.slice(0, last.end)) : null) : renderSentences(sentences);
   return (
     <div className="short-answer short-answer--arriving">
-      {waiting || leaving ? <AnswerWait status={status} leaving={!waiting} /> : null}
+      {waiting || leaving ? <AnswerWait status={status} skeleton={hadSkeleton.current} leaving={!waiting} /> : null}
       {shown}
       {unsure ? <div className="short-answer__unsure">{renderRich(unsure)}</div> : null}
     </div>

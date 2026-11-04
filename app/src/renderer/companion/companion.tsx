@@ -27,6 +27,8 @@ import { CONSENT_PROVIDERS } from '../../core/consent';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
+import { Celebration, CheckMark, claimCelebration, useReducedMotion } from '../shared/motion';
+import { localDayKey } from '../../core/learning';
 
 type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
@@ -69,6 +71,8 @@ interface Settings {
   barSize: 'small' | 'medium' | 'large';
   followActiveDisplay: boolean; soundEffects: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
+  /** The small burst on a real win, once per kind per day (MOTION-SPEC §2). */
+  celebrations: boolean;
   widgetOpacityInactive: number; inactiveBehavior: string;
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
@@ -456,13 +460,16 @@ const SAMPLE_LINES = [
  * Windows needs no permission, so it keeps its three steps. Google sign-in and editor bridges are
  * optional and stay reachable later.
  */
-function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
+function Onboarding({ soundEffects, soundVolume, soundStyle, celebrations, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; celebrations: boolean; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [celebrating, setCelebrating] = useState(false);
+  /** The finish button's contained celebration while the app opens; null when none. */
+  const [burst, setBurst] = useState<number | null>(null);
+  const reduced = useReducedMotion();
   const [explained, setExplained] = useState(false);
   const [sampleDone, setSampleDone] = useState(false);
   const [levelSaved, setLevelSaved] = useState('');
@@ -564,10 +571,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       await window.unvibe.completeOnboarding();
       if (soundEffects) playTone('celebrate');
       setBuddyMood('celebrate');
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        setCelebrating(true);
-        await new Promise((resolve) => window.setTimeout(resolve, 900));
-      }
+      // The contained card celebration (MOTION-SPEC §2) plays on the finish button while the app opens;
+      // nothing waits for it, and reduced motion keeps only the check.
+      setCelebrating(true);
+      if (claimCelebration('firstRun', { enabled: celebrations, today: localDayKey(new Date()), store: window.localStorage })) setBurst(Date.now());
       await onDone();
     } catch {
       setSaveError('Your setup could not be saved. Please try again.');
@@ -615,11 +622,6 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 
   return (
     <div className={`ob ob2 ob--scene-${step}`}>
-      {celebrating ? (
-        <div className="ob__confetti" aria-hidden="true">
-          {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
-        </div>
-      ) : null}
       <div className="ob__card ob2__card">
         <div className="ob2__top">
           <div className="ob__dots">{steps.map((label, i) => <span key={label} title={label} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
@@ -742,7 +744,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
         {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
         <div className="ob__actions">
           <button className="ob__skip" disabled={step === 0 || saving} onClick={back}>Back</button>
-          <button className={forward.ghost ? 'act' : 'field-btn inline'} disabled={saving} onClick={advance}>{continueLabel}</button>
+          <span className="celebrate-host">
+            <button className={forward.ghost ? 'act' : 'field-btn inline'} disabled={saving} onClick={advance}>
+              {celebrating ? <CheckMark pop={burst !== null && !reduced} /> : null}
+              {continueLabel}
+            </button>
+            <Celebration run={burst} reduced={reduced} onEnd={() => setBurst(null)} />
+          </span>
         </div>
       </div>
     </div>
@@ -1853,6 +1861,8 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
               <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
+              <div className="settings-section-label">MOTION</div>
+              <div className="setrow"><div><div className="sl">Celebrations</div><div className="sd">A small burst when you press Got it or get a Test me question right, at most once a day each. With Reduce motion on in your system settings, you see a plain check instead.</div></div><Toggle label="Celebrations" on={settings.celebrations !== false} onClick={() => onSettings({ celebrations: settings.celebrations === false })} /></div>
               <div className="settings-section-label">NOTIFICATIONS</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
@@ -2147,7 +2157,7 @@ function App() {
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
-    return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
+    return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} celebrations={settings?.celebrations !== false} shortcut={settings?.shortcut ?? (isWindows ? 'Control+Alt+U' : 'Control+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
   if (gate === 'login') {
     return (<><div className="titlebar" /><LoginScreen shortcut={settings?.shortcut ?? 'CommandOrControl+U'} notice={deletionNotice} onSignedIn={async () => { setDeletionNotice(''); await refresh(); setGate('app'); }} onSkip={() => { setDeletionNotice(''); setGate('app'); }} /></>);

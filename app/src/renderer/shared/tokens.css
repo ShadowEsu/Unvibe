@@ -30,12 +30,23 @@
   --uv-fast: 140ms;
   --uv-normal: 200ms;
   --uv-slow: 280ms;
-  /* Motion (Design motion spec, 2 Nov 2026): one set for the site and the app. Hovers and presses use
-     micro, enters at most standard, exits exit. Story is the site hero's single "answer arrives" beat. */
+  /* Motion system (Design MOTION-SPEC §1, 4 Nov 2026): one set for every app and site. New motion uses these
+     only; the JS twin is shared/motionTokens.ts. */
+  --m-instant: 80ms;   --m-fast: 180ms;  --m-exit: 150ms;
+  --m-normal: 350ms;   --m-slow: 600ms;  --m-crawl: 1000ms;
+  --m-stagger: 70ms;                      /* 0.05-0.10 s rule */
+  --m-ease-smooth: cubic-bezier(.22,1,.36,1);   /* arrivals */
+  --m-ease-sharp:  cubic-bezier(.4,0,.2,1);     /* state changes */
+  --m-ease-pop:    cubic-bezier(.34,1.56,.64,1);/* celebrations only */
+  --m-dist-sm: 8px; --m-dist-md: 16px;
+  --m-scale-press: .95; --m-scale-pop: 1.04;
+  /* The earlier panel motion set (Design motion spec, 2 Nov 2026). A value that §1 already has is an alias of
+     it, so each number lives once; micro (150), standard (240) and the two easings are already-gated state
+     motion, which §1's exception keeps as they are. Hovers and presses use micro, enters at most standard. */
   --dur-micro: 150ms;
   --dur-standard: 240ms;
-  --dur-story: 600ms;
-  --dur-exit: 150ms;
+  --dur-story: var(--m-slow);
+  --dur-exit: var(--m-exit);
   --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
   --uv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;

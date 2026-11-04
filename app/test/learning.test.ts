@@ -31,6 +31,18 @@ test('the activity calendar uses the captured local date rather than the UTC dat
   assert.deepEqual([nextDay[180], nextDay[181]], [1, 0]);
 });
 
+test('the weekly count takes saved explanations from the last 7 local days, not chats or older ones', () => {
+  const events = [
+    ev({ ts: '2026-07-11T09:00:00Z' }),
+    ev({ ts: '2026-07-05T09:00:00Z' }), // 6 days before: still this week
+    ev({ ts: '2026-07-04T09:00:00Z' }), // 7 days before: last week
+    ev({ ts: '2026-07-10T09:00:00Z', scope: 'chat' }),
+    ev({ ts: '2026-07-12T06:30:00Z', localDate: '2026-07-11' }), // the local day decides, as in the calendar
+  ];
+  assert.equal(computeProfile(events, '2026-07-11').explainedThisWeek, 3);
+  assert.equal(computeProfile(events, '2026-07-12').explainedThisWeek, 2, 'a day later the oldest one has left the week');
+});
+
 test('heatLevel maps explained lines to five shades', () => {
   assert.equal(heatLevel(0), 0);
   assert.equal(heatLevel(4), 0);

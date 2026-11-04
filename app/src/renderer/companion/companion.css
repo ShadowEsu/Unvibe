@@ -3139,25 +3139,8 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .ob__hello--small .ob__hello-bubble { border-radius: 14px 14px 14px 4px; }
 @keyframes obBubble { from { opacity: 0; transform: translateY(6px) scale(0.94); } }
 
-.ob__confetti { position: fixed; inset: 0; z-index: 200; overflow: hidden; pointer-events: none; }
-.ob__confetti i {
-  --hue: calc(var(--i) * 37deg);
-  position: absolute; top: 46%; left: 50%;
-  width: 8px; height: 12px; border-radius: 2px;
-  background: hsl(calc(250deg + var(--hue)) 85% 68%);
-  animation: obConfetti 1.4s cubic-bezier(.15,.7,.3,1) both;
-  animation-delay: calc(var(--i) * 12ms);
-  --dx: calc((var(--i) - 18) * 22px);
-}
-.ob__confetti i:nth-child(3n) { width: 6px; height: 6px; border-radius: 50%; }
-.ob__confetti i:nth-child(4n) { background: #fde68a; }
-@keyframes obConfetti {
-  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
-  100% { opacity: 0; transform: translate(var(--dx), calc(-260px + (var(--i) * 13px))) rotate(calc(var(--i) * 70deg)); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .ob__hello-bubble, .ob__confetti i { animation: none; }
+  .ob__hello-bubble { animation: none; }
 }
 
 /* Motion spec §4: no idle loop while the window is unfocused (the root gets .is-blurred from the window's

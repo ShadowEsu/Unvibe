@@ -99,6 +99,8 @@ export interface Settings {
   soundVolume: number;
   /** A restrained synthesized voice; no remote audio is used. */
   soundStyle: 'soft' | 'pixel';
+  /** The small burst on a real win (Got it, a right Test me answer, finishing setup), once per kind per day. */
+  celebrations: boolean;
   /** Opacity of an unfocused, unpinned widget (0.35–1). */
   widgetOpacityInactive: number;
   inactiveBehavior: InactiveBehavior;
@@ -164,6 +166,7 @@ const DEFAULTS: Settings = {
   soundEffects: true,
   soundVolume: 0.3,
   soundStyle: 'soft',
+  celebrations: true,
   // Enough transparency to show the editor beneath without making text feel disabled.
   widgetOpacityInactive: 0.72,
   inactiveBehavior: 'dim',
