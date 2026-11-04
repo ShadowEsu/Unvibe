@@ -438,16 +438,16 @@ function Widget() {
       if (claimCelebration(trigger, { enabled, today: localDayKey(new Date()), store: window.localStorage })) setCelebration({ trigger, run: Date.now() });
     });
   }, []);
-  /** "N explained this week" in the footer, from the learning profile the companion's Today stickers use. */
-  const [weekCount, setWeekCount] = useState(0);
-  const refreshWeek = useCallback(() => {
+  /** "N explained in the last 7 days" in the footer, from the learning profile the companion's Today stickers use. */
+  const [last7Count, setLast7Count] = useState(0);
+  const refreshLast7 = useCallback(() => {
     void window.unvibe.profile().then((profile: unknown) => {
-      if (profile && typeof profile === 'object' && 'explainedThisWeek' in profile && typeof profile.explainedThisWeek === 'number') {
-        setWeekCount(profile.explainedThisWeek);
+      if (profile && typeof profile === 'object' && 'explainedLast7Days' in profile && typeof profile.explainedLast7Days === 'number') {
+        setLast7Count(profile.explainedLast7Days);
       }
     }).catch(() => undefined);
   }, []);
-  useEffect(() => { refreshWeek(); }, [refreshWeek]);
+  useEffect(() => { refreshLast7(); }, [refreshLast7]);
   const bodyRef = useRef<HTMLDivElement>(null);
   /**
    * When a short answer arrives (its More detail block mounts once the whole answer is shown), scroll the body just
@@ -548,8 +548,8 @@ function Widget() {
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
       }
-      // A finished explanation is saved before its done event, so the weekly count can be read again now.
-      if (ev.type === 'done' && !('part' in ev && ev.part === 'detail')) refreshWeek();
+      // A finished explanation is saved before its done event, so the 7-day count can be read again now.
+      if (ev.type === 'done' && !('part' in ev && ev.part === 'detail')) refreshLast7();
       if (ev.type === 'graded' && ev.correct) celebrate('testCorrect');
       setTabs((prev) => {
         const tab = prev.find((t) => t.id === tabId);
@@ -1469,14 +1469,15 @@ function Widget() {
                     </div>
                   ) : null}
                   <ActionBar
+                    key={active.id}
                     answerReady={answerReady}
                     understood={active.understood}
                     streaming={phase === 'streaming'}
                     celebration={celebration?.trigger === 'gotIt' ? celebration.run : null}
                     reduced={reduced}
                     moreItems={moreItems}
-                    weekCount={weekCount > 0 ? (
-                      <CountUp value={weekCount} label={(n) => `${n} explained this week`} storageKey="unvibe.weekCountShown" reduced={reduced} />
+                    recentCount={last7Count > 0 ? (
+                      <CountUp value={last7Count} label={(n) => `${n} explained in the last 7 days`} storageKey="unvibe.weekCountShown" reduced={reduced} />
                     ) : undefined}
                     onGotIt={gotIt}
                     onTestMe={() => openQuiz()}

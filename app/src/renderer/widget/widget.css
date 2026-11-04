@@ -1450,6 +1450,8 @@ code.inline {
 .card .sw-btn--understood,
 .card .sw-btn--understood:not(:disabled):hover { background: var(--sw-mint-soft); border-color: var(--sw-mint); color: var(--sw-mint-ink); opacity: 1; cursor: default; }
 .card .sw-btn--understood:not(:disabled):active { transform: none; }
+/* The live region that holds "Understood"; empty (and zero width) until Got it. */
+.card .sw-status { display: inline-flex; }
 .card .sw-btn--secondary { min-width: 112px; background: var(--sw-field); border-color: var(--sw-ink); }
 .card .sw-btn--secondary:not(:disabled):hover { background: var(--sw-plate); }
 .card .sw-btn--quiet { padding: 0 12px; }

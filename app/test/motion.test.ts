@@ -77,9 +77,9 @@ test('a count-up tells screen readers only the final number while its digits sta
     },
   });
   try {
-    const label = (n: number) => `${n} explained this week`;
+    const label = (n: number) => `${n} explained in the last 7 days`;
     const html = renderToStaticMarkup(createElement(CountUp, { value: 13, label, storageKey: 'unvibe.weekCountShown', reduced: false }));
-    assert.match(html, /role="img" aria-label="13 explained this week"/);
+    assert.match(html, /role="img" aria-label="13 explained in the last 7 days"/);
     assert.match(html, /<span aria-hidden="true">.*>12<\/b>/, 'the moving digits start at the last value and are hidden');
     const still = renderToStaticMarkup(createElement(CountUp, { value: 13, label, storageKey: 'unvibe.weekCountShown', reduced: true }));
     assert.match(still, />13<\/b>/, 'reduced motion shows the final value at once');

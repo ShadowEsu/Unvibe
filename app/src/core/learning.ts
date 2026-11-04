@@ -57,8 +57,8 @@ export interface Profile {
   usage: Usage[];
   /** Intensity 0..5 per day from lines explained that day. Oldest to newest, ending today. Length = HEAT_DAYS. */
   heat: number[];
-  /** Explanations saved over the last 7 local days, today included (the count `reviews` makes, for the week). */
-  explainedThisWeek: number;
+  /** Explanations saved over the last 7 local days, today included (a rolling window, not a calendar week). */
+  explainedLast7Days: number;
   lastActive?: string;
 }
 
@@ -207,11 +207,11 @@ export function computeProfile(events: LocalEvent[], todayKey: string): Profile 
   for (let i = HEAT_DAYS - 1; i >= 0; i--) {
     heat.push(heatLevel(perDay.get(shift(todayKey, -i)) ?? 0));
   }
-  const weekStart = shift(todayKey, -6);
+  const last7Start = shift(todayKey, -6);
 
   return {
     reviews: learning.filter((e) => e.scope !== 'chat').length,
-    explainedThisWeek: learning.filter((e) => e.scope !== 'chat' && eventDay(e) >= weekStart && eventDay(e) <= todayKey).length,
+    explainedLast7Days: learning.filter((e) => e.scope !== 'chat' && eventDay(e) >= last7Start && eventDay(e) <= todayKey).length,
     understood: learning.filter((e) => e.outcome === 'understood').length,
     needsReview: learning.filter((e) => e.outcome === 'needs_review').length,
     linesReviewed: learning.reduce((a, e) => a + e.lines, 0),

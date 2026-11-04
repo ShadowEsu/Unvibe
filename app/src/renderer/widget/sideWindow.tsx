@@ -278,10 +278,12 @@ export function moreMenuItems(opts: {
 }
 
 /**
- * The action bar: one filled primary (Got it, which turns into a mint "Understood" with its check), one outline
- * secondary (Test me) and More. A Got it celebration plays inside the primary button only.
+ * The action bar: one filled primary (Got it), one outline secondary (Test me) and More. After Got it the primary
+ * becomes a mint "Understood" status: not a control, so it cannot be pressed again; focus moves on to Test me rather
+ * than falling to the page. It lasts for this explanation only (the panel resets `understood` on a new one) and
+ * the panel stays open. A Got it celebration plays inside the primary's place only.
  */
-export function ActionBar({ answerReady, understood, streaming, celebration, reduced, moreItems, weekCount, onGotIt, onTestMe, onStop, onCelebrationEnd }: {
+export function ActionBar({ answerReady, understood, streaming, celebration, reduced, moreItems, recentCount, onGotIt, onTestMe, onStop, onCelebrationEnd }: {
   /** The answer is all on screen, so it can be marked understood or tested. */
   answerReady: boolean;
   understood: boolean;
@@ -290,33 +292,50 @@ export function ActionBar({ answerReady, understood, streaming, celebration, red
   celebration: number | null;
   reduced: boolean;
   moreItems: MenuItem[];
-  weekCount?: ReactNode;
+  /** "N explained in the last 7 days", or nothing. */
+  recentCount?: ReactNode;
   onGotIt: () => void;
   onTestMe: () => void;
   onStop: () => void;
   onCelebrationEnd: () => void;
 }) {
+  const testMe = useRef<HTMLButtonElement>(null);
   return (
     <div className="sw-actions">
       <span className="celebrate-host">
-        <button
-          type="button"
-          className={`sw-btn sw-btn--primary${understood ? ' sw-btn--understood' : ''}`}
-          disabled={!answerReady}
-          aria-disabled={understood || undefined}
-          onClick={() => { if (!understood) onGotIt(); }}
-        >
-          {understood ? <><CheckMark pop={celebration !== null && !reduced} />Understood</> : 'Got it'}
-        </button>
+        {understood ? null : (
+          <button
+            type="button"
+            className="sw-btn sw-btn--primary"
+            disabled={!answerReady}
+            onClick={() => {
+              // Got it is about to leave the page; hand focus to the next control first.
+              testMe.current?.focus();
+              onGotIt();
+            }}
+          >
+            Got it
+          </button>
+        )}
+        {/* The bar's one live region, there from the start and empty until Got it: "Understood" is announced once,
+            when it appears, and never again on re-render. A new explanation remounts the bar with it empty. */}
+        <span className="sw-status" role="status">
+          {understood ? (
+            <span className="sw-btn sw-btn--primary sw-btn--understood">
+              <CheckMark pop={celebration !== null && !reduced} />
+              Understood
+            </span>
+          ) : null}
+        </span>
         <Celebration run={celebration} reduced={reduced} onEnd={onCelebrationEnd} />
       </span>
-      <button type="button" className="sw-btn sw-btn--secondary" disabled={!answerReady} onClick={onTestMe}>Test me</button>
+      <button ref={testMe} type="button" className="sw-btn sw-btn--secondary" disabled={!answerReady} onClick={onTestMe}>Test me</button>
       <MenuButton className="sw-btn sw-btn--quiet" items={moreItems} placement="up" menuLabel="More actions">
         More
         {chevron}
       </MenuButton>
       {streaming ? <button type="button" className="sw-btn sw-btn--quiet" onClick={onStop}>Stop</button> : null}
-      {weekCount ? <span className="sw-week">{weekCount}</span> : null}
+      {recentCount ? <span className="sw-week">{recentCount}</span> : null}
     </div>
   );
 }

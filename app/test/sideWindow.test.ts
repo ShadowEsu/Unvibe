@@ -33,13 +33,43 @@ function bar(props: Partial<Parameters<typeof ActionBar>[0]> = {}): string {
   }));
 }
 
-const buttons = (html: string) => html.match(/<button[^>]*>/g) ?? [];
+const buttons = (html: string) => html.match(/<button[\s\S]*?<\/button>/g) ?? [];
+const count = (html: string, pattern: RegExp) => (html.match(new RegExp(pattern, 'g')) ?? []).length;
 
 test('the action bar has exactly one filled primary, before and after Got it', () => {
   for (const html of [bar(), bar({ understood: true }), bar({ streaming: true, answerReady: false })]) {
-    assert.equal(buttons(html).filter((b) => /sw-btn--primary/.test(b)).length, 1);
+    assert.equal(count(html, /class="sw-btn sw-btn--primary/), 1);
     assert.equal(buttons(html).filter((b) => /sw-btn--secondary/.test(b)).length, 1, 'Test me is the one outline secondary');
   }
+});
+
+test('after Got it, Understood is a status that cannot be pressed again', () => {
+  const html = bar({ understood: true });
+  assert.match(html, /<span class="sw-btn sw-btn--primary sw-btn--understood">/);
+  assert.ok(buttons(html).every((b) => !b.includes('Understood') && !b.includes('Got it')), 'neither Understood nor Got it is a button any more');
+  assert.doesNotMatch(html, /role="button"|tabindex="0"/, 'nothing makes the status focusable or pressable');
+  assert.ok(buttons(html).some((b) => b.includes('Test me') && !/disabled/.test(b)), 'Test me is there to take the focus');
+});
+
+test('Understood stays through re-renders of the same explanation and is gone for a new one', () => {
+  const rerenders: Array<Partial<Parameters<typeof ActionBar>[0]>> = [{ celebration: 1 }, { celebration: null }, { streaming: true }, { answerReady: false }];
+  for (const props of rerenders) {
+    assert.equal(count(bar({ ...props, understood: true }), /Understood/), 1, JSON.stringify(props));
+  }
+  const fresh = bar({ understood: false });
+  assert.doesNotMatch(fresh, /Understood/);
+  assert.ok(buttons(fresh).some((b) => b.includes('Got it')), 'a new explanation offers Got it again');
+});
+
+test('Understood is announced once: one status region, there and empty before Got it, no label carrying it', () => {
+  const before = bar();
+  const after = bar({ understood: true });
+  assert.equal(count(before, /role="status"/), 1);
+  assert.equal(count(after, /role="status"/), 1, 'the same region, so the change is one addition');
+  assert.match(before, /<span class="sw-status" role="status"><\/span>/, 'empty before, so nothing is announced up front');
+  assert.match(after, /<span class="sw-status" role="status"><span class="sw-btn[^"]*sw-btn--understood">[\s\S]*Understood<\/span><\/span>/);
+  assert.doesNotMatch(after, /aria-label="[^"]*Understood/, 'no label repeats it');
+  assert.doesNotMatch(after, /aria-live/, 'no second live region on the bar');
 });
 
 test('Explain differently, Why and Teach live only in More, never as buttons in the bar', () => {
