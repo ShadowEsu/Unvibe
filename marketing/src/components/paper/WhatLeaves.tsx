@@ -10,7 +10,7 @@ export const SENT: readonly string[] = [
   "Its file path inside your project, when Unvibe knows it, never the full path on your computer",
   "The name of the project folder",
   "Any question you type",
-  "On Pro, up to 2 files the selection imports (the first 4,000 characters of each)",
+  "On Pro, up to two files the selection imports (the first 4,000 characters of each)",
   "Git changes, only when you ask a Brief to explain them",
   "Without an account, a random install ID with your system and the app version, so free explanations can be counted. Signed in, your sign-in token instead",
 ];
