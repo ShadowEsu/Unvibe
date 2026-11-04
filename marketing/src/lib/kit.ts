@@ -145,7 +145,7 @@ export function kitSections(): KitSection[] {
       bullets: [
         "Voice: warm, direct, short and plain, in first person plural (we).",
         "Mascot: Vibe, a lilac blob with an ink outline. One short line in a speech bubble at most.",
-        "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour and ink outlines: no offset shadows, no gradients, no glow.",
+        "Colours: paper #fffdf6 (sheets and cards), sky #d6ecfb (page ground), ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe only), sky accent #9fd8ff. Flat colour and ink outlines: no offset shadows, no gradients, no glow.",
         "Type: Inter for headings (700, tight) and body; emphasis is Inter 700, never italic. JetBrains Mono for code and shortcuts.",
         "Never: dashes in the middle of sentences, hype words, fake urgency, made up numbers or testimonials, unreleased features as if they exist.",
       ],

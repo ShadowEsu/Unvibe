@@ -377,13 +377,12 @@ export function ResourcesHub() {
               <p>The colors used on this site.</p>
               <div className="resources-swatches">
                 {[
+                  { name: "Paper (sheets and cards)", hex: "#FFFDF6" },
+                  { name: "Sky (page ground)", hex: "#D6ECFB" },
                   { name: "Ink", hex: "#141414" },
-                  { name: "Lime", hex: "#D6F45A" },
-                  { name: "Sky", hex: "#9FD8FF" },
-                  { name: "Sun", hex: "#FFD84D" },
-                  { name: "Lilac", hex: "#B8A6FF" },
-                  { name: "Coral", hex: "#FF9A76" },
-                  { name: "Paper", hex: "#F3EEF8" },
+                  { name: "Lime (main buttons)", hex: "#D6F45A" },
+                  { name: "Lilac (Vibe only)", hex: "#B8A6FF" },
+                  { name: "Sky accent", hex: "#9FD8FF" },
                 ].map((color) => (
                   <button
                     key={color.hex}

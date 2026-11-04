@@ -103,7 +103,7 @@ pre, code, kbd, samp, textarea, .font-mono {
 @font-face { font-family: "Unvibe Mono Courier"; src: local("Courier New Bold"), local("CourierNewPS-BoldMT"); font-weight: 550 900; size-adjust: 100%; ascent-override: 102%; descent-override: 30%; line-gap-override: 0%; }
 
 :root {
-  --paper: #f3eef8;
+  --paper: var(--u-sheet); /* Design 4 Nov: one paper colour, the glass sheet #fffdf6 */
   --paper-raised: rgb(255 255 255 / 0.42);
   --snow: #ffffff;
   --glass: rgb(255 255 255 / 0.14);
