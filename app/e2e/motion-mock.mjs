@@ -14,6 +14,8 @@
 //            (`detail:"full"` with `shortAnswer`) gets the rest plus a fenced code block (the panel's only
 //            Copy button); anything else (0.1.47 sends no `detail`) gets the whole 6-sentence answer
 //   unsure   the short answer starts "Not sure:"
+//   boldcode every answer starts with inline code inside bold (`**The check (`!user`):**`), the one widget spot
+//            whose JetBrains Mono weight the self-hosted fonts could change (Design's M5 weight stills)
 //   500      HTTP 500 {"error":"internal"}
 //   429      HTTP 429 plan_limit_reached with a used-up allowance
 //   drop     the connection is cut before any answer (what "can't reach the service" looks like)
@@ -31,6 +33,7 @@ const ANSWERS = {
   detail: `${REST}\n\nA guarded version:\n\n\`\`\`js\nconst total = (items) => items.reduce((sum, item) => sum + (item.price ?? 0) * item.qty, 0);\n\`\`\`\n\nIt treats a missing price as 0.`,
   full: `${SHORT} ${REST}`,
 };
+const BOLD_CODE = '**The check (`!user`):** it returns early when nobody is signed in.';
 let mode = 'stream';
 let release = null; let releaseNow = () => {}; // `release` settles when the mode leaves "hold"
 const stats = {};
@@ -44,7 +47,8 @@ async function review(req, res, body) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
   if (mode === 'hold') await (release ??= new Promise((r) => { releaseNow = r; }));
   const kind = body?.detail === 'short' ? 'short' : body?.detail === 'full' && body?.shortAnswer ? 'detail' : 'full';
-  const text = kind === 'short' ? ANSWERS.short[mode] ?? ANSWERS.short.stream : ANSWERS[kind];
+  const answer = kind === 'short' ? ANSWERS.short[mode] ?? ANSWERS.short.stream : ANSWERS[kind];
+  const text = mode === 'boldcode' ? `${BOLD_CODE} ${answer}` : answer;
   for (let i = 0; i < text.length && !res.destroyed; i += 3) {
     res.write(`data: ${JSON.stringify({ type: 'token', text: text.slice(i, i + 3) })}\n\n`);
     await new Promise((r) => setTimeout(r, 30));
@@ -61,7 +65,7 @@ const handle = (req, res) => {
     let body = ''; req.on('data', (d) => { body += d; });
     req.on('end', () => {
       const next = JSON.parse(body || '{}').mode;
-      if (!['stream', 'unsure', '500', '429', 'drop', 'hold'].includes(next)) return json(res, 400, { error: 'unknown mode' });
+      if (!['stream', 'unsure', 'boldcode', '500', '429', 'drop', 'hold'].includes(next)) return json(res, 400, { error: 'unknown mode' });
       mode = next;
       // Leaving "hold" lets a held explanation stream the new mode's answer (stream or unsure).
       if (mode !== 'hold' && release) { releaseNow(); release = null; }

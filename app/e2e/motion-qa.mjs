@@ -15,6 +15,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { launchApp } from './cdp-launch.mjs';
+import { bundleFonts, fallbacks, resourceHosts, weightSpot } from './font-spots.mjs';
 
 const PASS = process.env.MOTION_PASS;
 if (!['mock', 'real'].includes(PASS)) throw new Error('MOTION_PASS must be mock or real');
@@ -493,6 +494,60 @@ async function ownCode(s, code, first) {
   return { panel, frames: await watch(panel) };
 }
 
+// ---- M5 weight stills (Design, via the lead 4 Nov; ~/unvibe-e2e/fonts-weights-0150.md) and F1 (Security 0546) ---
+// Two spots where self-hosting the fonts could change a JetBrains Mono weight: inline code inside bold in a widget
+// answer (mock mode `boldcode` puts one in the first-run sample's answer), and the level/outcome chips (.pill, 10px)
+// on that sample's lesson page. Each gets a still, a 4x crop, the computed weight and the weight that renders against
+// the declared faces (font-spots.mjs). On the tested build F1 also lists the bundle's renderer/fonts and every host
+// the widget and companion loaded from.
+async function fontSpots(exe, label) {
+  const out = { label };
+  let s;
+  const cdp = (page) => s.app.context.newCDPSession(page);
+  try {
+    await setMode('boldcode');
+    s = await launch(exe, `fonts-${label}`, `qa-motion-mock-fonts-${label}-${Date.now()}`, mockEnv());
+    out.version = s.version;
+    out.bundleFonts = bundleFonts(s.bundle);
+    const panel = await firstRunSample(s);
+    await finished(panel);
+    out.boldCode = await weightSpot(panel, '.body strong code', path.join(OUT, `m5-fonts-${label}-bold-code`), cdp);
+    out.widgetFallback = await fallbacks(panel);
+    out.widgetHosts = await resourceHosts(panel);
+    await focusApp(s);
+    await finishSetup(s);
+    // The first-run sample is a Library lesson too (computeLearningItems drops only chats), on 0.1.49 and 0.1.50.
+    await s.companion.getByRole('button', { name: 'Library', exact: true }).first().click({ timeout: 10000 });
+    await s.companion.locator('.lib-row').first().click({ timeout: 15000 });
+    out.pill = await weightSpot(s.companion, '.learn-reader__chips .pill', path.join(OUT, `m5-fonts-${label}-lesson-pill`), cdp);
+    out.companionFallback = await fallbacks(s.companion);
+    out.companionHosts = await resourceHosts(s.companion);
+    await shot(s.companion, `m5-fonts-${label}-lesson`);
+  } catch (e) { check(false, `M5 weight stills ${label}`, e.message.split('\n')[0]); } finally { await s?.app.close(); await setMode('stream'); }
+  for (const k of ['boldCode', 'pill']) if (out[k]?.zoomError) note(`${label} ${k}: no 4x crop (${out[k].zoomError})`);
+  return out;
+}
+function fontChecks(tested, baseline) {
+  const row = (o, k) => (o?.[k] ? `${o[k].family} ${o[k].weight} @ ${o[k].size} → renders ${o[k].rendered ?? '?'} (faces ${o[k].faces.map((f) => `${f.weight}:${f.status}`).join(', ') || 'none'}); ${o[k].still}${o[k].zoom ? `, ${o[k].zoom}` : ''}` : 'not reached');
+  const lines = ['| Spot | Baseline | Tested |', '|---|---|---|'];
+  for (const [k, name] of [['boldCode', 'Widget answer, code inside bold'], ['pill', 'Companion lesson chip (.pill)']]) lines.push(`| ${name} | ${row(baseline, k)} | ${row(tested, k)} |`);
+  writeFileSync(path.join(OUT, 'm5-weights.md'), `${baseline?.version ?? '?'} -> ${tested?.version ?? '?'}\n\n${lines.join('\n')}\n`);
+  say(lines.join('\n'));
+  for (const [k, name] of [['boldCode', 'code inside bold'], ['pill', 'lesson .pill']]) {
+    const a = baseline?.[k]?.rendered; const b = tested?.[k]?.rendered;
+    check(a != null && b != null && a === b, `M5 weights: ${name} renders at the same JetBrains Mono weight as the baseline`, `${a ?? '?'} → ${b ?? '?'}`);
+  }
+  const fb = [...(tested?.widgetFallback ?? ['not measured']).map((f) => `widget ${f}`), ...(tested?.companionFallback ?? ['not measured']).map((f) => `companion ${f}`)];
+  check(fb.length === 0, 'M5 fonts: no first-choice family falls back on the tested build (widget answer, companion lesson)', fb.join(', ') || 'none');
+  // F1: Security's packaged-build items for the self-hosted fonts.
+  const files = tested?.bundleFonts?.files ?? [];
+  const count = { ofl: files.filter((f) => /(^|\/)OFL\.txt$/.test(f)).length, fontsMd: files.filter((f) => f === 'FONTS.md').length, fonts: files.filter((f) => /\.(woff2?|ttf|otf)$/i.test(f)).length };
+  check(count.ofl === 5 && count.fontsMd === 1 && count.fonts === 7, 'F1: the bundle\'s renderer/fonts holds 5 OFL.txt, FONTS.md and 7 font files', `${tested?.bundleFonts?.from ?? '?'}: ${count.ofl} OFL.txt, ${count.fontsMd} FONTS.md, ${count.fonts} fonts; ${files.join(', ') || 'none'}`);
+  const hosts = (h) => (h ? `${h.hosts.join(', ') || 'none'}` : 'not measured');
+  const google = [...(tested?.widgetHosts?.google ?? ['widget not measured']), ...(tested?.companionHosts?.google ?? ['companion not measured'])];
+  check(google.length === 0, 'F1: the widget and companion loaded nothing from *.googleapis.com / *.gstatic.com', `widget hosts ${hosts(tested?.widgetHosts)}; companion hosts ${hosts(tested?.companionHosts)}${google.length ? `; ${google.join(', ')}` : ''}`);
+}
+
 // ---- run ----------------------------------------------------------------------------------------------------
 const result = { pass: PASS };
 if (PASS === 'mock') {
@@ -513,6 +568,10 @@ if (PASS === 'mock') {
   const before = process.env.BASELINE_EXE ? await loopStates(process.env.BASELINE_EXE, 'baseline') : [];
   if (before.length) m6(before, after); else check(false, 'M6: the baseline ran', 'no BASELINE_EXE or no rows');
   result.loops = { before, after };
+  const fontsTested = await fontSpots(EXE, 'tested');
+  const fontsBaseline = process.env.BASELINE_EXE ? await fontSpots(process.env.BASELINE_EXE, 'baseline') : null;
+  fontChecks(fontsTested, fontsBaseline);
+  result.fontSpots = { tested: fontsTested, baseline: fontsBaseline };
   result.mock = await mockStats();
   check((result.mock['POST /api/v1/reviews'] ?? 0) > 0, 'The app used the mock for its explanations', JSON.stringify(result.mock));
 } else {

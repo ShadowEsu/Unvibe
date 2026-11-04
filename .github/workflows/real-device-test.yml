@@ -190,7 +190,7 @@ jobs:
         run: |
           pkill -f "/Applications/Unvibe.app/" || true
           mkdir -p "$OUT"
-          cp app/e2e/motion-qa.mjs app/e2e/motion-mock.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp app/e2e/motion-qa.mjs app/e2e/motion-mock.mjs app/e2e/cdp-launch.mjs app/e2e/font-spots.mjs "$RUNNER_TEMP/pw/"
           # Release builds take only their own URL or https://unvibe-mock.test with UNVIBE_CI_MOCK=1 (0.1.50+,
           # app/src/main/backendUrl.ts); older ones take any non-loopback name. The name resolves only here.
           echo "127.0.0.1 unvibe-mock.test" | sudo tee -a /etc/hosts >/dev/null
@@ -251,7 +251,7 @@ jobs:
         run: |
           pkill -f "/Applications/Unvibe.app/" || true
           mkdir -p "$OUT"
-          cp app/e2e/motion-qa.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp app/e2e/motion-qa.mjs app/e2e/cdp-launch.mjs app/e2e/font-spots.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && MOTION_PASS=real node motion-qa.mjs
 
       # The website's Windows download is the portable exe, so open that exact file too.
