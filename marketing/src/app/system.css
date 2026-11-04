@@ -27,7 +27,7 @@
   --u-error: #b42318;
 
   /* Elevation: 0 hairline only, 1 sheet. The ink offset ("sticker") shadow is gone site-wide (Design, ledger 443). */
-  --u-lift-1: 0 1px 0 rgb(20 20 20 / 0.04), 0 18px 40px -22px rgb(44 22 92 / 0.45);
+  --u-lift-1: 0 1px 0 rgb(20 20 20 / 0.04), 0 18px 40px -22px rgb(20 20 20 / 0.28);
   --u-lift-2: none;
   --u-lift-2-hover: none;
   --u-radius-sheet: 28px;

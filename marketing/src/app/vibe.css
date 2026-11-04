@@ -318,8 +318,8 @@ p { font-size: 17px; }
 .try__levels { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.8rem 1rem 0; }
 .try__levels button { padding: 0.35rem 0.85rem; border: 1.5px solid #3a3a36; border-radius: 999px; background: transparent; color: #cfccc3; font: 600 0.9rem var(--font-sans); cursor: pointer; }
 .try__levels button.is-on { border-color: var(--v-lime); background: var(--v-lime); color: var(--v-ink); }
-.try__go { margin: 0.9rem 1rem 0.4rem; min-height: 3.4rem; border: 0; border-radius: 14px; background: var(--v-lime); color: var(--v-ink); font: 800 1.15rem var(--font-sans); letter-spacing: -0.02em; cursor: pointer; box-shadow: 0 4px 0 #6f8a12; transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press); }
-.try__go:hover:not(:disabled):not([aria-disabled="true"]) { transform: translateY(-2px); box-shadow: 0 6px 0 #6f8a12; }
+.try__go { margin: 0.9rem 1rem 0.4rem; min-height: 3.4rem; border: 0; border-radius: 12px; background: var(--v-lime); color: var(--v-ink); font: 800 1.15rem var(--font-sans); letter-spacing: -0.02em; cursor: pointer; transition: background-color 160ms ease; }
+.try__go:hover:not(:disabled):not([aria-disabled="true"]) { background: #c8e64a; }
 .try__go:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(4px); box-shadow: none; }
 .try__go:disabled, .try__go[aria-disabled="true"], .try__retry[aria-disabled="true"] { opacity: 0.6; cursor: wait; }
 .try__fine { margin: 0 1rem 0.9rem; color: #c9c5bc; font-size: 0.82rem !important; }
@@ -345,7 +345,7 @@ p { font-size: 17px; }
 .invite .paper-lead { color: #d8d4cb !important; max-width: 40rem; margin-inline: auto; }
 .invite__form { display: flex; gap: 0.6rem; width: min(560px, 100%); }
 .invite__form input { flex: 1; min-width: 0; min-height: 3.4rem; padding: 0 1.1rem; border: 1.5px solid #fff; border-radius: 14px; background: #fff; color: #141414; font-size: 1.05rem; }
-.invite__form button, .invite__actions button { min-height: 3.4rem; padding: 0 1.4rem; border: 0; border-radius: 14px; background: var(--v-lime); color: var(--v-ink); font: 800 1.05rem var(--font-sans); cursor: pointer; box-shadow: 0 4px 0 #6f8a12; white-space: nowrap; }
+.invite__form button, .invite__actions button { min-height: 3.4rem; padding: 0 1.4rem; border: 0; border-radius: 12px; background: var(--v-lime); color: var(--v-ink); font: 800 1.05rem var(--font-sans); cursor: pointer; white-space: nowrap; }
 .invite__form button:active, .invite__actions button:active { transform: translateY(3px); box-shadow: none; }
 .invite__result { display: grid; gap: 0.8rem; justify-items: center; }
 .invite__result code { padding: 0.7rem 1rem; border: 1.5px dashed var(--v-lime); border-radius: 12px; color: var(--v-lime); font: 600 1.05rem var(--font-mono); word-break: break-all; }
@@ -395,7 +395,7 @@ p { font-size: 17px; }
 .remind p { margin: 0 2rem 0.7rem 0; font-size: 1rem; }
 .remind__row { display: flex; gap: 0.5rem; }
 .remind__row input { flex: 1; min-width: 0; min-height: 2.8rem; padding: 0 0.8rem; border: 1.5px solid var(--u-line); border-radius: 12px; background: var(--u-card); color: var(--u-text); font-size: 1rem; }
-.remind__row button { min-height: 2.8rem; padding: 0 1rem; border: 0; border-radius: 12px; background: var(--v-lime); color: var(--v-ink); font: 800 1rem var(--font-sans); cursor: pointer; box-shadow: 0 3px 0 #6f8a12; }
+.remind__row button { min-height: 2.8rem; padding: 0 1rem; border: 0; border-radius: 12px; background: var(--v-lime); color: var(--v-ink); font: 800 1rem var(--font-sans); cursor: pointer; }
 .remind__close { position: absolute; top: 0.6rem; right: 0.7rem; width: 1.9rem; height: 1.9rem; border: 1.5px solid var(--v-ink); border-radius: 50%; background: var(--u-card); color: var(--u-text); cursor: pointer; }
 .remind__done { margin: 0 !important; font-weight: 700; }
 .remind__error { color: #b91c1c; font-size: 0.9rem; margin-top: 0.4rem !important; }

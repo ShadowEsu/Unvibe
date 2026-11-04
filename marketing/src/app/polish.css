@@ -111,15 +111,6 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
-.paper-center > .paper-meta::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 10px rgb(111 69 210 / 0.6);
-}
-
 .paper-center > .paper-text-link {
   display: inline-flex;
   align-items: center;
@@ -138,18 +129,9 @@
   transition: background 240ms ease, transform 240ms var(--ease-out-soft);
 }
 
-.paper-center > .paper-text-link::after {
-  content: "\2192";
-  transition: transform 240ms var(--ease-out-soft);
-}
-
 .paper-center > .paper-text-link:hover {
   background: rgb(255 255 255 / 0.7);
   transform: translateY(-1px);
-}
-
-.paper-center > .paper-text-link:hover::after {
-  transform: translateX(3px);
 }
 
 @keyframes heroDrift {
@@ -391,12 +373,11 @@ html[data-performance="lite"] .paper-hero > img {
 
 .sel-card header kbd { margin-left: auto; }
 
+/* The flat Vibe mark: no gradient, no glow. */
 .sel-card__logo {
   width: 1rem;
   height: 1rem;
-  border-radius: 5px;
-  background: linear-gradient(135deg, #8b5cf6, #4c1d95);
-  box-shadow: 0 0 10px rgb(139 92 246 / 0.55);
+  background: url("/brand/vibe.svg") center / contain no-repeat;
 }
 
 .sel-card blockquote {
@@ -556,11 +537,14 @@ html[data-performance="lite"] .paper-hero > img {
   white-space: nowrap;
 }
 
+/* "Save N%" changes what the visitor picks, so it stays marked: a flat lime tag, not a pill. */
 .pricing-toggle .lg-tab-text span {
-  padding: 0.1rem 0.4rem;
-  border-radius: var(--radius-pill);
-  background: rgb(139 92 246 / 0.2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--v-lime);
+  color: var(--v-ink);
   font-size: max(13px, 0.68rem);
+  font-weight: 600;
 }
 
 .marketing-plan-price {
