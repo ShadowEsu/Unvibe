@@ -13,8 +13,8 @@ export default function DataControlsPage() {
   return (
     <LegalLayout
       title="Data controls"
-      updated="October 2026"
-      intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and secrets in the code you send are filtered on-device before it is sent."
+      updated="November 2026"
+      intro="What Unvibe keeps, where it lives, and how you stay in control. Private code contents are never written to analytics or application logs, and the code you send is checked for secrets on your device first, and a known key stops it from being sent."
     >
       <LegalSection heading="What is stored and where">
         <ul className="list-disc space-y-2 pl-5">

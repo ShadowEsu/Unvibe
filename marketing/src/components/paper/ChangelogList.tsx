@@ -1,8 +1,11 @@
+import { Arrive } from "@/components/paper/Arrive";
 import { changelogEntries, type Milestone } from "@/data/milestones";
 
 interface ChangelogListProps {
   items?: Milestone[];
   limit?: number;
+  /** The first 8 entries arrive one after another when the list first scrolls into view (/releases). */
+  arrive?: boolean;
 }
 
 function StarMark() {
@@ -16,30 +19,27 @@ function StarMark() {
   );
 }
 
-export function ChangelogList({ items, limit }: ChangelogListProps) {
+export function ChangelogList({ items, limit, arrive = false }: ChangelogListProps) {
   const list = items ?? (limit ? changelogEntries().slice(0, limit) : changelogEntries());
-  return (
-    <div className="paper-log">
-      {list.map((item) => (
-        <article key={`${item.date}-${item.title}`} className={item.pinned ? "is-pinned" : undefined}>
-          <div>
-            <p className="paper-meta">{item.category}</p>
-            <h3>
-              {item.pinned ? (
-                <span className="paper-log__star" role="img" aria-label="Highlighted">
-                  <StarMark />
-                </span>
-              ) : null}
-              {item.title}
-            </h3>
-            <p className="paper-lead">{item.summary}</p>
-          </div>
-          <aside>
-            {item.figure ? <strong>{item.figure}</strong> : null}
-            <time>{item.date}</time>
-          </aside>
-        </article>
-      ))}
-    </div>
-  );
+  const entries = list.map((item) => (
+    <article key={`${item.date}-${item.title}`} className={item.pinned ? "is-pinned" : undefined}>
+      <div>
+        <p className="paper-meta">{item.category}</p>
+        <h3>
+          {item.pinned ? (
+            <span className="paper-log__star" role="img" aria-label="Highlighted">
+              <StarMark />
+            </span>
+          ) : null}
+          {item.title}
+        </h3>
+        <p className="paper-lead">{item.summary}</p>
+      </div>
+      <aside>
+        {item.figure ? <strong>{item.figure}</strong> : null}
+        <time>{item.date}</time>
+      </aside>
+    </article>
+  ));
+  return arrive ? <Arrive className="paper-log">{entries}</Arrive> : <div className="paper-log">{entries}</div>;
 }

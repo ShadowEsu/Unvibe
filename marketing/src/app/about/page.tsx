@@ -5,6 +5,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { changelogEntries } from "@/data/milestones";
 import { AboutBacking } from "@/components/paper/AboutBacking";
+import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = pageMetadata({
@@ -15,7 +16,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default function AboutPage() {
-  // Version releases on the change log (/releases renders the same entries).
+  // Version releases on the changelog (/releases renders the same entries).
   const releases = changelogEntries().filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   return (
     <article className="founder-about">
@@ -25,7 +26,7 @@ export default function AboutPage() {
         </div>
         <div>
           <p className="founder-about__eyebrow">About</p>
-          <h1>We build Unvibe <em>so you understand the code AI writes.</em></h1>
+          <h1>We build Unvibe so you understand the code AI writes.</h1>
           <p className="founder-about__lead">
             AI writes code faster than anyone can read it. Unvibe sits beside your editor, explains the exact code you select at your level, checks that you got it, and keeps the lesson. Free for Mac and Windows.
           </p>
@@ -53,15 +54,15 @@ export default function AboutPage() {
             <li><b>Explain the code you&apos;re actually looking at,</b> not a tutorial about something else.</li>
             <li><b>At your level.</b> Five depths, from New to Expert. The first four are free.</li>
             <li><b>Check it stuck.</b> Test me asks about the code you just read, and a wrong answer comes back for review.</li>
-            <li><b>Say exactly what is sent.</b> Only what you ask about: the code you selected, its language, the file&apos;s path inside your project and your project folder&apos;s name when Unvibe knows them, and any question you type (on Pro, also nearby code, or git changes you ask it to explain). Keys and tokens are filtered on your computer first. Your repo is never uploaded.</li>
+            <li><b>Say exactly what is sent.</b> Only what you ask about: the code you selected, its language, the file&apos;s path inside your project and your project folder&apos;s name when Unvibe knows them, and any question you type (on Pro, also nearby code, or git changes you ask it to explain). Unvibe checks for keys and tokens on your computer first, and a known key stops the request. Your repo is never uploaded.</li>
           </ul>
         </article>
         <article className="founder-about__card">
           <h2>How we build it</h2>
           <ul>
-            <li>We ship small releases often and list every one on the <Link href="/releases">change log</Link>. {releases}+ releases so far.</li>
+            <li>We ship small releases often and list every one on the <Link href="/releases">changelog</Link>. {releases}+ releases so far.</li>
             <li>Every explanation is generated live by cloud AI after a secret scan on your computer. The <Link href="/privacy">privacy page</Link> says exactly what is sent.</li>
-            <li>Free explanations have a monthly limit. No card, no API key.</li>
+            <li>Free: {SIGNED_OUT_ALLOWANCE}, then {FREE_MONTHLY_ALLOWANCE} when you sign in. No card, no API key.</li>
           </ul>
         </article>
         <article className="founder-about__card">

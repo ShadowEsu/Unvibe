@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Button, Input } from "glisse";
 import { NEWSLETTER_CONSENT_TEXT } from "@/lib/newsletterConsent";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
@@ -9,7 +10,8 @@ const FAILED = "That didn't go through. Try again in a minute.";
 /**
  * Email signup for product news (ledger 299). The consent box starts unticked on every load and is
  * never remembered; Subscribe sends nothing until it is ticked, and the server refuses a newsletter
- * post without `consent: true`. `id` keeps the ids unique when several forms share a page.
+ * post without `consent: true`. `id` keeps the ids unique when several forms share a page. The consent
+ * box and its label stay native, on a solid surface (Security); the email field is a Glisse Input.
  */
 export function NewsletterSignup({ id }: { id: string }) {
   const [email, setEmail] = useState("");
@@ -72,7 +74,7 @@ export function NewsletterSignup({ id }: { id: string }) {
     <form className="newsletter" onSubmit={submit} noValidate>
       <div className="newsletter__row">
         <label className="sr-only" htmlFor={ids.email}>Email for product news</label>
-        <input
+        <Input
           id={ids.email}
           name="email"
           type="email"
@@ -82,18 +84,19 @@ export function NewsletterSignup({ id }: { id: string }) {
           inputMode="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onValueChange={setEmail}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? ids.error : undefined}
         />
-        <button
+        <Button
           type="submit"
+          variant="filled"
           disabled={state === "busy"}
           aria-disabled={agreed ? undefined : true}
           aria-describedby={describedBy}
         >
           {state === "busy" ? "Subscribing…" : "Subscribe"}
-        </button>
+        </Button>
       </div>
       <p className="newsletter__consent">
         <input

@@ -76,7 +76,7 @@ describe("Try it disclosure", () => {
     assert.match(page, /Anthropic&#x27;s Claude API/);
     assert.match(page, /href="https:\/\/www.anthropic.com\/legal\/commercial-terms"/);
     assert.match(page, /Unvibe is for people 18 or older, as our <a href="\/terms">Terms<\/a> say\./);
-    assert.match(page, /nothing is filtered in your browser/);
+    assert.match(page, /nothing is checked in your browser/);
     assert.match(page, /redemption record: a fingerprint of the code \(not the code itself\), your account and its email/);
     assert.match(page, /the link to your account and the email are removed/);
   });

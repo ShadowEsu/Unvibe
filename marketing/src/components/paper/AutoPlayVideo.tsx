@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { Switch } from "glisse";
 import { prefersLiteExperience } from "@/lib/performanceMode";
 
 interface AutoPlayVideoProps {
@@ -18,6 +19,8 @@ interface AutoPlayVideoProps {
   height?: number;
   /** English WebVTT captions, off until chosen in the player (they repeat the burned-in text). */
   captions?: string;
+  /** Id of the element that describes the video (its caption), for aria-describedby. */
+  describedBy?: string;
   /** Told whether the video will autoplay: false for lite visitors and when the browser refuses even muted play. */
   onAutoplayChange?: (autoplays: boolean) => void;
 }
@@ -39,6 +42,7 @@ export function AutoPlayVideo({
   width,
   height,
   captions,
+  describedBy,
   onAutoplayChange,
 }: AutoPlayVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -151,15 +155,18 @@ export function AutoPlayVideo({
         controls={controls}
         preload={preload}
         aria-label={label}
+        aria-describedby={describedBy}
       >
         {captions ? <track kind="captions" srcLang="en" label="English" src={captions} /> : null}
       </video>
       {autoplays ? (
-        // A toggle keeps one name; aria-pressed (and the filled style) says whether sound is on.
-        <button type="button" className="vtour__sound" aria-pressed={soundOn} onClick={toggleSound}>
+        // One switch named by its label ("Sound on"); aria-checked says whether sound is on. The label is
+        // the whole pill, so clicking the words toggles it too.
+        <label className="vtour__sound">
           {soundOn ? <Volume2 aria-hidden="true" size={18} /> : <VolumeX aria-hidden="true" size={18} />}
           Sound on
-        </button>
+          <Switch checked={soundOn} onCheckedChange={toggleSound} />
+        </label>
       ) : null}
     </>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { BETA_WINDOWS_DIRECT_DOWNLOAD, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
+import { WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -69,8 +70,8 @@ export default function CodeExplainerWindowsPage() {
       <section className="explain-card" aria-labelledby="win-which">
         <h2 id="win-which">Which Windows</h2>
         <p>
-          Windows 10 or Windows 11, on a 64-bit (x64) PC. The download is a single portable file, {BETA_WINDOWS_ASSET},
-          that runs from wherever you save it.
+          {WINDOWS_META} The download is a single portable file, {BETA_WINDOWS_ASSET}, that runs from wherever you save
+          it. <a href={WINDOWS_SHA256_URL}>Its SHA-256 checksum</a> is on the release.
         </p>
         <p>
           To have Unvibe in your Start menu instead, open Windows PowerShell (not Command Prompt), paste this line and
@@ -96,7 +97,7 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-what">What Vibe can do with your code</h2>
         <ul className="explain-notes">
           <li>Explain it at the level you pick. New, Beginner, Intermediate and Advanced are free; Expert comes with Pro.</li>
-          <li>Quiz you with Test me: up to three questions written about the lines you highlighted.</li>
+          <li>Quiz you with Test me: up to 3 questions written about the lines you highlighted.</li>
           <li>Keep the lessons you want in your Library, saved on this PC.</li>
           <li>See what changed in your repo in a Change Brief, built on your PC at no cost (its AI explanation is Pro).</li>
           <li>

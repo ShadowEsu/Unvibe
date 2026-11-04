@@ -16,6 +16,7 @@ import { BETA_INSTALL_VERSION, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOW
 import { PRICING } from "@/lib/pricing";
 import { OG_CARDS } from "@/lib/pageMeta";
 import { GIFT_LINK_NOTE, GIFT_OFFER } from "@/lib/giftOffer";
+import { proSentence } from "@/lib/proOffer";
 
 /**
  * The Unvibe resource kit: everything an AI agent (or a person) needs to talk about Unvibe
@@ -92,7 +93,7 @@ export function kitSections(): KitSection[] {
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
         "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
-        `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
+        `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. ${proSentence()}`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
         "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, perks from other tools worth about $21.5K to $23K).",
       ],
@@ -106,7 +107,7 @@ export function kitSections(): KitSection[] {
         "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Pro ranks the diff so you know where to look first.",
         "Working developers: own the code in your repo, even the parts you did not type.",
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
-        "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
+        "Objection: \"Is my code safe?\" Answer: Unvibe checks the code for secrets on your machine first, a known key stops the request, and you choose what is sent. From app 0.1.44, typed questions and Chat are checked too; older versions don't check them, so say so if asked.",
         "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
         AI_MAINTENANCE
           ? `Call to action: ${SITE} (download).`
@@ -145,8 +146,8 @@ export function kitSections(): KitSection[] {
       bullets: [
         "Voice: warm, direct, short and plain, in first person plural (we).",
         "Mascot: Vibe, a lilac blob with an ink outline. One short line in a speech bubble at most.",
-        "Colours: paper #f6f1e7, ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe), sky #9fd8ff, sun #ffd84d. Flat colour, ink outlines, small offset shadows. One gradient, pink to blue (#e470b5 to #9672ed to #5069f9), used only behind the homepage hero and on link previews. No glow.",
-        "Type: bold grotesque headings (Bricolage Grotesque), one italic serif accent phrase (Instrument Serif Italic), Inter for body.",
+        "Colours: paper #fffdf6 (sheets and cards), sky #d6ecfb (page ground), ink #141414, lime #d6f45a (main buttons), lilac #b8a6ff (Vibe only), sky accent #9fd8ff. Flat colour and ink outlines: no offset shadows, no gradients, no glow.",
+        "Type: Inter for headings (700, tight) and body; emphasis is Inter 700, never italic. JetBrains Mono for code and shortcuts.",
         "Never: dashes in the middle of sentences, hype words, fake urgency, made up numbers or testimonials, unreleased features as if they exist.",
       ],
     },

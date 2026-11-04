@@ -207,6 +207,16 @@ export const languages: Language[] = [
     learningPath: ["Commands", "Pipes", "Variables", "Scripts"],
     sample: `grep -r "TODO" src/ | wc -l`,
   },
+  {
+    id: "regex",
+    name: "Regex",
+    categories: ["scripting", "data"],
+    blurb: "Patterns that find, check and pull apart text.",
+    concepts: ["character classes", "quantifiers", "groups", "anchors", "flags"],
+    frameworks: ["Python re", "JavaScript RegExp", "PCRE", "grep -E"],
+    learningPath: ["Literals and classes", "Quantifiers", "Groups", "Anchors and flags"],
+    sample: String.raw`^\d{3}-\d{4}$`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
