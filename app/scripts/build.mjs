@@ -73,11 +73,11 @@ for (const name of ['bar', 'widget', 'companion']) {
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|webp|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }
-  // Bundled fonts so the interface never depends on a font CDN being reachable.
-  for (const file of readdirSync('src/renderer/shared/fonts').filter((f) => /\.woff2$/i.test(f))) {
-    cpSync(`src/renderer/shared/fonts/${file}`, `dist/renderer/${name}/${file}`);
-  }
 }
+// Bundled fonts so the interface never depends on a font CDN: one shared copy that every window's
+// stylesheet reaches as ../fonts/. Each family's OFL.txt and FONTS.md travel with the files into the
+// packaged app (package.json "files": dist/**), as OFL §2 requires.
+cpSync('src/renderer/shared/fonts', 'dist/renderer/fonts', { recursive: true });
 mkdirSync('dist/assets', { recursive: true });
 for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
   try {
