@@ -20,7 +20,7 @@ export function safeFirstName(firstName: string): string {
 }
 
 export function betaThanksText(): string {
-  return "Thank you so much for waitlisting, and for your support 💜";
+  return "Thank you so much for waitlisting, and for your support.";
 }
 
 export function betaEarlyNoteText(): string {
@@ -47,7 +47,7 @@ ${GIFT_LINK_NOTE} ${GIFT_OFFER}`;
 }
 
 export function betaSignOffText(): string {
-  return `Thank you again for being here 💜
+  return `Thank you again for being here.
 
 AI writes the code. Unvibe helps you understand it.
 
