@@ -195,6 +195,11 @@
   background: none;
 }
 
+/* The backing plate has no heading now, so its one line starts at the plate's own padding. */
+.home-page .paper-backing .u-sheet > .claude-startups {
+  padding-top: 0;
+}
+
 /* The /beta troubleshooting list: one solid container with hairline rows, like the home FAQ. */
 .beta-page .paper-faq {
   gap: 0;
