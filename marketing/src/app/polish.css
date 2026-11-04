@@ -345,9 +345,11 @@ html[data-performance="lite"] .paper-hero > img {
   animation: selIn 0.38s var(--ease-out-soft) both;
 }
 
+/* Both users (.sel-card, .palette__panel) carry a backdrop-filter, so the entrance moves only: no opacity or filter
+   on a glass element (glass-spec §3). */
 @keyframes selIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(4px); }
-  to { opacity: 1; transform: none; filter: none; }
+  from { transform: translateY(8px) scale(0.97); }
+  to { transform: none; }
 }
 
 .sel-card header {

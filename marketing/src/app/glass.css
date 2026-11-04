@@ -260,6 +260,13 @@ html[data-glass="b"] {
   background: rgb(20 20 20 / 0.06) !important;
 }
 
+/* Never glass in glass (glass-spec §3): a Glisse control or switch thumb inside a glass surface (a Glisse Glass or a
+   plated card or bar) keeps its fill but not its own blur. Glisse's segmented lens is part of its bar and keeps it. */
+:is(.lg-glass, :has(> .glass-plate)) :is(.lg-glass:not(.glass-plate, .lg-tab-lens), .lg-switch-thumb, .lg-slider-thumb) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* ── The floating layer ─────────────────────────────────────────────────── */
 
 /* Top bar and phone download bar: the glass replaces their own translucent fill and blur. */
