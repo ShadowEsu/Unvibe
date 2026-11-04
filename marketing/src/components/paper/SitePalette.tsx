@@ -32,15 +32,15 @@ function matches(haystack: string, query: string): boolean {
 export function siteCommands(push: (href: string) => void): Command[] {
   const go = (href: string) => () => push(href);
   return [
-    { id: "mac", label: "Download for Mac", hint: ".dmg · M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
-    { id: "win", label: "Download for Windows", hint: ".exe · x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
+    { id: "mac", label: "Download for Mac", hint: ".dmg for M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
+    { id: "win", label: "Download for Windows", hint: ".exe for x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
     { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
     { id: "home", label: "Home", hint: "/", run: go("/") },
     { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
     { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
     { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
     { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },
-    { id: "changelog", label: "Change log", hint: "What shipped", run: go("/releases") },
+    { id: "changelog", label: "Changelog", hint: "What shipped", keywords: "change log releases", run: go("/releases") },
     { id: "growth", label: "Growth", hint: "Building in public", run: go("/build") },
     { id: "privacy", label: "Privacy", hint: "What leaves your machine", keywords: "data security secrets policy", run: go("/privacy") },
     { id: "terms", label: "Terms", hint: "Plain language", run: go("/terms") },
