@@ -45,8 +45,8 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   return (
     <div className="pricing-plans">
       <header className="pricing-plans__intro">
-        <p className="paper-meta">Pricing</p>
-        <h1 id="pricing-title">{copy.heading.lead}<em>{copy.heading.emphasis}</em>{copy.heading.tail}</h1>
+        {/* One upright sentence: the copy keeps its lead/emphasis/tail parts, rendered without an accent word (Design, ledger 443). */}
+        <h1 id="pricing-title">{`${copy.heading.lead}${copy.heading.emphasis}${copy.heading.tail}`}</h1>
         <p>Free needs no card and no API key.</p>
       </header>
       <SegmentedControl

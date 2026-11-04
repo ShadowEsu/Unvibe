@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { Button, Glass, Input } from "glisse";
-import { useGlassLevel } from "@/components/glass/GlassLevel";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
@@ -32,7 +31,6 @@ export function FeedbackWidget() {
   const [claim, setClaim] = useState("");
   const [bonus, setBonus] = useState<"granted" | "already" | "too_short" | undefined>();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const glass = useGlassLevel();
 
   // The welcome email links to ?feedback=1&e=<email>&t=<signature>: open straight away, prefilled.
   useEffect(() => {
@@ -117,7 +115,7 @@ export function FeedbackWidget() {
             {status === "done" ? (
               <div className="fb-done">
                 <Vibe size={84} />
-                <h2 id="fb-title">Thank <em>you.</em></h2>
+                <h2 id="fb-title">Thank you.</h2>
                 <p>Every note gets read. That one just made Vibe&apos;s day.</p>
                 {bonus === "granted" ? <p className="fb-bonus"><b>+1 month of Pro</b> added to {email}. Sign in to the app with that email to use it.</p> : null}
                 {bonus === "already" ? <p className="fb-bonus">This email already got its feedback month. Thank you again!</p> : null}
@@ -128,7 +126,7 @@ export function FeedbackWidget() {
                 <div className="fb-head">
                   <Vibe size={56} />
                   <div>
-                    <h2 id="fb-title">How&apos;s <em>Unvibe?</em></h2>
+                    <h2 id="fb-title">How&apos;s Unvibe?</h2>
                     <p>{earning ? <>Stars and a few honest words earn you <b>another month of Pro</b>.</> : <>Stars and a few words. That&apos;s it.</>}</p>
                   </div>
                 </div>
@@ -152,13 +150,9 @@ export function FeedbackWidget() {
                   {rating && rating <= 3 ? "What would make it better?" : "Anything you want to tell us?"} <span>{earning ? `at least ${BONUS_MIN_WORDS} words for the month` : "optional"}</span>
                 </label>
                 <textarea id="fb-message" rows={4} maxLength={1200} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your words, up to 100." />
-                <p className={`fb-count${tooLong ? " is-over" : ""}`}>{count}/{MAX_WORDS} words{tooShortForBonus ? ` · ${BONUS_MIN_WORDS - count} more to unlock your month` : ""}</p>
+                <p className={`fb-count${tooLong ? " is-over" : ""}`}>{count}/{MAX_WORDS} words{tooShortForBonus ? `. ${BONUS_MIN_WORDS - count} more for your month.` : ""}</p>
                 <label className="fb-label" htmlFor="fb-email">Email <span>{earning ? "the month goes to this email" : "optional, only if you want a reply"}</span></label>
-                {glass === "full" ? (
-                  <Input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onValueChange={setEmail} placeholder="you@example.com" />
-                ) : (
-                  <input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-                )}
+                <Input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onValueChange={setEmail} placeholder="you@example.com" />
                 <input className="fb-hp" tabIndex={-1} autoComplete="off" aria-hidden="true" value={website} onChange={(e) => setWebsite(e.target.value)} name="website" />
                 {status === "error" ? <p className="fb-error" role="alert">{error}</p> : null}
                 <Button type="submit" variant="filled" className="fb-send" disabled={!rating || tooLong || tooShortForBonus || status === "sending"}>

@@ -19,7 +19,7 @@ const pro = strip.slice(strip.indexOf("plans-strip__card--pro"), strip.indexOf("
 describe("home price strip (W5)", () => {
   it("is on the home page with Design's heading", () => {
     assert.ok(start > 0, "no #pricing section on home");
-    assert.match(strip, /Free while in beta\. <em>Pro opens soon\.<\/em>/);
+    assert.match(strip, /<h2 id="pricing-title">Free while in beta\. Pro opens soon\.<\/h2>/);
   });
 
   it("states the real allowances and prices", () => {
