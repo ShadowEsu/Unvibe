@@ -5,3 +5,6 @@
  * A plain module (not the "use client" Try box) so server code like the kit gets the value itself.
  */
 export const AI_MAINTENANCE = process.env.NEXT_PUBLIC_AI_MAINTENANCE?.trim() === "1";
+
+/** What the site says wherever AI features would be offered while the switch is on (the Try box, /pricing, /beta). */
+export const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";

@@ -1,9 +1,10 @@
 import { PROGRAM_NOTICES, startupPrograms, withMark } from "@/data/compensation";
+import { Arrive } from "@/components/paper/Arrive";
 
 /**
  * The startup programs by full name, plain text in our own type. Only MongoDB shows a logo: its official,
- * unmodified file, on a light chip in both themes, smaller than Unvibe's own mark. Shared by the homepage strip,
- * /investors and /about. `firstUse`: this list is the first mention of the names on the page, so marks carry
+ * unmodified file, on a light chip in both themes, smaller than Unvibe's own mark. Shared by /investors
+ * and /about. `firstUse`: this list is the first mention of the names on the page, so marks carry
  * their notice (MongoDB®).
  */
 export function ProgramList({ firstUse }: { firstUse: boolean }) {
@@ -27,23 +28,21 @@ export function ProgramList({ firstUse }: { firstUse: boolean }) {
   );
 }
 
-/** Homepage strip: the startup programs Unvibe is in. Programs, not partnerships, so the label says so. */
+/**
+ * Homepage strip: one line and the investors link (Design 466). The full program list, with its notices,
+ * is on /investors and /about; with no other program named here, no trademark notice is needed.
+ */
 export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
-      <div className="paper-wrap u-sheet">
-        <div className="sec-head">
-          <p className="paper-meta">Behind Unvibe</p>
-          <h2 id="backing-title">Startup programs <em>we&apos;re in.</em></h2>
+      <Arrive className="arrive--plate">
+        <div className="paper-wrap u-sheet">
+          <div className="claude-startups">
+            <p className="claude-startups__title" id="backing-title">Unvibe is in Claude for Startups.</p>
+            <p className="claude-startups__copy">Credit details are on the <a href="/investors#backing">investors page</a>.</p>
+          </div>
         </div>
-        <div className="claude-startups">
-          <span className="claude-startups__tag">Startup program</span>
-          <p className="claude-startups__title">Unvibe is in <em>Claude for Startups.</em></p>
-          <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors#backing">investors page</a>.</p>
-        </div>
-        {/* The hero line names only Claude for Startups, so this list is the first use of the other names. */}
-        <ProgramList firstUse />
-      </div>
+      </Arrive>
     </section>
   );
 }

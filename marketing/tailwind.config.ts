@@ -30,7 +30,6 @@ const config: Config = {
         red: "rgb(var(--red) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Newsreader", "Georgia", "serif"],
         sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
       },

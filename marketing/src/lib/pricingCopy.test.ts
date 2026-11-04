@@ -1,12 +1,25 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import React, { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { PRICING } from "./pricing";
 import { pricingCopy, type PricingCopy } from "./pricingCopy";
+
+Object.assign(globalThis, { React });
+
+/** The rendered /pricing card for one plan, from its article tag to the next. */
+function planCard(paymentsOpen: boolean, id: string): string {
+  const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen }));
+  const start = markup.indexOf(`<article id="${id}"`);
+  assert.ok(start >= 0, `no card ${id}`);
+  return markup.slice(start, markup.indexOf("</article>", start));
+}
 
 function allText(copy: PricingCopy): string {
   return [
     copy.heading.lead, copy.heading.emphasis, copy.heading.tail, copy.description, copy.disclosure, copy.termsNote ?? "",
-    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.detail, plan.cta, ...plan.features]),
+    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.note ?? "", plan.detail, plan.cta ?? "", plan.after ?? "", ...plan.features]),
   ].join("\n");
 }
 
@@ -18,13 +31,23 @@ describe("pricing copy while payments are closed", () => {
     assert.doesNotMatch(text, /upgrade|renew|plan page|checkout|\bbuy\b|subscribe|cancel|lifetime/i);
   });
 
-  it("says Pro and Teams open soon and Free works today", () => {
+  it("says 'soon' once, in the heading, and each paid card says Not on sale yet", () => {
     assert.match(closed.heading.lead + closed.heading.emphasis + closed.heading.tail, /^Start free today\. Pro and Teams open soon\.$/);
-    const pro = closed.plans.find((plan) => plan.id === "pro");
-    assert.equal(pro?.detail, "One developer account. Pro opens soon. Your Free plan keeps working until then.");
-    assert.match(closed.plans.find((plan) => plan.id === "teams")?.detail ?? "", /Teams opens soon/);
+    const page = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false })).replace(/<[^>]+>/g, " ");
+    assert.equal(page.match(/soon/gi)?.length, 1, page);
+    for (const id of ["pro", "teams"]) assert.match(planCard(false, id), /<p class="plan-note">Not on sale yet<\/p>/, id);
+    assert.equal(closed.plans.find((plan) => plan.id === "pro")?.detail, "One developer account. Your Free plan keeps working until then.");
     assert.match(closed.disclosure, /not on sale yet, so nothing is billed today/);
     assert.match(closed.termsNote ?? "", /^Pro and Teams are not on sale yet\. Until they open, nothing is billed and your Free plan keeps working\.$/);
+  });
+
+  it("has no Monthly/Annual toggle; each paid card states both prices in one line", () => {
+    const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false }));
+    assert.doesNotMatch(markup, /radiogroup|pricing-toggle/);
+    const line = (id: string) => planCard(false, id).replace(/<[^>]+>/g, "").match(/\$\d+ a (seat a )?month, or \$\d+ a year/)?.[0];
+    assert.equal(line("pro"), `$${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year`);
+    assert.equal(line("teams"), `$${PRICING.teamsSeatMonthly} a seat a month, or $${PRICING.teamsSeatAnnual} a year`);
+    assert.match(renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: true })), /role="radiogroup" aria-label="Billing interval"/);
   });
 
   it("keeps the real prices visible", () => {
@@ -33,8 +56,26 @@ describe("pricing copy while payments are closed", () => {
   });
 
   it("has no button that leads to a dead end", () => {
-    for (const plan of closed.plans) assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:support@unvibe.site"), plan.id);
-    assert.equal(closed.plans.find((plan) => plan.id === "pro")?.cta, "Download free");
+    for (const plan of closed.plans) {
+      assert.ok(plan.href === "/beta" || plan.href.startsWith("mailto:support@unvibe.site"), plan.id);
+    }
+  });
+
+  it("gives the Pro card an outlined Download free, says it isn't on sale and how to try it today", () => {
+    const pro = planCard(false, "pro");
+    assert.match(pro, /<a [^>]*href="\/beta"[^>]*>Download free<\/a>/);
+    assert.match(pro, /class="[^"]*pricing-button--quiet/);
+    assert.doesNotMatch(pro, /upgrade|checkout|subscribe/i);
+    assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
+    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who enters your gift code in the app \(up to five\)\.<\/p>/);
+    assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
+    // Free keeps its download, Teams its email.
+    assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
+    assert.match(planCard(false, "teams"), /href="mailto:support@unvibe\.site/);
+  });
+
+  it("keeps the Pro button once payments open", () => {
+    assert.match(planCard(true, "pro"), /href="\/beta"[^>]*>.*Download, then upgrade/);
   });
 
   it("follows the copy rules", () => {
@@ -51,12 +92,14 @@ describe("pricing copy in both states", () => {
       assert.deepEqual(copy.plans.filter((plan) => plan.primary).map((plan) => [plan.id, plan.cta, plan.href]), [["free", "Download free", "/beta"]]);
     });
 
-    // Pro is 200 explanations a month (ledger 417), the number production enforces
-    // (plan_entitlements, web/src/billing/plans.ts). It is the only allowance number on the page.
-    it(`states Pro's 200 explanations and no other allowance number (payments ${paymentsOpen ? "open" : "closed"})`, () => {
-      const numbers = allText(copy).match(/\d+\s*(ai\s+)?(explanations|questions|projects|items|reviews)/gi) ?? [];
-      assert.deepEqual(numbers, ["200 AI explanations"]);
-      assert.ok(copy.plans.find((plan) => plan.id === "pro")?.features.includes("200 AI explanations a month"));
+    // Pro is 200 AI explanations a month (ledger 417), the number production enforces
+    // (plan_entitlements, web/src/billing/plans.ts); the others come from lib/allowance too.
+    it(`states the allowances from lib/allowance, Pro at 200 (payments ${paymentsOpen ? "open" : "closed"})`, () => {
+      const plans = Object.fromEntries(copy.plans.map((plan) => [plan.id, plan]));
+      assert.equal(plans.free.detail, "50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in. No card and no separate API key.");
+      assert.ok(plans.pro.features.includes("200 AI explanations a month"));
+      assert.doesNotMatch(allText(copy), /100 (ai )?explanations/i);
+      assert.doesNotMatch(allText(copy), /usage limit|More explanations each month/i);
     });
   }
 
@@ -91,7 +134,7 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
-      ["free", "No card needed", "Included AI explanations with a usage limit. No card and no separate API key.", "Download free", "/beta"],
+      ["free", "No card needed", open.plans[0].detail, "Download free", "/beta"],
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
       ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);

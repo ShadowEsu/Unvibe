@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
+import { Arrive } from "@/components/paper/Arrive";
 import { ChangelogHashOpen } from "@/components/paper/ChangelogHashOpen";
 import { changelogAnchors, changelogArchive, changelogEntries, type Milestone } from "@/data/milestones";
 
@@ -7,6 +9,8 @@ interface ChangelogListProps {
   limit?: number;
   /** Keep this many entries open under "Latest" and fold the older ones into one closed group per month. */
   expanded?: number;
+  /** The first 8 open entries arrive one after another when the list first scrolls into view (/releases). */
+  arrive?: boolean;
 }
 
 function StarMark() {
@@ -43,14 +47,15 @@ function Entry({ item, id, Heading = "h3" }: { item: Milestone; id?: string; Hea
   );
 }
 
-export function ChangelogList({ items, limit, expanded }: ChangelogListProps) {
+/** The open list: staggered in with Arrive when asked, otherwise a plain list. */
+function OpenLog({ arrive, children }: { arrive: boolean; children: ReactNode }) {
+  return arrive ? <Arrive className="paper-log">{children}</Arrive> : <div className="paper-log">{children}</div>;
+}
+
+export function ChangelogList({ items, limit, expanded, arrive = false }: ChangelogListProps) {
   const list = items ?? (limit ? changelogEntries().slice(0, limit) : changelogEntries());
   if (expanded === undefined) {
-    return (
-      <div className="paper-log">
-        {list.map((item) => <Entry key={`${item.date}-${item.title}`} item={item} />)}
-      </div>
-    );
+    return <OpenLog arrive={arrive}>{list.map((item) => <Entry key={`${item.date}-${item.title}`} item={item} />)}</OpenLog>;
   }
   const anchors = changelogAnchors(list);
   const anchorOf = new Map(list.map((item, index) => [item, anchors[index]]));
@@ -58,9 +63,9 @@ export function ChangelogList({ items, limit, expanded }: ChangelogListProps) {
   return (
     <>
       <h3 className="paper-log-group__title">Latest</h3>
-      <div className="paper-log">
+      <OpenLog arrive={arrive}>
         {recent.map((item) => <Entry key={anchorOf.get(item)} id={anchorOf.get(item)} item={item} Heading="h4" />)}
-      </div>
+      </OpenLog>
       {months.length ? (
         <div className="paper-log-archive">
           <h3 className="paper-log-group__title">Earlier</h3>

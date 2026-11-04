@@ -1,5 +1,7 @@
+import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { PRICING } from "@/lib/pricing";
+import { proSentence } from "@/lib/proOffer";
 import { SHORTCUTS } from "@/lib/shortcuts";
 
 /**
@@ -7,7 +9,7 @@ import { SHORTCUTS } from "@/lib/shortcuts";
  * free public beta for Mac and Windows; selection based (no screen recording or OCR);
  * keys and tokens in code and diffs filtered on the device (typed questions and Ask Vibe chat too from
  * v0.1.44, not in v0.1.43); no local-only mode yet; AI explanations can be wrong.
- * No allowance numbers here until the live trial configuration is confirmed.
+ * Allowance numbers come only from lib/allowance.
  */
 
 export interface FaqItem {
@@ -19,9 +21,9 @@ export interface FaqItem {
 
 export const faqCategories: Record<FaqItem["category"], string> = {
   product: "Product",
-  privacy: "Privacy & data",
+  privacy: "Privacy and data",
   platform: "Platforms",
-  pricing: "Access & pricing",
+  pricing: "Access and pricing",
 };
 
 const { mac, windows } = SHORTCUTS;
@@ -30,7 +32,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "what-is-it",
     question: "What is Unvibe?",
-    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, check yourself with Test me (up to three questions about that code), and save the lesson to your Library. The Today page sets a small daily goal: explain one piece of code and answer one question.`,
+    answer: `A free desktop app for Mac and Windows. Select code in any app and press ${mac.anywhere} (${windows.anywhere} on Windows). A panel beside your editor explains it at the depth you pick. Ask follow-ups, check yourself with Test me (up to 3 questions about that code), and save the lesson to your Library. The Today page sets a small daily goal: explain one piece of code and answer one question.`,
     category: "product",
   },
   {
@@ -62,7 +64,7 @@ export const faqItems: FaqItem[] = [
     id: "app-or-extension",
     question: "Is it an extension or an app?",
     answer:
-      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection. It sends that with its language and, when Unvibe knows them, the file's path inside your project and your project folder's name. Briefs read the git changes of a project on your computer. Keys and tokens in that code are filtered on your computer before it is sent.",
+      "A desktop app that runs beside your editor. When you press the shortcut it copies only your selection. It sends that with its language and, when Unvibe knows them, the file's path inside your project and your project folder's name. Briefs read the git changes of a project on your computer. Unvibe checks that code for keys and tokens on your computer before it is sent, and a known key stops the request.",
     category: "product",
   },
   {
@@ -76,7 +78,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Keys and tokens in the code are filtered on your computer first, and from version 0.1.44 so are your questions and Ask Vibe chat messages. Your repo is never uploaded.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded.",
     category: "privacy",
   },
   {
@@ -97,27 +99,27 @@ export const faqItems: FaqItem[] = [
     id: "local-mode",
     question: "Is there a local-only mode?",
     answer:
-      "Not yet. Explanations come from a cloud AI provider, after keys and tokens in your code are filtered on your computer.",
+      "Not yet. Explanations come from a cloud AI provider. Before anything is sent, Unvibe checks your code for keys and tokens on your computer and stops a known key.",
     category: "privacy",
   },
   {
     id: "training",
     question: "Will my code be used for training?",
     answer:
-      "Unvibe doesn't build a training dataset from your code. During the beta, explanations come from Anthropic's Claude API, and Anthropic's Commercial Terms decide how it handles that data. The secret filter catches common keys and tokens, but no filter can promise to find every sensitive value.",
+      "Unvibe doesn't build a training dataset from your code. During the beta, explanations come from Anthropic's Claude API, and Anthropic's Commercial Terms decide how it handles that data. The secret check catches common keys and tokens, but no check can promise to find every sensitive value.",
     category: "privacy",
   },
   {
     id: "free",
     question: "Is Free actually usable?",
     answer:
-      "Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library, within a usage allowance. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.",
+      `Yes. Free covers explanations at New through Advanced, follow-ups, Test me and your Library: ${SIGNED_OUT_ALLOWANCE}, then ${FREE_MONTHLY_ALLOWANCE} when you sign in. Briefs of your Git changes and “Why does this exist?” are free too and run on your computer. No card and no API key.`,
     category: "pricing",
   },
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year.`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
     category: "pricing",
   },
   {

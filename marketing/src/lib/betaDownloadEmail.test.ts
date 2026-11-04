@@ -12,7 +12,7 @@ describe("beta waitlist invite email", () => {
     const text = betaInviteText("Ohm", UNSUBSCRIBE);
     assert.match(BETA_INVITE_SUBJECT, /private beta/);
     assert.match(text, /Thank you so much for waitlisting/);
-    assert.match(text, /💜/);
+    assert.match(text, /Thank you again for being here\./);
     assert.match(text, new RegExp(BETA_CURL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(text, /install\.ps1/);
     assert.match(text, /Windows x64 PowerShell/);
@@ -28,6 +28,22 @@ describe("beta waitlist invite email", () => {
   it("has a visible unsubscribe link in both parts", () => {
     assert.match(betaInviteText("Ohm", UNSUBSCRIBE), /Unsubscribe: https:\/\/unvibe\.site\/api\/unsubscribe\?e=ohm%40example\.com&t=abc/);
     assert.match(betaInviteHtml("Ohm", UNSUBSCRIBE), /<a href="https:\/\/unvibe\.site\/api\/unsubscribe\?e=ohm%40example\.com&amp;t=abc"[^>]*>Unsubscribe<\/a>/);
+  });
+});
+
+describe("beta emails: no emoji, upright type (Design detect pass and Preston's no-italics rule, 4 Nov)", () => {
+  const download = { firstName: "Ohm", macDownloadUrl: "https://example.com/unvibe.zip", unsubscribeUrl: UNSUBSCRIBE };
+  const texts = [betaInviteText("Ohm", UNSUBSCRIBE), betaDownloadText(download)];
+  const htmls = [betaInviteHtml("Ohm", UNSUBSCRIBE), betaDownloadHtml(download)];
+
+  it("has no emoji or pictographs in the text or HTML of either email", () => {
+    const pictograph = new RegExp("\\p{Extended_Pictographic}", "u");
+    for (const part of [...texts, ...htmls]) assert.doesNotMatch(part, pictograph);
+  });
+
+  it("sets nothing in italics: no <em>, <i> or italic style in the HTML, no *emphasis* in the text", () => {
+    for (const html of htmls) assert.doesNotMatch(html, /<(em|i)\b|font-style:\s*italic/i);
+    for (const text of texts) assert.doesNotMatch(text, /\*[^*\s][^*]*\*/);
   });
 });
 

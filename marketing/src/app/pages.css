@@ -12,7 +12,6 @@
 /* ── Nav clearance: the fixed .mnav bar is 4rem tall ─────────────────────── */
 
 /* Photo-band pages run the photo under the bar; the band copy already has 7rem of top room. */
-.beta-page,
 .paper-resources-page {
   padding-top: 0;
 }
@@ -41,7 +40,7 @@
 
 /* ── Photo bands: deliberate under the dark bar, readable at every width ── */
 
-:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
+:is(.releases-page, .paper-resources-page) .paper-photo-band .paper-hero__veil {
   background: linear-gradient(
     180deg,
     rgb(16 13 20 / 0.92) 0,
@@ -52,24 +51,23 @@
 }
 
 /* vibe.css paints every .paper-meta #3c2fb8 !important (1.2:1 on the veil). Higher specificity wins. */
-:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
+:is(.releases-page, .paper-resources-page) .paper-photo-band .paper-meta {
   color: var(--hero-type) !important;
   font-size: clamp(1.2rem, 2vw, 1.45rem) !important;
 }
 
-:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band__copy > p {
+:is(.releases-page, .paper-resources-page) .paper-photo-band__copy > p {
   opacity: 1;
   text-shadow: 0 1px 14px rgb(0 0 0 / 0.45);
 }
 
-:is(.beta-page, .releases-page, .paper-resources-page) .paper-photo-band h1 {
+:is(.releases-page, .paper-resources-page) .paper-photo-band h1 {
   overflow-wrap: break-word;
 }
 
-/* ── Section heads that sit on the dusk field: homepage pill + reading box ── */
+/* ── Section heads that sit on the backdrop: resources pill + reading box. /beta and /pricing labels are plain
+   text (Design, ledger 443); their reading boxes turn to glass plates in glass.css. ── */
 
-.beta-page .paper-center > .paper-meta,
-.pricing-plans__intro > .paper-meta,
 .resources-section__head > .paper-meta {
   display: inline-block;
   padding: 0.25rem 0.8rem;
@@ -96,9 +94,27 @@
 
 /* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
 
-/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important. */
+/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important.
+   The bottom matches the top, and the page drops .launch-subpage's 110px bottom padding, so the note doesn't float
+   in an empty band above the footer (Design S2, 3 Nov). */
 .paper-pricing > .paper-section {
   padding-top: clamp(1.5rem, 4vw, 3rem) !important;
+  padding-bottom: clamp(2rem, 5vw, 3.5rem) !important;
+}
+
+.launch-subpage.paper-pricing {
+  padding-bottom: 0;
+}
+
+/* The fixed Feedback tab (vibe.css .fb-tab, left 20px, bottom 20px) sits on the Free card's left edge here, and
+   Design's rule is fixed only where measured clear: on /pricing it goes inline after the footer, as on phones (S3). */
+body:has(.paper-pricing) .fb-tab {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  display: block;
+  margin: 0 auto 1.5rem;
+  min-height: 44px;
 }
 
 .paper-pricing .pricing-plans__intro {
@@ -125,14 +141,30 @@
 
 /* ── Beta ───────────────────────────────────────────────────────────────── */
 
-/* The header's "Download free" lands here, so the download button sits on the first screen at
-   1440x900, 1280x720 and 390x844: the photo band hugs its copy and the install card follows closely. */
-.beta-page .paper-photo-band--short {
-  min-height: 0;
+/* No photo band (Design, ledger 443): a plain heading block that clears the 4rem bar, then the install card
+   follows closely, so the download button sits on the first screen at 1440x900, 1280x720 and 390x844. */
+.beta-page {
+  padding-top: 0;
 }
 
-.beta-page .paper-photo-band__copy {
-  padding: 5.5rem 1.25rem 1.75rem;
+.beta-page__head {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 7rem 1.25rem 0;
+  text-align: center;
+}
+
+.beta-page__head h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 5.2vw, 4.4rem);
+}
+
+.beta-page__head > p {
+  max-width: 40rem;
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
 }
 
 /* Beats vibe.css `.paper-section { padding-block … !important }`. */
@@ -145,10 +177,12 @@
   font-size: clamp(1.7rem, 3.2vw, 2.3rem) !important;
 }
 
+/* Trust tiles are glass cards (glass.css) with a hairline edge. */
 .beta-page__trust-item {
-  border: 1.5px solid var(--v-ink);
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--u-line-strong);
   background: var(--u-card);
-  box-shadow: 3px 3px 0 var(--v-ink);
   color: var(--v-ink);
 }
 
@@ -160,35 +194,73 @@
   color: var(--v-ink);
 }
 
-/* ── Pricing: the homepage card, not glass ──────────────────────────────── */
+/* The feedback ask closes the page, after the download and the fixes (W12). */
+.beta-page__feedback {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  max-width: 34rem;
+  margin: 1.5rem auto 0;
+  padding: 1rem 1.25rem;
+  border: 1.5px solid var(--v-ink);
+  border-radius: 14px;
+  background: var(--u-card);
+  box-shadow: 3px 3px 0 var(--v-ink);
+  color: var(--v-ink);
+  text-align: center;
+}
+
+.beta-page__feedback p {
+  margin: 0;
+}
+
+.beta-page__feedback a.paper-text-link {
+  color: var(--v-ink);
+  font-weight: 700;
+}
+
+/* ── Pricing: glass cards (glass.css) on this solid base ───────────────────── */
 
 .paper-pricing .marketing-plan-card {
   --ink: var(--v-ink);
   --ink-muted: var(--u-text-2);
-  border: 1.5px solid var(--v-ink);
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--u-line-strong);
   border-radius: var(--v-radius);
   background: var(--v-card);
-  box-shadow: var(--v-shadow);
+  box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   color: var(--v-ink);
-  transition: transform 260ms var(--v-press), box-shadow 260ms var(--v-press);
 }
 
 .paper-pricing .marketing-plan-card.featured {
-  border: 1.5px solid var(--v-ink);
+  border: 2px solid var(--v-ink);
   background: var(--v-lime);
-  box-shadow: var(--v-shadow);
 }
 
 .paper-pricing .marketing-plan-card:hover {
   border-color: var(--v-ink);
-  transform: translate(-2px, -2px);
-  box-shadow: var(--u-lift-2-hover);
 }
 
 .paper-pricing .marketing-plan-card .plan-badge {
   color: var(--v-ink);
+}
+
+/* A card with nothing to buy yet: one line under the price, one under the list, no button. */
+.paper-pricing .marketing-plan-card .plan-note {
+  margin: 0.5rem 0 0;
+  color: var(--v-ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.paper-pricing .marketing-plan-card .plan-after {
+  margin: 0 0 1.25rem;
+  color: var(--v-ink);
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 @media (min-width: 1120px) {
@@ -203,27 +275,6 @@
   .paper-pricing .pricing-plans {
     margin-right: max(0px, calc(clamp(10px, 2vw, 28px) + 68px - (100vw - 100%) / 2));
   }
-}
-
-.pricing-plans .pricing-toggle {
-  border: 1.5px solid var(--v-ink);
-  background: var(--u-card);
-  box-shadow: 3px 3px 0 var(--v-ink);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-.pricing-plans .pricing-toggle button {
-  min-height: 2.75rem;
-  color: var(--v-ink);
-}
-
-.pricing-plans .pricing-toggle button.is-on {
-  color: var(--u-on-cta);
-}
-
-.pricing-plans .pricing-toggle__thumb {
-  background: var(--u-cta);
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */
@@ -290,7 +341,7 @@
   background: var(--u-card);
   color: var(--v-ink);
   font-weight: 750;
-  box-shadow: 3px 3px 0 var(--v-ink);
+
 }
 
 .nf__btn--ink {
@@ -325,7 +376,7 @@
   border: 1.5px solid #141414;
   border-radius: var(--v-radius);
   background: #fff;
-  box-shadow: 4px 4px 0 #141414;
+
   color: #141414;
 }
 
@@ -334,18 +385,24 @@
   color: #fff;
 }
 
-/* ── /activate: solid card over the blurred photo ───────────────────────── */
+/* ── /activate: solid card on the flat sky ground (account and consent: no glass) ── */
 
 .activate-root .activate-card {
   --ink: var(--v-ink);
   --ink-muted: var(--u-text-2);
-  border: 1.5px solid var(--v-ink);
+  border: 1px solid var(--u-line);
   border-radius: var(--v-radius);
-  background: var(--v-card);
-  box-shadow: var(--v-shadow);
+  background: #fffdf6;
+  box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   color: var(--v-ink);
+}
+
+/* Resources type guide: the heading sample is set as a heading is (Inter 700, tight). */
+.resources-display-demo {
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* ── Focus ──────────────────────────────────────────────────────────────── */
@@ -353,7 +410,7 @@
 .resources-filter-pill:focus-visible,
 .resources-depth-tab:focus-visible,
 .resources-swatch:focus-visible,
-.pricing-plans .pricing-toggle button:focus-visible,
+.pricing-plans .pricing-toggle .lg-tab:focus-visible,
 .kit__toc a:focus-visible,
 .kit__btn:focus-visible,
 .nf__btn:focus-visible,
