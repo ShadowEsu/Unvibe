@@ -21,6 +21,14 @@ ol.explain-notes {
   font: 0.9rem / 1.4 var(--font-mono);
 }
 
+/* Code keeps its lines: no wrapping, the block scrolls sideways (Design, #135 gate). Three classes, so this beats
+   the wrapping .explain-card .os-cmd rule below, which the Windows PowerShell line keeps. */
+.explain-card .use-sample .os-cmd {
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
 .os-how {
   display: grid;
   gap: clamp(1rem, 3vw, 2rem);

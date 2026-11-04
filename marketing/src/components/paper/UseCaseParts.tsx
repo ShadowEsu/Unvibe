@@ -42,12 +42,13 @@ export function UseCaseHead({ useCase, heading, children }: { useCase: UseCase; 
   );
 }
 
-/** A short real code sample: wraps instead of scrolling, like the PowerShell line. */
+/** A short real code sample. Lines never wrap (a wrapped line reads as two lines of code): the block scrolls
+ *  sideways on narrow screens, and it takes focus so the keyboard can scroll it too. */
 export function UseCaseSample({ file, code }: { file: string; code: string }) {
   return (
     <figure className="use-sample">
       <figcaption>{file}</figcaption>
-      <code className="os-cmd">{code}</code>
+      <code className="os-cmd" tabIndex={0}>{code}</code>
     </figure>
   );
 }
