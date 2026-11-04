@@ -97,7 +97,7 @@ export const faqItems: FaqItem[] = [
     id: "local-mode",
     question: "Is there a local-only mode?",
     answer:
-      "Not yet. Explanations come from a cloud AI provider, after keys and tokens in your code are filtered on your computer.",
+      "Not yet. Explanations come from a cloud AI provider. Before anything is sent, Unvibe checks your code for keys and tokens on your computer and stops a known key.",
     category: "privacy",
   },
   {
