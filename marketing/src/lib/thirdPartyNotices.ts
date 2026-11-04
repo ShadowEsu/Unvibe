@@ -40,3 +40,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`,
   },
 ];
+
+/** A licence file's paragraphs with its hard line breaks joined, so the page wraps them to its own width. */
+export function licenseParagraphs(license: string): string[] {
+  return license.split(/\n\s*\n/).map((paragraph) => paragraph.split("\n").map((line) => line.trim()).join(" "));
+}

@@ -22,9 +22,12 @@ describe("open-source notices (/licenses)", () => {
     }
   });
 
-  it("the page shows each copyright line and the permission notice", () => {
-    const html = renderToStaticMarkup(createElement(LicensesPage)).replace(/&quot;/g, '"');
-    for (const notice of THIRD_PARTY_NOTICES) assert.ok(html.includes(notice.license), notice.name);
-    assert.match(html, /Copyright \(c\) 2026 Kelvin Zhang/);
+  it("the page shows every word of each licence, in order, and no policy-summary note", () => {
+    const words = (value: string) => value.replace(/\s+/g, " ").trim();
+    const text = words(renderToStaticMarkup(createElement(LicensesPage)).replace(/<[^>]+>/g, " ").replace(/&quot;/g, '"'));
+    for (const notice of THIRD_PARTY_NOTICES) assert.ok(text.includes(words(notice.license)), notice.name);
+    assert.match(text, /Copyright \(c\) 2026 Kelvin Zhang/);
+    assert.doesNotMatch(text, /summarizes/);
+    assert.match(text, /Questions\? Email support@unvibe\.site/);
   });
 });
