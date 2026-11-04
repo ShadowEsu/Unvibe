@@ -795,6 +795,38 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   color: var(--brand);
 }
 
+/* Entry text reads at a comfortable line length on wide screens (Design, #136 gate). */
+.paper-log .paper-lead {
+  max-width: 68ch;
+}
+
+/* Phones: the side column took most of the width and left the text 2-3 words a line. Version and date go on one
+   line above the entry, and the text runs full width. */
+@media (max-width: 640px) {
+  .paper-log article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .paper-log aside {
+    order: -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0.4rem 0.75rem;
+    min-width: 0;
+  }
+
+  .paper-log aside strong {
+    font-size: 1.2rem;
+  }
+
+  .paper-log time {
+    text-align: left;
+  }
+}
+
 /* /releases: the newest entries open under "Latest"; older ones fold into one closed group per month under "Earlier",
    so a phone does not scroll the whole history. */
 .paper-log-group__title {
