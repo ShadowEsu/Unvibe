@@ -406,11 +406,11 @@ export function ResourcesHub() {
               <div className="resources-typography-guide">
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Headings</span>
-                  <p className="resources-display-demo">Bricolage Grotesque, bold and tight.</p>
+                  <p className="resources-display-demo">Inter 700, tight, for every heading.</p>
                 </div>
                 <div className="resources-type-sample">
-                  <span className="resources-type-label">Accents</span>
-                  <p className="resources-serif-demo">Instrument Serif Italic, for the one word that matters.</p>
+                  <span className="resources-type-label">Emphasis</span>
+                  <p>Inter 700 for the <strong>one word</strong> that matters. No italics.</p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Code</span>
