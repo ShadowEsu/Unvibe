@@ -11,7 +11,7 @@
   --u-card: #ffffff;
   --u-raise: #f5f2ea;
   --u-text: #141414;
-  --u-text-2: #3a3732;
+  --u-text-2: #4a4a46;
   --u-line: rgb(20 20 20 / 0.14);
   --u-line-strong: #141414;
   --u-accent: #d6f45a;
@@ -26,10 +26,10 @@
   --u-cta-edge: #000000;
   --u-error: #b42318;
 
-  /* Elevation: 0 hairline only, 1 sheet, 2 the one primary object per view. */
+  /* Elevation: 0 hairline only, 1 sheet. The ink offset ("sticker") shadow is gone site-wide (Design, ledger 443). */
   --u-lift-1: 0 1px 0 rgb(20 20 20 / 0.04), 0 18px 40px -22px rgb(44 22 92 / 0.45);
-  --u-lift-2: 4px 4px 0 var(--u-ink);
-  --u-lift-2-hover: 6px 6px 0 var(--u-ink);
+  --u-lift-2: none;
+  --u-lift-2-hover: none;
   --u-radius-sheet: 28px;
   --u-radius-card: 18px;
 

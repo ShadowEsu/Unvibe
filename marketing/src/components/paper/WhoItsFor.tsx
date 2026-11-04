@@ -16,12 +16,13 @@ const AUDIENCES = [
   },
 ] as const;
 
+/** One glass panel, three columns split by hairlines (three rows on a phone): not three boxes (Design, ledger 443). */
 export function WhoItsForCards() {
   return (
-    <div className="inv-cards">
+    <div className="who-panel">
+      <GlassPlate />
       {AUDIENCES.map((audience) => (
-        <article key={audience.title} className="inv-card">
-          <GlassPlate />
+        <article key={audience.title} className="who-panel__item">
           <h3>{audience.title}</h3>
           <p>{audience.body}</p>
         </article>

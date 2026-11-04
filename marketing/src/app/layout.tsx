@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 // Glisse's own CSS first, bundled as a 'self' stylesheet, so server HTML is styled before hydration
 // and the site's CSS below wins ties. GlisseStylesMarker stops Glisse adding an inline copy (Security).
 import "glisse/styles.css";
@@ -13,7 +13,7 @@ import "./pages.css";
 import "./system.css";
 import "./home-ux.css";
 import "./glass.css";
-import { GlassLevelSwitch } from "@/components/glass/GlassLevel";
+import { GlassBackdropSwitch } from "@/components/glass/GlassBackdrop";
 import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
@@ -32,14 +32,14 @@ import { BOOT_SCRIPT } from "@/lib/theme";
 import { jsonLdScript } from "@/lib/jsonLd";
 import { SITE_URL } from "@/lib/siteUrl";
 
+// One face for everything but code (Design, ledger 443): Inter, preloaded for the first viewport.
 const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans-face",
   display: "swap",
 });
 
-// Only the two faces the first phone viewport sets in (Inter body, Bricolage headings) are preloaded,
-// so they and the CSS don't share the opening bandwidth with faces the fold doesn't need yet.
+// Inter is the only face preloaded, so it and the CSS don't share the opening bandwidth.
 // JetBrains Mono goes further: no font variable on <html>, so no first-layout text asks for it (any laid-out
 // text would, even far below the fold, and Lighthouse then counts it before the first paint). The script
 // at the end of <body> sets the variable on the first scroll, tap or key press, or 4 s after load,
@@ -58,23 +58,6 @@ const mono = JetBrains_Mono({
 const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown","keydown"];function use(){if(done)return;done=true;events.forEach(function(e){removeEventListener(e,use)});var s=document.createElement("style");s.textContent=${jsonLdScript(
   `:root{--font-mono-face:${mono.style.fontFamily}}`,
 )};document.head.appendChild(s)}events.forEach(function(e){addEventListener(e,use,{passive:true})});addEventListener("load",function(){setTimeout(use,4000)})})()`;
-
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-display-face",
-  display: "swap",
-});
-
-// The italic accent is not one of the two preloaded fold faces; swap shows it as soon as it loads.
-const serif = Instrument_Serif({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: "400",
-  variable: "--font-serif-face",
-  display: "swap",
-  preload: false,
-});
 
 const siteUrl = SITE_URL;
 
@@ -161,7 +144,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${display.variable} ${serif.variable}`}
+      className={sans.variable}
       // The site has one light theme; this pins Glisse to its light values for visitors whose system is dark.
       data-theme="light"
     >
@@ -181,8 +164,8 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          {/* BRANCH-ONLY: ?glass=subtle|full for Design's screenshots. Remove once a level is picked. */}
-          <GlassLevelSwitch />
+          {/* BRANCH-ONLY: ?glass=a|b picks the backdrop for Design's screenshots. Remove once one is picked. */}
+          <GlassBackdropSwitch />
           <AmbientEffects />
           <a href="#main" className="skip-link">
             Skip to content

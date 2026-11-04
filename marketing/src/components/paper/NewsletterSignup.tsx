@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { Button, Input } from "glisse";
-import { useGlassLevel } from "@/components/glass/GlassLevel";
 import { NEWSLETTER_CONSENT_TEXT } from "@/lib/newsletterConsent";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
@@ -12,8 +11,7 @@ const FAILED = "That didn't go through. Try again in a minute.";
  * Email signup for product news (ledger 299). The consent box starts unticked on every load and is
  * never remembered; Subscribe sends nothing until it is ticked, and the server refuses a newsletter
  * post without `consent: true`. `id` keeps the ids unique when several forms share a page. The consent
- * box and its label stay native and off glass at both glass levels (Security); the email field is a
- * Glisse Input at the full level only.
+ * box and its label stay native, on a solid surface (Security); the email field is a Glisse Input.
  */
 export function NewsletterSignup({ id }: { id: string }) {
   const [email, setEmail] = useState("");
@@ -21,7 +19,6 @@ export function NewsletterSignup({ id }: { id: string }) {
   const [blocked, setBlocked] = useState(false);
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState("");
-  const glass = useGlassLevel();
   const ids = {
     email: `newsletter-${id}-email`,
     consent: `newsletter-${id}-consent`,
@@ -73,27 +70,24 @@ export function NewsletterSignup({ id }: { id: string }) {
   }
 
   const describedBy = [blocked && !agreed ? ids.hint : "", error ? ids.error : ""].filter(Boolean).join(" ") || undefined;
-  const field = {
-    id: ids.email,
-    name: "email",
-    type: "email",
-    required: true,
-    maxLength: 254,
-    autoComplete: "email",
-    inputMode: "email",
-    placeholder: "you@example.com",
-    "aria-invalid": Boolean(error),
-    "aria-describedby": error ? ids.error : undefined,
-  } as const;
   return (
     <form className="newsletter" onSubmit={submit} noValidate>
       <div className="newsletter__row">
         <label className="sr-only" htmlFor={ids.email}>Email for product news</label>
-        {glass === "full" ? (
-          <Input {...field} value={email} onValueChange={setEmail} />
-        ) : (
-          <input {...field} value={email} onChange={(event) => setEmail(event.target.value)} />
-        )}
+        <Input
+          id={ids.email}
+          name="email"
+          type="email"
+          required
+          maxLength={254}
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          value={email}
+          onValueChange={setEmail}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? ids.error : undefined}
+        />
         <Button
           type="submit"
           variant="filled"

@@ -1,23 +1,22 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Liquid Glass with Glisse 0.5.0 (ledger 436; Design spec agents/design/glass-spec-2026-11-04.md).
+   Liquid Glass with Glisse 0.5.0 (ledgers 436 and 443; Design: agents/design/unvibe-site-glass-redesign-2026-11-04.md).
    Loads after the site's own CSS.
 
-   Levels, on <html data-glass> (set from ?glass= by the BRANCH-ONLY GlassLevelSwitch, lib/glassLevel.ts):
-   - L1 "subtle": rules with no level selector. Glisse controls everywhere they fit, plus the floating
-     layer: top bar and its phone menu, the phone download bar, the Feedback tab and dialog, the ⌘K sheet,
-     and secondary link buttons.
-   - L2 "full" (also the default with no attribute): L1, plus the rules under html:not([data-glass="subtle"]):
-     the home section sheets and the cards on them, pricing cards, the /beta download card, the closing card,
-     and Glisse Input for the newsletter and Feedback email fields (swapped in by useGlassLevel).
-   A surface turns glass with a <GlassPlate> (Glisse's Glass) as its first child, shown only where a list
-   below names the surface. Plated surfaces keep their own CSS and the rules here override it, so moving a
-   selector between the lists (or deleting it) moves that surface between levels (or back to solid).
-   Elements that are Glisse components themselves (Feedback tab and dialog, ⌘K sheet and field, pricing
-   toggle, sound switch, buttons) had their dead solid fills removed from their own CSS.
+   One glass layer only. Section sheets are clear (no plate, no fill); glass sits on cards, panels, the hero
+   still frame and the floating chrome (top bar, phone download bar, Feedback, the ⌘K sheet). Never glass on
+   glass: controls inside a glass card are outlined, not frosted.
 
-   Never glass, at either level (Design §1, Security finding 3): the analytics consent bar, consent
-   checkboxes and their labels (the Try it and newsletter sheets carry no plate), What leaves your computer,
-   Terms, Privacy and the footer.
+   Two backdrops, both shippable, on <html data-glass> (paper.css paints them; the BRANCH-ONLY
+   GlassBackdropSwitch reads ?glass=a|b, lib/glassBackdrop.ts):
+   - "a" (default): the selected-code field. Cards 0.62 white with an 18 px blur, pricing cards 0.72,
+     the lime Pro card 0.80 with a 2 px ink border.
+   - "b": hard-edged lime and sky discs on cream, no blur in the backdrop. Cards 0.78 with a 12 px blur.
+
+   A surface turns glass with a <GlassPlate> (Glisse's Glass) as its first child, shown only where the card
+   list below names the surface, so moving a selector in or out of that list is the whole change.
+
+   Always solid (Design §1, Security finding 3): the analytics consent bar and the newsletter sheet (consent),
+   What leaves your computer, the FAQ, the pricing disclosure, Terms, Privacy and the footer.
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -26,17 +25,29 @@
   --lg-ring: var(--u-focus);
   --lg-foreground: var(--u-text);
 
-  /* Fills (Design §1, light): bars that carry text >= 0.72, sheets and dialogs with body text above that,
-     cards with body text >= 0.78. Text on glass stays on a near-solid plate. */
-  --glass-bar: rgb(255 253 246 / 0.76);
-  --glass-sheet: rgb(255 253 246 / 0.86);
-  --glass-panel: rgb(255 253 246 / 0.8);
-  --glass-card: rgb(255 255 255 / 0.8);
-  --glass-card-lime: rgb(214 244 90 / 0.82);
-  --glass-link: rgb(255 255 255 / 0.6);
+  /* Floating chrome: bars with text at 0.72, sheets and dialogs at 0.88. */
+  --glass-bar: rgb(255 253 246 / 0.72);
+  --glass-sheet: rgb(255 253 246 / 0.88);
 
-  /* The site's opaque surface, for the fallbacks at the end. */
+  /* Backdrop A cards. Text on them stays >= 4.5:1: ink #141414 and #4a4a46 on 0.62 white over the blurred field. */
+  --glass-card: rgb(255 255 255 / 0.62);
+  --glass-card-strong: rgb(255 255 255 / 0.72);
+  --glass-card-lime: rgb(214 244 90 / 0.8);
+  --glass-card-blur: 18px;
+
+  /* Card edge: a hairline and a top highlight, no drop shadow. */
+  --glass-edge: rgb(20 20 20 / 0.16);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.7);
+
+  /* The site's opaque surface, for the solid sheets and the fallbacks at the end. */
   --surface-solid: var(--u-sheet);
+}
+
+/* Backdrop B: flat discs, so the cards carry more fill and a lighter blur. */
+html[data-glass="b"] {
+  --glass-card: rgb(255 255 255 / 0.78);
+  --glass-card-strong: rgb(255 255 255 / 0.78);
+  --glass-card-blur: 12px;
 }
 
 /* ── Plates ─────────────────────────────────────────────────────────────── */
@@ -50,7 +61,192 @@
   pointer-events: none;
 }
 
-/* ── L1: the floating layer ─────────────────────────────────────────────── */
+/* ── Sheets: clear on the home page, solid where they hold consent or long reading ── */
+
+.home-page .u-sheet:not(.u-solid) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.u-sheet.u-solid {
+  border: 1px solid var(--u-line);
+  background: var(--surface-solid);
+  box-shadow: none;
+}
+
+/* The /beta troubleshooting list: one solid container with hairline rows, like the home FAQ. */
+.beta-page .paper-faq {
+  gap: 0;
+  padding: 0.25rem clamp(1rem, 3vw, 1.6rem);
+  border: 1px solid var(--u-line);
+  border-radius: 20px;
+  background: var(--surface-solid);
+}
+
+.beta-page .paper-faq details {
+  margin: 0;
+  padding: 1.1rem 0.25rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+}
+
+.beta-page .paper-faq details + details {
+  border-top: 1px solid var(--u-line) !important;
+}
+
+/* ── Text on the backdrop: short lines read on a near-solid plate ───────── */
+
+.vhero__kicker,
+.vhero__trust,
+.vhero .vhero__fine,
+.home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+.home-page .hiw__note,
+.home-page .plans-strip__foot,
+.home-page .home-langs,
+.pricing-plans__intro > p,
+.beta-page__head > p,
+.beta-page .paper-center > .paper-meta {
+  justify-self: center;
+  width: fit-content;
+  max-width: min(44rem, 100%);
+  margin-inline: auto;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: 12px;
+  background: var(--glass-card-strong) !important;
+  -webkit-backdrop-filter: blur(var(--glass-card-blur));
+  backdrop-filter: blur(var(--glass-card-blur));
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  color: var(--u-text);
+}
+
+/* The FAQ sheet is split: its heading sits left on the solid sheet, with no plate. */
+.u-split > .sec-head > .paper-meta {
+  margin-inline: 0;
+}
+
+/* The pricing disclosure is long reading text: solid, never glass. */
+.paper-pricing .pricing-disclosure {
+  border: 1px solid var(--u-line);
+  background: var(--surface-solid);
+}
+
+/* ── Cards and panels ───────────────────────────────────────────────────── */
+
+/* Layout for the panels that only exist on this branch. */
+.who-panel,
+.backing-panel,
+.ssync,
+.vhero__still {
+  position: relative;
+  isolation: isolate;
+}
+
+.backing-panel,
+.ssync {
+  padding: clamp(22px, 4vw, 40px);
+  border-radius: 20px;
+}
+
+/* The home install card leaves the flattened sheet rule (system.css) and becomes a card again. */
+.home-page .paper-install .u-sheet .paper-beta {
+  width: min(980px, 100%) !important;
+  padding: clamp(2rem, 4vw, 3.4rem) !important;
+  border-radius: 20px !important;
+}
+
+/* Every glass card: the element drops its own fill and blur, keeps a hairline edge, and shows its plate. */
+:is(
+  .who-panel,
+  .backing-panel,
+  .ssync,
+  .flexacc__item,
+  .vtour__window,
+  .vhero__still,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .paper-invite__card,
+  .home-page .paper-install .u-sheet .paper-beta,
+  .beta-page .paper-beta,
+  .beta-page__steps,
+  .beta-page__trust-item
+):has(> .glass-plate) {
+  border: 1px solid var(--glass-edge) !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+:is(
+  .who-panel,
+  .backing-panel,
+  .ssync,
+  .flexacc__item,
+  .vtour__window,
+  .vhero__still,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .paper-invite__card,
+  .home-page .paper-install .u-sheet .paper-beta,
+  .beta-page .paper-beta,
+  .beta-page__steps,
+  .beta-page__trust-item
+) > .glass-plate {
+  --lg-glass: var(--glass-card);
+  --lg-blur: var(--glass-card-blur);
+  display: block;
+}
+
+/* Stronger fill where the text is dense or the card is the one in focus: the open step, prices, the video's
+   status bars and the download cards. */
+:is(
+  .flexacc__item.is-open,
+  .vtour__window,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .home-page .paper-install .u-sheet .paper-beta,
+  .beta-page .paper-beta
+) > .glass-plate {
+  --lg-glass: var(--glass-card-strong);
+}
+
+/* Lime Pro: 0.80 lime with a 2 px ink border. */
+.paper-pricing .marketing-plan-card.featured:has(> .glass-plate) {
+  border: 2px solid var(--v-ink) !important;
+}
+
+.paper-pricing .marketing-plan-card.featured > .glass-plate {
+  --lg-glass: var(--glass-card-lime);
+}
+
+/* Glisse's plate edge becomes the top highlight only; the element draws the hairline. Three classes, so this
+   also beats Glisse's .lg-glass[data-rim] shadow once the rim is painted. */
+.glass-plate.lg-glass[class] {
+  box-shadow: var(--glass-highlight);
+}
+
+/* Inside a glass card nothing else is frosted: the window's bars and the still's image sit on the card. */
+.vtour__window :is(.vtour__bar, .vtour__caption) {
+  background: transparent;
+}
+
+/* Secondary link buttons inside glass cards: outlined, no second layer of glass (links stay links). */
+.dl-card__other,
+.pricing-plans .pricing-button.pricing-button--quiet {
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dl-card__other:hover,
+.pricing-plans .pricing-button.pricing-button--quiet:hover {
+  background: rgb(20 20 20 / 0.06) !important;
+}
+
+/* ── The floating layer ─────────────────────────────────────────────────── */
 
 /* Top bar and phone download bar: the glass replaces their own translucent fill and blur. */
 .mnav,
@@ -63,6 +259,7 @@
 .mnav > .glass-plate,
 .mobile-dl > .glass-plate {
   --lg-glass: var(--glass-bar);
+  --lg-blur: var(--glass-card-blur);
   display: block;
 }
 
@@ -73,7 +270,7 @@
 }
 
 /* Feedback tab (a Glisse Button) and dialog (Glisse Glass as a sheet, close button inside). Two classes, so the
-   shadows beat Glisse's rim shadow. The dialog keeps its ink outline; its 8 px offset shadow is gone (Design §4). */
+   shadows beat Glisse's rim shadow. */
 .fb-tab.lg-button {
   --lg-glass: var(--glass-bar);
   box-shadow: var(--u-lift-1);
@@ -92,27 +289,12 @@
   box-shadow: var(--u-lift-1);
 }
 
-/* Secondary link buttons: a glass look on the existing <a> (links stay links; Glisse's Button is a <button>).
-   The ink outline stays for a 3:1 edge; the offset shadow goes. */
-.dl-card__other,
-.pricing-plans .pricing-button.pricing-button--quiet {
-  background: var(--glass-link) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(1.5);
-  backdrop-filter: blur(3px) saturate(1.5);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 1px 3px rgb(0 0 0 / 0.06);
-}
+/* ── Glisse fields ──────────────────────────────────────────────────────── */
 
-.dl-card__other:is(:hover, :active) {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 1px 3px rgb(0 0 0 / 0.06);
-}
-
-.pricing-plans .pricing-button.pricing-button--quiet:hover {
-  background: var(--glass-card) !important;
-}
-
-/* Glisse fields keep the site's 1.5 px edge (3:1 for a control outline) and a visible focus ring. Two classes,
-   so the edge also beats Glisse's .lg-glass[data-rim] shadow once the rim is painted. */
+/* Glisse fields keep a 1.5 px edge (3:1 for a control outline), a 12 px radius and a visible focus ring. Two
+   classes, so the edge also beats Glisse's .lg-glass[data-rim] shadow once the rim is painted. */
 .lg-glass.lg-input {
+  border-radius: 12px;
   box-shadow: inset 0 0 0 1.5px var(--u-line-strong);
 }
 
@@ -121,58 +303,7 @@
   outline-offset: 2px;
 }
 
-/* ── L2: panels, cards and text fields ─────────────────────────────────── */
-
-html:not([data-glass="subtle"]) :is(
-  .home-page .u-sheet,
-  .home-page .inv-card,
-  .plans-strip__card,
-  .paper-pricing .marketing-plan-card,
-  .paper-invite__card,
-  .beta-page .paper-beta
-):has(> .glass-plate) {
-  position: relative;
-  isolation: isolate;
-  background: transparent !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-html:not([data-glass="subtle"]) .home-page .u-sheet > .glass-plate {
-  --lg-glass: var(--glass-panel);
-  --lg-blur: 12px;
-  display: block;
-}
-
-html:not([data-glass="subtle"]) :is(
-  .home-page .inv-card,
-  .plans-strip__card,
-  .paper-pricing .marketing-plan-card,
-  .paper-invite__card,
-  .beta-page .paper-beta
-) > .glass-plate {
-  --lg-glass: var(--glass-card);
-  --lg-blur: 12px;
-  display: block;
-}
-
-html:not([data-glass="subtle"]) .paper-pricing .marketing-plan-card.featured > .glass-plate {
-  --lg-glass: var(--glass-card-lime);
-}
-
-/* On glass cards the sticker's offset shadow and the outline fight each other: a 1.5 px ink outline only. */
-html:not([data-glass="subtle"]) :is(
-  .home-page .inv-card,
-  .plans-strip__card,
-  .paper-pricing .marketing-plan-card,
-  .paper-invite__card,
-  .beta-page .paper-beta
-) {
-  border: 1.5px solid var(--v-ink) !important;
-  box-shadow: none !important;
-}
-
-/* Glisse Input (full level only, NewsletterSignup and FeedbackWidget) sized like the fields it replaces. */
+/* Glisse Input (NewsletterSignup and FeedbackWidget) sized like the fields it replaces. */
 .newsletter__row .lg-input {
   flex: 1 1 12rem;
   width: auto;
@@ -196,7 +327,7 @@ html:not([data-glass="subtle"]) :is(
   height: auto;
   min-height: 3rem;
   padding: 0 0.9rem;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: inset 0 0 0 1.5px var(--u-line);
   font: 1rem/1.5 var(--font-sans);
 }
@@ -222,71 +353,138 @@ html:not([data-glass="subtle"]) :is(
 
 /* ── Solid fallbacks (Design §2; Glisse has none) ───────────────────────── */
 
-/* Less transparency or more contrast asked for: every glass surface turns opaque, with no blur or refraction. */
+/* Less transparency or more contrast asked for: the backdrop goes flat cream and every glass surface turns
+   opaque, with a visible ink edge and no blur or refraction. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  [class^="lg-"],
-  [class*=" lg-"],
-  .dl-card__other,
-  .pricing-plans .pricing-button.pricing-button--quiet {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    background-image: none !important;
-  }
-
-  :root {
+  :root,
+  html[data-glass="b"] {
     --lg-glass: var(--surface-solid);
     --lg-surface: var(--surface-solid);
     --lg-edge: var(--u-line-strong);
     --glass-bar: var(--surface-solid);
     --glass-sheet: var(--surface-solid);
-    --glass-panel: var(--surface-solid);
     --glass-card: var(--surface-solid);
+    --glass-card-strong: var(--surface-solid);
     --glass-card-lime: var(--v-lime);
-    --glass-link: var(--surface-solid);
+    --glass-edge: var(--u-line-strong);
+    --glass-highlight: none;
+  }
+
+  html body::before,
+  html[data-glass="b"] body::before {
+    background: var(--surface-solid);
+  }
+
+  [class^="lg-"],
+  [class*=" lg-"],
+  .vhero__kicker,
+  .vhero__trust,
+  .vhero .vhero__fine,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .home-page .hiw__note,
+  .home-page .plans-strip__foot,
+  .home-page .home-langs,
+  .pricing-plans__intro > p,
+  .beta-page__head > p,
+  .beta-page .paper-center > .paper-meta {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-image: none !important;
   }
 }
 
 @media (forced-colors: active) {
+  html body::before,
+  html[data-glass="b"] body::before {
+    background: Canvas;
+  }
+
   [class^="lg-"],
   [class*=" lg-"],
-  .dl-card__other,
-  .pricing-plans .pricing-button.pricing-button--quiet {
+  .vhero__kicker,
+  .vhero__trust,
+  .vhero .vhero__fine,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .home-page .hiw__note,
+  .home-page .plans-strip__foot,
+  .home-page .home-langs,
+  .pricing-plans__intro > p,
+  .beta-page__head > p,
+  .beta-page .paper-center > .paper-meta {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background: Canvas !important;
     border: 1px solid CanvasText;
   }
+
+  :is(
+    .who-panel,
+    .backing-panel,
+    .ssync,
+    .flexacc__item,
+    .vtour__window,
+    .vhero__still,
+    .plans-strip__card,
+    .paper-pricing .marketing-plan-card,
+    .paper-invite__card,
+    .home-page .paper-install .u-sheet .paper-beta,
+    .beta-page .paper-beta,
+    .beta-page__steps,
+    .beta-page__trust-item
+  ):has(> .glass-plate) {
+    border: 1px solid CanvasText !important;
+  }
 }
 
 /* No backdrop-filter support: the glass fills turn opaque instead of showing the page through. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
+  :root,
+  html[data-glass="b"] {
     --lg-glass: var(--surface-solid);
     --lg-surface: var(--surface-solid);
     --glass-bar: var(--surface-solid);
     --glass-sheet: var(--surface-solid);
-    --glass-panel: var(--surface-solid);
     --glass-card: var(--surface-solid);
+    --glass-card-strong: var(--surface-solid);
     --glass-card-lime: var(--v-lime);
-    --glass-link: var(--surface-solid);
+    --glass-edge: var(--u-line-strong);
   }
 }
 
 /* The lite experience (lib/performanceMode: low-end devices) already drops the site's blurs; glass is the
-   heaviest of them, so it gets the solid surfaces too. */
-html[data-performance="lite"] :is([class^="lg-"], [class*=" lg-"], .dl-card__other, .pricing-plans .pricing-button.pricing-button--quiet) {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  background-image: none !important;
-}
-
-html[data-performance="lite"] {
+   heaviest of them, so it gets the solid surfaces and the flat cream backdrop too. */
+html[data-performance="lite"],
+html[data-performance="lite"][data-glass="b"] {
   --lg-glass: var(--surface-solid);
   --lg-surface: var(--surface-solid);
   --glass-bar: var(--surface-solid);
   --glass-sheet: var(--surface-solid);
-  --glass-panel: var(--surface-solid);
   --glass-card: var(--surface-solid);
+  --glass-card-strong: var(--surface-solid);
   --glass-card-lime: var(--v-lime);
-  --glass-link: var(--surface-solid);
+  --glass-edge: var(--u-line-strong);
+}
+
+html[data-performance="lite"] body::before,
+html[data-performance="lite"][data-glass="b"] body::before {
+  background: var(--surface-solid);
+}
+
+html[data-performance="lite"] :is(
+  [class^="lg-"],
+  [class*=" lg-"],
+  .vhero__kicker,
+  .vhero__trust,
+  .vhero .vhero__fine,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .home-page .hiw__note,
+  .home-page .plans-strip__foot,
+  .home-page .home-langs,
+  .pricing-plans__intro > p,
+  .beta-page__head > p,
+  .beta-page .paper-center > .paper-meta
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
 }

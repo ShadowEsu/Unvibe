@@ -14,7 +14,6 @@ import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { WhatLeaves } from "@/components/paper/WhatLeaves";
 import { HomePricing } from "@/components/paper/HomePricing";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -50,9 +49,8 @@ export default function HomePage() {
 
       <section className="paper-section" aria-labelledby="who-title">
         <div className="paper-wrap u-sheet">
-          <GlassPlate />
           <div className="sec-head">
-            <h2 id="who-title">Who it&apos;s <em>for.</em></h2>
+            <h2 id="who-title">Who it&apos;s for.</h2>
           </div>
           <WhoItsForCards />
         </div>
@@ -62,7 +60,6 @@ export default function HomePage() {
 
       <section className="paper-section" aria-label="What Unvibe can explain">
         <div className="paper-wrap u-sheet">
-          <GlassPlate />
           <ScrollSyncedList
             prefix="Select it, and Vibe explains"
             items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
@@ -74,7 +71,7 @@ export default function HomePage() {
         <div className="paper-wrap u-sheet">
           <div className="sec-head">
             <p className="paper-meta">Try it here</p>
-            <h2 id="try-it-title">Paste code. <em>Vibe explains it.</em></h2>
+            <h2 id="try-it-title">Paste code. Vibe explains it.</h2>
             <p className="paper-lead">
               A real explanation online, no download. In the app there is no pasting: select code in any app and
               press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows).
@@ -101,10 +98,9 @@ export default function HomePage() {
 
       <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
         <div className="paper-wrap u-sheet">
-          <GlassPlate />
           <div className="sec-head">
             <p className="paper-meta">Download</p>
-            <h2 id="install-title">Free for <em>Mac and Windows.</em></h2>
+            <h2 id="install-title">Free for Mac and Windows.</h2>
             <p className="paper-lead">Download, open the app, then press the shortcut in any app.</p>
           </div>
           <BetaInstall tone="page" surface="home_install" showFeedback={false} title={null} />
@@ -114,11 +110,10 @@ export default function HomePage() {
       <BackingStrip />
 
       <section className="paper-section" aria-labelledby="faq-title">
-        <div className="paper-wrap u-sheet u-split">
-          <GlassPlate />
+        <div className="paper-wrap u-sheet u-split u-solid">
           <div className="sec-head">
             <p className="paper-meta">Questions</p>
-            <h2 id="faq-title">Short <em>answers.</em></h2>
+            <h2 id="faq-title">Short answers.</h2>
           </div>
           <TypingFaq items={homeFaq} />
         </div>
@@ -129,9 +124,9 @@ export default function HomePage() {
       </section>
 
       <section className="paper-section" id="newsletter" aria-labelledby="newsletter-title">
-        <div className="paper-wrap u-sheet">
+        <div className="paper-wrap u-sheet u-solid">
           <div className="sec-head">
-            <h2 id="newsletter-title">Get the <em>newsletter.</em></h2>
+            <h2 id="newsletter-title">Get the newsletter.</h2>
             <p className="paper-lead">One email when something ships. No spam.</p>
           </div>
           <div className="newsletter-home">

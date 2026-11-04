@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { Reveal } from "@/components/redesign/Reveal";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 
@@ -20,28 +20,23 @@ const { mac, windows } = SHORTCUTS;
 export default function BetaDownloadsPage() {
   return (
     <article className="beta-page">
-      <header className="paper-photo-band paper-photo-band--short">
-        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
-        <div className="paper-hero__veil" />
-        <div className="paper-photo-band__copy">
-          <p className="paper-meta">Free for Mac and Windows</p>
-          <h1>Download <em>Unvibe.</em></h1>
-          <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
-        </div>
+      {/* No photo band and no eyebrow (Design, ledger 443): the heading, then the download card on the backdrop. */}
+      <header className="beta-page__head paper-wrap paper-center">
+        <h1>Download Unvibe.</h1>
+        <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
       </header>
 
       <section className="paper-section" id="install">
-        {/* The primary download paints at once: no Reveal here (motion spec). */}
         <div className="paper-wrap paper-center">
-          {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
           <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
         </div>
       </section>
 
       <section className="paper-section">
-        <Reveal className="paper-wrap">
+        <div className="paper-wrap">
           <div className="beta-page__steps paper-glass">
-            <h2>Get started in <em>three steps.</em></h2>
+            <GlassPlate />
+            <h2>Get started in 3 steps.</h2>
             <ol className="beta-page__steps-list">
               <li>
                 <span className="beta-page__step-badge">1</span>
@@ -79,13 +74,13 @@ export default function BetaDownloadsPage() {
               </li>
             </ol>
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section" id="help">
-        <Reveal className="paper-wrap paper-center">
+        <div className="paper-wrap paper-center">
           <p className="paper-meta">Troubleshooting</p>
-          <h2 className="mt-3">Stuck? <em>Quick fixes.</em></h2>
+          <h2 className="mt-3">Stuck? Quick fixes.</h2>
           <div className="paper-faq mt-8">
             <details>
               <summary>The app says “Waiting for Google sign-in…”</summary>
@@ -150,22 +145,24 @@ export default function BetaDownloadsPage() {
               </p>
             </details>
           </div>
-        </Reveal>
+        </div>
       </section>
 
       <section className="paper-section">
-        <Reveal className="paper-wrap paper-center">
+        <div className="paper-wrap paper-center">
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
+              <GlassPlate />
               <ShieldIcon />
               <p>Keys and tokens in your code are filtered on your device before it is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
+              <GlassPlate />
               <MonitorIcon />
               <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
-        </Reveal>
+        </div>
       </section>
     </article>
   );

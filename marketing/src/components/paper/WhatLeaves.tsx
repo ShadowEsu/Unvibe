@@ -23,10 +23,10 @@ export const KEPT: readonly string[] = [
 export function WhatLeaves() {
   return (
     <section className="paper-section" id="what-leaves" aria-labelledby="what-leaves-title">
-      <div className="paper-wrap u-sheet">
+      <div className="paper-wrap u-sheet u-solid">
         <div className="sec-head">
           <p className="paper-meta">Privacy</p>
-          <h2 id="what-leaves-title">What leaves <em>your computer.</em></h2>
+          <h2 id="what-leaves-title">What leaves your computer.</h2>
           <p className="paper-lead">Only what&apos;s needed to explain what you ask about. The privacy policy has the full detail.</p>
         </div>
         <div className="leaves">

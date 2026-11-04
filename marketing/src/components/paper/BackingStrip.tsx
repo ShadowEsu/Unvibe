@@ -33,18 +33,21 @@ export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <div className="paper-wrap u-sheet">
-        <GlassPlate />
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
-          <h2 id="backing-title">Startup programs <em>we&apos;re in.</em></h2>
+          <h2 id="backing-title">Startup programs we&apos;re in.</h2>
         </div>
-        <div className="claude-startups">
-          <span className="claude-startups__tag">Startup program</span>
-          <p className="claude-startups__title">Unvibe is in <em>Claude for Startups.</em></p>
-          <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors#backing">investors page</a>.</p>
+        {/* One glass panel holds the programs; the sheet around it is clear. */}
+        <div className="backing-panel">
+          <GlassPlate />
+          <div className="claude-startups">
+            <span className="claude-startups__tag">Startup program</span>
+            <p className="claude-startups__title">Unvibe is in Claude for Startups.</p>
+            <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors#backing">investors page</a>.</p>
+          </div>
+          {/* The only other mention of a program name on the page is Claude for Startups above, so this list is the first use of the rest. */}
+          <ProgramList firstUse />
         </div>
-        {/* The hero line names only Claude for Startups, so this list is the first use of the other names. */}
-        <ProgramList firstUse />
       </div>
     </section>
   );
