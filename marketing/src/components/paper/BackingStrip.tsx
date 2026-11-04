@@ -34,7 +34,6 @@ export function BackingStrip() {
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <div className="paper-wrap u-sheet">
         <div className="sec-head">
-          <p className="paper-meta">Behind Unvibe</p>
           <h2 id="backing-title">Startup programs we&apos;re in.</h2>
         </div>
         {/* One glass panel holds the programs; the sheet around it is clear. */}

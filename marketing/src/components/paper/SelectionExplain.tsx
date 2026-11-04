@@ -77,7 +77,7 @@ export function SelectionExplain() {
         That is the gesture. In Cursor, VS Code, Terminal or any app, this opens a plain-English explanation of
         the code you selected, right beside your editor.
       </p>
-      <a href="/beta" className="sel-card__cta">Try it on real code →</a>
+      <a href="/beta" className="sel-card__cta">Try it on real code</a>
     </div>
   );
 }

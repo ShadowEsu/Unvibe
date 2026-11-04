@@ -34,8 +34,7 @@ export default function BetaDownloadsPage() {
 
       <section className="paper-section">
         <div className="paper-wrap">
-          <div className="beta-page__steps paper-glass">
-            <GlassPlate />
+          <div className="beta-page__steps">
             <h2>Get started in 3 steps.</h2>
             <ol className="beta-page__steps-list">
               <li>
@@ -79,8 +78,7 @@ export default function BetaDownloadsPage() {
 
       <section className="paper-section" id="help">
         <div className="paper-wrap paper-center">
-          <p className="paper-meta">Troubleshooting</p>
-          <h2 className="mt-3">Stuck? Quick fixes.</h2>
+          <h2>Stuck? Quick fixes.</h2>
           <div className="paper-faq mt-8">
             <details>
               <summary>The app says “Waiting for Google sign-in…”</summary>

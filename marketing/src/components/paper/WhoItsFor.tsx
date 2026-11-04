@@ -12,7 +12,7 @@ const AUDIENCES = [
   },
   {
     title: "You review AI changes.",
-    body: "An agent touched six files. On Pro, a Change Brief lists what changed and what to read first.",
+    body: "An agent touched 6 files. On Pro, a Change Brief lists what changed and what to read first.",
   },
 ] as const;
 

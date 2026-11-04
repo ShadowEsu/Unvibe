@@ -18,7 +18,6 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
     <section className="paper-section" id="pricing" aria-labelledby="pricing-title">
       <div className="paper-wrap u-sheet">
         <div className="sec-head">
-          <p className="paper-meta">Pricing</p>
           <h2 id="pricing-title">Free while in beta. Pro opens soon.</h2>
           <p className="paper-lead">No card and no API key. Nothing is billed today.</p>
         </div>

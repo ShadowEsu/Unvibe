@@ -31,7 +31,7 @@ const STEPS: readonly FlexAccordionItem[] = [
     id: "test",
     label: "Test me",
     title: "Check that it stuck.",
-    body: "Test me writes a question about this exact code, and up to three if you want more. Miss one and the lesson is saved to revisit later.",
+    body: "Test me writes a question about this exact code, and up to 3 if you want more. Miss one and the lesson is saved to revisit later.",
     image: panelShot("panel-test-me", "A multiple-choice Test me question about the debounce function"),
   },
 ];
@@ -91,8 +91,7 @@ export function HowItWorks() {
         </div>
         <div className="paper-wrap u-sheet">
           <div className="hiw__head">
-            <p className="paper-meta">How it works</p>
-            <h2 id="hiw-title" className="mt-3">Four steps, one panel.</h2>
+            <h2 id="hiw-title">4 steps, 1 panel.</h2>
           </div>
           <FlexAccordion items={STEPS} shape="tall" label="How Unvibe works, step by step" />
         </div>
@@ -101,8 +100,7 @@ export function HowItWorks() {
       <section className="paper-section hiw hiw--pages" aria-labelledby="pages-title">
         <div className="paper-wrap u-sheet">
           <div className="hiw__head">
-            <p className="paper-meta">The rest of the app</p>
-            <h2 id="pages-title" className="mt-3">Where it sticks.</h2>
+            <h2 id="pages-title">Where it sticks.</h2>
           </div>
           <FlexAccordion items={PAGES} shape="wide" label="Pages in the Unvibe app" numbered={false} />
           <p className="hiw__note">Recorded on a {demo.platform} with Unvibe {demo.version}, except Library: Unvibe 0.1.43 with sample lessons.</p>

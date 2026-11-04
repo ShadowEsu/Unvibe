@@ -29,9 +29,9 @@
   --glass-bar: rgb(255 253 246 / 0.72);
   --glass-sheet: rgb(255 253 246 / 0.88);
 
-  /* Backdrop A cards. Text on them stays >= 4.5:1: ink #141414 and #4a4a46 on 0.62 white over the blurred field. */
-  --glass-card: rgb(255 255 255 / 0.62);
-  --glass-card-strong: rgb(255 255 255 / 0.72);
+  /* Backdrop A cards: cream glass. Text on them stays >= 4.5:1: ink #141414 and #4a4a46 on 0.62 cream over the blurred field. */
+  --glass-card: rgb(255 253 246 / 0.62);
+  --glass-card-strong: rgb(255 253 246 / 0.72);
   --glass-card-lime: rgb(214 244 90 / 0.8);
   --glass-card-blur: 18px;
 
@@ -45,8 +45,8 @@
 
 /* Backdrop B: flat discs, so the cards carry more fill and a lighter blur. */
 html[data-glass="b"] {
-  --glass-card: rgb(255 255 255 / 0.78);
-  --glass-card-strong: rgb(255 255 255 / 0.78);
+  --glass-card: rgb(255 253 246 / 0.78);
+  --glass-card-strong: rgb(255 253 246 / 0.78);
   --glass-card-blur: 12px;
 }
 
@@ -96,18 +96,24 @@ html[data-glass="b"] {
   border-top: 1px solid var(--u-line) !important;
 }
 
+/* The /beta install steps are reading text: solid #fffdf6 with a hairline (recipe §2), not glass. */
+.beta-page__steps {
+  border: 1px solid var(--u-line);
+  border-radius: 20px;
+  background: var(--surface-solid);
+}
+
 /* ── Text on the backdrop: short lines read on a near-solid plate ───────── */
 
 .vhero__kicker,
 .vhero__trust,
-.vhero .vhero__fine,
-.home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+.vhero .vhero__claims,
+.home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
 .home-page .hiw__note,
 .home-page .plans-strip__foot,
 .home-page .home-langs,
 .pricing-plans__intro > p,
-.beta-page__head > p,
-.beta-page .paper-center > .paper-meta {
+.beta-page__head > p {
   justify-self: center;
   width: fit-content;
   max-width: min(44rem, 100%);
@@ -121,9 +127,13 @@ html[data-glass="b"] {
   color: var(--u-text);
 }
 
-/* The FAQ sheet is split: its heading sits left on the solid sheet, with no plate. */
-.u-split > .sec-head > .paper-meta {
-  margin-inline: 0;
+/* The phone email note carries the unsubscribe and Privacy line (consent): solid, never glass. */
+.vhero__phone .vhero__fine {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--u-line);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  color: var(--u-text);
 }
 
 /* The pricing disclosure is long reading text: solid, never glass. */
@@ -134,11 +144,12 @@ html[data-glass="b"] {
 
 /* ── Cards and panels ───────────────────────────────────────────────────── */
 
-/* Layout for the panels that only exist on this branch. */
+/* Plates are absolute, so every plated surface is the positioning box for its own. */
 .who-panel,
 .backing-panel,
 .ssync,
-.vhero__still {
+.vhero__still,
+.paper-beta {
   position: relative;
   isolation: isolate;
 }
@@ -169,7 +180,6 @@ html[data-glass="b"] {
   .paper-invite__card,
   .home-page .paper-install .u-sheet .paper-beta,
   .beta-page .paper-beta,
-  .beta-page__steps,
   .beta-page__trust-item
 ):has(> .glass-plate) {
   border: 1px solid var(--glass-edge) !important;
@@ -191,7 +201,6 @@ html[data-glass="b"] {
   .paper-invite__card,
   .home-page .paper-install .u-sheet .paper-beta,
   .beta-page .paper-beta,
-  .beta-page__steps,
   .beta-page__trust-item
 ) > .glass-plate {
   --lg-glass: var(--glass-card);
@@ -259,7 +268,7 @@ html[data-glass="b"] {
 .mnav > .glass-plate,
 .mobile-dl > .glass-plate {
   --lg-glass: var(--glass-bar);
-  --lg-blur: var(--glass-card-blur);
+  --lg-blur: 3px;
   display: block;
 }
 
@@ -379,14 +388,13 @@ html[data-glass="b"] {
   [class*=" lg-"],
   .vhero__kicker,
   .vhero__trust,
-  .vhero .vhero__fine,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .vhero .vhero__claims,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
   .home-page .hiw__note,
   .home-page .plans-strip__foot,
   .home-page .home-langs,
   .pricing-plans__intro > p,
-  .beta-page__head > p,
-  .beta-page .paper-center > .paper-meta {
+  .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background-image: none !important;
@@ -403,14 +411,13 @@ html[data-glass="b"] {
   [class*=" lg-"],
   .vhero__kicker,
   .vhero__trust,
-  .vhero .vhero__fine,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .vhero .vhero__claims,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
   .home-page .hiw__note,
   .home-page .plans-strip__foot,
   .home-page .home-langs,
   .pricing-plans__intro > p,
-  .beta-page__head > p,
-  .beta-page .paper-center > .paper-meta {
+  .beta-page__head > p {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background: Canvas !important;
@@ -429,7 +436,6 @@ html[data-glass="b"] {
     .paper-invite__card,
     .home-page .paper-install .u-sheet .paper-beta,
     .beta-page .paper-beta,
-    .beta-page__steps,
     .beta-page__trust-item
   ):has(> .glass-plate) {
     border: 1px solid CanvasText !important;
@@ -475,14 +481,13 @@ html[data-performance="lite"] :is(
   [class*=" lg-"],
   .vhero__kicker,
   .vhero__trust,
-  .vhero .vhero__fine,
-  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > :is(.paper-meta, .paper-lead),
+  .vhero .vhero__claims,
+  .home-page .u-sheet:not(.u-solid) :is(.sec-head, .hiw__head) > .paper-lead,
   .home-page .hiw__note,
   .home-page .plans-strip__foot,
   .home-page .home-langs,
   .pricing-plans__intro > p,
-  .beta-page__head > p,
-  .beta-page .paper-center > .paper-meta
+  .beta-page__head > p
 ) {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;

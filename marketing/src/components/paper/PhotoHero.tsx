@@ -175,7 +175,7 @@ export function PhotoHero() {
         {device === "phone" ? (
           <>
             <EmailMeLink />
-            <p className="vhero__fine">{HERO_STRIP}</p>
+            <p className="vhero__fine vhero__claims">{HERO_STRIP}</p>
             <TryInBrowser device={device} />
           </>
         ) : (
