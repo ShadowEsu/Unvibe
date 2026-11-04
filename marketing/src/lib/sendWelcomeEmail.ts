@@ -19,7 +19,12 @@ export async function sendWelcomeEmail(input: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { sent: false, error: "Email delivery is not configured." };
   if (await isEmailUnsubscribed(input.email)) return { sent: false, error: "This address unsubscribed." };
-  const from = process.env.WAITLIST_FROM_EMAIL?.trim() || "Unvibe <onboarding@resend.dev>";
+  // No fallback sender: without the configured address, nothing is sent (named, never its value).
+  const from = process.env.WAITLIST_FROM_EMAIL?.trim();
+  if (!from) {
+    console.error("welcome email not sent: WAITLIST_FROM_EMAIL is not set");
+    return { sent: false, error: "WAITLIST_FROM_EMAIL is not set." };
+  }
   const content = {
     email: input.email,
     referralCode: input.referralCode,
