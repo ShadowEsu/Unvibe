@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <strong>Code you choose to review.</strong> When you activate Unvibe on a
-            selection, that snippet is sent to generate an explanation. On Pro, up to 2 files
+            selection, that snippet is sent to generate an explanation. On Pro, up to two files
             from your project that the snippet imports are added to it automatically (the first
             4,000 characters of each). Before that code leaves your computer it is scanned
             on-device for secrets, and detected credentials block or warn first.

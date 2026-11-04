@@ -176,7 +176,7 @@ export function PhotoHero() {
         {device === "phone" ? (
           <>
             <EmailMeLink />
-            <p className="vhero__fine">
+            <p className="vhero__fine vhero__claims">
               <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
               <span className="vhero__trust-item">No API key.</span>{" "}
               <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
