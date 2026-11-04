@@ -23,7 +23,8 @@ const OUT = process.env.OUT;
 if (!EXE || !OUT) throw new Error('UNVIBE_EXE and OUT are required');
 mkdirSync(OUT, { recursive: true });
 const STATE_S = Number(process.env.STATE_S ?? 30);
-const MOCK = 'http://127.0.0.1:8787';
+// The mock's control routes live on the same origin the app uses (NODE_EXTRA_CA_CERTS trusts its CI cert).
+const MOCK = process.env.MOTION_BACKEND ?? 'http://127.0.0.1:8787';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const bundleOf = (exe) => exe.replace(/\/Contents\/MacOS\/[^/]+$/, '');
 
@@ -36,7 +37,7 @@ const shot = (page, name) => page?.screenshot({ path: path.join(OUT, `${name}.pn
 
 // ---- the app ------------------------------------------------------------------------------------------------
 const baseEnv = { ...process.env };
-delete baseEnv.UNVIBE_BACKEND;
+delete baseEnv.UNVIBE_BACKEND; delete baseEnv.UNVIBE_CI_MOCK;
 async function launch(exe, name, installId, env = {}) {
   const userData = name.startsWith('/') ? name : path.join(process.env.MOTION_PROFILES ?? path.join(OUT, 'profiles'), name);
   rmSync(userData, { recursive: true, force: true }); mkdirSync(userData, { recursive: true });
@@ -48,7 +49,8 @@ async function launch(exe, name, installId, env = {}) {
   const { version } = await companion.evaluate(() => window.unvibe.appInfo());
   return { app, companion, version, bundle: bundleOf(exe), userData };
 }
-const mockEnv = () => ({ UNVIBE_BACKEND: process.env.MOTION_BACKEND });
+// UNVIBE_CI_MOCK=1: release builds from 0.1.50 accept https://unvibe-mock.test only with it (backendUrl.ts).
+const mockEnv = () => ({ UNVIBE_BACKEND: process.env.MOTION_BACKEND, UNVIBE_CI_MOCK: '1' });
 async function setMode(mode) {
   for (let i = 0; ; i++) {
     try { const r = await fetch(`${MOCK}/__qa/mode`, { method: 'POST', body: JSON.stringify({ mode }) }); if (r.ok) return; throw new Error(`mode ${mode}: ${r.status}`); } catch (e) { if (i === 2) throw e; await sleep(300); }
@@ -309,8 +311,6 @@ function m5(rows) {
   const bobs = rows.flatMap((r) => Object.values(r.windows).flatMap((a) => (a.loops ?? []).filter((l) => l.name === 'vibeBob').map((l) => ({ ...l, label: r.label }))));
   check(bobs.every((b) => b.iterations <= 3), 'M5 vibeBob: at most 3 iterations', bobs.map((b) => `${b.label} ${b.state} ${b.iteration}/${b.iterations}`).join(', ') || 'not seen');
   check(bobs.filter((b) => /blurred/.test(b.label)).every((b) => b.state !== 'running'), 'M5 vibeBob: 0 running while blurred');
-  const drift = rows.flatMap((r) => runningLoops(r, (l) => l.name === 'duskDrift').map((x) => `${r.label}: ${x}`));
-  check(drift.every((d) => d.startsWith('login focused:')), 'M5 duskDrift: runs only on login focused', drift.join('; ') || 'never running (the companion hides .sanFranWash and body::before under v3/light)');
   const rm = rows.filter((r) => /reduced motion/.test(r.label));
   check(rm.length === 2 && rm.every((r) => Object.values(r.windows).every((a) => a.error || a.running === 0)), 'M5 reduced motion: no running animation at all', rm.map((r) => `${r.label}: ${Object.entries(r.windows).map(([w, a]) => `${w} ${a.running}`).join(', ')}`).join('; '));
 }

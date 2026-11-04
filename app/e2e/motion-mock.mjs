@@ -2,7 +2,10 @@
 // make no production calls and use no AI. It answers only what a signed-out app asks for during the first run;
 // everything else is 404. Request bodies and headers are never logged (the app sends its trial headers).
 //
-//   PORT=8787 node motion-mock.mjs        (binds 127.0.0.1 only)
+//   PORT=8787 [TLS_CERT=cert.pem TLS_KEY=key.pem] node motion-mock.mjs        (binds 127.0.0.1 only)
+//
+// With TLS_CERT/TLS_KEY it serves https: release builds from 0.1.50 accept only https://unvibe-mock.test (with
+// UNVIBE_CI_MOCK=1) as an override (app/src/main/backendUrl.ts, Security 20261104-0637).
 //
 // The test sets how the next explanations are answered with POST /__qa/mode {"mode": ...}:
 //   stream   an answer with code spans and bold, cut into 3-character tokens 30 ms apart, so a span or a bold
@@ -16,7 +19,9 @@
 //   drop     the connection is cut before any answer (what "can't reach the service" looks like)
 //   hold     headers sent, then nothing until the test switches mode; the held answer then streams as stream/unsure
 // GET /__qa/stats returns how many requests each route got.
-import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const SHORT = 'This function adds up an order. For each item it multiplies `item.price` by `item.qty` and keeps a running total with **reduce**. The total starts at `0`, so an empty list gives 0 rather than an error.';
@@ -47,7 +52,8 @@ async function review(req, res, body) {
   res.end(`data: ${JSON.stringify({ type: 'done', model: 'qa-mock', mock: true })}\n\n`);
 }
 
-createServer((req, res) => {
+const tls = process.env.TLS_CERT && process.env.TLS_KEY ? { cert: readFileSync(process.env.TLS_CERT), key: readFileSync(process.env.TLS_KEY) } : null;
+const handle = (req, res) => {
   const route = (req.url ?? '').split('?')[0];
   stats[`${req.method} ${route}`] = (stats[`${req.method} ${route}`] ?? 0) + 1;
   res.on('finish', () => console.log(`${new Date().toISOString()} ${req.method} ${route} ${res.statusCode} (mode ${mode})`));
@@ -79,4 +85,6 @@ createServer((req, res) => {
   if (req.method === 'GET' && route === '/api/v1/trial/usage') return json(res, 200, { plan: 'trial', usage: [{ kind: 'ai_explanation', used: 1, limit: 50, remaining: 49, resetsAt: resetsAt() }] });
   if (req.method === 'POST' && route === '/api/v1/trial/progress') { res.writeHead(204); return res.end(); }
   json(res, 404, { error: 'not_found' });
-}).listen(PORT, '127.0.0.1', () => console.log(`motion mock on 127.0.0.1:${PORT}`));
+};
+(tls ? createHttpsServer(tls, handle) : createHttpServer(handle))
+  .listen(PORT, '127.0.0.1', () => console.log(`motion mock on ${tls ? 'https' : 'http'}://127.0.0.1:${PORT}`));

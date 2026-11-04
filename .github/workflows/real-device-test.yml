@@ -191,9 +191,21 @@ jobs:
           pkill -f "/Applications/Unvibe.app/" || true
           mkdir -p "$OUT"
           cp app/e2e/motion-qa.mjs app/e2e/motion-mock.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
-          # Release builds ignore a loopback UNVIBE_BACKEND (app/src/main/backendUrl.ts: the baked URL wins over
-          # localhost and 127.0.0.1), so the app reaches the mock through a name only this runner resolves.
+          # Release builds take only their own URL or https://unvibe-mock.test with UNVIBE_CI_MOCK=1 (0.1.50+,
+          # app/src/main/backendUrl.ts); older ones take any non-loopback name. The name resolves only here.
           echo "127.0.0.1 unvibe-mock.test" | sudo tee -a /etc/hosts >/dev/null
+          # A throwaway CA, trusted in this runner's System keychain for this job only, signs the mock's cert.
+          tls="$RUNNER_TEMP/mock-tls"; mkdir -p "$tls"
+          (
+            cd "$tls"
+            openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 2 -subj "/CN=Unvibe CI mock CA" \
+              -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+            openssl req -newkey rsa:2048 -nodes -keyout key.pem -out leaf.csr -subj "/CN=unvibe-mock.test"
+            printf 'subjectAltName=DNS:unvibe-mock.test\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n' > leaf.ext
+            openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out cert.pem -days 2 -extfile leaf.ext
+            sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ca.pem
+            security verify-cert -c cert.pem -p ssl -s unvibe-mock.test
+          )
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
           curl -fL -o "$RUNNER_TEMP/baseline.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$BASELINE/Unvibe-$BASELINE-mac-$arch.dmg"
           mnt="$RUNNER_TEMP/baseline-mnt"; mkdir -p "$mnt" "$RUNNER_TEMP/baseline"
@@ -206,17 +218,18 @@ jobs:
           printf '0.0.0.0 api.unvibe.site\n:: api.unvibe.site\n' | sudo tee -a /etc/hosts >/dev/null
           sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder || true
           cd "$RUNNER_TEMP/pw"
-          PORT=8787 node motion-mock.mjs > "$OUT/mock.log" 2>&1 &
+          TLS_CERT="$tls/cert.pem" TLS_KEY="$tls/key.pem" PORT=8787 node motion-mock.mjs > "$OUT/mock.log" 2>&1 &
           mock=$!
           trap 'kill $mock 2>/dev/null' EXIT
-          for i in $(seq 1 50); do curl -fs -o /dev/null http://127.0.0.1:8787/api/v1/health && break; sleep 0.2; done
-          MOTION_PASS=mock MOTION_BACKEND=http://unvibe-mock.test:8787 BASELINE_EXE="$RUNNER_TEMP/baseline/Unvibe.app/Contents/MacOS/Unvibe" node motion-qa.mjs
+          for i in $(seq 1 50); do curl -fs --cacert "$tls/ca.pem" -o /dev/null https://unvibe-mock.test:8787/api/v1/health && break; sleep 0.2; done
+          NODE_EXTRA_CA_CERTS="$tls/ca.pem" MOTION_PASS=mock MOTION_BACKEND=https://unvibe-mock.test:8787 BASELINE_EXE="$RUNNER_TEMP/baseline/Unvibe.app/Contents/MacOS/Unvibe" node motion-qa.mjs
 
-      - name: Unblock the production API
+      - name: Unblock the production API and drop the mock CA
         if: always() && inputs.motion == 'true' && matrix.label == 'mac'
         shell: bash
         run: |
           sudo sed -i '' '/ api\.unvibe\.site$/d' /etc/hosts
+          sudo security delete-certificate -c "Unvibe CI mock CA" /Library/Keychains/System.keychain || true
           sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder || true
           sleep 2
           curl -fsS -o /dev/null -w "api.unvibe.site health %{http_code}\n" https://api.unvibe.site/api/v1/health
