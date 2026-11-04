@@ -90,7 +90,7 @@ export function kitSections(): KitSection[] {
         "Works beside Cursor, VS Code, Claude Code and Terminal. It does not replace your editor.",
         "Five explanation depths: New, Beginner, Intermediate and Advanced are free. Expert is Pro.",
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
-        "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
+        "After-Agent Review (in Briefs, free): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look. Pro adds the AI explanation of the diff.",
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. Every new app account starts with a free month of Pro.`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
@@ -103,7 +103,7 @@ export function kitSections(): KitSection[] {
       intro: "Lead with the feeling, not the feature. Most people who code with AI have shipped something they could not explain.",
       bullets: [
         "Students and new coders: learn from the code AI gives you instead of copy pasting it. Unvibe meets you at your level.",
-        "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Pro ranks the diff so you know where to look first.",
+        "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Briefs rank the diff so you know where to look first.",
         "Working developers: own the code in your repo, even the parts you did not type.",
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
         "Objection: \"Is my code safe?\" Answer: secrets in the code are filtered on your machine first, and you choose what is sent. From app 0.1.44, typed questions and Chat are filtered too; older versions don't filter them, so say so if asked.",
