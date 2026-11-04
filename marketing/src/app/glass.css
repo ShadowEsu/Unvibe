@@ -1,0 +1,286 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Liquid Glass with Glisse 0.5.0 (ledger 436; Design spec agents/design/glass-spec-2026-11-04.md).
+   Loads after the site's own CSS.
+
+   Levels, on <html data-glass> (set from ?glass= by the BRANCH-ONLY GlassLevelSwitch, lib/glassLevel.ts):
+   - L1 "subtle": rules with no level selector. Glisse controls everywhere they fit, plus the floating
+     layer: top bar and its phone menu, the phone download bar, the Feedback tab and dialog, the ⌘K sheet,
+     and secondary link buttons.
+   - L2 "full" (also the default with no attribute): L1, plus the rules under html:not([data-glass="subtle"]):
+     the home section sheets and the cards on them, pricing cards, the /beta download card, the closing card,
+     and Glisse Input for the newsletter and Feedback email fields (swapped in by useGlassLevel).
+   A surface turns glass with a <GlassPlate> (Glisse's Glass) as its first child, shown only where a list
+   below names the surface. Plated surfaces keep their own CSS and the rules here override it, so moving a
+   selector between the lists (or deleting it) moves that surface between levels (or back to solid).
+   Elements that are Glisse components themselves (Feedback tab and dialog, ⌘K sheet and field, pricing
+   toggle, sound switch, buttons) had their dead solid fills removed from their own CSS.
+
+   Never glass, at either level (Design §1, Security finding 3): the analytics consent bar, consent
+   checkboxes and their labels (the Try it and newsletter sheets carry no plate), What leaves your computer,
+   Terms, Privacy and the footer.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Glisse's tokens in the site's colours: filled buttons are the ink call to action, focus rings the accent. */
+  --lg-fill: var(--u-cta);
+  --lg-ring: var(--u-focus);
+  --lg-foreground: var(--u-text);
+
+  /* Fills (Design §1, light): bars that carry text >= 0.72, sheets and dialogs with body text above that,
+     cards with body text >= 0.78. Text on glass stays on a near-solid plate. */
+  --glass-bar: rgb(255 253 246 / 0.76);
+  --glass-sheet: rgb(255 253 246 / 0.86);
+  --glass-panel: rgb(255 253 246 / 0.8);
+  --glass-card: rgb(255 255 255 / 0.8);
+  --glass-card-lime: rgb(214 244 90 / 0.82);
+  --glass-link: rgb(255 255 255 / 0.6);
+
+  /* The site's opaque surface, for the fallbacks at the end. */
+  --surface-solid: var(--u-sheet);
+}
+
+/* ── Plates ─────────────────────────────────────────────────────────────── */
+
+.glass-plate {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: none;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ── L1: the floating layer ─────────────────────────────────────────────── */
+
+/* Top bar and phone download bar: the glass replaces their own translucent fill and blur. */
+.mnav,
+.mobile-dl {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.mnav > .glass-plate,
+.mobile-dl > .glass-plate {
+  --lg-glass: var(--glass-bar);
+  display: block;
+}
+
+/* The phone menu opens inside the bar, so the open bar is a sheet: more fill and the 22 px sheet blur. */
+.mnav.is-open > .glass-plate {
+  --lg-glass: var(--glass-sheet);
+  --lg-blur: 22px;
+}
+
+/* Feedback tab (a Glisse Button) and dialog (Glisse Glass as a sheet, close button inside). Two classes, so the
+   shadows beat Glisse's rim shadow. The dialog keeps its ink outline; its 8 px offset shadow is gone (Design §4). */
+.fb-tab.lg-button {
+  --lg-glass: var(--glass-bar);
+  box-shadow: var(--u-lift-1);
+}
+
+.fb-dialog.lg-glass {
+  --lg-glass: var(--glass-sheet);
+  --lg-blur: 22px;
+  box-shadow: 0 24px 60px -24px rgb(20 20 20 / 0.45);
+}
+
+/* ⌘K sheet (SitePalette): Glisse Glass at sheet fill and blur; the lift shadow beats Glisse's rim shadow. */
+.palette__panel.lg-glass {
+  --lg-glass: var(--glass-sheet);
+  --lg-blur: 22px;
+  box-shadow: var(--u-lift-1);
+}
+
+/* Secondary link buttons: a glass look on the existing <a> (links stay links; Glisse's Button is a <button>).
+   The ink outline stays for a 3:1 edge; the offset shadow goes. */
+.dl-card__other,
+.pricing-plans .pricing-button.pricing-button--quiet {
+  background: var(--glass-link) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(1.5);
+  backdrop-filter: blur(3px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 1px 3px rgb(0 0 0 / 0.06);
+}
+
+.dl-card__other:is(:hover, :active) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 1px 3px rgb(0 0 0 / 0.06);
+}
+
+.pricing-plans .pricing-button.pricing-button--quiet:hover {
+  background: var(--glass-card) !important;
+}
+
+/* Glisse fields keep the site's 1.5 px edge (3:1 for a control outline) and a visible focus ring. Two classes,
+   so the edge also beats Glisse's .lg-glass[data-rim] shadow once the rim is painted. */
+.lg-glass.lg-input {
+  box-shadow: inset 0 0 0 1.5px var(--u-line-strong);
+}
+
+.lg-glass.lg-input:focus-within {
+  outline: 2px solid var(--u-focus);
+  outline-offset: 2px;
+}
+
+/* ── L2: panels, cards and text fields ─────────────────────────────────── */
+
+html:not([data-glass="subtle"]) :is(
+  .home-page .u-sheet,
+  .home-page .inv-card,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .paper-invite__card,
+  .beta-page .paper-beta
+):has(> .glass-plate) {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html:not([data-glass="subtle"]) .home-page .u-sheet > .glass-plate {
+  --lg-glass: var(--glass-panel);
+  --lg-blur: 12px;
+  display: block;
+}
+
+html:not([data-glass="subtle"]) :is(
+  .home-page .inv-card,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .paper-invite__card,
+  .beta-page .paper-beta
+) > .glass-plate {
+  --lg-glass: var(--glass-card);
+  --lg-blur: 12px;
+  display: block;
+}
+
+html:not([data-glass="subtle"]) .paper-pricing .marketing-plan-card.featured > .glass-plate {
+  --lg-glass: var(--glass-card-lime);
+}
+
+/* On glass cards the sticker's offset shadow and the outline fight each other: a 1.5 px ink outline only. */
+html:not([data-glass="subtle"]) :is(
+  .home-page .inv-card,
+  .plans-strip__card,
+  .paper-pricing .marketing-plan-card,
+  .paper-invite__card,
+  .beta-page .paper-beta
+) {
+  border: 1.5px solid var(--v-ink) !important;
+  box-shadow: none !important;
+}
+
+/* Glisse Input (full level only, NewsletterSignup and FeedbackWidget) sized like the fields it replaces. */
+.newsletter__row .lg-input {
+  flex: 1 1 12rem;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  height: auto;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-radius: 12px;
+  font: 500 1rem var(--font-sans);
+}
+
+.fb-dialog .lg-input {
+  max-width: none;
+  height: auto;
+  min-height: 3rem;
+  padding: 0 0.9rem;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1.5px var(--u-line);
+  font: 1rem/1.5 var(--font-sans);
+}
+
+.fb-dialog .lg-input:focus-within {
+  outline: 0;
+  box-shadow: inset 0 0 0 1.5px var(--v-ink), 0 0 0 4px rgb(214 244 90 / 0.6);
+}
+
+:is(.newsletter__row, .fb-dialog) .lg-input input {
+  min-height: 0;
+  padding: 0.6rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 1rem;
+}
+
+:is(.newsletter__row, .fb-dialog) .lg-input input:focus-visible {
+  outline: 0;
+}
+
+/* ── Solid fallbacks (Design §2; Glisse has none) ───────────────────────── */
+
+/* Less transparency or more contrast asked for: every glass surface turns opaque, with no blur or refraction. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [class^="lg-"],
+  [class*=" lg-"],
+  .dl-card__other,
+  .pricing-plans .pricing-button.pricing-button--quiet {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-image: none !important;
+  }
+
+  :root {
+    --lg-glass: var(--surface-solid);
+    --lg-surface: var(--surface-solid);
+    --lg-edge: var(--u-line-strong);
+    --glass-bar: var(--surface-solid);
+    --glass-sheet: var(--surface-solid);
+    --glass-panel: var(--surface-solid);
+    --glass-card: var(--surface-solid);
+    --glass-card-lime: var(--v-lime);
+    --glass-link: var(--surface-solid);
+  }
+}
+
+@media (forced-colors: active) {
+  [class^="lg-"],
+  [class*=" lg-"],
+  .dl-card__other,
+  .pricing-plans .pricing-button.pricing-button--quiet {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: Canvas !important;
+    border: 1px solid CanvasText;
+  }
+}
+
+/* No backdrop-filter support: the glass fills turn opaque instead of showing the page through. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --lg-glass: var(--surface-solid);
+    --lg-surface: var(--surface-solid);
+    --glass-bar: var(--surface-solid);
+    --glass-sheet: var(--surface-solid);
+    --glass-panel: var(--surface-solid);
+    --glass-card: var(--surface-solid);
+    --glass-card-lime: var(--v-lime);
+    --glass-link: var(--surface-solid);
+  }
+}
+
+/* The lite experience (lib/performanceMode: low-end devices) already drops the site's blurs; glass is the
+   heaviest of them, so it gets the solid surfaces too. */
+html[data-performance="lite"] :is([class^="lg-"], [class*=" lg-"], .dl-card__other, .pricing-plans .pricing-button.pricing-button--quiet) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+}
+
+html[data-performance="lite"] {
+  --lg-glass: var(--surface-solid);
+  --lg-surface: var(--surface-solid);
+  --glass-bar: var(--surface-solid);
+  --glass-sheet: var(--surface-solid);
+  --glass-panel: var(--surface-solid);
+  --glass-card: var(--surface-solid);
+  --glass-card-lime: var(--v-lime);
+  --glass-link: var(--surface-solid);
+}

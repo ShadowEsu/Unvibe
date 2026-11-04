@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
+import { Button, Glass, Input } from "glisse";
+import { useGlassLevel } from "@/components/glass/GlassLevel";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
@@ -16,7 +18,7 @@ function words(text: string): number {
   return trimmed ? trimmed.split(/\s+/).length : 0;
 }
 
-/** A small "Feedback" tab on every page: stars plus up to 100 words. */
+/** A small "Feedback" tab on every page: stars plus up to 100 words. The tab and the dialog are Glisse glass. */
 export function FeedbackWidget() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
@@ -30,6 +32,7 @@ export function FeedbackWidget() {
   const [claim, setClaim] = useState("");
   const [bonus, setBonus] = useState<"granted" | "already" | "too_short" | undefined>();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const glass = useGlassLevel();
 
   // The welcome email links to ?feedback=1&e=<email>&t=<signature>: open straight away, prefilled.
   useEffect(() => {
@@ -104,13 +107,13 @@ export function FeedbackWidget() {
 
   return (
     <>
-      <button type="button" className="fb-tab" onClick={() => { setOpen(true); track("feedback_opened", { surface: "site_tab" }); }}>
+      <Button className="fb-tab" onClick={() => { setOpen(true); track("feedback_opened", { surface: "site_tab" }); }}>
         Feedback
-      </button>
+      </Button>
       {open ? (
         <div className="fb-overlay" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) reset(); }}>
-          <div className="fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fb-title" ref={dialogRef}>
-            <button type="button" className="fb-close" aria-label="Close" onClick={reset}>×</button>
+          <Glass className="fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fb-title" ref={dialogRef}>
+            <Button className="fb-close" aria-label="Close" onClick={reset}>×</Button>
             {status === "done" ? (
               <div className="fb-done">
                 <Vibe size={84} />
@@ -118,7 +121,7 @@ export function FeedbackWidget() {
                 <p>Every note gets read. That one just made Vibe&apos;s day.</p>
                 {bonus === "granted" ? <p className="fb-bonus"><b>+1 month of Pro</b> added to {email}. Sign in to the app with that email to use it.</p> : null}
                 {bonus === "already" ? <p className="fb-bonus">This email already got its feedback month. Thank you again!</p> : null}
-                <button type="button" className="fb-send" onClick={reset}>Back to the site</button>
+                <Button variant="filled" className="fb-send" onClick={reset}>Back to the site</Button>
               </div>
             ) : (
               <form onSubmit={submit}>
@@ -151,15 +154,19 @@ export function FeedbackWidget() {
                 <textarea id="fb-message" rows={4} maxLength={1200} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your words, up to 100." />
                 <p className={`fb-count${tooLong ? " is-over" : ""}`}>{count}/{MAX_WORDS} words{tooShortForBonus ? ` · ${BONUS_MIN_WORDS - count} more to unlock your month` : ""}</p>
                 <label className="fb-label" htmlFor="fb-email">Email <span>{earning ? "the month goes to this email" : "optional, only if you want a reply"}</span></label>
-                <input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                {glass === "full" ? (
+                  <Input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onValueChange={setEmail} placeholder="you@example.com" />
+                ) : (
+                  <input id="fb-email" type="email" readOnly={Boolean(claim)} maxLength={254} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                )}
                 <input className="fb-hp" tabIndex={-1} autoComplete="off" aria-hidden="true" value={website} onChange={(e) => setWebsite(e.target.value)} name="website" />
                 {status === "error" ? <p className="fb-error" role="alert">{error}</p> : null}
-                <button type="submit" className="fb-send" disabled={!rating || tooLong || tooShortForBonus || status === "sending"}>
+                <Button type="submit" variant="filled" className="fb-send" disabled={!rating || tooLong || tooShortForBonus || status === "sending"}>
                   {status === "sending" ? "Sending…" : rating ? "Send feedback" : "Pick some stars first"}
-                </button>
+                </Button>
               </form>
             )}
-          </div>
+          </Glass>
         </div>
       ) : null}
     </>

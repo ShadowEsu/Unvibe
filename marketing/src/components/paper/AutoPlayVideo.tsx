@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { Switch } from "glisse";
 import { prefersLiteExperience } from "@/lib/performanceMode";
 
 interface AutoPlayVideoProps {
@@ -155,11 +156,13 @@ export function AutoPlayVideo({
         {captions ? <track kind="captions" srcLang="en" label="English" src={captions} /> : null}
       </video>
       {autoplays ? (
-        // A toggle keeps one name; aria-pressed (and the filled style) says whether sound is on.
-        <button type="button" className="vtour__sound" aria-pressed={soundOn} onClick={toggleSound}>
+        // One switch named by its label ("Sound on"); aria-checked says whether sound is on. The label is
+        // the whole pill, so clicking the words toggles it too.
+        <label className="vtour__sound">
           {soundOn ? <Volume2 aria-hidden="true" size={18} /> : <VolumeX aria-hidden="true" size={18} />}
           Sound on
-        </button>
+          <Switch checked={soundOn} onCheckedChange={toggleSound} />
+        </label>
       ) : null}
     </>
   );

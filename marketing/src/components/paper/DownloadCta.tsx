@@ -1,6 +1,7 @@
 import { InviteReveal } from "@/components/paper/InviteReveal";
 import { Vibe } from "@/components/paper/Vibe";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * Closing call to action on the homepage. It links to the download card at #install instead of
@@ -10,6 +11,7 @@ export function DownloadCta() {
   return (
     <InviteReveal>
       <div className="paper-invite__card paper-glass">
+        <GlassPlate />
         <div className="paper-invite__vibe" aria-hidden="true"><Vibe size={64} /></div>
         <p className="paper-meta">Free during the beta</p>
         <h2>Download <em>Unvibe.</em></h2>

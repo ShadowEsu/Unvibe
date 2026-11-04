@@ -1,6 +1,7 @@
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /** The Try box's own outage note (TryIt.tsx), repeated word for word under the allowances it qualifies. */
 export const PRICING_PAUSED_NOTE = "AI features are paused for maintenance. Back soon.";
@@ -16,6 +17,7 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
   return (
     <section className="paper-section" id="pricing" aria-labelledby="pricing-title">
       <div className="paper-wrap u-sheet">
+        <GlassPlate />
         <div className="sec-head">
           <p className="paper-meta">Pricing</p>
           <h2 id="pricing-title">Free while in beta. <em>Pro opens soon.</em></h2>
@@ -23,6 +25,7 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
         </div>
         <div className="plans-strip">
           <div className="plans-strip__card">
+            <GlassPlate />
             <p className="plans-strip__tag">Available now</p>
             <h3>Free</h3>
             <p className="plans-strip__price">$0</p>
@@ -35,6 +38,7 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
             </ul>
           </div>
           <div className="plans-strip__card plans-strip__card--pro">
+            <GlassPlate />
             <p className="plans-strip__tag">Opens soon</p>
             <h3>Pro</h3>
             <p className="plans-strip__price">${PRICING.proMonthly} <small>a month, or ${PRICING.proAnnual} a year</small></p>

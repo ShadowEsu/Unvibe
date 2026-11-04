@@ -1,4 +1,5 @@
 import { PROGRAM_NOTICES, startupPrograms, withMark } from "@/data/compensation";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * The startup programs by full name, plain text in our own type. Only MongoDB shows a logo: its official,
@@ -32,6 +33,7 @@ export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <div className="paper-wrap u-sheet">
+        <GlassPlate />
         <div className="sec-head">
           <p className="paper-meta">Behind Unvibe</p>
           <h2 id="backing-title">Startup programs <em>we&apos;re in.</em></h2>

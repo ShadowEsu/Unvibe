@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+// Glisse's own CSS first, bundled as a 'self' stylesheet, so server HTML is styled before hydration
+// and the site's CSS below wins ties. GlisseStylesMarker stops Glisse adding an inline copy (Security).
+import "glisse/styles.css";
 import "./globals.css";
 import "./paper.css";
 import "./polish.css";
@@ -9,6 +12,9 @@ import "./sections.css";
 import "./pages.css";
 import "./system.css";
 import "./home-ux.css";
+import "./glass.css";
+import { GlassLevelSwitch } from "@/components/glass/GlassLevel";
+import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
@@ -156,8 +162,12 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={`${sans.variable} ${display.variable} ${serif.variable}`}
+      // The site has one light theme; this pins Glisse to its light values for visitors whose system is dark.
+      data-theme="light"
     >
       <head>
+        {/* First in <head>, before any Glisse code runs: see GlisseStylesMarker. */}
+        <GlisseStylesMarker />
         {/* Before first paint: the `js` class, which scopes the motion start states. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
         <script
@@ -171,6 +181,8 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          {/* BRANCH-ONLY: ?glass=subtle|full for Design's screenshots. Remove once a level is picked. */}
+          <GlassLevelSwitch />
           <AmbientEffects />
           <a href="#main" className="skip-link">
             Skip to content

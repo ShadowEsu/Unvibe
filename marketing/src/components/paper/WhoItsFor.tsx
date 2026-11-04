@@ -1,3 +1,5 @@
+import { GlassPlate } from "@/components/glass/GlassPlate";
+
 /** The three audiences, shared by the homepage band and /about so the copy lives in one place. */
 const AUDIENCES = [
   {
@@ -19,6 +21,7 @@ export function WhoItsForCards() {
     <div className="inv-cards">
       {AUDIENCES.map((audience) => (
         <article key={audience.title} className="inv-card">
+          <GlassPlate />
           <h3>{audience.title}</h3>
           <p>{audience.body}</p>
         </article>

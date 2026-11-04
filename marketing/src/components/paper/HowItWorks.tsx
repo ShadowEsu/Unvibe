@@ -2,6 +2,7 @@ import demo from "@/data/demoMedia.json";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { FlexAccordion, type FlexAccordionItem } from "@/components/paper/FlexAccordion";
 import { TextReveal } from "@/components/paper/TextReveal";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 const panelShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 880, height: 1131, alt });
 const appShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 1600, height: 1000, alt });
@@ -95,6 +96,7 @@ export function HowItWorks() {
           />
         </div>
         <div className="paper-wrap u-sheet">
+          <GlassPlate />
           <div className="hiw__head">
             <p className="paper-meta">How it works</p>
             <h2 id="hiw-title" className="mt-3">Four steps, <em>one panel.</em></h2>
@@ -105,6 +107,7 @@ export function HowItWorks() {
 
       <section className="paper-section hiw hiw--pages" aria-labelledby="pages-title">
         <div className="paper-wrap u-sheet">
+          <GlassPlate />
           <div className="hiw__head">
             <p className="paper-meta">The rest of the app</p>
             <h2 id="pages-title" className="mt-3">Where it <em>sticks.</em></h2>

@@ -205,27 +205,6 @@
   }
 }
 
-.pricing-plans .pricing-toggle {
-  border: 1.5px solid var(--v-ink);
-  background: var(--u-card);
-  box-shadow: 3px 3px 0 var(--v-ink);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-.pricing-plans .pricing-toggle button {
-  min-height: 2.75rem;
-  color: var(--v-ink);
-}
-
-.pricing-plans .pricing-toggle button.is-on {
-  color: var(--u-on-cta);
-}
-
-.pricing-plans .pricing-toggle__thumb {
-  background: var(--u-cta);
-}
-
 /* ── Releases ───────────────────────────────────────────────────────────── */
 
 /* vibe.css sets .paper-meta to 1.55rem !important; a log category label needs less. */
@@ -353,7 +332,7 @@
 .resources-filter-pill:focus-visible,
 .resources-depth-tab:focus-visible,
 .resources-swatch:focus-visible,
-.pricing-plans .pricing-toggle button:focus-visible,
+.pricing-plans .pricing-toggle .lg-tab:focus-visible,
 .kit__toc a:focus-visible,
 .kit__btn:focus-visible,
 .nf__btn:focus-visible,
