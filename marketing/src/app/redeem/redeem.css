@@ -29,7 +29,7 @@
 .redeem-title {
   margin: 0;
   font-size: clamp(2rem, 5vw, 2.6rem);
-  font-weight: 760;
+  font-weight: 700;
   letter-spacing: -0.05em;
   line-height: 1.05;
 }
@@ -69,7 +69,8 @@
 
 .redeem-field--code {
   margin-bottom: 0.4rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.1em;

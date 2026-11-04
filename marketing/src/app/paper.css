@@ -1391,7 +1391,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border-radius: var(--radius-pill);
   color: var(--ink);
   background: var(--paper-raised);
-  font: 650 0.72rem var(--font-mono);
+  font: 650 0.72rem var(--font-sans);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
@@ -1495,7 +1496,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .founder-page .founder-console__clock small {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1523,7 +1525,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border-radius: var(--radius-field);
   background: var(--snow);
   color: var(--ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 1.05rem;
 }
 
@@ -1584,7 +1587,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
 }
 
 .founder-page .founder-table-wrap th {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1611,7 +1615,8 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
