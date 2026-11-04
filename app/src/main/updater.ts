@@ -108,23 +108,67 @@ export function cleanupPortableUpdate(): void {
 
 type Release = { tag_name: string; draft: boolean; html_url: string; assets: Array<{ name: string; browser_download_url: string }> };
 
+/** A feed item carrying every field the check reads, with the types it reads them as. */
+function isRelease(item: unknown): item is Release {
+  if (!item || typeof item !== 'object') return false;
+  const { tag_name, draft, html_url, assets } = item as Record<string, unknown>;
+  return (
+    typeof tag_name === 'string' &&
+    typeof draft === 'boolean' &&
+    typeof html_url === 'string' &&
+    Array.isArray(assets) &&
+    assets.every((asset: unknown) => {
+      if (!asset || typeof asset !== 'object') return false;
+      const { name, browser_download_url } = asset as Record<string, unknown>;
+      return typeof name === 'string' && typeof browser_download_url === 'string';
+    })
+  );
+}
+
+/**
+ * True when `url` is a file directly in the download folder of release `tag`
+ * (https://github.com/ShadowEsu/Unvibe/releases/download/<tag>/<file>), checked as parsed. Without
+ * it a list could label an older build with a newer tag, and on Windows nothing after the download
+ * would notice: ASSET_HOST holds and the old folder's own SHA256SUMS matches. verifyDownload reads
+ * the checksums from the asset's own folder, so they come from the same tag too.
+ */
+function inReleaseFolder(url: string, tag: string): boolean {
+  if (!URL.canParse(url)) return false;
+  const { href, pathname } = new URL(url);
+  // ['', 'ShadowEsu', 'Unvibe', 'releases', 'download', <tag>, <file>]
+  const parts = pathname.split('/');
+  if (!ASSET_HOST.test(href) || parts.length !== 7 || !parts[6]) return false;
+  try {
+    return decodeURIComponent(parts[5]) === tag;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Unvibe's cached copy of the GitHub release list (GET /api/v1/releases). GitHub allows 60
  * unauthenticated requests an hour per IP, which a shared school or office network runs out of.
- * The list only says which release is newest: every download still has to pass ASSET_HOST,
- * verifyDownload and, on macOS, MAC_SIGNING_REQUIREMENT, exactly as with GitHub's own list.
+ * The list only says which release is newest: every download still has to sit in its own release's
+ * folder and pass ASSET_HOST, verifyDownload and, on macOS, MAC_SIGNING_REQUIREMENT, exactly as
+ * with GitHub's own list.
  */
 const RELEASE_FEED = 'https://api.unvibe.site/api/v1/releases';
+const RELEASE_FEED_TIMEOUT_MS = 5000;
 
-export async function checkForUpdate(force = false, fetchImpl: Fetch = networkFetch): Promise<UpdateInfo> {
+/** `feedSignal` replaces the feed's 5 s timeout (tests end the wait themselves). */
+export async function checkForUpdate(force = false, opts: { fetchImpl?: Fetch; feedSignal?: AbortSignal } = {}): Promise<UpdateInfo> {
+  const { fetchImpl = networkFetch } = opts;
   const current = app.getVersion();
   if (!force && cached && Date.now() - cached.at < 30 * 60_000) return cached.info;
   let releases: Release[] | undefined;
-  // Any feed failure (offline, the 5 s timeout, an error status, a body that isn't a list) asks GitHub instead.
+  // Any feed failure (offline, the timeout, an error status, a body that isn't a list of releases) asks GitHub instead.
   try {
-    const res = await fetchImpl(RELEASE_FEED, { headers: { Accept: 'application/json', 'User-Agent': `Unvibe/${current}` }, signal: AbortSignal.timeout(5000) });
+    const res = await fetchImpl(RELEASE_FEED, {
+      headers: { Accept: 'application/json', 'User-Agent': `Unvibe/${current}` },
+      signal: opts.feedSignal ?? AbortSignal.timeout(RELEASE_FEED_TIMEOUT_MS),
+    });
     const body: unknown = res.ok ? await res.json() : undefined;
-    if (Array.isArray(body)) releases = body as Release[];
+    if (Array.isArray(body) && body.every(isRelease)) releases = body;
   } catch {
     // `releases` stays unset, so GitHub is asked below.
   }
@@ -138,8 +182,9 @@ export async function checkForUpdate(force = false, fetchImpl: Fetch = networkFe
   }
   for (const release of releases) {
     if (release.draft) continue;
-    const name = pickAsset(release.assets.map((a) => a.name), process.platform, process.arch, Boolean(portableExecutable()));
-    const asset = release.assets.find((a) => a.name === name);
+    const own = release.assets.filter((a) => inReleaseFolder(a.browser_download_url, release.tag_name));
+    const name = pickAsset(own.map((a) => a.name), process.platform, process.arch, Boolean(portableExecutable()));
+    const asset = own.find((a) => a.name === name);
     if (!asset) continue;
     const latest = release.tag_name.replace(/^v/, '');
     const info: UpdateInfo = isNewer(latest, current)
