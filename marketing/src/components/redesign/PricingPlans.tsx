@@ -12,12 +12,6 @@ import { trackDownloadPageClick } from '@/lib/downloadTracking';
 
 type Interval = 'monthly' | 'annual';
 
-/** Glisse's SegmentedControl: a radiogroup of two radios, arrow keys move the choice. */
-const BILLING_ITEMS = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: <>Annual <span>Save {PRICING.annualDiscountPercent}%</span></> },
-];
-
 function priceFor(id: string, interval: Interval, fallback: string): { price: string; per: string } {
   if (id === 'pro') return interval === 'annual' ? { price: `$${PRICING.proAnnual}`, per: '/year' } : { price: `$${PRICING.proMonthly}`, per: '/month' };
   if (id === 'teams') return interval === 'annual' ? { price: `$${PRICING.teamsSeatAnnual}`, per: '/seat/year' } : { price: `$${PRICING.teamsSeatMonthly}`, per: '/seat/month' };
@@ -35,6 +29,12 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   const trackedView = useRef(false);
   const [interval, setBilling] = useState<Interval>('monthly');
   const copy = pricingCopy(paymentsOpen);
+  // Glisse's SegmentedControl: a radiogroup of two radios, arrow keys move the choice. Built here, not at module
+  // level: the test runner's classic JSX transform needs React in scope for JSX evaluated at import.
+  const billingItems = [
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'annual', label: <>Annual <span>Save {PRICING.annualDiscountPercent}%</span></> },
+  ];
   useEffect(() => {
     if (!trackedView.current) {
       trackedView.current = true;
@@ -52,7 +52,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
       <SegmentedControl
         className="pricing-toggle"
         aria-label="Billing interval"
-        items={BILLING_ITEMS}
+        items={billingItems}
         value={interval}
         onValueChange={(value) => {
           const next: Interval = value === 'annual' ? 'annual' : 'monthly';
