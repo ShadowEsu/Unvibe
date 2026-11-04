@@ -41,6 +41,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   rust: "/og/og-explain-rust-42bddce3.png",
   csharp: "/og/og-explain-csharp-9e33a411.png",
   kotlin: "/og/og-explain-kotlin-8d6079b3.png",
+  regex: "/og/og-explain-regex-118d334c.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
