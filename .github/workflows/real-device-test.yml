@@ -15,6 +15,14 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      motion:
+        description: "Also run the 0.1.50 motion checks M1-M7 on the Mac (3 real explanations; the rest against a mock on the runner; type true)"
+        required: false
+        default: ""
+      motion_baseline:
+        description: "Motion check M6: the release to compare the tested build against, without the v"
+        required: false
+        default: "0.1.47"
 
 permissions:
   contents: read
@@ -31,7 +39,7 @@ jobs:
           - os: windows-latest
             label: windows
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.motion == 'true' && 80 || 30 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +68,7 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_BUILD_RUN: ${{ inputs.build_run }}
+          INPUT_BASELINE: ${{ inputs.motion_baseline }}
         run: |
           if [ -n "$INPUT_BUILD_RUN" ] && ! [[ "$INPUT_BUILD_RUN" =~ ^[0-9]+$ ]]; then echo "build_run must be a run id (digits only)"; exit 1; fi
           v="$INPUT_VERSION"
@@ -67,6 +76,8 @@ jobs:
           if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "version must look like 0.1.44"; exit 1; fi
           echo "Testing Unvibe $v"
           echo "v=$v" >> "$GITHUB_OUTPUT"
+          if ! [[ "$INPUT_BASELINE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "motion_baseline must look like 0.1.47"; exit 1; fi
+          echo "base=$INPUT_BASELINE" >> "$GITHUB_OUTPUT"
 
       - name: Install Playwright (driver, Chromium and its ffmpeg)
         shell: bash
@@ -163,6 +174,70 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
 
+      # v0.1.50 QA plan M3-M7 (agents/unvibe/v0.1.50-qa-plan.md in boss-handoff): error states, reduced motion,
+      # keyboard, and the decorative loops focused and blurred on this build and on the baseline release. Every
+      # explanation comes from app/e2e/motion-mock.mjs on this runner, and api.unvibe.site is blocked for the
+      # whole step: no production call, no AI, no install row, so nothing here needs a QA flag.
+      - name: Motion checks against a mock on the runner (M3-M7)
+        if: always() && inputs.motion == 'true' && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        timeout-minutes: 30
+        shell: bash
+        env:
+          BASELINE: ${{ steps.ver.outputs.base }}
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          OUT: ${{ runner.temp }}/shots/motion
+          MOTION_PROFILES: ${{ runner.temp }}/motion-profiles
+        run: |
+          pkill -f "/Applications/Unvibe.app/" || true
+          mkdir -p "$OUT"
+          cp app/e2e/motion-qa.mjs app/e2e/motion-mock.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          # Release builds ignore a loopback UNVIBE_BACKEND (app/src/main/backendUrl.ts: the baked URL wins over
+          # localhost and 127.0.0.1), so the app reaches the mock through a name only this runner resolves.
+          echo "127.0.0.1 unvibe-mock.test" | sudo tee -a /etc/hosts >/dev/null
+          arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
+          curl -fL -o "$RUNNER_TEMP/baseline.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$BASELINE/Unvibe-$BASELINE-mac-$arch.dmg"
+          mnt="$RUNNER_TEMP/baseline-mnt"; mkdir -p "$mnt" "$RUNNER_TEMP/baseline"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/baseline.dmg"
+          ditto "$mnt/Unvibe.app" "$RUNNER_TEMP/baseline/Unvibe.app"
+          hdiutil detach "$mnt" -force || true
+          xattr -cr "$RUNNER_TEMP/baseline/Unvibe.app"
+          # If the app ever ignored the mock address, its calls must fail rather than create installs nobody flags.
+          # The next step lifts this block whatever happens here.
+          printf '0.0.0.0 api.unvibe.site\n:: api.unvibe.site\n' | sudo tee -a /etc/hosts >/dev/null
+          sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder || true
+          cd "$RUNNER_TEMP/pw"
+          PORT=8787 node motion-mock.mjs > "$OUT/mock.log" 2>&1 &
+          mock=$!
+          trap 'kill $mock 2>/dev/null' EXIT
+          for i in $(seq 1 50); do curl -fs -o /dev/null http://127.0.0.1:8787/api/v1/health && break; sleep 0.2; done
+          MOTION_PASS=mock MOTION_BACKEND=http://unvibe-mock.test:8787 BASELINE_EXE="$RUNNER_TEMP/baseline/Unvibe.app/Contents/MacOS/Unvibe" node motion-qa.mjs
+
+      - name: Unblock the production API
+        if: always() && inputs.motion == 'true' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          sudo sed -i '' '/ api\.unvibe\.site$/d' /etc/hosts
+          sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder || true
+          sleep 2
+          curl -fsS -o /dev/null -w "api.unvibe.site health %{http_code}\n" https://api.unvibe.site/api/v1/health
+
+      # M1 and M2 need real streaming: 3 explanations (the first-run sample and 2 selections of the runner's own
+      # code) on one fresh profile with a qa- install id, flagged as QA by the step below with the walkthrough's.
+      - name: Motion checks with real explanations (M1, M2)
+        if: always() && inputs.motion == 'true' && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        timeout-minutes: 15
+        shell: bash
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          OUT: ${{ runner.temp }}/shots/motion
+          MOTION_PROFILE: ${{ runner.temp }}/motion-real-profile
+          MOTION_INSTALL_ID: qa-motion-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          pkill -f "/Applications/Unvibe.app/" || true
+          mkdir -p "$OUT"
+          cp app/e2e/motion-qa.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cd "$RUNNER_TEMP/pw" && MOTION_PASS=real node motion-qa.mjs
+
       # The website's Windows download is the portable exe, so open that exact file too.
       - name: Open the portable exe the website serves (Windows)
         if: always() && matrix.label == 'windows' && steps.ver.outputs.v != ''
@@ -220,7 +295,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          foreach ($name in 'walkthrough-profile', 'portable-profile') {
+          foreach ($name in 'walkthrough-profile', 'portable-profile', 'motion-real-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
             try {
