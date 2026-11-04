@@ -1078,6 +1078,64 @@ jobs:
     watchOut:
       "Quote version numbers. `python-version: 3.10` without quotes is the number 3.1, and the list `[3.9, 3.10, 3.11]` reads as `[3.9, 3.1, 3.11]`. GitHub reads it the same way, so the job asks for Python 3.1.",
   },
+  {
+    id: "awk",
+    fileName: "totals.awk",
+    lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",
+    description:
+      "Paste awk code and get a plain English explanation, free online. The sample totals sales per region from a CSV file, skips the header and sorts the result.",
+    sampleSummary: "An awk script that skips a CSV file's header, adds up sales per region in an array and prints the totals sorted largest first.",
+    sample: `# Total sales per region from a CSV export with a header row:
+#   date,region,product,amount
+# Run: awk -f totals.awk sales.csv
+
+BEGIN { FS = "," }
+
+NR == 1 { next }               # skip the header line
+
+$4 == "" {                     # a sale with no amount yet
+  missing++
+  next
+}
+
+{
+  total[$2] += $4
+  rows[$2]++
+}
+
+END {
+  for (region in total)
+    printf "%-6s %8.2f  %d sales\\n", region, total[region], rows[region] | "sort -k2 -rn"
+  close("sort -k2 -rn")
+  print missing + 0, "rows had no amount"
+}`,
+    shows: [
+      {
+        concept: "fields",
+        text: "`FS = \",\"` splits every line at its commas, so `$2` is the region and `$4` is the amount. awk turns `$4` into a number when it adds it: `12.50` adds 12.5, and text that doesn't start with a number adds 0.",
+      },
+      {
+        concept: "patterns and actions",
+        text: "Each `pattern { action }` runs on every line its pattern matches, in order from the top. `NR == 1 { next }` matches the first line, and `next` moves straight on to the line after, so the header never reaches the totals. `$4 == \"\"` catches a sale with no amount, and the last block has no pattern, so it runs on every line still left.",
+      },
+      {
+        concept: "associative arrays",
+        text: "`total[$2] += $4` uses the region as the key. The first time a region turns up its entry is empty, which counts as 0, so nothing has to be set up first. `rows[$2]++` counts each region's sales the same way.",
+      },
+      {
+        concept: "BEGIN and END",
+        text: "`BEGIN` runs before the first line is read, which is why `FS` is set there, and `END` runs after the last one. `for (region in total)` visits the keys in no set order, so each line goes through `sort -k2 -rn`, which sorts on the second column as a number, largest first.",
+      },
+    ],
+    notes: [
+      "Run on six sales with one missing amount, the script prints `west` 32.50 from 2 sales, `east` 28.00 from 2 and `north` 12.50 from 1, then `1 rows had no amount`.",
+      "`close(\"sort -k2 -rn\")` waits for `sort` to finish. Without it, `1 rows had no amount` came out above the totals in this run, because `sort` can't print anything until its input is closed, and awk only closes it on exit.",
+      "Given two files, `NR` keeps counting across both, so only the first header is skipped: the second file's header adds a region called `region` with 0.00. `FNR == 1` starts again for each file and skips both headers.",
+      "The sample was run with the awk that comes with macOS, `awk version 20200816`, and uses only standard awk. Sorting inside awk with `asort` or `PROCINFO[\"sorted_in\"]` is gawk-only, which is why the sample hands its lines to `sort`.",
+    ],
+    watchOut:
+      "awk splits at every comma, even one inside quotes. A product written `\"poster, large\"` becomes two fields, so `$4` is the text `large\"` with a space in front, which counts as 0: that sale's 30 is lost and `west` shows 12.50 from 2 sales, with no error. gawk 5.3 and later have a `--csv` option that reads quoted fields, while this macOS awk prints `unknown option --csv ignored`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

@@ -247,6 +247,16 @@ export const languages: Language[] = [
     learningPath: ["Mappings", "Lists", "Quoting and types", "Anchors"],
     sample: `runs-on: ubuntu-latest`,
   },
+  {
+    id: "awk",
+    name: "awk",
+    categories: ["scripting", "data"],
+    blurb: "Line-by-line text processing for logs, CSV files and reports.",
+    concepts: ["fields", "patterns and actions", "associative arrays", "BEGIN and END"],
+    frameworks: ["gawk", "mawk", "sed", "grep"],
+    learningPath: ["Fields", "Patterns", "Arrays", "BEGIN and END"],
+    sample: `awk -F, '{ sum += $3 } END { print sum }' sales.csv`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
