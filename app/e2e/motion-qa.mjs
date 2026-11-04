@@ -199,6 +199,44 @@ async function m3() {
   }
   await setMode('stream');
 }
+/**
+ * REG-83 (0.1.49+): a selected-code explanation that fails gives its credit back; one that explains keeps it.
+ * Trial builds count these on the computer (main.ts takeSelectionCredit); a link-started capture is counted when
+ * Explain is pressed. Read through the app's own usage:get (window.unvibe.usageGet → data.selections.used). A build
+ * that doesn't count moves neither way, which is a note, not a fail.
+ */
+async function m3credit() {
+  let s;
+  const usage = () => s.companion.evaluate(async () => (typeof window.unvibe.usageGet === 'function' ? { has: true, r: await window.unvibe.usageGet() } : { has: false }));
+  const used = async () => {
+    const u = await usage();
+    if (!u.has) return null;
+    if (!u.r?.ok) throw new Error(`usage:get failed: ${u.r?.error ?? 'no answer'}`);
+    return u.r.data?.selections?.used ?? null;
+  };
+  try {
+    await setMode('stream');
+    s = await launch(EXE, 'm3-credit', `qa-motion-mock-m3credit-${Date.now()}`, mockEnv());
+    await finished(await firstRunSample(s));
+    await focusApp(s);
+    await finishSetup(s);
+    const before = await used();
+    if (before === null) { note('M3 REG-83: this build has no selected-code counter (pre-0.1.49)'); return; }
+    await setMode('500');
+    const fail = await ownCode(s, LONG, true);
+    await shot(fail.panel, 'm3-credit-500');
+    await setMode('stream');
+    const afterFail = await used(); // the refund settles when the run ends; read it back with the mock healthy again
+    const ok = await ownCode(s, UNSURE, false);
+    const afterOk = await used();
+    const failedShown = !!fail.frames.at(-1)?.error;
+    const okLast = ok.frames.at(-1) ?? {};
+    const explained = /card--done/.test(okLast.card ?? '') && !okLast.error;
+    if (afterFail === before && afterOk === before) { note(`M3 REG-83: this build doesn't count selected-code prompts (used stayed ${before}); refund not testable here`); return; }
+    check(failedShown && afterFail === before, 'M3 REG-83: a selected-code explanation that fails (mock 500) gives its credit back', `used ${before} → ${afterFail}; error shown ${failedShown}`);
+    check(explained && afterOk === before + 1, 'M3 REG-83: one that explains keeps its credit', `used ${afterFail} → ${afterOk}; explained ${explained}`);
+  } catch (e) { check(false, 'M3 REG-83 credit refund', e.message.split('\n')[0]); } finally { await s?.app.close(); await setMode('stream'); }
+}
 
 async function m4() {
   let s;
@@ -465,6 +503,7 @@ if (PASS === 'mock') {
   if (!blocked) throw new Error('api.unvibe.site is reachable: refusing the mock pass');
   note(`api.unvibe.site unreachable for this pass; explanations come from ${process.env.MOTION_BACKEND}`);
   await m3();
+  await m3credit();
   await m4();
   await m7();
   // A mock-only unsure answer, so the unsure state is checked even when the model doesn't oblige.
