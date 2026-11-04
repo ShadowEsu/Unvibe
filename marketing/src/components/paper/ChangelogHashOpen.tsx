@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { anchorFromHash } from "@/lib/hashAnchor";
 
 /**
  * /releases#<anchor> for an entry in a closed month: open that month's <details> and scroll the entry into view, on
@@ -9,7 +10,7 @@ import { useEffect } from "react";
 export function ChangelogHashOpen() {
   useEffect(() => {
     const open = () => {
-      const id = decodeURIComponent(window.location.hash.slice(1));
+      const id = anchorFromHash(window.location.hash);
       if (!id) return;
       const target = document.getElementById(id);
       const month = target?.closest("details");

@@ -841,10 +841,11 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   display: none;
 }
 
+/* Body font, not the display face: this can ship before the glass type (Inter everywhere), and must not add one. */
 .paper-log-archive__month {
-  font-family: var(--font-display);
-  font-size: clamp(1.25rem, 2.6vw, 1.7rem);
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+  font-weight: 600;
 }
 
 .paper-log-archive__count {
