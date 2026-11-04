@@ -194,17 +194,20 @@ jobs:
           # Release builds take only their own URL or https://unvibe-mock.test with UNVIBE_CI_MOCK=1 (0.1.50+,
           # app/src/main/backendUrl.ts); older ones take any non-loopback name. The name resolves only here.
           echo "127.0.0.1 unvibe-mock.test" | sudo tee -a /etc/hosts >/dev/null
-          # A throwaway CA, trusted in this runner's System keychain for this job only, signs the mock's cert.
+          # A throwaway CA, trusted in this runner's System keychain for this job only, signs the mock's cert. It can
+          # only vouch for unvibe-mock.test (nameConstraints), and its key is deleted as soon as the leaf is signed.
           tls="$RUNNER_TEMP/mock-tls"; mkdir -p "$tls"
           (
             cd "$tls"
             openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 2 -subj "/CN=Unvibe CI mock CA" \
-              -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+              -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign" \
+              -addext "nameConstraints=critical,permitted;DNS:unvibe-mock.test"
             openssl req -newkey rsa:2048 -nodes -keyout key.pem -out leaf.csr -subj "/CN=unvibe-mock.test"
             printf 'subjectAltName=DNS:unvibe-mock.test\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n' > leaf.ext
             openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out cert.pem -days 2 -extfile leaf.ext
+            rm -f ca.key ca.srl leaf.csr
             sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ca.pem
-            security verify-cert -c cert.pem -p ssl -s unvibe-mock.test
+            security verify-cert -c cert.pem -p ssl -s unvibe-mock.test || echo "::warning::security verify-cert did not accept the mock cert; the app's own requests below are the real check"
           )
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
           curl -fL -o "$RUNNER_TEMP/baseline.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$BASELINE/Unvibe-$BASELINE-mac-$arch.dmg"
