@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { changelogArchive, changelogEntries, milestones } from "./milestones";
+import { changelogAnchors, changelogArchive, changelogEntries, milestones } from "./milestones";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
@@ -27,5 +27,26 @@ describe("milestones", () => {
       assert.match(month.label, /^[A-Z][a-z]+ \d{4}$/);
     }
     assert.deepEqual(changelogArchive(entries.slice(0, 3), 12), { recent: entries.slice(0, 3), months: [] });
+  });
+
+  it("each get a unique /releases anchor; a version's first entry is reachable as #v0-1-<n>", () => {
+    const entries = changelogEntries();
+    const anchors = changelogAnchors(entries);
+    assert.equal(new Set(anchors).size, entries.length, "two entries share an anchor");
+    for (const anchor of anchors) assert.match(anchor, /^[a-z0-9]+(-[a-z0-9]+)*$/);
+    const firstOf = new Map<string, string>();
+    entries.forEach((item, index) => {
+      const version = item.figure?.match(/^v\d+(?:\.\d+)*/)?.[0];
+      if (version && !firstOf.has(version)) firstOf.set(version, anchors[index]!);
+    });
+    firstOf.forEach((anchor, version) => assert.equal(anchor, version.replace(/\./g, "-")));
+    assert.deepEqual(
+      changelogAnchors([
+        { ...entries[0]!, figure: "v1.0", title: "A" },
+        { ...entries[0]!, figure: "v1.0", title: "B" },
+        { ...entries[0]!, figure: undefined, title: "Hello, World!" },
+      ]),
+      ["v1-0", "v1-0-2", "hello-world"],
+    );
   });
 });

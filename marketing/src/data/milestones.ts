@@ -1037,3 +1037,20 @@ export function changelogArchive(entries: Milestone[], expanded: number): { rece
   }
   return { recent: entries.slice(0, expanded), months };
 }
+
+/**
+ * One unique URL fragment per entry, in list order, for /releases#<anchor>: a figure that starts with a version
+ * ("v0.1.48", "v0.1.11 baseline") gives "v0-1-48", any other entry a slug of its title; a repeat gets "-2", "-3".
+ */
+export function changelogAnchors(entries: Milestone[]): string[] {
+  const seen = new Map<string, number>();
+  return entries.map((item) => {
+    const version = item.figure?.match(/^v\d+(?:\.\d+)*/)?.[0];
+    const base = version
+      ? version.replace(/\./g, "-")
+      : item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "entry";
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  });
+}

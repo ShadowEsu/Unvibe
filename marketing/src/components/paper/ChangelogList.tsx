@@ -1,9 +1,11 @@
-import { changelogArchive, changelogEntries, type Milestone } from "@/data/milestones";
+import { ChevronDown } from "lucide-react";
+import { ChangelogHashOpen } from "@/components/paper/ChangelogHashOpen";
+import { changelogAnchors, changelogArchive, changelogEntries, type Milestone } from "@/data/milestones";
 
 interface ChangelogListProps {
   items?: Milestone[];
   limit?: number;
-  /** Keep this many entries open and fold the older ones into one closed group per month. */
+  /** Keep this many entries open under "Latest" and fold the older ones into one closed group per month. */
   expanded?: number;
 }
 
@@ -18,19 +20,19 @@ function StarMark() {
   );
 }
 
-function Entry({ item }: { item: Milestone }) {
+function Entry({ item, id, Heading = "h3" }: { item: Milestone; id?: string; Heading?: "h3" | "h4" }) {
   return (
-    <article className={item.pinned ? "is-pinned" : undefined}>
+    <article id={id} className={item.pinned ? "is-pinned" : undefined}>
       <div>
         <p className="paper-meta">{item.category}</p>
-        <h3>
+        <Heading>
           {item.pinned ? (
             <span className="paper-log__star" role="img" aria-label="Highlighted">
               <StarMark />
             </span>
           ) : null}
           {item.title}
-        </h3>
+        </Heading>
         <p className="paper-lead">{item.summary}</p>
       </div>
       <aside>
@@ -41,37 +43,42 @@ function Entry({ item }: { item: Milestone }) {
   );
 }
 
-const key = (item: Milestone) => `${item.date}-${item.title}`;
-
 export function ChangelogList({ items, limit, expanded }: ChangelogListProps) {
   const list = items ?? (limit ? changelogEntries().slice(0, limit) : changelogEntries());
   if (expanded === undefined) {
     return (
       <div className="paper-log">
-        {list.map((item) => <Entry key={key(item)} item={item} />)}
+        {list.map((item) => <Entry key={`${item.date}-${item.title}`} item={item} />)}
       </div>
     );
   }
+  const anchors = changelogAnchors(list);
+  const anchorOf = new Map(list.map((item, index) => [item, anchors[index]]));
   const { recent, months } = changelogArchive(list, expanded);
   return (
     <>
+      <h3 className="paper-log-group__title">Latest</h3>
       <div className="paper-log">
-        {recent.map((item) => <Entry key={key(item)} item={item} />)}
+        {recent.map((item) => <Entry key={anchorOf.get(item)} id={anchorOf.get(item)} item={item} Heading="h4" />)}
       </div>
       {months.length ? (
         <div className="paper-log-archive">
-          <h3 className="paper-log-archive__title">Earlier</h3>
+          <h3 className="paper-log-group__title">Earlier</h3>
           {months.map((month) => (
             <details key={month.label}>
               <summary>
-                {month.label}
-                <span>{month.items.length === 1 ? "1 entry" : `${month.items.length} entries`}</span>
+                <span className="paper-log-archive__month">{month.label}</span>
+                <span className="paper-log-archive__count">
+                  {month.items.length === 1 ? "1 entry" : `${month.items.length} entries`}
+                  <ChevronDown aria-hidden="true" size={18} strokeWidth={2} />
+                </span>
               </summary>
               <div className="paper-log">
-                {month.items.map((item) => <Entry key={key(item)} item={item} />)}
+                {month.items.map((item) => <Entry key={anchorOf.get(item)} id={anchorOf.get(item)} item={item} Heading="h4" />)}
               </div>
             </details>
           ))}
+          <ChangelogHashOpen />
         </div>
       ) : null}
     </>
