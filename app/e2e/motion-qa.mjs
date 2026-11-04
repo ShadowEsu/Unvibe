@@ -96,12 +96,17 @@ const blurApp = async () => { execFileSync('open', ['-a', 'Finder']); await slee
  * Playwright (1.48 here) turns on CDP focus emulation for every page it attaches to, so document.hasFocus() is
  * always true and the app never sees a blur (run 41786725662: every "blurred" state read focused=true). For the
  * loop states, switch it off on every window, including ones opened later, so focus follows the real OS focus.
- * It's page-level state, so a second session's `false` wins.
+ * Each CDP session keeps its own on/off state and ignores a call that matches it, so a fresh session's plain
+ * `false` is a no-op (run 41789594818). Turning it on and then off from our session makes the page-level flag,
+ * which the last change sets, end up off.
  */
 function realFocus(s) {
   s.app.onWindow((page) => {
     void s.app.context.newCDPSession(page)
-      .then((cdp) => cdp.send('Emulation.setFocusEmulationEnabled', { enabled: false }))
+      .then(async (cdp) => {
+        await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+        await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+      })
       .catch((e) => console.log(`focus emulation not switched off on ${page.url()}: ${String(e).slice(0, 100)}`));
   });
 }
