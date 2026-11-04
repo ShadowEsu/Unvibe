@@ -31,12 +31,19 @@ describe("beta waitlist invite email", () => {
   });
 });
 
-describe("beta emails carry no emoji (Design detect pass, 4 Nov: emoji as icons is a MUST for anything sent)", () => {
+describe("beta emails: no emoji, upright type (Design detect pass and Preston's no-italics rule, 4 Nov)", () => {
+  const download = { firstName: "Ohm", macDownloadUrl: "https://example.com/unvibe.zip", unsubscribeUrl: UNSUBSCRIBE };
+  const texts = [betaInviteText("Ohm", UNSUBSCRIBE), betaDownloadText(download)];
+  const htmls = [betaInviteHtml("Ohm", UNSUBSCRIBE), betaDownloadHtml(download)];
+
   it("has no emoji or pictographs in the text or HTML of either email", () => {
-    const download = { firstName: "Ohm", macDownloadUrl: "https://example.com/unvibe.zip", unsubscribeUrl: UNSUBSCRIBE };
-    const parts = [betaInviteText("Ohm", UNSUBSCRIBE), betaInviteHtml("Ohm", UNSUBSCRIBE), betaDownloadText(download), betaDownloadHtml(download)];
     const pictograph = new RegExp("\\p{Extended_Pictographic}", "u");
-    for (const part of parts) assert.doesNotMatch(part, pictograph);
+    for (const part of [...texts, ...htmls]) assert.doesNotMatch(part, pictograph);
+  });
+
+  it("sets nothing in italics: no <em>, <i> or italic style in the HTML, no *emphasis* in the text", () => {
+    for (const html of htmls) assert.doesNotMatch(html, /<(em|i)\b|font-style:\s*italic/i);
+    for (const text of texts) assert.doesNotMatch(text, /\*[^*\s][^*]*\*/);
   });
 });
 
