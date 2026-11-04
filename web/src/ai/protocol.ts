@@ -35,7 +35,7 @@ export interface ReviewRequestPayload {
   question?: string;
   variant?: 'default' | 'different';
   /**
-   * 'short' (the app's default since 2 Nov): 2 to 4 plain sentences on what a selection does.
+   * 'short' (the app's default since 2 Nov): 1 or 2 plain sentences on what a selection does (2 to 4 until 4 Nov).
    * 'full', or absent (apps before then): today's full-depth explanation.
    */
   detail?: 'short' | 'full';
