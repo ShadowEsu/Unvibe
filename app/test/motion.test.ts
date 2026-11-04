@@ -51,7 +51,7 @@ test('reduced motion adds no animation classes: no burst and no pop, only the ch
 
 test('the burst is 8 shapes and only renders while a celebration runs', () => {
   const burst = renderToStaticMarkup(createElement(Celebration, { run: 7, reduced: false, onEnd: noop }));
-  assert.equal((burst.match(/celebrate__shape/g) ?? []).length, 8);
+  assert.equal((burst.match(/<i class="celebrate__shape /g) ?? []).length, 8);
   assert.equal(renderToStaticMarkup(createElement(Celebration, { run: null, reduced: false, onEnd: noop })), '');
 });
 

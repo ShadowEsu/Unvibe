@@ -1302,6 +1302,10 @@ code.inline {
    primary (Got it), one outline secondary (Test me), the rest in More. Colour only for state: mint is
    understood or right, amber is "Not sure:" and wrong, the accent is the one primary.
    The skin is the --sw-* properties alone, so S2 (glass) and S3 (dark) are a change of these values.
+   The ground (Design ledger 458) is the one --ground property: the S1 solid cream by default. A later pick is a
+   one-line change of --ground, e.g. `--ground: radial-gradient(...), var(--sw-ground);` with the cream last so
+   it is still the base. Text never sits on the wash: the header, tabs, reading area and footer are plates of
+   the cream at 0.92 (glass spec §3 asks for 0.88 or more). The ground never moves.
    Motion uses only the MOTION-SPEC §1 tokens from tokens.css. Last block wins.
    ═════════════════════════════════════════════════════════════════════════════ */
 :root[data-panel] .card.card {
@@ -1332,7 +1336,9 @@ code.inline {
   --p-faint: var(--sw-muted);
   --p-focus: var(--sw-ink);
   --celebrate-color: var(--sw-mint);
-  background: var(--sw-ground);
+  --ground: var(--sw-ground);
+  --sw-sheet: color-mix(in srgb, var(--sw-ground) 92%, transparent);
+  background: var(--ground);
   color: var(--sw-ink);
   border: 1px solid var(--sw-line);
   border-radius: 16px;
@@ -1356,14 +1362,16 @@ code.inline {
   --sw-amber-ink: #f2c46d;
   --sw-shadow: 0 24px 60px -18px rgb(0 0 0 / 0.7);
   --p-focus: var(--sw-accent);
+  /* Its own ground, so a light pick never lands on the ink panel. */
+  --ground: var(--sw-ground);
 }
 :root[data-panel] .card.card.card--away { background: color-mix(in srgb, var(--sw-ground) 62%, transparent); }
-:root[data-panel] .card.card.card--away:hover { background: var(--sw-ground); }
+:root[data-panel] .card.card.card--away:hover { background: var(--ground); }
 
 /* Header: Vibe, the title, the quiet allowance, collapse and close. */
-:root[data-panel] .card.card .head { min-height: 58px; padding: 0 14px 0 20px; gap: 10px; background: var(--sw-ground); border-bottom: 1px solid var(--sw-line); }
+:root[data-panel] .card.card .head { min-height: 58px; padding: 0 14px 0 20px; gap: 10px; background: var(--sw-sheet); border-bottom: 1px solid var(--sw-line); }
 :root[data-panel] .card.card .head::after { content: none; }
-:root[data-panel] .card.card.card--away .head { background: transparent; }
+:root[data-panel] .card.card.card--away :is(.head, .tabs, .widget-main, .foot) { background: transparent; }
 .card .head__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; color: var(--sw-ink); }
 .card .head__usage { color: var(--sw-muted); font-size: 12.5px; }
 :root[data-panel] .card.card .head__actions { gap: 2px; }
@@ -1378,12 +1386,12 @@ code.inline {
 @keyframes vibeBob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 
 /* Tabs, only at two or more. */
-:root[data-panel] .card.card .tabs { padding: 8px 16px; gap: 4px; background: var(--sw-ground); border-bottom: 1px solid var(--sw-line); }
+:root[data-panel] .card.card .tabs { padding: 8px 16px; gap: 4px; background: var(--sw-sheet); border-bottom: 1px solid var(--sw-line); }
 :root[data-panel] .card.card .tab.on { background: var(--sw-plate); border-color: var(--sw-line); color: var(--sw-ink); }
 .card .tab__x svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 
 /* The reading area: meta line, the code on a plate, then the answer. */
-:root[data-panel] .card.card .widget-main { flex: 1 1 auto; background: transparent; }
+:root[data-panel] .card.card .widget-main { flex: 1 1 auto; background: var(--sw-sheet); }
 :root[data-panel] .card.card .body { padding: 20px 24px 26px; font-size: calc(var(--sw-answer-size) * var(--widget-scale, 1)); line-height: 1.55; color: var(--sw-ink); }
 .card .sw-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; font-size: 12.5px; line-height: 1.4; }
 .card .sw-meta__line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sw-muted); }
@@ -1421,7 +1429,7 @@ code.inline {
 :root[data-panel] .card.card .btn:disabled { opacity: 0.45; cursor: default; }
 
 /* Footer: the Ask field, then the action bar under a hairline. */
-:root[data-panel] .card.card .foot { padding: 12px 20px 16px; gap: 12px; background: var(--sw-ground); border-top: 0; box-shadow: none; }
+:root[data-panel] .card.card .foot { padding: 12px 20px 16px; gap: 12px; background: var(--sw-sheet); border-top: 0; box-shadow: none; }
 :root[data-panel] .card.card .ask-sandbox { min-height: 44px; padding: 4px 4px 4px 16px; border: 1px solid var(--sw-line); border-radius: var(--sw-radius); background: var(--sw-field); box-shadow: none; }
 :root[data-panel] .card.card .ask-sandbox:focus-within { border-color: var(--sw-ink); background: var(--sw-field); }
 :root[data-panel] .card.card .askrow input { color: var(--sw-ink); font-size: 14px; }
