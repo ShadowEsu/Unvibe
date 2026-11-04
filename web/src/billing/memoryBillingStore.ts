@@ -7,8 +7,11 @@ import type {
   BillingOverview,
   BillingStore,
   CheckoutIntentRecord,
+  CheckoutStopAudits,
   SubscriptionRecord,
+  SubscriptionStatus,
   SubscriptionSyncInput,
+  VersionedSubscription,
   UsageKind,
   UsageReservation,
   WebhookClaim,
@@ -63,6 +66,21 @@ function defaultSubscription(workspaceId: string): SubscriptionRecord {
     seats: 1,
     cancelAtPeriodEnd: false,
   };
+}
+
+// Every write stores a new row object and none edits one in place, so a row object's identity is its
+// version: the dev mirror of comparing `updated_at`, which every SQL and store write sets.
+const rowVersions = new WeakMap<SubscriptionRecord, string>();
+let lastRowVersion = 0;
+
+function rowVersion(row: SubscriptionRecord): string {
+  let version = rowVersions.get(row);
+  if (version === undefined) {
+    lastRowVersion += 1;
+    version = String(lastRowVersion);
+    rowVersions.set(row, version);
+  }
+  return version;
 }
 
 export class MemoryBillingStore implements BillingStore {
@@ -295,7 +313,8 @@ export class MemoryBillingStore implements BillingStore {
     intent.stripeCheckoutSessionId = stripeCheckoutSessionId;
   }
 
-  async expireCheckoutIntent(intentId: string): Promise<void> { const intent = this.data.checkoutIntents.get(intentId); if (intent) intent.status = 'expired'; }
+  // Mirrors the SQL update, which only expires a pending intent; a completed one stays completed.
+  async expireCheckoutIntent(intentId: string): Promise<void> { const intent = this.data.checkoutIntents.get(intentId); if (intent?.status === 'pending') intent.status = 'expired'; }
 
   async completeCheckoutIntent(stripeCheckoutSessionId: string): Promise<CheckoutIntentRecord | null> {
     const intent = await this.findCheckoutIntent(stripeCheckoutSessionId);
@@ -309,6 +328,25 @@ export class MemoryBillingStore implements BillingStore {
 
   async syncSubscription(input: SubscriptionSyncInput): Promise<void> {
     this.data.subscriptions.set(input.workspaceId, { ...input });
+  }
+
+  async versionedSubscriptionByWorkspaceId(workspaceId: string): Promise<VersionedSubscription | null> {
+    const subscription = this.data.subscriptions.get(workspaceId);
+    return subscription ? { subscription, version: rowVersion(subscription) } : null;
+  }
+
+  async syncSubscriptionIf(input: SubscriptionSyncInput, expectedVersion: string | null): Promise<boolean> {
+    const current = this.data.subscriptions.get(input.workspaceId);
+    if ((current ? rowVersion(current) : null) !== expectedVersion) return false;
+    this.data.subscriptions.set(input.workspaceId, { ...input });
+    return true;
+  }
+
+  async setSubscriptionStatusIf(stripeSubscriptionId: string, expected: SubscriptionStatus, status: SubscriptionStatus, gracePeriodEndsAt?: string): Promise<boolean> {
+    const subscription = await this.subscriptionByProviderId(stripeSubscriptionId);
+    if (!subscription || subscription.status !== expected) return false;
+    this.data.subscriptions.set(subscription.workspaceId, { ...subscription, status, gracePeriodEndsAt });
+    return true;
   }
 
   async markSubscriptionCanceled(stripeSubscriptionId: string): Promise<void> {
@@ -357,6 +395,11 @@ export class MemoryBillingStore implements BillingStore {
     this.data.audits.push({ userId, workspaceId, action, metadata, at: this.now().toISOString() });
   }
 
+  async checkoutStopAudits(stripeCheckoutSessionId: string): Promise<CheckoutStopAudits> {
+    const actions = new Set(this.data.audits.filter((audit) => audit.metadata.checkoutSessionId === stripeCheckoutSessionId).map((audit) => audit.action));
+    return { started: actions.has('checkout.stop_started'), finished: actions.has('checkout.stopped_while_locked') };
+  }
+
   async deleteUserBilling(userId: string): Promise<void> {
     // usage_events rows cascade with the user in SQL.
     this.data.usageEvents = this.data.usageEvents.filter((event) => event.userId !== userId);
@@ -374,6 +417,9 @@ export class MemoryBillingStore implements BillingStore {
   /**
    * Dev mirror of the SQL `add_pro_months`: complimentary Pro months that stack on a running
    * gift month, end at most 12 months from now, and never touch a live Stripe subscription.
+   * A grant onto a canceled or inactive Stripe row drops that row's old Stripe subscription and
+   * price ids (Security R8-1), so a late event or a stop retry for the old subscription can't find
+   * the row and cancel the free months.
    */
   async addProMonths(userId: string, months: number): Promise<{ applied: boolean }> {
     if (!Number.isInteger(months) || months <= 0) return { applied: false };
@@ -394,6 +440,8 @@ export class MemoryBillingStore implements BillingStore {
       interval: 'monthly',
       status: 'trialing',
       seats: 1,
+      stripeSubscriptionId: undefined,
+      stripePriceId: undefined,
       currentPeriodStart: from > now ? current.currentPeriodStart ?? now.toISOString() : now.toISOString(),
       currentPeriodEnd: (stacked < cap ? stacked : cap).toISOString(),
     });

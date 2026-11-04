@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { POST as redeemRoute } from '../app/api/v1/promo/redeem/route';
+import { ACCOUNT_POLICY_VERSION } from '../src/lib/accountConsent';
 import { normalisePromoCode, promoCodeHash } from '../src/lib/promoCode';
 
 // The Supabase backend against a fake Supabase (fetch is replaced; no network, no database):
@@ -39,9 +40,11 @@ function fakeSupabase(rpcRow: Record<string, unknown>): { seen: Seen[]; restore:
   return { seen, restore: () => { globalThis.fetch = original; } };
 }
 
-function redeem(body: unknown): Promise<Response> {
+/** Every call carries the agreement /redeem asks for (promoRedeemAgreement.test.ts covers its refusals). */
+function redeem(body: Record<string, unknown>): Promise<Response> {
   return redeemRoute(new Request('https://api.example.test/api/v1/promo/redeem', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.7.0.${Math.floor(Math.random() * 250)}` }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': `10.7.0.${Math.floor(Math.random() * 250)}` },
+    body: JSON.stringify({ ...body, agreement: { terms: true, age18: true, policyVersion: ACCOUNT_POLICY_VERSION } }),
   }));
 }
 

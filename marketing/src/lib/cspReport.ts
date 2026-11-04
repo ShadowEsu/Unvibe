@@ -39,7 +39,7 @@ function blockedOrigin(raw: unknown): string {
 export const SITE_ROUTES: ReadonlySet<string> = new Set([
   "about", "account-deletion", "activate", "beta", "build", "code-explainer-mac",
   "code-explainer-windows", "data-controls", "explain", "founder", "install-help", "investors", "kit",
-  "pricing", "privacy", "redeem", "releases", "resources", "rewards", "s", "terms", "waitlist",
+  "pricing", "privacy", "redeem", "refund", "releases", "resources", "rewards", "s", "terms", "waitlist",
 ]);
 
 /**

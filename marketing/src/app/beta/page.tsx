@@ -31,10 +31,11 @@ export default function BetaDownloadsPage() {
       </header>
 
       <section className="paper-section" id="install">
-        <Reveal className="paper-wrap paper-center">
+        {/* The primary download paints at once: no Reveal here (motion spec). */}
+        <div className="paper-wrap paper-center">
           {/* The band above already says "Free for Mac and Windows"; dropping the repeat keeps the download button on the first screen. */}
-          <BetaInstall tone="page" surface="beta" title={null} showFeedback />
-        </Reveal>
+          <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
+        </div>
       </section>
 
       <section className="paper-section">
@@ -129,7 +130,7 @@ export default function BetaDownloadsPage() {
               <p>
                 No Run anyway button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it
                 blocks unsigned apps like Unvibe and can’t make an exception for one app. Email{" "}
-                <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20Windows%20install">hello@unvibe.site</a>
+                <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20Windows%20install">support@unvibe.site</a>
                 {" "}and we’ll help.
               </p>
             </details>
@@ -161,7 +162,7 @@ export default function BetaDownloadsPage() {
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
-              <p>Need help? <a className="paper-text-link" href="mailto:hello@unvibe.site?subject=Unvibe%20help">Email us</a></p>
+              <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
         </Reveal>

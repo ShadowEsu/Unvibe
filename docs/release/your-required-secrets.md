@@ -18,7 +18,7 @@ currently intended to be `https://api.unvibe.site`).
 | --- | --- | --- |
 | `APP_ENV` | `production` only after staging has passed. | Yes |
 | `WEB_BASE_URL` | The backend's public HTTPS URL, for example `https://api.unvibe.site`. | Yes |
-| `PUBLIC_APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. | Yes for billing |
+| `APP_URL` | The trusted HTTPS return URL for Billing Checkout/Portal. Use the public web app origin that hosts `/plan`. The code reads `APP_URL` first and falls back to the old name `PUBLIC_APP_URL`; production needs one of them. | Yes for billing |
 | `ENABLE_MOCK_AI` | Development only; production ignores it. | No |
 | `GEMINI_API_KEY` | Production AI key: every AI route uses only Google Gemini (`selectProvider` in `web/src/ai/index.ts`), as the consent screen and privacy policy say. Start with a restricted key and a spend limit. | Yes |
 | `GEMINI_MODEL` | The approved Gemini model name (default `gemini-3.1-flash-lite`). | Recommended |
@@ -61,6 +61,28 @@ Do not enable live billing until you have completed a real test checkout,
 verified signed webhooks (including cancellation and failed payment), tested
 the customer portal, and explicitly approved the live prices. The UI price
 switch is implemented, but it is not authorization to make live charges.
+
+In the Stripe dashboard, under the subscription settings for failed payments,
+set "if all retries for a payment fail" to cancel the subscription or to mark
+it unpaid, never to leave it past due. Support never voids a renewal invoice
+or marks it uncollectible without also canceling the subscription. In both
+cases Stripe would report the subscription active again, and Unvibe would
+keep giving paid access that nobody paid for.
+
+Turning purchases off again (the lock) needs no extra step in Stripe. A
+Checkout page opened before the lock can still be paid for up to about 30
+minutes. For a checkout with an intent in this deployment, the webhook starts a
+full refund and cancels the subscription at once, without granting access.
+Checkout takes cards only, including card wallets such as Apple Pay. Link and
+delayed payment methods are not offered, so payment is confirmed before the
+locked checkout refund runs. After cancellation, refund recovery applies only
+when we recorded that this checkout's stop started while purchases were locked;
+an ordinary cancellation does not trigger it. Recovery uses that session's own
+invoice and the same refund key as the duplicate-stop path. Refunds can remain
+pending, fail or be disputed; a refund id alone is not proof of success. Check
+older bank-debit sessions by hand, and monitor refund status updates for failures.
+If the refund succeeds but cancellation fails and purchases reopen before the
+retry, the customer can receive a free period; no customer loses money.
 
 Teams self-serve checkout stays paused; Plan UI collects company email + seat
 interest via mailto. There is no separate Teams switch: setting both Teams
@@ -115,6 +137,17 @@ Before making the app publicly available, complete every blocking item in
 - a separate staging Supabase project with migrations and RLS tests;
 - real AI-provider behavior, spend limits, and user-code handling checks;
 - a Stripe test-mode checkout and webhook exercise before any live billing;
+- `STRIPE_WEBHOOK_SECRET` on the production API is the real `whsec_` signing
+  secret of the Stripe endpoint that delivers to the production
+  `/api/v1/billing/webhook`, not a placeholder;
+- the go-live webhook gate is one **signed** Stripe test event of a
+  non-billing type (for example `customer.created`), sent from that Stripe
+  endpoint to the production endpoint. It must answer 200. Either of two
+  answers passes, because the signature is checked before anything else:
+  `{"ignored":"payments_locked"}` while payments are locked, or
+  `{"ignored":"livemode_mismatch"}` when a test event reaches a deployment
+  with a live key. An unsigned POST is not enough: it answers 400
+  `missing_signature` with a placeholder secret and with a real one alike;
 - waitlist storage and email delivery on the deployed marketing site;
 - signed, notarized, stapled macOS artifact plus a clean-machine QA pass;
 - legal approval of the privacy policy and terms; and

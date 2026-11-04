@@ -105,7 +105,8 @@
   outline-offset: 2px;
 }
 
-.redeem-btn:disabled {
+.redeem-btn:disabled,
+.redeem-btn[aria-disabled="true"] {
   opacity: 0.42;
   cursor: not-allowed;
 }
@@ -114,6 +115,45 @@
   color: var(--ink);
   background: var(--paper);
   border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+/* /activate's two separate unticked boxes, before any sign-in starts (Terms and Privacy; 18 or older). */
+.redeem-agree {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  border: 0;
+}
+
+.redeem-agree label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.redeem-agree input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--ink);
+}
+
+.redeem-agree input:focus-visible,
+.redeem-agree a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.redeem-agree a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .redeem-divider {
@@ -154,6 +194,11 @@
   text-decoration: underline;
   text-underline-offset: 0.18em;
   cursor: pointer;
+}
+
+/* The retry inside the "Sign-in did not finish." note takes the note's colour. */
+.redeem-link--inline {
+  color: inherit;
 }
 
 .redeem-note {

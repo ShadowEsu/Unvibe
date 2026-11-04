@@ -71,11 +71,13 @@ export const listingLinks = [
   { name: "FounderMag", href: "https://foundermag.co/products/unvibe/" },
   { name: "KrispiTech product showcase", href: "https://krispitech.com/the-hidden-cost-of-vibe-coding-and-how-unvibe-helps-you-actually-own-your-codebase/" },
   { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
+  { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
 ] as const;
 
 /**
- * Backlinks these directories require before Unvibe's free listing can be submitted. Not shown
- * until the listing pages exist (Security R-4); then move each into listingLinks with its page URL.
+ * Followed homepage links these directories require before Unvibe's free listing can be submitted
+ * (OK'd 26 Oct). They show on their own line labelled as listings in progress, never among the live
+ * listings (Security R-4); once a listing page exists, move it into listingLinks with its page URL.
  */
 export const pendingBacklinks = [
   { name: "Startup Fame", href: "https://startupfa.me" },

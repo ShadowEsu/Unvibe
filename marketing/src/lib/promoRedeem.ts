@@ -90,6 +90,7 @@ export type RedeemOutcomeKind =
   | "cap_reached"
   | "signed_out"
   | "rate_limited"
+  | "agreement_required"
   | "unavailable";
 
 export interface RedeemOutcome {
@@ -123,6 +124,8 @@ const ERRORS: Record<ErrorKind, { line: string; final: boolean }> = {
   cap_reached: { line: "Every code from this offer has been claimed.", final: true },
   signed_out: { line: "Your sign-in has expired. Sign in again, then redeem.", final: false },
   rate_limited: { line: "Too many tries. Wait a minute and try again.", final: false },
+  // /activate's "Tick both boxes above, then approve.", for the API's refusal without the agreement.
+  agreement_required: { line: "Tick both boxes above, then redeem.", final: false },
   unavailable: { line: "Codes cannot be redeemed right now. Try again shortly.", final: false },
 };
 

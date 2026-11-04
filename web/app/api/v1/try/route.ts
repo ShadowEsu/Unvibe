@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { noStoreFetch } from '@/lib/serviceSupabase';
 import { selectProvider } from '@/ai';
+import { SHORT_MAX_TOKENS } from '@/ai/anthropic';
 import { AiPausedError } from '@/ai/spendMeter';
 import {
   TRY_ALLOWED_ORIGINS,
@@ -52,7 +54,7 @@ async function reserveTry(bucket: string, hourCap: number, hourRefusal: Refusal)
   const url = process.env.SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (url && key) {
-    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: noStoreFetch } });
     const { data, error } = await db.rpc('reserve_try_request', {
       p_ip_hash: bucket,
       p_ip_cap: hourCap,
@@ -98,7 +100,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!checked.ok) return Response.json({ error: checked.error }, { status: 400, headers });
 
   const refuse = ({ status, error }: Refusal) => Response.json({ error }, { status, headers });
-  const provider = selectProvider();
+  const provider = selectProvider(undefined, SHORT_MAX_TOKENS);
   // Never pass off mock output as a real explanation.
   if (!provider || provider.mock) return refuse(UNAVAILABLE);
 

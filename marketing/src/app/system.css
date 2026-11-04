@@ -47,10 +47,11 @@
   /* Motion. Hover/press 110-160 ms, enter 280-400 ms, exit 150 ms or less. */
   --u-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --u-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  /* The same values as the --dur-* motion tokens (globals.css), so the site has one set. */
   --u-dur-press: 110ms;
-  --u-dur-hover: 160ms;
-  --u-dur-enter: 320ms;
-  --u-dur-exit: 150ms;
+  --u-dur-hover: var(--dur-micro);
+  --u-dur-enter: var(--dur-standard);
+  --u-dur-exit: var(--dur-exit);
 }
 
 /* Focusable scroll areas whose ring the page hid or washed out (390 keyboard walk). Focused state only.
@@ -67,7 +68,7 @@ html {
 }
 h1, h2, h3, .flexacc__title { text-wrap: balance; }
 p, li, figcaption, summary { text-wrap: pretty; }
-:is(time, .paper-beta__specs, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
+:is(time, .dl-card__meta, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
 
 /* Links in running text: the underline thickens on hover. */
 main a:not([class]) {

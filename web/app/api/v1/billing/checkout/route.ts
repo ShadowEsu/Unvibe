@@ -4,7 +4,7 @@ import { isResponse, requireUser, billingError } from '@/billing/http';
 import { CheckoutPendingError } from '@/billing/checkoutPending';
 import { TeamWorkspaceLimitError, teamWorkspaceLimitResponse } from '@/billing/teamWorkspaceLimit';
 import { CHECKOUT_SESSION_TTL_MS, complimentaryPaidEnd, normalizedSeats, teamsCheckoutEnabled } from '@/billing/plans';
-import { checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, stripePriceId } from '@/billing/stripe';
+import { automaticTax, checkoutOpen, getStripe, lifetimeCheckoutOpen, PAYMENTS_NOT_OPEN, publicAppUrl, STRIPE_PRODUCT, stripePriceId, termsConsent } from '@/billing/stripe';
 import type { BillingInterval, BillingStore, SubscriptionStatus, WorkspaceAccess } from '@/billing/types';
 
 export const runtime = 'nodejs';
@@ -120,7 +120,10 @@ export async function POST(req: Request): Promise<Response> {
       if (error instanceof CheckoutPendingError) return Response.json({ error: 'checkout_pending', message: 'Finish or wait for the open checkout before starting another.' }, { status: 409 });
       throw error;
     }
+    // `product` tags the session, the subscription (subscription_data) and the PaymentIntent
+    // (payment_intent_data) as Unvibe's on the Stripe account other products share (Security MUST-J1).
     const metadata = {
+      product: STRIPE_PRODUCT,
       workspace_id: workspace.id,
       user_id: user,
       plan: body.plan,
@@ -140,6 +143,7 @@ export async function POST(req: Request): Promise<Response> {
       session = body.interval === 'lifetime'
         ? await stripe.checkout.sessions.create({
           mode: 'payment',
+          payment_method_types: ['card'],
           line_items: [{ price, quantity: 1 }],
           success_url: `${appUrl}/plan?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${appUrl}/plan?checkout=canceled`,
@@ -150,9 +154,12 @@ export async function POST(req: Request): Promise<Response> {
           metadata,
           payment_intent_data: { metadata },
           allow_promotion_codes: true,
+          ...automaticTax(Boolean(current.subscription.stripeCustomerId)),
+          ...termsConsent(),
         }, { idempotencyKey: `uncode-checkout-${intent.id}` })
         : await stripe.checkout.sessions.create({
           mode: 'subscription',
+          payment_method_types: ['card'],
           line_items: [{ price, quantity: seats }],
           custom_text: {
             submit: {
@@ -167,6 +174,8 @@ export async function POST(req: Request): Promise<Response> {
           metadata,
           subscription_data: { metadata },
           allow_promotion_codes: true,
+          ...automaticTax(Boolean(current.subscription.stripeCustomerId)),
+          ...termsConsent(),
         }, { idempotencyKey: `uncode-checkout-${intent.id}` });
     } catch (error) {
       await billing.expireCheckoutIntent(intent.id);

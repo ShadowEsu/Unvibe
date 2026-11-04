@@ -45,12 +45,13 @@ h1 em, h2 em, h3 em, .serif-em {
 .vibe { --look-x: 0px; --look-y: 0px; display: inline-block; line-height: 0; flex: 0 0 auto; }
 .vibe svg { overflow: visible; }
 .vibe__float, .vibe__pupil, .vibe__eyes { transform-box: fill-box; transform-origin: center; }
-.vibe__float { transform-origin: 50% 100%; animation: vibeSquish 4.2s ease-in-out infinite; }
-.vibe__body { fill: var(--v-lilac); stroke: var(--v-ink); stroke-width: 2.2; stroke-linejoin: round; animation: vibeGoo 6s ease-in-out infinite; }
+/* Vibe squishes and morphs for 3 cycles, then rests; only the blink keeps going (it's the character). */
+.vibe__float { transform-origin: 50% 100%; animation: vibeSquish 4.2s ease-in-out 3; }
+.vibe__body { fill: var(--v-lilac); stroke: var(--v-ink); stroke-width: 2.2; stroke-linejoin: round; animation: vibeGoo 6s ease-in-out 3; }
 .vibe__iris { fill: var(--v-ink); }
 .vibe__eyes { animation: vibeBlink 5.2s infinite; }
 .vibe__pupil { fill: #fff; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
-.vibe__shadow { fill: var(--v-ink); opacity: 0.14; transform-box: fill-box; transform-origin: center; animation: vibeShadow 4.2s ease-in-out infinite; }
+.vibe__shadow { fill: var(--v-ink); opacity: 0.14; transform-box: fill-box; transform-origin: center; animation: vibeShadow 4.2s ease-in-out 3; }
 @keyframes vibeSquish { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.6px) scale(0.97, 1.03); } }
 @keyframes vibeShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86); } }
 @keyframes vibeBlink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.1); } }
@@ -106,7 +107,7 @@ h1 em, h2 em, h3 em, .serif-em {
 }
 
 /* Keep the promise and CTA visible before hydration. Only the mascot bubble enters. */
-.vhero.is-ready .vhero__bubble { animation: vPop 520ms var(--v-press) 700ms both; }
+.vhero.is-ready .vhero__bubble { animation: vPop var(--dur-standard) var(--v-press) 700ms both; }
 @keyframes vPop { 0% { opacity: 0; transform: scale(0.6) rotate(-6deg); } 70% { opacity: 1; transform: scale(1.05); } 100% { transform: none; } }
 
 /* Download buttons pick up the ink and press like keys. */
@@ -138,9 +139,9 @@ h1 em, h2 em, h3 em, .serif-em {
 /* Press, then open: the kicker's shortcut key presses once, and the app window opens in answer.
    Start states exist only with JS and motion allowed; without either the page is the final frame. */
 @media (prefers-reduced-motion: no-preference) {
-  .js .vhero.is-ready .vhero__kicker kbd { animation: uKeyPress 280ms var(--u-ease) 900ms both; }
+  .js .vhero.is-ready .vhero__kicker kbd { animation: uKeyPress var(--dur-micro) var(--u-ease) 900ms both; }
   .js .vtour__window:not(.is-open) { transform: perspective(1200px) translateY(18px) rotateX(7deg) scale(0.97); }
-  .js .vtour__window { transition: transform 620ms var(--u-ease-out); }
+  .js .vtour__window { transition: transform var(--dur-standard) var(--u-ease-out); }
 }
 @keyframes uKeyPress {
   0%, 100% { transform: none; }
@@ -206,11 +207,6 @@ p { font-size: 1.02rem; }
 /* The download box: big, loud, free. */
 .paper-beta { width: min(980px, 100%) !important; max-width: none !important; padding: clamp(2rem, 4vw, 3.4rem) !important; margin-inline: auto; }
 .paper-beta__title { font-family: var(--font-display) !important; font-size: clamp(2.2rem, 4.6vw, 3.6rem) !important; font-weight: 800 !important; letter-spacing: -0.045em !important; line-height: 1.02 !important; color: var(--v-ink) !important; }
-.paper-beta__os { gap: 0.9rem !important; }
-.paper-beta__os button { min-height: 4.2rem; padding: 0.8rem 1.6rem !important; border: 1.5px solid var(--v-ink) !important; border-radius: 16px !important; background: var(--u-card) !important; color: var(--u-text); box-shadow: 0 3px 0 var(--v-ink); }
-.paper-beta__os button.is-on { background: var(--v-lime) !important; color: #141414; }
-.paper-beta__os-name { font-size: 1.25rem !important; font-weight: 750 !important; }
-.paper-beta__os-meta { opacity: 1 !important; }
 .paper-beta__download-btn {
   min-height: 4.2rem !important; padding: 0 2.4rem !important; font-size: 1.3rem !important; font-weight: 750 !important;
   border-radius: 16px !important; background: var(--u-cta) !important; color: var(--u-on-cta) !important; border: 1.5px solid var(--u-cta) !important;
@@ -218,7 +214,7 @@ p { font-size: 1.02rem; }
 }
 .paper-beta__download-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--u-cta-edge), 0 0 0 5px var(--v-lime) !important; }
 .paper-beta__download-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--u-cta-edge) !important; }
-.paper-beta__specs, .paper-beta__shell { font-size: 0.95rem !important; }
+.paper-beta__shell { font-size: 0.95rem !important; }
 .paper-beta__step { padding: 0.5rem 1rem !important; border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--u-card) !important; color: var(--u-text); font-size: 1rem !important; }
 .paper-beta__step-num { background: var(--u-cta) !important; color: var(--u-on-cta) !important; }
 
@@ -260,7 +256,7 @@ p { font-size: 1.02rem; }
   display: none;
   position: absolute; right: calc(100% + 10px); top: 14px; white-space: nowrap; padding: 0.4rem 0.85rem; border: 1.5px solid var(--v-ink);
   border-radius: 14px 14px 4px 14px; background: var(--u-card); box-shadow: 3px 3px 0 var(--v-ink); font: italic 400 1.2rem/1.1 var(--font-serif); color: var(--v-ink);
-  animation: vPop 460ms var(--v-press) both;
+  animation: vPop var(--dur-standard) var(--v-press) both;
 }
 .svibe:hover .svibe__bubble,
 .svibe:focus-visible .svibe__bubble { display: block; }
@@ -350,8 +346,6 @@ p { font-size: 1.02rem; }
 .svibe.is-resting { visibility: hidden; opacity: 0; transform: translate3d(30px, var(--svibe-y, 110px), 0); pointer-events: none; }
 @media (max-width: 600px) {
   .paper-beta { padding: 1.6rem 1.1rem !important; }
-  .paper-beta__os button { min-height: 3.4rem; padding: 0.55rem 0.8rem !important; }
-  .paper-beta__os-name { font-size: 1.05rem !important; }
   .paper-beta__download-btn { min-width: 0; padding: 0 1.1rem !important; font-size: 1.05rem !important; min-height: 3.6rem !important; }
 }
 
@@ -378,7 +372,6 @@ p { font-size: 1.02rem; }
 .try__go:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(4px); box-shadow: none; }
 .try__go:disabled, .try__go[aria-disabled="true"], .try__retry[aria-disabled="true"] { opacity: 0.6; cursor: wait; }
 .try__fine { margin: 0 1rem 0.9rem; color: #c9c5bc; font-size: 0.82rem !important; }
-.try__bob { animation: vBob 1.1s ease-in-out infinite; }
 .try__error { margin: 0; color: #9a3412; font-weight: 600; }
 .try__answer { width: 100%; padding: 1.6rem 1.7rem; font-size: 1.08rem; line-height: 1.65; }
 .try__answer p { margin: 0 0 0.7rem; }
@@ -391,7 +384,6 @@ p { font-size: 1.02rem; }
 .try__after p { font-weight: 700; }
 @keyframes vWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes vShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-@keyframes vBob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
 @media (max-width: 860px) { .try { grid-template-columns: minmax(0, 1fr); } .try__panel { border-left: 0 !important; border-top: 1px solid var(--u-line); } }
 
 /* ── Invite ────────────────────────────────────────────────────────────────── */
@@ -449,7 +441,7 @@ p { font-size: 1.02rem; }
 @keyframes vFade { from { opacity: 0; } to { opacity: 1; } }
 
 /* ── Download reminder toast ───────────────────────────────────────────────── */
-.remind { position: fixed; left: 1.1rem; bottom: 1.1rem; z-index: 80; width: min(390px, calc(100vw - 2.2rem)); padding: 1.1rem 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 6px 6px 0 var(--v-ink); color: var(--v-ink); animation: vPop 420ms var(--v-press) both; }
+.remind { position: fixed; left: 1.1rem; bottom: 1.1rem; z-index: 80; width: min(390px, calc(100vw - 2.2rem)); padding: 1.1rem 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 6px 6px 0 var(--v-ink); color: var(--v-ink); animation: vPop var(--dur-standard) var(--v-press) both; }
 .remind p { margin: 0 2rem 0.7rem 0; font-size: 1rem; }
 .remind__row { display: flex; gap: 0.5rem; }
 .remind__row input { flex: 1; min-width: 0; min-height: 2.8rem; padding: 0 0.8rem; border: 1.5px solid var(--u-line); border-radius: 12px; background: var(--u-card); color: var(--u-text); font-size: 1rem; }
@@ -462,18 +454,28 @@ p { font-size: 1.02rem; }
 .remind__check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--v-ink); }
 .remind .remind__fine { margin: 0.5rem 0 0; font-size: 0.85rem; }
 .remind__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .live__dot, .try__bob, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .live__dot, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
 @media (min-width: 700px) { .remind { left: 3.4rem; } }
 
 /* Analytics bar (AnalyticsConsentBar): Allow and No thanks look the same, so neither is the default. */
 .consent-bar { position: fixed; left: 50%; bottom: calc(0.75rem + env(safe-area-inset-bottom)); z-index: 95; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; width: min(42rem, calc(100vw - 1.5rem)); padding: 0.9rem 1rem; border: 1.5px solid var(--v-ink); border-radius: 16px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); font-size: 0.95rem; line-height: 1.45; }
+/* Server-rendered open; before the client reads the stored answer, hidden where none is needed (theme.ts) or without JS. */
+html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not([data-live]) { display: none; }
 .consent-bar:focus { outline: none; }
 .consent-bar:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 3px; }
 .consent-bar p { flex: 1 1 18rem; margin: 0; }
 .consent-bar .consent-bar__now { flex-basis: 100%; order: 1; color: var(--u-text-2); font-size: 0.88rem; }
 .consent-bar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.consent-bar__actions a { margin-right: 0.35rem; color: var(--u-text); text-decoration: underline; text-underline-offset: 2px; }
+.consent-bar__actions a, .consent-bar__privacy--inline { margin-right: 0.35rem; color: var(--u-text); text-decoration: underline; text-underline-offset: 2px; }
+.consent-bar__privacy--inline { display: none; }
+/* Under 360px: Privacy ends the text and the two choices share one row at half width each (Design, 320px pass). */
+@media (max-width: 359px) {
+  .consent-bar__privacy--inline { display: inline; margin-right: 0; }
+  .consent-bar__actions .consent-bar__privacy { display: none; }
+  .consent-bar__actions { flex-wrap: nowrap; width: 100%; }
+  .consent-bar__actions .consent-bar__btn { flex: 1 1 50%; min-width: 0; padding: 0 0.5rem; }
+}
 .consent-bar__btn { min-width: 6.5rem; min-height: 2.75rem; padding: 0 1rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--u-card); color: var(--u-text); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .consent-bar__btn:hover { background: var(--u-raise); }
 .consent-bar__btn:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 2px; }
@@ -702,7 +704,7 @@ p { font-size: 1.02rem; }
 }
 .js .treveal:not(.is-marked) .treveal__accent { background-size: 0% 0.42em; }
 @media (prefers-reduced-motion: no-preference) {
-  .js .treveal__accent { transition: background-size 460ms var(--u-ease-out) 120ms; }
+  .js .treveal__accent { transition: background-size 400ms var(--u-ease-out) 120ms; }
 }
 
 /* ── Flexible accordion of real screenshots ──────────────────────────────── */
@@ -741,7 +743,7 @@ p { font-size: 1.02rem; }
   .flexacc--wide { height: 42rem; }
   .flexacc__item {
     display: flex; flex: 0 0 4.75rem;
-    transition: flex-grow 420ms var(--u-ease-out), flex-basis 420ms var(--u-ease-out), transform var(--u-dur-hover) var(--u-ease), box-shadow var(--u-dur-hover) var(--u-ease), border-color var(--u-dur-hover) var(--u-ease);
+    transition: flex-grow var(--dur-standard) var(--u-ease-out), flex-basis var(--dur-standard) var(--u-ease-out), transform var(--u-dur-hover) var(--u-ease), box-shadow var(--u-dur-hover) var(--u-ease), border-color var(--u-dur-hover) var(--u-ease);
   }
   .flexacc__item.is-open { flex: 1 1 0; }
   .flexacc__head { flex: none; }

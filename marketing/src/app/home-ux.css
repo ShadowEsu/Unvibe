@@ -1,0 +1,53 @@
+/* ── Download card (BetaInstall; Design W10, W11, W13): one filled button, the file in words, the other
+   downloads as one quiet row, the honest first-open line. Uses the site's own outline-and-offset look. ── */
+.dl-card__meta { margin: 0.1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.5; }
+.dl-card__others { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-top: 0.5rem; }
+.dl-card__other {
+  display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0 1rem;
+  border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--u-card); color: var(--u-text);
+  box-shadow: 0 3px 0 var(--v-ink); font: 600 0.95rem var(--font-sans); letter-spacing: -0.01em;
+  text-decoration: none; cursor: pointer; transition: transform 160ms var(--v-press), box-shadow 160ms var(--v-press);
+}
+.dl-card__other:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--v-ink); }
+.dl-card__other:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-ink); }
+.dl-card__other:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.dl-card__other svg { flex-shrink: 0; }
+.dl-card__honest { margin: 0.4rem auto 0; max-width: 46rem; color: var(--u-text); font-size: 0.98rem; line-height: 1.5; }
+/* Standalone links in the card get a 32 px target (W21). */
+.dl-card__meta > a, .dl-card__honest > a, .dl-card .paper-beta__update > a { display: inline-block; padding-block: 6px; line-height: 20px; }
+.dl-card__steps { display: grid; gap: 0.45rem; margin: 0; padding-left: 1.4rem; text-align: left; color: var(--u-text); line-height: 1.5; }
+@media (max-width: 520px) {
+  .dl-card__others { flex-direction: column; align-items: stretch; }
+  .dl-card__other { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-card__other { transition: none; }
+}
+
+/* ── What leaves your computer (WhatLeaves; Design W4): two lists side by side, one line under them. ── */
+.leaves { display: grid; gap: clamp(1.25rem, 3vw, 2rem); }
+@media (min-width: 760px) { .leaves { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.leaves__col { display: grid; align-content: start; gap: 0.9rem; padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); }
+.leaves__col h3 { margin: 0; font: 800 clamp(1.15rem, 1.8vw, 1.35rem)/1.2 var(--font-display); letter-spacing: -0.02em; }
+.leaves__list { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.leaves__list li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 0.65rem; align-items: start; line-height: 1.45; }
+.leaves__list svg { margin-top: 0.15rem; }
+.leaves__who { margin: 0; padding-top: 0.8rem; border-top: 1px solid var(--u-line); color: var(--u-text-2); line-height: 1.45; }
+.leaves__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); line-height: 1.5; text-align: center; }
+.leaves__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+
+/* ── Home price strip (HomePricing; Design W5): Free and Pro side by side, no button on Pro. ── */
+.plans-strip { display: grid; gap: clamp(1.25rem, 3vw, 2rem); }
+@media (min-width: 760px) { .plans-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.plans-strip__card { display: grid; align-content: start; gap: 0.6rem; padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1.5px solid var(--v-ink); border-radius: 20px; background: var(--u-card); box-shadow: 4px 4px 0 var(--v-ink); color: var(--u-text); text-align: left; }
+.plans-strip__card > * { margin: 0; }
+.plans-strip__card h3 { font: 800 clamp(1.3rem, 2vw, 1.6rem)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.plans-strip__tag { justify-self: start; padding: 0.15rem 0.7rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--v-lime); color: #141414; font: 700 0.85rem var(--font-sans); }
+.plans-strip__card--pro .plans-strip__tag { background: var(--u-card); color: var(--u-text); }
+.plans-strip__price { font: 800 clamp(2rem, 3.4vw, 2.6rem)/1 var(--font-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.plans-strip__price small { font: 500 1rem var(--font-sans); letter-spacing: 0; color: var(--u-text-2); }
+.plans-strip__note { color: var(--u-text-2); line-height: 1.45; }
+.plans-strip__list { display: grid; gap: 0.45rem; padding: 0 !important; list-style: none; line-height: 1.45; }
+.plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
+.plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
+.plans-strip__paused { margin: 0.6rem 0 0; color: var(--u-text); font-weight: 600; text-align: center; }
