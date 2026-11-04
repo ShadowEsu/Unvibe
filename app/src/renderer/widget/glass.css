@@ -1,0 +1,58 @@
+/* BRANCH-ONLY (app/glass, ledger 436). The explain panel's Liquid Glass (Design spec 4 Nov, "Unvibe app").
+   Loads before widget.css (it ships in widget.glass.css with Glisse's CSS), so rules carry
+   :root[data-glass] on top of widget.css's own selectors, or !important where widget.css sets the
+   same property on hover. The card carries data-theme (the panel's light or dark), which Glisse
+   and the glass layers read. The explanation body, quiz rail, code and the consent form stay solid. */
+
+:root[data-glass] { --surface-solid: #fbfaf6; --border-strong: #141414; }
+:root[data-glass] .card.card {
+  --surface-solid: var(--p-bg);
+  --glass-paper: var(--p-bg);
+  --border-strong: var(--p-ink);
+  --glass-ring: var(--p-focus);
+  --lg-ring: var(--p-focus);
+  --lg-fill: var(--p-lime);
+  --lg-on: #1f8a4c;
+}
+
+/* ── L1: header, rail, depth picker, action row ─────────────────────────── */
+/* Glass buttons (Saved, theme, collapse, close, Stop, Explain differently, Test me): glass fill and
+   panel ink; widget.css keeps their size and radius. Understand stays the filled lime primary. */
+:root[data-glass] .card .lg-button:not([data-variant]):not([data-destructive]) {
+  background-color: var(--lg-glass) !important;
+  background-image: var(--lg-rim, none) !important;
+  color: var(--p-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--p-line) !important;
+}
+:root[data-glass] .card .lg-button:not([data-variant]):not([data-destructive]):is(:hover:not(:disabled), :active, [data-pressed]) {
+  background-color: var(--lg-glass-active) !important;
+}
+:root[data-glass] .card .lg-button[data-variant="filled"] { color: #141413; }
+:root[data-glass] .card :is(.lg-switch, .lg-tab, .lg-menu-item, .lg-input-clear):not(:disabled):active { transform: none; }
+:root[data-glass] .card .lg-input input:focus-visible { outline: none; }
+
+/* Depth: five segments that fit the 420px minimum panel; the card is the "widget" container. */
+:root[data-glass] .card .levels__seg {
+  --lg-tab-height: 28px;
+  --lg-tab-width: clamp(60px, calc((100cqi - 170px) / 5), 96px);
+  flex: none;
+  color: var(--p-ink);
+  font: 600 11.5px var(--font-sans);
+}
+:root[data-glass] .card .levels__seg .lg-tab-text { white-space: nowrap; }
+:root[data-glass] .card .levels__seg[aria-disabled="true"] { opacity: 0.55; }
+:root[data-glass] .card .lvl-seg { display: inline-flex; align-items: center; gap: 4px; }
+:root[data-glass] .card .lvl-seg--locked { color: var(--p-muted); }
+
+/* ── L2: the panel shell is glass (12px, fill 0.82); reading stays on a solid plate ─────────── */
+:root[data-glass="full"] .card.card:has(> .glass-layer) {
+  box-shadow: 0 24px 60px -18px rgb(0 0 0 / 0.5);
+}
+:root[data-glass="full"] .card.card:has(> .glass-layer) :is(.stage > .body, .quiz-rail, .state, .pmf-card) {
+  background-color: color-mix(in srgb, var(--p-bg) 96%, transparent);
+}
+/* The follow-up field is a Glisse Input at L2; its sandbox stops drawing a second field around it. */
+:root[data-glass="full"] .card .ask-sandbox:has(.glass-field) { border-color: transparent; background: transparent; }
+:root[data-glass="full"] .card .askrow .glass-field { flex: 1 1 auto; max-width: none; height: 34px; padding: 0 12px; }
+/* Consent and legal text is never on glass, at either level: its state card is fully opaque. */
+:root[data-glass] .card.card .state:has(.consent-form) { background-color: var(--p-bg) !important; }

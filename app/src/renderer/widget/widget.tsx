@@ -20,6 +20,12 @@ import { CONSENT_PROVIDERS, type ConsentProvider } from '../../core/consent';
 import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
 import '../shared/tokens.css';
+// Branch-only (app/glass): Glisse and the glass layers. The bundler emits this CSS as widget.glass.css.
+import 'glisse/styles.css';
+import '../shared/glass.css';
+import './glass.css';
+import { Button, SegmentedControl } from 'glisse';
+import { GlassField, GlassLayer, loadGlassLevel } from '../shared/glass';
 
 /**
  * `aiConsent`: the first-send agreement (sending code to the provider, Terms, 18+);
@@ -937,10 +943,14 @@ function Widget() {
     });
   };
 
+  const expertNeedsPro = usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
+
   return (
-    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe" data-theme={panelTheme}>
+      <GlassLayer from="full" kind="shell" />
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
+        <GlassLayer kind="bar" />
         <span className="head__mark head__mark--vibe" aria-hidden="true">
           <Buddy mood={vibeMood} size={26} label="Vibe" />
         </span>
@@ -955,29 +965,30 @@ function Widget() {
               {usage.remaining} left
             </span>
           )}
-          <button
+          <Button
             className="head__theme"
             aria-label={panelTheme === 'dark' ? 'Switch panel to light mode' : 'Switch panel to dark mode'}
             title={panelTheme === 'dark' ? 'Light mode' : 'Dark mode'}
             onClick={() => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
           >
             {panelTheme === 'dark' ? '☀' : '☾'}
-          </button>
-          <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
+          </Button>
+          <Button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
             Saved
-          </button>
-          <button className="head__glyph" aria-label={collapsed ? 'Expand panel' : 'Collapse panel'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
+          </Button>
+          <Button className="head__glyph" aria-label={collapsed ? 'Expand panel' : 'Collapse panel'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
             <span aria-hidden="true">{collapsed ? '▾' : '▴'}</span>
-          </button>
-          <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
+          </Button>
+          <Button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
             <span aria-hidden="true">✕</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {!collapsed ? (
         <div className="widget-workspace">
           <aside className="widget-tools" aria-label="Review tools">
+            <GlassLayer kind="bar" />
             <button className={`tool--explain${activeTool === 'explain' ? ' on' : ''}`} type="button" title="Explanation" onClick={() => {
               setActiveTool('explain');
               document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1057,34 +1068,38 @@ function Widget() {
       {!collapsed && !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
         <div className="levels" role="group" aria-label="Explanation depth">
           <span className="levels__label">Depth</span>
-          {LEVELS.map((l) => {
-            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
-            return (
-              <button
-                key={l.id}
-                data-level={l.id}
-                className={`lvl${l.id === active.level ? ' on' : ''}${expertLocked ? ' lvl--locked' : ''}`}
-                disabled={outOfExplanations || expertLocked}
-                title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
-                aria-label={expertLocked ? `${l.label}, included with Unvibe Pro` : undefined}
-                onClick={() => {
-                  if (expertLocked) {
-                    setProGate(true);
-                    setTabs((prev) => patchTab(prev, activeRef.current, {
-                      phase: 'error',
-                      error: 'Expert explanations are included with Unvibe Pro. Pro connects explanations across files and project history so you can understand more than the selected code.',
-                    }));
-                    return;
-                  }
-                  setProGate(false);
-                  pick(l.id);
-                }}
-              >
-                {l.label}
-                {expertLocked ? <span className="lvl__pro" aria-hidden="true">Pro</span> : null}
-              </button>
-            );
-          })}
+          {/* Glisse SegmentedControl (L1). Expert stays unpickable without Pro, as the disabled button
+              was; while out of explanations the whole control is inert. */}
+          <SegmentedControl
+            className="levels__seg"
+            aria-label="Depth"
+            aria-disabled={outOfExplanations || undefined}
+            inert={outOfExplanations}
+            value={active.level}
+            items={LEVELS.map((l) => {
+              const expertLocked = l.id === 'expert' && expertNeedsPro;
+              return {
+                value: l.id,
+                label: (
+                  <span
+                    className={`lvl-seg${expertLocked ? ' lvl-seg--locked' : ''}`}
+                    data-level={l.id}
+                    title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
+                    aria-label={expertLocked ? `${l.label}, included with Unvibe Pro` : undefined}
+                  >
+                    {l.label}
+                    {expertLocked ? <span className="lvl__pro" aria-hidden="true">Pro</span> : null}
+                  </span>
+                ),
+              };
+            })}
+            onValueChange={(next) => {
+              const level = next as ExplanationLevel;
+              if (level === 'expert' && expertNeedsPro) return;
+              setProGate(false);
+              pick(level);
+            }}
+          />
         </div>
       )}
 
@@ -1429,12 +1444,14 @@ function Widget() {
           {(phase === 'streaming' || phase === 'done') && (
             <div className="foot">
               <div className="chips">
+                {/* Glisse buttons (L1): Understand is the filled primary, the others are glass. */}
                 {phase === 'streaming' && (
-                  <button className="chip" onClick={() => window.unvibe.cancel()}>
+                  <Button className="chip" onClick={() => window.unvibe.cancel()}>
                     Stop generating
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
+                  variant="filled"
                   className="chip chip--ok"
                   disabled={stillTyping}
                   onClick={() => {
@@ -1444,21 +1461,21 @@ function Widget() {
                   }}
                 >
                   Understand ✓
-                </button>
-                <button
+                </Button>
+                <Button
                   className="chip chip--diff"
                   disabled={stillTyping}
                   onClick={() => request({ variant: 'different' })}
                 >
                   Explain differently
-                </button>
-                <button
+                </Button>
+                <Button
                   className="chip chip--test"
                   disabled={stillTyping}
                   onClick={() => openQuiz()}
                 >
                   Test me
-                </button>
+                </Button>
 
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
@@ -1521,15 +1538,13 @@ function Widget() {
               <div className="ask-sandbox">
                 <div className="ask-sandbox__label">Ask a follow-up</div>
                 <div className="askrow">
-                  <input
+                  <GlassField
                     placeholder="Why does this exist? What breaks if I remove it?"
                     value={active.ask}
                     maxLength={4000}
                     disabled={stillTyping}
                     aria-label="Follow-up question"
-                    onChange={(e) =>
-                      setTabs((prev) => patchTab(prev, activeTabId, { ask: e.target.value }))
-                    }
+                    onValueChange={(ask) => setTabs((prev) => patchTab(prev, activeTabId, { ask }))}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && active.ask.trim()) {
                         request({ question: active.ask.trim() });
@@ -1580,4 +1595,5 @@ function Widget() {
   );
 }
 
+loadGlassLevel();
 createRoot(document.getElementById('root')!).render(<Widget />);

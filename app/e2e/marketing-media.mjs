@@ -132,7 +132,7 @@ const explained = firstRun && await step('first explanation', async () => {
 
 if (explained) {
   await step('beginner depth', async () => {
-    await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
+    await (await windowWith('widget.html')).locator('.levels__seg .lg-tab:has([data-level="beginner"])').click();
     await sleep(1500);
     await shot(await settledPanel(), 'panel-beginner');
   });
