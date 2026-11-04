@@ -79,7 +79,7 @@ export const milestones: Milestone[] = [
   {
     date: "25 OCT 2026",
     category: "PRODUCT",
-    title: "Your own code in the first minute, and typed questions filtered for secrets",
+    title: "Your own code in the first minute, and typed questions checked for secrets",
     summary: "The first run now ends on your own code: select a few lines in any app and press the shortcut. On a Mac, Accessibility is asked the first time you press it, and after Unvibe explains your own code once, it asks whether to open when you log in. While payments are closed, the upgrade offer says Pro isn't open yet instead of showing prices. The setup sample no longer counts as your own activity on the computer where you ran it. Follow-up questions, lesson questions and Chat messages go through the same secret filter as selected code. Signed-in friends can enter your gift code on their Share page, and you each get a month of Pro. The app now sends setup progress tied to a random install ID (never your code or email), with a switch in Settings to turn it off.",
     figure: "v0.1.44",
   },
