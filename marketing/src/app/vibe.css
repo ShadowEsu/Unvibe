@@ -253,9 +253,6 @@ p { font-size: 17px; }
 .inv-section { padding: clamp(3.5rem, 7vw, 6rem) 0 0; }
 .inv-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; margin-top: 1.6rem; }
 .inv-card { padding: 1.8rem 1.7rem; }
-.inv-card span { display: inline-grid; place-items: center; width: 2.3rem; height: 2.3rem; border: 1.5px solid var(--v-ink); border-radius: 999px; background: var(--v-lime); font: 800 0.95rem var(--font-sans); }
-.inv-cards .inv-card:nth-child(2) span { background: var(--v-sky); }
-.inv-cards .inv-card:nth-child(3) span { background: var(--v-sun); }
 .inv-card p { margin: 0; color: var(--u-text-2); font-size: 1.05rem; }
 .inv-table { margin-top: 1.6rem; overflow: hidden; padding: 0 !important; }
 .inv-row { display: grid; grid-template-columns: 1.3fr 0.7fr 1.6fr 0.6fr; gap: 1rem; align-items: center; padding: 1rem 1.4rem; border-top: 1.5px solid var(--u-line); font-size: 1.02rem; }

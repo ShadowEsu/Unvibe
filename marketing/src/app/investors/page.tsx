@@ -83,9 +83,9 @@ export default function InvestorsPage() {
         <p className="inv-eyebrow">The thesis</p>
         <h2>Shipping is solved. <em>Understanding is not.</em></h2>
         <div className="inv-cards">
-          <article className="inv-card"><span>01</span><h3>Problem</h3><p>Developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment the code changes.</p></article>
-          <article className="inv-card"><span>02</span><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
-          <article className="inv-card"><span>03</span><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
+          <article className="inv-card"><h3>Problem</h3><p>Developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment the code changes.</p></article>
+          <article className="inv-card"><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
+          <article className="inv-card"><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
         </div>
       </section>
 

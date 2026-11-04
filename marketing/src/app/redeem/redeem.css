@@ -212,6 +212,7 @@
   margin: -0.35rem 0 0.75rem;
 }
 
+/* avoid-ai-design-ignore: K4 the red stripe marks a real error message (role="alert" or a failed redeem), Design detect pass 4 Nov */
 .redeem-note--error,
 .redeem-result--error {
   padding-left: 0.6rem;
@@ -226,6 +227,7 @@
   line-height: 1.5;
 }
 
+/* avoid-ai-design-ignore: K4 the green stripe marks a real success result (the code was redeemed), Design detect pass 4 Nov */
 .redeem-result--ok {
   padding-left: 0.6rem;
   border-left: 3px solid #1b6e3a;

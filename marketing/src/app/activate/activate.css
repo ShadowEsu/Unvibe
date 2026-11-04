@@ -59,6 +59,7 @@
   -webkit-backdrop-filter: var(--glass-blur);
 }
 
+/* avoid-ai-design-ignore: K4 the amber stripe marks a real warning (approving a code someone else sent hands over the account), Design detect pass 4 Nov */
 .activate-check {
   margin: 0 0 1.4rem;
   padding: 0.9rem 1rem;
@@ -275,6 +276,7 @@
   line-height: 1.45;
 }
 
+/* avoid-ai-design-ignore: K4 the red stripe marks a real error message (role="alert"), Design detect pass 4 Nov */
 .activate-note--error {
   padding-left: 0.6rem;
   border-left: 3px solid #b3261e;
