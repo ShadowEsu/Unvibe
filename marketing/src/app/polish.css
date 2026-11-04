@@ -380,12 +380,12 @@ html[data-performance="lite"] .paper-hero > img {
   background: url("/brand/vibe.svg") center / contain no-repeat;
 }
 
+/* The selected text, quoted: a hairline left rule in ink, no tint. --line holds RGB channels, hence rgb(). */
 .sel-card blockquote {
   margin: 0.7rem 0 0.5rem;
   padding: 0.5rem 0.7rem;
-  border-left: 2px solid var(--brand);
-  border-radius: 0 8px 8px 0;
-  background: rgb(139 92 246 / 0.08);
+  border-left: 1px solid rgb(var(--line));
+  color: var(--v-ink);
   font-family: var(--font-sans);
   font-size: 0.95rem;
   font-style: normal;

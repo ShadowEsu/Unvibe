@@ -327,15 +327,15 @@
   color: #fff;
 }
 
-/* ── /activate: solid card over the blurred photo ───────────────────────── */
+/* ── /activate: solid card on the flat sky ground (account and consent: no glass) ── */
 
 .activate-root .activate-card {
   --ink: var(--v-ink);
   --ink-muted: var(--u-text-2);
-  border: 1.5px solid var(--v-ink);
+  border: 1px solid var(--u-line);
   border-radius: var(--v-radius);
-  background: var(--v-card);
-  box-shadow: var(--v-shadow);
+  background: #fffdf6;
+  box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   color: var(--v-ink);
