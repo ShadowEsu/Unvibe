@@ -59,11 +59,31 @@ html[data-glass="b"] {
 }
 
 /* Two classes: Glisse's .lg-glass sets position: relative, and the production build can put Glisse's sheet after
-   this file in the same CSS chunk, which made every plate a 0 px box. The plate stays absolute whatever the order. */
+   this file in the same CSS chunk, which made every plate a 0 px box. The plate stays absolute whatever the order.
+   No negative z-index: that needed an isolated host, and WebKit makes an isolated element a backdrop root
+   (glass-spec §3), so the plate would blur only its own card. The plate is its host's first child and paints
+   first; the host's other children are positioned (next rule), so they paint over it in source order. */
 .glass-plate.lg-glass {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: auto;
+}
+
+/* Zero specificity: a child that already sets its own position keeps it. */
+:where(:has(> .glass-plate.lg-glass)) > :where(:not(.glass-plate)) {
+  position: relative;
+}
+
+/* Nothing that holds glass isolates (WebKit backdrop root, see above); this covers the cards, sections and page
+   wrappers that isolate in other sheets. */
+:has(.lg-glass) {
+  isolation: auto !important;
+}
+
+/* The cursor spotlight sat at z-index -1 inside an isolated card; without isolation it would fall behind the page.
+   On a plated card the plate's top highlight is the light, so the spotlight is off. */
+:is(.paper-glass, .resources-card, .paper-quotes blockquote, .marketing-plan-card):has(> .glass-plate.lg-glass)::after {
+  display: none;
 }
 
 /* ── Sheets: clear on the home page, solid where they hold consent or long reading ── */
@@ -156,7 +176,6 @@ html[data-glass="b"] {
 .vhero__still,
 .paper-beta {
   position: relative;
-  isolation: isolate;
 }
 
 .backing-panel,
