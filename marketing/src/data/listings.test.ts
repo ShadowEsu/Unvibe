@@ -2,7 +2,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import React, { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ListingBadges } from "@/components/paper/ListingBadges";
 import { listingBadges, listingLinks, pendingBacklinks } from "./listings";
+
+Object.assign(globalThis, { React });
 
 /** Every directory the footer may link to. A new one is added here on purpose, never by accident (Security R-3). */
 const ALLOWED_LISTING_ORIGINS = [
@@ -55,5 +60,22 @@ describe("footer listings", () => {
     for (const file of readdirSync(dir)) {
       assert.ok(statSync(path.join(dir, file)).size < BADGE_LIMIT_BYTES, `public/badges/${file} is too big`);
     }
+  });
+
+  it("renders every listing and pending link with its href, a new tab and rel=noopener noreferrer, all followed", () => {
+    const markup = renderToStaticMarkup(createElement(ListingBadges));
+    for (const { name, href } of [...listingLinks, ...pendingBacklinks]) {
+      assert.ok(markup.includes(`<a href="${href}" target="_blank" rel="noopener noreferrer">${name}</a>`), name);
+    }
+    for (const { name, href } of listingBadges) {
+      assert.ok(markup.includes(`<a href="${href}" target="_blank" rel="noopener noreferrer" title=`), name);
+    }
+    // Startup Fame and Fazier require a followed link; none of the listings is paid, so none is sponsored.
+    assert.doesNotMatch(markup, /\b(nofollow|sponsored|ugc)\b/);
+  });
+
+  it("keeps the removed listings out: F6S (Security MUST-U1) and the personal DEV article (Security U2)", () => {
+    const markup = renderToStaticMarkup(createElement(ListingBadges));
+    assert.doesNotMatch(markup, /f6s\.com|dev\.to\//);
   });
 });
