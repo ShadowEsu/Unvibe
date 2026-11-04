@@ -78,6 +78,46 @@ test('assets outside this repository\'s release downloads are dropped, including
   assert.deepEqual(release.assets.map((a) => a.name), ['Unvibe-0.1.50-arm64.dmg']);
 });
 
+test('assets are bound to their own release: another tag\'s folder, a subfolder or a query string is dropped', async () => {
+  upstream(() => Response.json([{
+    ...githubRelease,
+    assets: [
+      { name: 'Unvibe-0.1.50-arm64.dmg', browser_download_url: `${DOWNLOAD}/Unvibe-0.1.50-arm64.dmg` },
+      { name: 'Unvibe-0.1.40-win-x64-setup.exe', browser_download_url: 'https://github.com/ShadowEsu/Unvibe/releases/download/app-v0.1.40/Unvibe-0.1.40-win-x64-setup.exe' },
+      { name: 'SHA256SUMS-windows.txt', browser_download_url: 'https://github.com/ShadowEsu/Unvibe/releases/download/app-v0.1.40/SHA256SUMS-windows.txt' },
+      { name: 'nested.dmg', browser_download_url: `${DOWNLOAD}/sub/nested.dmg` },
+      { name: 'query.dmg', browser_download_url: `${DOWNLOAD}/query.dmg?x=1` },
+      { name: 'tag-page.dmg', browser_download_url: 'https://github.com/ShadowEsu/Unvibe/releases/tag/app-v0.1.50/tag-page.dmg' },
+    ],
+  }]));
+  const res = await GET();
+  assert.equal(res.status, 200);
+  const [release] = (await res.json()) as Array<{ assets: Array<{ name: string }> }>;
+  assert.deepEqual(release.assets.map((a) => a.name), ['Unvibe-0.1.50-arm64.dmg']);
+});
+
+test('a release whose page is not its own tag\'s page on this repository is dropped; an escaped tag still matches', async () => {
+  const escaped = {
+    ...githubRelease,
+    tag_name: 'v1.2.3+mac',
+    html_url: 'https://github.com/ShadowEsu/Unvibe/releases/tag/v1.2.3%2Bmac',
+    assets: [{ name: 'Unvibe-1.2.3-mac-arm64.dmg', browser_download_url: 'https://github.com/ShadowEsu/Unvibe/releases/download/v1.2.3%2Bmac/Unvibe-1.2.3-mac-arm64.dmg' }],
+  };
+  upstream(() => Response.json([
+    { ...githubRelease, tag_name: 'v9.9.9', html_url: 'https://github.com/ShadowEsu/Unvibe/releases/tag/app-v0.1.50' },
+    { ...githubRelease, html_url: 'https://evil.example/ShadowEsu/Unvibe/releases/tag/app-v0.1.50' },
+    { ...githubRelease, html_url: 'https://github.com/someone-else/Unvibe/releases/tag/app-v0.1.50' },
+    { ...githubRelease, html_url: 'https://github.com/ShadowEsu/Unvibe/releases/tag/app-v0.1.50/extra' },
+    escaped,
+  ]));
+  const res = await GET();
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Array<{ tag_name: string; html_url: string; assets: Array<{ browser_download_url: string }> }>;
+  assert.deepEqual(body.map((r) => r.tag_name), ['v1.2.3+mac']);
+  assert.equal(body[0].html_url, escaped.html_url);
+  assert.deepEqual(body[0].assets.map((a) => a.browser_download_url), [escaped.assets[0].browser_download_url]);
+});
+
 for (const [label, respond] of [
   ['a rate-limited GitHub (403)', () => Response.json({ message: 'API rate limit exceeded' }, { status: 403 })],
   ['a GitHub server error (500)', () => new Response('boom', { status: 500 })],
