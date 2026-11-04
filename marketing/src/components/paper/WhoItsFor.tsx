@@ -1,3 +1,5 @@
+import { Arrive } from "@/components/paper/Arrive";
+
 /** The three audiences, shared by the homepage band and /about so the copy lives in one place. */
 const AUDIENCES = [
   {
@@ -14,15 +16,16 @@ const AUDIENCES = [
   },
 ] as const;
 
+/** The cards arrive one after another the first time they scroll into view (see Arrive). */
 export function WhoItsForCards() {
   return (
-    <div className="inv-cards">
+    <Arrive className="inv-cards">
       {AUDIENCES.map((audience) => (
         <article key={audience.title} className="inv-card">
           <h3>{audience.title}</h3>
           <p>{audience.body}</p>
         </article>
       ))}
-    </div>
+    </Arrive>
   );
 }

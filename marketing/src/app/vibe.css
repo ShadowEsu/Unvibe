@@ -382,8 +382,6 @@ p { font-size: 1.02rem; }
 .try__answer code { padding: 0.05rem 0.35rem; border-radius: 6px; background: #f1eee6; font: 0.9em var(--font-mono); }
 .try__after { margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1.5px dashed #e4dfd3; }
 .try__after p { font-weight: 700; }
-@keyframes vWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes vShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (max-width: 860px) { .try { grid-template-columns: minmax(0, 1fr); } .try__panel { border-left: 0 !important; border-top: 1px solid var(--u-line); } }
 
 /* ── Invite ────────────────────────────────────────────────────────────────── */
@@ -454,7 +452,7 @@ p { font-size: 1.02rem; }
 .remind__check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--v-ink); }
 .remind .remind__fine { margin: 0.5rem 0 0; font-size: 0.85rem; }
 .remind__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .live__dot, .try__thinking > i, .fb-overlay, .fb-dialog, .remind { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .live__dot, .fb-overlay, .fb-dialog, .remind { animation: none; } }
 @media (min-width: 821px) { .remind { bottom: 6.6rem; } }
 @media (min-width: 700px) { .remind { left: 3.4rem; } }
 

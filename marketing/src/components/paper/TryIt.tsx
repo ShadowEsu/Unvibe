@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
@@ -8,6 +8,7 @@ import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { detectVisitorDevice } from "@/lib/shortcuts";
+import { SKELETON_AFTER_MS, tryWaitView } from "@/lib/motionMoments";
 import { answerTimeLine } from "@/lib/tryTiming";
 import { TRY_CONSENT_KEY, TRY_CONSENT_VERSION, storedTryConsent, type TryConsentTicks } from "@/lib/tryConsent";
 import type { DownloadSurface } from "@/lib/downloadTracking";
@@ -30,7 +31,6 @@ const SAMPLE = `function debounce(fn, ms) {
   };
 }`;
 
-const NOTES = ["reading your code…", "checking what each line does…", "writing it up for you…"];
 const FALLBACK_ERROR = "Vibe could not answer just now.";
 /** While the outage switch is on (see aiMaintenance.ts) the box says so and sends nothing. */
 const AI_MAINTENANCE_NOTE = "AI features are paused for maintenance. Back soon.";
@@ -82,7 +82,7 @@ interface TryItProps {
 
 /**
  * Paste code, pick a depth, get a real explanation from Vibe. Laid out like the desktop
- * panel: depth buttons along the top, the explanation streaming in below. No account.
+ * panel: depth buttons along the top, the explanation below, shown whole the moment it arrives. No account.
  * With no props it is the home page's box; /explain pages pass their own sample and surfaces.
  */
 export function TryIt({
@@ -96,16 +96,15 @@ export function TryIt({
   const [level, setLevel] = useState<Level>("intermediate");
   const [state, setState] = useState<"idle" | "thinking" | "done" | "error">("idle");
   const [answer, setAnswer] = useState("");
-  const [shown, setShown] = useState("");
   const [error, setError] = useState("");
-  const [note, setNote] = useState(0);
+  // How long this request has been out, in the only step that matters: past the skeleton threshold or not.
+  const [waitedMs, setWaitedMs] = useState(0);
   const [phone, setPhone] = useState(false);
   // Request start to the whole answer received, for the last explanation that succeeded.
   const [tookMs, setTookMs] = useState(0);
   // Both boxes start unticked; a tick of the current consent version is remembered in localStorage.
   const [ticks, setTicks] = useState<TryConsentTicks>({ aiSend: false, age18: false });
   const consented = ticks.aiSend && ticks.age18;
-  const timer = useRef<number | null>(null);
   // Group sessions: opened as unvibe.site/?room, Try it shows a room code field. The host says the code
   // out loud, so it is never in a page address, a referrer or analytics.
   const [roomField, setRoomField] = useState(false);
@@ -136,29 +135,16 @@ export function TryIt({
     }
   };
 
+  // The shimmer bars join the step line only once the wait passes SKELETON_AFTER_MS, so a fast answer
+  // never flashes them. Nothing here delays the answer: it shows the moment the text arrives.
   useEffect(() => {
-    if (state !== "thinking") return;
-    setNote(0);
-    const id = window.setInterval(() => setNote((n) => Math.min(NOTES.length - 1, n + 1)), 1300);
-    return () => window.clearInterval(id);
-  }, [state]);
-
-  // Reveal the answer a few characters at a time so it feels like Vibe is writing.
-  useEffect(() => {
-    if (!answer) { setShown(""); return; }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setShown(answer);
+    if (state !== "thinking") {
+      setWaitedMs(0);
       return;
     }
-    let i = 0;
-    const step = () => {
-      i = Math.min(answer.length, i + 6);
-      setShown(answer.slice(0, i));
-      if (i < answer.length) timer.current = window.setTimeout(step, 14);
-    };
-    step();
-    return () => { if (timer.current) window.clearTimeout(timer.current); };
-  }, [answer]);
+    const id = window.setTimeout(() => setWaitedMs(SKELETON_AFTER_MS), SKELETON_AFTER_MS);
+    return () => window.clearTimeout(id);
+  }, [state]);
 
   const explain = async (depth: Level = level) => {
     // Nothing is sent to Anthropic until both boxes are ticked, and nothing at all while paused.
@@ -210,9 +196,9 @@ export function TryIt({
   };
 
   const lines = code ? code.split("\n").length : 0;
-  const writing = state === "done" && shown.length < answer.length;
+  const wait = tryWaitView(state, waitedMs);
   const status =
-    state === "thinking" ? "Vibe is thinking." : state === "error" ? error : state === "done" && !writing ? "Explanation ready." : "";
+    state === "thinking" ? "Loading explanation" : state === "error" ? error : state === "done" ? "Explanation ready." : "";
   const depthLabel = LEVELS.find(([id]) => id === level)?.[1] ?? "";
   const timeLine = answerTimeLine(tookMs);
 
@@ -296,7 +282,7 @@ export function TryIt({
           ))}
         </div>
         <p className="sr-only" role="status">{status}</p>
-        <div className="try__body">
+        <div className="try__body" aria-busy={wait.busy || undefined}>
           {state === "idle" ? (
             <div className="try__state">
               <Vibe size={72} />
@@ -304,10 +290,10 @@ export function TryIt({
                 {AI_MAINTENANCE ? AI_MAINTENANCE_NOTE : <>Press <b>Explain it</b> for the sample, or paste your own code first.</>}
               </p>
             </div>
-          ) : state === "thinking" ? (
-            <div className="try__state try__state--thinking" aria-hidden="true">
+          ) : wait.step ? (
+            <div className={wait.skeleton ? "try__state try__state--thinking is-slow" : "try__state try__state--thinking"} aria-hidden="true">
               <Vibe size={60} follow={false} />
-              <p key={note}>{NOTES[note]}</p>
+              <p>{wait.step}</p>
               <i /><i /><i />
             </div>
           ) : state === "error" ? (
@@ -327,14 +313,12 @@ export function TryIt({
             </div>
           ) : (
             <div className="try__answer">
-              <div dangerouslySetInnerHTML={{ __html: render(shown) }} />
-              {writing ? null : (
-                <div className="try__after">
-                  {timeLine ? <p className="try__took">{timeLine}</p> : null}
-                  <GetUnvibe surface={answerSurface} />
-                  <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
-                </div>
-              )}
+              <div dangerouslySetInnerHTML={{ __html: render(answer) }} />
+              <div className="try__after">
+                {timeLine ? <p className="try__took">{timeLine}</p> : null}
+                <GetUnvibe surface={answerSurface} />
+                <p className="try__again">Pick another depth above to explain it again. The app does this beside your editor, free.</p>
+              </div>
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight, Mail } from "lucide-react";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { ProgramList } from "@/components/paper/BackingStrip";
+import { CountUp } from "@/components/paper/CountUp";
 import { Vibe } from "@/components/paper/Vibe";
 import {
   compensationCashUsd,
@@ -75,7 +76,7 @@ export default function InvestorsPage() {
       <section className="inv-stats" aria-label="Unvibe at a glance">
         <div className="inv-stat inv-stat--lime"><b>{total}</b><span>{compensationTotalPhrase()}</span></div>
         <div className="inv-stat inv-stat--sky"><b>{programs}</b><span>startup programs we&apos;re in</span></div>
-        <div className="inv-stat inv-stat--sun"><b>{releases}+</b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
+        <div className="inv-stat inv-stat--sun"><b><CountUp name="investors-releases" value={releases} suffix="+" /></b><span>releases shipped, latest {BETA_INSTALL_VERSION}</span></div>
         <div className="inv-stat inv-stat--lilac"><b>Mac + Windows</b><span>beta, free to download</span></div>
       </section>
 
