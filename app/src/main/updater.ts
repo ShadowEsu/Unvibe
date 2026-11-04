@@ -106,15 +106,36 @@ export function cleanupPortableUpdate(): void {
   if (portable) void rm(`${portable}.old`, { force: true }).catch(() => undefined);
 }
 
-export async function checkForUpdate(force = false): Promise<UpdateInfo> {
+type Release = { tag_name: string; draft: boolean; html_url: string; assets: Array<{ name: string; browser_download_url: string }> };
+
+/**
+ * Unvibe's cached copy of the GitHub release list (GET /api/v1/releases). GitHub allows 60
+ * unauthenticated requests an hour per IP, which a shared school or office network runs out of.
+ * The list only says which release is newest: every download still has to pass ASSET_HOST,
+ * verifyDownload and, on macOS, MAC_SIGNING_REQUIREMENT, exactly as with GitHub's own list.
+ */
+const RELEASE_FEED = 'https://api.unvibe.site/api/v1/releases';
+
+export async function checkForUpdate(force = false, fetchImpl: Fetch = networkFetch): Promise<UpdateInfo> {
   const current = app.getVersion();
   if (!force && cached && Date.now() - cached.at < 30 * 60_000) return cached.info;
-  const res = await networkFetch(`https://api.github.com/repos/${REPO}/releases?per_page=8`, {
-    headers: { Accept: 'application/vnd.github+json', 'User-Agent': `Unvibe/${current}` },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`Update check failed (${res.status}).`);
-  const releases = (await res.json()) as Array<{ tag_name: string; draft: boolean; html_url: string; assets: Array<{ name: string; browser_download_url: string }> }>;
+  let releases: Release[] | undefined;
+  // Any feed failure (offline, the 5 s timeout, an error status, a body that isn't a list) asks GitHub instead.
+  try {
+    const res = await fetchImpl(RELEASE_FEED, { headers: { Accept: 'application/json', 'User-Agent': `Unvibe/${current}` }, signal: AbortSignal.timeout(5000) });
+    const body: unknown = res.ok ? await res.json() : undefined;
+    if (Array.isArray(body)) releases = body as Release[];
+  } catch {
+    // `releases` stays unset, so GitHub is asked below.
+  }
+  if (!releases) {
+    const res = await fetchImpl(`https://api.github.com/repos/${REPO}/releases?per_page=8`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': `Unvibe/${current}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`Update check failed (${res.status}).`);
+    releases = (await res.json()) as Release[];
+  }
   for (const release of releases) {
     if (release.draft) continue;
     const name = pickAsset(release.assets.map((a) => a.name), process.platform, process.arch, Boolean(portableExecutable()));
