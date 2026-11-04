@@ -3,17 +3,14 @@ import Link from "next/link";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
 import { TryIt } from "@/components/paper/TryIt";
-import { InviteFriend } from "@/components/paper/InviteFriend";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { TypingFaq } from "@/components/paper/TypingFaq";
-import { DownloadCta } from "@/components/paper/DownloadCta";
-import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { HowItWorks } from "@/components/paper/HowItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
-import { WhoItsForCards } from "@/components/paper/WhoItsFor";
 import { WhatLeaves } from "@/components/paper/WhatLeaves";
 import { HomePricing } from "@/components/paper/HomePricing";
+import { Arrive } from "@/components/paper/Arrive";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -27,7 +24,7 @@ export const metadata: Metadata = pageMetadata({
   description: `Select code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor. Free, no API key.`,
 });
 
-const homeFaq = faqItems.filter((item) => ["what-is-it", "which-shortcut", "editors", "sent", "beta", "accuracy"].includes(item.id));
+const homeFaq = faqItems.filter((item) => ["which-shortcut", "editors", "sent", "accuracy"].includes(item.id));
 
 /** The language pages linked from the Try it section, so search engines reach them from the homepage. */
 const HOME_LANGUAGES = ["python", "javascript", "typescript", "sql", "bash"];
@@ -36,8 +33,10 @@ const homeLanguagePages = HOME_LANGUAGES.map((id) => explainPages.find((page) =>
 export const revalidate = 300;
 
 /**
- * One promise, then the real app recorded, how it works in real screenshots, try it,
- * install, trust, questions. Visitors decide in seconds and read a fraction of the words.
+ * One promise, the real app recorded, how it works, try it, what leaves, pricing, backing, questions,
+ * then the download. Each section is a tinted glass plate (Design 466) that rises in as it scrolls into
+ * view: the Arrive sits between the section and its plate, so the motion is on the plate itself and no
+ * ancestor of a plate is transformed (WebKit backdrop root).
  */
 export default function HomePage() {
   return (
@@ -47,95 +46,69 @@ export default function HomePage() {
 
       <AppTour />
 
-      <section className="paper-section" aria-labelledby="who-title">
-        <div className="paper-wrap u-sheet">
-          <div className="sec-head">
-            <h2 id="who-title">Who it&apos;s for.</h2>
-          </div>
-          <WhoItsForCards />
-        </div>
-      </section>
-
       <HowItWorks />
 
       <section className="paper-section" aria-label="What Unvibe can explain">
-        <div className="paper-wrap u-sheet">
-          <ScrollSyncedList
-            prefix="Select it, and Vibe explains"
-            items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
-          />
-        </div>
+        <Arrive className="arrive--plate">
+          <div className="paper-wrap u-sheet">
+            <ScrollSyncedList
+              prefix="Select it, and Vibe explains"
+              items={["a React hook.", "a SQL query.", "a regex.", "a shell script.", "the diff your agent just wrote."]}
+            />
+          </div>
+        </Arrive>
       </section>
 
       <section className="paper-section" id="try-it" aria-labelledby="try-it-title">
-        <div className="paper-wrap u-sheet">
-          <div className="sec-head">
-            <h2 id="try-it-title">Paste code. Vibe explains it.</h2>
-            <p className="paper-lead">
-              A real explanation online, no download. In the app there is no pasting: select code in any app and
-              press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows).
+        <Arrive className="arrive--plate">
+          <div className="paper-wrap u-sheet">
+            <div className="sec-head">
+              <h2 id="try-it-title">Paste code. Vibe <mark className="u-mark">explains</mark> it.</h2>
+              <p className="paper-lead">A real explanation online, no download.</p>
+            </div>
+            <TryIt />
+            <p className="home-langs">
+              By programming language:{" "}
+              {homeLanguagePages.map((page, index) => (
+                <span key={page.id}>
+                  {index > 0 ? ", " : null}
+                  <Link className="paper-text-link" href={`/explain/${page.id}`}>
+                    Explain {explainLanguage(page).name} code
+                  </Link>
+                </span>
+              ))}
             </p>
           </div>
-          <TryIt />
-          <p className="home-langs">
-            By programming language:{" "}
-            {homeLanguagePages.map((page, index) => (
-              <span key={page.id}>
-                {index > 0 ? ", " : null}
-                <Link className="paper-text-link" href={`/explain/${page.id}`}>
-                  Explain {explainLanguage(page).name} code
-                </Link>
-              </span>
-            ))}
-          </p>
-        </div>
+        </Arrive>
       </section>
 
       <WhatLeaves />
 
       <HomePricing />
 
-      <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
-        <div className="paper-wrap u-sheet">
-          <div className="sec-head">
-            <h2 id="install-title">Free for Mac and Windows.</h2>
-            <p className="paper-lead">Download, open the app, then press the shortcut in any app.</p>
-          </div>
-          <BetaInstall tone="page" surface="home_install" showFeedback={false} title={null} />
-        </div>
-      </section>
-
       <BackingStrip />
 
       <section className="paper-section" aria-labelledby="faq-title">
-        <div className="paper-wrap u-sheet u-split u-solid">
-          <div className="sec-head">
-            <h2 id="faq-title">Short answers.</h2>
+        <Arrive className="arrive--plate">
+          <div className="paper-wrap u-sheet u-split u-solid">
+            <div className="sec-head">
+              <h2 id="faq-title">Short <mark className="u-mark">answers</mark>.</h2>
+            </div>
+            <TypingFaq items={homeFaq} />
           </div>
-          <TypingFaq items={homeFaq} />
-        </div>
+        </Arrive>
       </section>
 
-      <section className="paper-section" id="invite" aria-labelledby="invite-title">
-        <div className="paper-wrap"><InviteFriend /></div>
-      </section>
-
-      <section className="paper-section" id="newsletter" aria-labelledby="newsletter-title">
-        <div className="paper-wrap u-sheet u-solid">
-          <div className="sec-head">
-            <h2 id="newsletter-title">Get the newsletter.</h2>
-            <p className="paper-lead">One email when something ships. No spam.</p>
+      <section className="paper-section paper-install" id="install" aria-labelledby="install-title">
+        <Arrive className="arrive--plate">
+          <div className="paper-wrap u-sheet">
+            <div className="sec-head">
+              <h2 id="install-title"><mark className="u-mark">Free</mark> for Mac and Windows.</h2>
+              <p className="paper-lead">Download, open the app, then press the shortcut in any app.</p>
+            </div>
+            <BetaInstall tone="page" surface="home_install" showFeedback={false} title={null} />
           </div>
-          <div className="newsletter-home">
-            <NewsletterSignup id="home" />
-          </div>
-        </div>
-      </section>
-
-      <section className="paper-section">
-        <div className="paper-wrap">
-          <DownloadCta />
-        </div>
+        </Arrive>
       </section>
     </div>
   );

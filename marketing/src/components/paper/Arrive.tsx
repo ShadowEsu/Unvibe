@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { prefersReducedMotion } from "@/lib/motion";
+import { useEffect, useRef, type HTMLAttributes, type ReactNode } from "react";
 import { observeMotion } from "@/lib/motionInView";
-import { arrivingItems, stageArrival } from "@/lib/motionMoments";
+import { arrivingItems, prefersReducedMotion, stageArrival } from "@/lib/motionMoments";
 
 /**
  * A list whose first 8 children arrive one after another the first time it scrolls into view (motion
@@ -11,7 +10,7 @@ import { arrivingItems, stageArrival } from "@/lib/motionMoments";
  * server HTML shows every item. The start state goes on only when motion is allowed and the list starts
  * below the fold; it runs once per mount, never on a re-render. Transforms and opacity only, so CLS 0.
  */
-export function Arrive({ className, children }: { className?: string; children: ReactNode }) {
+export function Arrive({ className, children, ...rest }: { className?: string; children: ReactNode } & Pick<HTMLAttributes<HTMLDivElement>, "role" | "aria-label">) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,5 +40,5 @@ export function Arrive({ className, children }: { className?: string; children: 
     };
   }, []);
 
-  return <div ref={ref} className={className}>{children}</div>;
+  return <div ref={ref} className={className} {...rest}>{children}</div>;
 }

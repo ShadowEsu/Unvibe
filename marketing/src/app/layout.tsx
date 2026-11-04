@@ -13,7 +13,6 @@ import "./pages.css";
 import "./system.css";
 import "./home-ux.css";
 import "./glass.css";
-import { GlassBackdropSwitch } from "@/components/glass/GlassBackdrop";
 import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
@@ -164,8 +163,6 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          {/* BRANCH-ONLY: ?glass=a|b picks the backdrop for Design's screenshots. Remove once one is picked. */}
-          <GlassBackdropSwitch />
           <AmbientEffects />
           <a href="#main" className="skip-link">
             Skip to content

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
 import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";

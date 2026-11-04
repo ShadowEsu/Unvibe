@@ -41,7 +41,7 @@ export function AppTour() {
   return (
     <section className="vtour" id="tour" aria-labelledby="tour-title">
       <div className="vtour__head">
-        <h2 id="tour-title">Watch it explain a real function.</h2>
+        <h2 id="tour-title">Watch it explain a <mark className="u-mark">real function</mark>.</h2>
       </div>
       <div className="vtour__window">
         <GlassPlate />

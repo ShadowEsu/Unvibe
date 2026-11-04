@@ -18,7 +18,8 @@ const pro = strip.slice(strip.indexOf("plans-strip__card--pro"), strip.indexOf("
 describe("home price strip (W5)", () => {
   it("is on the home page with Design's heading", () => {
     assert.ok(start > 0, "no #pricing section on home");
-    assert.match(strip, /<h2 id="pricing-title">Free while in beta\. Pro opens soon\.<\/h2>/);
+    assert.match(strip, /<h2 id="pricing-title"><mark class="u-mark">Free<\/mark> while in beta\. Pro opens soon\.<\/h2>/);
+    assert.match(strip, /<p class="paper-lead">No card and no API key\.<\/p>/);
   });
 
   it("states the real allowances and prices", () => {
@@ -37,7 +38,7 @@ describe("home price strip (W5)", () => {
 describe("home price strip while hosted AI is paused (Security SHOULD-H3)", () => {
   it("shows the Try box's pause note under the strip when the switch is on", () => {
     const on = renderToStaticMarkup(createElement(HomePricing, { paused: true }));
-    assert.match(on, /<p class="plans-strip__paused" role="status">AI features are paused for maintenance\. Back soon\.<\/p><\/div><\/section>$/);
+    assert.match(on, /<p class="plans-strip__paused" role="status">AI features are paused for maintenance\. Back soon\.<\/p><\/div><\/div><\/section>$/);
   });
 
   it("shows no pause note when the switch is off", () => {

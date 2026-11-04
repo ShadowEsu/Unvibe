@@ -2,13 +2,15 @@
 
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { GlassPlate } from "@/components/glass/GlassPlate";
+import { Arrive } from "@/components/paper/Arrive";
 
 export interface FlexAccordionItem {
   id: string;
   /** Short label shown on the collapsed spine. */
   label: string;
   title: string;
-  body: string;
+  /** One line under the title; none when the title says it all. */
+  body?: string;
   image: { src: string; width: number; height: number; alt: string };
 }
 
@@ -25,8 +27,9 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Horizontal accordion of real screenshots: one panel open, the rest folded into spines (numbered for steps).
- * Stacks vertically on narrow screens. Headers are real buttons with aria-expanded, and arrow
- * keys move between them, so it works the same with a keyboard or a screen reader.
+ * Stacks vertically on narrow screens, and the items arrive one after another (Arrive, arrive--plate).
+ * Headers are real buttons with aria-expanded, and arrow keys move between them, so it works the same
+ * with a keyboard or a screen reader.
  */
 export function FlexAccordion({ items, shape, label, numbered = true }: FlexAccordionProps) {
   const [open, setOpen] = useState(0);
@@ -44,7 +47,7 @@ export function FlexAccordion({ items, shape, label, numbered = true }: FlexAcco
   };
 
   return (
-    <div className={`flexacc flexacc--${shape}`} role="group" aria-label={label}>
+    <Arrive className={`flexacc flexacc--${shape} arrive--plate`} role="group" aria-label={label}>
       {items.map((item, index) => {
         const isOpen = index === open;
         const headId = `${base}-h-${item.id}`;
@@ -70,7 +73,7 @@ export function FlexAccordion({ items, shape, label, numbered = true }: FlexAcco
               <div className="flexacc__copy">
                 {numbered ? <p className="flexacc__count" aria-hidden="true">{pad(index + 1)} / {pad(items.length)}</p> : null}
                 <p className="flexacc__title">{item.title}</p>
-                <p className="flexacc__text">{item.body}</p>
+                {item.body ? <p className="flexacc__text">{item.body}</p> : null}
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element -- pre-sized webp screenshots, lazy below the fold */}
               <img
@@ -86,6 +89,6 @@ export function FlexAccordion({ items, shape, label, numbered = true }: FlexAcco
           </article>
         );
       })}
-    </div>
+    </Arrive>
   );
 }

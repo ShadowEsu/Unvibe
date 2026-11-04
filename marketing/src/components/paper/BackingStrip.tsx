@@ -1,10 +1,11 @@
 import { PROGRAM_NOTICES, startupPrograms, withMark } from "@/data/compensation";
 import { GlassPlate } from "@/components/glass/GlassPlate";
+import { Arrive } from "@/components/paper/Arrive";
 
 /**
  * The startup programs by full name, plain text in our own type. Only MongoDB shows a logo: its official,
- * unmodified file, on a light chip in both themes, smaller than Unvibe's own mark. Shared by the homepage strip,
- * /investors and /about. `firstUse`: this list is the first mention of the names on the page, so marks carry
+ * unmodified file, on a light chip in both themes, smaller than Unvibe's own mark. Shared by /investors
+ * and /about. `firstUse`: this list is the first mention of the names on the page, so marks carry
  * their notice (MongoDB®).
  */
 export function ProgramList({ firstUse }: { firstUse: boolean }) {
@@ -28,26 +29,24 @@ export function ProgramList({ firstUse }: { firstUse: boolean }) {
   );
 }
 
-/** Homepage strip: the startup programs Unvibe is in. Programs, not partnerships, so the label says so. */
+/**
+ * Homepage strip: one line and the investors link (Design 466). The full program list, with its notices,
+ * is on /investors and /about; with no other program named here, no trademark notice is needed.
+ */
 export function BackingStrip() {
   return (
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
-      <div className="paper-wrap u-sheet">
-        <div className="sec-head">
-          <h2 id="backing-title">Startup programs we&apos;re in.</h2>
-        </div>
-        {/* One glass panel holds the programs; the sheet around it is clear. */}
-        <div className="backing-panel">
-          <GlassPlate />
-          <div className="claude-startups">
-            <span className="claude-startups__tag">Startup program</span>
-            <p className="claude-startups__title">Unvibe is in Claude for Startups.</p>
-            <p className="claude-startups__copy">Anthropic&apos;s program for early startups. Credit details are on the <a href="/investors#backing">investors page</a>.</p>
+      <Arrive className="arrive--plate">
+        <div className="paper-wrap u-sheet">
+          <div className="backing-panel">
+            <GlassPlate />
+            <div className="claude-startups">
+              <p className="claude-startups__title" id="backing-title">Unvibe is in Claude for Startups.</p>
+              <p className="claude-startups__copy">Credit details are on the <a href="/investors#backing">investors page</a>.</p>
+            </div>
           </div>
-          {/* The only other mention of a program name on the page is Claude for Startups above, so this list is the first use of the rest. */}
-          <ProgramList firstUse />
         </div>
-      </div>
+      </Arrive>
     </section>
   );
 }

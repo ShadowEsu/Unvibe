@@ -4,6 +4,12 @@
  * in globals.css; the few numbers JS needs are here.
  */
 
+/** True when the user prefers reduced motion; false on the server. */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export type TryPhase = "idle" | "thinking" | "done" | "error";
 
 /** A skeleton shows only once loading has lasted this long, so a fast answer never flashes it. */

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { prefersReducedMotion } from "@/lib/motion";
 import { observeMotion } from "@/lib/motionInView";
-import { countUpFrame } from "@/lib/motionMoments";
+import { countUpFrame, prefersReducedMotion } from "@/lib/motionMoments";
 
 // Layout effect in the browser (so a number that arrives after hydration never paints final, then 0);
 // plain effect on the server, where layout effects do nothing.

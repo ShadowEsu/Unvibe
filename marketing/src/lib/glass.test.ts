@@ -6,7 +6,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import HomePage from "@/app/page";
 import { GlassPlate } from "@/components/glass/GlassPlate";
 import { GLISSE_STYLES_ID, GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
-import { glassBackdropFrom } from "./glassBackdrop";
 
 // tsx compiles JSX to React.createElement, so rendering components here needs React in scope.
 Object.assign(globalThis, { React });
@@ -33,24 +32,14 @@ describe("Glisse styles stay CSP-clean (Security, glisse 0.5.0 review finding 1)
   });
 });
 
-describe("glass backdrop (branch-only ?glass= switch)", () => {
-  it("reads a or b from the query and defaults to a", () => {
-    assert.equal(glassBackdropFrom("?glass=b"), "b");
-    assert.equal(glassBackdropFrom("?glass=a"), "a");
-    assert.equal(glassBackdropFrom(""), "a");
-    assert.equal(glassBackdropFrom("?glass=full"), "a");
-    assert.equal(glassBackdropFrom("?glass=B&x=1"), "a");
-  });
-});
-
 describe("glass plates", () => {
   it("are decoration only: an empty aria-hidden Glisse Glass", () => {
     assert.equal(renderToStaticMarkup(createElement(GlassPlate)), '<div class="lg-glass glass-plate" aria-hidden="true"></div>');
   });
 
-  it("never sit under consent or long reading text: the Try it, What leaves, FAQ and newsletter sections and the analytics bar have no glass", () => {
+  it("never sit under consent or long reading text: the Try it, What leaves and FAQ sections and the analytics bar have no glass", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
-    for (const marker of ['id="try-it"', 'id="what-leaves"', 'aria-labelledby="faq-title"', 'id="newsletter"']) {
+    for (const marker of ['id="try-it"', 'id="what-leaves"', 'aria-labelledby="faq-title"']) {
       const start = html.indexOf(marker);
       assert.ok(start > 0, `${marker} is on home`);
       assert.doesNotMatch(html.slice(start, html.indexOf("</section>", start)), /glass-plate/, `${marker} has no plate`);
