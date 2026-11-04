@@ -245,12 +245,9 @@
   color: var(--u-text);
 }
 
-/* The phone email note carries the unsubscribe and Privacy line (consent): solid, never glass. */
+/* The phone email note (unsubscribe and Privacy line) sits on the hero plate like the rest of the hero copy:
+   the 0.80 sky plate gives it at least 7:1 (Design, ledger 466). Its text keeps the full ink colour. */
 .vhero__phone .vhero__fine {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid var(--u-line);
-  border-radius: 12px;
-  background: var(--surface-solid);
   color: var(--u-text);
 }
 
