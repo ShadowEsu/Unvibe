@@ -53,12 +53,17 @@ html[data-glass="b"] {
 /* ── Plates ─────────────────────────────────────────────────────────────── */
 
 .glass-plate {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
   display: none;
   border-radius: inherit;
   pointer-events: none;
+}
+
+/* Two classes: Glisse's .lg-glass sets position: relative, and the production build can put Glisse's sheet after
+   this file in the same CSS chunk, which made every plate a 0 px box. The plate stays absolute whatever the order. */
+.glass-plate.lg-glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
 }
 
 /* ── Sheets: clear on the home page, solid where they hold consent or long reading ── */
