@@ -201,7 +201,7 @@ export default function PrivacyPage() {
           command, unvibe.site adds one to that day&apos;s count of copies, together with one short
           label for where you first came from. The label is picked from a fixed list (such as search,
           Reddit, Hacker News, X, a directory, a friend&apos;s invite link, other, or direct when the
-          link had no tag) using the link you first arrived by. It never includes the link itself, the
+          link had no tag) using the address of the page you were on when you pressed Allow (or a friend&apos;s invite link you arrived by). It never includes the link itself, the
           campaign name or an invite code. Your browser keeps the label so a later copy uses the same
           one, until you press No thanks or clear this site&apos;s data. Our server keeps only a count
           per day and label, with no ID, IP address, page or time, for 12 months, so we can see which
