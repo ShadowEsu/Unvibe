@@ -328,9 +328,10 @@ pre, code, kbd, samp, textarea, .font-mono {
   --brand-soft: #e8dff8;
   --brand-mist: rgb(111 69 210 / 0.12);
   --brand-wash: rgb(111 69 210 / 0.1);
-  --glow-copy: 0 0 28px rgb(111 69 210 / 0.2);
-  --glow-hero: 0 0 46px rgb(167 139 250 / 0.42);
-  --glow-bloom: 0 0 48px rgb(111 69 210 / 0.16);
+  /* No glow on type or blocks (Design, ledger 443). */
+  --glow-copy: none;
+  --glow-hero: none;
+  --glow-bloom: none;
   --cta-fill: linear-gradient(180deg, #c4a4ff 0%, #8b5cf6 42%, #6d28d9 100%);
   --cta-fill-hot: linear-gradient(180deg, #d4b8ff 0%, #a78bfa 40%, #7c3aed 100%);
   --cta-edge: rgb(247 244 238 / 0.42);
@@ -393,7 +394,6 @@ pre, code, kbd, samp, textarea, .font-mono {
   --deep-field: linear-gradient(135deg, #1a1028, #30194e 54%, #552d27);
   --final-field-bg: linear-gradient(135deg, #4c279b, #7851d4 50%, #c46c43);
 
-  --font-display: var(--font-display-face), "Newsreader", Georgia, serif;
   --font-sans: var(--font-sans-face), Inter, system-ui, sans-serif;
   /* --font-mono-face is set once JetBrains Mono is wanted (layout.tsx); before that the first entry falls
      back to the metric-matched system faces above. */
@@ -478,7 +478,7 @@ header, main, footer, .admin-shell {
   letter-spacing: -.065em;
 }
 
-h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
+h1 em, h2 em { font-family: var(--font-sans); font-weight: 500; }
 
 .home-demo__frame {
   position: relative;
@@ -681,7 +681,7 @@ h1 em, h2 em { font-family: var(--font-display); font-weight: 500; }
 
 @layer base {
   h1 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-weight: 500;
     letter-spacing: -0.01em;
     line-height: 1.08;

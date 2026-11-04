@@ -5,29 +5,17 @@ import { usePathname } from "next/navigation";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 
-/** What Vibe says as you scroll further down the page. */
-const LINES: Array<[number, string]> = [
-  [0.0, ""],
-  [0.06, "keep going, it gets good"],
-  [0.25, "this is me, in the app"],
-  [0.45, "oh, and it's free"],
-  [0.65, "no card. no API key."],
-  [0.85, "go on, download me"],
-];
-
 const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
 
 /**
- * Site-wide scroll companion: a lime progress bar and Vibe riding down the right edge,
- * chatting on hover/focus and jumping to the free download when clicked.
+ * Site-wide scroll companion: a lime progress bar and Vibe riding down the right edge, jumping to the
+ * free download when clicked. No speech bubble (Design, ledger 443).
  * Scrolling writes the bar's scale and Vibe's offset straight to the DOM (transforms only, no
- * re-render per frame); React state changes only when Vibe's line or the rest state changes.
+ * re-render per frame); React state changes only when the rest state changes.
  */
 export function ScrollVibe() {
   const pathname = usePathname() ?? "/";
-  const [line, setLine] = useState("");
   const [resting, setResting] = useState(true);
-  const [bubbleHidden, setBubbleHidden] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLSpanElement>(null);
@@ -59,7 +47,6 @@ export function ScrollVibe() {
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress.toFixed(4)})`;
       buttonRef.current?.style.setProperty("--svibe-y", `calc(110px + ${progress.toFixed(4)} * (100vh - 290px))`);
       setResting(progress < 0.04);
-      setLine([...LINES].reverse().find(([at]) => progress >= at)?.[1] ?? "");
       if (!reduce) {
         setTilt(Math.max(-14, Math.min(14, velocity * 10)));
         window.clearTimeout(settle);
@@ -80,8 +67,6 @@ export function ScrollVibe() {
     };
   }, [pathname]);
 
-  useEffect(() => setBubbleHidden(false), [pathname]);
-
   if (HIDDEN.some((p) => pathname.startsWith(p))) return null;
 
   return (
@@ -94,13 +79,11 @@ export function ScrollVibe() {
         aria-label="Vibe. Jump to the free download"
         onClick={() => {
           delight();
-          setBubbleHidden(true);
           const target = document.getElementById("install");
           if (target) target.scrollIntoView({ block: "center" });
           else window.location.href = "/beta";
         }}
       >
-        {line && !bubbleHidden ? <span className="svibe__bubble" key={line}>{line}</span> : null}
         <span className="svibe__body" ref={bodyRef}>
           <Vibe size={44} />
         </span>

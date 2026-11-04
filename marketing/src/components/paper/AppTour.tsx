@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
-import { DotGrid } from "@/components/paper/DotGrid";
-
-/** When the kicker's shortcut key has finished its press (vibe.css `uKeyPress`: 900 ms delay + ~110 ms down). */
-const KEY_PRESSED_AT = 1010;
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * The site demo cut (1920x1080, music only). Files in public/videos are named by the first 8 hex of the
@@ -19,33 +16,11 @@ const TITLE_FRAME_AT = 0.6;
 /** Real app recordings and screenshots, directly under the hero promise. */
 export function AppTour() {
   const posterRef = useRef<HTMLImageElement>(null);
-  const windowRef = useRef<HTMLDivElement>(null);
   // undefined until the poster image settles; then its chosen file (or null if it failed).
   const [poster, setPoster] = useState<string | null>();
-  const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   // Server HTML assumes autoplay; AutoPlayVideo corrects it for lite visitors and refused autoplay.
   const [autoplays, setAutoplays] = useState(true);
-
-  // The window opens once a quarter of it is on screen, but never before the hero's key press lands.
-  useEffect(() => {
-    const node = windowRef.current;
-    if (!node || typeof IntersectionObserver === "undefined") {
-      setOpen(true);
-      return;
-    }
-    let timer = 0;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
-      timer = window.setTimeout(() => setOpen(true), Math.max(0, KEY_PRESSED_AT - performance.now()));
-    }, { threshold: 0.25 });
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-      window.clearTimeout(timer);
-    };
-  }, []);
 
   useEffect(() => {
     const img = posterRef.current;
@@ -65,13 +40,11 @@ export function AppTour() {
 
   return (
     <section className="vtour" id="tour" aria-labelledby="tour-title">
-      <DotGrid />
       <div className="vtour__head">
-        <h2 id="tour-title">
-          Watch Unvibe <em>in action.</em>
-        </h2>
+        <h2 id="tour-title">Watch it explain a real function.</h2>
       </div>
-      <div ref={windowRef} className={open ? "vtour__window is-open" : "vtour__window"}>
+      <div className="vtour__window">
+        <GlassPlate />
         <div className="vtour__bar" aria-hidden="true">
           <i /><i /><i />
           <span>Unvibe 0.1.43 and 0.1.44</span>

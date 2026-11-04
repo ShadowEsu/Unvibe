@@ -1,8 +1,6 @@
 import demo from "@/data/demoMedia.json";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { FlexAccordion, type FlexAccordionItem } from "@/components/paper/FlexAccordion";
-import { TextReveal } from "@/components/paper/TextReveal";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 
 const panelShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 880, height: 1131, alt });
 const appShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 1600, height: 1000, alt });
@@ -89,17 +87,12 @@ export function HowItWorks() {
     <>
       <section className="paper-section hiw" id="product" aria-labelledby="hiw-title">
         <div className="paper-wrap">
-          <TextReveal
-            className="hiw__statement"
-            text="AI writes the code in seconds. Unvibe helps you understand every line before you ship it."
-            accent={["understand", "every", "line"]}
-          />
+          <p className="treveal hiw__statement">AI writes the code in seconds. Unvibe helps you understand every line before you ship it.</p>
         </div>
         <div className="paper-wrap u-sheet">
-          <GlassPlate />
           <div className="hiw__head">
             <p className="paper-meta">How it works</p>
-            <h2 id="hiw-title" className="mt-3">Four steps, <em>one panel.</em></h2>
+            <h2 id="hiw-title" className="mt-3">Four steps, one panel.</h2>
           </div>
           <FlexAccordion items={STEPS} shape="tall" label="How Unvibe works, step by step" />
         </div>
@@ -107,12 +100,11 @@ export function HowItWorks() {
 
       <section className="paper-section hiw hiw--pages" aria-labelledby="pages-title">
         <div className="paper-wrap u-sheet">
-          <GlassPlate />
           <div className="hiw__head">
             <p className="paper-meta">The rest of the app</p>
-            <h2 id="pages-title" className="mt-3">Where it <em>sticks.</em></h2>
+            <h2 id="pages-title" className="mt-3">Where it sticks.</h2>
           </div>
-          <FlexAccordion items={PAGES} shape="wide" label="Pages in the Unvibe app" />
+          <FlexAccordion items={PAGES} shape="wide" label="Pages in the Unvibe app" numbered={false} />
           <p className="hiw__note">Recorded on a {demo.platform} with Unvibe {demo.version}, except Library: Unvibe 0.1.43 with sample lessons.</p>
         </div>
       </section>

@@ -90,7 +90,7 @@
 
 .paper-pricing .marketing-plan-price {
   margin-top: 0.4rem;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: clamp(2.2rem, 3.4vw, 3rem);
   font-weight: 400;
   letter-spacing: -0.03em;
@@ -174,50 +174,18 @@
   100% { opacity: 0; transform: translateY(10px); }
 }
 
-/* ── Buttons: lift and a light sweep ── */
+/* ── Buttons: a colour change on hover, no sweep and no lift (Design, ledger 443) ── */
 
 .paper-join,
 .paper-beta__download-btn {
   overflow: hidden;
-  transition: transform 260ms var(--ease-out-soft), box-shadow 260ms var(--ease-out-soft), background 260ms ease;
-}
-
-.paper-join::after,
-.paper-beta__download-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-
-.paper-join:hover::after,
-.paper-beta__download-btn:hover::after {
-  transform: translateX(120%);
-  transition: transform 400ms var(--ease-out-soft);
-}
-
-.paper-join:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px -12px rgb(18 17 15 / 0.45);
-}
-
-.paper-join:active,
-.paper-beta__download-btn:active {
-  transform: translateY(0) scale(0.98);
+  transition: background-color 160ms ease;
 }
 
 .paper-join--win {
   border-color: rgb(255 255 255 / 0.2);
   background: rgb(18 17 15 / 0.86);
   color: #f7f4ee;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.paper-join--win::after {
-  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.18) 50%, transparent 70%);
 }
 
 /* ── Behind Unvibe ── */
@@ -340,16 +308,9 @@
 /* ── Motion and performance fallbacks ── */
 
 @media (prefers-reduced-motion: reduce) {
-
-  .paper-join::after,
-  .paper-beta__download-btn::after {
-    display: none;
-  }
-
   .resources-card:hover,
   .paper-quotes blockquote:hover,
-  .marketing-plan-card:hover,
-  .paper-join:hover {
+  .marketing-plan-card:hover {
     transform: none;
   }
 }
@@ -444,9 +405,9 @@ html[data-performance="lite"] .paper-hero > img {
   border-left: 2px solid var(--brand);
   border-radius: 0 8px 8px 0;
   background: rgb(139 92 246 / 0.08);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 0.95rem;
-  font-style: italic;
+  font-style: normal;
 }
 
 .sel-card p {

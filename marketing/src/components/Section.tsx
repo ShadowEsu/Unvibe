@@ -88,7 +88,7 @@ export function Section({
                 className={cn(
                   "text-balance font-semibold text-fg",
                   variant === "editorial"
-                    ? "font-display text-fluid-3xl font-book tracking-tight"
+                    ? "text-fluid-3xl font-book tracking-tight"
                     : "text-fluid-2xl"
                 )}
               >

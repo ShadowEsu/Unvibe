@@ -59,7 +59,7 @@
 
 .resources-section__head h2 {
   margin: 0.4rem 0 0.8rem;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -595,8 +595,8 @@
 
 .resources-serif-demo {
   margin: 0;
-  font-family: var(--font-display);
-  font-style: italic;
+  font-family: var(--font-sans);
+  font-style: normal;
   font-size: 1.15rem;
   color: var(--ink);
 }
@@ -633,7 +633,7 @@
 
 .resources-cta-copy h3 {
   margin: 0.35rem 0 0.5rem;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.7rem;
   font-weight: 500;
   color: var(--ink);
@@ -657,7 +657,7 @@
 .resources-filters {
   border: 1.5px solid var(--v-ink);
   background: var(--u-card);
-  box-shadow: 3px 3px 0 var(--v-ink);
+
 }
 
 .resources-filter-pill,
@@ -717,7 +717,7 @@
 
 .resources-swatch:hover {
   border-color: var(--v-ink);
-  box-shadow: 3px 3px 0 var(--v-ink);
+
 }
 
 .resources-swatch__circle {
@@ -734,7 +734,7 @@
 
 .resources-display-demo {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.3rem;
   font-weight: 750;
   letter-spacing: -0.03em;
@@ -742,7 +742,7 @@
 }
 
 .resources-serif-demo {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.35rem;
 }
 

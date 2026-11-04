@@ -46,7 +46,7 @@ export function HowItWorks() {
         <p className="mb-4 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary">
           How it works
         </p>
-        <h2 className="max-w-2xl text-balance font-display text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
+        <h2 className="max-w-2xl text-balance text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
           Three quiet steps,
           <br />
           <span className="text-primary">right where you are.</span>

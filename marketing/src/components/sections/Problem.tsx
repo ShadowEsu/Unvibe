@@ -35,7 +35,7 @@ export function Problem() {
         <p className="mb-4 text-fluid-sm font-medium uppercase tracking-[0.18em] text-primary">
           The gap
         </p>
-        <h2 className="text-balance font-display text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
+        <h2 className="text-balance text-fluid-3xl font-book leading-[1.08] tracking-tight text-fg">
           You shipped it.
           <br />
           <span className="text-primary">Can you explain it?</span>
