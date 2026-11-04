@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="2 November 2026"
+      updated="4 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -57,6 +57,15 @@ export default function PrivacyPage() {
             your answers, the app version and your random install ID. Kept 12 months. The team reads
             them and may use AI tools that don&apos;t train on your data to summarise them. To have
             them deleted, email support@unvibe.site with the install ID the app shows after Send.
+          </li>
+          <li>
+            <strong>Where you first heard about Unvibe:</strong> from version 0.1.50 the in-app survey
+            has one optional question with fixed choices (Search, A friend or colleague, Reddit, Hacker
+            News, X, YouTube or TikTok, A directory or list, Other). If you pick one, your choice and
+            the few words you type under Other (at most 80 characters) are sent with your other answers
+            when you press Send, under the same random install ID, and kept with them for 12 months. We
+            use it to see which places bring people to Unvibe. It holds no code, and we don&apos;t ask
+            for your name, so please don&apos;t type one under Other.
           </li>
         </ul>
       </LegalSection>
@@ -186,6 +195,18 @@ export default function PrivacyPage() {
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
           26 October 2026 that hash is keyed with a server secret, so it can&apos;t be matched to an
           address without that secret; requests from before then kept a plain hash, which is weaker.
+        </p>
+        <p>
+          From 4 November 2026, if you have pressed Allow on the analytics bar and copy the install
+          command, unvibe.site adds one to that day&apos;s count of copies, together with one short
+          label for where you first came from. The label is picked from a fixed list (such as search,
+          Reddit, Hacker News, X, a directory, a friend&apos;s invite link, other, or direct when the
+          link had no tag) using the link you first arrived by. It never includes the link itself, the
+          campaign name or an invite code. Your browser keeps the label so a later copy uses the same
+          one, until you press No thanks or clear this site&apos;s data. Our server keeps only a count
+          per day and label, with no ID, IP address, page or time, for 12 months, so we can see which
+          places bring people who install Unvibe. It holds no code and no name. If you have not
+          pressed Allow, copying the command sends nothing.
         </p>
         <p>
           If you tick the newsletter box, we keep your email, that you signed up through the
