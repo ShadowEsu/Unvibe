@@ -88,10 +88,15 @@ export function AppTour() {
             captions={`${DEMO}.en.vtt`}
             onAutoplayChange={setAutoplays}
             label="Unvibe demo with music and no voice: select code and press the shortcut, an explanation at different depths, a follow-up question, Test me, a React hook explained, a Change Brief (the brief is free; the AI explanation of a change is Pro), the Library, a saved lesson, a review quiz, Why does this exist?, the same panel on Windows, privacy settings, and Try it in the browser"
+            describedBy="tour-detail"
           />
         </div>
+        {/* Design 466: one short visible line; the rest of the caption stays for screen readers, read with the video. */}
         <p className="vtour__caption">
-          Unvibe 0.1.43 and 0.1.44 on Mac and Windows: explain at your depth, a follow-up, Test me, a Change Brief (free; the AI explanation of a change is Pro), the Library and a review quiz, Why does this exist?, privacy settings and Try it. Real screen recordings at 1x and real screenshots, waits cut, sample code. Music only.
+          Unvibe 0.1.43 and 0.1.44 on Mac and Windows.
+          <span className="sr-only" id="tour-detail">
+            {" "}explain at your depth, a follow-up, Test me, a Change Brief (free; the AI explanation of a change is Pro), the Library and a review quiz, Why does this exist?, privacy settings and Try it. Real screen recordings at 1x and real screenshots, waits cut, sample code. Music only.
+          </span>
         </p>
       </div>
     </section>

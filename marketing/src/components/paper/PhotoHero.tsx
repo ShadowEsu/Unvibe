@@ -161,32 +161,34 @@ export function PhotoHero() {
         <div className="vhero__vibe">
           <Vibe size={72} />
         </div>
-        <h1 id="hero-title">
-          <span className="vhero__lead">Understand the code</span> your AI just wrote.
-        </h1>
-        <p className="vhero__kicker">
+        {/* One glass plate holds the promise, the action and the trust line (Design 466). No entrance motion: the h1 is the LCP. */}
+        <div className="u-sheet vhero__plate">
+          <h1 id="hero-title">
+            <span className="vhero__lead">Understand the code</span> your AI just wrote.
+          </h1>
+          <p className="vhero__kicker">
+            {device === "phone" ? (
+              "Select code on your Mac or PC, press one shortcut, and Vibe explains it in plain English beside your editor."
+            ) : (
+              <>
+                Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it in plain English beside your editor.
+              </>
+            )}
+          </p>
           {device === "phone" ? (
-            "Select code on your Mac or PC, press one shortcut, and Vibe explains it in plain English beside your editor."
-          ) : (
             <>
-              Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it in plain English beside your editor.
+              <EmailMeLink />
+              <p className="vhero__fine vhero__claims">
+                <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
+                <span className="vhero__trust-item">No API key.</span>{" "}
+                <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
+              </p>
+              <TryInBrowser device={device} />
             </>
+          ) : (
+            <DownloadForThisComputer device={device} actionsRef={actionsRef} />
           )}
-        </p>
-        {device === "phone" ? (
-          <>
-            <EmailMeLink />
-            <p className="vhero__fine vhero__claims">
-              <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
-              <span className="vhero__trust-item">No API key.</span>{" "}
-              <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
-            </p>
-            <TryInBrowser device={device} />
-          </>
-        ) : (
-          <DownloadForThisComputer device={device} actionsRef={actionsRef} />
-        )}
-
+        </div>
       </div>
       <figure className="vhero__still">
         <GlassPlate />

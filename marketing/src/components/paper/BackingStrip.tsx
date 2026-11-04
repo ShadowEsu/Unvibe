@@ -1,5 +1,4 @@
 import { PROGRAM_NOTICES, startupPrograms, withMark } from "@/data/compensation";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { Arrive } from "@/components/paper/Arrive";
 
 /**
@@ -38,12 +37,9 @@ export function BackingStrip() {
     <section id="backing" className="paper-section paper-backing" aria-labelledby="backing-title">
       <Arrive className="arrive--plate">
         <div className="paper-wrap u-sheet">
-          <div className="backing-panel">
-            <GlassPlate />
-            <div className="claude-startups">
-              <p className="claude-startups__title" id="backing-title">Unvibe is in Claude for Startups.</p>
-              <p className="claude-startups__copy">Credit details are on the <a href="/investors#backing">investors page</a>.</p>
-            </div>
+          <div className="claude-startups">
+            <p className="claude-startups__title" id="backing-title">Unvibe is in Claude for Startups.</p>
+            <p className="claude-startups__copy">Credit details are on the <a href="/investors#backing">investors page</a>.</p>
           </div>
         </div>
       </Arrive>
