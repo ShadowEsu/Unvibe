@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { currentUserId } from '@/lib/session';
 import { getBillingStore } from '@/billing/store';
 import { checkoutOpen, lifetimeCheckoutOpen, paymentsLocked } from '@/billing/stripe';
@@ -12,9 +11,9 @@ export default async function PlanPage({ searchParams }: { searchParams: Record<
   const userId = await currentUserId();
   if (!userId) {
     // Stripe's return lands in the system browser, which usually has no session: confirm, don't bounce.
+    // Any other signed-out visit says where sign-in lives (the old /login page now goes to the marketing home).
     const checkout = searchParams.checkout;
-    if (checkout === 'success' || checkout === 'canceled') return <CheckoutReturn outcome={checkout} />;
-    redirect('/login');
+    return <CheckoutReturn outcome={checkout === 'success' || checkout === 'canceled' ? checkout : 'signed-out'} />;
   }
   const billing = getBillingStore();
   const workspaces = await billing.listWorkspaces(userId);

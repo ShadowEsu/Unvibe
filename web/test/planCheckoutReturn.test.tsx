@@ -59,9 +59,15 @@ test('an unknown session token is treated as signed out on the checkout return',
   assert.match(page, /id="checkout-return-title"/);
 });
 
-test('/plan without a session and without a checkout return still redirects to sign in', async () => {
-  assert.deepEqual(await getPlan(''), { redirect: '/login' });
-  assert.deepEqual(await getPlan('checkout=other'), { redirect: '/login' });
+test('/plan without a session and without a checkout return says to sign in from the app, with no redirect', async () => {
+  // /login was retired to the marketing home (35dd9946), so a redirect there would drop the visitor on the wrong page.
+  for (const query of ['', 'checkout=other']) {
+    const page = html(await getPlan(query));
+    assert.equal(page.match(/<h1[\s>]/g)?.length, 1);
+    assert.match(page, /<h1[^>]*>Sign in from the Unvibe app<\/h1>/);
+    assert.match(page, /Sign in to sync/);
+    assert.doesNotMatch(page, /Back from checkout|Nothing was charged/);
+  }
 });
 
 test('a signed-in buyer returning from checkout still gets the full plan page', async () => {
