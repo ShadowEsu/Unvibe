@@ -903,7 +903,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
       },
       {
         concept: "flags",
-        text: "`re.VERBOSE` ignores spaces in the pattern and lets each line end in a `#` comment, which is why the pattern can be laid out one field per line. A real space has to be written as `\\s`.",
+        text: "`re.VERBOSE` ignores spaces in the pattern and lets each line end in a `#` comment, which is why the pattern can be laid out one field per line. So a space to match is written here as `\\s`, which matches any whitespace.",
       },
     ],
     notes: [
