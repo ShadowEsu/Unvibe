@@ -109,13 +109,17 @@ test('explanations fail closed when the plan cannot be checked', async () => {
   }
 });
 
-test('follow-ups and Explain differently count as follow-up questions', async () => {
+test('follow-ups, Explain differently and More detail count as follow-up questions; a short answer is an explanation', async () => {
   upstream = 'answer';
   const pro = await signedIn('pro');
   assert.equal((await review(explainRequest(pro.headers, { question: 'Why x?' }))).status, 200);
   assert.equal((await review(explainRequest(pro.headers, { variant: 'different' }))).status, 200);
-  assert.equal(await used(pro.userId, 'project_question'), 2);
+  assert.equal((await review(explainRequest(pro.headers, { detail: 'full', shortAnswer: 'It sets x.' }))).status, 200);
+  assert.equal(await used(pro.userId, 'project_question'), 3);
   assert.equal(await used(pro.userId, 'ai_explanation'), 0);
+  assert.equal((await review(explainRequest(pro.headers, { detail: 'short' }))).status, 200);
+  assert.equal((await review(explainRequest(pro.headers, { detail: 'full', shortAnswer: '   ' }))).status, 200);
+  assert.equal(await used(pro.userId, 'ai_explanation'), 2, 'a full request without a short answer is a new explanation');
 });
 
 test('a Free user at the plan limit gets a plan_limit_reached 429 with the upgrade path', async () => {
