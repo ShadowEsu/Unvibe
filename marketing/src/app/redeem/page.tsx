@@ -9,6 +9,7 @@ import {
   formatCodeInput,
   normalisePromoCode,
   pendingPromoCode,
+  PROMO_CODE_EXAMPLE,
   redeemOutcome,
   savePromoCode,
   type RedeemOutcome,
@@ -21,6 +22,19 @@ function sessionStore(): Storage | null {
   } catch {
     return null;
   }
+}
+
+/** A code value shown as text sits in <code> so it renders in JetBrains Mono (Design: 0/O and 1/l must differ). */
+function withCodeExample(line: string) {
+  const at = line.indexOf(PROMO_CODE_EXAMPLE);
+  if (at < 0) return line;
+  return (
+    <>
+      {line.slice(0, at)}
+      <code>{PROMO_CODE_EXAMPLE}</code>
+      {line.slice(at + PROMO_CODE_EXAMPLE.length)}
+    </>
+  );
 }
 
 function redeemOrigin(): string {
@@ -332,7 +346,7 @@ export default function RedeemPage() {
           <label className="redeem-label" htmlFor="redeem-code">Promo code</label>
           <input
             id="redeem-code"
-            className="redeem-field redeem-field--code"
+            className="redeem-field redeem-field--code code-input"
             value={code}
             onChange={(event) => setCode(formatCodeInput(event.target.value))}
             placeholder="XXXX-XXXX-XXXX-XXXX"
@@ -357,7 +371,7 @@ export default function RedeemPage() {
             className={outcome.ok ? "redeem-result redeem-result--ok" : "redeem-result redeem-result--error"}
             role={outcome.ok ? "status" : "alert"}
           >
-            {outcome.line}
+            {withCodeExample(outcome.line)}
           </p>
         )}
 

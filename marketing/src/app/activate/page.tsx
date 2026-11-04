@@ -332,7 +332,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
         <label className="activate-label" htmlFor="activate-code">Device code</label>
         <input
           id="activate-code"
-          className="activate-field activate-field--code"
+          className="activate-field activate-field--code code-input"
           value={code}
           onChange={(event) => setCode(event.target.value.toUpperCase())}
           placeholder="XXXXXXXX"
