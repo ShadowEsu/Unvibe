@@ -21,12 +21,21 @@ ol.explain-notes {
   font: 0.9rem / 1.4 var(--font-mono);
 }
 
-/* Code keeps its lines: no wrapping, the block scrolls sideways (Design, #135 gate). Three classes, so this beats
-   the wrapping .explain-card .os-cmd rule below, which the Windows PowerShell line keeps. */
+/* Code keeps its lines: no wrapping; the region around it scrolls sideways (Design, #135 gate). The code grows to
+   its longest line so its dark fill stays under the text while scrolling. Three classes, so this beats the wrapping
+   .explain-card .os-cmd rule below, which the Windows PowerShell line keeps. */
+.use-sample__scroll {
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
 .explain-card .use-sample .os-cmd {
+  display: inline-block;
+  min-width: 100%;
+  margin: 0;
   white-space: pre;
   overflow-wrap: normal;
-  overflow-x: auto;
 }
 
 .os-how {

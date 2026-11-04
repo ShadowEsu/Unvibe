@@ -43,12 +43,15 @@ export function UseCaseHead({ useCase, heading, children }: { useCase: UseCase; 
 }
 
 /** A short real code sample. Lines never wrap (a wrapped line reads as two lines of code): the block scrolls
- *  sideways on narrow screens, and it takes focus so the keyboard can scroll it too. */
+ *  sideways on narrow screens. The scroller is a named region that takes focus, so the keyboard can scroll it and a
+ *  screen reader announces it (code and pre can't carry a name). */
 export function UseCaseSample({ file, code }: { file: string; code: string }) {
   return (
     <figure className="use-sample">
       <figcaption>{file}</figcaption>
-      <code className="os-cmd" tabIndex={0}>{code}</code>
+      <div className="use-sample__scroll" role="region" aria-label={`${file}, code sample, scrolls sideways`} tabIndex={0}>
+        <code className="os-cmd">{code}</code>
+      </div>
     </figure>
   );
 }
