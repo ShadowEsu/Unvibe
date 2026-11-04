@@ -47,8 +47,11 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     <div className="codeblock">
       <div className="cb-head">
         <span>{lang || 'code'}</span>
+        {/* The name stays "Copy code" while the visible label swaps; "Copied" is announced by the status
+            region below, so a screen reader hears the result without the control being renamed. */}
         <button
           type="button"
+          aria-label="Copy code"
           onClick={() => {
             void navigator.clipboard.writeText(code);
             setCopied(true);
@@ -57,6 +60,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
         >
           <CopyLabel copied={copied} />
         </button>
+        <span className="sr-only" role="status" aria-live="polite">{copied ? 'Copied' : ''}</span>
       </div>
       <pre>{highlight(code)}</pre>
     </div>
