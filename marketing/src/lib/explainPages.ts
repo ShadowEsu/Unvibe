@@ -1023,6 +1023,61 @@ end`,
     watchOut:
       "Methods need the colon. `board.add(\"nova\", 5)` with a dot passes `\"nova\"` as `self` and 5 as the name, and fails with `attempt to index a nil value (field 'scores')`. Leaving out the points fails too, with `attempt to perform arithmetic on a nil value (local 'points')`.",
   },
+  {
+    id: "yaml",
+    fileName: "ci.yml",
+    lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
+    description:
+      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
+    sampleSummary: "A GitHub Actions workflow that installs a Python app's dependencies with a pip cache and runs its tests, with a secret passed in as an environment variable.",
+    sample: `name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: \${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: pytest -q`,
+    shows: [
+      {
+        concept: "mappings",
+        text: "Each `key: value` line is a mapping entry, and a block indented under a key is that key's value, so `push`, `test` and `with` are mappings inside mappings. Read with Ruby's YAML library, `on:` comes back as the key `true`, not `\"on\"`, because YAML 1.1 reads a bare `on` as true. GitHub reads it as the `on` key, but another tool that reads the file can see `true`.",
+      },
+      {
+        concept: "sequences",
+        text: "A line that starts with `- ` is one item in a list, so `steps` is a list of four mappings, each with a `uses` or a `run`. `[main]` is the same kind of list written on one line. Drop the space in `-run: pytest -q` and it isn't a list item any more: the parser returns a mapping with the key `-run`.",
+      },
+      {
+        concept: "scalars",
+        text: "A plain value is read by how it looks: `20` is a number, and in YAML 1.1 `yes`, `no`, `on` and `off` are true or false, so `country: NO` reads as `false`. Quotes keep text as text, which is why `\"3.12\"` stays the string `3.12`. `\${{ secrets.DATABASE_URL }}` is plain text to YAML too: GitHub replaces it with the secret's value when the job runs.",
+      },
+      {
+        concept: "indentation",
+        text: "Nesting is set by spaces alone. A tab in front of `test:` gives `found character that cannot start any token`, and a `cache: pip` indented one space less than the `python-version` line above it gives `did not find expected key while parsing a block mapping`.",
+      },
+    ],
+    notes: [
+      "Parsed, the file is a mapping with three keys, `name`, `true` and `jobs`. An empty `pull_request:` is `null`, which GitHub takes to mean its default pull request events: opened, reopened and new commits pushed.",
+      "`branches: [main]` sits under `push`, so it limits pushes only. Pull requests run the tests whatever branch they target.",
+      "`cache: pip` asks `actions/setup-python` to save pip's downloads between runs, keyed on your requirements file.",
+      "Secrets aren't passed to a workflow run for a pull request from a fork, so there `DATABASE_URL` is an empty string and tests that need the database fail.",
+      "The file was parsed with the YAML library in Ruby 2.6, not run on GitHub. Parsing checks the YAML, not whether GitHub accepts the workflow.",
+    ],
+    watchOut:
+      "Quote version numbers. `python-version: 3.10` without quotes is the number 3.1, and the list `[3.9, 3.10, 3.11]` reads as `[3.9, 3.1, 3.11]`. GitHub reads it the same way, so the job asks for Python 3.1.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

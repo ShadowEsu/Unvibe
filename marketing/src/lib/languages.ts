@@ -237,6 +237,16 @@ export const languages: Language[] = [
     learningPath: ["Tables", "Functions", "Metatables", "Modules"],
     sample: `for i, name in ipairs(players) do print(i, name) end`,
   },
+  {
+    id: "yaml",
+    name: "YAML",
+    categories: ["backend", "data"],
+    blurb: "Indented config files for CI, containers and deploys.",
+    concepts: ["mappings", "sequences", "scalars", "indentation", "anchors"],
+    frameworks: ["GitHub Actions", "Docker Compose", "Kubernetes", "OpenAPI"],
+    learningPath: ["Mappings", "Lists", "Quoting and types", "Anchors"],
+    sample: `runs-on: ubuntu-latest`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
