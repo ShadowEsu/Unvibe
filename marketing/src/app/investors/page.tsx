@@ -55,7 +55,7 @@ export default function InvestorsPage() {
       <header className="inv-hero">
         <div className="inv-hero__copy">
           <p className="inv-eyebrow">Unvibe for investors</p>
-          <h1>The ownership layer for <em>AI-written code.</em></h1>
+          <h1>The ownership layer for AI-written code.</h1>
           <p className="inv-lead">
             AI writes code faster than people can understand it. Unvibe sits beside the editor, explains what
             changed, checks that it stuck, and keeps the knowledge fresh as the code moves.
@@ -81,23 +81,23 @@ export default function InvestorsPage() {
 
       <section className="inv-section inv-thesis">
         <p className="inv-eyebrow">The thesis</p>
-        <h2>Shipping is solved. <em>Understanding is not.</em></h2>
+        <h2>Shipping is solved. Understanding is not.</h2>
         <div className="inv-cards">
-          <article className="inv-card"><span>01</span><h3>Problem</h3><p>Developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment the code changes.</p></article>
-          <article className="inv-card"><span>02</span><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
-          <article className="inv-card"><span>03</span><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
+          <article className="inv-card"><h3>Problem</h3><p>Developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment the code changes.</p></article>
+          <article className="inv-card"><h3>Product</h3><p>Select code, press Control+U (Ctrl+Alt+U on Windows). Unvibe explains it in place at five depths, quizzes you, saves the lesson, and reviews what your agent just changed.</p></article>
+          <article className="inv-card"><h3>Wedge</h3><p>A desktop layer that works beside Cursor, VS Code, Claude Code and Terminal instead of replacing the editor. Neutral across every agent.</p></article>
         </div>
       </section>
 
       <section className="inv-section" id="backing">
         <p className="inv-eyebrow">Startup programs</p>
-        <h2>In {programs} startup <em>programs.</em></h2>
+        <h2>In {programs} startup programs.</h2>
         <ProgramList firstUse />
       </section>
 
       <section className="inv-section" id="support">
         <p className="inv-eyebrow">Resource runway</p>
-        <h2>Where the {total} <em>comes from.</em></h2>
+        <h2>Where the {total} comes from.</h2>
         <p className="inv-lead">Every source by name. {creditSourcesLabel()} credits {credits} · cash {cash}. The other {programsWithoutAmountCount()} programs are listed with their terms and no amount. Credits are not cash, and this is not a funding round.</p>
         <div className="inv-table" role="table" aria-label="Support by source">
           <div className="inv-row inv-row--head" role="row">
@@ -108,7 +108,7 @@ export default function InvestorsPage() {
               <strong role="cell">{line.name}</strong>
               <span role="cell" className="inv-amount">{line.amount}</span>
               <span role="cell">{line.detail}</span>
-              <span role="cell"><i className="inv-pill">{line.state}</i></span>
+              <span role="cell"><span className="inv-pill">{line.state}</span></span>
             </div>
           ))}
         </div>
@@ -116,11 +116,11 @@ export default function InvestorsPage() {
 
       <section className="inv-section">
         <p className="inv-eyebrow">Commitments</p>
-        <h2>What shipped, <em>and what&apos;s next.</em></h2>
+        <h2>What shipped, and what&apos;s next.</h2>
         <ol className="inv-roadmap">
           {roadmap.map(([name, detail, state]) => (
             <li key={name} data-state={state}>
-              <i className="inv-pill">{state === "shipped" ? "Shipped" : state === "next" ? "Building next" : "After that"}</i>
+              <span className="inv-pill">{state === "shipped" ? "Shipped" : state === "next" ? "Building next" : "After that"}</span>
               <strong>{name}</strong>
               <p>{detail}</p>
             </li>
@@ -131,7 +131,7 @@ export default function InvestorsPage() {
       <section className="inv-section inv-split">
         <div>
           <p className="inv-eyebrow">Milestones</p>
-          <h2>The company <em>so far.</em></h2>
+          <h2>The company so far.</h2>
           <ul className="inv-timeline">
             {company.map((m) => (
               <li key={`${m.date}-${m.title}`}><time>{m.date}</time><strong>{m.title}</strong>{m.figure ? <span>{m.figure}</span> : null}</li>
@@ -140,7 +140,7 @@ export default function InvestorsPage() {
         </div>
         <div>
           <p className="inv-eyebrow">Pipeline</p>
-          <h2>Applications, <em>kept separate.</em></h2>
+          <h2>Applications, kept separate.</h2>
           <div className="inv-pipeline">
             {pipeline.map(([name, detail]) => (
               <article key={name} className="inv-card"><h3>{name}</h3><p>{detail}</p></article>
@@ -151,7 +151,7 @@ export default function InvestorsPage() {
       </section>
 
       <section className="inv-section inv-close">
-        <h2>Let&apos;s <em>talk.</em></h2>
+        <h2>Let&apos;s talk.</h2>
         <p className="inv-lead">Demo and numbers. Everything above is current as of {BETA_INSTALL_VERSION}.</p>
         <div className="inv-actions inv-actions--center">
           <a className="inv-btn inv-btn--ink" href="mailto:support@unvibe.site?subject=Unvibe%20investment%20conversation"><Mail size={17} /> support@unvibe.site</a>

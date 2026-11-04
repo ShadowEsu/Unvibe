@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 export interface FlexAccordionItem {
   id: string;
@@ -16,16 +17,18 @@ interface FlexAccordionProps {
   /** "tall" for panel screenshots (text beside the image), "wide" for full-window shots. */
   shape: "tall" | "wide";
   label: string;
+  /** Number the spines (01, 02…) only when the items are a real sequence, like steps. */
+  numbered?: boolean;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * Horizontal accordion of real screenshots: one panel open, the rest folded into numbered spines.
+ * Horizontal accordion of real screenshots: one panel open, the rest folded into spines (numbered for steps).
  * Stacks vertically on narrow screens. Headers are real buttons with aria-expanded, and arrow
  * keys move between them, so it works the same with a keyboard or a screen reader.
  */
-export function FlexAccordion({ items, shape, label }: FlexAccordionProps) {
+export function FlexAccordion({ items, shape, label, numbered = true }: FlexAccordionProps) {
   const [open, setOpen] = useState(0);
   const base = useId();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -48,6 +51,7 @@ export function FlexAccordion({ items, shape, label }: FlexAccordionProps) {
         const bodyId = `${base}-b-${item.id}`;
         return (
           <article key={item.id} className={isOpen ? "flexacc__item is-open" : "flexacc__item"}>
+            <GlassPlate />
             <h3 className="flexacc__head">
               <button
                 ref={(node) => { buttons.current[index] = node; }}
@@ -58,13 +62,13 @@ export function FlexAccordion({ items, shape, label }: FlexAccordionProps) {
                 onClick={() => setOpen(index)}
                 onKeyDown={(event) => onKey(event, index)}
               >
-                <span className="flexacc__num">{pad(index + 1)}</span>
+                {numbered ? <span className="flexacc__num">{pad(index + 1)}</span> : null}
                 <span className="flexacc__label">{item.label}</span>
               </button>
             </h3>
             <div id={bodyId} role="region" aria-labelledby={headId} className="flexacc__body" hidden={!isOpen}>
               <div className="flexacc__copy">
-                <p className="flexacc__count" aria-hidden="true">{pad(index + 1)} / {pad(items.length)}</p>
+                {numbered ? <p className="flexacc__count" aria-hidden="true">{pad(index + 1)} / {pad(items.length)}</p> : null}
                 <p className="flexacc__title">{item.title}</p>
                 <p className="flexacc__text">{item.body}</p>
               </div>

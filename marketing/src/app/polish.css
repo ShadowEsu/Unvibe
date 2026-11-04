@@ -90,7 +90,7 @@
 
 .paper-pricing .marketing-plan-price {
   margin-top: 0.4rem;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: clamp(2.2rem, 3.4vw, 3rem);
   font-weight: 400;
   letter-spacing: -0.03em;
@@ -111,15 +111,6 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
-.paper-center > .paper-meta::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 10px rgb(111 69 210 / 0.6);
-}
-
 .paper-center > .paper-text-link {
   display: inline-flex;
   align-items: center;
@@ -138,18 +129,9 @@
   transition: background 240ms ease, transform 240ms var(--ease-out-soft);
 }
 
-.paper-center > .paper-text-link::after {
-  content: "\2192";
-  transition: transform 240ms var(--ease-out-soft);
-}
-
 .paper-center > .paper-text-link:hover {
   background: rgb(255 255 255 / 0.7);
   transform: translateY(-1px);
-}
-
-.paper-center > .paper-text-link:hover::after {
-  transform: translateX(3px);
 }
 
 @keyframes heroDrift {
@@ -174,50 +156,18 @@
   100% { opacity: 0; transform: translateY(10px); }
 }
 
-/* ── Buttons: lift and a light sweep ── */
+/* ── Buttons: a colour change on hover, no sweep and no lift (Design, ledger 443) ── */
 
 .paper-join,
 .paper-beta__download-btn {
   overflow: hidden;
-  transition: transform 260ms var(--ease-out-soft), box-shadow 260ms var(--ease-out-soft), background 260ms ease;
-}
-
-.paper-join::after,
-.paper-beta__download-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.45) 50%, transparent 70%);
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-
-.paper-join:hover::after,
-.paper-beta__download-btn:hover::after {
-  transform: translateX(120%);
-  transition: transform 400ms var(--ease-out-soft);
-}
-
-.paper-join:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px -12px rgb(18 17 15 / 0.45);
-}
-
-.paper-join:active,
-.paper-beta__download-btn:active {
-  transform: translateY(0) scale(0.98);
+  transition: background-color 160ms ease;
 }
 
 .paper-join--win {
   border-color: rgb(255 255 255 / 0.2);
   background: rgb(18 17 15 / 0.86);
   color: #f7f4ee;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.paper-join--win::after {
-  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.18) 50%, transparent 70%);
 }
 
 /* ── Behind Unvibe ── */
@@ -340,16 +290,9 @@
 /* ── Motion and performance fallbacks ── */
 
 @media (prefers-reduced-motion: reduce) {
-
-  .paper-join::after,
-  .paper-beta__download-btn::after {
-    display: none;
-  }
-
   .resources-card:hover,
   .paper-quotes blockquote:hover,
-  .marketing-plan-card:hover,
-  .paper-join:hover {
+  .marketing-plan-card:hover {
     transform: none;
   }
 }
@@ -402,9 +345,11 @@ html[data-performance="lite"] .paper-hero > img {
   animation: selIn 0.38s var(--ease-out-soft) both;
 }
 
+/* Both users (.sel-card, .palette__panel) carry a backdrop-filter, so the entrance moves only: no opacity or filter
+   on a glass element (glass-spec §3). */
 @keyframes selIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(4px); }
-  to { opacity: 1; transform: none; filter: none; }
+  from { transform: translateY(8px) scale(0.97); }
+  to { transform: none; }
 }
 
 .sel-card header {
@@ -430,23 +375,22 @@ html[data-performance="lite"] .paper-hero > img {
 
 .sel-card header kbd { margin-left: auto; }
 
+/* The flat Vibe mark: no gradient, no glow. */
 .sel-card__logo {
   width: 1rem;
   height: 1rem;
-  border-radius: 5px;
-  background: linear-gradient(135deg, #8b5cf6, #4c1d95);
-  box-shadow: 0 0 10px rgb(139 92 246 / 0.55);
+  background: url("/brand/vibe.svg") center / contain no-repeat;
 }
 
+/* The selected text, quoted: a hairline left rule in ink, no tint. --line holds RGB channels, hence rgb(). */
 .sel-card blockquote {
   margin: 0.7rem 0 0.5rem;
   padding: 0.5rem 0.7rem;
-  border-left: 2px solid var(--brand);
-  border-radius: 0 8px 8px 0;
-  background: rgb(139 92 246 / 0.08);
-  font-family: var(--font-display);
+  border-left: 1px solid rgb(var(--line));
+  color: var(--v-ink);
+  font-family: var(--font-sans);
   font-size: 0.95rem;
-  font-style: italic;
+  font-style: normal;
 }
 
 .sel-card p {
@@ -483,6 +427,7 @@ html[data-performance="lite"] .paper-hero > img {
   color: var(--ink);
 }
 
+/* Tint only, no blur: a backdrop-filter here would stop the glass sheet inside it seeing the page. */
 .palette {
   position: fixed;
   inset: 0;
@@ -491,8 +436,6 @@ html[data-performance="lite"] .paper-hero > img {
   place-items: start center;
   padding: 14vh 1rem 1rem;
   background: rgb(18 12 32 / 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   animation: paletteFade 0.2s ease both;
 }
 
@@ -500,28 +443,30 @@ html[data-performance="lite"] .paper-hero > img {
   from { opacity: 0; }
 }
 
+/* Glisse Glass (SitePalette): its fill, blur and refraction come from .lg-glass; glass.css sets the sheet values. */
 .palette__panel {
   width: min(36rem, 100%);
   overflow: hidden;
   border: 1px solid var(--u-line);
   border-radius: 20px;
-  background: var(--u-sheet);
   box-shadow: var(--u-lift-1);
   color: var(--u-text);
-  backdrop-filter: blur(30px) saturate(1.8);
-  -webkit-backdrop-filter: blur(30px) saturate(1.8);
   animation: selIn 0.28s var(--ease-out-soft) both;
 }
 
-.palette__input {
-  width: 100%;
-  padding: 1.1rem 1.25rem;
-  border: 0;
-  border-bottom: 1px solid var(--u-line);
-  outline: none;
-  background: transparent;
-  color: var(--u-text);
+/* Glisse SearchField: a pill across the top of the sheet. */
+.palette__input.lg-input {
+  width: auto;
+  max-width: none;
+  height: 3rem;
+  margin: 0.75rem 0.75rem 0.4rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
   font: 500 1.05rem var(--font-sans);
+}
+
+.palette__input input {
+  font-size: inherit;
 }
 
 .palette__list {
@@ -573,68 +518,35 @@ html[data-performance="lite"] .paper-hero > img {
   font-size: 0.72rem;
 }
 
-/* ── Pricing toggle ── */
+/* ── Pricing toggle: Glisse's SegmentedControl (PricingPlans), sized for "Annual Save N%" and a 44 px target ── */
 
-.pricing-toggle {
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
-  margin: 0 auto 2rem;
-  padding: 0.3rem;
-  border: 1px solid rgb(255 255 255 / 0.5);
-  border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.pricing-plans .pricing-toggle {
-  display: grid;
+.pricing-toggle.lg-segmented {
+  --lg-tab-width: min(9.5rem, calc((100vw - 3rem) / 2));
+  --lg-tab-height: 2.75rem;
+  display: flex;
   width: fit-content;
+  margin: 0 auto 2rem;
 }
 
-.pricing-toggle button {
-  position: relative;
-  z-index: 1;
+.pricing-toggle :is(.lg-tab, .lg-tab-copy) {
+  font: 600 0.88rem var(--font-sans);
+}
+
+.pricing-toggle .lg-tab-text {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.4rem;
-  min-width: 8rem;
-  padding: 0.55rem 1rem;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: 600 0.88rem var(--font-sans);
-  cursor: pointer;
-  transition: color 260ms ease;
-}
-
-.pricing-toggle button.is-on {
-  color: #f7f4ee;
-}
-
-.pricing-toggle button span {
-  padding: 0.1rem 0.4rem;
-  border-radius: var(--radius-pill);
-  background: rgb(139 92 246 / 0.2);
-  font-size: max(13px, 0.68rem);
   white-space: nowrap;
 }
 
-.pricing-toggle__thumb {
-  position: absolute;
-  top: 0.3rem;
-  bottom: 0.3rem;
-  left: 0.3rem;
-  width: calc(50% - 0.3rem);
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  transition: transform 380ms var(--ease-out-soft);
-}
-
-.pricing-toggle__thumb[data-on="annual"] {
-  transform: translateX(100%);
+/* "Save N%" changes what the visitor picks, so it stays marked: a flat lime tag, not a pill. */
+.pricing-toggle .lg-tab-text span {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--v-lime);
+  color: var(--v-ink);
+  font-size: max(13px, 0.68rem);
+  font-weight: 600;
 }
 
 .marketing-plan-price {
@@ -758,7 +670,7 @@ html[data-performance="lite"] .paper-hero > img {
 }
 
 .nf__code span { color: #c4a4ff; }
-.nf__code em { color: #f5b68a; font-style: normal; }
+.nf__code .nf__str { color: #f5b68a; }
 
 .nf__actions {
   display: flex;

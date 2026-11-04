@@ -21,7 +21,7 @@ const BACKING: Readonly<Record<string, readonly string[]>> = {
   [SENT[1]]: ["path inside your project", "The full path on your computer is not sent."],
   [SENT[2]]: ["the name of the project folder you last worked in"],
   [SENT[3]]: ["Any question you type is sent too."],
-  [SENT[4]]: ["up to two files from your project that the snippet imports", "the first 4,000 characters of each"],
+  [SENT[4]]: ["up to 2 files from your project that the snippet imports", "the first 4,000 characters of each"],
   [SENT[5]]: ["Git diffs are sent only when you ask a Brief to explain them."],
   [SENT[6]]: ["the app sends a random install ID with each cloud explanation", "your computer's system (Mac or Windows) and the app version", "explanations carry your sign-in token instead of the install ID"],
   [KEPT[0]]: ["Your repo is never uploaded."],

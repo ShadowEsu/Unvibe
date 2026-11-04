@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/Button';
+import { GlassPlate } from '@/components/glass/GlassPlate';
 import { track } from '@/lib/analytics';
 import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
@@ -47,8 +48,8 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   return (
     <div className="pricing-plans">
       <header className="pricing-plans__intro">
-        <p className="paper-meta">Pricing</p>
-        <h1 id="pricing-title">{copy.heading.lead}<em>{copy.heading.emphasis}</em>{copy.heading.tail}</h1>
+        {/* One upright sentence: the copy keeps its lead/emphasis/tail parts, rendered without an accent word (Design, ledger 443). */}
+        <h1 id="pricing-title">{`${copy.heading.lead}${copy.heading.emphasis}${copy.heading.tail}`}</h1>
         <p>Free needs no card and no API key.</p>
       </header>
       {paymentsOpen ? (
@@ -74,6 +75,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
       <div className="marketing-plan-grid marketing-plan-grid--core">
         {copy.plans.map((plan) => (
           <article key={plan.id} id={plan.id} className={`marketing-plan-card${plan.featured ? ' featured' : ''}`}>
+            <GlassPlate />
             <span className="plan-badge">{plan.badge}</span>
             <h3>{plan.name}</h3>
             <p className="plan-kicker">{plan.eyebrow}</p>

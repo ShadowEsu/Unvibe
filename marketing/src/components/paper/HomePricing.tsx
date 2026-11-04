@@ -1,6 +1,7 @@
 import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * The home page's two-card price strip (Design W5): Free today, Pro's real price and that it is not on
@@ -14,12 +15,12 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
     <section className="paper-section" id="pricing" aria-labelledby="pricing-title">
       <div className="paper-wrap u-sheet">
         <div className="sec-head">
-          <p className="paper-meta">Pricing</p>
-          <h2 id="pricing-title">Free while in beta. <em>Pro opens soon.</em></h2>
+          <h2 id="pricing-title">Free while in beta. Pro opens soon.</h2>
           <p className="paper-lead">No card and no API key. Nothing is billed today.</p>
         </div>
         <div className="plans-strip">
           <div className="plans-strip__card">
+            <GlassPlate />
             <p className="plans-strip__tag">Available now</p>
             <h3>Free</h3>
             <p className="plans-strip__price">$0</p>
@@ -32,6 +33,7 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
             </ul>
           </div>
           <div className="plans-strip__card plans-strip__card--pro">
+            <GlassPlate />
             <p className="plans-strip__tag">Opens soon</p>
             <h3>Pro</h3>
             <p className="plans-strip__price">${PRICING.proMonthly} <small>a month, or ${PRICING.proAnnual} a year</small></p>

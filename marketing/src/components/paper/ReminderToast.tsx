@@ -84,12 +84,12 @@ export function ReminderToast() {
       <button type="button" className="remind__close" aria-label="No thanks" onClick={close}>×</button>
       {state === "done" ? (
         <p className="remind__done">
-          {giftCode ? <>Sent! After you sign in to the app, enter <b>{giftCode}</b> on the Share page. <em>A month of Pro each.</em></> : <>Sent! Check your inbox. <em>Have fun.</em></>}
+          {giftCode ? <>Sent! After you sign in to the app, enter <b>{giftCode}</b> on the Share page. <b>A month of Pro each.</b></> : <>Sent! Check your inbox. <b>Have fun.</b></>}
         </p>
       ) : (
         <form onSubmit={submit}>
           {giftCode ? (
-            <p><b>A friend invited you.</b> Sign in to the Unvibe app and enter <b>{giftCode}</b> on the Share page. You each get <em>a month of Pro</em>. Want the download link by email?</p>
+            <p><b>A friend invited you.</b> Sign in to the Unvibe app and enter <b>{giftCode}</b> on the Share page. You each get <b>a month of Pro</b>. Want the download link by email?</p>
           ) : invited ? (
             <p><b>A friend invited you.</b> Want the download link and setup guide by email?</p>
           ) : (

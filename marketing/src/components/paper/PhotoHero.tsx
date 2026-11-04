@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from "rea
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
-import { compensationProgramCount, compensationTotalLabel, compensationTotalPhrase, startupPrograms } from "@/data/compensation";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
@@ -113,6 +113,7 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
         <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} surface="hero" />
         <TryInBrowser device={device} />
       </div>
+      {/* Security-approved wording (2026-11-04); the other OS stays a plain link. */}
       <p className="vhero__trust">
         <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
         <span className="vhero__trust-item">No API key.</span>{" "}
@@ -127,7 +128,7 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
   );
 }
 
-/** Homepage hero: one promise, what happens when you use it, one action for this device. The recording follows. */
+/** Homepage hero: one promise, what happens when you use it, one action for this device, then the real product. */
 export function PhotoHero() {
   const [ready, setReady] = useState(false);
   const [device, setDevice] = useState<VisitorDevice>("mac");
@@ -159,10 +160,9 @@ export function PhotoHero() {
       <div className="vhero__copy">
         <div className="vhero__vibe">
           <Vibe size={72} />
-          <span className="vhero__bubble">{device === "phone" ? "psst, I live on your Mac or PC" : "hi, I'm Vibe"}</span>
         </div>
         <h1 id="hero-title">
-          <span className="vhero__lead">Understand the code</span> <em>your AI just wrote.</em>
+          <span className="vhero__lead">Understand the code</span> your AI just wrote.
         </h1>
         <p className="vhero__kicker">
           {device === "phone" ? (
@@ -186,14 +186,21 @@ export function PhotoHero() {
         ) : (
           <DownloadForThisComputer device={device} actionsRef={actionsRef} />
         )}
-        <p className="vhero__backing">
-          <a href="/investors#backing">
-            <b>{compensationTotalLabel()} {compensationTotalPhrase()}</b>
-            <span className="vhero__backing-separator">. </span>
-            <span className="vhero__backing-programs">{compensationProgramCount()} programs, including {startupPrograms[0].program}</span>
-          </a>
-        </p>
+
       </div>
+      <figure className="vhero__still">
+        <GlassPlate />
+        {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size still with its own srcSet */}
+        <img
+          src="/product/unvibe-0148-debounce-1180.webp"
+          srcSet="/product/unvibe-0148-debounce-720.webp 720w, /product/unvibe-0148-debounce-1180.webp 1180w"
+          sizes="(max-width: 1200px) calc(100vw - 2.5rem - 20px), 1160px"
+          width={1180}
+          height={846}
+          alt="Unvibe 0.1.48 explaining a debounce function beside the code."
+          decoding="async"
+        />
+      </figure>
     </section>
   );
 }

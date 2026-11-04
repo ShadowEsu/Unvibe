@@ -229,7 +229,7 @@ export function TryIt({
 
   return (
     <div className="try">
-      <div className="try__editor">
+      <div className="try__editor code-window">
         <div className="try__bar"><i /><i /><i /><span>{fileName}</span></div>
         <label className="sr-only" htmlFor="try-code">Code to explain</label>
         <textarea
@@ -305,7 +305,7 @@ export function TryIt({
       <div className="try__panel">
         <div className="try__head">
           <Vibe size={34} follow={false} />
-          <p><b>Vibe</b><span>{lines} {lines === 1 ? "line" : "lines"} selected</span></p>
+          <p><b>Vibe</b><span className="code-window">{lines} {lines === 1 ? "line" : "lines"} selected</span></p>
         </div>
         <div className="try__levels" role="group" aria-label="Explanation depth">
           {LEVELS.map(([id, label]) => (

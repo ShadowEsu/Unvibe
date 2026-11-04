@@ -49,7 +49,7 @@ const NO_AMOUNT_TERMS: Array<[string, string]> = [
   ["Deepgram Startup Program", "Program member"],
   ["MongoDB for Startups", "Program member"],
 ];
-const HERO = "$72,300 in Claude and PostHog credits and committed cash. 7 programs, including Claude for Startups";
+
 const SUMMARY =
   "In Claude for Startups, plus Mixpanel, PostHog, Salesforce Launchpad, Google for Startups, Deepgram and MongoDB®";
 /** Program lines and amounts Security removed for lack of a record (0208): never shown again anywhere. */
@@ -165,13 +165,12 @@ describe("startup programs", () => {
     assert.equal(createHash("sha256").update(readFileSync(join(dir, "mongodb-logo.svg"))).digest("hex"), LOGO_SHA256);
   });
 
-  it("home: the hero line links to /investors#backing, and the strip shows the 7 names and only the MongoDB logo", () => {
+  it("home: no credits line in the hero (it lives on /investors), and the strip shows the 7 names and only the MongoDB logo", () => {
     const home = render(HomePage);
-    const hero = home.match(/<p class="vhero__backing">([\s\S]*?)<\/p>/)?.[1] ?? "";
-    assert.match(hero, /<a href="\/investors#backing">/);
-    assert.equal(Array.from(hero.matchAll(/<a\b/g)).length, 1, "the programs line stays one tab stop");
-    // text() turns tags into spaces; the separator span starts with the sentence's full stop.
-    assert.equal(text(hero).replace(/\s+\./g, ".").trim(), HERO);
+    // Design and Security, 2026-11-04: the $ total is investor proof, so the home hero no longer carries it.
+    assert.doesNotMatch(home, /vhero__backing/);
+    assert.doesNotMatch(text(home), /\$72,300/);
+    assert.match(home, /<a href="\/investors#backing">investors page<\/a>/);
     const strip = section(home, /<section id="backing"/);
     assertProgramSection(strip, "home strip");
     assert.match(text(strip), /Unvibe is in Claude for Startups\./);

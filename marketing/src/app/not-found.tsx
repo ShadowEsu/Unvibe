@@ -33,7 +33,7 @@ export default function NotFound() {
           Press <kbd>⌘K</kbd> or <kbd>Ctrl+K</kbd> to search the site.
         </p>
         <p className="nf__code" aria-hidden="true">
-          <span>const</span> page = routes.find(r =&gt; r.path === <em>&quot;here&quot;</em>); <span>{"// undefined"}</span>
+          <span>const</span> page = routes.find(r =&gt; r.path === <span className="nf__str">&quot;here&quot;</span>); <span>{"// undefined"}</span>
         </p>
       </div>
     </section>

@@ -8,7 +8,7 @@ export const SENT: readonly string[] = [
   "Its file path inside your project, when Unvibe knows it, never the full path on your computer",
   "The name of the project folder",
   "Any question you type",
-  "On Pro, up to two files the selection imports (the first 4,000 characters of each)",
+  "On Pro, up to 2 files the selection imports (the first 4,000 characters of each)",
   "Git changes, only when you ask a Brief to explain them",
   "Without an account, a random install ID with your system and the app version, so free explanations can be counted. Signed in, your sign-in token instead",
 ];
@@ -23,10 +23,9 @@ export const KEPT: readonly string[] = [
 export function WhatLeaves() {
   return (
     <section className="paper-section" id="what-leaves" aria-labelledby="what-leaves-title">
-      <div className="paper-wrap u-sheet">
+      <div className="paper-wrap u-sheet u-solid">
         <div className="sec-head">
-          <p className="paper-meta">Privacy</p>
-          <h2 id="what-leaves-title">What leaves <em>your computer.</em></h2>
+          <h2 id="what-leaves-title">What leaves your computer.</h2>
           <p className="paper-lead">Only what&apos;s needed to explain what you ask about. The privacy policy has the full detail.</p>
         </div>
         <div className="leaves">

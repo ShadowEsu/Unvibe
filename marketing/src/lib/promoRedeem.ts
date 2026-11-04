@@ -113,9 +113,12 @@ export function formatProUntil(iso: string, timeZone?: string): string | null {
 
 type ErrorKind = Exclude<RedeemOutcomeKind, "redeemed" | "already_yours">;
 
+/** The sample code in the bad_code line; the page sets it in a <code> element so it renders in JetBrains Mono. */
+export const PROMO_CODE_EXAMPLE = "ABCD-EFGH-JKMN-PQRS";
+
 /** One line per answer. `final`: the API has decided about this code, so the saved code is forgotten. */
 const ERRORS: Record<ErrorKind, { line: string; final: boolean }> = {
-  bad_code: { line: "That code does not look right. Codes have 16 letters and numbers, like ABCD-EFGH-JKMN-PQRS.", final: false },
+  bad_code: { line: `That code does not look right. Codes have 16 letters and numbers, like ${PROMO_CODE_EXAMPLE}.`, final: false },
   invalid: { line: "That code was not found. Check it and try again.", final: true },
   used: { line: "That code has already been used by another account.", final: true },
   one_per_account: { line: "This account already used a code from this offer.", final: true },

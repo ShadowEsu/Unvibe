@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { track } from "@/lib/analytics";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { detectVisitorDevice } from "@/lib/shortcuts";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * Pages with no bar: the download pages, whose own content is the download it would cover
@@ -48,6 +49,7 @@ export function MobileDownloadBar() {
   // An <aside>, so the bar sits in a landmark once it shows (axe `region`, seen at 390 with the try-it answer open).
   return (
     <aside className={visible ? "mobile-dl is-in" : "mobile-dl"} aria-label="Get Unvibe" aria-hidden={!visible}>
+      <GlassPlate />
       <span>{phone ? "Free for your Mac or PC" : "Free for Mac and Windows"}</span>
       {phone ? (
         <a href="/#email-link" tabIndex={visible ? 0 : -1} onClick={() => track("email_link_cta_clicked", { surface: "mobile_bar" })}>

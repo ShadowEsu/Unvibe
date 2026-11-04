@@ -97,7 +97,7 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-what">What Vibe can do with your code</h2>
         <ul className="explain-notes">
           <li>Explain it at the level you pick. New, Beginner, Intermediate and Advanced are free; Expert comes with Pro.</li>
-          <li>Quiz you with Test me: up to three questions written about the lines you highlighted.</li>
+          <li>Quiz you with Test me: up to 3 questions written about the lines you highlighted.</li>
           <li>Keep the lessons you want in your Library, saved on this PC.</li>
           <li>See what changed in your repo in a Change Brief, built on your PC at no cost (its AI explanation is Pro).</li>
           <li>

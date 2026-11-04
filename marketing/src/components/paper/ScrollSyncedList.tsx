@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { prefersLiteExperience } from "@/lib/performanceMode";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 interface ScrollSyncedListProps {
   prefix: string;
@@ -53,6 +54,7 @@ export function ScrollSyncedList({ prefix, items }: ScrollSyncedListProps) {
 
   return (
     <div className="ssync">
+      <GlassPlate />
       <p className="ssync__prefix">{prefix}</p>
       <ul ref={listRef} className="ssync__list">
         {items.map((item) => <li key={item}><span>{item}</span></li>)}

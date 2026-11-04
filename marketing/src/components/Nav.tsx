@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
+import { GlassPlate } from "@/components/glass/GlassPlate";
 
 const links = [
   { label: "Product", href: "/#product" },
@@ -15,10 +16,10 @@ const links = [
 ];
 
 /**
- * One dark bar pinned to the top of every page. On phones the menu opens inside the bar
- * (no overlay sheet); Escape or any link closes it and focus returns to the toggle. Tabbing
- * out of the menu closes it too, so focus never lands on a control hidden under it.
- * /activate is a full-screen card over the page, so the bar is not rendered there.
+ * One glass bar pinned to the top of every page. On phones the menu opens inside the bar
+ * (no overlay sheet), so the bar's glass becomes the menu sheet; Escape or any link closes it and focus
+ * returns to the toggle. Tabbing out of the menu closes it too, so focus never lands on a control hidden
+ * under it. /activate is a full-screen card over the page, so the bar is not rendered there.
  */
 export function Nav() {
   const pathname = usePathname();
@@ -47,6 +48,7 @@ export function Nav() {
         if (open && next instanceof Node && !menu.current?.contains(next) && !toggle.current?.contains(next)) setOpen(false);
       }}
     >
+      <GlassPlate />
       <nav className="mnav__bar paper-wrap" aria-label="Primary">
         <Link href="/" aria-label="Unvibe home" className="mnav__home"><Logo /></Link>
         <ul className="mnav__links">
