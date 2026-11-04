@@ -47,4 +47,5 @@ test('the Try demo asks for the same length as the app: 1 or 2 sentences, 40 wor
   assert.match(prompt, /1 or 2 short, plain sentences/);
   assert.match(prompt, /40 words at most in all/);
   assert.doesNotMatch(prompt, /2 to 4/);
+  assert.match(prompt, /never leave it out to stay short/);
 });

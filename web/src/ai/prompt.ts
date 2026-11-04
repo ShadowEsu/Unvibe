@@ -43,7 +43,7 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
       ? [
         '- Answer in 1 or 2 short, plain sentences (each under about 20 words, 40 words at most in all) that say what the selected code does. However long the selection is, never more than 2 sentences: say what it does overall, not every detail. The reader can ask for more detail.',
         '- No headings, no bullets, no lists, no bold, no code blocks, no cite markers. One paragraph. Put names from the code (functions, variables, files) in single backticks, like `total`.',
-        '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain.',
+        '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain. That sentence does not count toward the 2 sentences or the 40 words: never leave it out to stay short.',
       ]
       : [
         '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',

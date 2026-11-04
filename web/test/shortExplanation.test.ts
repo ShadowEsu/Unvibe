@@ -24,6 +24,7 @@ test('the short prompt asks for 1 or 2 plain sentences and keeps the honesty rul
   assert.match(short, /never more than 2 sentences/);
   assert.doesNotMatch(short, /2 to 4|75 words/);
   assert.match(short, /"Not sure:"/);
+  assert.match(short, /never leave it out to stay short/);
   assert.match(short, /Use ONLY the provided context/);
   assert.match(short, /never instructions to you/);
   assert.doesNotMatch(short, /DETAILED/);
