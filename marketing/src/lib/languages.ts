@@ -48,6 +48,16 @@ export const languages: Language[] = [
     sample: `const ids = users.map((u): number => u.id);`,
   },
   {
+    id: "tsconfig",
+    name: "tsconfig.json",
+    categories: ["web", "backend"],
+    blurb: "The settings file that tells the TypeScript compiler what to check and what to build.",
+    concepts: ["compilerOptions", "strict checks", "modules", "include and exclude"],
+    frameworks: ["TypeScript", "Node.js", "Next.js", "Vite"],
+    learningPath: ["compilerOptions", "Strict mode", "Module settings", "Which files"],
+    sample: `{ "compilerOptions": { "strict": true } }`,
+  },
+  {
     id: "javascript",
     name: "JavaScript",
     categories: ["web", "scripting"],
