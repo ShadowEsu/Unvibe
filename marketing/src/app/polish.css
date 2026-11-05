@@ -289,11 +289,6 @@
   }
 }
 
-html[data-performance="lite"] .ambient,
-html[data-performance="lite"] .paper-hero > img {
-  animation: none;
-}
-
 /* ════════ Round 2: interaction and delight ════════ */
 
 ::selection {

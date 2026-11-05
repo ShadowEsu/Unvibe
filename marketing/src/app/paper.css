@@ -634,11 +634,6 @@ h2 {
   main > .paper-section:not(.paper-install--front) { content-visibility: auto; contain-intrinsic-size: 1px 850px; }
 }
 
-html[data-performance="lite"] .paper-marquee__track,
-html[data-performance="lite"] .paper-follow,
-html[data-performance="lite"] .paper-keys,
-html[data-performance="lite"] .paper-faq__caret { animation: none; will-change: auto; }
-
 .paper-follow {
   display: flex;
   flex-wrap: wrap;

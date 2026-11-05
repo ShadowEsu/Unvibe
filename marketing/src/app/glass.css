@@ -373,17 +373,3 @@
     border: 1px solid CanvasText !important;
   }
 }
-
-/* The lite experience (lib/performanceMode: low-end devices) gets the flat cream backdrop, ink edges and no
-   painted rims on the controls. */
-html[data-performance="lite"] {
-  --glass-edge: var(--u-line-strong);
-}
-
-html[data-performance="lite"] body::before {
-  background: var(--surface-solid);
-}
-
-html[data-performance="lite"] :is([class^="lg-"], [class*=" lg-"]) {
-  background-image: none !important;
-}

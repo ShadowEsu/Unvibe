@@ -429,12 +429,3 @@ body:has(.paper-pricing) .fb-tab {
     transition: none;
   }
 }
-
-html[data-performance="lite"] .paper-pricing .marketing-plan-card,
-html[data-performance="lite"] .paper-pricing .marketing-plan-card:hover,
-html[data-performance="lite"] :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
-html[data-performance="lite"] .resources-card:hover,
-html[data-performance="lite"] .founder-about__btn:hover {
-  transform: none;
-  transition: none;
-}
