@@ -298,6 +298,16 @@ export const languages: Language[] = [
     sample: `app: main.o\n\tcc -o $@ $^`,
   },
   {
+    id: "gitignore",
+    name: ".gitignore",
+    categories: ["scripting", "systems"],
+    blurb: "The patterns that tell git which files to leave out of a repository.",
+    concepts: ["patterns", "slashes and folders", "negation", "tracked files"],
+    frameworks: ["git", "GitHub", "GitLab", "git check-ignore"],
+    learningPath: ["Patterns", "Folders", "Negation", "Already tracked files"],
+    sample: `node_modules/\n*.log\n.env`,
+  },
+  {
     id: "perl",
     name: "Perl",
     categories: ["scripting", "backend"],
