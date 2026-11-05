@@ -592,7 +592,11 @@
 /* ── Onboarding v2: Vibe talks, five quick steps, a live demo ─────────────── */
 :root[data-ui="v3"][data-v7] {
   & .ob2 { display: grid; place-items: center; padding: 28px; overflow: auto; }
-  & .ob2__card { width: min(720px, 100%); padding: 26px 34px 24px; display: grid; gap: 18px; }
+  /* The card never grows past the window: top, Vibe and the Back/forward row keep their size, and only the step's
+     body scrolls if it must, so the forward button is always in view (Design, 0.1.50 RC: the heard_from field
+     pushed "Let's go" out of the card at the Mac's 1024x674). */
+  & .ob2__card { width: min(720px, 100%); min-height: min(590px, 100%); max-height: 100%; overflow: hidden; padding: 26px 34px 24px; display: flex; flex-direction: column; gap: 18px; }
+  & .ob2__top, & .ob2__vibe, & .ob2__card > .field-err, & .ob2 .ob__actions { flex: none; }
   & .ob2__top { display: flex; align-items: center; gap: 14px; }
   & .ob2__top .ob__dots { display: flex; flex: 1; gap: 6px; }
   & .ob2__top .ob__dot { flex: 1; height: 8px; border-radius: 99px; border: 1.5px solid var(--v-ink); background: var(--v-surface); transition: background 300ms ease; }
@@ -608,7 +612,8 @@
   & .ob--scene-0 .ob2__speech { border-radius: 18px; max-width: 520px; font-size: 25px; }
   & .ob2__caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: var(--v-ink); animation: v7Blink 900ms steps(1) infinite; }
   & .ob2__caret.is-off { display: none; }
-  & .ob2__body { display: grid; gap: 14px; }
+  /* The padding keeps focus rings and hard shadows inside the scroll area; the margin cancels it in the layout. */
+  & .ob2__body { display: grid; gap: 14px; flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: safe center; padding: 4px 6px 6px; margin: -4px -6px -6px; }
   & .ob--scene-0 .ob2__body { text-align: center; justify-items: center; }
   & .ob2 .ob__title { margin: 0; font-size: 34px; }
   & .ob2 .ob__sub { margin: 0; font-size: 15.5px; }
@@ -675,6 +680,14 @@
   & .ob__confetti i:nth-child(4n+2) { background: var(--sky); }
   & .ob__confetti i:nth-child(4n+3) { background: var(--sun); }
   & .ob__confetti i:nth-child(4n+4) { background: var(--lilac); border-radius: 50%; width: 12px; height: 12px; }
+}
+/* Short windows (the Mac default clamps to about 674 tall): tighter gaps, and companion.tsx's SHORT_WINDOW gives
+   step 1 a 64px Vibe, so step 1 fits whole. */
+@media (max-height: 760px) {
+  :root[data-ui="v3"][data-v7] .ob2__card { gap: 10px; padding-block: 18px 16px; }
+  :root[data-ui="v3"][data-v7] .ob2__body { gap: 10px; }
+  :root[data-ui="v3"][data-v7] .ob--scene-0 .ob2__vibe { gap: 8px; }
+  :root[data-ui="v3"][data-v7] .ob2__speech { padding-block: 10px; }
 }
 @keyframes v7Blink { 50% { opacity: 0; } }
 @keyframes obConfetti { to { transform: translateY(105vh) rotate(540deg); } }

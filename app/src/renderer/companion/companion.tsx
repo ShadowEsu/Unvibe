@@ -472,6 +472,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   // Mac step 4: the offer, the guide while System Settings is open, then the shortcut is on.
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
   const shortcutHeading = useRef<HTMLHeadingElement>(null);
+  // Short windows (v7.css's max-height: 760px block) get a smaller step-1 Vibe so the step fits whole.
+  const [shortWindow, setShortWindow] = useState(() => window.matchMedia(SHORT_WINDOW).matches);
   const paste = useOwnCodePaste();
   const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
   const macPaste = !isWindows && step === 2;
@@ -483,6 +485,12 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
+  useEffect(() => {
+    const media = window.matchMedia(SHORT_WINDOW);
+    const apply = () => setShortWindow(media.matches);
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
   // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer.
   useEffect(() => {
     if (isWindows) return undefined;
@@ -629,7 +637,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
           <span className="ob2__count">{step + 1} / {steps.length}</span>
         </div>
         <div className="ob2__vibe">
-          <span className="ob2__blob"><Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} /></span>
+          <span className="ob2__blob"><Buddy mood={mood} size={step === 0 ? (shortWindow ? 64 : 112) : 72} follow label="Vibe" key={`${step}-${mood}`} /></span>
           <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
         </div>
 
@@ -760,6 +768,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 }
 
 const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation.";
+const SHORT_WINDOW = '(max-height: 760px)';
 
 /**
  * The own-code paste step's two ways in, used by setup's step 3 on a Mac and by the next open's
