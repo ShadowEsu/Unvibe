@@ -425,8 +425,19 @@ await step('today', async () => {
     await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).waitFor();
     await sleep(1000);
     await shot(companion, 'onboarding-anywhere');
-    // On a Mac step 3 is the paste target; nothing is pasted here, so Skip for now finishes setup.
-    await button(companion, steps === 3 ? 'Start using Unvibe' : 'Skip for now').click();
+    // Step 3 on a Mac is the paste target. Once own code was explained there (the pasted samples above count),
+    // its button is Next and step 4 offers the shortcut (Not now finishes); otherwise Skip for now finishes.
+    // Windows has 3 steps and ends with Start using Unvibe.
+    const finishers = ['Skip for now', 'Not now', 'Do it later', 'Start using Unvibe'];
+    for (let i = 0; i < 4 && await companion.locator('.ob2__count').count(); i++) {
+      let clicked = false;
+      for (const name of finishers) {
+        const b = companion.getByRole('button', { name, exact: true });
+        if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
+      }
+      if (!clicked) await button(companion, 'Next').click();
+      await sleep(1000);
+    }
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
   await sleep(1800);
