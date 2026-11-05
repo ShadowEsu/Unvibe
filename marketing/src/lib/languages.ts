@@ -257,6 +257,26 @@ export const languages: Language[] = [
     learningPath: ["Fields", "Patterns", "Arrays", "BEGIN and END"],
     sample: `awk -F, '{ sum += $3 } END { print sum }' sales.csv`,
   },
+  {
+    id: "make",
+    name: "Makefile",
+    categories: ["systems", "scripting"],
+    blurb: "Build rules that rebuild only what changed, for C projects and task shortcuts.",
+    concepts: ["targets and prerequisites", "variables", "pattern rules", "automatic variables", "phony targets"],
+    frameworks: ["GNU Make", "BSD make", "CMake", "gcc"],
+    learningPath: ["Rules", "Variables", "Pattern rules", "Phony targets"],
+    sample: `app: main.o\n\tcc -o $@ $^`,
+  },
+  {
+    id: "perl",
+    name: "Perl",
+    categories: ["scripting", "backend"],
+    blurb: "Text and log processing, system scripts and older web back ends.",
+    concepts: ["scalars, arrays and hashes", "regular expressions", "strict and warnings", "sort with a comparison"],
+    frameworks: ["CPAN", "Mojolicious", "Dancer", "DBI"],
+    learningPath: ["Variables and sigils", "Regular expressions", "Hashes", "Sorting"],
+    sample: `my %seen; $seen{$_}++ for @words;`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

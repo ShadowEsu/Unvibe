@@ -1136,6 +1136,125 @@ END {
     watchOut:
       "awk splits at every comma, even one inside quotes. A product written `\"poster, large\"` becomes two fields, so `$4` is the text `large\"` with a space in front, which counts as 0: that sale's 30 is lost and `west` shows 12.50 from 2 sales, with no error. gawk 5.3 and later have a `--csv` option that reads quoted fields, while this macOS awk prints `unknown option --csv ignored`.",
   },
+  {
+    id: "make",
+    fileName: "Makefile",
+    lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",
+    description:
+      "Paste a Makefile and get a plain English explanation, free online. The sample builds a small C program, rebuilds only the files that changed and runs a test.",
+    sampleSummary: "A Makefile that compiles a C word-count tool from every file in src/, keeps the object files in build/ and checks the tool's output.",
+    sample: `# Build the \`wordcount\` tool from the C files in src/.
+# Run: make (build), make test (build, then check the output), make clean
+
+CC      := cc
+CFLAGS  := -Wall -Wextra -O2
+SRC     := $(wildcard src/*.c)
+OBJ     := $(SRC:src/%.c=build/%.o)
+
+wordcount: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+build/%.o: src/%.c src/count.h | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build:
+	mkdir -p build
+
+test: wordcount
+	./wordcount < tests/sample.txt | diff - tests/expected.txt
+
+clean:
+	rm -rf build wordcount
+
+.PHONY: test clean`,
+    shows: [
+      {
+        concept: "targets and prerequisites",
+        text: "Each rule reads `target: prerequisites`, with its commands on the lines under it. make runs a rule's commands only when the target is missing or older than one of its prerequisites, so a second `make` in a row printed `make: 'wordcount' is up to date.` and compiled nothing.",
+      },
+      {
+        concept: "variables",
+        text: "`:=` sets a variable once, when make reads the line. `$(wildcard src/*.c)` lists the C files that exist, and `$(SRC:src/%.c=build/%.o)` turns each one into its object file's name, so `src/main.c` becomes `build/main.o`. A new .c file in src/ joins the build with no edit to the Makefile.",
+      },
+      {
+        concept: "pattern rules",
+        text: "`build/%.o: src/%.c src/count.h` is one rule for every object file, where `%` is the same name on both sides. Because the header is listed too, touching `src/count.h` recompiled both files and relinked the tool. The `| build` part is an order-only prerequisite: the folder has to exist first, but its newer time stamp never causes a rebuild.",
+      },
+      {
+        concept: "automatic variables",
+        text: "`$@` is the rule's target, `$^` all its prerequisites and `$<` the first one. So the link step ran `cc -Wall -Wextra -O2 -o wordcount build/count.o build/main.o`, and each compile got only its own .c file.",
+      },
+      {
+        concept: "phony targets",
+        text: "`test` and `clean` name jobs, not files, and `.PHONY` says so. It matters once a file with that name turns up: with the `.PHONY` line removed, a file called `test` newer than the tool made `make test` print `make: 'test' is up to date.` and skip the test.",
+      },
+    ],
+    notes: [
+      "Run with GNU Make 4.4.1 on a three-file C project, the first `make` ran `mkdir -p build`, two compiles and the link, and `make test` passed (`3 lines, 9 words, 44 characters`).",
+      "Editing only `src/main.c` recompiled `main.o` and relinked, and left `count.o` alone. On a big project that is the point of make: only what changed gets built again.",
+      "When the output differs, `diff` prints both lines and exits with 1, so make stops with `make: *** [Makefile:19: test] Error 1`, and a CI job running `make test` fails.",
+    ],
+    watchOut:
+      "Each command line has to start with a tab, not spaces. With the tabs turned into four spaces, which some editors do on save, make stopped at the first command with `Makefile:10: *** missing separator.  Stop.` and built nothing.",
+  },
+  {
+    id: "perl",
+    fileName: "slow_pages.pl",
+    lead: "Paste Perl and Vibe explains what each regular expression captures, whether a sigil means one value, a list or a hash, and what a `sort` block compares.",
+    description:
+      "Paste Perl code and get a plain English explanation, free online. The sample reads a web server log, averages response times per page and counts server errors.",
+    sampleSummary: "A Perl script that reads a web server log, averages each page's response time in two hashes and prints the three slowest pages and the server error count.",
+    sample: `# Which pages are slow? Reads web server log lines like:
+#   2026-11-05T09:14:02 GET /pricing 200 412ms
+# Run: perl slow_pages.pl access.log
+use strict;
+use warnings;
+
+my (%total_ms, %hits);
+my $errors = 0;
+
+while (my $line = <>) {
+    next unless $line =~ m{^\\S+ (GET|POST) (\\S+) (\\d{3}) (\\d+)ms$};
+    my ($path, $status, $ms) = ($2, $3, $4);
+    $errors++ if $status >= 500;
+    $total_ms{$path} += $ms;
+    $hits{$path}++;
+}
+
+my @slowest = sort { $total_ms{$b} / $hits{$b} <=> $total_ms{$a} / $hits{$a} } keys %hits;
+
+for my $path (@slowest[0 .. 2]) {
+    last unless defined $path;
+    printf "%-12s %5.0f ms average over %d requests\\n",
+        $path, $total_ms{$path} / $hits{$path}, $hits{$path};
+}
+print "$errors server errors\\n";`,
+    shows: [
+      {
+        concept: "scalars, arrays and hashes",
+        text: "The first character says what a variable holds: `$line` is one value, `@slowest` a list and `%hits` a hash of keys and values. One entry of a hash is a single value, so it takes `$`: `$hits{$path}`. The first time a path turns up its entry is empty, and `++` starts it from 0.",
+      },
+      {
+        concept: "regular expressions",
+        text: "`m{...}` is a match written with braces in place of slashes, which helps when the text has `/` in it. Each pair of brackets captures one part into `$1` to `$4`: the method, the path, the 3-digit status and the milliseconds. `next unless` skips a line that doesn't match, so the sample log's `health check ok` line is ignored.",
+      },
+      {
+        concept: "strict and warnings",
+        text: "`use strict` makes every variable be declared with `my`. Without it, a typo such as `$hit{...}` for `$hits{...}` quietly made a second hash and the count came out as `0 paths`. With it, Perl refused to run and named `%hit`.",
+      },
+      {
+        concept: "sort with a comparison",
+        text: "`sort { ... } keys %hits` orders the paths using the block, where `$a` and `$b` are the two being compared. `<=>` compares numbers, and putting `$b` on the left sorts largest first, here by average time. `@slowest[0 .. 2]` takes the first three, and `last unless defined $path` stops early when the log has fewer pages.",
+      },
+    ],
+    notes: [
+      "Run with Perl 5.42.2 on a 9-line sample log, the script printed `/api/signup` at 925 ms average over 2 requests, `/pricing` at 396 ms and `/docs` at 92 ms, then `1 server errors` for the one 503.",
+      "`<>` reads the files named on the command line a line at a time, or standard input when there are none, so `cat access.log | perl slow_pages.pl` printed the same result.",
+      "With only two pages in the log, the script printed both and stopped with no warning, because of the `defined` check.",
+    ],
+    watchOut:
+      "`==` compares numbers and `eq` compares text. `\"GET\" == \"POST\"` came out true: Perl turned both words into 0, printed `Argument \"POST\" isn't numeric in numeric eq (==)` and carried on. A log saved on Windows has a hidden `\\r` at the end of each line, so `ms$` never matched and the script printed only `0 server errors`, with no error. Adding `$line =~ s/\\r$//;` as the loop's first line fixed it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
