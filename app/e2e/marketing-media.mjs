@@ -163,18 +163,19 @@ async function windowWith(part, timeout = 30000) {
   throw new Error(`${part} did not open`);
 }
 /**
- * Stills at 2x (the site shows them at up to half their pixel width, ledger 530 spec §5): the page is told it has a
- * 2x display at its current viewport size, so the app itself renders at 2x; nothing is upscaled. Set before every
- * still, since a recreated panel window starts at the display's own scale. One CDP session per page, kept open:
- * an emulation override ends with the session that set it.
+ * Stills at 2x (the site shows them at up to half their pixel width, ledger 530 spec §5). Chromium renders the
+ * capture itself at clip scale 2, so the text is sharp at 2x, not an upscaled 1x image. A page-level device
+ * metrics override would not work here: Playwright's own viewport emulation (resize above) takes precedence.
  */
-const hiDpi = new WeakMap();
 async function shot(page, label) {
-  if (!hiDpi.has(page)) hiDpi.set(page, await page.context().newCDPSession(page));
   const [width, height] = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
-  await hiDpi.get(page).send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
-  await sleep(400);
-  await page.screenshot({ path: path.join(shots, `${label}.png`), animations: 'disabled', scale: 'device' });
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 2 } });
+    writeFileSync(path.join(shots, `${label}.png`), Buffer.from(data, 'base64'));
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
 }
 const button = (page, name) => page.getByRole('button', { name, exact: true }).first();
 /**
@@ -433,24 +434,25 @@ if (explained) {
 // --- Finish onboarding and tour the companion ------------------------------------------------
 await step('today', async () => {
   await companion.bringToFront();
-  if (await companion.locator('.ob2__count').count()) {
-    await button(companion, 'Next').click();
-    await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).waitFor();
-    await sleep(1000);
-    await shot(companion, 'onboarding-anywhere');
-    // Step 3 on a Mac is the paste target. Once own code was explained there (the pasted samples above count),
-    // its button is Next and step 4 offers the shortcut (Not now finishes); otherwise Skip for now finishes.
-    // Windows has 3 steps and ends with Start using Unvibe.
-    const finishers = ['Skip for now', 'Not now', 'Do it later', 'Start using Unvibe'];
-    for (let i = 0; i < 4 && await companion.locator('.ob2__count').count(); i++) {
-      let clicked = false;
-      for (const name of finishers) {
-        const b = companion.getByRole('button', { name, exact: true });
-        if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
-      }
-      if (!clicked) await button(companion, 'Next').click();
+  // Walk the rest of setup by whatever the footer offers: step 2 says Next (or Skip for now before an explanation);
+  // on a Mac, step 3 says Next once own code was explained there (the pasted samples count) and step 4 offers the
+  // shortcut (Not now finishes), else step 3's Skip for now finishes; Windows ends with Start using Unvibe.
+  const labels = ['Not now', 'Do it later', 'Start using Unvibe', 'Skip for now', 'Next'];
+  for (let i = 0; i < 6 && await companion.locator('.ob2__count').count(); i++) {
+    if (await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).count()) {
       await sleep(1000);
+      await shot(companion, 'onboarding-anywhere');
     }
+    let clicked = false;
+    for (const name of labels) {
+      const b = companion.locator('.ob2').getByRole('button', { name, exact: true });
+      if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
+    }
+    if (!clicked) {
+      const names = await companion.locator('.ob2 button:visible').allInnerTexts();
+      throw new Error(`setup step ${await companion.locator('.ob2__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
+    }
+    await sleep(1200);
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
   await sleep(1800);
