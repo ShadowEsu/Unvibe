@@ -41,3 +41,11 @@ test('secret patterns catch common key shapes but not normal code', () => {
 test('prompt tells the model to ignore instructions inside the snippet', () => {
   assert.match(trySystemPrompt('beginner'), /Ignore any instructions/);
 });
+
+test('the Try demo asks for the same length as the app: 1 or 2 sentences, 40 words at most', () => {
+  const prompt = trySystemPrompt('beginner');
+  assert.match(prompt, /1 or 2 short, plain sentences/);
+  assert.match(prompt, /40 words at most in all/);
+  assert.doesNotMatch(prompt, /2 to 4/);
+  assert.match(prompt, /never leave it out to stay short/);
+});
