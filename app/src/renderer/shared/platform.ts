@@ -15,9 +15,10 @@ export const platformAttr = isWindows ? 'win' : isMac ? 'mac' : 'other';
 
 /**
  * The shortcut that works in every app before settings load (the platform default in
- * main/settings.ts). ⌘U / Ctrl+U only work inside VS Code and Cursor with the editor bridge.
+ * main/settings.ts: ⌃U on a Mac, Ctrl+Alt+U on Windows and Linux). ⌘U / Ctrl+U only work inside
+ * VS Code and Cursor with the editor bridge.
  */
-export const reviewKeyHint = isWindows ? 'Ctrl+Alt+U' : '⌃U';
+export const reviewKeyHint = isMac ? '⌃U' : 'Ctrl+Alt+U';
 
 /** One-line voice instructions: macOS Dictation, or Windows voice typing (Win+H). */
 export const voiceHowTo = isWindows
