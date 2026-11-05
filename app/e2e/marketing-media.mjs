@@ -34,6 +34,10 @@ const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-media-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-media-local-${Date.now()}`;
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId }));
 console.log(`install id ${installId}`);
+// Briefs reads the project last chosen (settings lastProjectRoot). The folder dialog can't be answered reliably on
+// GitHub's runner, so the run starts as if this sample project had been chosen before: a brief of its real change.
+const briefRepo = uploadRepo().repo;
+writeFileSync(path.join(userData, 'unvibe-settings.json'), JSON.stringify({ lastProjectRoot: briefRepo }));
 
 // Retina-sharp screenshots on runners whose display is 1x.
 const app = await launchApp({ exe, userData, args: ['--force-device-scale-factor=2'], timeout: 90000 });
@@ -130,7 +134,6 @@ function answerOpenPanel(file) {
   set found to false
   repeat 40 times
     if exists (first window of p whose name is "Choose a file to explain") then set found to true
-    if exists (first window of p whose name is "Open") then set found to true
     repeat with w in (windows of p)
       if exists sheet 1 of w then set found to true
     end repeat
@@ -164,14 +167,15 @@ async function windowWith(part, timeout = 30000) {
 }
 /**
  * Stills at 2x (the site shows them at up to half their pixel width, ledger 530 spec §5). Chromium renders the
- * capture itself at clip scale 2, so the text is sharp at 2x, not an upscaled 1x image. A page-level device
- * metrics override would not work here: Playwright's own viewport emulation (resize above) takes precedence.
+ * capture itself at the clip's scale, so the text is sharp, not an upscaled image; the scale makes the file twice
+ * the page's CSS size whatever the window's own pixel ratio is (the app runs at 2x, but Playwright's viewport
+ * emulation in resize() can report 1x).
  */
 async function shot(page, label) {
-  const [width, height] = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  const [width, height, ratio] = await page.evaluate(() => [window.innerWidth, window.innerHeight, window.devicePixelRatio || 1]);
   const cdp = await page.context().newCDPSession(page);
   try {
-    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 2 } });
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 2 / ratio } });
     writeFileSync(path.join(shots, `${label}.png`), Buffer.from(data, 'base64'));
   } finally {
     await cdp.detach().catch(() => {});
@@ -545,17 +549,13 @@ await step('island', async () => {
   await shot(bar, 'island');
 });
 
-// Last, because on GitHub's macOS runner companion steps after a native pick have timed out (see why exists):
-// one Change Brief open, from the sample repo's working-tree change. Reading a brief stays on the computer.
-if (process.env.E2E_LOCAL === '1') console.log('NOTE brief open: skipped (E2E_LOCAL: no keystrokes into a native dialog on someone\'s own Mac)');
-else await step('brief open', async () => {
-  const { repo } = uploadRepo();
+// One Change Brief open: the sample project chosen before launch (briefRepo), its working-tree change to upload.js.
+// Reading a brief stays on the computer.
+await step('brief open', async () => {
   await closeFeedback(0);
   await companion.bringToFront();
   await companion.locator('.side').getByRole('button', { name: 'Briefs', exact: true }).click();
   await companion.locator('.topbar__title').filter({ hasText: 'Briefs' }).waitFor({ timeout: 10000 });
-  const choose = companion.getByRole('button', { name: /^(Choose a project|Choose repo)$/ }).first();
-  await Promise.all([choose.click(), answerOpenPanel(repo)]);
   try {
     await companion.locator('.briefings').getByText('upload.js').first().waitFor({ timeout: 45000 });
   } catch (e) {
