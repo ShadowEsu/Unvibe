@@ -1013,7 +1013,7 @@ h2 {
 .launch-subpage,
 .releases-page,
 .investor-page,
-.founder-page,
+.console-page,
 .build-page,
 .beta-download-page,
 .legal-page {
@@ -1270,42 +1270,42 @@ h2 {
   appearance: none;
 }
 
-.founder-page .founder-analytics {
+.console-page .console-analytics {
   color: var(--ink);
 }
 
-.founder-page .founder-analytics .founder-analytics__title,
-.founder-page .founder-analytics__grid strong,
-.founder-page .founder-analytics__panels .founder-analytics__subhead,
-.founder-page .founder-analytics__visits .founder-analytics__subhead,
-.founder-page .founder-analytics__people .founder-analytics__subhead,
-.founder-page .founder-analytics__sources li strong,
-.founder-page .founder-analytics__error strong {
+.console-page .console-analytics .console-analytics__title,
+.console-page .console-analytics__grid strong,
+.console-page .console-analytics__panels .console-analytics__subhead,
+.console-page .console-analytics__visits .console-analytics__subhead,
+.console-page .console-analytics__people .console-analytics__subhead,
+.console-page .console-analytics__sources li strong,
+.console-page .console-analytics__error strong {
   color: var(--ink);
   font-family: var(--font-sans);
   font-weight: 400;
 }
 
-.founder-page .founder-analytics__eyebrow,
-.founder-page .founder-analytics article > span,
-.founder-page .founder-analytics article header > span {
+.console-page .console-analytics__eyebrow,
+.console-page .console-analytics article > span,
+.console-page .console-analytics article header > span {
   color: var(--ink);
 }
 
-.founder-page .founder-analytics__header p,
-.founder-page .founder-analytics__grid small,
-.founder-page .founder-analytics__panels header small,
-.founder-page .founder-analytics__bar-value,
-.founder-page .founder-analytics__bars small,
-.founder-page .founder-analytics__sources li,
-.founder-page .founder-analytics__footer,
-.founder-page .founder-analytics__empty,
-.founder-page .founder-analytics__error,
-.founder-page .founder-analytics__error span {
+.console-page .console-analytics__header p,
+.console-page .console-analytics__grid small,
+.console-page .console-analytics__panels header small,
+.console-page .console-analytics__bar-value,
+.console-page .console-analytics__bars small,
+.console-page .console-analytics__sources li,
+.console-page .console-analytics__footer,
+.console-page .console-analytics__empty,
+.console-page .console-analytics__error,
+.console-page .console-analytics__error span {
   color: var(--ink);
 }
 
-.founder-page .founder-analytics__grid {
+.console-page .console-analytics__grid {
   gap: 1rem;
   overflow: visible;
   border: 0;
@@ -1314,19 +1314,19 @@ h2 {
   box-shadow: none;
 }
 
-.founder-page .founder-analytics__grid article,
-.founder-page .founder-analytics__panels > article,
-.founder-page .founder-analytics__error,
-.founder-page .founder-analytics__loading {
+.console-page .console-analytics__grid article,
+.console-page .console-analytics__panels > article,
+.console-page .console-analytics__error,
+.console-page .console-analytics__loading {
   background: var(--glass);
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
   box-shadow: var(--shadow-glass);
 }
 
-.founder-page .founder-analytics__actions button,
-.founder-page .founder-analytics__actions a,
-.founder-page .founder-analytics__error button {
+.console-page .console-analytics__actions button,
+.console-page .console-analytics__actions a,
+.console-page .console-analytics__error button {
   color: var(--ink);
   background: var(--snow);
   border: 1px solid var(--hairline);
@@ -1334,15 +1334,15 @@ h2 {
   box-shadow: var(--shadow-card);
 }
 
-.founder-page .founder-analytics__actions button:hover,
-.founder-page .founder-analytics__actions a:hover,
-.founder-page .founder-analytics__error button:hover {
+.console-page .console-analytics__actions button:hover,
+.console-page .console-analytics__actions a:hover,
+.console-page .console-analytics__error button:hover {
   background: var(--snow);
   border-color: var(--ink);
   transform: translateY(-1px);
 }
 
-.founder-page .founder-analytics__people > header {
+.console-page .console-analytics__people > header {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -1350,7 +1350,7 @@ h2 {
   flex-wrap: wrap;
 }
 
-.founder-page .founder-analytics__clear-probes {
+.console-page .console-analytics__clear-probes {
   min-height: 34px;
   padding: 0 0.9rem;
   border: 1px solid var(--hairline);
@@ -1362,12 +1362,12 @@ h2 {
   cursor: pointer;
 }
 
-.founder-page .founder-analytics__trash-cell {
+.console-page .console-analytics__trash-cell {
   width: 3rem;
   text-align: right;
 }
 
-.founder-page .founder-analytics__trash {
+.console-page .console-analytics__trash {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1380,43 +1380,43 @@ h2 {
   cursor: pointer;
 }
 
-.founder-page .founder-analytics__trash:hover:not(:disabled) {
+.console-page .console-analytics__trash:hover:not(:disabled) {
   border-color: var(--ink);
   background: var(--snow);
 }
 
-.founder-page .founder-analytics__trash:disabled {
+.console-page .console-analytics__trash:disabled {
   opacity: 0.55;
   cursor: wait;
 }
 
-.founder-page .founder-table-wrap tr.is-probe td {
+.console-page .console-table-wrap tr.is-probe td {
   opacity: 0.72;
 }
 
-.founder-page .founder-analytics__bar-track {
+.console-page .console-analytics__bar-track {
   background: var(--hairline);
 }
 
-.founder-page .founder-analytics__bar-track > span {
+.console-page .console-analytics__bar-track > span {
   background: var(--brand);
 }
 
-.founder-page .founder-analytics__sources li {
+.console-page .console-analytics__sources li {
   border-top-color: var(--hairline);
 }
 
-.founder-page .founder-analytics__loading span {
+.console-page .console-analytics__loading span {
   background: var(--hairline);
   animation: none;
 }
 
-.founder-page {
+.console-page {
   background: transparent;
 }
 
-.founder-page .founder-console,
-.founder-page .founder-signin {
+.console-page .console-clock,
+.console-page .console-signin {
   margin-bottom: 3rem;
   padding: 0;
   border: 0;
@@ -1425,27 +1425,27 @@ h2 {
   color: var(--ink);
 }
 
-.founder-page .founder-signin h1,
-.founder-page .founder-console h2 {
+.console-page .console-signin h1,
+.console-page .console-clock h2 {
   color: var(--ink);
   font-family: var(--font-sans);
   font-weight: 400;
 }
 
-.founder-page .founder-signin > p:not(.launch-label),
-.founder-page .founder-console__head p,
-.founder-page .founder-console label {
+.console-page .console-signin > p:not(.launch-label),
+.console-page .console-clock__head p,
+.console-page .console-clock label {
   color: var(--ink);
 }
 
-.founder-page .founder-console textarea {
+.console-page .console-clock textarea {
   color: var(--ink);
   background: var(--snow);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-field);
 }
 
-.founder-page .founder-console__clock {
+.console-page .console-clock__clock {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1455,13 +1455,13 @@ h2 {
   font-family: var(--font-sans);
 }
 
-.founder-page .founder-console__clock b {
+.console-page .console-clock__clock b {
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   font-weight: 400;
   letter-spacing: -0.04em;
 }
 
-.founder-page .founder-console__clock small {
+.console-page .console-clock__clock small {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   font-size: 0.68rem;
@@ -1469,7 +1469,7 @@ h2 {
   text-transform: uppercase;
 }
 
-.founder-page .founder-console__time {
+.console-page .console-clock__time {
   display: flex;
   flex-wrap: wrap;
   gap: 0.8rem;
@@ -1477,13 +1477,13 @@ h2 {
   margin-top: 1.4rem;
 }
 
-.founder-page .founder-console__time label {
+.console-page .console-clock__time label {
   display: grid;
   gap: 0.4rem;
   margin: 0;
 }
 
-.founder-page .founder-console__time input {
+.console-page .console-clock__time input {
   width: 7rem;
   min-height: 2.8rem;
   padding: 0 0.8rem;
@@ -1496,7 +1496,7 @@ h2 {
   font-size: 1.05rem;
 }
 
-.founder-page .founder-console__time button {
+.console-page .console-clock__time button {
   min-height: 2.8rem;
   padding: 0 1.1rem;
   border: 1px solid var(--ink);
@@ -1505,8 +1505,8 @@ h2 {
   color: var(--snow);
 }
 
-.founder-page .founder-analytics__visits,
-.founder-page .founder-analytics__people {
+.console-page .console-analytics__visits,
+.console-page .console-analytics__people {
   margin-top: 1.4rem;
   padding: 1.4rem 1.2rem;
   border: 1px solid var(--hairline);
@@ -1515,36 +1515,36 @@ h2 {
   box-shadow: var(--shadow-card);
 }
 
-.founder-page .founder-analytics__visits header,
-.founder-page .founder-analytics__people header {
+.console-page .console-analytics__visits header,
+.console-page .console-analytics__people header {
   margin-bottom: 1rem;
 }
 
-.founder-page .founder-analytics__empty {
+.console-page .console-analytics__empty {
   margin: 0;
   color: var(--ink-muted);
 }
 
-.founder-page .founder-analytics__people table {
+.console-page .console-analytics__people table {
   min-width: 78rem;
 }
 
-.founder-page .founder-analytics__activation table {
+.console-page .console-analytics__activation table {
   min-width: 36rem;
 }
 
-.founder-table-wrap {
+.console-table-wrap {
   overflow-x: auto;
 }
 
-.founder-page .founder-table-wrap table {
+.console-page .console-table-wrap table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
 
-.founder-page .founder-table-wrap th,
-.founder-page .founder-table-wrap td {
+.console-page .console-table-wrap th,
+.console-page .console-table-wrap td {
   padding: 0.7rem 0.65rem;
   border-bottom: 1px solid var(--hairline);
   color: var(--ink);
@@ -1552,7 +1552,7 @@ h2 {
   vertical-align: top;
 }
 
-.founder-page .founder-table-wrap th {
+.console-page .console-table-wrap th {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   font-size: 0.68rem;
@@ -1561,14 +1561,14 @@ h2 {
   color: var(--ink-muted);
 }
 
-.founder-page .founder-table-wrap a {
+.console-page .console-table-wrap a {
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
 
-.founder-page .founder-signin a,
-.founder-page .founder-public-link {
+.console-page .console-signin a,
+.console-page .console-public-link {
   color: var(--ink);
 }
 

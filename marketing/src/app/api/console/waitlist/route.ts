@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } },
     );
   } catch (error) {
-    console.error("founder waitlist list failed", error);
+    console.error("console waitlist list failed", error);
     return NextResponse.json(
       { error: "Could not load waitlist names." },
       { status: 500, headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } },
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   }
 }
 
-/** Remove a signup (test emails, duplicates). Same private founder surface as GET. */
+/** Remove a signup (test emails, duplicates). Same private console surface as GET. */
 export async function DELETE(request: Request) {
   if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) return unauthorized();
   const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
@@ -65,7 +65,7 @@ export async function DELETE(request: Request) {
       { headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } },
     );
   } catch (error) {
-    console.error("founder waitlist delete failed", error);
+    console.error("console waitlist delete failed", error);
     return NextResponse.json(
       { error: "Could not delete signup." },
       { status: 500, headers: { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" } },

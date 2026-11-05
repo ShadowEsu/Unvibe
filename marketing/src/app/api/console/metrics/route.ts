@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const HEADERS = { "Cache-Control": "no-store, private", "X-Robots-Tag": "noindex" };
 
-/** Founder-only app user counts. Requires the WAITLIST_ADMIN_TOKEN bearer. */
+/** Console-only app user counts. Requires the WAITLIST_ADMIN_TOKEN bearer. */
 export async function GET(request: Request) {
   if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: HEADERS });

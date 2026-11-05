@@ -31,7 +31,7 @@ export async function GET() {
   }
 }
 
-/** Founder only: this text and clock are published on /build and in the site nav. */
+/** Console only: this text and clock are published on /build and in the site nav. */
 export async function POST(request: Request) {
   if (!isWaitlistAdminAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json(

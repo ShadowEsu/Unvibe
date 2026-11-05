@@ -59,7 +59,7 @@ describe("the visit beacon waits for Allow (Security A4)", () => {
   });
 
   it("sends nothing with Global Privacy Control, ?notrack=1 or on a private page, even after Allow", () => {
-    for (const visit of [{ gpc: true }, { search: "?notrack=1" }, { path: "/founder" }, { path: "/stats" }]) {
+    for (const visit of [{ gpc: true }, { search: "?notrack=1" }, { path: "/console" }, { path: "/stats" }]) {
       tab({ stored: "allow", ...visit });
       startVisitBeacon()();
       assert.deepEqual(beacons, [], JSON.stringify(visit));

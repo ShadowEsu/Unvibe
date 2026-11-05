@@ -50,11 +50,11 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
-        source: "/founder",
+        source: "/console",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        source: "/founder/:path*",
+        source: "/console/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {

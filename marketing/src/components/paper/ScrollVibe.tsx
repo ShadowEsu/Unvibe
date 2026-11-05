@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 
-const HIDDEN = ["/founder", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
+const HIDDEN = ["/console", "/stats", "/s/", "/kit", "/waitlist", "/waitlist-admin", "/activate"];
 
 /**
  * Site-wide scroll companion: a lime progress bar and Vibe riding down the right edge, jumping to the
