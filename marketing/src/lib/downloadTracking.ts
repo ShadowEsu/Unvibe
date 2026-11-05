@@ -9,8 +9,8 @@
  *   the /explain pages: explain (the page's download section), explain_answer and explain_try
  *   (their Try it box, as try_it_answer and try_it), seo_mac / seo_windows (the download on
  *   /code-explainer-mac and /code-explainer-windows), use_cases (the download section on /use-cases pages)
- *   and faq (the download section on /faq).
- * - Opens the download page (/beta) instead: nav, mobile_bar, pricing, footer, releases, build,
+ *   and faq (the download section on /faq), and mobile_bar on the home page (its persistent download pill).
+ * - Opens the download page (/beta) instead: nav, mobile_bar (every other page), pricing, footer, releases, build,
  *   resources. Of these, only the DownloadLink buttons (nav, releases, build, resources) also
  *   fire DOWNLOADED_EVENT, as they always have.
  *

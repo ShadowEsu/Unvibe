@@ -22,54 +22,6 @@
   .dl-card__other { transition: none; }
 }
 
-/* ── What leaves your computer (WhatLeaves; Design W4): two lists side by side, one line under them. ── */
-.leaves { display: grid; gap: clamp(1.25rem, 3vw, 2rem); align-items: start; }
-@media (min-width: 760px) { .leaves { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-/* Two columns split by a hairline on a wide screen (Design, ledger 443); as <details> they are panes (below). */
-.leaves__col { display: grid; align-content: start; gap: 0.9rem; padding: 0; border: 0; border-radius: 0; background: none; color: var(--u-text); }
-@media (min-width: 760px) { .leaves__col + .leaves__col { padding-left: clamp(1.25rem, 3vw, 2rem); border-left: 1px solid var(--u-line); } }
-.leaves__col h3 { margin: 0; font: 600 1.25rem/1.2 var(--font-sans); letter-spacing: -0.01em; }
-.leaves__list { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
-.leaves__list li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 0.65rem; align-items: start; line-height: 1.45; }
-.leaves__list svg { margin-top: 0.15rem; }
-.leaves__who { margin: 0; padding-top: 0.8rem; border-top: 1px solid var(--u-line); color: var(--u-text-2); line-height: 1.45; }
-.leaves__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); line-height: 1.5; text-align: center; }
-.leaves__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
-/* Ledger 466: each list folds into a closed <details>, a frosted pane on the plate (--u-card is 0.55 white there,
-   glass.css). The lists inside stay word for word. */
-.leaves__col.leaves__panel { display: block; padding: 0.35rem 1.1rem; border: 1px solid var(--u-line); border-radius: var(--u-radius-card); background: var(--u-card); }
-@media (min-width: 760px) { .leaves__col.leaves__panel + .leaves__col.leaves__panel { padding-left: 1.1rem; border-left: 1px solid var(--u-line); } }
-.leaves__summary {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.75rem; padding-block: 0.5rem;
-  color: var(--u-text); font: 600 1.25rem/1.2 var(--font-sans); letter-spacing: -0.01em; list-style: none; cursor: pointer;
-}
-.leaves__summary::-webkit-details-marker { display: none; }
-.leaves__summary::after {
-  content: ""; flex: none; width: 0.55rem; height: 0.55rem; margin-right: 0.2rem;
-  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
-  transform: translateY(-0.15rem) rotate(45deg); transition: transform var(--m-fast) var(--m-ease-sharp);
-}
-.leaves__panel[open] > .leaves__summary::after { transform: translateY(0.1rem) rotate(-135deg); }
-.leaves__summary:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 2px; border-radius: 8px; }
-.leaves__panel > .leaves__list { padding-block: 0.4rem 1rem; }
-@media (prefers-reduced-motion: reduce) { .leaves__summary::after { transition: none; } }
-
-/* ── Home price strip (HomePricing; Design W5): Free and Pro side by side, no button on Pro. ── */
-.plans-strip { display: grid; gap: clamp(1.25rem, 3vw, 2rem); }
-@media (min-width: 760px) { .plans-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.plans-strip__card { position: relative; isolation: isolate; display: grid; align-content: start; gap: 0.6rem; padding: clamp(1.1rem, 2.5vw, 1.6rem); border: 1px solid var(--u-line-strong); border-radius: 20px; background: var(--u-card); color: var(--u-text); text-align: left; }
-.plans-strip__card > * { margin: 0; }
-.plans-strip__card h3 { font: 700 clamp(1.3rem, 2vw, 1.6rem)/1.1 var(--font-sans); letter-spacing: -0.025em; }
-/* Labels: sentence case, Inter 600 at 14 px, no pill. */
-.plans-strip__tag { justify-self: start; color: var(--u-text); font: 600 14px/1.4 var(--font-sans); }
-.plans-strip__price { font: 700 clamp(2rem, 3.4vw, 2.6rem)/1 var(--font-sans); letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
-.plans-strip__price small { font: 500 1rem var(--font-sans); letter-spacing: 0; color: var(--u-text-2); }
-.plans-strip__note { color: var(--u-text-2); line-height: 1.45; }
-.plans-strip__list { display: grid; gap: 0.45rem; padding: 0 !important; list-style: none; line-height: 1.45; }
-.plans-strip__foot { margin: clamp(1.2rem, 3vw, 1.8rem) 0 0; color: var(--u-text-2); text-align: center; }
-.plans-strip__foot > a { display: inline-block; padding-block: 6px; line-height: 20px; font-weight: 700; }
-.plans-strip__paused { margin: 0.6rem 0 0; color: var(--u-text); font-weight: 600; text-align: center; }
-
 /* ── Who it's for (WhoItsFor): one panel, three columns split by hairlines, rows on a phone. ── */
 .who-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.6rem; border: 1px solid var(--u-line-strong); border-radius: 20px; background: var(--u-card); color: var(--u-text); }
 .who-panel__item { padding: clamp(1.2rem, 2.6vw, 1.8rem); }
@@ -79,16 +31,4 @@
 @media (max-width: 760px) {
   .who-panel { grid-template-columns: minmax(0, 1fr); }
   .who-panel__item + .who-panel__item { border-left: 0; border-top: 1px solid rgb(20 20 20 / 0.14); }
-}
-
-/* ── Where it sticks (HowItWorks, ledger 466): the app's five screens in one row of frosted panes on the plate,
-   labelled only. Two columns on a phone, the fifth centred. ── */
-.hiw-rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(0.6rem, 1.4vw, 1rem); align-items: start; margin: 0; padding: 0; list-style: none; }
-.hiw-rail__item { min-width: 0; padding: 0.5rem; border: 1px solid var(--u-line); border-radius: var(--u-radius-card); background: var(--u-card); }
-.hiw-rail__item figure { display: grid; gap: 0.5rem; margin: 0; }
-.hiw-rail__item img { display: block; width: 100%; height: auto; border-radius: 12px; }
-.hiw-rail__item figcaption { color: var(--u-text); font: 600 14px/1.4 var(--font-sans); text-align: center; }
-@media (max-width: 759px) {
-  .hiw-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hiw-rail__item:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - clamp(0.6rem, 1.4vw, 1rem) / 2); }
 }

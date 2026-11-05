@@ -13,32 +13,36 @@ Object.assign(globalThis, { React });
 const html = renderToStaticMarkup(createElement(HomePage));
 const start = html.indexOf('id="pricing"');
 const strip = html.slice(start, html.indexOf("</section>", start));
-const pro = strip.slice(strip.indexOf("plans-strip__card--pro"), strip.indexOf("plans-strip__foot"));
+const text = (markup: string) => markup.replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+const plans = strip.slice(0, strip.indexOf('class="n-note nprice__teams"')).split('<div class="nprice__plan');
+const pro = plans.find((plan) => plan.includes("<h3>Pro</h3>")) ?? "";
 
 describe("home price strip (W5)", () => {
   it("is on the home page with Design's heading", () => {
     assert.ok(start > 0, "no #pricing section on home");
-    assert.match(strip, /<h2 id="pricing-title"><mark class="u-mark">Free<\/mark> while in beta\. Pro opens soon\.<\/h2>/);
-    assert.match(strip, /<p class="paper-lead">No card and no API key\.<\/p>/);
+    assert.match(strip, /<h2 id="pricing-title">Free while in beta\. Pro opens soon\.<\/h2>/);
+    assert.match(text(strip), /No card and no API key\./);
   });
 
-  it("states the real allowances and prices", () => {
-    assert.ok(strip.includes(`${SIGNED_OUT_ALLOWANCE}. Sign in for ${FREE_MONTHLY_ALLOWANCE}.`));
-    assert.ok(pro.includes(`$${PRICING.proMonthly} <small>a month, or $${PRICING.proAnnual} a year</small>`));
-    assert.ok(pro.includes(PRO_MONTHLY_ALLOWANCE));
-    assert.match(pro, /Not on sale yet\. Your Free plan keeps working until then\./);
+  it("states the real allowances and prices, with the counting digits hidden from assistive tech", () => {
+    assert.ok(text(strip).includes(`${SIGNED_OUT_ALLOWANCE}. Sign in for ${FREE_MONTHLY_ALLOWANCE}.`));
+    for (const value of [PRICING.proMonthly, PRICING.proAnnual]) assert.ok(pro.includes(`aria-label="${value}"`), `price ${value} is labelled`);
+    assert.ok(text(pro).includes(`$${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year`));
+    assert.ok(text(pro).includes(PRO_MONTHLY_ALLOWANCE));
+    assert.match(text(pro), /Not on sale yet\. Your Free plan keeps working until then\./);
   });
 
   it("gives Pro no button or link, since nothing can be bought", () => {
+    assert.ok(pro, "no Pro plan");
     assert.doesNotMatch(pro, /<a\b|<button\b/);
-    assert.match(strip, /also opens soon\. <a class="paper-text-link" href="\/pricing">See all plans<\/a>/);
+    assert.match(strip, /<a class="nprice__all" href="\/pricing">See all plans<\/a>/);
   });
 });
 
 describe("home price strip while hosted AI is paused (Security SHOULD-H3)", () => {
-  it("shows the Try box's pause note under the strip when the switch is on", () => {
+  it("shows the Try box's pause note under the plans when the switch is on", () => {
     const on = renderToStaticMarkup(createElement(HomePricing, { paused: true }));
-    assert.match(on, /<p class="plans-strip__paused" role="status">AI features are paused for maintenance\. Back soon\.<\/p><\/div><\/div><\/section>$/);
+    assert.match(on, /role="status">AI features are paused for maintenance\. Back soon\.<\/p><\/section>$/);
   });
 
   it("shows no pause note when the switch is off", () => {

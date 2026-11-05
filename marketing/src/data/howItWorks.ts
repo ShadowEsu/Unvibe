@@ -1,4 +1,11 @@
-import type { FlexAccordionItem } from "@/components/paper/FlexAccordion";
+export interface HowStep {
+  id: string;
+  label: string;
+  title: string;
+  /** One line under the title; none when the title says it all. */
+  body?: string;
+  image: { src: string; width: number; height: number; alt: string };
+}
 
 const panelShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 880, height: 1131, alt });
 
@@ -6,7 +13,7 @@ const panelShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.w
  * The home page's four-step loop in the panel (components/paper/HowItWorks). Plain data, so the home
  * page's HowTo JSON-LD and /llms-full.txt state exactly these visible steps without importing UI.
  */
-export const STEPS: readonly FlexAccordionItem[] = [
+export const STEPS: readonly HowStep[] = [
   {
     id: "explain",
     label: "Explain",

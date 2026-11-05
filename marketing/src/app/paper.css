@@ -621,8 +621,7 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .paper-key,
   .paper-keys,
-  .paper-follow,
-  .paper-faq__caret {
+  .paper-follow {
     animation: none;
   }
 }
@@ -964,21 +963,6 @@ h2 {
   color: var(--ink);
   font-size: 1.12rem;
   line-height: 1.55;
-}
-
-.paper-faq__caret {
-  display: inline-block;
-  width: 0.45ch;
-  height: 0.95em;
-  margin-left: 0.12em;
-  vertical-align: text-bottom;
-  background: var(--brand);
-  box-shadow: var(--glow-bloom);
-  animation: paperCaret 0.8s steps(1) infinite;
-}
-
-@keyframes paperCaret {
-  50% { opacity: 0; }
 }
 
 .paper-invite {

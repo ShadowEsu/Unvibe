@@ -1,4 +1,5 @@
 import { Arrive } from "@/components/paper/Arrive";
+import { ExpandRows } from "@/components/paper/ExpandRows";
 
 /**
  * "What leaves your computer." (Design W4): what an explanation sends and what stays, as two lists.
@@ -22,59 +23,29 @@ export const KEPT: readonly string[] = [
   "Your keystrokes and screen. Unvibe never records them.",
 ];
 
+/** Both lists word for word, closed by default (Security: collapsed is fine); the Anthropic line and the AI line stay visible. */
 export function WhatLeaves() {
   return (
-    <section className="paper-section" id="what-leaves" aria-labelledby="what-leaves-title">
-      <Arrive className="arrive--plate">
-        <div className="paper-wrap u-sheet u-solid">
-          <div className="sec-head">
-            <h2 id="what-leaves-title">What <mark className="u-mark">leaves</mark> your computer.</h2>
-            <p className="paper-lead">Only what&apos;s needed to explain what you ask about.</p>
-          </div>
-          {/* Both lists word for word, closed by default (Security: collapsed is fine); the Anthropic line and the AI line stay visible. */}
-          <div className="leaves">
-            <details className="leaves__col leaves__panel">
-              <summary className="leaves__summary">Sent to write the explanation</summary>
-              <ul className="leaves__list">
-                {SENT.map((item) => (
-                  <li key={item}><UpIcon />{item}</li>
-                ))}
-              </ul>
-            </details>
-            <details className="leaves__col leaves__panel">
-              <summary className="leaves__summary">Stays on your computer</summary>
-              <ul className="leaves__list">
-                {KEPT.map((item) => (
-                  <li key={item}><HomeIcon />{item}</li>
-                ))}
-              </ul>
-            </details>
-          </div>
-          <p className="leaves__who">During the beta, Anthropic&apos;s Claude API writes the explanation, unless you add your own provider key in the app.</p>
-          <p className="leaves__foot">
-            <span>AI can be wrong, even when it sounds sure. Each explanation sits next to its code so you can check it.</span>{" "}
-            <a className="paper-text-link" href="/privacy">Privacy policy</a>
+    <section className="n-sec n-wrap nleaves" id="what-leaves" aria-labelledby="what-leaves-title">
+      <Arrive className="n-head">
+        <h2 id="what-leaves-title">What leaves your computer.</h2>
+        <p className="n-lead">Only what&apos;s needed to explain what you ask about.</p>
+      </Arrive>
+      <div>
+        <ExpandRows
+          rows={[
+            { id: "sent", question: "Sent to write the explanation", answer: <ul>{SENT.map((item) => <li key={item}>{item}</li>)}</ul> },
+            { id: "kept", question: "Stays on your computer", answer: <ul>{KEPT.map((item) => <li key={item}>{item}</li>)}</ul> },
+          ]}
+        />
+        <div className="nleaves__notes">
+          <p className="n-note">During the beta, Anthropic&apos;s Claude API writes the explanation, unless you add your own provider key in the app.</p>
+          <p className="n-note">
+            AI can be wrong, even when it sounds sure. Each explanation sits next to its code so you can check it.{" "}
+            <a className="n-link" href="/privacy">Privacy policy</a>
           </p>
         </div>
-      </Arrive>
+      </div>
     </section>
-  );
-}
-
-function UpIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 19V6" />
-      <path d="m6 11 6-6 6 6" />
-    </svg>
-  );
-}
-
-function HomeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="13" rx="2" />
-      <path d="M8 21h8" />
-    </svg>
   );
 }

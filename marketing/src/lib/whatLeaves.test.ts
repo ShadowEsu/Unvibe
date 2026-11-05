@@ -52,6 +52,6 @@ describe("What leaves your computer (W4)", () => {
     assert.ok(privacy.includes("If you add your own provider key in the app"));
     assert.match(section, /Only what's needed to explain what you ask about\./);
     assert.match(section, /AI can be wrong, even when it sounds sure\. Each explanation sits next to its code so you can check it\./);
-    assert.match(html.slice(start, html.indexOf("</section>", start)), /<a class="paper-text-link" href="\/privacy">Privacy policy<\/a>/);
+    assert.match(html.slice(start, html.indexOf("</section>", start)), /<a [^>]*href="\/privacy"[^>]*>Privacy policy<\/a>/);
   });
 });
