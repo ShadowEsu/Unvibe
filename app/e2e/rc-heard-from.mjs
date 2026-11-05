@@ -27,6 +27,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { launchApp, readStore } from './cdp-launch.mjs';
+import { checkFooter as footerCheck } from './footer-check.mjs';
 
 const exe = process.env.UNVIBE_EXE;
 const osName = process.env.UNVIBE_OS;
@@ -113,104 +114,41 @@ const settingOn = (userData) => {
   return existsSync(file) && JSON.parse(readFileSync(file, 'utf8')).shareSetupProgress === true;
 };
 
-// --- First-run footer in view (the lead and Design, after df9c5497) --------------------------------
-// The Back/forward row (`.ob2 .ob__actions`) and each of its buttons must be fully in view with nothing
-// scrolled: inside the window and the card, not clipped by any overflow ancestor, and on top at its centre.
-// Measured once the row has held still for 1.5 s (the step's entrance and Vibe's typewriter are done).
-// Playwright's click scrolls first and its visibility ignores clipping, so neither proves this.
-async function footerInView(page, forwardName) {
-  const row = page.locator('.ob2 .ob__actions').first();
-  await row.waitFor({ state: 'visible', timeout: 10000 });
-  if (forwardName) await row.getByRole('button', { name: forwardName, exact: true }).first().waitFor({ state: 'attached', timeout: 10000 });
-  let last = '';
-  let since = Date.now();
-  const t0 = Date.now();
-  while (Date.now() - t0 < 12000) {
-    const box = await row.evaluate((el) => [...el.querySelectorAll('button'), el].map((e) => {
-      const r = e.getBoundingClientRect();
-      return [r.top, r.left, r.bottom, r.right].map(Math.round).join(',');
-    }).join(';'));
-    if (box !== last) { last = box; since = Date.now(); } else if (Date.now() - since >= 1500) break;
-    await sleep(250);
-  }
-  return row.evaluate((rowEl, name) => {
-    const round = (r) => ({ top: Math.round(r.top), left: Math.round(r.left), bottom: Math.round(r.bottom), right: Math.round(r.right) });
-    const tagOf = (a) => `${a.tagName.toLowerCase()}${typeof a.className === 'string' && a.className.trim() ? `.${a.className.trim().split(/\s+/).join('.')}` : ''}`;
-    const card = rowEl.closest('.ob2__card');
-    const cardRect = card?.getBoundingClientRect();
-    const measure = (el) => {
-      const b = el.getBoundingClientRect();
-      const within = (o) => b.top >= o.top - 0.5 && b.left >= o.left - 0.5 && b.bottom <= o.bottom + 0.5 && b.right <= o.right + 0.5;
-      const clippedBy = [];
-      for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
-        const s = getComputedStyle(a);
-        if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
-        const r = a.getBoundingClientRect();
-        const inner = { top: r.top + a.clientTop, left: r.left + a.clientLeft, bottom: r.top + a.clientTop + a.clientHeight, right: r.left + a.clientLeft + a.clientWidth };
-        if (!within(inner)) clippedBy.push(tagOf(a));
-      }
-      const hit = document.elementFromPoint((b.left + b.right) / 2, (b.top + b.bottom) / 2);
-      return {
-        what: el === rowEl ? 'footer row' : `button "${el.innerText.trim()}"`,
-        rect: round(b),
-        inWindow: within({ top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth }),
-        inCard: !!cardRect && within(cardRect),
-        clippedBy,
-        onTop: !!hit && (hit === el || el.contains(hit)),
-      };
-    };
-    const buttons = [...rowEl.querySelectorAll('button')];
-    const forward = name ? buttons.find((b) => b.innerText.trim() === name) : buttons.at(-1);
-    const scrolled = [];
-    for (let a = rowEl; a; a = a.parentElement) if (a.scrollTop > 0 || a.scrollLeft > 0) scrolled.push(`${tagOf(a)} ${a.scrollTop}`);
-    const body = rowEl.closest('.ob2')?.querySelector('.ob2__body');
-    return {
-      viewport: `${window.innerWidth}x${window.innerHeight}`,
-      forward: forward ? forward.innerText.trim() : null,
-      card: cardRect ? round(cardRect) : null,
-      parts: [rowEl, ...buttons].map(measure),
-      scrolled,
-      bodyOverflow: body ? Math.max(0, body.scrollHeight - body.clientHeight) : null,
-    };
-  }, forwardName);
-}
-
-async function checkFooter(page, label, forwardName, size = null) {
-  const m = await footerInView(page, forwardName).catch((e) => ({ error: e.message.split('\n')[0] }));
-  if (m.error) { log(false, `${label}: footer measured`, m.error); return; }
-  const bad = m.parts.filter((p) => !p.inWindow || !p.inCard || p.clippedBy.length || !p.onTop);
-  const fwd = m.parts.find((p) => p.what === `button "${m.forward}"`);
-  log(!!m.forward && !bad.length && !m.scrolled.length, `${label}: "${m.forward}" and the footer row fully in view without scrolling (${m.viewport})`,
-    JSON.stringify({ forward: fwd?.rect, card: m.card, bad, scrolled: m.scrolled }));
-  log(m.bodyOverflow === 0, `${label}: the step fits whole (its body needs no scrolling)`, `body overflow ${m.bodyOverflow}px`);
-  if (size) log(m.viewport === size, `${label}: measured at the default Mac window ${size}`, m.viewport);
-}
+// First-run footer in view (footer-check.mjs). Case a on a Mac measures at exactly 1024x674; `emulated` labels it.
+const checkFooter = (page, label, forwardName, size = null) => footerCheck(page, label, forwardName, { log, size });
+let emulated = '';
 
 // Case a goes on through every first-run step and checks the footer on each: step 2 before and after the
 // sample is explained, step 3, and on a Mac step 4, which comes only after the person's own code is
 // explained (a small function pasted on step 3's target; the first own code shows the send agreement).
 async function walkSteps(app, companion, name) {
-  const still = (label) => companion.screenshot({ path: path.join(out, `steps-${label}.png`) }).catch(() => {});
+  const still = (page, label) => page?.screenshot({ path: path.join(out, `steps-${label}.png`) }).catch(() => {});
+  const at = `${name}${emulated}`;
+  let panel = null;
   try {
-    await checkFooter(companion, `${name}: step 2 before explaining`, 'Skip for now');
+    await checkFooter(companion, `${at}: step 2 before explaining`, 'Skip for now');
     await companion.getByRole('button', { name: 'Explain this code', exact: true }).first().click({ timeout: 8000 });
     await companion.locator('.ob2 .ob__actions').getByRole('button', { name: 'Next', exact: true }).waitFor({ timeout: 90000 });
-    await checkFooter(companion, `${name}: step 2 explained`, 'Next');
-    await still('2-explained');
+    await checkFooter(companion, `${at}: step 2 explained`, 'Next');
+    await still(companion, '2-explained');
     await companion.locator('.ob2 .ob__actions').getByRole('button', { name: 'Next', exact: true }).click({ timeout: 8000 });
     await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 10000 });
-    await checkFooter(companion, `${name}: step 3`, osName === 'windows' ? 'Start using Unvibe' : 'Skip for now');
-    await still('3');
+    await checkFooter(companion, `${at}: step 3`, osName === 'windows' ? 'Start using Unvibe' : 'Skip for now');
+    await still(companion, '3');
     if (osName !== 'mac') return;
+    // Main explains the system clipboard ("a paste explains the clipboard, which holds what was just
+    // pasted"), so the code goes on the clipboard first, as a real ⌘C would put it there.
+    const code = 'function add(a, b) {\n  return a + b;\n}';
+    execFileSync('pbcopy', { input: code });
     const box = companion.locator('.paste-target__box');
     await box.waitFor({ timeout: 8000 });
-    await box.evaluate((el, code) => {
+    await box.evaluate((el, text) => {
       el.focus();
       const data = new DataTransfer();
-      data.setData('text/plain', code);
+      data.setData('text/plain', text);
       el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
-    }, 'function add(a, b) {\n  return a + b;\n}');
-    const panel = await app.windowWith('widget.html', 20000);
+    }, code);
+    panel = await app.windowWith('widget.html', 20000);
     if (!panel) throw new Error('the review panel did not open after the paste');
     const four = companion.locator('.ob2__count').filter({ hasText: `4 / ${setupSteps}` });
     let agreed = false;
@@ -232,11 +170,12 @@ async function walkSteps(app, companion, name) {
       await sleep(500);
     }
     await four.waitFor({ timeout: 1000 });
-    await checkFooter(companion, `${name}: step 4`, null);
-    await still('4');
+    await checkFooter(companion, `${at}: step 4`, null);
+    await still(companion, '4');
   } catch (e) {
-    log(false, `${name}: walk every first-run step`, e.message.split('\n')[0]);
-    await still('stuck');
+    log(false, `${at}: walk every first-run step`, e.message.split('\n')[0]);
+    await still(companion, 'stuck');
+    await still(panel, 'stuck-panel');
   }
 }
 
@@ -259,8 +198,22 @@ for (const { id, answer } of CASES) {
     const companion = await app.windowWith('companion.html', 60000);
     if (!companion) throw new Error('no companion window');
     await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 30000 });
-    // Measured on first sight, before typing or any click.
-    await checkFooter(companion, `${name}: step 1`, "Let's go", osName === 'mac' && id === 'a' ? '1024x674' : null);
+    // Measured on first sight, before typing or any click, in the window this launch got.
+    await checkFooter(companion, `${name}: step 1`, "Let's go");
+    if (id === 'a' && osName === 'mac') {
+      // The window is the screen's work area minus 24 (windows.ts clampToVisibleArea), and on the runner's
+      // 1024x768 screen that came out 674 tall for the walkthrough but 679 for later launches. So case a lays
+      // the real app out at exactly the lead's 1024x674 (viewport emulation) for every step it checks.
+      const real = await companion.evaluate(() => `${window.innerWidth}x${window.innerHeight}`);
+      note(`${name}: this launch's window is ${real}`);
+      if (real !== '1024x674') {
+        try {
+          await companion.setViewportSize({ width: 1024, height: 674 });
+          emulated = ' [emulated 1024x674]';
+        } catch (e) { log(false, `${name}: lay out at 1024x674`, e.message.split('\n')[0]); }
+      }
+      await checkFooter(companion, `${name}${emulated}: step 1`, "Let's go", '1024x674');
+    }
     const field = companion.locator('input[aria-describedby="heard-from-note"]');
     const labelShown = await companion.getByText('Where did you hear about Unvibe?').first().isVisible().catch(() => false);
     const fieldShown = await field.isVisible().catch(() => false);

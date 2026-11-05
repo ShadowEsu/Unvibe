@@ -11,6 +11,7 @@
 //      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into other apps, no whole-screen shots).
 import { chromium } from 'playwright';
 import { launchApp, readStore } from './cdp-launch.mjs';
+import { checkFooter } from './footer-check.mjs';
 import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -36,6 +37,13 @@ report.push(axeSource
   ? 'NOTE  a11y: axe-core checks each screenshot; color-contrast in Electron depends on what was rendered at that moment.'
   : 'NOTE  a11y: skipped, axe-core not found (set AXE_PATH to axe.min.js).');
 let a11yMs = 0; // kept out of the timed first-run measurement
+// QA (0.1.50 RC, qa/heard-from-0150): the first-run footer must be fully in view without scrolling in the
+// real default window (1024x674 on the runner's Mac). Its time is kept out of the timed measurement too.
+async function footerCheck(label, forwardName, size = null) {
+  const start = Date.now();
+  await checkFooter(companion, `QA footer: ${label}`, forwardName, { log, size });
+  a11yMs += Date.now() - start;
+}
 
 async function a11y(page, label) {
   // Only Unvibe's own screens: Google's account page is not ours to gate on.
@@ -188,10 +196,12 @@ const setupSteps = os === 'windows' ? 3 : 4;
 try {
   await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
+  await footerCheck('step 1', "Let's go", os === 'mac' ? '1024x674' : null);
   await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
   await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
+  await footerCheck('step 2 before explaining', 'Skip for now');
   await clickText(companion, 'Explain this code');
   log(true, 'Onboarding: hello and sample');
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
@@ -205,10 +215,12 @@ writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
 const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
+  await footerCheck('step 2 explained', 'Next');
   await clickText(companion, 'Next');
   await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await companion.locator(os === 'windows' ? '.ob2__task' : '.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
+  await footerCheck('step 3', os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
   // Nothing is pasted here, so a Mac's step 3 finishes with Skip for now (no step 4).
   await clickText(companion, os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
   await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });

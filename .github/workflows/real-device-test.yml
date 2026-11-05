@@ -159,7 +159,7 @@ jobs:
           # Seeded into the profile, so this run's install is known and flagged as QA below.
           E2E_INSTALL_ID: qa-walkthrough-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
         run: |
-          cp app/e2e/real-device.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp app/e2e/real-device.mjs app/e2e/cdp-launch.mjs app/e2e/footer-check.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
 
@@ -242,7 +242,7 @@ jobs:
           PROFILES_DIR: ${{ runner.temp }}
           RUN_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          cp app/e2e/rc-heard-from.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp app/e2e/rc-heard-from.mjs app/e2e/cdp-launch.mjs app/e2e/footer-check.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node rc-heard-from.mjs
 
       # Leave this run's installs out of founder stats: the walkthrough's and the heard_from cases' profiles
