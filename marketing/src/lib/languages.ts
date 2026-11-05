@@ -408,6 +408,16 @@ export const languages: Language[] = [
     sample: `node_modules/\n*.log\n.env`,
   },
   {
+    id: "ssh-config",
+    name: "SSH config",
+    categories: ["systems"],
+    blurb: "The ~/.ssh/config file: host shortcuts, keys per server and jump hosts for ssh, scp and git.",
+    concepts: ["Host and HostName", "keys per host", "jump hosts", "Host * and first match"],
+    frameworks: ["OpenSSH", "git", "GitHub", "scp"],
+    learningPath: ["Host and HostName", "Keys per host", "Jump hosts", "First match wins"],
+    sample: `Host staging\n    HostName staging.example.com`,
+  },
+  {
     id: "perl",
     name: "Perl",
     categories: ["scripting", "backend"],

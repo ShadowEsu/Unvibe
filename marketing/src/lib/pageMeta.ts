@@ -61,6 +61,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   fish: "/og/og-explain-fish-1d1104c2.png",
   make: "/og/og-explain-make-34d992b1.png",
   gitignore: "/og/og-explain-gitignore-90ca6cdd.png",
+  "ssh-config": "/og/og-explain-ssh-config-b6f8da39.png",
   perl: "/og/og-explain-perl-6a375c1e.png",
   sed: "/og/og-explain-sed-052acff4.png",
 };
