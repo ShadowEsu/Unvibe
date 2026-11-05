@@ -431,6 +431,18 @@ if (explained) {
   });
 }
 
+/**
+ * After a few explanations the companion asks for feedback (a modal, feedback.tsx, 2.5 s after Today shows). Close
+ * it the way a person would, so the tour's clicks reach the page; `wait` ms for it to appear first.
+ */
+async function closeFeedback(wait) {
+  const overlay = companion.locator('.fbk-overlay');
+  try { await overlay.waitFor({ timeout: Math.max(wait, 1) }); } catch { return; }
+  await companion.getByRole('button', { name: 'Close feedback', exact: true }).click();
+  await overlay.waitFor({ state: 'detached', timeout: 5000 });
+  console.log('NOTE closed the feedback card');
+}
+
 // --- Finish onboarding and tour the companion ------------------------------------------------
 await step('today', async () => {
   await companion.bringToFront();
@@ -449,18 +461,21 @@ await step('today', async () => {
       if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
     }
     if (!clicked) {
+      if (!await companion.locator('.ob2__count').count()) break; // setup finished while this looked
       const names = await companion.locator('.ob2 button:visible').allInnerTexts();
       throw new Error(`setup step ${await companion.locator('.ob2__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
     }
     await sleep(1200);
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
+  await closeFeedback(4000);
   await sleep(1800);
   await shot(companion, 'today');
 });
 
 for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
   await step(page, async () => {
+    await closeFeedback(0);
     await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     await sleep(1800);
@@ -470,6 +485,7 @@ for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
 
 // Ask Vibe answers a real question about what was just learned.
 await step('ask vibe answer', async () => {
+  await closeFeedback(0);
   const question = 'Explain debounce again in one sentence, like I am new to this.';
   const chat = companion.locator('#chatDraft');
   const send = companion.locator('.chat-dock').getByRole('button', { name: 'Send', exact: true });
@@ -489,6 +505,7 @@ await step('ask vibe answer', async () => {
 });
 
 await step('settings privacy', async () => {
+  await closeFeedback(0);
   await companion.locator('.side-settings').click();
   await companion.locator('.mside').getByRole('button', { name: 'Privacy & Data', exact: true }).click();
   await sleep(1200);
