@@ -143,6 +143,59 @@ console.log("after");`,
       "A relative URL like `/api/users/1` only works in a web page. In Node.js, `fetch` needs a full URL, so every request here would fail with `Failed to parse URL` and end up in `failed`.",
   },
   {
+    id: "jquery",
+    fileName: "products.js",
+    lead: "Paste jQuery and Vibe explains what each `$()` selects, which element a handler runs on, and what `this` and `.closest()` point to.",
+    description:
+      "Paste jQuery code and get a plain English explanation, free online. The sample filters a product list as you type and removes items with a fade.",
+    sampleSummary: "A jQuery script that filters a product list as you type, keeps a count of what's shown and fades out an item when its Remove button is clicked.",
+    sample: `// Filter a product list as you type, and remove items with a fade.
+// Load jQuery first: <script src="jquery.min.js"></script>
+$(function () {
+  const $items = $("#products li");
+
+  $("#search").on("input", function () {
+    const term = $(this).val().toLowerCase();
+    $items.each(function () {
+      const name = $(this).find(".name").text().toLowerCase();
+      $(this).toggle(name.includes(term));
+    });
+    $("#count").text($items.filter(":visible").length + " shown");
+  });
+
+  $("#products").on("click", ".remove", function () {
+    $(this).closest("li").fadeOut(200, function () {
+      $(this).remove();
+    });
+  });
+});`,
+    shows: [
+      {
+        concept: "selectors",
+        text: "`$(\"#products li\")` takes a CSS selector and returns every matching element, wrapped so jQuery methods work on all of them at once. `$(function () { ... })` waits for the page to be ready before running. `:visible` is jQuery's own addition: `document.querySelectorAll(\":visible\")` threw `':visible' is not a valid selector`.",
+      },
+      {
+        concept: "events",
+        text: "`.on(\"input\", ...)` runs on every keystroke in the search box, and inside the handler `this` is the element the handler runs for, here the search box. `.on(\"click\", \".remove\", ...)` is a delegated handler: it sits on the list and runs for any `.remove` button inside it, with `this` set to that button, so a Remove button added after the page loaded worked too.",
+      },
+      {
+        concept: "traversal",
+        text: "`.find(\".name\")` looks down inside each item, and `.closest(\"li\")` walks up from the clicked button to the item it belongs to. `.filter(\":visible\")` keeps the items still showing, which is how the count line reads `2 shown` after typing `blue`.",
+      },
+      {
+        concept: "effects",
+        text: "`.toggle(true)` shows an item and `.toggle(false)` hides it. `.fadeOut(200, ...)` fades the item over 200 ms and then runs the function, so the item was still in the list straight after the click and gone 400 ms later, once `.remove()` had run.",
+      },
+    ],
+    notes: [
+      "Run with jQuery 4.0.0 in Chromium on a list of three products: typing `blue` left `Blue mug` and `Blue plate` with `2 shown`, clearing the box brought back all three, and Remove on `Red mug` faded it out and took it off the list.",
+      "The same Remove handler bound straight to the buttons with `$(\".remove\").on(\"click\", ...)` removed an original item but did nothing on a button added later, because that button didn't exist when the handler was bound.",
+      "`$items` is a common naming habit, not syntax: the `$` at the start reminds you the variable holds a jQuery object, not a plain element.",
+    ],
+    watchOut:
+      "`$items` is looked up once, when the page loads. A product added later isn't in it, so typing `blue` hid nothing new: an added `Green bowl` stayed on screen while the count still said `2 shown`. Looking the items up inside the input handler with `$(\"#products li\")` fixed both.",
+  },
+  {
     id: "typescript",
     fileName: "users.ts",
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
