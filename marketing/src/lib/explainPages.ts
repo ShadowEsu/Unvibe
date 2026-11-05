@@ -615,6 +615,53 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
       "A login shell doesn't read ~/.bashrc. Started as `bash -l`, `type ll` printed `ll: not found`, because a login shell reads ~/.bash_profile instead. With `[ -f ~/.bashrc ] && . ~/.bashrc` in ~/.bash_profile, the same login shell had the alias.",
   },
   {
+    id: "chmod",
+    fileName: "set-permissions.sh",
+    lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
+    description:
+      "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
+    sampleSummary: "A shell script that sets permissions before a deploy: numeric modes for a script, a config file, a secrets file and a private folder, then letter modes that add or remove one permission.",
+    sample: `#!/bin/sh
+# Set file permissions for a small web app before deploying it.
+# Each digit is owner, group, everyone else: read = 4, write = 2, run = 1.
+
+chmod 755 bin/deploy.sh         # owner: read, write, run; others: read, run
+chmod 644 config/app.json       # owner: read, write; others: read only
+chmod 600 config/secrets.env    # owner only: read and write
+chmod 700 private               # only the owner can open this folder
+
+chmod u+x bin/start.sh          # add run for the owner, change nothing else
+chmod go-w shared/notes.txt     # take write away from group and others
+chmod -R a+rX public            # everyone reads; X adds run to folders only
+
+ls -l bin config`,
+    shows: [
+      {
+        concept: "the three digits",
+        text: "Each digit is a sum: read 4, write 2, run 1. The first digit is the file's owner, the second its group and the third everyone else. So 7 is 4+2+1, all three; 5 is read and run; 4 is read only; 0 is nothing. After the script, `ls -l` showed `-rwxr-xr-x` for deploy.sh (755) and `-rw-------` for secrets.env (600).",
+      },
+      {
+        concept: "letter modes",
+        text: "Letters change one thing and leave the rest: `u` is the owner, `g` the group, `o` others and `a` all three, with `+` to add and `-` to take away. `chmod u+x` turned start.sh from 644 into 744, `-rwxr--r--`, and `chmod go-w` turned notes.txt from 666 into 644.",
+      },
+      {
+        concept: "folders",
+        text: "On a folder, read lets you list the names in it, and run lets you go inside and open what's there. Capital `X` adds run only to folders, and to files that already have it: `chmod -R a+rX public` turned a 700 folder into 755 and a 600 page into 644, with no run bit on the page.",
+      },
+      {
+        concept: "running scripts",
+        text: "A script needs the run bit to start as `./run.sh`. At 644, `./run.sh` stopped with `Permission denied`; `sh run.sh` still ran it, because then `sh` is the program being run and only reads the file. After `chmod u+x run.sh` it started directly.",
+      },
+    ],
+    notes: [
+      "Run with chmod from GNU coreutils 9.11 as a normal user, in a test folder, with umask 022: new files came out 644 and new folders 755.",
+      "`chmod 777` gives everyone read, write and run: `ls -l` showed `-rwxrwxrwx`. Any account on the machine can then change the file, so it's rarely the fix it looks like.",
+      "750 is `-rwxr-x---`: the owner does everything, the group can read and run, and everyone else gets nothing.",
+    ],
+    watchOut:
+      "`chmod -R 644` on a folder locks you out of it, because it takes the run bit off folders too. `chmod -R 644 site` printed `chmod: cannot access 'site/img': Permission denied` partway through, and afterwards `cd site/img` and reading `site/img/a.txt` were refused. `chmod -R u=rwX,go=rX site` put it right: 755 for both folders and 644 for the file.",
+  },
+  {
     id: "c",
     fileName: "players.c",
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
