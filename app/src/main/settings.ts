@@ -135,7 +135,8 @@ export interface Settings {
   /**
    * Send setup progress (instrumentation spec 5 and 10): one date each for setup
    * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
-   * Off until the person turns it on.
+   * Off until the person turns it on. The first-run "Where did you hear about Unvibe?" answer is
+   * not covered: typing it is its own opt-in (progress.ts `answerHeardFrom`).
    */
   shareSetupProgress: boolean;
   /** The first explanation of the user's own code is saved, so the companion's paste step is gone for good. */

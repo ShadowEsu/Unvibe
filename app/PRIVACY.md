@@ -51,6 +51,8 @@ The app can also send one message per setup step, the first time it happens: set
 
 From version 0.1.45 this is off unless you turn it on, and updating to 0.1.45 switches it off once even if it was on before. Version 0.1.44 sends it until you switch it off. To turn it on or off, open Settings › Privacy & Data and use **Send setup progress** (in version 0.1.44 the switch reads **Send anonymous setup progress**). That switch does not cover the install ID, dates and counts under Without an account, which come with requests the app makes anyway.
 
+If you type an answer to the optional first-run question "Where did you hear about Unvibe?" and press Continue, it is sent once to Unvibe with this install's random ID, even with setup progress off, and kept with the anonymous install record for 12 months after the install started, with any email address or phone number in it removed; leave it blank and nothing is sent.
+
 ## Feedback
 
 When you send feedback from the app or the website, Unvibe stores your star rating and message, where it came from (the app version or the page), and your email only if you add it. Your IP address is used only in the server's memory, to stop repeated sends, and is not stored with your feedback. The server and the app send no analytics event for it; on the website, if you pressed Allow on the analytics bar, the site records one Mixpanel event with the star rating.

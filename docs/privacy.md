@@ -69,6 +69,13 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   progress" and starts on); it does not
   cover the rows above, which come from requests the app makes anyway. Both are described on
   unvibe.site/privacy and in `app/PRIVACY.md`.
+- If you type an answer to the optional first-run question "Where did you hear about Unvibe?" and
+  press Continue, it is sent once to Unvibe with this install's random ID, even with setup progress
+  off, and kept with the anonymous install record for 12 months after the install started, with any
+  email address or phone number in it removed; leave it blank and nothing is sent. (Step
+  `heard_from` on the same route, sealed trial builds only, up to 200 characters, stored in
+  `trial_installs.heard_from`, cleared by the daily `trial-heard-from-12-months` pg_cron job, never
+  on the stats page, in a log line or in analytics.)
 
 ## Required before inviting external beta users
 

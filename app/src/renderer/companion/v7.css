@@ -616,6 +616,7 @@
   & .ob2__form label { display: grid; gap: 6px; font: 650 13.5px var(--font-sans); color: var(--v-ink); }
   & .ob2__form .field { height: 46px; padding: 0 14px; font-size: 16px; }
   & .ob2__opt { color: var(--v-faint); font-weight: 500; }
+  & .ob2__note { color: var(--v-muted); font: 500 12.5px/1.4 var(--font-sans); }
   & .ob2__google { padding: 14px 16px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
   & .ob2__ok { margin: 0; color: var(--v-good); font-weight: 700; }
   & .ob2__more { width: min(440px, 100%); justify-self: center; text-align: left; }

@@ -149,6 +149,13 @@ export default function PrivacyPage() {
           the app makes anyway.
         </p>
         <p>
+          If you type an answer to the optional first-run question &ldquo;Where did you hear about
+          Unvibe?&rdquo; and press Continue, it is sent once to Unvibe with this install&apos;s random
+          ID, even with setup progress off, and kept with the anonymous install record for 12 months
+          after the install started, with any email address or phone number in it removed; leave it
+          blank and nothing is sent.
+        </p>
+        <p>
           If you redeem a promo code at <a href="/redeem">/redeem</a>, we keep a redemption record: a
           fingerprint of the code (not the code itself), your account and its email, the months of Pro
           it added, and the dates (when you redeemed it, your Pro end date before and after, and when
