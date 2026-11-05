@@ -1,32 +1,31 @@
 # Unvibe
-unvibe.site
 
-A code-comprehension layer for AI-generated code. When an AI agent or you change code,
-Unvibe offers a quiet review and explains **what changed and why**, using your project's
-context, then checks that you understood it and tracks what you're learning.
+Select code in any app, press Control+U (Ctrl+Alt+U on Windows), and Unvibe explains it in plain English beside your editor, at the depth you pick.
 
-**Just want the app?** Download it free for Mac or Windows at [unvibe.site](https://unvibe.site).
-No API key is needed. Select code and press **Control+U** on Mac or **Ctrl+Alt+U** on Windows.
+**[Download free for Mac and Windows](https://unvibe.site/?utm_source=github&utm_medium=readme&utm_campaign=repo-readme)** · [Releases](https://github.com/ShadowEsu/Unvibe/releases) · [First-open help](https://unvibe.site/install-help?utm_source=github&utm_medium=readme&utm_campaign=repo-readme)
 
-> The primary value is understanding, verifying, and retaining AI-written code, not
-> generating more of it.
+Unvibe is a free desktop app for Mac and Windows that explains code in plain English. Select code in any app, press Control+U (Ctrl+Alt+U on Windows), and a panel opens beside your editor with an explanation at the depth you pick, from New to Advanced. Ask follow-up questions, check yourself with Test me, and save what you learn to your Library. Keys and tokens are checked for on your computer before anything is sent. No API key and no card. AI explanations can be wrong, so check them against the code.
 
-## Status
-**Desktop-first since July 2026** — Unvibe is a desktop overlay app (`app/`): a menu-bar agent,
+Apple hasn't verified Unvibe yet, so the first open takes a few extra steps in System Settings. The [first-open help](https://unvibe.site/install-help?utm_source=github&utm_medium=readme&utm_campaign=repo-readme) walks through them for Mac and Windows.
+
+## Develop
+
+### Status
+**Desktop-first since July 2026.** Unvibe is a desktop overlay app (`app/`): a menu-bar agent,
 a tiny floating bar, movable streaming explanation widgets, and a Wispr-Flow-style companion
-app. The VS Code extension (M1–M6) is parked; its logic lives on inside the desktop agent.
+app. The VS Code extension (M1 to M6) is parked; its logic lives on inside the desktop agent.
 See [`CLAUDE.md`](CLAUDE.md) for scope and [`docs/`](docs/) for architecture, design, privacy.
 
-## Run the launch website (marketing)
+### Run the launch website (marketing)
 ```
 cd marketing
 npm install
-npm run dev          # http://localhost:3000 — waitlist + product storytelling
+npm run dev          # http://localhost:3000: waitlist + product storytelling
 ```
 See [`marketing/README.md`](marketing/README.md) for env vars, Supabase waitlist migration,
 and Vercel deploy steps. This site is separate from the product backend in `web/`.
 
-## Run the desktop app (dev)
+### Run the desktop app (dev)
 ```
 cd app
 npm install
@@ -36,11 +35,11 @@ Select code anywhere and press **Control+U** on Mac or **Ctrl+Alt+U** on Windows
 grant Accessibility when asked; the shortcut can be changed in Settings), or use the clipboard
 fallback in the widget. Expects the backend below on localhost:8787 (`UNVIBE_BACKEND` overrides).
 
-## Run the backend + dashboard (dev)
+### Run the backend + dashboard (dev)
 ```
 cd web
 npm install
-npm run dev          # http://localhost:8787 — dashboard + AI + sync API
+npm run dev          # http://localhost:8787: dashboard + AI + sync API
 ```
 - No keys needed for dev: set `ENABLE_MOCK_AI=true` for the labelled **mock AI provider**; an
   **in-memory dev store** is used.
@@ -52,13 +51,13 @@ npm run dev          # http://localhost:8787 — dashboard + AI + sync API
 
 `server/` is an optional AI-only dev harness (superseded by `web/`).
 
-## Milestones
+### Milestones
 1. ✅ Extension skeleton + detection
 2. ✅ AI layer + context builder + secret filter (streaming explanations)
 3. ✅ Project-summary scope + clickable, validated file/line citations
-4. ✅ Comprehension checks + local persistence (streak, mastery, history)
+4. ✅ Comprehension checks + local persistence (mastery, history)
 5. ✅ Dashboard + auth + sync (AI endpoints migrated into Next.js)
-6. ✅ States, polish, validation — offline outbox, retry, hardening, dashboard verified
+6. ✅ States, polish, validation: offline outbox, retry, hardening, dashboard verified
 
 **Desktop milestones (v2 pivot):**
 
