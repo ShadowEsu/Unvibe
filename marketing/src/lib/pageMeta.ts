@@ -37,6 +37,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   cpp: "/og/og-explain-cpp-91334837.png",
   swift: "/og/og-explain-swift-4c89d84c.png",
   ruby: "/og/og-explain-ruby-6ea2946f.png",
+  sqlite: "/og/og-explain-sqlite-816164d8.png",
   java: "/og/og-explain-java-dbded452.png",
   cron: "/og/og-explain-cron-c15c15c1.png",
   html: "/og/og-explain-html-2d46f438.png",
