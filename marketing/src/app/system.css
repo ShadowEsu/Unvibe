@@ -66,7 +66,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-h1, h2, h3, .flexacc__title { text-wrap: balance; }
+h1, h2, h3 { text-wrap: balance; }
 p, li, figcaption, summary { text-wrap: pretty; }
 :is(time, .dl-card__meta, .inv-amount, [data-tabular]) { font-variant-numeric: tabular-nums; }
 
@@ -83,7 +83,7 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
   padding: clamp(24px, 4.5vw, 56px); border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
   background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
 }
-.u-sheet .sec-head > .paper-meta, .u-sheet .hiw__head > .paper-meta { padding: 0; border-radius: 0; background: none; }
+.u-sheet .sec-head > .paper-meta { padding: 0; border-radius: 0; background: none; }
 .u-sheet .sec-head > .paper-lead { padding: 0; border-radius: 0; background: none; }
 @media (max-width: 520px) {
   .paper-wrap.u-sheet { width: calc(100% - 1.5rem); }

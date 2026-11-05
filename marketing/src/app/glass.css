@@ -49,20 +49,6 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), var(--u-lift-1);
 }
 
-/* The page reads lime, sky, lilac down the sections; the marker word turns sky on the lime plate. */
-.home-page .paper-section:nth-of-type(3n+1) .u-sheet {
-  --u-sheet-solid: #eefad0;
-  --u-sheet-mark: #9fd8ff;
-}
-
-.home-page .paper-section:nth-of-type(3n+2) .u-sheet {
-  --u-sheet-solid: #e2f1fd;
-}
-
-.home-page .paper-section:nth-of-type(3n) .u-sheet {
-  --u-sheet-solid: #eee8ff;
-}
-
 /* One word per heading on the marker: lime, or sky on the lime plate. Upright, the heading's own ink. */
 .u-mark {
   padding-inline: 0.08em;
@@ -74,56 +60,17 @@
   box-decoration-break: clone;
 }
 
-/* The Vibe buddy violet appears once: the lilac plate's eyebrow dot. */
-.home-page .paper-section:nth-of-type(3n) .u-sheet :is(.sec-head, .hiw__head) > .paper-meta::before {
-  content: "";
-  display: inline-block;
-  width: 0.5em;
-  height: 0.5em;
-  margin-right: 0.45em;
-  border-radius: 50%;
-  background: #b8a6ff;
-  vertical-align: 0.08em;
-}
-
-/* The hero plate (PhotoHero, Design FIX 1): one sky plate holding the H1, the kicker, the buttons and the trust
-   line, so no words sit on the field's selection bands. It is in the hero, not a .paper-section, so the rotation
-   above never reaches it; the tint is pinned anyway. The H1 is the LCP: no reveal and no hover lift. */
-.home-page .vhero .vhero__plate.u-sheet {
-  --u-sheet-solid: #e2f1fd;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  gap: 0.75rem;
-  width: min(900px, 100%);
-  margin-inline: auto;
-  padding: clamp(24px, 4.5vw, 56px) clamp(18px, 5vw, 64px);
-  border-radius: var(--u-radius-sheet);
-  text-align: center;
-}
-
-/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion.
-   Not the hero plate (LCP). */
+/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .u-sheet:not(.vhero__plate) {
+  .u-sheet {
     transition: transform var(--m-fast) var(--m-ease-sharp);
   }
 
-  .u-sheet:not(.vhero__plate):hover {
+  .u-sheet:hover {
     transform: translateY(-2px);
   }
 }
 
-/* The backing band was a pale wash behind its plate: on the home page the plate sits on the field like the rest. */
-.home-page .paper-backing {
-  border-bottom: 0;
-  background: none;
-}
-
-/* The backing plate has no heading now, so its one line starts at the plate's own padding. */
-.home-page .paper-backing .u-sheet > .claude-startups {
-  padding-top: 0;
-}
 
 /* The /beta troubleshooting list: one solid container with hairline rows, like the home FAQ. */
 .beta-page .paper-faq {
@@ -183,28 +130,16 @@
 /* ── Cards and panels ───────────────────────────────────────────────────── */
 
 .who-panel,
-.vhero__still,
 .paper-beta {
   position: relative;
-}
-
-/* The home install card leaves the flattened sheet rule (system.css) and becomes a card again. */
-.home-page .paper-install .u-sheet .paper-beta {
-  width: min(980px, 100%) !important;
-  padding: clamp(2rem, 4vw, 3.4rem) !important;
-  border-radius: 20px !important;
 }
 
 /* The cards: solid cream with a hairline edge and a top highlight. Inside a home plate (.u-sheet) a card is the
    plate's 0.55 white pane instead. */
 :is(
   .who-panel,
-  .flexacc__item,
   .vtour__window,
-  .vhero__still,
-  .plans-strip__card,
   .paper-pricing .marketing-plan-card,
-  .home-page .paper-install .u-sheet .paper-beta,
   .beta-page .paper-beta,
   .beta-page__trust-item
 ) {
@@ -361,12 +296,8 @@
 
   :is(
     .who-panel,
-    .flexacc__item,
     .vtour__window,
-    .vhero__still,
-    .plans-strip__card,
     .paper-pricing .marketing-plan-card,
-    .home-page .paper-install .u-sheet .paper-beta,
     .beta-page .paper-beta,
     .beta-page__trust-item
   ) {
