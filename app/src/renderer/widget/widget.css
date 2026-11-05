@@ -963,7 +963,8 @@ code.inline {
 .card.card .ask-sandbox .askrow { flex: 1 1 auto; width: 100%; display: flex; justify-content: space-between; }
 .card.card .ask-sandbox .askrow input { flex: 1 1 auto; width: auto; text-align: left; padding: 6px 2px; }
 .card.card .ask-sandbox .askrow .btn-ask { flex: 0 0 auto; margin-left: auto; }
-@container widget (max-width: 520px) {
+/* Test me stacks under the explanation below about 640 px, so the explanation keeps the full width (Design gate, 464). */
+@container widget (max-width: 639px) {
   .card.card--quiz .stage { flex-direction: column; }
   .card.card--quiz .body { border-right: 0; flex: 1 1 55%; }
   .card.card--quiz .quiz-rail { border-left: 0; border-top: 1px solid var(--p-line); flex: 1 1 45%; width: auto; max-width: none; }
@@ -1459,6 +1460,11 @@ code.inline {
 .card .sw-btn--quiet[aria-expanded="true"] { background: var(--sw-plate); }
 .card .sw-week { margin-left: auto; color: var(--sw-muted); font-size: 12.5px; white-space: nowrap; }
 .card .sw-week .count-up__n { color: var(--sw-ink); }
+/* Narrower than about 620 px the count gets its own line under the action row, words whole (Design gate, 464). */
+@container widget (max-width: 619px) {
+  .card .sw-actions { flex-wrap: wrap; row-gap: 8px; }
+  .card .sw-week { flex: 1 0 100%; order: 1; margin-left: 0; font-size: 12px; text-align: left; white-space: normal; }
+}
 
 /* Menus (More, the level pill): from --m-scale-press at the trigger, in --m-fast. Esc removes them at once. */
 .card .sw-menu-wrap { position: relative; display: inline-flex; }
@@ -1494,7 +1500,6 @@ code.inline {
   :root[data-panel] .card.card .body { padding: 16px 16px 26px; }
   .card .sw-actions { gap: 8px; }
   .card .sw-btn--primary, .card .sw-btn--secondary { min-width: 0; }
-  .card .sw-week { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .card .head__mark--bob .buddy, .card .sw-menu, .card .answer-skeleton { animation: none; }
