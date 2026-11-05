@@ -1124,7 +1124,7 @@ Turn a CSV of hours into a **PDF invoice**. See the [changelog](CHANGELOG.md).
 ## Install
 
 1. Install Python 3.10 or newer.
-1. Run \`pip install invoicer\`.
+1. Run \`pip install .\` in this folder.
 1. Check it works with \`invoicer --version\`.
 
 ## Use

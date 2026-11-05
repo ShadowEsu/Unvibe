@@ -265,7 +265,7 @@ export const languages: Language[] = [
     concepts: ["headings and emphasis", "lists", "code", "quotes and tables"],
     frameworks: ["CommonMark", "markdown-it", "README files", "HTML"],
     learningPath: ["Headings and emphasis", "Lists and links", "Code", "Line breaks"],
-    sample: `## Install\n\n1. Run \`pip install invoicer\`.`,
+    sample: `## Install\n\n1. Run \`pip install .\` in this folder.`,
   },
   {
     id: "bash",
