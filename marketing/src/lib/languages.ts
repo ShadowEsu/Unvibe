@@ -98,6 +98,16 @@ export const languages: Language[] = [
     sample: `squares = [n * n for n in range(10)]`,
   },
   {
+    id: "pyproject-toml",
+    name: "pyproject.toml",
+    categories: ["backend", "scripting"],
+    blurb: "The file that tells pip how to build and install a Python package, and where tools like pytest keep their settings.",
+    concepts: ["[build-system]", "dependencies and extras", "[project.scripts]", "[tool.*] tables"],
+    frameworks: ["pip", "setuptools", "pytest", "TOML"],
+    learningPath: ["Build system", "Project metadata", "Dependencies and extras", "Scripts and tools"],
+    sample: `[project]\nname = "invoicer"\nversion = "0.3.1"`,
+  },
+  {
     id: "go",
     name: "Go",
     categories: ["backend", "systems"],

@@ -89,6 +89,62 @@ def total_by_city(path):
       "A header row such as `city,amount` crashes the function, because `float(\"amount\")` raises `ValueError`. Skip it with `next(f)` before the loop, or read the file with the `csv` module.",
   },
   {
+    id: "pyproject-toml",
+    fileName: "pyproject.toml",
+    lead: "Paste a pyproject.toml and Vibe explains what each table does: how the package is built, what it depends on, which commands it installs and where tools like pytest read their settings.",
+    description:
+      "Paste a pyproject.toml and get it explained in plain English, free online. The sample builds a small Python package with setuptools, one dependency, a dev extra and a command line script.",
+    sampleSummary: "A pyproject.toml for a small package: the setuptools build backend, name and version, the Python versions it supports, one dependency, a dev extra with pytest, a command called invoicer and pytest's settings.",
+    sample: `# pyproject.toml: how to build, install and run the "invoicer" package.
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoicer"
+version = "0.3.1"
+description = "Turn a CSV of hours into a PDF invoice"
+requires-python = ">=3.10"
+dependencies = [
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+invoicer = "invoicer.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]`,
+    shows: [
+      {
+        concept: "[build-system]",
+        text: "`[build-system]` tells pip what to install before it can build the package, here setuptools, and which backend does the build. `pip install .` read it, built the package and installed it: `pip show invoicer` then printed `Version: 0.3.1` and the description as its `Summary`.",
+      },
+      {
+        concept: "dependencies and extras",
+        text: "`dependencies` installs with the package: `pip show invoicer` listed `Requires: python-dotenv`, and python-dotenv was installed with it. `[project.optional-dependencies]` only installs when asked for: pytest came in with `pip install \".[dev]\"` and not with plain `pip install .`.",
+      },
+      {
+        concept: "[project.scripts]",
+        text: "Each line under `[project.scripts]` becomes a command. `invoicer = \"invoicer.cli:main\"` means: make a command called `invoicer` that runs the `main` function in `invoicer/cli.py`. After the install, typing `invoicer` printed `invoicer 0.3.1: ready`.",
+      },
+      {
+        concept: "[tool.*] tables",
+        text: "Tables under `[tool]` belong to other tools, which read their own. pytest reads `[tool.pytest.ini_options]`: run in the project folder, `pytest -q` found the test in `tests` and printed `1 passed`.",
+      },
+    ],
+    notes: [
+      "Run with Python 3.14 and pip 26.2 in a fresh virtual environment.",
+      "`requires-python` is checked at install time. Changed to `>=3.99`, pip stopped with `ERROR: Package 'invoicer' requires a different Python: 3.14.7 not in '>=3.99'`.",
+      "Names under `[project]` are checked. With `dependencies` misspelled as `dependancies`, the build failed with `configuration error`, saying `project` must not contain `{'dependancies'}`.",
+    ],
+    watchOut:
+      "A plain `pip install .` copies your code, so edits don't show until you install again. After changing `cli.py`, `invoicer` still printed `invoicer 0.3.1: ready`. Installed with `pip install -e .` instead, the same edit showed straight away: `invoicer 0.3.1: edited`.",
+  },
+  {
     id: "javascript",
     fileName: "profiles.js",
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
