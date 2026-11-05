@@ -472,7 +472,10 @@ await step('today', async () => {
   // on a Mac, step 3 says Next once own code was explained there (the pasted samples count) and step 4 offers the
   // shortcut (Not now finishes), else step 3's Skip for now finishes; Windows ends with Start using Unvibe.
   const labels = ['Not now', 'Do it later', 'Start using Unvibe', 'Skip for now', 'Next'];
-  for (let i = 0; i < 6 && await companion.locator('.ob2__count').count(); i++) {
+  // A step can be mid-transition (e.g. "Welcome!" while setup closes), so a step with no known button is looked at
+  // again a moment later; only a step that stays that way fails.
+  let stuck = 0;
+  for (let i = 0; i < 12 && await companion.locator('.ob2__count').count(); i++) {
     if (await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).count()) {
       await sleep(1000);
       await shot(companion, 'onboarding-anywhere');
@@ -484,8 +487,10 @@ await step('today', async () => {
     }
     if (!clicked) {
       if (!await companion.locator('.ob2__count').count()) break; // setup finished while this looked
-      const names = await companion.locator('.ob2 button:visible').allInnerTexts();
-      throw new Error(`setup step ${await companion.locator('.ob2__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
+      if (++stuck >= 4) {
+        const names = await companion.locator('.ob2 button:visible').allInnerTexts();
+        throw new Error(`setup step ${await companion.locator('.ob2__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
+      }
     }
     await sleep(1200);
   }
