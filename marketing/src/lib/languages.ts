@@ -78,6 +78,16 @@ export const languages: Language[] = [
     sample: `$(".remove").on("click", function () { $(this).closest("li").remove(); });`,
   },
   {
+    id: "npm-scripts",
+    name: "npm scripts",
+    categories: ["web", "scripting"],
+    blurb: "The named commands in a package.json that npm run starts: dev, build, test, lint.",
+    concepts: ["npm run", "pre and post", "local tools", "chaining and exit codes"],
+    frameworks: ["npm", "Node.js", "ESLint", "Vite"],
+    learningPath: ["npm run", "Pre and post scripts", "Local tools", "Chaining and exit codes"],
+    sample: `"scripts": { "build": "node build.js" }`,
+  },
+  {
     id: "python",
     name: "Python",
     categories: ["backend", "data", "scripting"],
