@@ -27,8 +27,22 @@
 /* ── Try it: editor on the left, Vibe panel on the right ── */
 .try__editor, .try__panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .try__editor { background: #151514; }
-.try__editor textarea { flex: 1; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; }
+.try__code { position: relative; display: flex; flex: 1; min-height: 0; timeline-scope: --try-code; }
+.try__editor textarea { flex: 1; min-width: 0; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; scroll-timeline: --try-code inline; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
+/* Scroll cue (Design), as on /use-cases: the right edge fades into the editor's fill while a line runs past it, and
+   clears once you reach the end. A sample that fits has no active scroll timeline, so the cue stays at opacity 0.
+   It stops above the bottom edge so the resize grip and a horizontal scrollbar stay clear, and hides while the
+   editor has focus so it never dims the focus ring. Browsers without scroll-driven animations show no cue. */
+.try__code::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0.75rem; width: 2.5rem; background: linear-gradient(to right, rgb(21 21 20 / 0), #151514 80%); opacity: 0; pointer-events: none; }
+.try__code:focus-within::after { visibility: hidden; }
+@supports (animation-timeline: scroll()) {
+  .try__code::after { animation: try-code-cue linear both; animation-timeline: --try-code; }
+}
+@keyframes try-code-cue {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .try__foot { display: grid; gap: 0.55rem; padding: 0.9rem 1rem 1rem; border-top: 1px solid #2c2c29; }
 .try__foot .try__go { margin: 0; padding: 0 1.2rem; }
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
