@@ -52,6 +52,16 @@ export const shell = {
   },
 };
 
+/** Tests inject their own clipboard readers; touching the real one fails loudly. */
+export const clipboard = {
+  readText: (): never => {
+    throw new Error('The clipboard is not available in tests.');
+  },
+  writeText: (): never => {
+    throw new Error('The clipboard is not available in tests.');
+  },
+};
+
 /** Records what was cleared from the default session (renderer storage, HTTP cache). */
 export const sessionCalls: Array<{ call: 'clearStorageData' | 'clearCache'; options?: Electron.ClearStorageDataOptions }> = [];
 
