@@ -51,7 +51,9 @@ export default function ExplainLanguagePage({ params }: Params) {
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}
         </nav>
         <h1>Explain {name} code</h1>
-        <p>{page.lead}</p>
+        <p>
+          <Prose text={page.lead} />
+        </p>
       </header>
 
       <section aria-label={`Try it with a ${name} sample`}>
