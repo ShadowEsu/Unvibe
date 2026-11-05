@@ -345,6 +345,67 @@ ORDER BY spend_rank, c.name;`,
       "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
   },
   {
+    id: "git-log",
+    fileName: "git-log.txt",
+    lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
+    description:
+      "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
+    sampleSummary: "The output of `git log -3` and `git log --oneline --graph --decorate --all` for a small repo: two people's commits, a branch merged back into main and a release tag.",
+    sample: `$ git log -3
+commit 6dd93ddd5276a4e1a8ee3c3af46db31f8057a267
+Merge: b0b26af 6788b88
+Author: Sam Lee <sam@example.com>
+Date:   Wed Nov 4 08:30:00 2026 +0000
+
+    Merge branch 'discount'
+
+commit b0b26af6fdabbfa40bd89bb0cfc9e995afcdfd8c
+Author: Sam Lee <sam@example.com>
+Date:   Tue Nov 3 16:05:00 2026 +0000
+
+    Say how to run it
+
+commit 6788b88166dcc5851351b9272b10b69b8c718788
+Author: Ana Ruiz <ana@example.com>
+Date:   Tue Nov 3 14:20:00 2026 +0000
+
+    Let total take a discount
+
+$ git log --oneline --graph --decorate --all
+*   6dd93dd (HEAD -> main, tag: v1.0) Merge branch 'discount'
+|\\
+| * 6788b88 (discount) Let total take a discount
+* | b0b26af Say how to run it
+|/
+* 0626e29 Add cart total
+* b5aaded Start the shop`,
+    shows: [
+      {
+        concept: "commits",
+        text: "Each entry is one commit, newest first: its full hash, who wrote it, when, and the message. `--oneline` keeps only a short hash and the first line, so `6dd93ddd5276...` became `6dd93dd`. `git log -1 --format='%h %an %ad %s' --date=short` printed `6dd93dd Sam Lee 2026-11-04 Merge branch 'discount'`.",
+      },
+      {
+        concept: "merges",
+        text: "A merge commit has two parents, and the `Merge:` line lists them: `b0b26af` is the commit main was on, and `6788b88` is the branch's last commit. `HEAD^1` named `Say how to run it` and `HEAD^2` named `Let total take a discount`.",
+      },
+      {
+        concept: "the graph",
+        text: "In `--graph`, each `*` is a commit and the lines show history splitting and joining: `|/` is where `discount` branched off after `Add cart total`, and `|\\` is where the merge brought it back. `--decorate` adds the names that point at a commit: `HEAD -> main` is the branch you're on, `tag: v1.0` a tag and `(discount)` the branch.",
+      },
+      {
+        concept: "filtering",
+        text: "`git log --author=Ana` listed only `Let total take a discount`, and `git log -- cart.js` only the 2 commits that changed that file. `git log discount..main` lists what main has that discount doesn't: the merge and `Say how to run it`. `main..discount` printed nothing, because the branch is fully merged.",
+      },
+    ],
+    notes: [
+      "Made with git 2.55.0 in a test repo with fixed names and dates, so the same commands give the same hashes. The graph's `|\\` and `|/` lines end in spaces in git's output; they're trimmed here.",
+      "`git log -p` adds each commit's diff, and `--stat` a summary: for Ana's commit, `cart.js | 4 ++--` and `1 file changed, 2 insertions(+), 2 deletions(-)`.",
+      "A long log opens in a pager, `less` unless you set another, so it can look stuck: press `q` to get back to the prompt.",
+    ],
+    watchOut:
+      "A plain `git log` sorts every merged branch's commits into one list by date, so it isn't the order work landed on main: Ana's branch commit sits between main's own commits above. `git log --first-parent` follows only main's side of each merge and listed 4 commits, the merge, `Say how to run it`, `Add cart total` and `Start the shop`, without Ana's.",
+  },
+  {
     id: "bash",
     fileName: "top-errors.sh",
     lead: "Paste a shell script or a one-liner and Vibe explains what it does before you run it.",
