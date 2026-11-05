@@ -60,6 +60,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   zshrc: "/og/og-explain-zshrc-7f62def4.png",
   lua: "/og/og-explain-lua-a54ac404.png",
   yaml: "/og/og-explain-yaml-a1a67fe9.png",
+  ini: "/og/og-explain-ini-d293613e.png",
   json: "/og/og-explain-json-995efaed.png",
   csv: "/og/og-explain-csv-514f7a62.png",
   env: "/og/og-explain-env-35024476.png",

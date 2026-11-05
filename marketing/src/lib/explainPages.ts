@@ -1888,6 +1888,59 @@ jobs:
       "Quote version numbers. `python-version: 3.10` without quotes is the number 3.1, and the list `[3.9, 3.10, 3.11]` reads as `[3.9, 3.1, 3.11]`. GitHub reads it the same way, so the job asks for Python 3.1.",
   },
   {
+    id: "ini",
+    fileName: "settings.ini",
+    lead: "Paste an .ini file and Vibe explains what each section and setting is for, which defaults every section shares and how a value like `%(log_dir)s` gets filled in.",
+    description:
+      "Paste an INI file and get it explained in plain English, free online. The sample is an app's settings with shared defaults, a server, a database and an email section.",
+    sampleSummary: "An app's settings.ini: a comment, a [DEFAULT] section shared by every section, then server, database and email sections, with one value built from another.",
+    sample: `; settings.ini: settings for the invoicer app, one [section] per area.
+
+[DEFAULT]
+log_dir = /var/log/invoicer
+debug = no
+
+[server]
+host = 127.0.0.1
+port = 8080
+debug = yes
+
+[database]
+path = data/invoices.db
+backup_file = %(log_dir)s/backup.log
+timeout_seconds = 5
+
+[email]
+sender = billing@example.com
+subject = Your invoice from Acme`,
+    shows: [
+      {
+        concept: "sections and keys",
+        text: "`[server]` starts a section, and each `name = value` line below it belongs to that section until the next one. A line starting with `;` is a comment. Python's `configparser` listed the sections as `['server', 'database', 'email']`: `[DEFAULT]` isn't listed, because it's special.",
+      },
+      {
+        concept: "[DEFAULT]",
+        text: "Every section can see the keys in `[DEFAULT]`, unless it sets its own. `[email]` has no `debug` line, so it got the default `no`, read as `False`; `[server]` sets `debug = yes` and read as `True`. `[email]` also had `log_dir` without ever naming it.",
+      },
+      {
+        concept: "%(name)s values",
+        text: "`%(log_dir)s` is filled in from another key, here the one in `[DEFAULT]`. `backup_file` came out as `/var/log/invoicer/backup.log`.",
+      },
+      {
+        concept: "everything is text",
+        text: "Every value is read as text: `port` came back as the string `'8080'`. `getint`, `getfloat` and `getboolean` convert it, and `getboolean` took `yes` and `no`. Key names don't care about case, so `PORT` found `port`, but section names do: there was no `SERVER` section.",
+      },
+    ],
+    notes: [
+      "Read with `configparser` in Python 3.14. Other programs that read .ini files may follow different rules, so check the docs of the one reading yours.",
+      "A `%` in a value has to be written `%%`. With `password = 50%off`, reading it raised `InterpolationSyntaxError: '%' must be followed by '%' or '(', found: '%off'`. `ConfigParser(interpolation=None)` read it as `50%off`.",
+      "A missing file isn't an error: `read(\"nope.ini\")` returned `[]` and there were no sections. Check what `read` returns.",
+      "The same key twice in one section stopped the read with `DuplicateOptionError`.",
+    ],
+    watchOut:
+      "A comment at the end of a line becomes part of the value. `port = 8080 ; dev only` read as `'8080 ; dev only'`, and `getint` failed with `ValueError: invalid literal for int() with base 10: '8080 ; dev only'`. Put comments on their own line, or pass `inline_comment_prefixes=(\";\",)`, which read it as `'8080'`.",
+  },
+  {
     id: "json",
     fileName: "package.json",
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
