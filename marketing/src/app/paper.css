@@ -715,6 +715,11 @@ h2 {
   font-weight: 400;
 }
 
+/* The summary sits 8 px under its title (Design), not flush against it. */
+.paper-log :is(h2, h3, h4) + .paper-lead {
+  margin-top: 8px;
+}
+
 .paper-log__star {
   display: grid;
   place-items: center;
