@@ -378,6 +378,16 @@ export const languages: Language[] = [
     sample: `awk -F, '{ sum += $3 } END { print sum }' sales.csv`,
   },
   {
+    id: "fish",
+    name: "fish",
+    categories: ["scripting", "systems"],
+    blurb: "A friendly interactive shell with its own syntax, set in config.fish.",
+    concepts: ["variables", "PATH", "abbreviations and aliases", "functions and status"],
+    frameworks: ["fish", "Fisher", "Oh My Fish", "Starship"],
+    learningPath: ["set and set -gx", "fish_add_path", "Abbreviations", "Functions"],
+    sample: `set -gx EDITOR nano`,
+  },
+  {
     id: "make",
     name: "Makefile",
     categories: ["systems", "scripting"],
