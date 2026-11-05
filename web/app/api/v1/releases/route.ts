@@ -46,7 +46,7 @@ function releaseUrl(raw: unknown, tag: string, kind: 'tag' | 'download'): string
  * Only the fields the desktop updater reads. A release whose page isn't its own tag's page is
  * dropped, and so is any asset outside its own release's download folder.
  */
-export function trimReleases(body: unknown): FeedRelease[] | null {
+function trimReleases(body: unknown): FeedRelease[] | null {
   if (!Array.isArray(body)) return null;
   const releases: FeedRelease[] = [];
   for (const item of body) {
