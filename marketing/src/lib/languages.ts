@@ -238,6 +238,16 @@ export const languages: Language[] = [
     sample: `Get-Process | Sort-Object CPU -Descending | Select-Object -First 5`,
   },
   {
+    id: "bashrc",
+    name: ".bashrc",
+    categories: ["scripting", "systems"],
+    blurb: "The bash startup file that sets up aliases, PATH and the prompt for each new terminal.",
+    concepts: ["interactive shells", "variables and PATH", "aliases and functions", "the prompt"],
+    frameworks: ["bash", "~/.bash_profile", "git", "coreutils"],
+    learningPath: ["When it runs", "PATH and export", "Aliases and functions", "The prompt"],
+    sample: `alias ll='ls -lah'`,
+  },
+  {
     id: "regex",
     name: "Regex",
     categories: ["scripting", "data"],
