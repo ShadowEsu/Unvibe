@@ -1,4 +1,4 @@
-import { escapeEmailHtml } from "@/emails/betaShared";
+import { escapeEmailHtml } from "@/emails/escapeHtml";
 import { cancelScheduledEmailsTo } from "@/lib/sendBetaDownloadEmail";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe";
 import { recordEmailUnsubscribe } from "@/lib/waitlistStore";

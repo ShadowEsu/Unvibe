@@ -19,7 +19,7 @@ export interface WelcomeInput {
   siteUrl?: string;
 }
 
-export const WELCOME_SUBJECT = "You're in! Welcome to Unvibe early access";
+export const WELCOME_SUBJECT = "You're in! Welcome to Unvibe";
 
 const INK = "#141414";
 const PAPER = "#f6f1e7";
@@ -34,7 +34,6 @@ function links(input: WelcomeInput) {
   return {
     site,
     banner: `${site}/email/welcome-banner.png`,
-    pro: `${site}/pricing`,
     referral: `${site}/?ref=${encodeURIComponent(code)}`,
     download: input.downloadUrl || `${site}/#install`,
   };
@@ -48,7 +47,6 @@ function links(input: WelcomeInput) {
 export const EMAIL_BUTTONS = {
   get: { file: "btn-get.png", width: 185, height: 55, label: "Get Unvibe free" },
   download: { file: "btn-download.png", width: 202, height: 55, label: "Download Unvibe" },
-  pro: { file: "btn-pro.png", width: 120, height: 55, label: "See Pro" },
   months: { file: "btn-months.png", width: 230, height: 55, label: "See your Pro months" },
   feedback: { file: "btn-feedback.png", width: 281, height: 55, label: "Give feedback, get a month" },
   try: { file: "btn-try.png", width: 183, height: 55, label: "Try Unvibe free" },
@@ -69,19 +67,18 @@ export function welcomeHtml(input: WelcomeInput): string {
   const p = `margin:0 0 16px;font-size:16px;line-height:1.55;color:#3b3b3b`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Welcome to Unvibe</title><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head>
 <body style="margin:0;padding:0;background:${PAPER};font-family:Helvetica,Arial,sans-serif;color:${INK}">
-<div style="display:none;max-height:0;overflow:hidden">Thank you for joining early. Your invite link and a free month of Pro are inside.</div>
+<div style="display:none;max-height:0;overflow:hidden">Thank you for joining. How to get Unvibe and your invite link are inside.</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${PAPER}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:${PAPER}">
 <tr><td style="padding:0 0 20px"><a href="${l.site}"><img src="${l.banner}" width="600" alt="You're in. Welcome to Unvibe." style="display:block;width:100%;height:auto;border:2px solid ${INK};border-radius:20px"></a></td></tr>
 <tr><td style="padding:0 28px 18px">
-<h1 style="margin:0 0 12px;font-size:30px;line-height:1.15;color:${INK}">Congrats, you're in early!</h1>
-<p style="${p}">Thank you so much for trying Unvibe this early. You're one of the first people using it, and that means a lot. Unvibe explains the code AI writes for you, right beside your editor, so you actually understand what you ship.</p>
+<h1 style="margin:0 0 12px;font-size:30px;line-height:1.15;color:${INK}">Congrats, you're in!</h1>
+<p style="${p}">Thank you so much for trying Unvibe. Unvibe explains the code AI writes for you, right beside your editor, so you actually understand what you ship.</p>
 <p style="margin:0">${imageButton(l.site, l.download, input.downloadUrl ? "download" : "get")}</p>
-<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">The first time you open it, your Mac or PC asks you to approve it once. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
+<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">Opening it the first time takes a few extra steps on a Mac or PC. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
 </td></tr>
-${card(`<h2 style="${h2}">Want Pro?</h2><p style="${p}">Expert depth, git diffs and nearby-file context. Your app account already starts with a free month of Pro.</p>${imageButton(l.site, l.pro, "pro")}`)}
 ${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE} ${GIFT_OFFER}</p><p style="margin:0;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>`, "#eef9c8")}
-${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style="${p}">Give Unvibe some stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add <b>another free month of Pro</b> to this email.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
+${card(`<h2 style="${h2}">Tell us what you think, get a free month</h2><p style="${p}">Give Unvibe some stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add <b>a free month of Pro</b> to this email.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
 <tr><td style="padding:6px 28px 28px">
 <p style="${p}">Thank you so much. Seriously. Reply to this email any time, it comes straight to us.</p>
 <p style="margin:0;font-size:16px;line-height:1.55;color:${INK}"><b>The Unvibe team</b></p>
@@ -92,23 +89,20 @@ ${card(`<h2 style="${h2}">Tell us what you think, get another month</h2><p style
 
 export function welcomeText(input: WelcomeInput): string {
   const l = links(input);
-  return `Congrats, you're in early!
+  return `Congrats, you're in!
 
-Thank you so much for trying Unvibe this early. You're one of the first people using it, and that means a lot. Unvibe explains the code AI writes for you, right beside your editor.
+Thank you so much for trying Unvibe. Unvibe explains the code AI writes for you, right beside your editor.
 
 ${input.downloadUrl ? "Download Unvibe" : "Get Unvibe free"}: ${l.download}
-The first time you open it, your Mac or PC asks you to approve it once: ${l.site}/install-help
-
-WANT PRO?
-Your app account already starts with a free month of Pro. See Pro: ${l.pro}
+Opening it the first time takes a few extra steps on a Mac or PC. Here is exactly what to press: ${l.site}/install-help
 
 YOUR INVITE LINK
 ${l.referral}
 Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE}
 ${GIFT_OFFER}
 
-TELL US WHAT YOU THINK, GET ANOTHER MONTH
-Stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add another free month of Pro.
+TELL US WHAT YOU THINK, GET A FREE MONTH
+Stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add a free month of Pro.
 ${input.feedbackUrl}
 
 Thank you so much. Reply any time, it comes straight to us.

@@ -13,6 +13,13 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "4 NOV 2026",
+    category: "PRODUCT",
+    title: "Explanations start with a short answer",
+    summary: "An explanation now opens as a short answer of a few sentences, with names from your code in code style and a quiet line for anything Unvibe is not sure about. More detail opens the full explanation under it. If an explanation is refused or breaks before it arrives, for example while AI features are paused, the free trial gives that credit back. A one-line selection now reads 1 line, not 1 lines.",
+    figure: "v0.1.49",
+  },
+  {
     date: "2 NOV 2026",
     category: "PRODUCT",
     title: "The panel says why an explanation could not start",
@@ -1013,4 +1020,44 @@ export function changelogEntries(): Milestone[] {
 
 export function changelogPreview(limit = 5): Milestone[] {
   return changelogEntries().slice(0, limit);
+}
+
+const MONTH_NAMES: Record<string, string> = {
+  JAN: "January", FEB: "February", MAR: "March", APR: "April", MAY: "May", JUN: "June",
+  JUL: "July", AUG: "August", SEP: "September", OCT: "October", NOV: "November", DEC: "December",
+};
+
+export interface ChangelogMonth {
+  label: string;
+  items: Milestone[];
+}
+
+/** /releases: the first `expanded` entries stay open; older ones fold into one group per month, newest month first. */
+export function changelogArchive(entries: Milestone[], expanded: number): { recent: Milestone[]; months: ChangelogMonth[] } {
+  const months: ChangelogMonth[] = [];
+  for (const item of entries.slice(expanded)) {
+    const [, mon = "", year = ""] = item.date.split(" ");
+    const label = `${MONTH_NAMES[mon] ?? mon} ${year}`;
+    const last = months[months.length - 1];
+    if (last?.label === label) last.items.push(item);
+    else months.push({ label, items: [item] });
+  }
+  return { recent: entries.slice(0, expanded), months };
+}
+
+/**
+ * One unique URL fragment per entry, in list order, for /releases#<anchor>: a figure that starts with a version
+ * ("v0.1.48", "v0.1.11 baseline") gives "v0-1-48", any other entry a slug of its title; a repeat gets "-2", "-3".
+ */
+export function changelogAnchors(entries: Milestone[]): string[] {
+  const seen = new Map<string, number>();
+  return entries.map((item) => {
+    const version = item.figure?.match(/^v\d+(?:\.\d+)*/)?.[0];
+    const base = version
+      ? version.replace(/\./g, "-")
+      : item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "entry";
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  });
 }

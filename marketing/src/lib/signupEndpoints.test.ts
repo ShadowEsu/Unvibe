@@ -10,7 +10,6 @@ import * as betaDownloadRoute from "../app/api/beta-download/route";
 import { GET as referralGET } from "../app/api/referrals/[code]/route";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "./betaInstallScript";
 import { NEWSLETTER_CONSENT_VERSION } from "./newsletterConsent";
-import { betaInviteCandidates } from "./betaInviteSelection";
 import { listWaitlistEntries } from "./waitlistStore";
 
 /**
@@ -21,6 +20,8 @@ import { listWaitlistEntries } from "./waitlistStore";
 const SERVICE_KEY = "service-role-test-key";
 const SITE = "https://unvibe.site";
 const KEY_SECRET = ["rate", "limit", "key", "test"].join("-");
+/** Welcome mail is sent only with a configured sender (no fallback), so the send tests set one. */
+const SENDER = "Unvibe <hello@unvibe-mail.test>";
 
 type Row = Record<string, unknown> & { email: string; referral_code: string };
 
@@ -212,7 +213,7 @@ describe("beta-download hands out the pinned release", () => {
       throw new Error(`unexpected network call from the test: ${url}`);
     }) as typeof fetch;
     try {
-      await withEnv({ ...OLD_OVERRIDES, RESEND_API_KEY: "resend-test-key" }, async () => {
+      await withEnv({ ...OLD_OVERRIDES, RESEND_API_KEY: "resend-test-key", WAITLIST_FROM_EMAIL: SENDER }, async () => {
         // A fresh address each run: the local download store (.data) remembers who was already emailed.
         const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `pinned-email-${randomUUID()}@example.com` }));
         assert.equal(response.status, 200);
@@ -245,7 +246,7 @@ describe("beta-download: the setup tip email is its own opt-in", () => {
       throw new Error(`unexpected network call from the test: ${url}`);
     }) as typeof fetch;
     try {
-      await withEnv({ RESEND_API_KEY: "resend-test-key" }, async () => {
+      await withEnv({ RESEND_API_KEY: "resend-test-key", WAITLIST_FROM_EMAIL: SENDER }, async () => {
         // A fresh address each run: the local download store (.data) remembers who was already emailed.
         const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: `setup-tip-${randomUUID()}@example.com`, ...body }));
         assert.equal(response.status, 200);
@@ -531,7 +532,7 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
       throw new Error(`unexpected network call from the test: ${url}`);
     }) as typeof fetch;
     try {
-      const response = await withEnv({ RESEND_API_KEY: "resend-test-key" }, () => waitlistRoute.POST(post("/api/waitlist", body)));
+      const response = await withEnv({ RESEND_API_KEY: "resend-test-key", WAITLIST_FROM_EMAIL: SENDER }, () => waitlistRoute.POST(post("/api/waitlist", body)));
       return { response, mailedTo };
     } finally {
       globalThis.fetch = realFetch;
@@ -596,7 +597,7 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     assert.ok(row?.newsletter_consent_at);
   });
 
-  it("a second newsletter post keeps the first consent and the entry stays out of beta invites (Security R-1)", async () => {
+  it("a second newsletter post keeps the first consent and the newsletter signup source (Security R-1)", async () => {
     const email = newsletterEmail();
     await signUp({ email, source: "newsletter", consent: true });
     const row = waitlistRows.get(email);
@@ -610,10 +611,10 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     assert.equal(row.newsletter_consent_at, firstAt, "the first consent time stands");
     const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
     assert.equal(listed.length, 1);
-    assert.deepEqual(betaInviteCandidates(listed), []);
+    assert.equal(listed[0]?.signupSource, "newsletter");
   });
 
-  it("a waitlist signup that later ticks the newsletter box stays a beta invite candidate", async () => {
+  it("a waitlist signup that later ticks the newsletter box keeps no newsletter signup source", async () => {
     const email = newsletterEmail();
     await signUp({ email });
     await signUp({ email, source: "newsletter", consent: true });
@@ -621,6 +622,6 @@ describe("newsletter signups need the consent box and send no email (ledger 299)
     assert.equal(row?.signup_source, undefined, "a duplicate never writes signup_source");
     assert.ok(row?.newsletter_consent_at, "the consent is recorded");
     const listed = (await listWaitlistEntries(10_000)).filter((entry) => entry.email === email);
-    assert.deepEqual(betaInviteCandidates(listed).map((entry) => entry.email), [email]);
+    assert.deepEqual(listed.map((entry) => entry.signupSource), [undefined]);
   });
 });

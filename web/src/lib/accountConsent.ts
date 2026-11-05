@@ -2,9 +2,9 @@
  * The agreement /activate asks for before an Unvibe app is signed in with an account: the Terms and
  * Privacy Policy, and being 18 or older (Unvibe's Terms are 18+). The page asks with two
  * separate unticked boxes; /api/v1/auth/approve refuses without both, so a request that skips the
- * page still can't sign an app in. The version matches the app's consent screen (app/src/core/consent.ts).
+ * page still can't sign an app in. The app's own consent screen has a separate version (app/src/core/consent.ts).
  */
-export const ACCOUNT_POLICY_VERSION = '2026-10-28';
+export const ACCOUNT_POLICY_VERSION = '2026-11-05';
 
 export type AccountConsentKind = 'terms' | 'age_18';
 
