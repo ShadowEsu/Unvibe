@@ -318,6 +318,16 @@ export const languages: Language[] = [
     sample: `final names = users.map((u) => u.name).toList();`,
   },
   {
+    id: "zshrc",
+    name: ".zshrc",
+    categories: ["scripting", "systems"],
+    blurb: "The zsh startup file behind the Mac terminal: aliases, path, history and the prompt.",
+    concepts: ["when it runs", "history and options", "path and typeset -U", "aliases, functions and the prompt"],
+    frameworks: ["zsh", "Oh My Zsh", "~/.zshenv", "compinit"],
+    learningPath: ["When it runs", "History options", "path and PATH", "The prompt"],
+    sample: `alias ll='ls -lah'`,
+  },
+  {
     id: "lua",
     name: "Lua",
     categories: ["scripting"],
