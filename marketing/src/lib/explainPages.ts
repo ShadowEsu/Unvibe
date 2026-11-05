@@ -453,6 +453,61 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
       "Use `-LiteralPath` for file names you didn't type. In a file called `app[1].log`, `-Path` reads `[1]` as a wildcard: `Remove-Item -Path` matched nothing, deleted nothing and still reported success, while `-LiteralPath` removed the file.",
   },
   {
+    id: "bashrc",
+    fileName: ".bashrc",
+    lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
+    description:
+      "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a small function and a prompt with the git branch.",
+    sampleSummary: "A personal .bashrc: an interactive-only guard, history settings, your own folder first on PATH, two aliases, a make-and-enter folder function and a prompt that shows the git branch.",
+    sample: `# ~/.bashrc: read by every new interactive bash shell.
+# Scripts and other non-interactive shells stop here.
+[[ $- != *i* ]] && return
+
+# History: more lines, no repeats, added to the file instead of overwriting it
+HISTSIZE=5000
+HISTCONTROL=ignoredups:erasedups
+shopt -s histappend
+
+# My own tools first, then the system's
+export PATH="$HOME/bin:$PATH"
+export EDITOR=nano
+
+# Shortcuts
+alias ll='ls -lah'
+alias gs='git status --short'
+
+# Make a folder and go into it: mkcd projects/new-app
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+# Prompt: user@host:folder, plus the git branch when there is one
+PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '`,
+    shows: [
+      {
+        concept: "interactive shells",
+        text: "bash reads ~/.bashrc each time it starts an interactive shell, the kind you type into. `$-` holds the shell's options and has an `i` only when it's interactive, so a script that ran `source ~/.bashrc` stopped at that line: its next line still ran, but `type ll` said `ll: not found`.",
+      },
+      {
+        concept: "variables and PATH",
+        text: "`export` hands a variable on to every program the shell starts, while `HISTSIZE` and `HISTCONTROL` are settings for bash itself. `PATH` is the list of folders searched for a command, in order, so with `$HOME/bin` put first, `command -v hello` found the `hello` script in ~/bin.",
+      },
+      {
+        concept: "aliases and functions",
+        text: "An alias swaps a short word for a longer command: `type ll` reported that `ll` is aliased to `ls -lah`. A function can take arguments, which an alias can't: `mkcd a/b` made both folders and moved into them, so `pwd` printed `~/a/b`.",
+      },
+      {
+        concept: "the prompt",
+        text: "`PS1` is the prompt. `\\u`, `\\h` and `\\w` stand for your user name, the computer's name and the current folder, and `$(...)` runs a command each time the prompt is drawn. In a repo on the `feature/login` branch, the prompt ended in `~/proj (feature/login)$`.",
+      },
+    ],
+    notes: [
+      "Run with GNU bash 5.3.15 on a test home folder, so nothing touched a real ~/.bashrc. Changes reach new terminals; in an open one, `source ~/.bashrc` reads the file again.",
+      "Aliases are for typing, not for scripts: a script that defined `alias ll=\"ls -lah\"` and then ran `ll` stopped with `ll: command not found`. Write a function when a script needs the shortcut.",
+      "The bash manual on the history lines: `erasedups` \"causes all previous lines matching the current line to be removed from the history list before that line is saved\", and with `histappend` \"the history list is appended to the file named by the value of the HISTFILE variable when the shell exits, rather than overwriting the file.\"",
+    ],
+    watchOut:
+      "A login shell doesn't read ~/.bashrc. Started as `bash -l`, `type ll` printed `ll: not found`, because a login shell reads ~/.bash_profile instead. With `[ -f ~/.bashrc ] && . ~/.bashrc` in ~/.bash_profile, the same login shell had the alias.",
+  },
+  {
     id: "c",
     fileName: "players.c",
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
