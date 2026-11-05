@@ -680,6 +680,64 @@ puts members.sort.map(&:name).inspect`,
       "`Comparable` also defines `==` from `<=>`, so two different members with the same points count as equal: `Member.new(\"Al\", 5) == Member.new(\"Bo\", 5)` is `true`.",
   },
   {
+    id: "sqlite",
+    fileName: "shop.sql",
+    lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
+    description:
+      "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index, inserts rows and runs a report.",
+    sampleSummary: "A SQLite script for a small shop: customers and orders tables with a foreign key, a CHECK and a default date, an index, a few rows and a spending report per customer.",
+    sample: `-- A small shop database. Run: sqlite3 shop.db < shop.sql
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE customers (
+  id    INTEGER PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE orders (
+  id          INTEGER PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  total       REAL NOT NULL CHECK (total >= 0),
+  placed_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX orders_by_customer ON orders(customer_id);
+
+INSERT INTO customers (email) VALUES ('ana@example.com'), ('sam@example.com');
+INSERT INTO orders (customer_id, total) VALUES (1, 12.50), (1, 48.00), (2, 9.99);
+
+SELECT c.email, count(o.id) AS orders, round(sum(o.total), 2) AS spent
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id
+GROUP BY c.id
+ORDER BY spent DESC;`,
+    shows: [
+      {
+        concept: "tables and keys",
+        text: "`INTEGER PRIMARY KEY` makes `id` the row's own number, filled in when you leave it out: the two customers got 1 and 2. `REFERENCES customers(id)` says each order belongs to a customer, and `UNIQUE` refuses a second row with the same email: `UNIQUE constraint failed: customers.email`.",
+      },
+      {
+        concept: "constraints",
+        text: "`CHECK (total >= 0)` is tested on every insert and update, so a total of -3 stopped with `CHECK constraint failed: total >= 0`. `DEFAULT (datetime('now'))` fills in `placed_at` when an insert leaves it out, as text in UTC: `2026-11-05 18:38:24`, the same second `date -u` showed.",
+      },
+      {
+        concept: "joins and grouping",
+        text: "`LEFT JOIN` keeps every customer, even one with no orders, and `GROUP BY c.id` folds each customer's orders into one row. Run with `sqlite3 -header -column`, the report showed `ana@example.com` with 2 orders and 60.5 spent, then `sam@example.com` with 1 and 9.99.",
+      },
+      {
+        concept: "indexes",
+        text: "`orders_by_customer` lets SQLite go straight to one customer's orders. `EXPLAIN QUERY PLAN` for `WHERE customer_id = 1` said `SEARCH orders USING INDEX orders_by_customer (customer_id=?)`; for `WHERE total > 10`, which has no index, it said `SCAN orders`, every row.",
+      },
+    ],
+    notes: [
+      "Run with the sqlite3 command-line tool, SQLite 3.53.4, on a new shop.db. Every error quoted here is that tool's own message.",
+      "`PRAGMA foreign_keys = ON` lasts only for that connection. In a new `sqlite3 shop.db` session, `PRAGMA foreign_keys` printed 0 and an order for customer 99, who doesn't exist, was saved. With the pragma on, the same insert stopped with `FOREIGN KEY constraint failed`.",
+      "Column types are loose unless you ask otherwise: `total` is `REAL`, yet inserting `'lots'` was stored as text, and `typeof(total)` said `text`. The text `'7.25'` was turned into the number 7.25. In a table declared `STRICT`, `'lots'` was refused with `cannot store TEXT value in REAL column t.total`.",
+    ],
+    watchOut:
+      "Running the script a second time doesn't stop at the first error. sqlite3 reported `table customers already exists` and `UNIQUE constraint failed: customers.email` but went on, and the orders `INSERT` ran again: ana now had 4 orders and 121.0 spent. `sqlite3 -bail` stopped at the first error and left the 3 orders as they were. `CREATE TABLE IF NOT EXISTS` is not enough on its own: with it, the second run still doubled the orders to 6.",
+  },
+  {
     id: "java",
     fileName: "Reports.java",
     lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",

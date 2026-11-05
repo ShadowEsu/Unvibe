@@ -188,6 +188,16 @@ export const languages: Language[] = [
     sample: `users.map(&:id)`,
   },
   {
+    id: "sqlite",
+    name: "SQLite",
+    categories: ["data", "backend", "mobile"],
+    blurb: "A whole SQL database in one file, built into phones, browsers and many apps.",
+    concepts: ["tables and keys", "constraints", "joins and grouping", "indexes"],
+    frameworks: ["sqlite3 CLI", "Python sqlite3", "Android Room", "better-sqlite3"],
+    learningPath: ["Tables and keys", "Constraints", "Joins and grouping", "Indexes"],
+    sample: `SELECT email FROM customers WHERE id = 1;`,
+  },
+  {
     id: "php",
     name: "PHP",
     categories: ["web", "backend"],
