@@ -408,6 +408,16 @@ export const languages: Language[] = [
     sample: `{ "name": "app", "version": "1.0.0" }`,
   },
   {
+    id: "csv",
+    name: "CSV",
+    categories: ["data"],
+    blurb: "Rows of values separated by commas: spreadsheet exports, reports and data files.",
+    concepts: ["header and rows", "quotes", "line breaks in a value", "empty values and text"],
+    frameworks: ["Python csv", "spreadsheets", "pandas", "SQL imports"],
+    learningPath: ["Header and rows", "Quoting", "Line breaks", "Reading safely"],
+    sample: `order_id,customer,qty\n1002,"Lee, Sam",1`,
+  },
+  {
     id: "env",
     name: ".env",
     categories: ["web", "backend"],
