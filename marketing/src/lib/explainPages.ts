@@ -1346,6 +1346,58 @@ jobs:
       "`devDependencies` are for working on the project, not for using it. With `import prettier from \"prettier\"` added to `bin/report.js`, the tool ran after a full `npm install` but failed after `npm install --omit=dev`, which skips devDependencies, with `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'prettier'`.",
   },
   {
+    id: "env",
+    fileName: ".env",
+    lead: "Paste a .env file and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
+    description:
+      "Paste a .env file and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
+    sampleSummary: "A .env file for running a web shop on your own machine: the port, a database URL, a test API key, quoted values, a comment after a value and one value built from another.",
+    sample: `# Settings for running the shop on your own machine.
+# Copy .env.example to .env, fill in your values, and keep .env out of git.
+NODE_ENV=development
+PORT=3000
+
+# Database on this machine
+DATABASE_URL=postgres://shop:devpass@localhost:5432/shop
+DB_POOL_SIZE=5
+
+# Keys for outside services: test keys only, never the live ones
+PAYMENTS_API_KEY=replace-with-your-test-key
+MAIL_FROM="Shop Team <team@example.com>"
+
+# Quotes keep spaces and a # inside the value
+WELCOME_TEXT="Hello # this is part of the value"
+DEBUG=true # this part is a comment
+
+# One value built from another
+APP_URL=http://localhost:\${PORT}`,
+    shows: [
+      {
+        concept: "names and values",
+        text: "Each line is `NAME=value`, and the app reads it as an environment variable: `process.env.PORT` in Node, `os.environ[\"PORT\"]` in Python. Lines starting with `#` are comments, and blank lines are skipped.",
+      },
+      {
+        concept: "quotes and comments",
+        text: "A `#` after a value starts a comment, so `DEBUG=true # this part is a comment` came through as `true`. Inside double quotes it doesn't: `WELCOME_TEXT` kept `Hello # this is part of the value`, and the quotes around `MAIL_FROM` kept its spaces and `<team@example.com>` in one value.",
+      },
+      {
+        concept: "text only",
+        text: "Every value arrives as a string. In Node, `process.env.PORT + 1` printed `30001`, not 3001, and `process.env.DEBUG === true` was false while `=== \"true\"` was true. Numbers and true/false have to be converted in your code.",
+      },
+      {
+        concept: "loading the file",
+        text: "Nothing reads a .env file on its own: plain `node show.js` saw every value as `undefined`. `node --env-file=.env show.js` loaded it, and in Python `load_dotenv()` from python-dotenv does. A variable already set wins: with `PORT=8080` set, both kept 8080, and only `load_dotenv(override=True)` let the file's 3000 win.",
+      },
+    ],
+    notes: [
+      "Run with Node 25.7.0 (`--env-file`) and python-dotenv 1.2.4 on this file: both read the same values, apart from `APP_URL` (see below).",
+      "A missing file stops Node before your code runs: `node --env-file=.env.missing` printed `node: .env.missing: not found` and exited with code 9. `--env-file-if-exists` printed `.env.missing not found. Continuing without it.` and ran.",
+      "Keep the real .env out of git and commit a `.env.example` with the same names and placeholder values, so others know which settings to fill in.",
+    ],
+    watchOut:
+      "`\${PORT}` isn't filled in everywhere. python-dotenv turned `APP_URL` into `http://localhost:3000`, but Node's `--env-file` passed it through as the text `http://localhost:\${PORT}`, so the same file gave the two apps different URLs. Write the full value out when more than one tool reads the file.",
+  },
+  {
     id: "awk",
     fileName: "totals.awk",
     lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",

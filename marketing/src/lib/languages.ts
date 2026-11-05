@@ -298,6 +298,16 @@ export const languages: Language[] = [
     sample: `{ "name": "app", "version": "1.0.0" }`,
   },
   {
+    id: "env",
+    name: ".env",
+    categories: ["web", "backend"],
+    blurb: "Local settings and secrets for an app, one NAME=value per line.",
+    concepts: ["names and values", "quotes and comments", "text only", "loading the file"],
+    frameworks: ["Node --env-file", "python-dotenv", "dotenv", "Next.js"],
+    learningPath: ["NAME=value", "Quotes and comments", "Strings only", "Who loads it"],
+    sample: `PORT=3000\nDEBUG=true`,
+  },
+  {
     id: "awk",
     name: "awk",
     categories: ["scripting", "data"],
