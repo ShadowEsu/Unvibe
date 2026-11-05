@@ -6,6 +6,8 @@
 
 .vhero h1 { max-width: none; font-size: clamp(2.6rem, 5.2vw, 4.4rem); line-height: 1.05; }
 .vhero__lead { display: block; }
+/* "AI-written" never breaks at its hyphen. */
+.vhero__nowrap { white-space: nowrap; }
 
 .vhero__kicker { max-width: 44rem; font-size: 1.1rem; line-height: 1.45; text-wrap: balance; }
 .vhero__kicker kbd {

@@ -163,7 +163,7 @@ export function PhotoHero() {
         {/* One glass plate holds the promise, the action and the trust line (Design 466). No entrance motion: the h1 is the LCP. */}
         <div className="u-sheet vhero__plate">
           <h1 id="hero-title">
-            <span className="vhero__lead">Explain AI-written code</span> in plain English.
+            <span className="vhero__lead">Explain <span className="vhero__nowrap">AI-written</span> code</span> in plain English.
           </h1>
           <p className="vhero__kicker">
             {device === "phone" ? (

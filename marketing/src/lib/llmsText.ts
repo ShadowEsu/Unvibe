@@ -25,7 +25,7 @@ function facts(): string[] {
     `- Current version: ${BETA_INSTALL_VERSION.replace(/^v/, "")}, a free public beta. Download: ${url("/beta")}`,
     `- Price: Free is $0. Pro is $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year. ${proSentence()}`,
     `- Free allowance: ${SIGNED_OUT_ALLOWANCE}, then ${FREE_MONTHLY_ALLOWANCE} when you sign in. No card and no API key.`,
-    `- Explanations come from Anthropic's Claude API during the beta. AI explanations can be wrong; each one sits next to the code it describes so you can check it.`,
+    `- Explanations come from Anthropic's Claude API during the beta, or from your own provider (Gemini, OpenAI, Anthropic, Grok, DeepSeek or Kimi) if you add your own API key in Settings; that key stays encrypted on your computer and is never sent to Unvibe. AI explanations can be wrong; each one sits next to the code it describes so you can check it.`,
     `- What gets sent to the AI: ${answer("sent")} It never records your screen or uses OCR. Details: ${url("/privacy")}`,
   ];
 }
