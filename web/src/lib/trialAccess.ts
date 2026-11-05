@@ -238,14 +238,25 @@ async function readInstall(installKey: string, now = new Date(), meta: TrialInst
 /** Longest stored first-run answer; the heard_from check in 20261105084501_trial_heard_from.sql. */
 export const HEARD_FROM_MAX_CHARS = 200;
 
+/** Email-shaped text: something@something.tld. */
+const EMAIL_SHAPED = /[^\s@]+@[^\s@]+\.[^\s@]+/gu;
+/** Phone-shaped text: 7 or more digits, optionally with +, spaces, dots, dashes or brackets between. */
+const PHONE_SHAPED = /\+?\(?\d(?:[\s().-]*\d){6,}/gu;
+
 /**
  * The optional first-run answer to "Where did you hear about Unvibe?", made safe to store: control,
- * format and lone surrogate characters dropped, whitespace collapsed to one space, trimmed, then cut
- * to 200 characters (code points, as Postgres `char_length` counts). Null when nothing is left.
+ * format and lone surrogate characters dropped, email- and phone-shaped text removed (Security 0046:
+ * an answer is a source, never a contact), whitespace collapsed to one space, trimmed, then cut to 200
+ * characters (code points, as Postgres `char_length` counts). Null when nothing is left.
  */
 export function sanitizeHeardFrom(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const clean = value.replace(/[^\P{Cc}\s]|\p{Cf}|\p{Cs}/gu, '').replace(/\s+/g, ' ').trim();
+  const clean = value
+    .replace(/[^\P{Cc}\s]|\p{Cf}|\p{Cs}/gu, '')
+    .replace(EMAIL_SHAPED, ' ')
+    .replace(PHONE_SHAPED, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return Array.from(clean).slice(0, HEARD_FROM_MAX_CHARS).join('').trimEnd() || null;
 }
 

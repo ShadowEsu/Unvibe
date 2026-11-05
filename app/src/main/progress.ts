@@ -5,8 +5,10 @@
  * trial builds send; dev and founder builds and the "Send setup progress" setting off send
  * nothing. A step is marked sent on 2xx or 400 (a bad step is never retried); anything else (offline,
  * 409 no install row yet, 429, 5xx) is retried by `syncProgress` on the next launch.
- * `heard_from` also carries the optional first-run answer to "Where did you hear about Unvibe?"
- * (`answerHeardFrom`), kept locally only until the server has it.
+ * `heard_from` is different: it carries the optional first-run answer to "Where did you hear about
+ * Unvibe?" (`answerHeardFrom`). Typing it and pressing Continue is its own opt-in (Security 0046,
+ * option A), so it goes from sealed trial builds whether or not the setting is on, once, and is kept
+ * locally only until the server has it.
  */
 import { aiAuthHeaders, postTrialProgress } from './backend';
 import { settings } from './settings';
@@ -24,7 +26,9 @@ export type ProgressStep =
   | 'heard_from';
 
 export interface ProgressDeps {
-  /** Sealed trial build, not a founder build, and the setting is on. */
+  /** Sealed trial build and not a founder build. */
+  trialBuild: () => boolean;
+  /** `trialBuild` and the "Send setup progress" setting is on. */
   enabled: () => boolean;
   platform: NodeJS.Platform;
   sent: (step: ProgressStep) => boolean;
@@ -52,7 +56,9 @@ export function cleanHeardFrom(value: unknown): string {
 
 /** Testable core of `reportProgress`. */
 export async function sendProgress(step: ProgressStep, deps: ProgressDeps): Promise<void> {
-  if ((MAC_ONLY[step] && deps.platform !== 'darwin') || !deps.enabled() || deps.sent(step) || inFlight.has(step)) return;
+  // The first-run answer is its own opt-in; every other step needs the setting.
+  const allowed = step === 'heard_from' ? deps.trialBuild() : deps.enabled();
+  if ((MAC_ONLY[step] && deps.platform !== 'darwin') || !allowed || deps.sent(step) || inFlight.has(step)) return;
   const answer = step === 'heard_from' ? deps.heardFrom() : undefined;
   if (answer === null) return;
   inFlight.add(step);
@@ -64,8 +70,10 @@ export async function sendProgress(step: ProgressStep, deps: ProgressDeps): Prom
   }
 }
 
+const trialBuild = () => trialBuildEnabled() && !fullProductBuildEnabled();
 const liveDeps: ProgressDeps = {
-  enabled: () => trialBuildEnabled() && !fullProductBuildEnabled() && settings().all().shareSetupProgress === true,
+  trialBuild,
+  enabled: () => trialBuild() && settings().all().shareSetupProgress === true,
   platform: process.platform,
   sent: (step) => store().progressSent(step),
   markSent: (step) => store().markProgressSent(step),
@@ -80,12 +88,13 @@ export function reportProgress(step: ProgressStep): void {
 }
 
 /**
- * The optional first-run answer. Skipped (empty) sends nothing; with progress off it is neither kept
- * nor sent. Otherwise it is kept until the server has it and sent once, like every step.
+ * The optional first-run answer, sent when the person presses Continue with something typed. Blank
+ * sends nothing. Typing it is the opt-in, so the setup-progress setting does not gate it; only sealed
+ * trial builds send it. Kept until the server has it and sent once.
  */
 export async function answerHeardFrom(answer: unknown, deps: ProgressDeps = liveDeps): Promise<void> {
   const clean = cleanHeardFrom(answer);
-  if (!clean || !deps.enabled() || deps.sent('heard_from')) return;
+  if (!clean || !deps.trialBuild() || deps.sent('heard_from')) return;
   deps.saveHeardFrom(clean);
   await sendProgress('heard_from', deps);
 }

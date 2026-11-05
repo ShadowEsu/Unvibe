@@ -47,9 +47,11 @@ No code or prompts are stored with it. Signed in, explanations carry your sign-i
 
 ## Setup progress
 
-The app can also send one message per setup step, the first time it happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the explanation level question answered, and the question about opening Unvibe when you log in shown and answered yes. Each message carries the step name with the same random install ID, system and app version, never your sign-in token. The server keeps only the step and the time it arrived (for signing in, only the day), never your code, file names, email or IP address. A step that does not get through is sent again on a later launch. If you answer the optional first-run question "Where did you hear about Unvibe?", your answer (up to 200 characters) is sent the same way and stored with the anonymous install record described above; leave it blank and nothing is sent.
+The app can also send one message per setup step, the first time it happens: setup finished, Accessibility asked for and allowed (Mac only), signed in, the explanation level question answered, and the question about opening Unvibe when you log in shown and answered yes. Each message carries the step name with the same random install ID, system and app version, never your sign-in token. The server keeps only the step and the time it arrived (for signing in, only the day), never your code, file names, email or IP address. A step that does not get through is sent again on a later launch.
 
 From version 0.1.45 this is off unless you turn it on, and updating to 0.1.45 switches it off once even if it was on before. Version 0.1.44 sends it until you switch it off. To turn it on or off, open Settings › Privacy & Data and use **Send setup progress** (in version 0.1.44 the switch reads **Send anonymous setup progress**). That switch does not cover the install ID, dates and counts under Without an account, which come with requests the app makes anyway.
+
+If you type an answer to the optional first-run question "Where did you hear about Unvibe?" and press Continue, it is sent once to Unvibe with this install's random ID, even with setup progress off, and kept with the anonymous install record for 12 months after the install started, with any email address or phone number in it removed; leave it blank and nothing is sent.
 
 ## Feedback
 

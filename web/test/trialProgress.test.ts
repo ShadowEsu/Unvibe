@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { POST } from '../app/api/v1/trial/progress/route';
+import { installStats } from '../src/lib/adminStats';
 import { sanitizeHeardFrom, trialInstallKey, trialUsageOverview } from '../src/lib/trialAccess';
 
 // The real route runs; only the Supabase HTTP boundary is local (instrumentation spec 11.1).
@@ -201,6 +202,18 @@ test('heard_from: sanitising drops control characters, collapses whitespace and 
   }
 });
 
+test('heard_from: email- and phone-shaped text is removed before storing (an answer is a source, never a contact)', async () => {
+  assert.equal(sanitizeHeardFrom('my friend sam.lee+x@example.co.uk told me'), 'my friend told me');
+  assert.equal(sanitizeHeardFrom('call +1 (415) 555-0134 or 415.555.0134'), 'call or');
+  assert.equal(sanitizeHeardFrom('sam@example.com'), null, 'nothing left: nothing stored');
+  assert.equal(sanitizeHeardFrom('Product Hunt, top 5'), 'Product Hunt, top 5', 'short numbers stay');
+  assert.equal(sanitizeHeardFrom('r/vibecoding @someone'), 'r/vibecoding @someone', 'a handle is not an email');
+  const id = 'progress-install-heard-contact';
+  installs.add(trialInstallKey(id));
+  assert.equal((await ping(id, { step: 'heard_from', answer: 'A tweet by dev@example.com' })).status, 204);
+  assert.equal(heardFrom.get(trialInstallKey(id)), 'A tweet by');
+});
+
 test('heard_from: the cap is 200 characters, counted as Postgres counts them', async () => {
   const id = 'progress-install-heard-cap';
   installs.add(trialInstallKey(id));
@@ -263,4 +276,41 @@ test('heard_from in the memory backend (no Supabase): only for a known install, 
   assert.equal((await ping(id, { step: 'heard_from', answer: ' A  friend ' })).status, 204);
   assert.equal((await ping(id, { step: 'heard_from', answer: 'A video' })).status, 204);
   assert.equal(g.__unvibeTrialInstalls.get(trialInstallKey(id))?.heardFrom, 'A friend');
+});
+
+test('heard_from: the answer never reaches a log line, on success or on any error path', async () => {
+  const marker = 'Heard-From-Marker-Q7';
+  const lines: string[] = [];
+  const saved = { log: console.log, info: console.info, warn: console.warn, error: console.error };
+  for (const name of ['log', 'info', 'warn', 'error'] as const) {
+    console[name] = (...args: unknown[]) => { lines.push(args.map((a) => (a instanceof Error ? a.message : typeof a === 'string' ? a : JSON.stringify(a))).join(' ')); };
+  }
+  try {
+    const id = 'progress-install-heard-logs';
+    await ping(id, { step: 'heard_from', answer: marker });
+    installs.add(trialInstallKey(id));
+    heardFromColumnMissing = true;
+    await ping(id, { step: 'heard_from', answer: marker });
+    heardFromColumnMissing = false;
+    await ping(id, { step: 'heard_from', answer: marker });
+  } finally {
+    Object.assign(console, saved);
+  }
+  assert.ok(lines.length > 0, 'the 503 path logged something, so the check is live');
+  assert.equal(lines.filter((line) => line.includes(marker)).length, 0, lines.join('\n'));
+});
+
+test('heard_from: the stats never carry an answer, even when the database hands one back', async () => {
+  const marker = 'Heard-From-Marker-S9';
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const table = url.pathname.replace('/rest/v1/', '');
+    if ((init?.method ?? 'GET') === 'HEAD') return new Response(null, { status: 200, headers: { 'content-range': '*/1' } });
+    // A careless database: every trial_installs row comes back with every column, the answer included.
+    if (table === 'trial_installs') return Response.json([{ install_key: 'k1', started_at: new Date().toISOString(), qa: false, heard_from: marker }]);
+    return Response.json([]);
+  }) as typeof fetch;
+  const stats = await installStats();
+  assert.equal(stats.source, 'supabase');
+  assert.ok(!JSON.stringify(stats).includes(marker), JSON.stringify(stats));
 });

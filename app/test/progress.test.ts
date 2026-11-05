@@ -8,14 +8,15 @@ import { netCalls } from './electronStub';
  * A fake install: `persisted` stands in for unvibe-store.json, so a "restart" keeps it. `local.heardFrom`
  * is the answer waiting to be sent, cleared once it is sent, as the store does.
  */
-function fakeInstall(options: { enabled?: boolean; platform?: NodeJS.Platform; status?: number | null; persisted?: Partial<Record<ProgressStep, true>> } = {}) {
+function fakeInstall(options: { enabled?: boolean; trialBuild?: boolean; platform?: NodeJS.Platform; status?: number | null; persisted?: Partial<Record<ProgressStep, true>> } = {}) {
   const persisted = options.persisted ?? {};
   const posts: ProgressStep[] = [];
   const answers: string[] = [];
-  const local: { heardFrom: string | null; enabled: boolean } = { heardFrom: null, enabled: options.enabled ?? true };
+  const local: { heardFrom: string | null; enabled: boolean; trialBuild: boolean } = { heardFrom: null, enabled: options.enabled ?? true, trialBuild: options.trialBuild ?? true };
   let status = options.status === undefined ? 204 : options.status;
   const deps: ProgressDeps = {
-    enabled: () => local.enabled,
+    trialBuild: () => local.trialBuild,
+    enabled: () => local.trialBuild && local.enabled,
     platform: options.platform ?? 'darwin',
     sent: (step) => persisted[step] === true,
     markSent: (step) => {
@@ -139,28 +140,32 @@ test('the answer is cleaned and sent once, across repeats and a restart', async 
   assert.deepEqual(restarted.posts, [], 'progressSent survives a restart');
 });
 
-test('with setup progress off, the answer is neither kept nor sent', async () => {
+test('typing an answer is its own opt-in: it is sent with setup progress off, and the other steps are not', async () => {
   const install = fakeInstall({ enabled: false });
   await answerHeardFrom('A friend', install.deps);
-  assert.equal(install.local.heardFrom, null, 'not kept with the switch off');
-  install.local.enabled = true;
-  await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
-  assert.deepEqual(install.posts, [], 'turning the switch on later sends nothing from before');
+  await sendProgress('onboarded', install.deps);
+  await syncProgress({ onboarded: true, accessibilityGranted: false, signedIn: false }, install.deps);
+  assert.deepEqual(install.posts, ['heard_from'], 'only the answer goes with the switch off');
+  assert.deepEqual(install.answers, ['A friend']);
 });
 
-test('an answer that did not get through is kept, retried next launch, and not sent while the switch is off', async () => {
-  const install = fakeInstall({ status: 409 });
+test('a build that is not a sealed trial build never keeps or sends the answer', async () => {
+  const install = fakeInstall({ trialBuild: false });
+  await answerHeardFrom('A friend', install.deps);
+  await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
+  assert.equal(install.local.heardFrom, null, 'not kept');
+  assert.deepEqual(install.posts, [], 'not sent');
+});
+
+test('an answer that did not get through is kept and retried next launch, with the switch off too', async () => {
+  const install = fakeInstall({ status: 409, enabled: false });
   await answerHeardFrom('A subreddit', install.deps);
   assert.equal(install.local.heardFrom, 'A subreddit', 'kept for the retry');
-  install.local.enabled = false;
-  await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
-  assert.deepEqual(install.posts, ['heard_from'], 'no retry with the switch off');
-  install.local.enabled = true;
   install.setStatus(204);
   await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
   assert.deepEqual(install.answers, ['A subreddit', 'A subreddit']);
   assert.equal(install.persisted.heard_from, true);
-  assert.equal(install.local.heardFrom, null);
+  assert.equal(install.local.heardFrom, null, 'cleared once the server has it');
 });
 
 test('the answer is capped at 200 characters before it leaves the app', () => {

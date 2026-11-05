@@ -1,9 +1,13 @@
 -- Optional first-run answer to "Where did you hear about Unvibe?" (attraction report item A5).
 -- One nullable column on the anonymous install record, so existing rows and older app builds stay
--- valid. The app sends it once through POST /api/v1/trial/progress (step `heard_from`), and only
--- when "Send anonymous setup progress" is on. The API trims it, collapses whitespace, drops control
--- characters, caps it at 200 characters and stores it only for an install that already has its row.
--- The first non-empty answer wins: a later send never overwrites it. The stats page never reads it.
+-- valid. The app sends it once through POST /api/v1/trial/progress (step `heard_from`), only when the
+-- person typed an answer and pressed Continue. Typing it is its own opt-in (Security 0046, option A),
+-- so the "Send setup progress" setting does not gate it; only sealed trial builds send it. The API
+-- drops control characters and email- and phone-shaped text, collapses whitespace, caps it at 200
+-- characters and stores it only for an install that already has its row. The first non-empty answer
+-- wins: a later send never overwrites it. The stats page never reads it.
+--
+-- Retention: an answer is cleared 12 months after its install started (the daily pg_cron job below).
 --
 -- The API may deploy before this is applied. Until then POST /api/v1/trial/progress answers 503 for
 -- `heard_from`, so the app keeps the answer and retries on later launches.
@@ -12,6 +16,7 @@
 -- since `add column if not exists` would otherwise skip it silently and leave the check unenforced.
 --
 -- Rollback:
+--   select cron.unschedule('trial-heard-from-12-months');
 --   alter table public.trial_installs drop constraint if exists trial_installs_heard_from_check;
 --   alter table public.trial_installs drop column if exists heard_from;
 --
@@ -36,5 +41,16 @@ alter table public.trial_installs add column if not exists heard_from text;
 alter table public.trial_installs drop constraint if exists trial_installs_heard_from_check;
 alter table public.trial_installs add constraint trial_installs_heard_from_check
   check (heard_from is null or char_length(heard_from) between 1 and 200);
+
+create extension if not exists pg_cron;
+
+-- Daily at 03:17 UTC: clear answers older than 12 months. Re-running the migration replaces the job.
+select cron.unschedule(jobid) from cron.job where jobname = 'trial-heard-from-12-months';
+select cron.schedule(
+  'trial-heard-from-12-months',
+  '17 3 * * *',
+  $$update public.trial_installs set heard_from = null
+    where heard_from is not null and started_at < now() - interval '12 months'$$
+);
 
 commit;

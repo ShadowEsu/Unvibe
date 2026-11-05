@@ -64,14 +64,18 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   (`app/src/main/progress.ts`): setup finished, Accessibility asked and allowed (Mac), signed in
   (UTC day only), level question answered, and the launch-at-login question shown and accepted
   (`app/src/main/main.ts`, `askLaunchAtLogin`). One timestamp per step, no code, file names, email
-  or IP. The optional first-run answer to "Where did you hear about Unvibe?" goes the same way
-  (step `heard_from`, up to 200 characters, nothing sent when blank) and is stored with the
-  anonymous install record (`trial_installs.heard_from`), never on the stats page.
-  Settings, Privacy & Data, "Send setup progress" turns these on (off by default from 0.1.45;
+  or IP. Settings, Privacy & Data, "Send setup progress" turns these on (off by default from 0.1.45;
   updating switches existing installs off once; 0.1.44's switch reads "Send anonymous setup
   progress" and starts on); it does not
   cover the rows above, which come from requests the app makes anyway. Both are described on
   unvibe.site/privacy and in `app/PRIVACY.md`.
+- If you type an answer to the optional first-run question "Where did you hear about Unvibe?" and
+  press Continue, it is sent once to Unvibe with this install's random ID, even with setup progress
+  off, and kept with the anonymous install record for 12 months after the install started, with any
+  email address or phone number in it removed; leave it blank and nothing is sent. (Step
+  `heard_from` on the same route, sealed trial builds only, up to 200 characters, stored in
+  `trial_installs.heard_from`, cleared by the daily `trial-heard-from-12-months` pg_cron job, never
+  on the stats page, in a log line or in analytics.)
 
 ## Required before inviting external beta users
 
