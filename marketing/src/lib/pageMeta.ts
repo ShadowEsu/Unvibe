@@ -36,6 +36,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   curl: "/og/og-explain-curl-d7836fd3.png",
   bashrc: "/og/og-explain-bashrc-17882b99.png",
   chmod: "/og/og-explain-chmod-8db5af98.png",
+  find: "/og/og-explain-find-aded3f37.png",
   c: "/og/og-explain-c-fbf7085c.png",
   cpp: "/og/og-explain-cpp-91334837.png",
   swift: "/og/og-explain-swift-4c89d84c.png",
