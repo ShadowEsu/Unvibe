@@ -21,6 +21,23 @@ export function readLinuxPrimary(read: (type: 'selection') => string = (type) =>
   return text.trim().length > 0 ? { code: text } : { code: null, error: 'empty' };
 }
 
+/** Why a capture waits for Explain instead of sending at once; null sends at once. */
+export type ConfirmReason = 'link' | 'highlight';
+
+/**
+ * An `unvibe://review` link always waits ('link'). On Linux PRIMARY keeps the last highlight from
+ * any app, so with nothing highlighted now the shortcut could pick up old text ('highlight'): the
+ * person sees it and presses Explain. Clipboard explains, samples and already-captured code are the
+ * person's own choice and send at once.
+ */
+export function captureConfirmReason(
+  options: { confirm?: boolean; preferClipboard?: boolean; sample?: boolean; captured?: unknown },
+  linux = isLinux,
+): ConfirmReason | null {
+  if (options.confirm) return 'link';
+  return linux && !options.preferClipboard && !options.sample && !options.captured ? 'highlight' : null;
+}
+
 function osascript(script: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile('osascript', ['-e', script], { timeout: 5000, windowsHide: true }, (err, stdout) =>

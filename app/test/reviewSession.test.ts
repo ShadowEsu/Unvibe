@@ -133,6 +133,21 @@ test('a link-captured review sends nothing until Explain, then exactly one reque
   assert.equal(reviewBodies().length, 1);
 });
 
+test('a Linux highlight capture shows the text as the last highlight and calls the provider 0 times before Explain', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = { ...session('intermediate'), awaitingConfirm: true, confirmFrom: 'highlight' as const };
+  initWidget(win, s, { autoStart: true });
+  const init = events.find((ev) => ev.type === 'init');
+  assert.deepEqual([init?.confirm, init?.confirmFrom, init?.autoStart], [true, 'highlight', false]);
+  assert.equal(init?.type === 'init' && init.preview, s.code, 'the person sees the exact text before anything is sent');
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 0, 'no provider call while the highlight waits for Explain');
+  s.awaitingConfirm = false; // what Explain (widget:request) does
+  await runReview(win, s, { level: 'intermediate' });
+  assert.equal(reviewBodies().length, 1);
+});
+
 test('a file or brief built over a waiting link capture runs as the person\'s own pick', () => {
   const { win, events } = panel();
   const s = { ...session('intermediate'), awaitingConfirm: true };
