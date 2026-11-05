@@ -46,7 +46,7 @@ export default function FaqPage() {
             .filter((item) => item.category === category)
             .map((item) => (
               <div key={item.id} id={item.id}>
-                <h3>{item.question}</h3>
+                <h3 className="explain-faq__q">{item.question}</h3>
                 <p>{item.answer}</p>
               </div>
             ))}
