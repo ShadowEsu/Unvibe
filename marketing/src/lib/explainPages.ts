@@ -1273,7 +1273,7 @@ print "$errors server errors\\n";`,
 s/^[[:space:]]+//
 s/[[:space:]]+$//
 
-# One space around each "=".
+# One space around the first "=" on each line.
 s/[[:space:]]*=[[:space:]]*/ = /
 
 # Dates from 2026-11-05 to 05/11/2026.
@@ -1308,7 +1308,7 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
       "`sed -i` writes the result back over the file instead of printing it, and `-i.bak` first keeps the original as `settings.conf.bak`. Run on a copy, `-i` with no suffix left no way back to the comments.",
     ],
     watchOut:
-      "`[a-z_]+` only matches lowercase letters, so a line written `API_TOKEN = abc` came through as `API_TOKEN = abc`, with the secret showing and no error. `[A-Za-z_]+`, or GNU sed's `I` flag after the last slash, hid it.",
+      "`[a-z_]+` and `(token|password)` only match lowercase letters, so a line written `API_TOKEN = abc` came through as `API_TOKEN = abc`, with the secret showing and no error. Adding GNU sed's `I` flag after the last slash makes the match ignore case, and then it printed `API_TOKEN = [hidden]`.",
   },
 ];
 
