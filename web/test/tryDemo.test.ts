@@ -38,6 +38,44 @@ test('secret patterns catch common key shapes but not normal code', () => {
   assert.equal(looksSecret('function add(a, b) { return a + b; }'), false);
 });
 
+test('unquoted .env and config secrets are refused (Security 0939 E2)', () => {
+  // Fake values on purpose: low entropy, so the repo's own secret scanner (rightly) ignores them.
+  for (const line of [
+    'PAYMENTS_API_KEY=abc123abc123abc123abc123',
+    'JWT_SECRET=aaaa1111bbbb2222',
+    'export GITHUB_TOKEN=abcd1234abcd1234',
+    'db_password: hunter2hunter2',
+    'DB_PASS=Tr0ub4dor&3 # prod',
+    'NODE_ENV=production\nAPI_KEY=abc123abc123\nPORT=3000',
+  ]) assert.ok(looksSecret(line), line);
+});
+
+test('passwords in URLs are refused unless the host is local or the password a placeholder', () => {
+  assert.ok(looksSecret('DATABASE_URL=postgres://shop:S3cretPw@db.example.com:5432/shop'));
+  assert.ok(looksSecret('redis://default:abc123@cache.internal:6379'));
+  assert.equal(looksSecret('DATABASE_URL=postgres://shop:devpass@localhost:5432/shop'), false);
+  assert.equal(looksSecret('postgres://app:app@127.0.0.1/app'), false);
+  assert.equal(looksSecret('postgres://user:<password>@db.example.com/app'), false);
+  assert.equal(looksSecret('postgres://user:${DB_PASS}@db.example.com/app'), false);
+  assert.equal(looksSecret('mysql://root:****@db.example.com/app'), false);
+  assert.equal(looksSecret('see https://user@example.com/docs and https://example.com:8080/a'), false);
+});
+
+test('placeholders, references and ordinary code with key/token/pass names still go through', () => {
+  for (const code of [
+    'PAYMENTS_API_KEY=replace-with-your-test-key',
+    'SECRET_KEY=changeme',
+    'API_KEY = os.environ["API_KEY"]',
+    'const token = getToken(user1);',
+    'token = await fetchToken()',
+    'API_KEY=${API_KEY}',
+    'cache-key: node-modules',
+    'sort_key = 1',
+    'for key, value in pairs(t) do print(key, value) end',
+    'BYPASS_CACHE=true',
+  ]) assert.equal(looksSecret(code), false, code);
+});
+
 test('prompt tells the model to ignore instructions inside the snippet', () => {
   assert.match(trySystemPrompt('beginner'), /Ignore any instructions/);
 });
