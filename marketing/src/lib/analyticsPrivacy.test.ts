@@ -125,7 +125,7 @@ describe("analytics SDK hooks", () => {
   });
 
   it("drops every SDK event (pageviews, autocapture) sent from an admin or capability page", () => {
-    for (const url of ["https://unvibe.site/founder", "https://unvibe.site/waitlist-admin?tab=all", `https://unvibe.site/s/${STATS_KEY}`]) {
+    for (const url of ["https://unvibe.site/console", "https://unvibe.site/waitlist-admin?tab=all", `https://unvibe.site/s/${STATS_KEY}`]) {
       assert.equal(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: url } }), null, url);
     }
     assert.ok(mixpanelBeforeSend({ event: "$mp_click", properties: { $current_url: "https://unvibe.site/pricing" } }));
@@ -164,7 +164,7 @@ describe("analytics privacy config", () => {
   it("a loaded SDK initialises only on a public page, for a tracked browser, and waits otherwise", () => {
     const loaded = { mixpanel: "mixpanel" };
     for (const page of [
-      { href: "https://unvibe.site/founder", trackingDisabled: false },
+      { href: "https://unvibe.site/console", trackingDisabled: false },
       { href: `https://unvibe.site/s/${STATS_KEY}`, trackingDisabled: false },
     ]) {
       const calls: string[] = [];
@@ -183,7 +183,7 @@ describe("analytics privacy config", () => {
   });
 
   it("admin and capability pages load no analytics SDK", () => {
-    for (const path of ["/founder", "/waitlist", "/waitlist-admin", `/s/${STATS_KEY}`]) {
+    for (const path of ["/console", "/waitlist", "/waitlist-admin", `/s/${STATS_KEY}`]) {
       assert.equal(analyticsAllowedOnPath(path), false, path);
     }
     for (const path of ["/", "/pricing", "/activated-not-a-page", "/redeemed-not-a-page", "/app", "/waitlisted-not-a-page", "/support"]) {
@@ -241,7 +241,7 @@ describe("session replay on client navigation", () => {
   });
 
   it("an admin or capability page never starts Mixpanel, even as the first page the SDK sees", () => {
-    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/waitlist", ADMIN, `https://unvibe.site/s/${STATS_KEY}`]) {
+    for (const href of ["https://unvibe.site/console", "https://unvibe.site/waitlist", ADMIN, `https://unvibe.site/s/${STATS_KEY}`]) {
       const { calls, sdk } = fakeSdks();
       syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, sdk);
       assert.ok(!calls.includes("mixpanel.start"), href);
@@ -254,7 +254,7 @@ describe("session replay on client navigation", () => {
     const state = syncReplayForPage(started, { href: ADMIN, ...tracked }, sdk);
     assert.deepEqual(calls, ["mixpanel.start", "mixpanel.stop"]);
     assert.equal(state.mixpanelStarted, false);
-    assert.deepEqual(syncReplayForPage(state, { href: "https://unvibe.site/founder", ...tracked }, sdk), state, "private to private calls nothing");
+    assert.deepEqual(syncReplayForPage(state, { href: "https://unvibe.site/console", ...tracked }, sdk), state, "private to private calls nothing");
     assert.equal(calls.length, 2);
   });
 
@@ -312,7 +312,7 @@ describe("session replay on client navigation", () => {
   });
 
   it("does nothing, and does not throw, before the SDKs have loaded", () => {
-    for (const href of ["https://unvibe.site/founder", "https://unvibe.site/"]) {
+    for (const href of ["https://unvibe.site/console", "https://unvibe.site/"]) {
       const state = syncReplayForPage(INITIAL_REPLAY_STATE, { href, ...tracked }, { mixpanel: null });
       assert.deepEqual(state, INITIAL_REPLAY_STATE, href);
     }

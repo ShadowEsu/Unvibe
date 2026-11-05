@@ -1,42 +1,7 @@
-import { BETA_DOWNLOAD_SUBJECT, betaDownloadHtml, betaDownloadText } from "@/emails/betaDownload";
-import { escapeEmailHtml } from "@/emails/betaShared";
+import { escapeEmailHtml } from "@/emails/escapeHtml";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { unsubscribeHeaders, unsubscribeUrl } from "@/lib/unsubscribe";
 import { isEmailUnsubscribed } from "@/lib/waitlistStore";
-
-export async function sendBetaDownloadEmail(input: {
-  firstName: string;
-  email: string;
-  macDownloadUrl: string;
-  referralCode: string;
-}): Promise<{ sent: boolean; messageId?: string; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { sent: false, error: "Beta email delivery is not configured." };
-  if (await isEmailUnsubscribed(input.email)) return { sent: false, error: "This address unsubscribed." };
-  const from = process.env.WAITLIST_FROM_EMAIL?.trim() || "Unvibe Beta <onboarding@resend.dev>";
-  const content = { ...input, unsubscribeUrl: unsubscribeUrl(input.email) };
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `unvibe-beta-download-${input.referralCode}`,
-    },
-    body: JSON.stringify({
-      from,
-      to: [input.email],
-      reply_to: "support@unvibe.site",
-      subject: BETA_DOWNLOAD_SUBJECT,
-      html: betaDownloadHtml(content),
-      text: betaDownloadText(content),
-      headers: unsubscribeHeaders(input.email),
-    }),
-    signal: AbortSignal.timeout(8_000),
-  });
-  const data = await response.json().catch(() => ({})) as { id?: string; message?: string };
-  if (!response.ok) return { sent: false, error: data.message || `Email delivery failed (${response.status}).` };
-  return { sent: true, messageId: data.id };
-}
 
 /**
  * A friendly nudge a day after download, for the many people who install and forget.
@@ -47,28 +12,39 @@ export async function scheduleSetupReminder(email: string, referralCode: string)
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { scheduled: false, error: "Email delivery is not configured." };
   if (await isEmailUnsubscribed(email)) return { scheduled: false, error: "This address unsubscribed." };
-  const from = process.env.WAITLIST_FROM_EMAIL?.trim() || "Unvibe Beta <onboarding@resend.dev>";
+  // No fallback sender: without the configured address, nothing is scheduled (named, never its value).
+  const from = process.env.WAITLIST_FROM_EMAIL?.trim();
+  if (!from) {
+    console.error("setup tip not scheduled: WAITLIST_FROM_EMAIL is not set");
+    return { scheduled: false, error: "WAITLIST_FROM_EMAIL is not set." };
+  }
   const unsubscribe = unsubscribeUrl(email);
+  // Where it lives, per the app: the Mac Dock icon always shows (LSUIElement false, app.dock.show()
+  // in app/src/main/main.ts), and on Windows closing the window minimizes it to the taskbar.
   const text = [
-    "Hi, it's Vibe from Unvibe.",
+    "Hi from the Unvibe team.",
     "",
-    "Your first explanation is waiting. Three steps:",
+    "Your first explanation is waiting. Here's how:",
     "1. Open Unvibe (it lives in your Dock or taskbar).",
-    "2. Select any code in Cursor, VS Code or Terminal.",
-    `3. Press ${SHORTCUTS.mac.anywhere} on Mac or ${SHORTCUTS.windows.anywhere} on Windows.`,
+    "2. On a Mac, let it read your selection: open System Settings, then Privacy & Security, then Accessibility, and turn Unvibe on.",
+    "3. Select any code in Cursor, VS Code or Terminal.",
+    `4. Press ${SHORTCUTS.mac.anywhere} on Mac or ${SHORTCUTS.windows.anywhere} on Windows.`,
     "",
-    "That's it. I'll explain it right beside your editor.",
+    "That's it. Unvibe explains it right beside your editor.",
     "",
     "Reply to this email if anything gets in the way. A human reads every reply.",
+    "",
+    "The Unvibe team",
     "",
     `Unsubscribe: ${unsubscribe}`,
   ].join("\n");
   const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:16px;line-height:1.55;color:#141414;max-width:520px">
-<p><b>Hi, it's Vibe from Unvibe.</b></p>
-<p>Your first explanation is waiting. Three steps:</p>
-<ol><li>Open Unvibe (it lives in your Dock or taskbar).</li><li>Select any code in Cursor, VS Code or Terminal.</li><li>Press <b>${SHORTCUTS.mac.anywhere}</b> on Mac or <b>${SHORTCUTS.windows.anywhere}</b> on Windows.</li></ol>
-<p>That's it. I'll explain it right beside your editor.</p>
+<p><b>Hi from the Unvibe team.</b></p>
+<p>Your first explanation is waiting. Here's how:</p>
+<ol><li>Open Unvibe (it lives in your Dock or taskbar).</li><li>On a Mac, let it read your selection: open <b>System Settings</b>, then <b>Privacy &amp; Security</b>, then <b>Accessibility</b>, and turn Unvibe on.</li><li>Select any code in Cursor, VS Code or Terminal.</li><li>Press <b>${SHORTCUTS.mac.anywhere}</b> on Mac or <b>${SHORTCUTS.windows.anywhere}</b> on Windows.</li></ol>
+<p>That's it. Unvibe explains it right beside your editor.</p>
 <p style="color:#66635d">Reply to this email if anything gets in the way. A human reads every reply.</p>
+<p><b>The Unvibe team</b></p>
 <p style="font-size:12px"><a href="${escapeEmailHtml(unsubscribe)}" style="color:#66635d">Unsubscribe</a></p></div>`;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

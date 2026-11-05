@@ -1,7 +1,7 @@
-/** Browser-side holder for the founder admin token (WAITLIST_ADMIN_TOKEN). Session only. */
-const KEY = "unvibe.founderToken";
+/** Browser-side holder for the console admin token (WAITLIST_ADMIN_TOKEN). Session only. */
+const KEY = "unvibe.consoleToken";
 
-export function readFounderToken(): string {
+export function readConsoleToken(): string {
   try {
     return window.sessionStorage.getItem(KEY) ?? "";
   } catch {
@@ -9,7 +9,7 @@ export function readFounderToken(): string {
   }
 }
 
-export function saveFounderToken(token: string): void {
+export function saveConsoleToken(token: string): void {
   try {
     if (token) window.sessionStorage.setItem(KEY, token);
     else window.sessionStorage.removeItem(KEY);
@@ -18,7 +18,7 @@ export function saveFounderToken(token: string): void {
   }
 }
 
-export function founderHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  const token = readFounderToken();
+export function consoleHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token = readConsoleToken();
   return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { isProbeWaitlistEmail } from "@/lib/waitlistProbes";
-import { founderHeaders, readFounderToken, saveFounderToken } from "@/lib/founderToken";
+import { consoleHeaders, readConsoleToken, saveConsoleToken } from "@/lib/consoleToken";
 import type { DownloadStats } from "@/lib/downloadStats";
 import type { AppUserStats } from "@/lib/appUserStats";
 
@@ -92,7 +92,7 @@ function appUserNote(users: AppUserStats | null, locked: boolean): string {
 }
 
 /** `embedded` drops the headings one level below a host page's h1 and section h2 (the private /s page). */
-export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
+export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
   const Title = embedded ? "h3" : "h1";
   const Subhead = embedded ? "h4" : "h2";
   const [data, setData] = useState<AnalyticsPayload | null>(null);
@@ -111,11 +111,11 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
   const load = useCallback(async () => {
     try {
       // Without a saved token the two admin routes can only answer 401, so they are not called (QA P3, 2 Nov).
-      const hasToken = Boolean(readFounderToken());
+      const hasToken = Boolean(readConsoleToken());
       const [statsResponse, waitlistResponse, metricsResponse] = await Promise.all([
         fetch("/api/stats?include=waitlist", { cache: "no-store" }),
-        hasToken ? fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() }) : null,
-        hasToken ? fetch("/api/founder/metrics", { cache: "no-store", headers: founderHeaders() }) : null,
+        hasToken ? fetch("/api/console/waitlist", { cache: "no-store", headers: consoleHeaders() }) : null,
+        hasToken ? fetch("/api/console/metrics", { cache: "no-store", headers: consoleHeaders() }) : null,
       ]);
       const waitlistLocked = !waitlistResponse || waitlistResponse.status === 401;
       setLocked(waitlistLocked || !metricsResponse || metricsResponse.status === 401);
@@ -169,9 +169,9 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
     setDeleting(email);
     setDeleteError(null);
     try {
-      const response = await fetch("/api/founder/waitlist", {
+      const response = await fetch("/api/console/waitlist", {
         method: "DELETE",
-        headers: founderHeaders({ "Content-Type": "application/json" }),
+        headers: consoleHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("delete failed");
@@ -202,9 +202,9 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
     setDeleteError(null);
     try {
       for (const person of probes) {
-        const response = await fetch("/api/founder/waitlist", {
+        const response = await fetch("/api/console/waitlist", {
           method: "DELETE",
-          headers: founderHeaders({ "Content-Type": "application/json" }),
+          headers: consoleHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ email: person.email }),
         });
         if (!response.ok) throw new Error("delete failed");
@@ -218,14 +218,14 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
   };
 
   return (
-    <section className="founder-analytics" aria-busy={loading}>
-      <header className="founder-analytics__header">
+    <section className="console-analytics" aria-busy={loading}>
+      <header className="console-analytics__header">
         <div>
-          <span className="founder-analytics__eyebrow">Analytics</span>
-          <Title className="founder-analytics__title">Unvibe, by the numbers.</Title>
+          <span className="console-analytics__eyebrow">Analytics</span>
+          <Title className="console-analytics__title">Unvibe, by the numbers.</Title>
           <p>Joined people stay on the roster. Form starts, copies, and drop-off come from the site&apos;s own funnel counter so unfinished traffic is not invented as accounts.</p>
         </div>
-        <div className="founder-analytics__actions">
+        <div className="console-analytics__actions">
           <button type="button" onClick={() => void load()} disabled={loading}>
             {loading ? "Refreshing…" : "Refresh"}
           </button>
@@ -234,7 +234,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
       </header>
 
       {error ? (
-        <div className="founder-analytics__error" role="alert">
+        <div className="console-analytics__error" role="alert">
           <strong>Could not load the numbers.</strong>
           <span>{error}</span>
           <button type="button" onClick={() => void load()}>Try again</button>
@@ -242,23 +242,23 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
       ) : null}
 
       {!data && loading ? (
-        <div className="founder-analytics__loading" role="status" aria-label="Loading analytics">
+        <div className="console-analytics__loading" role="status" aria-label="Loading analytics">
           <span /><span /><span /><span />
         </div>
       ) : null}
 
       {locked ? (
         <form
-          className="founder-analytics__error"
+          className="console-analytics__error"
           onSubmit={(event) => {
             event.preventDefault();
-            saveFounderToken(tokenDraft.trim());
+            saveConsoleToken(tokenDraft.trim());
             setTokenDraft("");
             void load();
           }}
         >
           <strong>Private numbers are locked.</strong>
-          <span>{readFounderToken() ? "That token was not accepted." : "Enter WAITLIST_ADMIN_TOKEN to see app users and the waitlist roster."}</span>
+          <span>{readConsoleToken() ? "That token was not accepted." : "Enter WAITLIST_ADMIN_TOKEN to see app users and the waitlist roster."}</span>
           <input
             type="password"
             autoComplete="off"
@@ -273,7 +273,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
 
       {data ? (
         <>
-          <div className="founder-analytics__grid founder-analytics__grid--tight">
+          <div className="console-analytics__grid console-analytics__grid--tight">
             <article>
               <span>Installer downloads, all time</span>
               <strong>{data.downloads?.source === "github" ? data.downloads.total.toLocaleString() : "—"}</strong>
@@ -300,7 +300,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
             </article>
           </div>
 
-          <div className="founder-analytics__grid founder-analytics__grid--tight">
+          <div className="console-analytics__grid console-analytics__grid--tight">
             <article>
               <span>Email signups</span>
               <strong>{data.waitlist.total.toLocaleString()}</strong>
@@ -344,16 +344,16 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           {appUsers?.source === "supabase" ? (
-            <article className="founder-analytics__people founder-analytics__activation">
+            <article className="console-analytics__people console-analytics__activation">
               <header>
                 <div>
                   <span>Activation, last 14 days</span>
-                  <Subhead className="founder-analytics__subhead">First completed explanations</Subhead>
+                  <Subhead className="console-analytics__subhead">First completed explanations</Subhead>
                 </div>
                 <small>UTC · {appUsers.qaExcluded} CI installs excluded</small>
               </header>
               <p>Anonymous trial installs only. Own code includes any selection, not only the shortcut. Downloads and email signups are separate counts, not a combined people total.</p>
-              <div className="founder-table-wrap">
+              <div className="console-table-wrap">
                 <table>
                   <thead>
                     <tr><th scope="col">Date (UTC)</th><th scope="col">New trial installs</th><th scope="col">First sample</th><th scope="col">First own code</th></tr>
@@ -371,22 +371,22 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
             </article>
           ) : null}
 
-          <div className="founder-analytics__panels">
-            <article className="founder-analytics__activity">
+          <div className="console-analytics__panels">
+            <article className="console-analytics__activity">
               <header>
                 <div>
                   <span>Page views</span>
-                  <Subhead className="founder-analytics__subhead">Last 14 days</Subhead>
+                  <Subhead className="console-analytics__subhead">Last 14 days</Subhead>
                 </div>
                 <small>Pacific time</small>
               </header>
-              <div className="founder-analytics__bars" aria-label="Fourteen day page views">
+              <div className="console-analytics__bars" aria-label="Fourteen day page views">
                 {[...data.stats.recentDays].reverse().map((day) => {
                   const signups = data.waitlist.dailySignups.find((item) => item.date === day.date)?.signups ?? 0;
                   return (
                     <div key={day.date} title={`${compactDate(day.date)}: ${day.views} page views, ${day.visitors} unique visitors, ${signups} waitlist joins`}>
-                      <span className="founder-analytics__bar-value">{day.views || ""}</span>
-                      <span className="founder-analytics__bar-track">
+                      <span className="console-analytics__bar-value">{day.views || ""}</span>
+                      <span className="console-analytics__bar-track">
                         <span style={{ height: `${Math.max(day.views ? 10 : 2, (day.views / chartMax) * 100)}%` }} />
                       </span>
                       <small>{compactDate(day.date)}</small>
@@ -396,10 +396,10 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
               </div>
             </article>
 
-            <article className="founder-analytics__sources">
+            <article className="console-analytics__sources">
               <header>
                 <span>Sources</span>
-                <Subhead className="founder-analytics__subhead">Where joins came from</Subhead>
+                <Subhead className="console-analytics__subhead">Where joins came from</Subhead>
               </header>
               <ol>
                 {data.waitlist.sourceCounts.length ? data.waitlist.sourceCounts.map((source) => (
@@ -412,16 +412,16 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
             </article>
           </div>
 
-          <article className="founder-analytics__people">
+          <article className="console-analytics__people">
             <header>
               <div>
                 <span>Waitlist</span>
-                <Subhead className="founder-analytics__subhead">Joined people only</Subhead>
+                <Subhead className="console-analytics__subhead">Joined people only</Subhead>
               </div>
               {probeCount > 0 ? (
                 <button
                   type="button"
-                  className="founder-analytics__clear-probes"
+                  className="console-analytics__clear-probes"
                   onClick={() => void clearProbes()}
                   disabled={clearingProbes || Boolean(deleting)}
                 >
@@ -429,13 +429,13 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
                 </button>
               ) : null}
             </header>
-            {peopleError ? <p className="founder-analytics__empty">{peopleError}</p> : null}
-            {deleteError ? <p className="founder-analytics__empty" role="alert">{deleteError}</p> : null}
+            {peopleError ? <p className="console-analytics__empty">{peopleError}</p> : null}
+            {deleteError ? <p className="console-analytics__empty" role="alert">{deleteError}</p> : null}
             {!peopleError && people.length === 0 ? (
-              <p className="founder-analytics__empty">No waitlist names yet. The first signup will appear here.</p>
+              <p className="console-analytics__empty">No waitlist names yet. The first signup will appear here.</p>
             ) : null}
             {people.length > 0 ? (
-              <div className="founder-table-wrap">
+              <div className="console-table-wrap">
                 <table>
                   <thead>
                     <tr>
@@ -453,10 +453,10 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
                         <td><a href={`mailto:${person.email}`}>{person.email}</a></td>
                         <td>{joinedStamp(person.joinedAt)}</td>
                         <td>{person.tool}</td>
-                        <td className="founder-analytics__trash-cell">
+                        <td className="console-analytics__trash-cell">
                           <button
                             type="button"
-                            className="founder-analytics__trash"
+                            className="console-analytics__trash"
                             onClick={() => void deletePerson(person.email)}
                             disabled={deleting === person.email || clearingProbes}
                             aria-label={`Delete ${person.email}`}
@@ -473,7 +473,7 @@ export function FounderAnalytics({ embedded = false }: { embedded?: boolean }) {
             ) : null}
           </article>
 
-          <footer className="founder-analytics__footer">
+          <footer className="console-analytics__footer">
             <span>Funnel counts itself from form starts. Joined people stay real emails only.</span>
             <span>{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span>
           </footer>

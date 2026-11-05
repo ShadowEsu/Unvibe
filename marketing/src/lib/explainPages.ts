@@ -915,6 +915,227 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
     watchOut:
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
   },
+  {
+    id: "dart",
+    fileName: "track.dart",
+    lead: "Paste Dart, Flutter app code included, and Vibe explains where null is allowed, what a constructor does with its arguments and what each type cast checks.",
+    description:
+      "Paste Dart code and get a plain English explanation, free online. The sample reads a JSON list of music tracks into a model class with null safety.",
+    sampleSummary: "A model class for music tracks with a fromJson factory, the kind a Flutter app parses an API response into, and one optional field.",
+    sample: `import 'dart:convert';
+
+class Track {
+  final String id;
+  final String title;
+  final int seconds;
+  final String? artist;
+
+  const Track({required this.id, required this.title, required this.seconds, this.artist});
+
+  factory Track.fromJson(Map<String, dynamic> json) => Track(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        seconds: (json['seconds'] as num?)?.toInt() ?? 0,
+        artist: json['artist'] as String?,
+      );
+
+  String get length => '\${seconds ~/ 60}:\${(seconds % 60).toString().padLeft(2, '0')}';
+  String label() => '$title by \${artist ?? 'unknown artist'}, $length';
+}
+
+List<Track> parseTracks(String body) {
+  final items = jsonDecode(body) as List<dynamic>;
+  return items.map((item) => Track.fromJson(item as Map<String, dynamic>)).toList();
+}`,
+    shows: [
+      {
+        concept: "null safety",
+        text: "`String? artist` may be null and the other three fields may not. `json['artist'] as String?` lets a missing or `null` artist through, and `artist ?? 'unknown artist'` fills in for it in the label. Write `track.artist.toUpperCase()` and the program doesn't compile: Method 'toUpperCase' cannot be called on 'String?' because it is potentially null.",
+      },
+      {
+        concept: "constructors",
+        text: "`const Track({required this.id, ...})` takes named arguments and puts each one straight into its field. Leave out a `required` one and the call doesn't compile, while `this.artist` can be left out and stays `null`. `factory Track.fromJson` is a constructor that runs code first: it reads the map, then calls the main constructor.",
+      },
+      {
+        concept: "collections",
+        text: "`jsonDecode` returns `dynamic`, so `as List<dynamic>` says the body is a list. `items.map(...)` builds nothing yet: it is a lazy `Iterable` that makes each `Track` only when it is read. `.toList()` makes all of them at once into a `List<Track>`.",
+      },
+    ],
+    notes: [
+      "Run on `[{\"id\":\"t1\",\"title\":\"Night Drive\",\"seconds\":215,\"artist\":\"Lumen\"},{\"id\":\"t2\",\"title\":\"Intro\",\"seconds\":9}]`, `parseTracks` gives two tracks labelled `Night Drive by Lumen, 3:35` and `Intro by unknown artist, 0:09`.",
+      "`seconds ~/ 60` divides and drops the remainder, 3 for 215, and `% 60` is the 35 left over. `padLeft(2, '0')` turns 9 into `09`, so the label reads `0:09`, not `0:9`.",
+      "A missing `seconds` becomes 0. A decimal like `95.9` is cut to 95 by `toInt()`, not rounded, so that track shows as `1:35`.",
+      "`Track` doesn't define `==`, so two tracks parsed from the same JSON are not equal. Two `const Track(...)` written with the same values are the same object.",
+      "The file imports only `dart:convert`, not Flutter, so it was run with the plain Dart SDK, and a Flutter app can use it as it is.",
+    ],
+    watchOut:
+      "`as` checks the type when the code runs and throws if it's wrong. An API that sends `\"seconds\": \"215\"` as text makes `parseTracks` throw `type 'String' is not a subtype of type 'num?' in type cast`, and one track with no `id` gives `type 'Null' is not a subtype of type 'String' in type cast`. Either way the whole list fails, not just that track.",
+  },
+  {
+    id: "lua",
+    fileName: "Leaderboard.lua",
+    lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
+    description:
+      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use too.",
+    sampleSummary: "A game leaderboard built from a table and a metatable, with a method that adds points and one that lists the top players.",
+    sample: `local Leaderboard = {}
+Leaderboard.__index = Leaderboard
+
+function Leaderboard.new()
+  return setmetatable({ scores = {} }, Leaderboard)
+end
+
+function Leaderboard:add(name, points)
+  self.scores[name] = (self.scores[name] or 0) + points
+end
+
+function Leaderboard:top(count)
+  local rows = {}
+  for name, score in pairs(self.scores) do
+    table.insert(rows, { name = name, score = score })
+  end
+  table.sort(rows, function(a, b)
+    return a.score > b.score or (a.score == b.score and a.name < b.name)
+  end)
+  local lines = {}
+  for i = 1, math.min(count, #rows) do
+    lines[i] = i .. ". " .. rows[i].name .. ": " .. rows[i].score
+  end
+  return lines
+end`,
+    shows: [
+      {
+        concept: "tables",
+        text: "The table is Lua's one data structure, and the sample uses it three ways: `scores` maps names to points, each `{ name = name, score = score }` is a record, and `rows` and `lines` are lists numbered from 1. Reading a missing key gives `nil`, so `self.scores[name] or 0` starts a new player at 0.",
+      },
+      {
+        concept: "metatables",
+        text: "`setmetatable({ scores = {} }, Leaderboard)` makes a board that looks up any key it doesn't have in `Leaderboard`, because `Leaderboard.__index` is `Leaderboard` itself. The board holds only `scores`, so `board:add` finds `add` on `Leaderboard`. `board:add(\"nova\", 30)` is short for `board.add(board, \"nova\", 30)`, and that first argument is `self`.",
+      },
+    ],
+    notes: [
+      "With `nova` adding 30 and then 20, `blitz` 45 and `echo` 50, `board:top(3)` returns `1. echo: 50`, `2. nova: 50` and `3. blitz: 45`.",
+      "`pairs` visits keys in no set order, so `table.sort` decides the order: higher scores first, and a tie goes by name, which is why `echo` comes before `nova` on 50 every time.",
+      "Names are compared as text, and in this run capital letters sorted before lowercase ones: three players tied on 10 come out as `Bolt`, `Zed`, `alpha`. Compare `a.name:lower() < b.name:lower()` to ignore case.",
+      "`math.min(count, #rows)` stops at the players there are: `top(10)` with three players returns three lines, and an empty board returns an empty table.",
+      "The sample uses only standard Lua, no Roblox APIs, and was run with Lua 5.5. In Roblox it would usually sit in a ModuleScript that ends with `return Leaderboard`, which other scripts load with `require`.",
+    ],
+    watchOut:
+      "Methods need the colon. `board.add(\"nova\", 5)` with a dot passes `\"nova\"` as `self` and 5 as the name, and fails with `attempt to index a nil value (field 'scores')`. Leaving out the points fails too, with `attempt to perform arithmetic on a nil value (local 'points')`.",
+  },
+  {
+    id: "yaml",
+    fileName: "ci.yml",
+    lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
+    description:
+      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
+    sampleSummary: "A GitHub Actions workflow that installs a Python app's dependencies with a pip cache and runs its tests, with a secret passed in as an environment variable.",
+    sample: `name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: \${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: pytest -q`,
+    shows: [
+      {
+        concept: "mappings",
+        text: "Each `key: value` line is a mapping entry, and a block indented under a key is that key's value, so `push`, `test` and `with` are mappings inside mappings. Read with Ruby's YAML library, `on:` comes back as the key `true`, not `\"on\"`, because YAML 1.1 reads a bare `on` as true. GitHub reads it as the `on` key, but another tool that reads the file can see `true`.",
+      },
+      {
+        concept: "sequences",
+        text: "A line that starts with `- ` is one item in a list, so `steps` is a list of four mappings, each with a `uses` or a `run`. `[main]` is the same kind of list written on one line. Drop the space in `-run: pytest -q` and it isn't a list item any more: the parser returns a mapping with the key `-run`.",
+      },
+      {
+        concept: "scalars",
+        text: "A plain value is read by how it looks: `20` is a number, and in YAML 1.1 `yes`, `no`, `on` and `off` are true or false, so `country: NO` reads as `false`. Quotes keep text as text, which is why `\"3.12\"` stays the string `3.12`. `\${{ secrets.DATABASE_URL }}` is plain text to YAML too: GitHub replaces it with the secret's value when the job runs.",
+      },
+      {
+        concept: "indentation",
+        text: "Nesting is set by spaces alone. A tab in front of `test:` gives `found character that cannot start any token`, and a `cache: pip` indented one space less than the `python-version` line above it gives `did not find expected key while parsing a block mapping`.",
+      },
+    ],
+    notes: [
+      "Parsed, the file is a mapping with three keys, `name`, `true` and `jobs`. An empty `pull_request:` is `null`, which GitHub takes to mean its default pull request events: opened, reopened and new commits pushed.",
+      "`branches: [main]` sits under `push`, so it limits pushes only. Pull requests run the tests whatever branch they target.",
+      "`cache: pip` asks `actions/setup-python` to save pip's downloads between runs, keyed on your requirements file.",
+      "Secrets aren't passed to a workflow run for a pull request from a fork, so there `DATABASE_URL` is an empty string and tests that need the database fail.",
+      "The file was parsed with the YAML library in Ruby 2.6, not run on GitHub. Parsing checks the YAML, not whether GitHub accepts the workflow.",
+    ],
+    watchOut:
+      "Quote version numbers. `python-version: 3.10` without quotes is the number 3.1, and the list `[3.9, 3.10, 3.11]` reads as `[3.9, 3.1, 3.11]`. GitHub reads it the same way, so the job asks for Python 3.1.",
+  },
+  {
+    id: "awk",
+    fileName: "totals.awk",
+    lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",
+    description:
+      "Paste awk code and get a plain English explanation, free online. The sample totals sales per region from a CSV file, skips the header and sorts the result.",
+    sampleSummary: "An awk script that skips a CSV file's header, adds up sales per region in an array and prints the totals sorted largest first.",
+    sample: `# Total sales per region from a CSV export with a header row:
+#   date,region,product,amount
+# Run: awk -f totals.awk sales.csv
+
+BEGIN { FS = "," }
+
+NR == 1 { next }               # skip the header line
+
+$4 == "" {                     # a sale with no amount yet
+  missing++
+  next
+}
+
+{
+  total[$2] += $4
+  rows[$2]++
+}
+
+END {
+  for (region in total)
+    printf "%-6s %8.2f  %d sales\\n", region, total[region], rows[region] | "sort -k2 -rn"
+  close("sort -k2 -rn")
+  print missing + 0, "rows had no amount"
+}`,
+    shows: [
+      {
+        concept: "fields",
+        text: "`FS = \",\"` splits every line at its commas, so `$2` is the region and `$4` is the amount. awk turns `$4` into a number when it adds it: `12.50` adds 12.5, and text that doesn't start with a number adds 0.",
+      },
+      {
+        concept: "patterns and actions",
+        text: "Each `pattern { action }` runs on every line its pattern matches, in order from the top. `NR == 1 { next }` matches the first line, and `next` moves straight on to the line after, so the header never reaches the totals. `$4 == \"\"` catches a sale with no amount, and the last block has no pattern, so it runs on every line still left.",
+      },
+      {
+        concept: "associative arrays",
+        text: "`total[$2] += $4` uses the region as the key. The first time a region turns up its entry is empty, which counts as 0, so nothing has to be set up first. `rows[$2]++` counts each region's sales the same way.",
+      },
+      {
+        concept: "BEGIN and END",
+        text: "`BEGIN` runs before the first line is read, which is why `FS` is set there, and `END` runs after the last one. `for (region in total)` visits the keys in no set order, so each line goes through `sort -k2 -rn`, which sorts on the second column as a number, largest first.",
+      },
+    ],
+    notes: [
+      "Run on six sales with one missing amount, the script prints `west` 32.50 from 2 sales, `east` 28.00 from 2 and `north` 12.50 from 1, then `1 rows had no amount`.",
+      "`close(\"sort -k2 -rn\")` waits for `sort` to finish. Without it, `1 rows had no amount` came out above the totals in this run, because `sort` can't print anything until its input is closed, and awk only closes it on exit.",
+      "Given two files, `NR` keeps counting across both, so only the first header is skipped: the second file's header adds a region called `region` with 0.00. `FNR == 1` starts again for each file and skips both headers.",
+      "The sample was run with the awk that comes with macOS, `awk version 20200816`, and uses only standard awk. Sorting inside awk with `asort` or `PROCINFO[\"sorted_in\"]` is gawk-only, which is why the sample hands its lines to `sort`.",
+    ],
+    watchOut:
+      "awk splits at every comma, even one inside quotes. A product written `\"poster, large\"` becomes two fields, so `$4` is the text `large\"` with a space in front, which counts as 0: that sale's 30 is lost and `west` shows 12.50 from 2 sales, with no error. gawk 5.3 and later have a `--csv` option that reads quoted fields, while this macOS awk prints `unknown option --csv ignored`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

@@ -7,7 +7,7 @@ import { track } from "@/lib/analytics";
 import { DOWNLOADED_EVENT } from "@/lib/downloadTracking";
 import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/referral";
 
-const QUIET = ["/founder", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
+const QUIET = ["/console", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 
 /**
  * One small email ask. Opens when a friend's invite link brings you here (with an app gift code,

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BuildAction, BuildStatus } from "@/lib/buildStatus";
-import { founderHeaders } from "@/lib/founderToken";
+import { consoleHeaders, readConsoleToken } from "@/lib/consoleToken";
 import { readResponseJson } from "@/lib/readResponseJson";
 
 type PublicStatus = BuildStatus & { isLive: boolean; sessionSeconds: number };
 
-export function FounderConsole() {
+export function BuildClockConsole() {
   const [status, setStatus] = useState<PublicStatus | null>(null);
   const [message, setMessage] = useState("Checking the build clock.");
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,7 @@ export function FounderConsole() {
     try {
       const response = await fetch("/api/build-status", {
         method: "POST",
-        headers: founderHeaders({ "Content-Type": "application/json" }),
+        headers: consoleHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(action),
       });
       const payload = await readResponseJson<PublicStatus & { error?: string }>(response);
@@ -65,7 +65,8 @@ export function FounderConsole() {
   useEffect(() => {
     if (!status?.isLive) return undefined;
     const beat = window.setInterval(() => {
-      void send({ action: "heartbeat" }, { quiet: true });
+      // Locked visitors have no token; beating anyway drew a 401 and a console error every 20 s.
+      if (readConsoleToken()) void send({ action: "heartbeat" }, { quiet: true });
     }, 20_000);
     const clock = window.setInterval(() => setTick((value) => value + 1), 1_000);
     return () => {
@@ -92,11 +93,11 @@ export function FounderConsole() {
   };
 
   return (
-    <div className="founder-console">
+    <div className="console-clock">
       <p className="paper-meta">Build clock</p>
       <h2>{live ? "Hours and minutes are on." : "Hours and minutes are off."}</h2>
       <p>{message}</p>
-      <p className="founder-console__clock" aria-live="polite">
+      <p className="console-clock__clock" aria-live="polite">
         <b>{liveClock.hours}</b>
         <small>hours</small>
         <b>{liveClock.minutes}</b>
@@ -116,7 +117,7 @@ export function FounderConsole() {
         {live ? "On" : "Off"}
       </button>
       <form
-        className="founder-console__time"
+        className="console-clock__time"
         onSubmit={(event) => {
           event.preventDefault();
           saveClock();
@@ -142,7 +143,7 @@ export function FounderConsole() {
         </label>
         <button type="submit" disabled={busy || !status}>Save time</button>
       </form>
-      <a href="/build" className="founder-public-link">Open the public view</a>
+      <a href="/build" className="console-public-link">Open the public view</a>
     </div>
   );
 }

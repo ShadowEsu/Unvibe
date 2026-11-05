@@ -718,39 +718,6 @@ export async function referralProgress(code: string): Promise<{ found: boolean; 
   return { found: true, joinedReferrals };
 }
 
-/** Entries are marked only after Resend accepts the beta invitation, making batches safe to retry. */
-export async function markBetaInviteSent(email: string, betaInviteAt: string): Promise<void> {
-  const normalized = email.trim().toLowerCase();
-  if (supabaseConfigured()) {
-    const { error } = await supabaseClient()
-      .from("waitlist_entries")
-      .update({ invited_at: betaInviteAt })
-      .eq("email", normalized);
-    if (error) throw new Error(`Supabase beta invite update failed: ${error.message}`);
-    return;
-  }
-  if (durableBlobReady()) {
-    const pathName = entryPath(email);
-    const listed = await list({ prefix: pathName, limit: 5, token: blobToken() });
-    const found = listed.blobs.find((blob) => blob.pathname === pathName);
-    if (!found) throw new Error("Waitlist entry was not found while recording beta invite");
-    const current = await readEntryBlob(found.url);
-    if (!current) throw new Error("Waitlist entry could not be read while recording beta invite");
-    current.betaInviteAt = betaInviteAt;
-    await putEntry(current);
-    return;
-  }
-  const entries = await readLocal();
-  const entry = entries.find((item) => item.email.trim().toLowerCase() === email.trim().toLowerCase());
-  if (!entry) throw new Error("Waitlist entry was not found while recording beta invite");
-  entry.betaInviteAt = betaInviteAt;
-  await writeLocal(entries);
-}
-
-export async function listUninvitedWaitlistEntries(): Promise<WaitlistAdminEntry[]> {
-  return (await listWaitlistEntries(10_000)).filter((entry) => !entry.betaInviteAt);
-}
-
 export async function deleteWaitlistEntry(email: string): Promise<boolean> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
