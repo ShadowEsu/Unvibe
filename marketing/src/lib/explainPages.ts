@@ -2008,7 +2008,7 @@ Host *
     notes: [
       "Checked with OpenSSH 10.6 using `ssh -G -F config <host>` on a test home folder: nothing connected anywhere.",
       "A misspelled option stops ssh before it connects: with `HostNme`, ssh printed `Bad configuration option: hostnme` and `terminating, 1 bad configuration options`.",
-      "Hosts without `IdentitiesOnly yes` got ssh's whole list of default key files, from `~/.ssh/id_rsa` to `~/.ssh/id_ed25519`, plus any keys in your agent. Each key ssh offers counts as a try, and the OpenSSH server's `MaxAuthTries` default is 6, so with many keys the right one can come too late.",
+      "Hosts without `IdentitiesOnly yes` got ssh's whole list of default key files, six of them from `~/.ssh/id_rsa` to `~/.ssh/id_mldsa44_ed25519`, and ssh can offer keys from your agent too. Each key ssh offers counts as a try, and the OpenSSH server's `MaxAuthTries` default is 6, so with many keys the right one can come too late.",
     ],
     watchOut:
       "Put `Host *` first and its values win over everything below it. With a `Host *` block holding `User nobody` at the top of the file, `ssh -G staging` showed `user nobody`, although the `staging` block says `User deploy`. Keep specific hosts at the top and the catch-all at the end.",
