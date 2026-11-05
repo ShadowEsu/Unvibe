@@ -2490,6 +2490,59 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
     watchOut:
       "`[a-z_]+` and `(token|password)` only match lowercase letters, so a line written `API_TOKEN = abc` came through as `API_TOKEN = abc`, with the secret showing and no error. Adding GNU sed's `I` flag after the last slash makes the match ignore case, and then it printed `API_TOKEN = [hidden]`.",
   },
+  {
+    id: "grep",
+    fileName: "find-problems.sh",
+    lead: "Paste grep commands and Vibe explains what each one finds: what the flags change, what the pattern matches and what the command prints back.",
+    description:
+      "Paste grep commands and get every flag explained in plain English, free online. The sample searches an app's logs and code with -i, -n, -c, -w, -v, -r, -l, -o and -E.",
+    sampleSummary: "A shell script with six grep searches: errors in any case with line numbers, a count of timeouts, a whole word, every line but the health checks, files with a TODO, and just the error status codes.",
+    sample: `#!/bin/sh
+# Search an app's logs and code for problems.
+
+# Lines with "error" in any case, with their line numbers.
+grep -in "error" logs/app.log
+
+# How many lines mention a timeout.
+grep -c "timeout" logs/app.log
+
+# The whole word "fail" only, not "failed" or "failure".
+grep -w "fail" logs/app.log
+
+# Every line except the health checks.
+grep -v "GET /health" logs/access.log
+
+# Search a whole folder and print only the file names.
+grep -rl "TODO" src
+
+# Extended pattern: print just the 4xx and 5xx status codes.
+grep -oE " [45][0-9]{2} " logs/access.log`,
+    shows: [
+      {
+        concept: "-i and -n",
+        text: "grep prints every line that contains the pattern. `-i` ignores case and `-n` adds line numbers: on a test log it printed `2:09:00:05 ERROR could not reach database` and `5:09:02:30 Error: disk almost full`.",
+      },
+      {
+        concept: "-c and -w",
+        text: "`-c` prints how many lines matched instead of the lines: `2` for timeout. `-w` only matches the whole word, so `-w \"fail\"` printed only `WARN fail count 3` and skipped the lines with `failed` and `failure`.",
+      },
+      {
+        concept: "-v, -r and -l",
+        text: "`-v` turns the search around and prints the lines that don't match: the access log came back without its two health checks. `-r` searches every file in a folder and its subfolders, and `-l` prints only the names of files with a match: `src/cart.js` and `src/lib/retry.py`, but not `src/price.js`.",
+      },
+      {
+        concept: "-o and -E",
+        text: "`-E` allows extended patterns such as `{2}` for exactly two, and `-o` prints only the matched part. `[45][0-9]{2}` is a 4 or 5 followed by two digits, so the command printed ` 500 ` and ` 404 ` and left out the 200s.",
+      },
+    ],
+    notes: [
+      "Run with GNU grep 3.12 on a test log, access log and source folder.",
+      "grep's exit code says what happened: 0 when something matched, 1 when nothing did, and 2 for an error such as `nope.log: No such file or directory`.",
+      "In a script with `set -e`, a search that finds nothing ends the script. `grep -c \"panic\"` printed `0`, exited with 1, and the next line never ran.",
+    ],
+    watchOut:
+      "A `.` in the pattern matches any character, not just a dot. `grep \"10.0.0.5\"` also matched a line with `10a0b0c5`. Use `grep -F` to search for the text exactly as written, or write `\\.` for a dot.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
