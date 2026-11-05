@@ -169,10 +169,10 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
    Without autoplay (lite visitors, refused autoplay) it stays under the player, so the native controls show. */
 .vtour__media.is-auto:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
 .vtour__media.is-playing .vtour__poster { visibility: hidden; }
-/* "Sound on" over the demo's top right corner, clear of the native controls along the bottom. The pill is the
-   switch's label; the Glisse Switch inside shows whether sound is on. */
+/* "Sound on" in the demo's bottom right corner, above the native controls' scrubber and clear of the poster's title
+   (Design). The pill is the switch's label; the Glisse Switch inside shows whether sound is on. */
 .vtour__sound {
-  position: absolute; top: 0.75rem; right: 0.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.5rem;
+  position: absolute; right: 0.75rem; bottom: 3.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.5rem;
   min-height: 2.5rem; padding: 0 0.7rem 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
   font: 700 0.9rem var(--font-sans); cursor: pointer;
 }

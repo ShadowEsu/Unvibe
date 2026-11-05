@@ -370,6 +370,10 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .consent-bar__btn { min-width: 6.5rem; min-height: 2.75rem; padding: 0 1rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--u-card); color: var(--u-text); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .consent-bar__btn:hover { background: var(--u-raise); }
 .consent-bar__btn:focus-visible { outline: 2px solid var(--v-ink); outline-offset: 2px; }
+/* From 1024px it is a compact card bottom left, clear of the centred hero download button (Design, N live read-back). */
+@media (min-width: 1024px) {
+  .consent-bar { left: 24px; bottom: calc(24px + env(safe-area-inset-bottom)); transform: none; width: min(400px, calc(100vw - 48px)); }
+}
 .fb-bonus { margin: 0.6rem 0 1rem; padding: 0.7rem 0.9rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--v-lime); font-size: 0.98rem; }
 
 /* Private stats page (/s/<key>) */
