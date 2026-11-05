@@ -1182,6 +1182,64 @@ List<Track> parseTracks(String body) {
       "`as` checks the type when the code runs and throws if it's wrong. An API that sends `\"seconds\": \"215\"` as text makes `parseTracks` throw `type 'String' is not a subtype of type 'num?' in type cast`, and one track with no `id` gives `type 'Null' is not a subtype of type 'String' in type cast`. Either way the whole list fails, not just that track.",
   },
   {
+    id: "zshrc",
+    fileName: ".zshrc",
+    lead: "Paste a .zshrc and Vibe explains what each line sets up in a new terminal: history options, `path`, completion, aliases, functions and what the `%` codes in `PROMPT` show.",
+    description:
+      "Paste a .zshrc and get a plain English explanation, free online. The sample sets up shared history, PATH, tab completion, two aliases, a function and a colored prompt.",
+    sampleSummary: "A personal .zshrc: history shared between terminals, your own folder first on the path without duplicates, tab completion, two aliases, a make-and-enter folder function and a short colored prompt.",
+    sample: `# ~/.zshrc: read by every new interactive zsh, the default shell on a Mac.
+
+# History: keep more, share it between open terminals, skip repeats
+HISTFILE=~/.zsh_history
+HISTSIZE=5000
+SAVEHIST=5000
+setopt SHARE_HISTORY HIST_IGNORE_DUPS
+
+# My own tools first; typeset -U drops any folder that's already in the list
+typeset -U path
+path=(~/bin $path)
+export EDITOR=nano
+
+# Tab completion for commands like git
+autoload -Uz compinit && compinit
+
+# Shortcuts
+alias ll='ls -lah'
+alias gs='git status --short'
+
+# Make a folder and go into it: mkcd projects/new-app
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+# Prompt: folder in blue, then % (or # for root)
+PROMPT='%F{blue}%~%f %# '`,
+    shows: [
+      {
+        concept: "when it runs",
+        text: "zsh reads ~/.zshrc each time it starts an interactive shell, a terminal you type into, and that includes a login shell: `zsh -l -i` had the `ll` alias too. A script run with `zsh -c` doesn't read it: there `whence -v ll` said `ll not found`. bash ignores the file completely.",
+      },
+      {
+        concept: "history and options",
+        text: "`HISTSIZE` is how many commands a session keeps and `SAVEHIST` how many are saved to `HISTFILE` when it closes. `setopt` turns on zsh options: `SHARE_HISTORY` lets every open terminal see the others' commands, and `HIST_IGNORE_DUPS` skips a command typed twice in a row. `setopt` listed both as `sharehistory` and `histignoredups`.",
+      },
+      {
+        concept: "path and typeset -U",
+        text: "In zsh, the array `path` and the text `PATH` are the same list, so `path=(~/bin $path)` puts ~/bin first, and `command -v hello` found the `hello` script there. `typeset -U path` keeps each folder once: after adding ~/bin again and re-reading the file, it was still listed 1 time. Without that line, two re-reads left it listed 3 times.",
+      },
+      {
+        concept: "aliases, functions and the prompt",
+        text: "`whence -v ll` printed `ll is an alias for ls -lah`, and `mkcd a/b` made both folders and moved into them. In `PROMPT`, `%F{blue}` and `%f` start and stop the color, `%~` is the folder with your home shown as `~` and `%#` is `%` for you or `#` for root: in ~/proj the prompt read `~/proj %` with the folder in blue.",
+      },
+    ],
+    notes: [
+      "Run with zsh 5.9.2 on a test home folder, so nothing touched a real ~/.zshrc. `compinit` wrote its cache, a `.zcompdump` file, into that folder on the first run.",
+      "zsh doesn't split a variable on spaces the way bash does: with `f=\"my file.txt\"`, `set -- $f` gave 1 argument in zsh and 2 in bash. Code copied from a bash script can behave differently here.",
+      "zsh arrays start at 1, not 0: with `a=(x y z)`, `${a[1]}` was `x`.",
+    ],
+    watchOut:
+      "Settings that scripts need don't belong in .zshrc. A script run as `zsh -c` saw none of it: `ll not found`, ~/bin wasn't on its `path` and `command -v hello` found nothing. A variable exported in ~/.zshenv, which zsh reads for every shell, reached the same script: it printed `SHOP_ENV=[dev]`.",
+  },
+  {
     id: "lua",
     fileName: "Leaderboard.lua",
     lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
