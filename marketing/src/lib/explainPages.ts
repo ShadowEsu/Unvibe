@@ -560,6 +560,57 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
       "Use `-LiteralPath` for file names you didn't type. In a file called `app[1].log`, `-Path` reads `[1]` as a wildcard: `Remove-Item -Path` matched nothing, deleted nothing and still reported success, while `-LiteralPath` removed the file.",
   },
   {
+    id: "curl",
+    fileName: "check-orders.sh",
+    lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
+    description:
+      "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
+    sampleSummary: "A shell script with four curl calls to an orders API: a quiet GET that fails on errors, a JSON POST with a bearer token, a redirect saved to a file with its status code, and a DELETE that prints the response headers.",
+    sample: `#!/bin/sh
+# Talk to an orders API from the terminal: read, create, follow a redirect.
+API="\${API:-http://localhost:8080}"
+
+# GET: -s hides the progress bar, -f fails on HTTP errors (4xx, 5xx).
+curl -sf "$API/api/orders?status=open"
+
+# POST JSON: --json sets the body and the JSON headers in one flag.
+curl -sf --json '{"item":"mug","qty":2}' \\
+  -H "Authorization: Bearer $ORDERS_TOKEN" \\
+  "$API/api/orders"
+
+# -L follows redirects; -o saves the reply; -w prints the status code.
+curl -sL -o orders.json -w "%{http_code}\\n" "$API/old"
+
+# -X sets the method; -i prints the response headers above the body.
+curl -si -X DELETE "$API/api/orders/42"`,
+    shows: [
+      {
+        concept: "-s and -f",
+        text: "`-s` hides the progress bar, and `-f` makes an HTTP error count as a failure. Against a page that answers 404, `curl -sf` printed nothing and exited with code 22, so a script can stop there. Without `-f`, curl printed the error page, `{\"error\":\"not found\"}`, and exited with 0 as if it had worked.",
+      },
+      {
+        concept: "--json and -H",
+        text: "`--json` sends its text as the body and adds the JSON headers: the test server saw a POST with `Content-Type: application/json`, `Accept: application/json` and the body `{\"item\":\"mug\",\"qty\":2}`. Each `-H` adds a header, and the server saw `Authorization: Bearer` followed by the token from `$ORDERS_TOKEN`.",
+      },
+      {
+        concept: "-L, -o and -w",
+        text: "`/old` answers with a 301 redirect. Without `-L`, `-w \"%{http_code}\"` printed `301`. With `-L`, curl followed it to `/api/orders`, saved that reply in orders.json and printed `200`.",
+      },
+      {
+        concept: "-X and -i",
+        text: "`-X DELETE` changes the method, and the server saw `DELETE /api/orders/42`. `-i` put the response headers above the body: `HTTP/1.0 200 OK`, the `Content-Type` and the `Content-Length`.",
+      },
+    ],
+    notes: [
+      "Run with curl 8.21 against a test server on this machine that sends back what it received: no request left the machine.",
+      "`-d` also sends a body, but as form data: with `-d '{\"item\":\"mug\"}'` the server saw `Content-Type: application/x-www-form-urlencoded`, not JSON. Adding `-H \"Content-Type: application/json\"` changed that, or use `--json`.",
+      "`-s` also hides curl's own error message. With `-sS`, a 404 still printed `curl: (22) The requested URL returned error: 404`.",
+      "Single quotes stop the shell from filling in a variable: with `-H 'Authorization: Bearer $ORDERS_TOKEN'`, the server got the words `$ORDERS_TOKEN` instead of the token.",
+    ],
+    watchOut:
+      "Quote any URL with `&` in it. Unquoted, `curl -s http://localhost:8080/api/orders?status=open&limit=5` was split by the shell at the `&`: curl ran in the background and the server saw only `/api/orders?status=open`, with `limit=5` gone.",
+  },
+  {
     id: "bashrc",
     fileName: ".bashrc",
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",

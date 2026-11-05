@@ -278,6 +278,16 @@ export const languages: Language[] = [
     sample: `Get-Process | Sort-Object CPU -Descending | Select-Object -First 5`,
   },
   {
+    id: "curl",
+    name: "curl",
+    categories: ["scripting", "web"],
+    blurb: "The command that sends HTTP requests from a terminal or a script: methods, headers, bodies and redirects.",
+    concepts: ["-s and -f", "--json and -H", "-L, -o and -w", "-X and -i"],
+    frameworks: ["curl", "HTTP", "REST APIs", "JSON"],
+    learningPath: ["GET a URL", "Headers and bodies", "Errors and exit codes", "Redirects and files"],
+    sample: `curl -sf "https://example.com/api/orders"`,
+  },
+  {
     id: "bashrc",
     name: ".bashrc",
     categories: ["scripting", "systems"],
