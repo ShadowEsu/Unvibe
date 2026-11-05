@@ -73,13 +73,3 @@ export const listingLinks = [
   { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
   { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
 ] as const;
-
-/**
- * Followed homepage links these directories require before Unvibe's free listing can be submitted
- * (OK'd 26 Oct). They show on their own line labelled as listings in progress, never among the live
- * listings (Security R-4); once a listing page exists, move it into listingLinks with its page URL.
- */
-export const pendingBacklinks = [
-  { name: "Startup Fame", href: "https://startupfa.me" },
-  { name: "Fazier", href: "https://fazier.com" },
-] as const;

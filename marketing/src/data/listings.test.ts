@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { listingBadges, listingLinks, pendingBacklinks } from "./listings";
+import { listingBadges, listingLinks } from "./listings";
 
 /** Every directory the footer may link to. A new one is added here on purpose, never by accident (Security R-3). */
 const ALLOWED_LISTING_ORIGINS = [
@@ -23,9 +23,6 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://strategic-flow-audit.replit.app",
 ];
 
-/** Directories whose required homepage link shows as "Listing in progress" until the listing exists. */
-const ALLOWED_PENDING_ORIGINS = ["https://startupfa.me", "https://fazier.com"];
-
 const BADGE_LIMIT_BYTES = 50 * 1024;
 
 describe("footer listings", () => {
@@ -34,19 +31,6 @@ describe("footer listings", () => {
       const url = new URL(href);
       assert.equal(url.protocol, "https:", name);
       assert.ok(ALLOWED_LISTING_ORIGINS.includes(url.origin), `${name}: ${url.origin} is not in the allowlist`);
-    }
-  });
-
-  it("shows no directory where Unvibe isn't listed yet (Security R-4)", () => {
-    const shown = listingLinks.map((link) => new URL(link.href).origin);
-    for (const pending of pendingBacklinks) assert.equal(shown.includes(new URL(pending.href).origin), false, pending.name);
-  });
-
-  it("links to pending directories only from their allowlisted homepages, over https", () => {
-    for (const { name, href } of pendingBacklinks) {
-      const url = new URL(href);
-      assert.equal(url.protocol, "https:", name);
-      assert.ok(ALLOWED_PENDING_ORIGINS.includes(url.origin), `${name}: ${url.origin} is not in the pending allowlist`);
     }
   });
 
