@@ -158,6 +158,16 @@ export const languages: Language[] = [
     sample: `SELECT name FROM users WHERE active;`,
   },
   {
+    id: "git-log",
+    name: "git log",
+    categories: ["systems", "scripting"],
+    blurb: "The history of a git repo: who changed what, when and how branches came together.",
+    concepts: ["commits", "merges", "the graph", "filtering"],
+    frameworks: ["git", "GitHub", "GitLab", "git bisect"],
+    learningPath: ["Reading a commit", "Merge commits", "The graph view", "Filtering the log"],
+    sample: `git log --oneline --graph --decorate --all`,
+  },
+  {
     id: "swift",
     name: "Swift",
     categories: ["mobile"],
