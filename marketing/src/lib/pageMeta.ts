@@ -40,6 +40,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   cron: "/og/og-explain-cron-c15c15c1.png",
   html: "/og/og-explain-html-2d46f438.png",
   css: "/og/og-explain-css-a1736dc1.png",
+  xml: "/og/og-explain-xml-789f5b88.png",
   go: "/og/og-explain-go-cf95e359.png",
   jquery: "/og/og-explain-jquery-ff3aa78e.png",
   rust: "/og/og-explain-rust-42bddce3.png",
