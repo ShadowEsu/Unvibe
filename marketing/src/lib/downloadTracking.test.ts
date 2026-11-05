@@ -6,7 +6,7 @@ import * as React from "react";
 import { createRef, isValidElement, type ReactElement, type ReactNode } from "react";
 import { FooterLinks } from "@/components/Footer";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
-import { DownloadForThisComputer } from "@/components/paper/PhotoHero";
+import { DownloadForThisComputer } from "@/components/b/DemoHero";
 import { siteCommands } from "@/components/paper/SitePalette";
 import { trackPlanCta } from "@/components/redesign/PricingPlans";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "./betaOffer";

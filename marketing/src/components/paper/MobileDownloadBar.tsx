@@ -28,7 +28,7 @@ export function MobileDownloadBar() {
 
   useEffect(() => {
     setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone");
-    const hero = document.querySelector(".vhero");
+    const hero = document.querySelector(".b-hero");
     const onScroll = () => {
       const nearBottom = window.innerHeight + window.scrollY > document.documentElement.scrollHeight - 420;
       const pastHero = hero ? hero.getBoundingClientRect().bottom <= 0 : window.scrollY > window.innerHeight * 0.85;

@@ -168,7 +168,6 @@ describe("startup programs", () => {
   it("home: no credits line in the hero (it lives on /investors), and the strip is one line plus the investors link", () => {
     const home = render(HomePage);
     // Design and Security, 2026-11-04: the $ total is investor proof, so the home hero no longer carries it.
-    assert.doesNotMatch(home, /vhero__backing/);
     assert.doesNotMatch(text(home), /\$72,300/);
     assert.match(home, /<a href="\/investors#backing">investors page<\/a>/);
     const strip = section(home, /<section id="backing"/);

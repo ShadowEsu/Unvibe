@@ -7,12 +7,13 @@ import "./globals.css";
 import "./paper.css";
 import "./polish.css";
 import "./vibe.css";
-import "./hero.css";
 import "./sections.css";
 import "./pages.css";
 import "./system.css";
 import "./home-ux.css";
 import "./glass.css";
+// Ledger 469 B: loaded last, so the new ground, type scale and layouts win ties.
+import "./b.css";
 import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
@@ -28,6 +29,8 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { BOOT_SCRIPT } from "@/lib/theme";
+import { INTRO_SCRIPT } from "@/lib/intro";
+import { Intro } from "@/components/b/Intro";
 import { jsonLdScript } from "@/lib/jsonLd";
 import { SITE_URL } from "@/lib/siteUrl";
 
@@ -133,7 +136,7 @@ const organizationJsonLd = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#d6ecfb",
+  themeColor: "#fbfaf7",
 };
 
 export default function RootLayout({
@@ -150,8 +153,8 @@ export default function RootLayout({
       <head>
         {/* First in <head>, before any Glisse code runs: see GlisseStylesMarker. */}
         <GlisseStylesMarker />
-        {/* Before first paint: the `js` class, which scopes the motion start states. */}
-        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+        {/* Before first paint: the `js` class, which scopes the motion start states, and the intro flag. */}
+        <script dangerouslySetInnerHTML={{ __html: `${BOOT_SCRIPT};${INTRO_SCRIPT}` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(softwareJsonLd) }}
@@ -163,6 +166,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <Intro />
           <AmbientEffects />
           <a href="#main" className="skip-link">
             Skip to content

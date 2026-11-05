@@ -22,11 +22,11 @@ function renderWithFlag(flag: "1" | ""): { tryIt: string; hero: string; kit: str
     'const { renderToStaticMarkup } = require("react-dom/server");',
     "Object.assign(globalThis, { React });",
     'const { TryIt } = require("@/components/paper/TryIt");',
-    'const { PhotoHero } = require("@/components/paper/PhotoHero");',
+    'const { DemoHero } = require("@/components/b/DemoHero");',
     'const { kitMarkdown } = require("@/lib/kit");',
     "process.stdout.write(JSON.stringify({",
     "  tryIt: renderToStaticMarkup(React.createElement(TryIt)),",
-    "  hero: renderToStaticMarkup(React.createElement(PhotoHero)),",
+    "  hero: renderToStaticMarkup(React.createElement(DemoHero)),",
     "  kit: kitMarkdown(),",
     "}));",
   ].join("\n");
@@ -84,11 +84,11 @@ describe("Try it disclosure", () => {
 
 describe("hero Try link", () => {
   it("with Try it on, the hero links to the Try box as before", () => {
-    assert.match(live.hero, /<a class="vhero__try" href="#try-it">Or try it online first<\/a>/);
+    assert.match(live.hero, /<a class="b-hero__try" href="#try-it">Or try it online first<\/a>/);
   });
 
   it("while Try it is paused, the hero renders no link to it and no stand-in", () => {
-    assert.doesNotMatch(paused.hero, /vhero__try/);
+    assert.doesNotMatch(paused.hero, /b-hero__try/);
     assert.doesNotMatch(paused.hero, /#try-it/);
     assert.doesNotMatch(paused.hero, /try it online/i);
     assert.doesNotMatch(paused.hero, /Watch the demo/);

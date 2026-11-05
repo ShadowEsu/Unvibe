@@ -1,0 +1,1434 @@
+/* Ledger 469: B made vibrant (HQ 4-0; Design's agents/design/unvibe-469/vibrant/, mock Bv.html + base-v.css),
+   then Preston 22:5x: "make a new one, clean and tons of animations". Loaded last.
+   Site-wide: one ground (no code wallpaper, no discs), a smaller type scale, violet buttons and the bar.
+   Home (.b-page) and /pricing (.paper-pricing) get the new layouts.
+   Gradients only in Design's places: the hero ribbon, the H1's second line, the story rules, hairlines, the
+   field behind each story capture, the closing band. Motion: transform and opacity only, every loop paused
+   off-screen, everything static under reduced motion. No filter, no backdrop-filter, no SVG filters. */
+
+:root {
+  --b-ground: #fbfaf7;
+  --b-ink: #141414;
+  --b-ink-2: #4a4a46;
+  /* Dimmed story steps: 5.25:1 on the ground (AA). */
+  --b-mute: #6b6964;
+  --b-line: rgb(20 20 20 / 0.1);
+  /* One violet family from the mark (#b8a6ff). */
+  --v-100: #efeaff;
+  --v-200: #dcd3ff;
+  --v-300: #b8a6ff;
+  --v-500: #7b5cff;
+  --v-600: #5a3fe0;
+  --v-700: #4a2fc4;
+  --v-900: #1d1450;
+  /* Lime is the product's code selection, nothing else. */
+  --b-lime: #d6f45a;
+  --b-cta: var(--v-600);
+  --g-ribbon: linear-gradient(90deg, rgb(220 211 255 / 0) 0%, #e6dfff 16%, #c9bbff 34%, #a58dff 52%, #7b5cff 72%, rgb(123 92 255 / 0) 100%);
+  --g-warm: linear-gradient(90deg, rgb(255 184 148 / 0) 0%, rgb(255 196 166 / 0.85) 45%, rgb(255 168 140 / 0.7) 60%, rgb(255 168 140 / 0) 100%);
+  --g-deep: linear-gradient(90deg, rgb(90 63 224 / 0) 0%, #6a4ff0 30%, #4a2fc4 62%, rgb(29 20 80 / 0.9) 86%, rgb(29 20 80 / 0) 100%);
+  --g-text: linear-gradient(95deg, #4a2fc4 0%, #6d4df2 55%, #5a3fe0 100%);
+  --g-v: linear-gradient(180deg, #7b5cff, #4a2fc4);
+  --g-rule: linear-gradient(90deg, rgb(184 166 255 / 0), #b8a6ff 30%, #ffb894 70%, rgb(255 184 148 / 0));
+  --g-rule-solid: linear-gradient(90deg, #5a3fe0, #b8a6ff 60%, #ffb894);
+  --g-field: radial-gradient(closest-side at 60% 50%, rgb(184 166 255 / 0.75), rgb(184 166 255 / 0.3) 55%, rgb(184 166 255 / 0)), radial-gradient(closest-side at 28% 80%, rgb(255 184 148 / 0.45), rgb(255 184 148 / 0));
+  --g-halo: radial-gradient(closest-side, rgb(184 166 255 / 0.5), rgb(184 166 255 / 0.14) 55%, rgb(184 166 255 / 0));
+  --g-band: radial-gradient(60% 90% at 88% 0%, rgb(255 184 148 / 0.38), rgb(255 184 148 / 0) 70%), radial-gradient(70% 100% at 8% 100%, rgb(184 166 255 / 0.4), rgb(184 166 255 / 0) 70%), linear-gradient(120deg, #1d1450 0%, #2f1f8a 48%, #4a2fc4 100%);
+  --b-float: 0 0 0 1px rgb(29 20 80 / 0.08), 0 2px 4px rgb(29 20 80 / 0.08), 0 28px 56px -20px rgb(40 22 130 / 0.42);
+  --b-lift: 0 1px 2px rgb(29 20 80 / 0.06), 0 18px 40px -24px rgb(40 22 130 / 0.3);
+  --b-h1: clamp(2rem, 3.4vw, 2.9rem);
+  --b-h2: clamp(1.375rem, 2vw, 1.75rem);
+  --b-gap: clamp(80px, 10vw, 136px);
+  --b-ease-load: cubic-bezier(0.19, 1, 0.22, 1);
+  --b-ease-reveal: cubic-bezier(0.77, 0, 0.175, 1);
+  --b-ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
+  /* The site's older tokens follow the new ones, so every page gets the violet focus ring and buttons. */
+  --u-focus: var(--v-600);
+  --u-cta: var(--b-cta);
+  --u-on-cta: #fff;
+}
+
+/* ── Site-wide ground and type ───────────────────────────────────────────── */
+html,
+html body {
+  font-size: 16px;
+}
+@media (min-width: 1100px) {
+  html {
+    font-size: 16px;
+  }
+}
+html body {
+  background: var(--b-ground);
+  color: var(--b-ink);
+}
+/* The fixed code-field wallpaper (paper.css) is gone on every page: one ground. */
+html body::before {
+  content: none;
+  display: none;
+}
+p {
+  font-size: 16px;
+}
+.paper-section h2,
+.inv h2 {
+  font-size: var(--b-h2) !important;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.paper-lead,
+.paper-caption {
+  font-size: 1rem !important;
+}
+/* Headline marker words (466) read as plain words now: no single-word accent. */
+:is(h1, h2, h3) mark.u-mark {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+/* The bar: the ground, a hairline, 14 px links, the violet button. */
+.mnav {
+  background: var(--b-ground);
+  border-bottom-color: var(--b-line);
+}
+.mnav__bar {
+  height: 60px;
+}
+.mnav__links a {
+  font-size: 14px;
+  font-weight: 500;
+}
+.mnav .mnav__cta {
+  border-radius: 10px !important;
+  background: var(--b-cta) !important;
+  color: #fff !important;
+}
+
+/* ── Shared pieces ───────────────────────────────────────────────────────── */
+.b-wrap {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+}
+.b-center {
+  text-align: center;
+}
+.b-page h2,
+.b-sec h2 {
+  margin: 0;
+  color: var(--b-ink);
+  font-size: var(--b-h2);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.b-shot {
+  display: block;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: var(--b-float);
+}
+.b-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--b-cta);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 6px 16px -8px rgb(74 47 196 / 0.7);
+  cursor: pointer;
+  transition: transform 200ms var(--b-ease-hover), background-color 200ms var(--b-ease-hover);
+}
+.b-btn:hover {
+  background: var(--v-700);
+}
+.b-btn:active {
+  transform: scale(var(--m-scale-press));
+}
+.b-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ── The home page: every section sits on the ground; no plates ─────────── */
+.b-page .u-sheet {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+/* No whole-section hover lift (glass.css); the arrival rise still moves the section once. */
+.b-page .u-sheet:hover {
+  transform: none;
+}
+.b-page > .paper-section {
+  padding-block: 0 !important;
+  margin-top: var(--b-gap);
+  border: 0;
+  background: none;
+}
+.b-page .paper-wrap {
+  width: min(1120px, calc(100% - 40px));
+}
+.b-page .sec-head {
+  display: grid;
+  justify-items: center;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.b-page .sec-head .paper-lead {
+  margin-top: 8px;
+  color: var(--b-ink-2) !important;
+}
+
+/* ── Hero: the promise centred, the product working under it ─────────────── */
+.b-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: calc(60px + 64px) 0 88px;
+}
+.b-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--g-rule);
+}
+.b-hero__grid {
+  display: grid;
+  justify-items: center;
+  gap: 56px;
+}
+.b-hero__copy {
+  display: grid;
+  justify-items: center;
+  max-width: 760px;
+  text-align: center;
+}
+.b-hero h1 {
+  margin: 0;
+  color: var(--b-ink);
+  font-size: var(--b-h1);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+.b-hl {
+  display: block;
+  background: var(--g-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.b-hero__kicker {
+  max-width: 34em;
+  margin: 18px 0 0;
+  color: var(--b-ink-2);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.b-hero__kicker kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--v-200);
+  border-radius: 6px;
+  background: var(--v-100);
+  color: var(--b-ink);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.b-hero__cta {
+  display: grid;
+  justify-items: center;
+  margin-top: 28px;
+}
+.b-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 18px;
+}
+.b-hero .paper-join {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  min-height: 0;
+  padding: 0 22px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--b-cta) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 6px 16px -8px rgb(74 47 196 / 0.7) !important;
+  transition: transform 200ms var(--b-ease-hover), background-color 200ms var(--b-ease-hover);
+}
+.b-hero .paper-join:hover {
+  background: var(--v-700) !important;
+  transform: translateY(-1px);
+}
+.b-hero .paper-join:active {
+  transform: scale(var(--m-scale-press));
+}
+.b-hero__try {
+  padding: 0 6px;
+  color: var(--b-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--v-300);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 200ms var(--b-ease-hover);
+}
+.b-hero__try:hover {
+  text-decoration-color: var(--v-600);
+}
+.b-hero__trust,
+.b-hero__fine {
+  max-width: 34rem;
+  margin: 16px 0 0;
+  color: var(--b-ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.b-hero__trust a,
+.b-hero__fine a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.b-hero__phone {
+  width: min(420px, 100%);
+  margin-top: 26px;
+}
+.b-hero__email {
+  display: grid;
+  gap: 10px;
+}
+.b-hero__email input {
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--v-200);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--b-ink);
+  font-size: 16px;
+}
+.b-hero__email input::placeholder {
+  color: var(--b-mute);
+  opacity: 1;
+}
+.b-hero__error {
+  margin: 10px 0 0;
+  color: #a1253a;
+  font-size: 14px;
+}
+.b-hero a:focus-visible,
+.b-hero button:focus-visible,
+.b-hero input:focus-visible {
+  outline: 3px solid var(--v-600);
+  outline-offset: 3px;
+}
+.b-hero__demo {
+  width: 100%;
+}
+
+/* The stage: the ribbon behind, the editor on the left, the real panel overlapping its right edge. */
+.b-stage {
+  position: relative;
+  height: 600px;
+}
+.b-ribbon {
+  position: absolute;
+  z-index: -1;
+  left: -30vw;
+  right: -30vw;
+  top: -260px;
+  bottom: -200px;
+  pointer-events: none;
+}
+.b-ribbon i {
+  position: absolute;
+  top: -30%;
+  height: 160%;
+  transform: rotate(24deg);
+}
+.b-ribbon__1 {
+  left: 30%;
+  width: 640px;
+  background: var(--g-ribbon);
+}
+.b-ribbon__2 {
+  left: calc(30% + 330px);
+  width: 300px;
+  background: var(--g-warm);
+}
+.b-ribbon__3 {
+  left: calc(30% + 470px);
+  width: 520px;
+  background: var(--g-deep);
+}
+.b-editor {
+  position: absolute;
+  z-index: 1;
+  left: 2%;
+  top: 72px;
+  width: 58%;
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: #141414;
+  color: #e9e9e4;
+  overflow: hidden;
+  box-shadow: var(--b-float);
+}
+.b-editor__path {
+  margin-bottom: 14px;
+  color: #a9a8a2;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.b-code {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.75;
+  white-space: pre;
+}
+.b-code__kw {
+  color: var(--v-300);
+}
+/* The selection: a lime bar behind each line's text (scaleX from the left), with ink text on it. */
+.b-code__line {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: max-content;
+  color: #141414;
+}
+.b-code__line::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 -3px;
+  border-radius: 2px;
+  background: var(--b-lime);
+  transform-origin: left center;
+}
+.b-code__line .b-code__kw {
+  color: var(--v-700);
+}
+.b-keys {
+  display: flex;
+  gap: 6px;
+  margin-top: 18px;
+}
+.b-keys kbd {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 #000;
+}
+.b-stage__panel {
+  position: absolute;
+  z-index: 2;
+  right: 2%;
+  top: 0;
+  width: 40%;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: var(--b-float);
+}
+
+/* The loop (lib/demoLoop.ts). "done" is the resting frame and the server HTML. */
+@media (prefers-reduced-motion: no-preference) {
+  .b-code__line,
+  .b-code__line .b-code__kw {
+    transition: color 180ms var(--b-ease-hover) calc(var(--line) * 60ms);
+  }
+  .b-code__line::before {
+    transition: transform 160ms var(--b-ease-hover) calc(var(--line) * 60ms);
+  }
+  .b-stage__panel {
+    transition: opacity 600ms var(--b-ease-load), transform 600ms var(--b-ease-load);
+  }
+  .b-stage[data-phase="reset"] .b-code__line {
+    color: #e9e9e4;
+    transition-delay: 0ms;
+  }
+  .b-stage[data-phase="reset"] .b-code__line .b-code__kw {
+    color: var(--v-300);
+    transition-delay: 0ms;
+  }
+  .b-stage[data-phase="reset"] .b-code__line::before {
+    transform: scaleX(0);
+    transition-delay: 0ms;
+  }
+  .b-stage:is([data-phase="reset"], [data-phase="select"], [data-phase="keys"]) .b-stage__panel {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    transition-duration: 300ms;
+  }
+  .b-stage[data-phase="keys"] .b-keys kbd {
+    animation: bKey 120ms var(--b-ease-hover) calc(var(--key) * 120ms) both;
+  }
+  /* The ribbon drifts a little, slowly, only while the hero is on screen. */
+  .b-ribbon {
+    animation: bDrift 16s ease-in-out infinite alternate;
+  }
+  .b-stage[data-in="false"] .b-ribbon {
+    animation-play-state: paused;
+  }
+}
+@keyframes bKey {
+  50% {
+    transform: scale(var(--m-scale-press));
+    box-shadow: inset 0 -1px 0 #000;
+  }
+}
+@keyframes bDrift {
+  from {
+    transform: translate3d(-28px, 0, 0);
+  }
+  to {
+    transform: translate3d(28px, -12px, 0);
+  }
+}
+
+/* Load-in: everything but the h1 (the LCP) fades up once, 80 ms apart, Dia's long expo-out. Only with JS
+   (the boot script's `js` class), so no-JS visitors see it all at once. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .b-hero [data-b-in] {
+    animation: bIn 1000ms var(--b-ease-load) both;
+  }
+  .js .b-hero [data-b-in="1"] {
+    animation-delay: 80ms;
+  }
+  .js .b-hero [data-b-in="2"] {
+    animation-delay: 160ms;
+  }
+  .js .b-hero [data-b-in="3"] {
+    animation-delay: 240ms;
+    animation-duration: 1200ms;
+  }
+}
+@keyframes bIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+/* As the page scrolls, the stage settles from a touch smaller to full size (scroll-linked, compositor only). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .b-stage {
+      animation: bSettle linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+  }
+}
+@keyframes bSettle {
+  from {
+    transform: scale(0.94) translateY(24px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ── The statement: "Select it, and Vibe explains …" ─────────────────────── */
+.b-select {
+  margin-top: var(--b-gap);
+}
+.b-select__line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0 0.3em;
+  margin: 0;
+  color: var(--b-ink);
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  text-align: center;
+}
+.b-select__prefix {
+  color: var(--b-mute);
+}
+.b-select__slot {
+  display: inline-grid;
+}
+.b-select__item {
+  position: relative;
+  z-index: 0;
+  grid-area: 1 / 1;
+  justify-self: start;
+  width: max-content;
+  padding: 0 0.12em;
+  opacity: 0;
+  transform: translateY(0.45em);
+}
+.b-select__item::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0.08em 0;
+  border-radius: 6px;
+  background: var(--b-lime);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.b-select__item.is-on {
+  opacity: 1;
+  transform: none;
+}
+.b-select__item.is-on::before {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .b-select__item {
+    transition: opacity 420ms var(--b-ease-load), transform 520ms var(--b-ease-load);
+  }
+  .b-select__item::before {
+    transition: transform 380ms var(--b-ease-hover);
+  }
+  .b-select__item.is-on::before {
+    transition-delay: 260ms;
+  }
+}
+
+/* ── The story (Dia): pinned numbered steps on the left, one real capture per step on the right ── */
+.b-story {
+  margin-top: var(--b-gap);
+}
+.b-story__grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  column-gap: 72px;
+  margin-top: 56px;
+}
+.b-story__steps {
+  position: sticky;
+  top: 110px;
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  align-self: start;
+  display: grid;
+  gap: 30px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.b-story__steps li {
+  position: relative;
+  padding-left: 20px;
+  color: var(--b-mute);
+  transition: color 300ms var(--b-ease-hover);
+}
+.b-story__steps li::before,
+.b-story__steps li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+}
+.b-story__steps li::before {
+  background: var(--b-line);
+}
+/* The active step's rule fills top to bottom. */
+.b-story__steps li::after {
+  background: var(--g-v);
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform 500ms var(--b-ease-load);
+}
+.b-story__num {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.b-story__steps h3 {
+  margin: 4px 0 0;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.b-story__steps p {
+  margin: 6px 0 0;
+  color: inherit;
+  font-size: 15px;
+  transition: color 300ms var(--b-ease-hover);
+}
+.b-story__steps li.is-on {
+  color: var(--b-ink);
+}
+.b-story__steps li.is-on::after {
+  transform: scaleY(1);
+}
+.b-story__steps li.is-on .b-story__num {
+  color: var(--v-700);
+}
+.b-story__steps li.is-on p {
+  color: var(--b-ink-2);
+}
+.b-story__fig {
+  position: relative;
+  isolation: isolate;
+  grid-column: 2;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 56px 0;
+}
+.b-story__fig::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -20px -90px;
+  background: var(--g-field);
+}
+.b-story__fig .b-shot {
+  width: min(440px, 100%);
+}
+.b-story__fig .b-shot--wide {
+  width: 100%;
+}
+/* Each capture settles in as it reaches the middle of the view (scroll-linked where supported). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 901px) {
+    .b-story__fig .b-shot {
+      animation: bShot linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+    .b-story__fig::before {
+      animation: bField linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+  }
+}
+@keyframes bShot {
+  from {
+    opacity: 0.35;
+    transform: translateY(48px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bField {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Section arrivals: every section fades up once as it scrolls in (Arrive stages them below the fold) ── */
+.b-page [data-arrive] > [data-arrive-item] {
+  --arrive-dist: 16px;
+}
+.b-page [data-arrive="go"] > [data-arrive-item] {
+  animation-duration: 700ms;
+  animation-timing-function: var(--b-ease-load);
+  animation-delay: calc(var(--arrive-i) * 90ms);
+}
+
+/* ── Try it ──────────────────────────────────────────────────────────────── */
+.b-page .home-langs {
+  margin-top: 18px;
+  color: var(--b-ink-2);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ── What leaves: the two lists side by side, the notes centred under them ── */
+.b-page .leaves__who,
+.b-page .leaves__foot {
+  border-top: 0;
+  text-align: center;
+  font-size: 15px;
+}
+.b-page .leaves__who {
+  margin-top: 22px;
+}
+.b-page .leaves__col.leaves__panel {
+  border-color: var(--b-line);
+  background: #fff;
+  transition: transform 200ms var(--b-ease-hover);
+}
+@media (hover: hover) {
+  .b-page .leaves__col.leaves__panel:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* ── Home pricing (Dia): the mark centred above the title, Free raised with a gradient top rule ── */
+.b-page #pricing .sec-head::before {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 18px;
+  background: url("/brand/vibe.svg") center / contain no-repeat;
+}
+.b-page .plans-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 360px));
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 44px;
+}
+.b-page .plans-strip__card {
+  position: relative;
+  display: block;
+  padding: 28px 28px 30px;
+  border: 1px solid var(--b-line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: none;
+  transition: transform 250ms var(--b-ease-hover);
+}
+.b-page .plans-strip__card:not(.plans-strip__card--pro) {
+  padding: 36px 28px 40px;
+  border-color: var(--v-200);
+  box-shadow: var(--b-float);
+}
+.b-page .plans-strip__card:not(.plans-strip__card--pro)::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--g-rule-solid);
+}
+@media (hover: hover) {
+  .b-page .plans-strip__card:hover {
+    transform: translateY(-3px);
+  }
+}
+.b-page .plans-strip__tag {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--v-100);
+  color: var(--v-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+.b-page .plans-strip__card--pro .plans-strip__tag {
+  background: #f1f0ec;
+  color: var(--b-ink-2);
+}
+.b-page .plans-strip__card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.b-page .plans-strip__price {
+  margin: 14px 0 0;
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.b-page .plans-strip__price small {
+  color: var(--b-ink-2);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.b-page .plans-strip__note {
+  margin: 22px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--b-line);
+  color: var(--b-ink-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.b-page .plans-strip__list {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--b-ink);
+  font-size: 14px;
+}
+.b-page .plans-strip__list li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.b-page .plans-strip__list li::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--v-500);
+  transform: translateY(-2px);
+}
+.b-page .plans-strip__foot {
+  margin-top: 28px;
+  color: var(--b-ink-2);
+  font-size: 14px;
+  text-align: center;
+}
+.b-page .plans-strip__foot a {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--b-line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--b-ink);
+  font-weight: 550;
+  text-decoration: underline;
+  text-decoration-color: var(--v-300);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: transform 200ms var(--b-ease-hover);
+}
+.b-page .plans-strip__foot a:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Backing: one quiet line ─────────────────────────────────────────────── */
+.b-page .paper-backing .claude-startups {
+  text-align: center;
+}
+.b-page .paper-backing .claude-startups__title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.b-page .paper-backing .claude-startups__copy {
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+/* ── Questions (Dia): a centred title over 1 narrow column ───────────────── */
+.b-page .u-split {
+  display: block !important;
+}
+.b-page .paper-faq {
+  width: min(720px, 100%);
+  margin: 0 auto;
+}
+.b-page .paper-faq summary {
+  min-height: 0;
+  font-size: 17px !important;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+.b-page .paper-faq summary::after {
+  color: var(--v-600) !important;
+}
+.b-page .paper-faq details p {
+  color: var(--b-ink-2);
+  font-size: 15.5px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .b-page .paper-faq details[open] > p {
+    animation: bFade 300ms var(--b-ease-hover) both;
+  }
+}
+@keyframes bFade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── The closing band: deep violet, white type, the install card on it ───── */
+.b-page .paper-install {
+  padding: 104px 0 112px !important;
+  background: var(--g-band);
+  color: #fff;
+}
+.b-page .paper-install h2 {
+  color: #fff !important;
+}
+.b-page .paper-install .sec-head .paper-lead {
+  color: #e6e0ff !important;
+}
+.b-page .paper-install .u-sheet .paper-beta {
+  width: min(900px, 100%) !important;
+  margin-inline: auto;
+  padding: clamp(28px, 4vw, 48px) !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #fff !important;
+  color: var(--b-ink);
+  box-shadow: 0 24px 60px -24px rgb(0 0 0 / 0.55) !important;
+}
+main:has(.b-page) + .paper-footer {
+  border-top: 0;
+}
+
+/* ── The intro (lib/intro.ts; Design's storyboard, 1.0 s) ───────────────── */
+.b-intro {
+  display: none;
+}
+html[data-intro] .b-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--b-ground);
+  pointer-events: none;
+  animation: bIntroOut 400ms var(--b-ease-hover) 600ms both;
+}
+html[data-intro] .b-intro::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  background: var(--g-halo);
+  animation: bIntroHalo 600ms var(--b-ease-load) both;
+}
+.b-intro__lock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  animation: bIntroLift 400ms var(--b-ease-hover) 600ms both;
+}
+.b-intro__mark {
+  animation: bIntroMark 450ms var(--b-ease-load) both;
+}
+.b-intro__body {
+  fill: var(--v-300);
+  stroke: var(--b-ink);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+.b-intro__eye {
+  fill: var(--b-ink);
+}
+.b-intro__glint {
+  fill: #fff;
+}
+.b-intro__word {
+  color: var(--b-ink);
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  animation: bIntroWord 400ms var(--b-ease-load) 150ms both;
+}
+.b-intro__rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--g-rule-solid);
+  transform-origin: 0 50%;
+  animation: bIntroRule 400ms var(--b-ease-load) 200ms both;
+}
+@keyframes bIntroMark {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes bIntroWord {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes bIntroRule {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes bIntroHalo {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes bIntroOut {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes bIntroLift {
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* ── /pricing (Dia): the mark over a centred heading, Free raised, Pro and Teams level ── */
+.paper-pricing .paper-section {
+  padding-block: calc(60px + 64px) 80px !important;
+}
+.paper-pricing .u-sheet {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.paper-pricing .pricing-plans__intro {
+  text-align: center;
+}
+.paper-pricing .pricing-plans__intro::before {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 18px;
+  background: url("/brand/vibe.svg") center / contain no-repeat;
+}
+.paper-pricing .pricing-plans__intro h1 {
+  max-width: 22ch;
+  margin: 0 auto;
+  font-size: var(--b-h1) !important;
+  font-weight: 600 !important;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.paper-pricing .pricing-plans__intro p {
+  display: block;
+  margin-top: 12px;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: var(--b-ink-2);
+  font-size: 16px;
+}
+.paper-pricing .marketing-plan-grid {
+  align-items: center;
+  gap: 24px !important;
+  margin-top: 48px;
+}
+.paper-pricing .marketing-plan-card,
+.paper-pricing .marketing-plan-card.featured {
+  position: relative;
+  padding: 28px !important;
+  border: 1px solid var(--b-line) !important;
+  border-radius: 22px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transform: none;
+  transition: transform 250ms var(--b-ease-hover);
+}
+.paper-pricing .marketing-plan-card:first-child {
+  padding: 36px 28px 40px !important;
+  border-color: var(--v-200) !important;
+  box-shadow: var(--b-float) !important;
+}
+.paper-pricing .marketing-plan-card:first-child::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--g-rule-solid);
+}
+@media (hover: hover) {
+  .paper-pricing .marketing-plan-card:hover {
+    transform: translateY(-3px);
+  }
+}
+.paper-pricing .marketing-plan-card .plan-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  padding: 4px 10px !important;
+  border: 0 !important;
+  border-radius: 99px !important;
+  background: #f1f0ec !important;
+  color: var(--b-ink-2) !important;
+  font-size: 12px !important;
+  font-weight: 600;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.paper-pricing .marketing-plan-card:first-child .plan-badge {
+  background: var(--v-100) !important;
+  color: var(--v-700) !important;
+}
+.paper-pricing .marketing-plan-card h3 {
+  margin-top: 0;
+  font-size: 18px !important;
+  font-weight: 600;
+}
+.paper-pricing .plan-kicker {
+  max-width: calc(100% - 7rem);
+  color: var(--b-ink-2);
+  font-size: 14.5px;
+}
+.paper-pricing .marketing-plan-price {
+  font-size: 44px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.03em;
+}
+.paper-pricing .marketing-plan-per {
+  color: var(--b-ink-2) !important;
+  font-size: 15px !important;
+  letter-spacing: 0;
+}
+.paper-pricing .marketing-plan-card li svg {
+  color: var(--v-600);
+}
+.paper-pricing .pricing-button {
+  border-radius: 10px !important;
+}
+.paper-pricing .pricing-button:not(.pricing-button--quiet) {
+  border-color: var(--b-cta) !important;
+  background: var(--b-cta) !important;
+  color: #fff !important;
+}
+.paper-pricing .pricing-disclosure {
+  margin-top: 24px;
+  color: var(--b-ink-2);
+  font-size: 14px;
+  text-align: center;
+}
+/* The plans arrive once, 90 ms apart. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .paper-pricing .marketing-plan-card {
+    animation: bIn 800ms var(--b-ease-load) both;
+  }
+  .js .paper-pricing .marketing-plan-card:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .js .paper-pricing .marketing-plan-card:nth-child(3) {
+    animation-delay: 180ms;
+  }
+}
+
+/* ── Reduced motion: no intro, no fades; the demo shows its finished frame, every step is ink. ── */
+@media (prefers-reduced-motion: reduce) {
+  html[data-intro] .b-intro {
+    display: none;
+  }
+  .b-story__steps li,
+  .b-story__steps li p {
+    color: var(--b-ink);
+    transition: none;
+  }
+  .b-story__steps li p {
+    color: var(--b-ink-2);
+  }
+  .b-story__steps li::after {
+    transform: none;
+    transition: none;
+  }
+  /* Every ending of the statement, listed. */
+  .b-select__slot {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 0.3em;
+  }
+  .b-select__item {
+    opacity: 1;
+    transform: none;
+  }
+  .b-select__item::before {
+    transform: none;
+  }
+}
+
+/* ── Phones and narrow windows ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .b-story__grid {
+    display: flex;
+    flex-direction: column;
+    margin-top: 32px;
+  }
+  .b-story__steps {
+    display: contents;
+  }
+  .b-story__steps li {
+    margin-top: 36px;
+    color: var(--b-ink);
+  }
+  .b-story__steps li::after {
+    transform: none;
+  }
+  .b-story__steps li .b-story__num {
+    color: var(--v-700);
+  }
+  .b-story__steps li p {
+    color: var(--b-ink-2);
+  }
+  .b-story__steps li:nth-child(1) { order: 1; }
+  .b-story__steps li:nth-child(2) { order: 3; }
+  .b-story__steps li:nth-child(3) { order: 5; }
+  .b-story__steps li:nth-child(4) { order: 7; }
+  .b-story__fig {
+    padding: 28px 0 8px;
+  }
+  .b-story__fig::before {
+    inset: 0 -20px;
+  }
+  .b-story__fig[data-step="0"] { order: 2; }
+  .b-story__fig[data-step="1"] { order: 4; }
+  .b-story__fig[data-step="2"] { order: 6; }
+  .b-story__fig[data-step="3"] { order: 8; }
+  .b-story__fig .b-shot {
+    width: 86%;
+  }
+  .b-story__fig .b-shot--wide {
+    width: 100%;
+  }
+  .b-page .plans-strip {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .b-stage {
+    height: 520px;
+  }
+  .b-code {
+    font-size: 13px;
+  }
+}
+@media (max-width: 720px) {
+  .b-hero {
+    padding: calc(60px + 40px) 0 56px;
+  }
+  .b-hero__grid {
+    gap: 36px;
+  }
+  .b-hero__kicker {
+    font-size: 16px;
+  }
+  .b-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .b-hero__cta {
+    width: 100%;
+  }
+  .b-hero .paper-join,
+  .b-hero .b-btn {
+    justify-content: center;
+    width: 100%;
+  }
+  .b-hero__try {
+    text-align: center;
+  }
+  .b-stage {
+    height: auto;
+    padding-top: 8px;
+  }
+  .b-editor,
+  .b-stage__panel {
+    position: static;
+  }
+  .b-editor {
+    width: 100%;
+    padding: 18px;
+  }
+  .b-code {
+    font-size: 10.5px;
+  }
+  .b-stage__panel {
+    position: relative;
+    width: 86%;
+    margin: -24px 0 0 auto;
+  }
+  .b-ribbon {
+    left: -40vw;
+    right: -40vw;
+    top: 40px;
+    bottom: -60px;
+  }
+  .b-ribbon i {
+    top: 0;
+    height: 100%;
+  }
+  .b-ribbon__1 {
+    left: 8%;
+    width: 420px;
+  }
+  .b-ribbon__2 {
+    left: calc(8% + 220px);
+    width: 200px;
+  }
+  .b-ribbon__3 {
+    left: calc(8% + 320px);
+    width: 360px;
+  }
+  .b-select__line {
+    flex-direction: column;
+    align-items: center;
+  }
+  .b-select__item {
+    justify-self: center;
+  }
+  .b-page .plans-strip__price,
+  .paper-pricing .marketing-plan-price {
+    font-size: 38px !important;
+  }
+  .b-page .paper-install {
+    padding: 72px 0 80px !important;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-intro] .b-intro,
+  .b-ribbon,
+  .b-story__fig::before {
+    display: none;
+  }
+  .b-hl {
+    background: none;
+    color: CanvasText;
+  }
+  .b-code__line::before,
+  .b-select__item::before {
+    background: Highlight;
+  }
+}

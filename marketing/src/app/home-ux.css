@@ -80,15 +80,3 @@
   .who-panel { grid-template-columns: minmax(0, 1fr); }
   .who-panel__item + .who-panel__item { border-left: 0; border-top: 1px solid rgb(20 20 20 / 0.14); }
 }
-
-/* ── Where it sticks (HowItWorks, ledger 466): the app's five screens in one row of frosted panes on the plate,
-   labelled only. Two columns on a phone, the fifth centred. ── */
-.hiw-rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(0.6rem, 1.4vw, 1rem); align-items: start; margin: 0; padding: 0; list-style: none; }
-.hiw-rail__item { min-width: 0; padding: 0.5rem; border: 1px solid var(--u-line); border-radius: var(--u-radius-card); background: var(--u-card); }
-.hiw-rail__item figure { display: grid; gap: 0.5rem; margin: 0; }
-.hiw-rail__item img { display: block; width: 100%; height: auto; border-radius: 12px; }
-.hiw-rail__item figcaption { color: var(--u-text); font: 600 14px/1.4 var(--font-sans); text-align: center; }
-@media (max-width: 759px) {
-  .hiw-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hiw-rail__item:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - clamp(0.6rem, 1.4vw, 1rem) / 2); }
-}

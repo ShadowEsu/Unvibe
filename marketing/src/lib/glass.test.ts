@@ -36,11 +36,13 @@ describe("home surfaces", () => {
     assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
-  it("the hero still is the real 0.1.48 frame with its size and a description", () => {
+  // Security (469 vote): the scripted hero shows no invented output. The panel screenshot says "7 lines" of
+  // this debounce, so the editor beside it must select exactly those 7 lines, and the panel must be that file.
+  it("the hero demo selects the same 7 lines the real panel screenshot explains", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
-    const still = html.slice(html.indexOf('<figure class="vhero__still">'), html.indexOf("</figure>"));
-    assert.match(still, /src="\/product\/unvibe-0148-debounce-1180\.webp"/);
-    assert.match(still, /width="1180" height="846"/);
-    assert.match(still, /alt="Unvibe 0\.1\.48 explaining a debounce function beside the code\."/);
+    const hero = html.slice(html.indexOf('<section class="b-hero"'), html.indexOf("</section>"));
+    assert.equal((hero.match(/class="b-code__line"/g) ?? []).length, 7);
+    assert.match(hero, /function<\/span> debounce\(fn, wait\) \{/);
+    assert.match(hero, /src="\/unvibe\/real\/panel-explained-top\.webp" width="880" height="1131"/);
   });
 });
