@@ -198,6 +198,16 @@ export const languages: Language[] = [
     sample: `SELECT name FROM users WHERE active;`,
   },
   {
+    id: "graphql",
+    name: "GraphQL",
+    categories: ["web", "backend"],
+    blurb: "Queries that ask an API for exactly the fields you need, in the shape you want them back.",
+    concepts: ["fields", "variables and defaults", "arguments", "fragments"],
+    frameworks: ["graphql-js", "Apollo", "GitHub GraphQL API", "Relay"],
+    learningPath: ["Fields", "Arguments", "Variables", "Fragments"],
+    sample: `query { orders(first: 2) { id total } }`,
+  },
+  {
     id: "git-log",
     name: "git log",
     categories: ["systems", "scripting"],

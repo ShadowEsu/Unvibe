@@ -31,6 +31,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   javascript: "/og/og-explain-javascript-f8878f58.png",
   typescript: "/og/og-explain-typescript-9328f8c2.png",
   sql: "/og/og-explain-sql-0d9df631.png",
+  graphql: "/og/og-explain-graphql-6bd3229b.png",
   "git-log": "/og/og-explain-git-log-a16206ef.png",
   bash: "/og/og-explain-bash-f04ec8df.png",
   powershell: "/og/og-explain-powershell-c4ef5527.png",

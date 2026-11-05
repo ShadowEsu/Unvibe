@@ -558,6 +558,62 @@ ORDER BY spend_rank, c.name;`,
       "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
   },
   {
+    id: "graphql",
+    fileName: "query.graphql",
+    lead: "Paste a GraphQL query and Vibe explains what it asks the server for: which fields come back, what each variable and argument does and how a fragment fits in.",
+    description:
+      "Paste a GraphQL query and get it explained in plain English, free online. The sample asks an orders API for open orders with their customer and items, using variables, a default value and a fragment.",
+    sampleSummary: "A named GraphQL query with two variables, one with a default: it asks for orders with their id, total, customer name and items, plus the signed-in user's name and email through a fragment.",
+    sample: `# query.graphql: ask an orders API for exactly the fields this page shows.
+query OpenOrders($status: Status = OPEN, $first: Int!) {
+  orders(status: $status, first: $first) {
+    id
+    total
+    customer {
+      name
+    }
+    items {
+      name
+      qty
+    }
+  }
+  me {
+    ...UserBits
+  }
+}
+
+fragment UserBits on User {
+  name
+  email
+}`,
+    shows: [
+      {
+        concept: "fields",
+        text: "A query lists the fields it wants, and the reply has the same shape with only those fields. Run against a test schema, each order came back with just `id`, `total`, `customer.name` and `items`; asking for only `id` returned `{ \"id\": \"1001\" }` and nothing else.",
+      },
+      {
+        concept: "variables and defaults",
+        text: "`$status` and `$first` are filled in from a separate JSON object sent with the query. `Int!` means required, and `= OPEN` is a default: with only `{\"first\": 2}`, the reply held two open orders, 1001 and 1003, and skipped the shipped 1002. Sending `\"status\": \"SHIPPED\"` returned 1002.",
+      },
+      {
+        concept: "arguments",
+        text: "Values in parentheses after a field, such as `orders(status: $status, first: $first)`, are arguments the server uses to pick what to return. Here they filter by status and cap how many orders come back.",
+      },
+      {
+        concept: "fragments",
+        text: "`fragment UserBits on User` is a reusable list of fields for a `User`, and `...UserBits` pastes it in. `me` came back with `name` and `email`, as if they were written there.",
+      },
+    ],
+    notes: [
+      "Run with graphql-js 17.0.2 against a small test schema of orders, items and users, with made-up data.",
+      "The server checks every field name: asking for `price` gave `Cannot query field \"price\" on type \"Order\".`",
+      "A field that holds an object needs its own list of fields. `customer` on its own gave `Field \"customer\" of type \"User!\" must have a selection of subfields. Did you mean \"customer { ... }\"?`",
+      "A field without `!` in the schema can come back `null`: the second customer's `email` did.",
+    ],
+    watchOut:
+      "A required variable left out stops the whole query. Sent without `$first`, it returned no data, only `Variable \"$first\" has invalid value: Expected a value of non-null type \"Int!\" to be provided.` Enum values are case-sensitive too: `\"shipped\"` was refused with `Did you mean the enum value \"SHIPPED\"?`",
+  },
+  {
     id: "git-log",
     fileName: "git-log.txt",
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
