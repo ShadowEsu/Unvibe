@@ -65,14 +65,14 @@ async function errorOf(response: Response): Promise<string> {
 }
 
 test('gift code is an HMAC of the normalized giver email, not a public hash', () => {
-  const code = giftCodeForEmail('Preston@Unvibe.site', SECRET);
+  const code = giftCodeForEmail('Sam@Example.com', SECRET);
   assert.equal(code.length, GIFT_CODE_LENGTH);
   assert.ok(GIFT_CODE_LENGTH >= 12);
   assert.match(code, /^[A-Za-z0-9_-]+$/);
-  assert.equal(code, giftCodeForEmail(' preston@unvibe.site ', SECRET));
-  assert.notEqual(code, giftCodeForEmail('preston@unvibe.site', `${SECRET}-other`));
+  assert.equal(code, giftCodeForEmail(' sam@example.com ', SECRET));
+  assert.notEqual(code, giftCodeForEmail('sam@example.com', `${SECRET}-other`));
   assert.notEqual(code, giftCodeForEmail('other@unvibe.site', SECRET));
-  const sha = createHash('sha256').update('preston@unvibe.site').digest('hex');
+  const sha = createHash('sha256').update('sam@example.com').digest('hex');
   assert.ok(!sha.startsWith(code.slice(0, 8)));
 });
 

@@ -1,6 +1,6 @@
 # Desktop cleanup — September 19, 2026
 
-Source: active checkout `/Users/prestonjaysusanto/Unvibe/Unvibe`, based on f4babe3. The outer checkout is older and was not edited. Marketing is untouched.
+Source: active checkout `~/Unvibe/Unvibe`, based on f4babe3. The outer checkout is older and was not edited. Marketing is untouched.
 
 The latest user request supersedes older requirements for purple controls and keeping the Island within the menu bar: use neutral chrome, restrained San Francisco color, readable system-font controls, spacious lists, and a camera-safe Island below the menu bar. Keep Newsreader for editorial headings and monospace for code.
 

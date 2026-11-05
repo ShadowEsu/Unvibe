@@ -69,7 +69,7 @@ describe("reward links", () => {
   });
 });
 
-// Moved here from the deleted beta email test: Design's detect pass and Preston's no-italics rule (4 Nov).
+// Moved here from the deleted beta email test: Design's detect pass and the no-italics rule (4 Nov).
 describe("welcome email: no emoji, upright type", () => {
   const html = welcomeHtml(input);
   const text = welcomeText(input);

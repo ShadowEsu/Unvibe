@@ -1,5 +1,5 @@
 /**
- * Consent before the user's own content leaves this computer (Preston, BOSS ledger 299; Security's
+ * Consent before the user's own content leaves this computer (owner, BOSS ledger 299; Security's
  * consent audit U6, U7, U14, U15, U19, U20, U21, U36; gate conditions CC-1 to CC-7).
  *
  * Three separate, unticked agreements, all required before Unvibe sends any code, diff or question

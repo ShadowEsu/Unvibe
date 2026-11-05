@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Makes a random Try it room code and the row to commit in web/src/lib/tryRooms.ts (TRY_ROOMS).
 //
-//   TRY_ROOM_KEY_FILE=~/.config/preston-secrets/try-room-key node web/scripts/try-room-code.mjs \
+//   TRY_ROOM_KEY_FILE=~/.config/<secrets-dir>/try-room-key node web/scripts/try-room-code.mjs \
 //     --id 2026-11-03-a --start 2026-11-03T18:00:00-08:00 --hours 2 --per-hour 60
 //
 // The key is read from a file only readable by its owner (mode 600), so it never lands in shell

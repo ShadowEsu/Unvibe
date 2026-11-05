@@ -674,7 +674,7 @@ header, main, footer, .admin-shell {
   .product-story__visual { min-height: 270px; margin: 12px; }
 }
 
-/* One light theme for every visitor (Preston, 27 Oct): no automatic or chosen dark theme. */
+/* One light theme for every visitor (owner, 27 Oct): no automatic or chosen dark theme. */
 html {
   color-scheme: light;
 }

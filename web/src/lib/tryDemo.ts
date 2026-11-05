@@ -88,7 +88,7 @@ const LEVEL_GUIDE: Record<TryLevel, string> = {
   expert: 'The reader is an expert. Be dense and precise: complexity, failure modes, design choices.',
 };
 
-/** Short, like the app's default answer (Preston 2026-11-02): 2 to 4 plain sentences, then an honest "Not sure:" line when needed. */
+/** Short, like the app's default answer (owner 2026-11-02): 2 to 4 plain sentences, then an honest "Not sure:" line when needed. */
 export function trySystemPrompt(level: TryLevel): string {
   return [
     'You are Vibe, the friendly tutor inside Unvibe. Say what the snippet the user pasted does.',

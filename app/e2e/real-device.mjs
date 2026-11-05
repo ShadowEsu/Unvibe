@@ -188,7 +188,7 @@ const setupSteps = os === 'windows' ? 3 : 4;
 try {
   await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
-  await companion.getByPlaceholder('Your name').fill('Preston Test');
+  await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
   await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');

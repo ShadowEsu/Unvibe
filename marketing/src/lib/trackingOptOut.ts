@@ -6,7 +6,7 @@
  * - Automated browsers (Playwright, Selenium; `navigator.webdriver === true`): our own CI
  *   device test and site sweeps were about a third of tracked visitors in October 2026.
  * - Anyone who opts out: `?notrack=1` on any page stores the choice in this browser,
- *   `?notrack=0` clears it. For Preston's and agents' own devices.
+ *   `?notrack=0` clears it. For the team's own devices.
  */
 
 import { browserAnalyticsConsent } from "@/lib/analyticsConsent";
