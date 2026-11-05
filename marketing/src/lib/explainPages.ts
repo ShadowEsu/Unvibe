@@ -1220,7 +1220,7 @@ PROMPT='%F{blue}%~%f %# '`,
       },
       {
         concept: "history and options",
-        text: "`HISTSIZE` is how many commands a session keeps and `SAVEHIST` how many are saved to `HISTFILE` when it closes. `setopt` turns on zsh options: `SHARE_HISTORY` lets every open terminal see the others' commands, and `HIST_IGNORE_DUPS` skips a command typed twice in a row. `setopt` listed both as `sharehistory` and `histignoredups`.",
+        text: "`HISTSIZE` is how many commands a session keeps in memory and `SAVEHIST` how many the history file keeps. With `SHARE_HISTORY` on, each command is written to `HISTFILE` as you type it, so every open terminal sees the others' commands, and `HIST_IGNORE_DUPS` skips a command typed twice in a row. `setopt` listed both as `sharehistory` and `histignoredups`.",
       },
       {
         concept: "path and typeset -U",
