@@ -170,7 +170,7 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
             {"  "}<span className="k">return</span> (...args) =&gt; {"{"}{"\n"}
             <Selected line={1} text="    clearTimeout(timer);" />{"\n"}
             <Selected line={2} text="    timer = setTimeout(() => fn(...args), wait);" />{"\n"}
-            {"  "};{"\n"}
+            {"  };\n"}
             {"}"}
           </pre>
           <div className="ndemo__keys">
@@ -273,7 +273,7 @@ export function PhotoHero() {
             "Unvibe is a free app for Mac and Windows. Select code on your computer, press one shortcut, and Vibe explains it beside your editor."
           ) : (
             <>
-              Unvibe is a free app for Mac and Windows. Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it beside your editor.
+              Unvibe is a free app for Mac and Windows. Select code in any app, press <span className="nhero__nowrap"><kbd>{shortcut}</kbd>,</span> and Vibe explains it beside your editor.
             </>
           )}
         </p>
