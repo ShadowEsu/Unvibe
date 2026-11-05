@@ -1348,9 +1348,9 @@ jobs:
   {
     id: "env",
     fileName: ".env",
-    lead: "Paste a .env file and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
+    lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
     description:
-      "Paste a .env file and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
+      "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
     sampleSummary: "A .env file for running a web shop on your own machine: the port, a database URL, a test API key, quoted values, a comment after a value and one value built from another.",
     sample: `# Settings for running the shop on your own machine.
 # Copy .env.example to .env, fill in your values, and keep .env out of git.
@@ -1390,6 +1390,7 @@ APP_URL=http://localhost:\${PORT}`,
       },
     ],
     notes: [
+      "This box sends what you paste to Unvibe and Anthropic, and only common key formats are refused, so paste your .env.example or swap each real value for a placeholder first.",
       "Run with Node 25.7.0 (`--env-file`) and python-dotenv 1.2.4 on this file: both read the same values, apart from `APP_URL` (see below).",
       "A missing file stops Node before your code runs: `node --env-file=.env.missing` printed `node: .env.missing: not found` and exited with code 9. `--env-file-if-exists` printed `.env.missing not found. Continuing without it.` and ran.",
       "Keep the real .env out of git and commit a `.env.example` with the same names and placeholder values, so others know which settings to fill in.",
