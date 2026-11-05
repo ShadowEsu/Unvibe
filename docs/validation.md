@@ -65,7 +65,7 @@ Chrome DevTools Protocol against the running Electron app, mock AI):
 - **Floating bar** renders bottom-center (dimmed idle state confirmed by screenshot).
 - **Companion app** — Wispr-Flow-style shell confirmed by screenshot: sidebar (9 sections +
   Invite/Free month/Settings/Help), serif-italic hero banner, right-rail stats, dashed
-  empty feed, beta card, settings modal. Real first name resolved ("Preston").
+  empty feed, beta card, settings modal. Real first name resolved (the test account's).
 - **Streaming widget E2E**: clipboard code → main-process secret scan → SSE from the
   `web/` backend → token-streamed explanation rendered with 5 level pills, action chips
   (Got it / Explain differently / Test me·D2), follow-up input, honest "mock AI" label.

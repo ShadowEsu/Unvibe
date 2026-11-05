@@ -48,7 +48,7 @@ export function stripeIsConfigured(): boolean {
 }
 
 /**
- * Checkout stays closed until Preston opens it (Security L3, 2 Nov):
+ * Checkout stays closed until the owner opens it (Security L3, 2 Nov):
  * - a live key (restricted `rk_live_` only, see `stripeKeyMode`) opens checkout only on the production
  *   deployment, and only with UNVIBE_CHECKOUT_LIVE set to exactly `1` (nothing else truthy, no trimming);
  *   a preview or a local server with a live key is always closed;
@@ -79,7 +79,7 @@ export function webhookConfigured(): boolean {
 }
 
 /**
- * Stripe Tax on Checkout (Preston, ledger 415): off until he has turned Stripe Tax on in the Dashboard and
+ * Stripe Tax on Checkout (owner, ledger 415): off until Stripe Tax is turned on in the Dashboard and
  * STRIPE_AUTOMATIC_TAX is set to exactly `1`. A returning customer's address is saved back to the customer,
  * which Stripe needs to calculate tax for an existing customer.
  */
@@ -91,7 +91,7 @@ export function automaticTax(reusesCustomer: boolean): Pick<Stripe.Checkout.Sess
 /**
  * Terms of Service consent on Checkout (Security L6), with a live key only: Stripe refuses
  * `consent_collection.terms_of_service` until the account's public details carry a Terms URL, which
- * Preston sets on the live account; the sandbox has none, so sandbox checkout sends nothing here.
+ * the owner sets on the live account; the sandbox has none, so sandbox checkout sends nothing here.
  */
 export function termsConsent(): Pick<Stripe.Checkout.SessionCreateParams, 'consent_collection'> {
   return stripeKeyMode(process.env.STRIPE_SECRET_KEY) === 'live' ? { consent_collection: { terms_of_service: 'required' } } : {};
@@ -107,7 +107,7 @@ export function checkoutOpen(): boolean {
   return stripeIsConfigured() && !paymentsLocked();
 }
 
-/** Pro Lifetime is hidden unless explicitly enabled (pending Preston's keep/drop decision). */
+/** Pro Lifetime is hidden unless explicitly enabled (pending the owner's keep/drop decision). */
 export function lifetimeCheckoutOpen(): boolean {
   return checkoutOpen() && Boolean(process.env.STRIPE_PRICE_PRO_LIFETIME?.trim()) && process.env.BILLING_LIFETIME_ENABLED?.trim() === 'true';
 }

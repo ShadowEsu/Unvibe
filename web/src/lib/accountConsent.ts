@@ -24,7 +24,7 @@ export function accountAgreement(body: unknown): AccountAgreement | null {
   return { kinds: ['terms', 'age_18'], policyVersion: ACCOUNT_POLICY_VERSION };
 }
 
-/** Rows go to public.consents only once Preston has applied that migration and set CONSENTS_TABLE=on. */
+/** Rows go to public.consents only once the owner has applied that migration and set CONSENTS_TABLE=on. */
 export function consentsTableOn(): boolean {
   return process.env.CONSENTS_TABLE === 'on';
 }

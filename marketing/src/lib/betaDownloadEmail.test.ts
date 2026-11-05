@@ -31,7 +31,7 @@ describe("beta waitlist invite email", () => {
   });
 });
 
-describe("beta emails: no emoji, upright type (Design detect pass and Preston's no-italics rule, 4 Nov)", () => {
+describe("beta emails: no emoji, upright type (Design detect pass and the no-italics rule, 4 Nov)", () => {
   const download = { firstName: "Ohm", macDownloadUrl: "https://example.com/unvibe.zip", unsubscribeUrl: UNSUBSCRIBE };
   const texts = [betaInviteText("Ohm", UNSUBSCRIBE), betaDownloadText(download)];
   const htmls = [betaInviteHtml("Ohm", UNSUBSCRIBE), betaDownloadHtml(download)];

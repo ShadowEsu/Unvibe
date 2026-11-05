@@ -126,7 +126,7 @@ Unvibe is a Mac overlay that explains AI-written code in your editor so you can 
 
 Worth a look if the bottleneck is understanding, not generating.
 
-Preston
+{sender}
 Unvibe
 
 Prospect list: research via CMO outreach skill in-window; do not send outside Sat 09:30–12:30 America/Los_Angeles; cap 10.

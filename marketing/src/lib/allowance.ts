@@ -6,7 +6,7 @@
  *   questions. Nothing resets for unsigned use.
  * - signed in, Free: 50 explanations a month (web/src/billing/plans.ts free.ai_explanation).
  * - Pro: 200 AI explanations a month (plans.ts pro.ai_explanation; plan_entitlements, applied 2 Nov;
- *   Preston ledger 417). Worded as the Terms say it.
+ *   ledger 417). Worded as the Terms say it.
  */
 export const ALLOWANCE = {
   trialExplanations: 50,

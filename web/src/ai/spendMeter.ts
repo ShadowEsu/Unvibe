@@ -4,7 +4,7 @@ import { noStoreFetch } from '@/lib/serviceSupabase';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
- * Hard spend stops for the hosted AI (Preston 2026-11-02, via BOSS): the Anthropic key may spend $50
+ * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS): the Anthropic key may spend $50
  * per calendar month; Unvibe's share is $25 per UTC calendar month, with a $5 per UTC day guard (a
  * fifth of the month) so one bad day can't burn the month, and a $1 per UTC day share per account (a
  * fifth of the day guard) so one account can't use up the day for everyone. Counted on the database
