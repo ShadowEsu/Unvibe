@@ -6,6 +6,8 @@ import sitemap from "@/app/sitemap";
 import { TryIt } from "@/components/paper/TryIt";
 import { EXPLAIN_PATHS, explainLanguage, explainPages } from "./explainPages";
 import { languages } from "./languages";
+// The API's own check (marketing can't import web through "@/"; this file only needs node:crypto).
+import { looksSecret } from "../../../web/src/lib/tryDemo";
 
 // tsx compiles the components' JSX to React.createElement (tsconfig has jsx: preserve for Next),
 // so rendering them here needs React in scope.
@@ -94,5 +96,11 @@ describe("the Try it box", () => {
       assert.equal(textareaText(html), page.sample, page.id);
       assert.ok(html.includes(`<span>${page.fileName}</span>`), page.id);
     }
+  });
+
+  it("never preloads a sample the API would refuse as a secret", () => {
+    // A refused sample breaks that page's one-click Explain: the visitor sees "looks like it has a key".
+    assert.equal(looksSecret(HOME_SAMPLE), false, "home");
+    for (const page of explainPages) assert.equal(looksSecret(page.sample), false, page.id);
   });
 });

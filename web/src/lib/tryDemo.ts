@@ -38,8 +38,36 @@ const SECRET_PATTERNS: RegExp[] = [
   /(password|passwd|secret|api[_-]?key|token)\s*[:=]\s*['"][^'"\s]{8,}['"]/i,
 ];
 
+/**
+ * A .env or config line that hands an unquoted value to a name with KEY, SECRET, TOKEN or PASS in it,
+ * such as `PAYMENTS_API_KEY=3f9a...` or `db_password: hunter2hunter2` (Security 0939 E2). The value is a
+ * run of 8+ characters with at least one letter and one digit and nothing that reads as code or a
+ * reference (`$`, brackets, quotes), then the end of the line or a `#` comment. Placeholders such as
+ * `replace-with-your-test-key` have no digit and pass; so do `API_KEY = os.environ["API_KEY"]` and
+ * `token = getToken()`.
+ */
+const UNQUOTED_SECRET_LINE =
+  /^[ \t]*(?:export[ \t]+)?[A-Za-z0-9_.-]*(?:key|secret|token|passw(?:or)?d|pass)[A-Za-z0-9_.-]*[ \t]*[:=][ \t]*(?=[^\s#]*\d)(?=[^\s#]*[A-Za-z])[A-Za-z0-9+/=_.~!@%^&*-]{8,}[ \t]*(?:#.*)?$/im;
+
+/** Hosts where a password in a URL is a local development one, not a real credential. */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]', 'host.docker.internal']);
+
+/** A placeholder in the password slot of a URL: `<password>`, `${DB_PASS}`, `****`, `xxxx`, `password`. */
+const PLACEHOLDER_PASSWORD = /^(?:<[^>]*>|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|[*x]+|pass(?:word)?|changeme|secret)$/i;
+
+/** `scheme://user:password@host`, unless the host is local or the password is a placeholder (Security 0939 E2). */
+function hasUrlCredentials(code: string): boolean {
+  // An exec loop, not for...of over matchAll: marketing's tests import this file under an older target.
+  const urls = /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@'"]+:([^\s/@'"]+)@(\[[^\]\s]+\]|[^\s:/?#'"]+)/gi;
+  for (let match = urls.exec(code); match; match = urls.exec(code)) {
+    const [, password, host] = match;
+    if (!LOCAL_HOSTS.has(host.toLowerCase()) && !PLACEHOLDER_PASSWORD.test(password)) return true;
+  }
+  return false;
+}
+
 export function looksSecret(code: string): boolean {
-  return SECRET_PATTERNS.some((pattern) => pattern.test(code));
+  return SECRET_PATTERNS.some((pattern) => pattern.test(code)) || UNQUOTED_SECRET_LINE.test(code) || hasUrlCredentials(code);
 }
 
 export function validateTry(input: unknown): { ok: true; code: string; level: TryLevel } | { ok: false; error: string } {
