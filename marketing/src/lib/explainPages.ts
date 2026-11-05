@@ -1956,6 +1956,64 @@ uploads/*
       "`!` can't bring back a file whose folder is left out, because git never looks inside that folder. With `logs/` and then `!logs/keep.txt`, `git status` still didn't list `logs/keep.txt`. Writing `logs/*` leaves out the folder's contents instead of the folder, and then `!logs/keep.txt` worked.",
   },
   {
+    id: "ssh-config",
+    fileName: "config",
+    lead: "Paste an ~/.ssh/config and Vibe explains what each `Host` block sets, which key goes to which server and what ssh actually uses when several blocks match.",
+    description:
+      "Paste an SSH config file and get a plain English explanation, free online. The sample sets keys for two GitHub accounts, a server behind a jump host and defaults for every host.",
+    sampleSummary: "An ~/.ssh/config with two GitHub identities, a staging server reached through a bastion on a custom port, the bastion itself and defaults for every other host.",
+    sample: `# ~/.ssh/config: shortcuts and settings for ssh, scp and git over SSH.
+
+Host github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_github
+    IdentitiesOnly yes
+
+Host work-github
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_work
+    IdentitiesOnly yes
+
+Host staging
+    HostName staging.example.com
+    User deploy
+    Port 2222
+    ProxyJump bastion
+
+Host bastion
+    HostName bastion.example.com
+    User deploy
+
+Host *
+    ServerAliveInterval 60`,
+    shows: [
+      {
+        concept: "Host and HostName",
+        text: "`Host` is the name you type, and `HostName` is the real server. So `ssh staging` goes to `staging.example.com` as `deploy` on port 2222: `ssh -G staging`, which prints the settings ssh would use without connecting, showed `hostname staging.example.com`, `user deploy` and `port 2222`.",
+      },
+      {
+        concept: "keys per host",
+        text: "`IdentityFile` picks the key, and `IdentitiesOnly yes` tells ssh to offer only that one. `work-github` is a second name for github.com with the work key: `ssh -G work-github` showed `hostname github.com` and only `id_ed25519_work`. `git clone git@work-github:acme/app.git` called ssh with `git@work-github`, so the clone used the work key.",
+      },
+      {
+        concept: "jump hosts",
+        text: "`ProxyJump bastion` makes ssh connect to `bastion` first and reach `staging` through it. The bastion's own block applies to that first hop: `ssh -G bastion` showed `hostname bastion.example.com`, `user deploy` and the default port 22.",
+      },
+      {
+        concept: "Host * and first match",
+        text: "`Host *` matches every host, so `ServerAliveInterval 60` showed up for all of them, including a host with no block of its own. With it, after 60 seconds without data from the server, ssh sends a message asking for a reply; the default, 0, never does. For each setting, ssh keeps the first value it reads, which is why the catch-all block goes last.",
+      },
+    ],
+    notes: [
+      "Checked with OpenSSH 10.6 using `ssh -G -F config <host>` on a test home folder: nothing connected anywhere.",
+      "A misspelled option stops ssh before it connects: with `HostNme`, ssh printed `Bad configuration option: hostnme` and `terminating, 1 bad configuration options`.",
+      "Hosts without `IdentitiesOnly yes` got ssh's whole list of default key files, from `~/.ssh/id_rsa` to `~/.ssh/id_ed25519`, plus any keys in your agent. Each key ssh offers counts as a try, and the OpenSSH server's `MaxAuthTries` default is 6, so with many keys the right one can come too late.",
+    ],
+    watchOut:
+      "Put `Host *` first and its values win over everything below it. With a `Host *` block holding `User nobody` at the top of the file, `ssh -G staging` showed `user nobody`, although the `staging` block says `User deploy`. Keep specific hosts at the top and the catch-all at the end.",
+  },
+  {
     id: "perl",
     fileName: "slow_pages.pl",
     lead: "Paste Perl and Vibe explains what each regular expression captures, whether a sigil means one value, a list or a hash, and what a `sort` block compares.",
