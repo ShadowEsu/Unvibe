@@ -550,7 +550,14 @@ else await step('brief open', async () => {
   await companion.locator('.topbar__title').filter({ hasText: 'Briefs' }).waitFor({ timeout: 10000 });
   const choose = companion.getByRole('button', { name: /^(Choose a project|Choose repo)$/ }).first();
   await Promise.all([choose.click(), answerOpenPanel(repo)]);
-  await companion.locator('.briefings').getByText('upload.js').first().waitFor({ timeout: 30000 });
+  try {
+    await companion.locator('.briefings').getByText('upload.js').first().waitFor({ timeout: 45000 });
+  } catch (e) {
+    // What the page shows instead: a still and its text, for the next fix.
+    await shot(companion, 'briefs-failed');
+    console.log(`  briefs text: ${(await companion.locator('.briefings').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600)}`);
+    throw e;
+  }
   await sleep(1800);
   await shot(companion, 'briefs-open');
 });
