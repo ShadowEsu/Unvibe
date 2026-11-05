@@ -348,6 +348,16 @@ export const languages: Language[] = [
     sample: `runs-on: ubuntu-latest`,
   },
   {
+    id: "ini",
+    name: "INI",
+    categories: ["data", "backend"],
+    blurb: "Settings files made of [sections] and name = value lines: app config, setup.cfg and older tools.",
+    concepts: ["sections and keys", "[DEFAULT]", "%(name)s values", "everything is text"],
+    frameworks: ["Python configparser", "setup.cfg", "tox.ini", "php.ini"],
+    learningPath: ["Sections and keys", "Defaults", "Filling in values", "Reading types"],
+    sample: `[server]\nport = 8080`,
+  },
+  {
     id: "json",
     name: "JSON",
     categories: ["web", "data"],
