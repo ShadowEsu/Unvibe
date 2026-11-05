@@ -839,6 +839,58 @@ class Reports {
       "The fallback in `var(--accent, #2563eb)` is used only when `--accent` isn't set at all. A card that sets `--accent: 12px` gets a button with no background: not red, not blue and not the gray from `.buy`, because the browser can't tell the value is wrong until it uses it.",
   },
   {
+    id: "xml",
+    fileName: "catalog.xml",
+    lead: "Paste XML and Vibe explains its structure: which elements hold which, what each attribute adds, and what `&amp;` and `<![CDATA[` are doing there.",
+    description:
+      "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and a CDATA block.",
+    sampleSummary: "An XML product catalog: a root element with a schema reference, two products with attributes, nested tags, an escaped ampersand and a CDATA description.",
+    sample: `<?xml version="1.0" encoding="UTF-8"?>
+<!-- A shop's product list, checked against catalog.xsd -->
+<catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="catalog.xsd"
+         updated="2026-11-05">
+  <product id="mug-blue" inStock="true">
+    <name>Blue mug</name>
+    <price currency="USD">12.50</price>
+    <tags>
+      <tag>kitchen</tag>
+      <tag>gift</tag>
+    </tags>
+  </product>
+  <product id="plate-set" inStock="false">
+    <name>Plates &amp; bowls set</name>
+    <price currency="USD">48.00</price>
+    <description><![CDATA[Fits <b>4 people</b>; dishwasher safe]]></description>
+  </product>
+</catalog>`,
+    shows: [
+      {
+        concept: "elements and nesting",
+        text: "An XML file is one tree: a single root element, here `<catalog>`, with every other element inside it, and each opening tag closed in the right order. Tag names are case-sensitive, so `<Name>Blue mug</name>` stopped the parser with `Opening and ending tag mismatch: Name line 7 and name`.",
+      },
+      {
+        concept: "attributes",
+        text: "Attributes add small facts to an element, in quotes inside its opening tag: `id=\"mug-blue\"`, `inStock=\"true\"`, `currency=\"USD\"`. The XPath query `//product[@inStock=\"true\"]/name/text()` picked out `Blue mug`, and `string(/catalog/@updated)` read `2026-11-05`.",
+      },
+      {
+        concept: "escaping and CDATA",
+        text: "`<` and `&` have jobs in XML, so in text they're written `&lt;` and `&amp;`: `Plates &amp; bowls set` reads back as `Plates & bowls set`. A plain `&` there stopped the parser with `xmlParseEntityRef: no name`. Inside `<![CDATA[ ... ]]>` nothing is read as markup, so the description came back as the text `Fits <b>4 people</b>; dishwasher safe`.",
+      },
+      {
+        concept: "schemas",
+        text: "A schema (.xsd) says which elements may appear, in what order and with what types. Well-formed isn't the same as valid: with the first `<name>` removed, the file still parsed, but the schema check said `Element 'price': This element is not expected. Expected is ( name ).` A price written `12,50` failed with `'12,50' is not a valid value of the atomic type 'xs:decimal'`.",
+      },
+    ],
+    notes: [
+      "Checked with xmllint, libxml2 2.15.3: `xmllint --noout catalog.xml` found no errors, `--schema catalog.xsd` printed `catalog.xml validates`, and XPath counted 2 tags and summed the prices to 60.5.",
+      "`<?xml version=\"1.0\" encoding=\"UTF-8\"?>` is the declaration, and it has to come first. With a comment or even one blank line above it, xmllint stopped with `XML declaration allowed only at the start of the document`.",
+      "In the schema, `id` has the type `xs:ID`, so two products with `id=\"mug-blue\"` failed with `'mug-blue' is not a valid value of the atomic type 'xs:ID'`: each ID can be used once per file.",
+    ],
+    watchOut:
+      "A comment can't contain two hyphens in a row. With `check with xmllint --schema` in the comment on line 2, the whole file failed to parse with `Double hyphen within comment`, before any element was read.",
+  },
+  {
     id: "go",
     fileName: "counts.go",
     lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",

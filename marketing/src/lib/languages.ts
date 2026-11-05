@@ -218,6 +218,16 @@ export const languages: Language[] = [
     sample: `display: grid; gap: 1rem;`,
   },
   {
+    id: "xml",
+    name: "XML",
+    categories: ["web", "data"],
+    blurb: "Tagged data files for feeds, configs, office documents and older APIs.",
+    concepts: ["elements and nesting", "attributes", "escaping and CDATA", "schemas"],
+    frameworks: ["XSD", "XPath", "RSS", "SOAP"],
+    learningPath: ["Elements", "Attributes", "Escaping", "Schemas"],
+    sample: `<product id="mug-blue"><name>Blue mug</name></product>`,
+  },
+  {
     id: "bash",
     name: "Bash",
     categories: ["scripting", "systems"],
