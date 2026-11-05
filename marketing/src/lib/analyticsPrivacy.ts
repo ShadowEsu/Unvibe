@@ -10,7 +10,7 @@
  * - Replays: all page text and every input is masked, so names, emails on admin pages and model
  *   explanations of someone's code never reach a replay. New elements are covered by default.
  * - Autocapture: no element text.
- * - Admin and capability pages (`/founder`, `/waitlist`, `/waitlist-admin`, `/s/…`) and the pages
+ * - Admin and capability pages (`/console`, `/waitlist`, `/waitlist-admin`, `/s/…`) and the pages
  *   that hold a sign-in session (`/activate`, `/redeem`) load no SDK. When a visitor reaches one
  *   by client navigation from a public page, Mixpanel's capture and replay stop until they leave
  *   it, and every SDK event recorded there is dropped before sending.
@@ -48,7 +48,7 @@ const SECRET_PARAMS: Record<string, true> = {
 const URL_PROPERTY = /(url|referrer|href|pathname|path|search)$/i;
 
 /** Pages that render private data, whose URL is a secret, or that hold a sign-in session. No analytics SDK starts on them. */
-const PRIVATE_PATH = /^\/(founder|waitlist|waitlist-admin|s|activate|redeem)(\/|$)/;
+const PRIVATE_PATH = /^\/(console|waitlist|waitlist-admin|s|activate|redeem)(\/|$)/;
 
 function cleanSearch(search: string): string {
   if (!search || search === "?") return search;

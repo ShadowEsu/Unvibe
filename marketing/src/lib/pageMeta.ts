@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { explainLanguage, type ExplainPage } from "@/lib/explainPages";
 
 /**
- * Link-preview cards: static 1200x630 PNGs in public/og, drawn by Design (option B "Flow", Preston
+ * Link-preview cards: static 1200x630 PNGs in public/og, drawn by Design (option B "Flow", picked
  * 27 Oct; source and alt text in boss-handoff agents/design/unvibe-link-preview-2026-10-27/final-b).
  * Names carry the first 8 hex of the file's sha256, so a new card never hides behind a cached one.
  * A card shows a panel only next to the exact code it explains: language cards show only their

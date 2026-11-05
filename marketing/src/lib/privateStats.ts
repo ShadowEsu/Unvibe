@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSiteStats, type SiteStatsSummary } from "@/lib/siteStatsStore";
 
 /**
- * Numbers for Preston's private stats page. The page lives at /s/<STATS_PAGE_KEY>; anyone
+ * Numbers for the owner's private stats page. The page lives at /s/<STATS_PAGE_KEY>; anyone
  * without the key gets a 404, so the address itself is the secret.
  */
 

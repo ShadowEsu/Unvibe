@@ -65,7 +65,7 @@ Apply `web/supabase/migrations/20260919010000_knowledge_objects.sql` on Supabase
 
 No new required variables. Existing: `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY` or `GEMINI_API_KEY`, optional `UNVIBE_TRIAL_TOKEN`, Supabase keys for sync.
 
-## External Setup Preston Must Complete
+## External Setup the Owner Must Complete
 
 - Apply the knowledge migration if you want cloud-ready tables
 - Do not create a GitHub App until product is ready to install one

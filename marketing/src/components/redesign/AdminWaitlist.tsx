@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { founderHeaders, readFounderToken, saveFounderToken } from "@/lib/founderToken";
+import { consoleHeaders, readConsoleToken, saveConsoleToken } from "@/lib/consoleToken";
 import { Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { SiteStatsSummary } from "@/lib/siteStatsStore";
@@ -34,7 +34,7 @@ export function AdminWaitlist() {
   const load = useCallback(async (background = false) => {
     // Both admin endpoints require the WAITLIST_ADMIN_TOKEN bearer. Without one, ask for it
     // instead of sending requests the server can only answer with 401.
-    if (!readFounderToken()) {
+    if (!readConsoleToken()) {
       setState("locked");
       return;
     }
@@ -42,11 +42,11 @@ export function AdminWaitlist() {
     else setState("loading");
     try {
       const statsRequest = fetch("/api/stats", { cache: "no-store" });
-      const waitlistResponse = await fetch("/api/waitlist/admin", { cache: "no-store", headers: founderHeaders() });
+      const waitlistResponse = await fetch("/api/waitlist/admin", { cache: "no-store", headers: consoleHeaders() });
 
       if (waitlistResponse.status === 401) {
         // Both endpoints share one check, so the fallback below would be rejected too.
-        saveFounderToken("");
+        saveConsoleToken("");
         setState("denied");
         return;
       }
@@ -59,14 +59,14 @@ export function AdminWaitlist() {
         setEntries(data.entries);
         setUpdatedAt(data.generatedAt);
       } else {
-        // Same admin token, older founder shape.
-        const founderResponse = await fetch("/api/founder/waitlist", { cache: "no-store", headers: founderHeaders() });
-        if (!founderResponse.ok) {
+        // Same admin token, older console shape.
+        const consoleResponse = await fetch("/api/console/waitlist", { cache: "no-store", headers: consoleHeaders() });
+        if (!consoleResponse.ok) {
           throw new Error(
-            `The waitlist API answered ${waitlistResponse.status} and the founder API answered ${founderResponse.status}.`
+            `The waitlist API answered ${waitlistResponse.status} and the console API answered ${consoleResponse.status}.`
           );
         }
-        const roster = (await founderResponse.json()) as {
+        const roster = (await consoleResponse.json()) as {
           entries?: Array<{ name: string; email: string; joinedAt: string; tool: string }>;
         };
         const mapped: WaitlistAdminEntry[] = (roster.entries ?? []).map((entry, index) => {
@@ -140,7 +140,7 @@ export function AdminWaitlist() {
     try {
       const response = await fetch("/api/waitlist/admin", {
         method: "POST",
-        headers: founderHeaders({ "Content-Type": "application/json" }),
+        headers: consoleHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("retry failed");
@@ -163,9 +163,9 @@ export function AdminWaitlist() {
     setActionError("");
     setRetryError("");
     try {
-      const response = await fetch("/api/founder/waitlist", {
+      const response = await fetch("/api/console/waitlist", {
         method: "DELETE",
-        headers: founderHeaders({ "Content-Type": "application/json" }),
+        headers: consoleHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error("delete failed");
@@ -203,7 +203,7 @@ export function AdminWaitlist() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              saveFounderToken(tokenDraft.trim());
+              saveConsoleToken(tokenDraft.trim());
               setTokenDraft("");
               void load();
             }}

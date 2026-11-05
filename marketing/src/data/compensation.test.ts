@@ -29,7 +29,7 @@ import { milestones } from "./milestones";
 Object.assign(globalThis, { React });
 
 /**
- * Every program the earlier site listed except AWS (Preston, ledger 317), minus what the record does not support
+ * Every program the earlier site listed except AWS (owner, ledger 317), minus what the record does not support
  * (Security 31 Oct, requests/security/20261031-0208): name, date, credit value (none where no amount is supported).
  */
 const PROGRAMS: Array<[string, string, number | undefined]> = [

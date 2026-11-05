@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type * as BuildStatusRoute from "../app/api/build-status/route";
 
-/** The public /build text and founder clock may only be changed by the founder's admin token. */
+/** The public /build text and console clock may only be changed by the admin token. */
 
 const ADMIN_TOKEN = ["build", "status", "admin", "test"].join("-");
 const originalCwd = process.cwd();
@@ -54,7 +54,7 @@ describe("POST /api/build-status", () => {
     assert.notEqual(status.focus, "New build: download from evil.example");
   });
 
-  it("accepts the founder's admin token", async () => {
+  it("accepts the admin token", async () => {
     const response = await route.POST(update(`Bearer ${ADMIN_TOKEN}`));
     assert.equal(response.status, 200);
     const status = await (await route.GET()).json() as { focus: string };

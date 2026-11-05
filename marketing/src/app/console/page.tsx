@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
-import { FounderAnalytics } from "@/components/FounderAnalytics";
+import { ConsoleAnalytics } from "@/components/ConsoleAnalytics";
 import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
-import { FounderConsole } from "@/components/build/FounderConsole";
+import { BuildClockConsole } from "@/components/build/BuildClockConsole";
 import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = {
   ...pageMetadata({
-    path: "/founder",
+    path: "/console",
     title: "Analytics",
     description: "Live aggregate traffic, waitlist, and beta-request numbers for Unvibe.",
   }),
   robots: { index: false, follow: false },
 };
 
-export default function FounderPage() {
+export default function ConsolePage() {
   return (
-    <article className={`founder-page ${REPLAY_BLOCK_CLASS}`}>
+    <article className={`console-page ${REPLAY_BLOCK_CLASS}`}>
       <div className="paper-wrap">
-        <FounderConsole />
-        <FounderAnalytics />
+        <BuildClockConsole />
+        <ConsoleAnalytics />
       </div>
     </article>
   );

@@ -38,10 +38,10 @@ Copy `.env.example` to `.env.local`. Everything is optional for local developmen
 | `RESEND_API_KEY` | Recommended server-only Resend credential for reliable signup email. |
 | `WAITLIST_FROM_EMAIL` | Verified sender used by Resend. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL for metadata, sitemap, robots, referral links. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL used for founder Google sign-in. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL used for console Google sign-in. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public Supabase browser key (preferred). |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Legacy public key fallback when no publishable key exists. |
-| `FOUNDER_EMAILS` | Server-only comma-separated founder Google accounts allowed to update `/build`. |
+| `FOUNDER_EMAILS` | Server-only comma-separated owner Google accounts allowed to update `/build`. |
 | `NEXT_PUBLIC_MIXPANEL_TOKEN` | Optional Mixpanel project token for the browser SDK. Autocapture and session replay are on. |
 | `MIXPANEL_TOKEN` | Optional Mixpanel project token (server only). Fallback named events via `/api/analytics`. |
 | `MIXPANEL_HOST` | Optional Mixpanel API host (defaults to `https://api.mixpanel.com`). |
@@ -52,8 +52,8 @@ Without Vercel Blob configured, waitlist submissions are written to `.data/waitl
 (gitignored) so the form works end to end in development. Production fails closed when durable
 storage is missing; it never reports a signup as saved to ephemeral serverless storage.
 
-The public `/build` page also uses Blob for its tiny status document. `/founder` signs in
-through Supabase Google OAuth, and the API verifies the bearer token and server-only founder
+The public `/build` page also uses Blob for its tiny status document. `/console` signs in
+through Supabase Google OAuth, and the API verifies the bearer token and server-only owner
 email allow-list before accepting a start, heartbeat, note, or stop action.
 
 ## Waitlist storage

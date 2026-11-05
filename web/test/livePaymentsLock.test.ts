@@ -10,7 +10,7 @@ import { automaticTax, billingMode, getStripe, paymentsLocked, webhookConfigured
 import { GET as health } from '../app/api/v1/health/route';
 import { POST as webhook } from '../app/api/v1/billing/webhook/route';
 
-// Live money stays off until Preston approves it. These tests use fake key strings only;
+// Live money stays off until the owner approves it. These tests use fake key strings only;
 // a locked request must be refused before any Stripe call is attempted.
 const STRIPE_ENV = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO_ANNUAL', 'STRIPE_PRICE_PRO_LIFETIME', 'UNVIBE_CHECKOUT_LIVE', 'BILLING_LIFETIME_ENABLED', 'BILLING_TEST_CHECKOUT_IN_PRODUCTION', 'VERCEL_ENV', 'STRIPE_AUTOMATIC_TAX'] as const;
 
@@ -181,7 +181,7 @@ test('the webhook answers 503 for a missing, placeholder or whitespace signing s
   assert.equal(res.status, 400, 'a real-shaped secret reaches signature verification, which refuses the forged header');
 }));
 
-// Ledger 415: Stripe Tax stays off until Preston turns it on in Stripe and sets STRIPE_AUTOMATIC_TAX=1.
+// Ledger 415: Stripe Tax stays off until the owner turns it on in Stripe and sets STRIPE_AUTOMATIC_TAX=1.
 test('Stripe Tax is off unless STRIPE_AUTOMATIC_TAX is exactly 1, and saves a returning customer address', withBillingEnv({}, () => {
   for (const value of [undefined, 'true', ' 1', '0']) {
     if (value === undefined) delete process.env.STRIPE_AUTOMATIC_TAX;
