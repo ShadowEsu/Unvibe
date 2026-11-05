@@ -2,6 +2,8 @@
  * Selection capture: save clipboard → activate the user's editor if needed →
  * synthesize Copy → read → restore clipboard. macOS uses System Events (⌘C).
  * Windows uses SendKeys (Ctrl+Insert — Ctrl+C would interrupt a running terminal process).
+ * Linux reads the X11/Wayland PRIMARY selection (the highlighted text), so no Copy is
+ * synthesized and the clipboard is never touched.
  * A failed capture returns no code so the shortcut never explains a stale clipboard
  * when the user did not select anything.
  */
@@ -11,6 +13,30 @@ import { execFile } from 'node:child_process';
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
+const isLinux = process.platform === 'linux';
+
+/** Linux: the highlighted text is already in PRIMARY; empty when nothing is selected. */
+export function readLinuxPrimary(read: (type: 'selection') => string = (type) => clipboard.readText(type)): CaptureResult {
+  const text = read('selection');
+  return text.trim().length > 0 ? { code: text } : { code: null, error: 'empty' };
+}
+
+/** Why a capture waits for Explain instead of sending at once; null sends at once. */
+export type ConfirmReason = 'link' | 'highlight';
+
+/**
+ * An `unvibe://review` link always waits ('link'). On Linux PRIMARY keeps the last highlight from
+ * any app, so with nothing highlighted now the shortcut could pick up old text ('highlight'): the
+ * person sees it and presses Explain. Clipboard explains, samples and already-captured code are the
+ * person's own choice and send at once.
+ */
+export function captureConfirmReason(
+  options: { confirm?: boolean; preferClipboard?: boolean; sample?: boolean; captured?: unknown },
+  linux = isLinux,
+): ConfirmReason | null {
+  if (options.confirm) return 'link';
+  return linux && !options.preferClipboard && !options.sample && !options.captured ? 'highlight' : null;
+}
 
 function osascript(script: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -147,6 +173,7 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
     const copied = clipboard.readText();
     return copied.trim().length > 0 ? { code: copied } : { code: null, error: 'empty' };
   }
+  if (isLinux) return readLinuxPrimary();
   if (!isMac && !isWindows) return { code: null, error: 'unsupported' };
   const previous = clipboard.readText();
   // Let Control+U / the saved shortcut release before synthesizing Copy.

@@ -31,13 +31,15 @@ import { productEvent } from '../core/productEvents';
 import { CONSENT_PROVIDERS, ConsentRequiredError, type ConsentProvider } from '../core/consent';
 import { codeConsented } from './consentStore';
 import { providerInUse } from './consent';
+import type { ConfirmReason } from './selection';
 
 export type WidgetEvent =
   /**
    * `consentProvider`: ask first, for this provider (the person hasn't agreed to sending code to it);
-   * `confirm`: a link started this review, and Explain must be pressed before anything is sent.
+   * `confirm`: a link started this review, or (Linux) the shortcut read the last highlight, which may be
+   * stale; Explain must be pressed before anything is sent. `confirmFrom` says which, for the sheet's wording.
    */
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; providerName: string; mode?: string; level: ExplanationLevel }
+  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; confirmFrom?: ConfirmReason; providerName: string; mode?: string; level: ExplanationLevel }
   /** The person hasn't agreed to sending their code to this provider: the panel asks first. */
   | { type: 'consentNeeded'; tabId: string; provider: ConsentProvider }
   | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean }
@@ -83,6 +85,8 @@ export interface ReviewSession {
    * nothing is sent until the person presses Explain in the panel (Security 10-22 LOW #8).
    */
   awaitingConfirm?: boolean;
+  /** What is waiting: a link's clipboard text, or Linux's last highlight (PRIMARY can be stale). */
+  confirmFrom?: ConfirmReason;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -227,6 +231,7 @@ export function initWidget(
     ...(consentProvider ? { consentProvider } : {}),
     providerName: CONSENT_PROVIDERS[providerInUse()],
     confirm: Boolean(session.awaitingConfirm && code),
+    ...(session.awaitingConfirm && code && session.confirmFrom ? { confirmFrom: session.confirmFrom } : {}),
     mode: session.mode,
     // The panel's depth row and every re-request it sends start from the session depth (the user's default).
     level: session.level,

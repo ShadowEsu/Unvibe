@@ -88,6 +88,8 @@ interface TabState {
   agreedJustNow: boolean;
   /** The confirm sheet shows the clipboard read right after Agree, not a link's capture. */
   confirmAfterAgree: boolean;
+  /** Linux: the confirm sheet shows the last highlighted text (PRIMARY), which may be from earlier. */
+  confirmFromHighlight: boolean;
   /** Who Explain sends the code to, for the confirm sheet (Security U10). */
   providerName: string;
 }
@@ -165,6 +167,7 @@ function newTab(id: string, label: string): TabState {
     confirmAfterConsent: false,
     agreedJustNow: false,
     confirmAfterAgree: false,
+    confirmFromHighlight: false,
     providerName: CONSENT_PROVIDERS.unvibe,
   };
 }
@@ -519,6 +522,7 @@ function Widget() {
               consentProvider: ev.consentProvider ?? null,
               confirmAfterConsent: Boolean(ev.confirm),
               confirmAfterAgree: Boolean(ev.confirm) && tab.agreedJustNow,
+              confirmFromHighlight: ev.confirmFrom === 'highlight',
               agreedJustNow: false,
               providerName: ev.providerName,
               level: ev.level,
@@ -1002,14 +1006,16 @@ function Widget() {
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               {active.meta.preview ? (
-                <section className="code-context" aria-label="Code from your clipboard">
+                <section className="code-context" aria-label={active.confirmFromHighlight ? 'The last text you highlighted' : 'Code from your clipboard'}>
                   <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
                 </section>
               ) : null}
               <div className="sub">
-                {active.confirmAfterAgree
-                  ? 'This is what is on your clipboard now.'
-                  : 'Your editor or a link asked Unvibe to explain what is on your clipboard.'}{' '}
+                {active.confirmFromHighlight
+                  ? 'This is the last text you highlighted, in any app. It may be from earlier, so check it is the code you mean.'
+                  : active.confirmAfterAgree
+                    ? 'This is what is on your clipboard now.'
+                    : 'Your editor or a link asked Unvibe to explain what is on your clipboard.'}{' '}
                 Nothing has been sent yet. Explain sends it to {active.providerName}.
               </div>
               <button className="btn" onClick={() => request({})}>

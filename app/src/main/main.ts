@@ -40,7 +40,7 @@ import {
   showBar,
   type WidgetResizeEdge,
 } from './windows';
-import { captureSelection, frontmostApp, startFrontmostWatch } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, startFrontmostWatch, type ConfirmReason } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -285,16 +285,19 @@ function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
-  confirm = false,
+  confirmFrom: ConfirmReason | null = null,
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
-  if (confirm && code) session.awaitingConfirm = true;
+  if (confirmFrom && code) {
+    session.awaitingConfirm = true;
+    session.confirmFrom = confirmFrom;
+  }
   tabSessions.set(activeTabId, session);
   if (!panelReady) return;
-  // No selection → calm picker UI (never auto-error / auto-run). A link-started capture waits for Explain.
+  // No selection → calm picker UI (never auto-error / auto-run). A link or Linux-highlight capture waits for Explain.
   const start = Boolean(code) && !session.awaitingConfirm;
   initWidget(win, session, { autoStart: start });
   if (start) void runReview(win, session, { level: session.level });
@@ -542,6 +545,7 @@ let heldClipboardReview: HeldClipboardReview | null = null;
 
 /**
  * `confirm`: an `unvibe://review` link asked for this; capture it, but send nothing until Explain is pressed.
+ * A Linux shortcut capture waits for Explain too: PRIMARY may still hold an old highlight from any app.
  * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
  * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
  */
@@ -586,6 +590,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   }
   const capture = await reviewCapture(options, agreed, () => captureSelection(options));
   const code = capture.code;
+  const confirmFrom = captureConfirmReason(options);
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
   const captureFailed = !code && agreed;
@@ -606,20 +611,23 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   }
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
-  // A link-started capture is counted when Explain is pressed (widget:request), not when the link arrives.
-  if (code && !options.confirm && !allowSelectedCodePrompt()) return;
-  if (code && options.confirm) pulseBar({ phase: 'idle', label: 'Ready' });
+  // A link-started (or Linux PRIMARY) capture is counted when Explain is pressed (widget:request), not when it arrives.
+  if (code && !confirmFrom && !allowSelectedCodePrompt()) return;
+  if (code && confirmFrom) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
     const session = makeSession(activeTabId, code, sourceApp);
-    if (options.confirm && code) session.awaitingConfirm = true;
+    if (confirmFrom && code) {
+      session.awaitingConfirm = true;
+      session.confirmFrom = confirmFrom;
+    }
     tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp, options.confirm);
+  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom);
 }
 
 function registerShortcut(accel: string): boolean {
