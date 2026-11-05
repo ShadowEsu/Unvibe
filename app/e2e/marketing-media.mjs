@@ -119,10 +119,9 @@ async function resize(page, width, height, { center = false } = {}) {
 }
 
 /**
- * Answers the app's native "Choose a file to explain" dialog with `file` (macOS): waits for the
- * dialog, brings Unvibe forward, and types Go to Folder + path + Open only while Unvibe is the
- * frontmost app, so no keystroke can land in another app. The app opens it with a parent window,
- * so macOS shows it as a sheet on that window, not as a window of its own.
+ * Answers the app's native open dialog with `file` (macOS): "Choose a file to explain" (a sheet on its parent
+ * window) or a folder chooser (a window named Open). Waits for the dialog, brings Unvibe forward, and types Go to
+ * Folder + path + Open only while Unvibe is the frontmost app, so no keystroke can land in another app.
  */
 function answerOpenPanel(file) {
   // Async: the pickFile call that opens the dialog has to reach the app while this waits for it.
@@ -131,6 +130,7 @@ function answerOpenPanel(file) {
   set found to false
   repeat 40 times
     if exists (first window of p whose name is "Choose a file to explain") then set found to true
+    if exists (first window of p whose name is "Open") then set found to true
     repeat with w in (windows of p)
       if exists sheet 1 of w then set found to true
     end repeat
@@ -373,45 +373,7 @@ if (explained) {
   // history), but every companion step after it then timed out, cause not found; skipped so the rest records.
   else if (process.env.CI === 'true') console.log('NOTE why exists: skipped on CI (after the native file pick the companion tour times out on the runner)');
   else await step('why exists', async () => {
-    // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
-    // repo root through the link, so a /var file path would sit "outside" its own repo.
-    const repo = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-why-')));
-    const git = (...args) => execFileSync('git', args, {
-      cwd: repo,
-      env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
-    });
-    const file = path.join(repo, 'upload.js');
-    git('init', '-q');
-    writeFileSync(file, [
-      'export async function upload(file, send) {',
-      '  for (let attempt = 1; ; attempt++) {',
-      '    try {',
-      '      return await send(file);',
-      '    } catch (error) {',
-      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
-      '    }',
-      '  }',
-      '}',
-      '',
-    ].join('\n'));
-    git('add', '.');
-    git('commit', '-q', '-m', 'Retry uploads with backoff so a dropped connection does not lose the file');
-    writeFileSync(file, [
-      '// The storage API rate-limits after five quick failures, so stop there.',
-      'const MAX_ATTEMPTS = 5;',
-      '',
-      'export async function upload(file, send) {',
-      '  for (let attempt = 1; ; attempt++) {',
-      '    try {',
-      '      return await send(file);',
-      '    } catch (error) {',
-      '      if (attempt >= MAX_ATTEMPTS) throw error;',
-      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
-      '    }',
-      '  }',
-      '}',
-      '',
-    ].join('\n'));
+    const { file, git } = uploadRepo();
     git('commit', '-q', '-am', 'Stop after 5 attempts: the storage API rate-limits after that');
     // The file dialog is native (the main process can't be stubbed on a release build), so macOS
     // answers it: Go to Folder with the file's path, then Open, typed only while Unvibe is in front.
@@ -429,6 +391,53 @@ if (explained) {
     // The answer must carry the real commit history, not the "no documented history" fallback.
     await panel.locator('.origin-panel').getByText('Reason documented').waitFor({ timeout: 5000 });
   });
+}
+
+/**
+ * A small git repo for the features that read history (Why does this exist?, Change Briefs): upload.js committed,
+ * then changed in the working tree. The author is neutral, because the answers show who changed the lines.
+ */
+function uploadRepo() {
+  // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
+  // repo root through the link, so a /var file path would sit "outside" its own repo.
+  const repo = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-why-')));
+  const git = (...args) => execFileSync('git', args, {
+    cwd: repo,
+    env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
+  });
+  const file = path.join(repo, 'upload.js');
+  git('init', '-q');
+  writeFileSync(file, [
+    'export async function upload(file, send) {',
+    '  for (let attempt = 1; ; attempt++) {',
+    '    try {',
+    '      return await send(file);',
+    '    } catch (error) {',
+    '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n'));
+  git('add', '.');
+  git('commit', '-q', '-m', 'Retry uploads with backoff so a dropped connection does not lose the file');
+  writeFileSync(file, [
+    '// The storage API rate-limits after five quick failures, so stop there.',
+    'const MAX_ATTEMPTS = 5;',
+    '',
+    'export async function upload(file, send) {',
+    '  for (let attempt = 1; ; attempt++) {',
+    '    try {',
+    '      return await send(file);',
+    '    } catch (error) {',
+    '      if (attempt >= MAX_ATTEMPTS) throw error;',
+    '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n'));
+  return { repo, file, git };
 }
 
 /**
@@ -516,6 +525,22 @@ await step('settings privacy', async () => {
 await step('island', async () => {
   const bar = await windowWith('bar.html', 5000);
   await shot(bar, 'island');
+});
+
+// Last, because on GitHub's macOS runner companion steps after a native pick have timed out (see why exists):
+// one Change Brief open, from the sample repo's working-tree change. Reading a brief stays on the computer.
+if (process.env.E2E_LOCAL === '1') console.log('NOTE brief open: skipped (E2E_LOCAL: no keystrokes into a native dialog on someone\'s own Mac)');
+else await step('brief open', async () => {
+  const { repo } = uploadRepo();
+  await closeFeedback(0);
+  await companion.bringToFront();
+  await companion.locator('.side').getByRole('button', { name: 'Briefs', exact: true }).click();
+  await companion.locator('.topbar__title').filter({ hasText: 'Briefs' }).waitFor({ timeout: 10000 });
+  const choose = companion.getByRole('button', { name: /^(Choose a project|Choose repo)$/ }).first();
+  await Promise.all([choose.click(), answerOpenPanel(repo)]);
+  await companion.locator('.briefings').getByText('upload.js').first().waitFor({ timeout: 30000 });
+  await sleep(1800);
+  await shot(companion, 'briefs-open');
 });
 
 for (const v of videos) v.stop();
