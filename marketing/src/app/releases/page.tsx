@@ -40,7 +40,7 @@ export default async function ReleasesPage() {
       <section className="paper-section">
         <div className="paper-wrap paper-log-wrap paper-glass">
           <h2 className="sr-only">Release notes</h2>
-          <ChangelogList items={changelogEntries()} arrive />
+          <ChangelogList items={changelogEntries()} expanded={12} arrive />
         </div>
       </section>
     </article>
