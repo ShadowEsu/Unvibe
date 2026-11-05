@@ -930,6 +930,59 @@ ls -l bin config`,
       "`chmod -R 644` on a folder locks you out of it, because it takes the run bit off folders too. `chmod -R 644 site` printed `chmod: cannot access 'site/img': Permission denied` partway through, and afterwards `cd site/img` and reading `site/img/a.txt` were refused. `chmod -R u=rwX,go=rX site` put it right: 755 for both folders and 644 for the file.",
   },
   {
+    id: "find",
+    fileName: "clean-project.sh",
+    lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
+    description:
+      "Paste find commands and get them explained in plain English, free online. The sample looks through a project for logs, big files, recent changes and empty folders, and counts lines in its code.",
+    sampleSummary: "A shell script with six find commands for a project cleanup: .log files, node_modules folders, files over 1 MB, files changed this week outside .git, line counts for .js files and deleting empty folders.",
+    sample: `#!/bin/sh
+# Find files in a project folder before a cleanup.
+
+# Every .log file anywhere under the project.
+find . -name "*.log"
+
+# Only folders called node_modules, without looking inside them.
+find . -type d -name node_modules -prune
+
+# Files bigger than 1 MB.
+find . -type f -size +1M
+
+# Files changed in the last 7 days, skipping .git.
+find . -path ./.git -prune -o -type f -mtime -7 -print
+
+# Count the lines in every .js file outside node_modules.
+find . -name "*.js" -not -path "*/node_modules/*" -exec wc -l {} +
+
+# Delete empty folders.
+find . -type d -empty -delete`,
+    shows: [
+      {
+        concept: "start folder and tests",
+        text: "`find .` walks the current folder and everything below it, and each test after it narrows the list. `-name \"*.log\"` matched by file name and found `./debug.log` and `./logs/app.log` on a test project. `-type d` means folders and `-type f` means files.",
+      },
+      {
+        concept: "-prune",
+        text: "`-prune` stops find from going into a folder it matched. The second command printed `./node_modules` and `./web/node_modules` and nothing from inside them. In the fourth, `-path ./.git -prune -o ...` skips `.git` and checks everything else.",
+      },
+      {
+        concept: "-size and -mtime",
+        text: "`-size +1M` means bigger than 1 MB and found the 2 MB `logs/big.bin`. `-mtime -7` means changed less than 7 days ago: it printed `logs/big.bin` and `src/app.js`, and skipped files last changed 20 and 30 days ago.",
+      },
+      {
+        concept: "-exec and -delete",
+        text: "`-exec wc -l {} +` runs a command on the matches, with `{}` standing for the file names; the `+` hands them over in one go, so `wc` printed one line per file and a `3 total`. The node_modules files were left out by `-not -path`. `-delete` removes what matched: it removed both empty folders under `tmp`, and then `tmp` too, once it was empty.",
+      },
+    ],
+    notes: [
+      "Run with GNU find 4.11 on a test project with code, logs, node_modules folders, a .git folder and empty folders.",
+      "Quote patterns like `\"*.log\"`. Unquoted, the shell filled in the .log files in the current folder first, and find stopped with `find: paths must precede expression`, naming one of those files, and asked about a possible unquoted pattern after `-name`.",
+      "Run a find without `-delete` first and read the list. Nothing asks before `-delete` removes a file.",
+    ],
+    watchOut:
+      "`-o` means or, and an action such as `-print` only belongs to the test right before it. `find . -name \"*.log\" -o -name \"*.bin\" -print` printed only `./logs/big.bin`. With parentheses, `find . \\( -name \"*.log\" -o -name \"*.bin\" \\) -print` printed all four matches.",
+  },
+  {
     id: "c",
     fileName: "players.c",
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",

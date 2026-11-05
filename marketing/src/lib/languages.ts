@@ -358,6 +358,16 @@ export const languages: Language[] = [
     sample: `chmod 755 deploy.sh`,
   },
   {
+    id: "find",
+    name: "find",
+    categories: ["scripting", "systems"],
+    blurb: "The command that walks folders and picks out files by name, type, size or age, then prints, runs or deletes.",
+    concepts: ["start folder and tests", "-prune", "-size and -mtime", "-exec and -delete"],
+    frameworks: ["GNU find", "BSD find", "xargs", "grep"],
+    learningPath: ["Names and types", "Skipping folders", "Size and age", "Acting on matches"],
+    sample: `find . -name "*.log"`,
+  },
+  {
     id: "regex",
     name: "Regex",
     categories: ["scripting", "data"],
