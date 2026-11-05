@@ -42,7 +42,11 @@ alter table public.trial_installs drop constraint if exists trial_installs_heard
 alter table public.trial_installs add constraint trial_installs_heard_from_check
   check (heard_from is null or char_length(heard_from) between 1 and 200);
 
-create extension if not exists pg_cron;
+-- Supabase's documented form (Security 0046 SHOULD-C1): pg_cron lives in pg_catalog, and postgres gets
+-- the cron schema so the job can be scheduled. anon and authenticated get nothing on cron.
+create extension if not exists pg_cron with schema pg_catalog;
+grant usage on schema cron to postgres;
+grant all privileges on all tables in schema cron to postgres;
 
 -- Daily at 03:17 UTC: clear answers older than 12 months. Re-running the migration replaces the job.
 select cron.unschedule(jobid) from cron.job where jobname = 'trial-heard-from-12-months';
