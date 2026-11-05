@@ -127,19 +127,27 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
   );
 }
 
-/** The demo's selected lines: a lime bar sweeps under each, and the glyphs cross-fade to ink. */
+/**
+ * The demo's selected lines: a lime bar sweeps under each, and the ink copy of the text is revealed with it (a
+ * transform-only window), so the swept part is ink on lime from its first frame, never white on lime (Design).
+ */
 function Selected({ line, text }: { line: 1 | 2; text: string }) {
   return (
     <span className={`ndemo__sel ndemo__sel--${line}`}>
       <i className="ndemo__bar" />
       <span className="ndemo__plain">{text}</span>
-      <span className="ndemo__ink" aria-hidden="true">{text}</span>
+      <span className="ndemo__ink" aria-hidden="true"><span>{text}</span></span>
     </span>
   );
 }
 
-/** Where each answer line of the panel capture sits, as % of the image, for the masks that reveal them in turn. */
-const ANSWER_LINES: readonly [top: number, height: number][] = [
+/**
+ * The panel body's masks, as % of the capture, revealed in turn: the selected-code block first, then each answer
+ * line. The panel's chrome (title row, tabs, Depth row, rail, buttons) is never masked, so the window reads as the
+ * app from frame 0 (Design).
+ */
+const BODY_MASKS: readonly [top: number, height: number][] = [
+  [20.2, 26.0],
   [47.5, 3.9], [52.1, 3.6], [55.6, 3.5], [59.1, 3.5], [62.5, 3.8], [67.6, 3.9], [72.1, 3.6], [75.8, 3.6], [79.3, 6.1],
 ];
 
@@ -183,7 +191,7 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
           {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size capture */}
           <img src={panel.src} width={panel.width} height={panel.height} alt={panel.alt} decoding="async" />
           <div className="ndemo__cover" aria-hidden="true">
-            {ANSWER_LINES.map(([top, height], k) => (
+            {BODY_MASKS.map(([top, height], k) => (
               <i key={top} style={{ "--k": k, top: `${top}%`, height: `${height}%` } as CSSProperties} />
             ))}
           </div>
