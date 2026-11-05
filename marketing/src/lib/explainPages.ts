@@ -1676,6 +1676,48 @@ jobs:
       "`devDependencies` are for working on the project, not for using it. With `import prettier from \"prettier\"` added to `bin/report.js`, the tool ran after a full `npm install` but failed after `npm install --omit=dev`, which skips devDependencies, with `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'prettier'`.",
   },
   {
+    id: "csv",
+    fileName: "orders.csv",
+    lead: "Paste a CSV file and Vibe explains what each column holds and how the quoting works: why some values sit in quotes, what a doubled quote means and why one row can run over two lines.",
+    description:
+      "Paste a CSV file and get it explained in plain English, free online. The sample is an orders export with a header row, commas inside quoted values, a doubled quote and a note that runs over two lines.",
+    sampleSummary: "An orders export: a header row, then six orders with an id, customer, item, quantity, price and note, including quoted values with commas, a doubled quote, a note over two lines and empty notes.",
+    sample: `order_id,customer,item,qty,price,note
+1001,Ana Ruiz,Blue mug,2,12.50,
+1002,"Lee, Sam",Teapot,1,34.00,gift wrap
+1003,Priya Shah,"Mug, large",3,14.00,"said ""no rush"""
+1004,Tom Berg,Coasters,4,3.25,"leave at
+back door"
+1005,Mei Lin,Teapot,1,34.00,
+1006,Ana Ruiz,Coasters,2,3.25,`,
+    shows: [
+      {
+        concept: "header and rows",
+        text: "The first line names the columns, and every other row gives one value per column, separated by commas. Python's `csv.DictReader` used the header as keys and read 6 orders, each with `order_id`, `customer`, `item`, `qty`, `price` and `note`.",
+      },
+      {
+        concept: "quotes",
+        text: "A value with a comma in it goes in double quotes, so the comma is part of the value. `\"Lee, Sam\"` came out as `Lee, Sam` and `\"Mug, large\"` as `Mug, large`. Inside quotes, two double quotes stand for one: `\"said \"\"no rush\"\"\"` came out as `said \"no rush\"`.",
+      },
+      {
+        concept: "line breaks in a value",
+        text: "A quoted value can hold a line break. Order 1004's note runs over two lines of the file, and the reader kept it as one value, `leave at` and `back door` with a line break between, so the file has 8 lines but 6 orders.",
+      },
+      {
+        concept: "empty values and text",
+        text: "A trailing comma means an empty last value: orders 1001, 1005 and 1006 came out with a note of `''`. Every value is text, quantities and prices too, so code has to convert them: `int(qty) * float(price)` over all rows gave 154.5.",
+      },
+    ],
+    notes: [
+      "Read with the `csv` module in Python 3.14, opening the file with `newline=\"\"` as the module's docs ask.",
+      "Not every CSV uses commas. A file separated by `;` came back as one column, `['id;name']`, until it was read with `delimiter=\";\"`.",
+      "A space after a comma counts as part of the value: `a, \"b, c\"` gave `' \"b'` and `' c\"'`, while `skipinitialspace=True` read it as `b, c`.",
+      "Writing with `csv.writer` quoted `Lee, Sam` and doubled the quotes in `said \"hi\"` by itself, and ended the row with `\\r\\n`.",
+    ],
+    watchOut:
+      "Splitting lines on commas breaks on quoted values. `line.split(\",\")` on the Lee, Sam row gave 7 pieces for 6 columns, with `\"Lee` and ` Sam\"` apart, and reading line by line would cut order 1004's note in two. Use a CSV reader instead of `split`.",
+  },
+  {
     id: "env",
     fileName: ".env",
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
