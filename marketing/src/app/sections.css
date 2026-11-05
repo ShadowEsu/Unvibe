@@ -176,6 +176,12 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
   min-height: 2.5rem; padding: 0 0.7rem 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
   font: 700 0.9rem var(--font-sans); cursor: pointer;
 }
+/* Phones: the poster fills the whole small frame, so the toggle sits right-aligned under the video instead, in a
+   row the frame reserves only when the toggle is there. */
+@media (max-width: 639px) {
+  .vtour__media:has(.vtour__sound) { margin-bottom: 3.25rem; }
+  .vtour__sound { top: calc(100% + 0.6rem); right: 0; bottom: auto; }
+}
 .vtour__sound .lg-switch:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 
 /* ── Newsletter signup (footer, /about, homepage): field and button on one row, the consent box under them. ── */
