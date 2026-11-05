@@ -250,6 +250,17 @@ const firstRun = await step('onboarding', async () => {
   await button(companion, 'Explain this code').click();
 });
 
+/**
+ * The website quotes short passages of real answers word for word (ledger 530), so each one it may
+ * quote is saved with the depth that produced it: the panel's own text, nothing rewritten.
+ */
+const snippets = [];
+async function saveAnswer(panel, label) {
+  const depth = (await panel.locator('.lvl.on').first().innerText().catch(() => '')).trim();
+  const text = (await panel.locator('.body').first().innerText()).trim();
+  snippets.push({ label, depth, text });
+}
+
 const explained = firstRun && await step('first explanation', async () => {
   const panel = await windowWith('widget.html', 20000);
   await resize(panel, 560, 720);
@@ -258,6 +269,7 @@ const explained = firstRun && await step('first explanation', async () => {
   await shot(panel, 'panel-streaming');
   const done = await settledPanel();
   await shot(done, 'panel-explained');
+  await saveAnswer(done, 'first explanation');
   // The panel follows the stream to the end; the site also needs the opening of the answer.
   await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
   await sleep(600);
@@ -268,7 +280,19 @@ if (explained) {
   await step('beginner depth', async () => {
     await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
     await sleep(1500);
-    await shot(await settledPanel(), 'panel-beginner');
+    const done = await settledPanel();
+    await shot(done, 'panel-beginner');
+    await saveAnswer(done, 'beginner depth');
+  });
+  // The deepest depth a free install can open (Expert needs Pro), for the site's side-by-side.
+  await step('advanced depth', async () => {
+    await (await windowWith('widget.html')).locator('.lvl[data-level="advanced"]').click();
+    await sleep(1500);
+    const done = await settledPanel();
+    await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+    await sleep(600);
+    await shot(done, 'panel-advanced');
+    await saveAnswer(done, 'advanced depth');
   });
   await step('follow-up', async () => {
     const question = 'What happens if I call it five times quickly?';
@@ -290,12 +314,43 @@ if (explained) {
     await panel.locator('.quiz__q').waitFor({ timeout: 60000 });
     await sleep(1200);
     await shot(panel, 'panel-test-me');
+    const question = (await panel.locator('.quiz__q').first().innerText()).trim();
+    const options = await panel.locator('.quiz__opts .opt').allInnerTexts();
+    snippets.push({ label: 'test me', depth: '', text: [question, ...options.map((o) => o.trim())].join('\n') });
     await panel.locator('.quiz__opts .opt').first().click();
     await sleep(600);
     await button(panel, 'Check').click();
     await panel.locator('.verdict').waitFor({ timeout: 60000 });
     await sleep(1500);
     await shot(panel, 'panel-test-checked');
+  });
+  // More of the person's own code, entered through the panel's paste box (widget:usePaste, which
+  // takes the text from the page, never the OS clipboard), so the Library holds several real
+  // explanations. Neutral sample code only.
+  const samples = [
+    ['formatPrice', 'export function formatPrice(cents, currency = "USD") {\n  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);\n}'],
+    ['chunk', 'export function chunk(items, size) {\n  const out = [];\n  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));\n  return out;\n}'],
+    ['retry', 'export async function retry(task, times = 3) {\n  for (let attempt = 1; ; attempt++) {\n    try { return await task(); }\n    catch (error) { if (attempt >= times) throw error; }\n  }\n}'],
+  ];
+  for (const [name, code] of samples) {
+    await step(`paste ${name}`, async () => {
+      const panel = await windowWith('widget.html');
+      await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
+      await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: name }).first().waitFor({ timeout: 30000 });
+      await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
+      await settledPanel();
+    });
+  }
+  // The key check: code holding a key-shaped string is refused on this computer before anything is
+  // sent. 'sk_test_' + 24 x's matches the stripe-key rule (core/secretFilter.ts) and is plainly fake.
+  await step('key check', async () => {
+    const code = `const stripe = new Stripe("sk_test_${'x'.repeat(24)}");\nexport const charge = (amount) => stripe.charges.create({ amount, currency: "usd" });`;
+    const panel = await windowWith('widget.html');
+    await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
+    const blocked = (await windowWith('widget.html')).locator('.state[role="alert"]').filter({ hasText: 'Blocked: credential detected' });
+    await blocked.waitFor({ timeout: 20000 });
+    await sleep(800);
+    await shot(await windowWith('widget.html'), 'panel-key-check');
   });
   // "Why does this exist?" reads git history, so it needs a file inside a repo. The repo is made
   // here with a neutral author, because the answer shows who last changed the lines.
@@ -426,5 +481,6 @@ await app.close();
 await Promise.race([Promise.all(videos.map((v) => v.done)), sleep(30000)]);
 const files = videos.map((v) => ({ window: v.window, opened: v.opened, closed: v.closed, path: existsSync(v.path) ? v.path : null }));
 writeFileSync(path.join(out, 'timeline.json'), JSON.stringify({ version, marks, videos: files, failures }, null, 2));
+writeFileSync(path.join(out, 'snippets.json'), JSON.stringify({ version, snippets }, null, 2));
 console.log(JSON.stringify({ version, failures, videos: files }, null, 2));
 process.exit(failures.length ? 1 : 0);
