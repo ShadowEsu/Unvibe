@@ -218,16 +218,18 @@ export function TryIt({
       <div className="try__editor code-window">
         <div className="try__bar"><i /><i /><i /><span>{fileName}</span></div>
         <label className="sr-only" htmlFor="try-code">Code to explain</label>
-        <textarea
-          id="try-code"
-          aria-describedby="try-fine"
-          spellCheck={false}
-          wrap="off"
-          value={code}
-          maxLength={1500}
-          onChange={(e) => setCode(e.target.value)}
-          onKeyDown={onEditorKey}
-        />
+        <div className="try__code">
+          <textarea
+            id="try-code"
+            aria-describedby="try-fine"
+            spellCheck={false}
+            wrap="off"
+            value={code}
+            maxLength={1500}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={onEditorKey}
+          />
+        </div>
         <div className="try__foot">
           <p className="try__fine try__consent">
             <input
