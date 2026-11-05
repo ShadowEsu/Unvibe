@@ -320,7 +320,19 @@ if (explained) {
       await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
     }
     await sleep(1500);
-    await shot(await settledPanel(), 'panel-follow-up');
+    const done = await settledPanel();
+    // The answer goes under the explanation with the question as its heading (worded by the answer, e.g. "you"):
+    // bring that heading to the top of the panel so the still shows the question and its answer, not the end.
+    const found = await done.locator('.body').evaluate((body) => {
+      const heading = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')].find((el) => /five times/i.test(el.textContent ?? ''));
+      if (!heading) return false;
+      body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
+      return true;
+    });
+    if (!found) throw new Error('the follow-up question is not in the panel');
+    await sleep(600);
+    await shot(done, 'panel-follow-up');
+    await saveAnswer(done, 'follow-up');
   });
   await step('test me', async () => {
     const panel = await windowWith('widget.html');
