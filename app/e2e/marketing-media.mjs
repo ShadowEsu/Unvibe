@@ -321,10 +321,11 @@ if (explained) {
     }
     await sleep(1500);
     const done = await settledPanel();
-    // The answer goes under the explanation with the question as its heading (worded by the answer, e.g. "you"):
-    // bring that heading to the top of the panel so the still shows the question and its answer, not the end.
+    // The answer goes under the explanation (0.1.49 opens it with a "Short answer" heading; earlier builds used the
+    // question as its heading): bring that start to the top of the panel, so the still shows the answer, not the end.
     const found = await done.locator('.body').evaluate((body) => {
-      const heading = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')].find((el) => /five times/i.test(el.textContent ?? ''));
+      const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
+      const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => /five times/i.test(el.textContent ?? ''));
       if (!heading) return false;
       body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
       return true;
