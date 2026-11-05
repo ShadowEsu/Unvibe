@@ -1245,21 +1245,8 @@ h2 {
   font-size: 0.82rem;
 }
 
-.paper-listings__links a:hover,
-.paper-listings__pending a:hover {
+.paper-listings__links a:hover {
   color: var(--brand);
-}
-
-.paper-listings__pending {
-  margin: 0.6rem 0 0;
-  color: var(--ink-muted);
-  font-size: 0.82rem;
-}
-
-.paper-listings__pending a {
-  color: var(--ink-muted);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .launch-subpage .marketing-plan-price,

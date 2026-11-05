@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { listingBadges, listingLinks, pendingBacklinks } from "@/data/listings";
+import { listingBadges, listingLinks } from "@/data/listings";
 import { ANALYTICS_CONSENT_CHANGED } from "@/lib/analyticsConsent";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
@@ -59,15 +59,6 @@ export function ListingBadges() {
           </a>
         ))}
       </div>
-      <p className="paper-listings__pending">
-        Listing in progress:{" "}
-        {pendingBacklinks.map((listing, i) => (
-          <span key={listing.href}>
-            {i > 0 ? ", " : null}
-            <a href={listing.href} target="_blank" rel="noopener noreferrer">{listing.name}</a>
-          </span>
-        ))}
-      </p>
     </div>
   );
 }
