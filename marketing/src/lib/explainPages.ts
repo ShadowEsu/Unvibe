@@ -1404,6 +1404,60 @@ END {
       "awk splits at every comma, even one inside quotes. A product written `\"poster, large\"` becomes two fields, so `$4` is the text `large\"` with a space in front, which counts as 0: that sale's 30 is lost and `west` shows 12.50 from 2 sales, with no error. gawk 5.3 and later have a `--csv` option that reads quoted fields, while this macOS awk prints `unknown option --csv ignored`.",
   },
   {
+    id: "fish",
+    fileName: "config.fish",
+    lead: "Paste a fish config or script and Vibe explains what each line does: `set -gx`, `fish_add_path`, abbreviations, functions and where fish differs from bash.",
+    description:
+      "Paste fish shell code and get a plain English explanation, free online. The sample is a config.fish with PATH, an exported variable, an abbreviation, an alias and a function.",
+    sampleSummary: "A personal config.fish: your own folder on the PATH, an exported EDITOR, an abbreviation and an alias for interactive shells, no greeting and a make-and-enter folder function.",
+    sample: `# ~/.config/fish/config.fish: read by every new fish shell.
+
+# My own tools first; fish_add_path skips a folder that's already there
+fish_add_path ~/bin
+
+# set -gx: a global variable, exported to programs fish starts
+set -gx EDITOR nano
+
+if status is-interactive
+    # Abbreviations expand as you type: gs becomes git status --short
+    abbr --add gs git status --short
+    alias ll 'ls -lah'
+
+    # No greeting when a terminal opens
+    set -g fish_greeting
+end
+
+# Make a folder and go into it: mkcd projects/new-app
+function mkcd --description 'Make a folder and go into it'
+    mkdir -p $argv[1]; and cd $argv[1]
+end`,
+    shows: [
+      {
+        concept: "variables",
+        text: "fish sets variables with `set`, not `NAME=value`. `-g` makes one global and `-x` exports it to the programs fish starts, so `set -gx EDITOR nano` gave `EDITOR=nano`. `set -g fish_greeting` with no value empties the greeting, so a new terminal opens without one.",
+      },
+      {
+        concept: "PATH",
+        text: "`fish_add_path ~/bin` puts ~/bin first on the PATH and leaves it alone if it's already there: after running it again and re-reading the file, ~/bin was still listed once. `command -v hello` then found the `hello` script in ~/bin.",
+      },
+      {
+        concept: "abbreviations and aliases",
+        text: "An abbreviation is expanded on the command line as you type, so the full `git status --short` lands in your history. `alias` in fish writes a small function: `type ll` showed `function ll --wraps='ls -lah'`. fish already ships an `ll` of its own, `ls -lh`, and the alias replaces it.",
+      },
+      {
+        concept: "functions and status",
+        text: "`function ... end` defines a command, and `$argv` holds its arguments, starting at 1: `mkcd a/b` made both folders and moved into them. `; and` runs the next command only if the one before it worked. `if status is-interactive` keeps the shortcuts to terminals you type into; the rest of the file runs for every fish, so a `fish -c` script still had `EDITOR` and `mkcd`.",
+      },
+    ],
+    notes: [
+      "Run with fish 4.8.1 on a test home folder, so nothing touched a real config.",
+      "Some bash habits work in fish 4.8.1: `export FOO=bar`, `$(echo hi)` and `true && echo ok` all ran. A bash `if [ 1 = 1 ]; then echo yes; fi` didn't: fish stopped with `Missing end to balance this if statement`, because fish ends an `if` with `end`.",
+      "fish doesn't split variables on spaces: with `set f \"my file.txt\"`, `count $f` printed 1. Lists start at 1, and `$l[-1]` is the last item.",
+    ],
+    watchOut:
+      "Abbreviations exist only while you type. In a fish script, `abbr --add gs git status --short` followed by `gs` didn't run git: it ran the real `gs` command, which on the test machine was GPL Ghostscript 10.07.1. Write the full command, or a function, in scripts.",
+  },
+  {
     id: "make",
     fileName: "Makefile",
     lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",

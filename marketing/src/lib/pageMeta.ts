@@ -51,6 +51,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   yaml: "/og/og-explain-yaml-a1a67fe9.png",
   json: "/og/og-explain-json-995efaed.png",
   awk: "/og/og-explain-awk-2360d439.png",
+  fish: "/og/og-explain-fish-1d1104c2.png",
   make: "/og/og-explain-make-34d992b1.png",
   gitignore: "/og/og-explain-gitignore-90ca6cdd.png",
   perl: "/og/og-explain-perl-6a375c1e.png",
