@@ -270,8 +270,6 @@ html:not(.js) .ndemo__plain { opacity: 0; }
 @keyframes n-drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes n-rise32 { from { opacity: 0; transform: translateY(32px); } }
 @keyframes n-rise12 { from { opacity: 0; transform: translateY(12px); } }
-@keyframes n-mark { from { opacity: 0; transform: scale(0.92); } }
-@keyframes n-out { to { opacity: 0; visibility: hidden; } }
 /* Demo cycle (8000 ms; 1% = 80 ms): 200-500 line 1 selection sweeps; 450-750 line 2; 900 Control press; 1000 U press;
    1150-1650 the panel slides 12 px and fades in; from 1750 the answer lines appear one by one, 150 ms apart;
    hold 4 s; 7300-7700 everything fades out; loop. */
