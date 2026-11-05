@@ -162,7 +162,20 @@ async function windowWith(part, timeout = 30000) {
   }
   throw new Error(`${part} did not open`);
 }
-const shot = (page, label) => page.screenshot({ path: path.join(shots, `${label}.png`), animations: 'disabled' });
+/**
+ * Stills at 2x (the site shows them at up to half their pixel width, ledger 530 spec §5): the page is told it has a
+ * 2x display at its current viewport size, so the app itself renders at 2x; nothing is upscaled. Set before every
+ * still, since a recreated panel window starts at the display's own scale. One CDP session per page, kept open:
+ * an emulation override ends with the session that set it.
+ */
+const hiDpi = new WeakMap();
+async function shot(page, label) {
+  if (!hiDpi.has(page)) hiDpi.set(page, await page.context().newCDPSession(page));
+  const [width, height] = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  await hiDpi.get(page).send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
+  await sleep(400);
+  await page.screenshot({ path: path.join(shots, `${label}.png`), animations: 'disabled', scale: 'device' });
+}
 const button = (page, name) => page.getByRole('button', { name, exact: true }).first();
 /**
  * Puts `text` in a field and waits until the field holds exactly it. No key events: typing over CDP
