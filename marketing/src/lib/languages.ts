@@ -277,6 +277,16 @@ export const languages: Language[] = [
     learningPath: ["Variables and sigils", "Regular expressions", "Hashes", "Sorting"],
     sample: `my %seen; $seen{$_}++ for @words;`,
   },
+  {
+    id: "sed",
+    name: "sed",
+    categories: ["scripting", "data"],
+    blurb: "Find and replace, delete lines and rewrite text files from the command line.",
+    concepts: ["addresses", "substitution", "capture groups", "ranges"],
+    frameworks: ["GNU sed", "BSD sed", "awk", "grep"],
+    learningPath: ["Delete and print", "Substitute", "Capture groups", "Ranges"],
+    sample: `sed -i.bak 's/http:/https:/g' links.txt`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

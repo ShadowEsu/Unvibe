@@ -1255,6 +1255,61 @@ print "$errors server errors\\n";`,
     watchOut:
       "`==` compares numbers and `eq` compares text. `\"GET\" == \"POST\"` came out true: Perl turned both words into 0, printed `Argument \"POST\" isn't numeric in numeric eq (==)` and carried on. A log saved on Windows has a hidden `\\r` at the end of each line, so `ms$` never matched and the script printed only `0 server errors`, with no error. Adding `$line =~ s/\\r$//;` as the loop's first line fixed it.",
   },
+  {
+    id: "sed",
+    fileName: "tidy.sed",
+    lead: "Paste a sed command or script and Vibe explains which lines each address picks, what a `s///` swaps in and what `\\1` and `\\2` hold.",
+    description:
+      "Paste a sed command or script and get a plain English explanation, free online. The sample cleans up a settings file, rewrites dates and hides secret values.",
+    sampleSummary: "A sed script that strips comments and blank lines from a settings file, rewrites dates, hides token and password values and keeps one section.",
+    sample: `# Tidy an exported settings file before sharing it.
+# Run: sed -E -f tidy.sed settings.conf > shared.conf
+
+# Drop comment lines and blank lines.
+/^[[:space:]]*#/d
+/^[[:space:]]*$/d
+
+# Trim spaces at the start and end of every line.
+s/^[[:space:]]+//
+s/[[:space:]]+$//
+
+# One space around each "=".
+s/[[:space:]]*=[[:space:]]*/ = /
+
+# Dates from 2026-11-05 to 05/11/2026.
+s/([0-9]{4})-([0-9]{2})-([0-9]{2})/\\3\\/\\2\\/\\1/g
+
+# Hide the value of any key ending in _token or _password.
+s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
+
+# Only keep the [server] section, up to the next [section].
+/^\\[server\\]/,/^\\[/!d`,
+    shows: [
+      {
+        concept: "addresses",
+        text: "A command can start with an address that picks the lines it runs on. `/^[[:space:]]*#/d` deletes every line whose first non-space character is `#`, and `d` also stops work on that line, so a deleted line never reaches the later commands. Every other line runs through each command from the top, in order.",
+      },
+      {
+        concept: "substitution",
+        text: "`s/old/new/` replaces the first match on each line, and `g` at the end replaces every match. On a line with two dates, the script rewrote both; the same command without `g` rewrote only the first and left `2026-11-30` as it was.",
+      },
+      {
+        concept: "capture groups",
+        text: "Brackets in the pattern save what they match, and `\\1`, `\\2` and `\\3` put it back in the replacement, so the year, month and day come back in a new order. `-E` turns on extended regular expressions, where plain brackets capture and `{4}` means four times. Run without `-E`, sed stopped with `invalid reference \\3 on 's' command's RHS`.",
+      },
+      {
+        concept: "ranges",
+        text: "`/^\\[server\\]/,/^\\[/` picks every line from `[server]` to the next line that starts with `[`, and `!` turns it around, so `!d` deletes everything outside that range. When `[server]` was the last section, the range ran to the end of the file.",
+      },
+    ],
+    notes: [
+      "Run with GNU sed 4.10 on a 13-line settings file, the script printed 7 lines: `[server]`, `host = example.internal`, `port = 8080`, `api_token = [hidden]`, `db_password = [hidden]`, `started = 05/11/2026 09:14` and `[logging]`.",
+      "`[logging]` is still in the output because a range includes the line that ends it. That line starts with `[`, so it closes the `[server]` range and is kept with it.",
+      "`sed -i` writes the result back over the file instead of printing it, and `-i.bak` first keeps the original as `settings.conf.bak`. Run on a copy, `-i` with no suffix left no way back to the comments.",
+    ],
+    watchOut:
+      "`[a-z_]+` only matches lowercase letters, so a line written `API_TOKEN = abc` came through as `API_TOKEN = abc`, with the secret showing and no error. `[A-Za-z_]+`, or GNU sed's `I` flag after the last slash, hid it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
