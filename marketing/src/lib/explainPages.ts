@@ -244,7 +244,7 @@ export async function userLabel(id: number): Promise<string> {
     notes: [
       "Run with TypeScript 5.9.3 on a two-file project: `npx tsc` finished with no errors, and `node dist/index.js` printed `total 19.75` and `cheapest 3.25`.",
       "Unlike package.json, a tsconfig.json may have `//` comments, and the compiler read this one, comment included, without complaint.",
-      "`skipLibCheck` skips checking the .d.ts files of installed packages. It makes builds faster and hides type errors inside those packages, not in your own code.",
+      "`skipLibCheck` skips checking every .d.ts file, the ones in installed packages and any you write yourself (TypeScript's docs: \"Skip type checking of declaration files.\"). Builds get faster, and errors inside those files go unreported; your .ts files are still checked.",
     ],
     watchOut:
       "`exclude` only changes where TypeScript starts, not what it compiles. When `src/run-tests.ts` imported `./prices.test.js`, the test file was checked and written to `dist/` anyway, and `--listFilesOnly` listed it. To keep a file out of the build, nothing the build includes may import it.",
