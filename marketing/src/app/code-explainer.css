@@ -24,10 +24,44 @@ ol.explain-notes {
 /* Code keeps its lines: no wrapping; the region around it scrolls sideways (Design, #135 gate). The code grows to
    its longest line so its dark fill stays under the text while scrolling. Three classes, so this beats the wrapping
    .explain-card .os-cmd rule below, which the Windows PowerShell line keeps. */
-.use-sample__scroll {
+.use-sample__frame {
+  position: relative;
   margin: 0 0 1rem;
+  timeline-scope: --use-sample;
+}
+
+.use-sample__scroll {
   overflow-x: auto;
   border-radius: 12px;
+  scroll-timeline: --use-sample inline;
+}
+
+/* Scroll cue (Design): the right edge fades into the code's fill while there is more to the right, and clears as
+   you reach the end. Opacity follows the block's own sideways scroll; a block that fits has no active scroll
+   timeline, so the cue stays at its base opacity 0. Browsers without scroll-driven animations show no cue. */
+.use-sample__frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2.5rem;
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(to right, rgb(21 21 20 / 0), #151514 80%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .use-sample__frame::after {
+    animation: use-sample-cue linear both;
+    animation-timeline: --use-sample;
+  }
+}
+
+@keyframes use-sample-cue {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .explain-card .use-sample .os-cmd {
