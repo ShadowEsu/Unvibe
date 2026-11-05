@@ -303,6 +303,58 @@ export async function userLabel(id: number): Promise<string> {
       "`exclude` only changes where TypeScript starts, not what it compiles. When `src/run-tests.ts` imported `./prices.test.js`, the test file was checked and written to `dist/` anyway, and `--listFilesOnly` listed it. To keep a file out of the build, nothing the build includes may import it.",
   },
   {
+    id: "npm-scripts",
+    fileName: "shop/package.json",
+    lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
+    description:
+      "Paste npm scripts and get a plain English explanation of npm run dev, build, test and lint, free online. The sample is a small shop's package.json with eight scripts.",
+    sampleSummary: "A package.json with the usual npm scripts: dev with a file watcher, start, build with a prebuild step, test, lint with ESLint, one that chains two others and one that prints package fields.",
+    sample: `{
+  "name": "shop",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "prebuild": "node clean.js",
+    "build": "node build.js",
+    "test": "node --test",
+    "lint": "eslint .",
+    "check": "npm run lint && npm test",
+    "hello": "echo \\"$npm_package_name v$npm_package_version\\""
+  },
+  "devDependencies": {
+    "eslint": "^9.39.0"
+  }
+}`,
+    shows: [
+      {
+        concept: "npm run",
+        text: "Each entry under `scripts` is a name and a shell command. `npm run build` runs the `build` line, and `npm run` on its own listed every script. `start` and `test` are special enough to have shortcuts: `npm start` and `npm test` work without `run`, while `npm run dev` needs it.",
+      },
+      {
+        concept: "pre and post",
+        text: "A script named `pre` plus another script's name runs first. `npm run build` printed `clean: removed dist/` from `prebuild`, then `build: wrote dist/app.js`. Each step is announced with a `>` line, such as `> shop@1.2.0 prebuild`.",
+      },
+      {
+        concept: "local tools",
+        text: "npm puts the project's own `node_modules/.bin` first on the PATH while a script runs. After `npm install` added ESLint 9.39.5, typing `eslint --version` in the terminal gave `eslint: command not found`, but `npm run lint` found it and, for a file with one stray variable, reported `'unused' is assigned a value but never used`.",
+      },
+      {
+        concept: "chaining and exit codes",
+        text: "`&&` runs the next command only if the one before it succeeded. With a lint error, `npm run check` stopped after ESLint with exit code 1 and `npm test` never ran; with the error fixed, lint passed and the test ran, exit code 0. That exit code is what CI checks.",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 on Node 25.7.0. Before `npm install`, `npm run lint` stopped with `eslint: command not found` and exit code 127: listing a tool in devDependencies isn't enough until it's installed.",
+      "npm passes the package's fields to scripts as environment variables: `npm run hello` printed `shop v1.2.0` from `$npm_package_name` and `$npm_package_version`.",
+      "`npm run nope` stopped with `npm error Missing script: \"nope\"` and pointed to `npm run` for the list.",
+    ],
+    watchOut:
+      "Extra arguments for the script go after `--`. `npm run hello -- --loud` ran `echo ... --loud` and printed `shop v1.2.0 --loud`, but `npm test --watch` without the `--` gave the flag to npm itself: `npm warn Unknown cli config \"--watch\"`, and `node --test` ran without it.",
+  },
+  {
     id: "sql",
     fileName: "report.sql",
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
