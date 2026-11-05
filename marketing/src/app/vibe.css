@@ -589,11 +589,20 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .fos-page .fos-page__help { max-width: 760px; margin: 18px auto 0; padding: 14px 18px; border: 2px solid var(--v-ink); border-radius: 14px; background: var(--v-card); color: var(--u-text-2) !important; }
 .fos-page .fos-page__help a { color: var(--u-text) !important; font-weight: 700; }
 
-/* ── Top bar: a solid paper sheet over the dusk, ink type, one ink call to action ── */
+/* ── Top bar: a floating white pill (Design N, 5 Nov), solid, no glass or blur. It ends 62 px from the top, inside
+   the 4rem every page already clears. Centred by margins, not transform, so the home page's drop-in can move it. ── */
 .mnav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 40; background: var(--u-sheet); color: var(--u-text); border-bottom: 1px solid var(--u-line);
+  position: fixed; top: 10px; left: 12px; right: 12px; z-index: 40; width: auto; margin: 0 auto;
+  border-radius: 27px; background: #fff; color: var(--u-text);
+  box-shadow: 0 0 0 1px rgb(29 20 80 / 0.08), 0 10px 30px -14px rgb(29 20 80 / 0.45);
 }
-.mnav__bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 4rem; }
+.mnav .paper-wrap { width: auto; margin: 0; padding: 0 6px 0 14px; }
+.mnav__bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 52px; }
+.mnav__menu.paper-wrap { padding: 0 14px 14px; }
+@media (min-width: 900px) {
+  .mnav { left: 0; right: 0; width: fit-content; }
+  .mnav__home { margin-right: 10px; }
+}
 .mnav .paper-logo__word { color: var(--u-text); }
 .mnav__home { display: inline-flex; border-radius: 10px; }
 .mnav__links { display: none; align-items: center; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
@@ -606,11 +615,12 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .mnav__end { display: flex; align-items: center; gap: 0.6rem; }
 .mnav .nav-kbd { display: none; color: var(--u-text); }
 .mnav .nav-kbd kbd { color: var(--u-text); border-color: var(--u-line); background: var(--u-card); }
-.mnav .mnav__cta { border: 0 !important; background: var(--u-cta) !important; color: var(--u-on-cta) !important; box-shadow: none !important; transition: transform var(--u-dur-hover) var(--u-ease); }
+.mnav .mnav__cta { border: 0 !important; background: #5a3fe0 !important; color: #fff !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 8px 18px -10px rgb(74 47 196 / 0.8) !important; border-radius: 99px !important; transition: transform var(--u-dur-hover) var(--u-ease); }
+.mnav .mnav__cta:hover { background: #4a2fc4 !important; }
 .mnav .mnav__cta:hover { transform: translateY(-1px); }
 .mnav .mnav__cta:active { transform: translateY(1px); transition-duration: var(--u-dur-press); }
 .mnav__cta { display: none !important; }
-.mnav__toggle { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 999px; background: var(--u-hover); color: var(--u-text); cursor: pointer; }
+.mnav__toggle { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 999px; background: var(--u-hover); color: var(--u-text); cursor: pointer; }
 .mnav__toggle span, .mnav__toggle span::before { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform 200ms ease; }
 .mnav__toggle span { position: relative; transform: translateY(-3px); }
 .mnav__toggle span::before { content: ""; position: absolute; top: 6px; left: 0; }

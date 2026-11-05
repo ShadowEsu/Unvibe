@@ -9,12 +9,13 @@ import { detectVisitorDevice } from "@/lib/shortcuts";
 /**
  * Pages with no bar: the download pages, whose own content is the download it would cover
  * (/pricing, /beta, /install-help; Design W16), and the private and form pages. /redeem and
- * /activate are forms: at 390 the bar covered the promo-code field (QA, 2 Nov).
+ * /activate are forms: at 390 the bar covered the promo-code field (QA, 2 Nov). The home page has
+ * its own persistent download pill (HomeDock, Design N).
  */
 const NO_BAR = ["/pricing", "/beta", "/install-help", "/console", "/stats", "/s/", "/waitlist", "/redeem", "/activate"];
 
 export function mobileBarHidden(pathname: string | null): boolean {
-  return NO_BAR.some((prefix) => pathname?.startsWith(prefix));
+  return pathname === "/" || NO_BAR.some((prefix) => pathname?.startsWith(prefix));
 }
 
 /**

@@ -12,8 +12,12 @@ describe("the small-screen download bar", () => {
     for (const path of ["/redeem", "/activate"]) assert.equal(mobileBarHidden(path), true, path);
   });
 
+  it("stays off the home page, which has its own download pill (HomeDock)", () => {
+    assert.equal(mobileBarHidden("/"), true);
+  });
+
   it("still shows on the other public pages", () => {
-    for (const path of ["/", "/about", "/resources", "/releases", "/explain"]) assert.equal(mobileBarHidden(path), false, path);
+    for (const path of ["/about", "/resources", "/releases", "/explain"]) assert.equal(mobileBarHidden(path), false, path);
   });
 
   it("leaves room under the footer so it never covers the last line", () => {

@@ -1,53 +1,76 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { Arrive } from "@/components/paper/Arrive";
-import { CountUp } from "@/components/paper/CountUp";
-import { FlexAccordion } from "@/components/paper/FlexAccordion";
 import { STEPS } from "@/data/howItWorks";
 
-const appShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.webp`, width: 1600, height: 1000, alt });
+/** Step 1's picture is the whole app beside the editor; the other steps show the panel at that moment. */
+const WIDE = { src: "/product/unvibe-0148-debounce-1180.webp", width: 1180, height: 846, alt: "Unvibe 0.1.48 explaining a debounce function beside the code." };
 
-/** The app's pages as a captionless rail: a screenshot and its name, nothing else. */
-const PAGES = [
-  { label: "Today", image: appShot("today", "The Unvibe Today page") },
-  { label: "Library", image: { src: "/press/app/03-library.jpg", width: 2000, height: 1281, alt: "Unvibe 0.1.43 Library with sample lessons" } },
-  { label: "Briefs", image: appShot("briefs", "The Unvibe Briefs page") },
-  { label: "Momentum", image: appShot("momentum", "The Unvibe Momentum page") },
-  { label: "Quick Quiz", image: appShot("quiz", "The Unvibe Quick Quiz page") },
-] as const;
-
-/** The homepage walk-through: the four-step loop in the panel, then a rail of the app's pages. */
+/**
+ * How it works, Design N: the numbered steps pinned on the left, the active one ruled, and one real capture on the
+ * right that changes as you scroll (a sentinel per step crossing the middle of the view picks it). Phones and
+ * narrow windows get a plain stack, step then capture. Reduced motion swaps the captures without a slide or fade.
+ */
 export function HowItWorks() {
-  return (
-    <>
-      <section className="paper-section hiw" id="product" aria-labelledby="hiw-title">
-        <Arrive className="arrive--plate">
-          <div className="paper-wrap u-sheet">
-            <div className="hiw__head">
-              <h2 id="hiw-title">
-                <CountUp name="hiw-steps" value={4} /> steps, <CountUp name="hiw-panel" value={1} /> <mark className="u-mark">panel</mark>.
-              </h2>
-            </div>
-            <FlexAccordion items={STEPS} shape="tall" label="How Unvibe works, step by step" />
-          </div>
-        </Arrive>
-      </section>
+  const [active, setActive] = useState(0);
+  const marks = useRef<HTMLDivElement>(null);
 
-      <section className="paper-section hiw hiw--pages" aria-label="Pages in the Unvibe app">
-        <Arrive className="arrive--plate">
-          <div className="paper-wrap u-sheet">
-            <ul className="hiw-rail">
-              {PAGES.map((page) => (
-                <li key={page.label} className="hiw-rail__item">
-                  <figure>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- pre-sized screenshots, lazy below the fold */}
-                    <img src={page.image.src} width={page.image.width} height={page.image.height} alt={page.image.alt} loading="lazy" decoding="async" />
-                    <figcaption>{page.label}</figcaption>
-                  </figure>
-                </li>
-              ))}
-            </ul>
+  useEffect(() => {
+    const root = marks.current;
+    if (!root || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.step));
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    for (const mark of Array.from(root.children)) io.observe(mark);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <section className="n-sec n-wrap nstory" id="product" aria-labelledby="story-title">
+      <Arrive className="n-head n-center">
+        <h2 id="story-title">{STEPS.length} steps, 1 panel.</h2>
+      </Arrive>
+      <div className="nstory__track">
+        <div className="nstory__pin">
+          <ol className="nstory__steps">
+            {STEPS.map((step, index) => (
+              <li key={step.id} className={index === active ? "is-on" : undefined} aria-current={index === active ? "step" : undefined}>
+                <span className="nstory__num">{String(index + 1).padStart(2, "0")}</span>
+                <h3>{step.title}</h3>
+                {step.body ? <p>{step.body}</p> : null}
+              </li>
+            ))}
+          </ol>
+          <div className="nstory__figs">
+            {STEPS.map((step, index) => {
+              const image = index === 0 ? WIDE : step.image;
+              const state = index === active ? "is-on" : index < active ? "is-past" : "";
+              return (
+                // eslint-disable-next-line @next/next/no-img-element -- fixed-size real captures
+                <img
+                  key={step.id}
+                  className={[index === 0 ? "is-wide" : "", state].filter(Boolean).join(" ") || undefined}
+                  src={image.src}
+                  width={image.width}
+                  height={image.height}
+                  alt={image.alt}
+                  loading="lazy"
+                  decoding="async"
+                />
+              );
+            })}
           </div>
-        </Arrive>
-      </section>
-    </>
+        </div>
+        <div className="nstory__marks" ref={marks} aria-hidden="true">
+          {STEPS.map((step, index) => (
+            <i key={step.id} data-step={index} style={{ top: `${index * 440}px` }} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

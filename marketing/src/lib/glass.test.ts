@@ -36,11 +36,11 @@ describe("home surfaces", () => {
     assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
-  it("the hero still is the real 0.1.48 frame with its size and a description", () => {
+  it("the hero's demo window shows the real panel capture with its size and a description", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
-    const still = html.slice(html.indexOf('<figure class="vhero__still">'), html.indexOf("</figure>"));
-    assert.match(still, /src="\/product\/unvibe-0148-debounce-1180\.webp"/);
-    assert.match(still, /width="1180" height="846"/);
-    assert.match(still, /alt="Unvibe 0\.1\.48 explaining a debounce function beside the code\."/);
+    const panel = html.slice(html.indexOf('<div class="ndemo__panel">'), html.indexOf('<div class="ndemo__cover"'));
+    assert.match(panel, /src="\/unvibe\/real\/panel-explained-top\.webp"/);
+    assert.match(panel, /width="880" height="1131"/);
+    assert.match(panel, /alt="The Unvibe panel explaining a JavaScript debounce function, with depth buttons along the top"/);
   });
 });
