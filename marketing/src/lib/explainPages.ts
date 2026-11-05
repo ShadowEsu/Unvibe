@@ -350,8 +350,8 @@ ORDER BY spend_rank, c.name;`,
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
       "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
-    sampleSummary: "The output of `git log -3` and `git log --oneline --graph --decorate --all` for a small repo: two people's commits, a branch merged back into main and a release tag.",
-    sample: `$ git log -3
+    sampleSummary: "The output of `git log -2` and `git log --oneline --graph --decorate --all` for a small repo: two people's commits, a branch merged back into main and a release tag.",
+    sample: `$ git log -2
 commit 6dd93ddd5276a4e1a8ee3c3af46db31f8057a267
 Merge: b0b26af 6788b88
 Author: Sam Lee <sam@example.com>
@@ -364,12 +364,6 @@ Author: Sam Lee <sam@example.com>
 Date:   Tue Nov 3 16:05:00 2026 +0000
 
     Say how to run it
-
-commit 6788b88166dcc5851351b9272b10b69b8c718788
-Author: Ana Ruiz <ana@example.com>
-Date:   Tue Nov 3 14:20:00 2026 +0000
-
-    Let total take a discount
 
 $ git log --oneline --graph --decorate --all
 *   6dd93dd (HEAD -> main, tag: v1.0) Merge branch 'discount'
@@ -403,7 +397,7 @@ $ git log --oneline --graph --decorate --all
       "A long log opens in a pager, `less` unless you set another, so it can look stuck: press `q` to get back to the prompt.",
     ],
     watchOut:
-      "A plain `git log` sorts every merged branch's commits into one list by date, so it isn't the order work landed on main: Ana's branch commit sits between main's own commits above. `git log --first-parent` follows only main's side of each merge and listed 4 commits, the merge, `Say how to run it`, `Add cart total` and `Start the shop`, without Ana's.",
+      "A plain `git log` sorts every merged branch's commits into one list by date, so it isn't the order work landed on main: `git log --oneline` listed the merge, `Say how to run it`, then Ana's `Let total take a discount` from the branch, then `Add cart total`. `git log --first-parent` follows only main's side of each merge and listed 4 commits, the merge, `Say how to run it`, `Add cart total` and `Start the shop`, without Ana's.",
   },
   {
     id: "bash",
