@@ -4,7 +4,7 @@
 // Electron binary. Unvibe never runs Electron as plain Node, never reads NODE_OPTIONS and never
 // takes --inspect, so those three are turned off: left on, any local script could run its own
 // code as Unvibe, with Unvibe's Accessibility permission. They are flipped before signing so the
-// signature covers them, on Mac and Windows, and read back: a build with any of them still on
+// signature covers them, on Mac, Windows and Linux, and read back: a build with any of them still on
 // throws here and is never signed or shipped.
 //
 // 2. Apple silicon Macs refuse to launch an app whose bundle signature is broken ("Unvibe is
@@ -26,8 +26,14 @@ async function disableNodeFuses(context) {
   const { flipFuses, getCurrentFuseWire, FuseVersion, FuseV1Options, FuseState } = await import('@electron/fuses');
   const name = context.packager.appInfo.productFilename;
   const platform = context.electronPlatformName;
-  if (platform !== 'darwin' && platform !== 'win32') throw new Error(`No fuse settings for ${platform} builds.`);
-  const electron = path.join(context.appOutDir, platform === 'darwin' ? `${name}.app` : `${name}.exe`);
+  const binaries = {
+    darwin: `${name}.app`,
+    win32: `${name}.exe`,
+    // Linux has no product-name binary: electron-builder names it after `executableName`.
+    linux: context.packager.executableName,
+  };
+  if (!binaries[platform]) throw new Error(`No fuse settings for ${platform} builds.`);
+  const electron = path.join(context.appOutDir, binaries[platform]);
   const config = { version: FuseVersion.V1 };
   for (const fuse of DISABLED_FUSES) config[FuseV1Options[fuse]] = false;
   await flipFuses(electron, config);
