@@ -517,6 +517,16 @@ export const languages: Language[] = [
     learningPath: ["Delete and print", "Substitute", "Capture groups", "Ranges"],
     sample: `sed -i.bak 's/http:/https:/g' links.txt`,
   },
+  {
+    id: "grep",
+    name: "grep",
+    categories: ["scripting", "systems"],
+    blurb: "The command that finds lines matching a pattern in files and folders.",
+    concepts: ["-i and -n", "-c and -w", "-v, -r and -l", "-o and -E"],
+    frameworks: ["GNU grep", "BSD grep", "sed", "regex"],
+    learningPath: ["Search a file", "Flags", "Folders", "Patterns and exit codes"],
+    sample: `grep -in "error" app.log`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

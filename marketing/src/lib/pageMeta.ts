@@ -72,6 +72,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "ssh-config": "/og/og-explain-ssh-config-b6f8da39.png",
   perl: "/og/og-explain-perl-6a375c1e.png",
   sed: "/og/og-explain-sed-052acff4.png",
+  grep: "/og/og-explain-grep-dae0ebb6.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
