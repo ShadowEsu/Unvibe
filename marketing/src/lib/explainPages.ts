@@ -1079,6 +1079,63 @@ jobs:
       "Quote version numbers. `python-version: 3.10` without quotes is the number 3.1, and the list `[3.9, 3.10, 3.11]` reads as `[3.9, 3.1, 3.11]`. GitHub reads it the same way, so the job asks for Python 3.1.",
   },
   {
+    id: "json",
+    fileName: "package.json",
+    lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
+    description:
+      "Paste JSON and get a plain English explanation, free online. The sample is a package.json for a small Node tool: its scripts, dependencies and version ranges.",
+    sampleSummary: "A package.json for a Node command-line tool, with start and test scripts, a pretest check, an engines line and dependencies pinned three different ways.",
+    sample: `{
+  "name": "csv-report",
+  "version": "1.2.0",
+  "description": "Turn a sales CSV export into a monthly summary",
+  "type": "module",
+  "bin": {
+    "csv-report": "./bin/report.js"
+  },
+  "scripts": {
+    "start": "node bin/report.js data/sales.csv",
+    "pretest": "node bin/check-data.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.0",
+    "dayjs": "~1.11.10"
+  },
+  "devDependencies": {
+    "prettier": "3.3.3"
+  }
+}`,
+    shows: [
+      {
+        concept: "objects and arrays",
+        text: "The whole file is one JSON object: keys in double quotes, a colon, then a value, with commas between pairs. A value can be another object, like `scripts` and `dependencies` here, so each one groups its own named entries.",
+      },
+      {
+        concept: "scripts",
+        text: "`npm start` runs the `start` line and `npm test` runs `test`. npm also runs a script called `pre` plus the name first, so `npm test` printed `data/sales.csv found` from `pretest` before the test ran. `npm pkg get dependencies.dayjs` reads one field back without opening the file.",
+      },
+      {
+        concept: "version ranges",
+        text: "`^5.5.0` allows any 5.x.x from 5.5.0 up, `~1.11.10` only 1.11.x patches, and `3.3.3` that exact version. On 5 Nov npm installed csv-parse 5.6.0 although 7.0.3 was out, dayjs 1.11.23, and prettier 3.3.3 while 3.9.10 was the latest.",
+      },
+      {
+        concept: "strict syntax",
+        text: "JSON is stricter than JavaScript: no comments, no comma after the last item and only double quotes. One stray comma after `\"3.3.3\"` made every npm command stop with `npm error code EJSONPARSE` and `Note: package.json must be actual JSON, not just JavaScript.`",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 on Node 25.7.0: `npm install` added the 3 packages, `npm start` printed `2026-10 200.50` and `2026-11 42.25`, and `npm test` passed 1 test.",
+      "`\"type\": \"module\"` tells Node the .js files use `import`. With that line removed, Node 25 still ran the tool but printed a `MODULE_TYPELESS_PACKAGE_JSON` warning first, because it had to read each file twice to find out.",
+      "`engines` is a request, not a lock. With `\"node\": \">=26\"` on Node 25, `npm install` printed `npm warn EBADENGINE Unsupported engine` and installed everything anyway, exit code 0.",
+    ],
+    watchOut:
+      "`devDependencies` are for working on the project, not for using it. With `import prettier from \"prettier\"` added to `bin/report.js`, the tool ran after a full `npm install` but failed after `npm install --omit=dev`, which skips devDependencies, with `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'prettier'`.",
+  },
+  {
     id: "awk",
     fileName: "totals.awk",
     lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",

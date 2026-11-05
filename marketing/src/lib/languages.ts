@@ -248,6 +248,16 @@ export const languages: Language[] = [
     sample: `runs-on: ubuntu-latest`,
   },
   {
+    id: "json",
+    name: "JSON",
+    categories: ["web", "data"],
+    blurb: "Data and config files: package.json, API responses and settings.",
+    concepts: ["objects and arrays", "scripts", "version ranges", "strict syntax"],
+    frameworks: ["npm", "Node.js", "tsconfig", "REST APIs"],
+    learningPath: ["Objects and arrays", "package.json fields", "Version ranges", "Syntax rules"],
+    sample: `{ "name": "app", "version": "1.0.0" }`,
+  },
+  {
     id: "awk",
     name: "awk",
     categories: ["scripting", "data"],
