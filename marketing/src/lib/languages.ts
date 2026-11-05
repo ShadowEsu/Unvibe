@@ -118,6 +118,16 @@ export const languages: Language[] = [
     sample: `[project]\nname = "invoicer"\nversion = "0.3.1"`,
   },
   {
+    id: "requirements-txt",
+    name: "requirements.txt",
+    categories: ["backend", "scripting"],
+    blurb: "The list of Python packages an app needs, with the versions pip may install.",
+    concepts: ["pip install -r", "==, >= and <", "~= compatible release", "markers after ;"],
+    frameworks: ["pip", "PyPI", "virtual environments", "pip freeze"],
+    learningPath: ["One package per line", "Version ranges", "Markers", "Freeze vs hand-written"],
+    sample: `requests==2.34.2\npython-dotenv>=1.0,<2`,
+  },
+  {
     id: "go",
     name: "Go",
     categories: ["backend", "systems"],

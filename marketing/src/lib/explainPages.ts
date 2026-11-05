@@ -145,6 +145,54 @@ testpaths = ["tests"]`,
       "A plain `pip install .` copies your code, so edits don't show until you install again. After changing `cli.py`, `invoicer` still printed `invoicer 0.3.1: ready`. Installed with `pip install -e .` instead, the same edit showed straight away: `invoicer 0.3.1: edited`.",
   },
   {
+    id: "requirements-txt",
+    fileName: "requirements.txt",
+    lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
+    description:
+      "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range for another, uses ~= for a third and installs a fourth only on Windows.",
+    sampleSummary: "A requirements.txt for a small Python app: requests pinned to one version, python-dotenv limited to 1.x, rich allowed any 15.x release, and tzdata only on Windows.",
+    sample: `# requirements.txt: the packages this app needs, one per line.
+# Install them all with: pip install -r requirements.txt
+
+# Exactly this version, so every machine gets the same code.
+requests==2.34.2
+
+# 1.0 or newer, but not 2.0 or anything after it.
+python-dotenv>=1.0,<2
+
+# 15.0 or any later 15.x release.
+rich~=15.0
+
+# Only installed on Windows, which has no IANA time zone database.
+tzdata; sys_platform == "win32"`,
+    shows: [
+      {
+        concept: "pip install -r",
+        text: "`pip install -r requirements.txt` installs every line in one go. In a fresh virtual environment it printed `Successfully installed` for 10 packages: the 3 named here plus 7 they need, such as `urllib3` and `certifi` for requests. Running it again changed nothing and printed `Requirement already satisfied` 10 times.",
+      },
+      {
+        concept: "==, >= and <",
+        text: "`==2.34.2` allows that one version only. `>=1.0,<2` allows 1.0 and up to, but not including, 2.0: pip's own version checker accepted 1.0 and 1.2.4 and turned down 0.9 and 2.0, and pip installed python-dotenv 1.2.4.",
+      },
+      {
+        concept: "~= compatible release",
+        text: "`~=15.0` means 15.0 or newer, but still 15: the same checker accepted 15.0 and 15.3 and turned down 14.9 and 16.0. pip installed rich 15.0.0.",
+      },
+      {
+        concept: "markers after ;",
+        text: "Text after `;` is a condition about the machine. On this machine, which isn't Windows, pip printed `Ignoring tzdata: markers 'sys_platform == \"win32\"' don't match your environment` and skipped it. Python's zoneinfo docs recommend tzdata because Windows systems don't have an IANA time zone database.",
+      },
+    ],
+    notes: [
+      "Run with Python 3.14 and pip 26.2 in a fresh virtual environment, with the versions that were current on PyPI at the time.",
+      "Two lines that can't both be true stop the install: `requests==2.34.2` with `requests>=3` gave `ERROR: Cannot install requests==2.34.2 and requests>=3 because these package versions have conflicting dependencies.`",
+      "A version that doesn't exist fails with `Could not find a version that satisfies the requirement requests==9.9.9`, followed by the versions that do exist.",
+      "`pip uninstall requests` removed only requests: `urllib3`, `certifi` and `idna`, which came in with it, stayed installed.",
+    ],
+    watchOut:
+      "`pip freeze > requirements.txt` writes down everything installed, not what you asked for. After installing these 4 lines, `pip freeze` listed 10 packages, each pinned with `==`, including `Pygments==2.21.0` and `mdurl==0.1.2`, which came in with rich and not from any line here. Keep the short file you wrote, and use freeze only when you want every version locked.",
+  },
+  {
     id: "javascript",
     fileName: "profiles.js",
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
