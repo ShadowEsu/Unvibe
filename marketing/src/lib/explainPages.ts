@@ -559,7 +559,7 @@ fragment UserBits on User {
     notes: [
       "Run with graphql-js 17.0.2 against a small test schema of orders, items and users, with made-up data.",
       "The server checks every field name: asking for `price` gave `Cannot query field \"price\" on type \"Order\".`",
-      "A field that holds an object needs its own list of fields. `customer` on its own gave `Field \"customer\" of type \"User!\" must have a selection of subfields.`",
+      "A field that holds an object needs its own list of fields. `customer` on its own gave `Field \"customer\" of type \"User!\" must have a selection of subfields. Did you mean \"customer { ... }\"?`",
       "A field without `!` in the schema can come back `null`: the second customer's `email` did.",
     ],
     watchOut:
