@@ -27,6 +27,7 @@ export const OG_CARDS = {
 export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   python: "/og/og-explain-python-674f8424.png",
   "pyproject-toml": "/og/og-explain-pyproject-toml-74c55e43.png",
+  "requirements-txt": "/og/og-explain-requirements-txt-f1f61d5d.png",
   javascript: "/og/og-explain-javascript-f8878f58.png",
   typescript: "/og/og-explain-typescript-9328f8c2.png",
   sql: "/og/og-explain-sql-0d9df631.png",
