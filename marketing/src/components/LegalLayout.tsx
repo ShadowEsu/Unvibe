@@ -7,6 +7,8 @@ interface LegalLayoutProps {
   updated: string;
   intro: string;
   children: React.ReactNode;
+  /** The closing note says the page summarizes a policy. Off for pages that summarize nothing (/licenses). */
+  summarizes?: boolean;
 }
 
 /**
@@ -14,7 +16,7 @@ interface LegalLayoutProps {
  * documents in docs/legal in plain language. They are not a substitute for the full,
  * attorney-reviewed policies and do not claim certifications the product does not hold.
  */
-export function LegalLayout({ title, updated, intro, children }: LegalLayoutProps) {
+export function LegalLayout({ title, updated, intro, children, summarizes = true }: LegalLayoutProps) {
   return (
     <article className="legal-page container-page max-w-prose py-16 sm:py-24">
       <Link
@@ -30,7 +32,7 @@ export function LegalLayout({ title, updated, intro, children }: LegalLayoutProp
       </p>
       <div className="legal-prose mt-10 space-y-8">{children}</div>
       <div className="mt-14 rounded-card border border-line bg-surface-2/60 p-5 text-fluid-sm text-fg-muted">
-        This page summarizes our policies in plain language. Questions? Email{" "}
+        {summarizes ? "This page summarizes our policies in plain language. Questions? Email" : "Questions? Email"}{" "}
         <a href={supportMailto} className="text-fg underline underline-offset-2">
           {SUPPORT_EMAIL}
         </a>
