@@ -91,7 +91,7 @@ export function kitSections(): KitSection[] {
         "Works beside Cursor, VS Code, Claude Code and Terminal. It does not replace your editor.",
         "Five explanation depths: New, Beginner, Intermediate and Advanced are free. Expert is Pro.",
         "Test me: one quick question to check you understood. Lessons are saved to a library.",
-        "After-Agent Review (Pro, in Briefs): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look.",
+        "After-Agent Review (in Briefs, free): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look. Pro adds the AI explanation of the diff.",
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month. ${proSentence()}`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
@@ -104,11 +104,11 @@ export function kitSections(): KitSection[] {
       intro: "Lead with the feeling, not the feature. Most people who code with AI have shipped something they could not explain.",
       bullets: [
         "Students and new coders: learn from the code AI gives you instead of copy pasting it. Unvibe meets you at your level.",
-        "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Pro ranks the diff so you know where to look first.",
+        "Builders shipping with Cursor or Claude Code: know what your agent changed before you merge. Briefs rank the diff so you know where to look first.",
         "Working developers: own the code in your repo, even the parts you did not type.",
         "Objection: \"I can just ask ChatGPT.\" Answer: Unvibe is in place, one key, knows the file you are in, checks you understood, and keeps the lesson.",
         "Objection: \"Is my code safe?\" Answer: Unvibe checks the code for secrets on your machine first, a known key stops the request, and you choose what is sent. From app 0.1.44, typed questions and Chat are checked too; older versions don't check them, so say so if asked.",
-        "Objection: \"Is it really free?\" Answer: yes. Pro adds Expert depth, git diffs and nearby-file context, and your first month of Pro is free anyway.",
+        "Objection: \"Is it really free?\" Answer: yes. Change Briefs are free too. Pro adds Expert depth, the AI explanation of a Brief and nearby-file context, and signing in to the app gives you a free month of Pro.",
         AI_MAINTENANCE
           ? `Call to action: ${SITE} (download).`
           : `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,

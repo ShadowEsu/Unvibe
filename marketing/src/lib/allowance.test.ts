@@ -9,7 +9,6 @@ import BetaDownloadsPage from "@/app/beta/page";
 import AboutPage from "@/app/about/page";
 import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { faqItems } from "@/data/faq";
-import { FREE_USE_NOTE } from "@/emails/betaShared";
 import { ALLOWANCE } from "./allowance";
 
 Object.assign(globalThis, { React });
@@ -39,13 +38,12 @@ describe("explanation allowances", () => {
     assert.doesNotMatch(page, VAGUE);
   });
 
-  it("the FAQ, /about and the download email say the same", () => {
+  it("the FAQ and /about say the same", () => {
     const free = faqItems.find((item) => item.id === "free")?.answer ?? "";
     assert.match(free, /50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in\./);
     const about = text(createElement(AboutPage));
     assert.match(about, /Free: 50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in\./);
-    assert.equal(FREE_USE_NOTE, "Without an account you get 50 explanations (follow-up questions count toward these) and 50 Test me questions in your first 30 days. Sign in for 50 explanations a month on Free.");
-    for (const copy of [free, about, FREE_USE_NOTE]) assert.doesNotMatch(copy, VAGUE);
+    for (const copy of [free, about]) assert.doesNotMatch(copy, VAGUE);
   });
 
   it("are written only in lib/allowance", async () => {

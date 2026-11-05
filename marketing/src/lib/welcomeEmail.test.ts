@@ -13,17 +13,18 @@ const input = {
 };
 
 describe("welcome email", () => {
-  it("has the banner, Pro, referral and feedback month", () => {
+  it("has the banner, referral and feedback month, and no Pro card or early-access claims", () => {
     const html = welcomeHtml(input);
     assert.match(html, /email\/welcome-banner\.png/);
-    assert.match(html, /unvibe\.site\/pricing/);
     assert.match(html, /\?ref=ab12cd34/);
-    assert.match(html, /another free month of Pro/);
-    assert.match(WELCOME_SUBJECT, /early access/);
+    assert.match(html, /a free month of Pro/);
     const text = welcomeText(input);
     assert.match(text, /Congrats/);
     assert.match(text, /feedback=1/);
-    assert.doesNotMatch(text + html + WELCOME_SUBJECT, /[—–]/);
+    const all = text + html + WELCOME_SUBJECT;
+    assert.doesNotMatch(all, /[—–]/);
+    // Security W1 and W3 (2026-11-04): no account months for people without an account, no pricing link, no "early" claims.
+    assert.doesNotMatch(all, /\/pricing|Want Pro|already starts with|early access|first people|in early/i);
   });
 
   it("states the shared gift rule in both parts, and no waitlist reward", () => {
@@ -65,5 +66,18 @@ describe("reward links", () => {
     assert.equal(verifyEmailSignature("someone@else.com", token), false);
     assert.equal(verifyEmailSignature("friend@example.com", "nope"), false);
     assert.match(feedbackRewardUrl("friend@example.com"), new RegExp(`t=${token}`));
+  });
+});
+
+// Moved here from the deleted beta email test: Design's detect pass and Preston's no-italics rule (4 Nov).
+describe("welcome email: no emoji, upright type", () => {
+  const html = welcomeHtml(input);
+  const text = welcomeText(input);
+  it("has no emoji or pictographs in the subject, text or HTML", () => {
+    const pictograph = new RegExp("\\p{Extended_Pictographic}", "u");
+    for (const part of [WELCOME_SUBJECT, text, html]) assert.doesNotMatch(part, pictograph);
+  });
+  it("sets nothing in italics: no <em>, <i> or italic style in the HTML", () => {
+    assert.doesNotMatch(html, /<(em|i)\b|font-style:\s*italic/i);
   });
 });
