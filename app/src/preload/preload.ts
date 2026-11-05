@@ -153,6 +153,8 @@ const api = {
   /** First run step 3: explain what is on the clipboard (no Accessibility needed). */
   explainClipboard: () => ipcRenderer.send('onboarding:explainClipboard'),
   answerLevel: (answer: 'too_basic' | 'about_right' | 'too_advanced'): Promise<{ ok: true; level: string } | { ok: false }> => ipcRenderer.invoke('onboarding:levelAnswer', answer),
+  /** Optional first-run answer to "Where did you hear about Unvibe?"; fire and forget. */
+  answerHeardFrom: (answer: string) => ipcRenderer.send('onboarding:heardFrom', answer),
   /** The first-run sample answer finished; returns an unsubscribe. */
   onSampleDone: (cb: () => void) => {
     const listener = () => cb();

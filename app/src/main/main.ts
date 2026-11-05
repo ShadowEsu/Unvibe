@@ -62,7 +62,7 @@ import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown }
 import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
 import { fullProductBuildEnabled, trialBuildEnabled } from './trial';
-import { reportProgress, syncProgress } from './progress';
+import { answerHeardFrom, reportProgress, syncProgress } from './progress';
 import { flush, onSyncStatus, retrySync, stopSync, syncStatus } from './sync';
 import {
   signIn,
@@ -1577,6 +1577,8 @@ app.whenReady().then(() => {
     reportProgress('level_answered');
     return { ok: true as const, level };
   });
+  /** The optional "Where did you hear about Unvibe?" answer from step 1; never awaited by setup. */
+  ipcMain.on('onboarding:heardFrom', (_e, answer: unknown) => void answerHeardFrom(answer));
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     reportProgress('onboarded');

@@ -449,16 +449,17 @@ const SAMPLE_LINES = [
 ];
 
 /**
- * First run, built so the first real explanation lands within a minute: 1 hello (name optional),
- * 2 explain a sample for real (no permission needed), then one skippable level question, 3 try it on
- * your own code. On a Mac, step 3 is one paste target (no permission), and step 4 offers the shortcut
- * only once that own code has been explained (onboarding:ownCodeDone): value first, permission second.
- * Windows needs no permission, so it keeps its three steps. Google sign-in and editor bridges are
- * optional and stay reachable later.
+ * First run, built so the first real explanation lands within a minute: 1 hello (name and where you
+ * heard about Unvibe, both optional), 2 explain a sample for real (no permission needed), then one
+ * skippable level question, 3 try it on your own code. On a Mac, step 3 is one paste target (no
+ * permission), and step 4 offers the shortcut only once that own code has been explained
+ * (onboarding:ownCodeDone): value first, permission second. Windows needs no permission, so it keeps
+ * its three steps. Google sign-in and editor bridges are optional and stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
+  const [heardFrom, setHeardFrom] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -588,6 +589,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
                 : { label: 'Start using Unvibe', finishes: true };
   const advance = () => {
+    // Optional and never awaited: a blank answer sends nothing and setup never waits on it.
+    if (step === 0 && heardFrom.trim()) window.unvibe.answerHeardFrom(heardFrom);
     if (forward.finishes) void finish();
     else go(step + 1);
   };
@@ -639,6 +642,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                   <span>What should I call you? <em className="ob2__opt">optional</em></span>
                   <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
                     onChange={(event) => setDisplayName(event.target.value)} />
+                </label>
+                <label>
+                  <span>Where did you hear about Unvibe? <em className="ob2__opt">optional</em></span>
+                  <input className="field" value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
+                    aria-describedby="heard-from-note" onChange={(event) => setHeardFrom(event.target.value)} />
+                  {/* Security 0046 (option A): typing an answer is its own opt-in, so the line says what happens. */}
+                  <span className="ob2__note" id="heard-from-note">Sent once to Unvibe with this install&apos;s random ID. Leave it blank to send nothing.</span>
                 </label>
                 <button type="submit" hidden />
               </form>
