@@ -294,6 +294,62 @@ echo "Top errors written to $report"`,
       "If no line contains `ERROR`, `grep` exits with 1, `pipefail` fails the pipeline and `set -e` ends the script before the last `echo`, leaving an empty report. Add `|| true` after the pipeline if no errors is a normal result.",
   },
   {
+    id: "powershell",
+    fileName: "Clear-OldLogs.ps1",
+    lead: "Paste a PowerShell script and Vibe explains what each cmdlet in the pipeline passes along, what `$_` holds and what `-WhatIf` would change before anything runs.",
+    description:
+      "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and reports their size.",
+    sampleSummary: "A PowerShell script that finds .log files older than a number of days, deletes them with WhatIf support and prints a size report.",
+    sample: `# Delete .log files older than -Days in a folder and its subfolders.
+# Run: ./Clear-OldLogs.ps1 -Path ./logs -Days 30 -WhatIf
+[CmdletBinding(SupportsShouldProcess)]
+param(
+    [Parameter(Mandatory)]
+    [string]$Path,
+    [int]$Days = 30
+)
+
+$cutoff = (Get-Date).AddDays(-$Days)
+
+$old = Get-ChildItem -Path $Path -Filter *.log -Recurse -File |
+    Where-Object { $_.LastWriteTime -lt $cutoff } |
+    Sort-Object Length -Descending
+
+foreach ($file in $old) {
+    if ($PSCmdlet.ShouldProcess($file.FullName, "Delete")) {
+        Remove-Item -LiteralPath $file.FullName
+    }
+}
+
+$old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.Length / 1KB, 1) } }
+"{0} files, {1:N1} KB" -f $old.Count, (($old | Measure-Object Length -Sum).Sum / 1KB)`,
+    shows: [
+      {
+        concept: "cmdlets and the pipeline",
+        text: "`Get-ChildItem` lists the files, `|` hands each one to `Where-Object`, which keeps the ones that pass its test, and `Sort-Object Length -Descending` puts the biggest first. `-Filter *.log` and `-File` narrow the list before anything reaches the pipeline, so `notes.txt` and the folders never show up.",
+      },
+      {
+        concept: "objects and properties",
+        text: "The pipeline passes file objects, not lines of text. Inside `{ ... }`, `$_` is the current file, so `$_.LastWriteTime` and `$_.Length` are its date and size, with no text to cut apart. `@{ Name = \"SizeKB\"; Expression = { ... } }` adds a column worked out for each file, and `1KB` is PowerShell's own constant for 1,024.",
+      },
+      {
+        concept: "parameters",
+        text: "`param()` declares what the script takes. `[Parameter(Mandatory)]` made a run with no `-Path` stop with `missing mandatory parameters: Path`, `[int]` made `-Days abc` stop with `Cannot convert value \"abc\" to type \"System.Int32\"`, and `= 30` is the default when `-Days` is left out.",
+      },
+      {
+        concept: "WhatIf and ShouldProcess",
+        text: "`[CmdletBinding(SupportsShouldProcess)]` gives the script a `-WhatIf` switch. `$PSCmdlet.ShouldProcess(...)` returns false under `-WhatIf` and prints the change instead, so the run printed `What if: Performing the operation \"Delete\" on target ...` for each old log and deleted nothing.",
+      },
+    ],
+    notes: [
+      "Run with PowerShell 7.6.9 on four test files, two .log files from 20 September, one from 4 November and a .txt, with `-Days 30 -WhatIf` on 5 November: it listed the two September logs, printed `2 files, 250.0 KB` and left all four files in place.",
+      "The same run without `-WhatIf`, on a copy of the folder, deleted exactly those two logs and kept `notes.txt` and the November log.",
+      "With one old file the summary read `1 files, 2.0 KB`, and with none `0 files, 0.0 KB`. `.Count` works on a single result and on an empty one in PowerShell 7, so the line never breaks.",
+    ],
+    watchOut:
+      "Use `-LiteralPath` for file names you didn't type. In a file called `app[1].log`, `-Path` reads `[1]` as a wildcard: `Remove-Item -Path` matched nothing, deleted nothing and still reported success, while `-LiteralPath` removed the file.",
+  },
+  {
     id: "c",
     fileName: "players.c",
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",

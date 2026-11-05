@@ -208,6 +208,16 @@ export const languages: Language[] = [
     sample: `grep -r "TODO" src/ | wc -l`,
   },
   {
+    id: "powershell",
+    name: "PowerShell",
+    categories: ["scripting", "systems"],
+    blurb: "Windows automation and admin scripts that pass objects down the pipeline.",
+    concepts: ["cmdlets and the pipeline", "objects and properties", "parameters", "WhatIf and ShouldProcess"],
+    frameworks: ["PowerShell 7", "Windows PowerShell", "Pester", "PSReadLine"],
+    learningPath: ["Cmdlets", "The pipeline", "Parameters", "Safe changes"],
+    sample: `Get-Process | Sort-Object CPU -Descending | Select-Object -First 5`,
+  },
+  {
     id: "regex",
     name: "Regex",
     categories: ["scripting", "data"],
