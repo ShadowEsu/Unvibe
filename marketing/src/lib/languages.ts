@@ -258,6 +258,16 @@ export const languages: Language[] = [
     sample: `<product id="mug-blue"><name>Blue mug</name></product>`,
   },
   {
+    id: "markdown",
+    name: "Markdown",
+    categories: ["web"],
+    blurb: "Plain text with a few marks that turn into headings, lists, links and code: READMEs, docs and notes.",
+    concepts: ["headings and emphasis", "lists", "code", "quotes and tables"],
+    frameworks: ["CommonMark", "markdown-it", "README files", "HTML"],
+    learningPath: ["Headings and emphasis", "Lists and links", "Code", "Line breaks"],
+    sample: `## Install\n\n1. Run \`pip install invoicer\`.`,
+  },
+  {
     id: "bash",
     name: "Bash",
     categories: ["scripting", "systems"],

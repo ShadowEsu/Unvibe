@@ -1111,6 +1111,64 @@ class Reports {
       "A comment can't contain two hyphens in a row. With `check with xmllint --schema` in the comment on line 2, the whole file failed to parse with `Double hyphen within comment`, before any element was read.",
   },
   {
+    id: "markdown",
+    fileName: "README.md",
+    lead: "Paste Markdown and Vibe explains what each mark turns into: headings, lists, links, code blocks and tables, and why a line sometimes doesn't break where you expect.",
+    description:
+      "Paste a Markdown file and get it explained in plain English, free online. The sample is a project README with headings, a numbered list, a code block, a quote and a table.",
+    sampleSummary: "A README for a small command line tool: a title, bold text and a link, a numbered install list, a shell code block, a bullet list, a tip in a quote and a table of flags.",
+    sample: `# Invoicer
+
+Turn a CSV of hours into a **PDF invoice**. See the [changelog](CHANGELOG.md).
+
+## Install
+
+1. Install Python 3.10 or newer.
+1. Run \`pip install invoicer\`.
+1. Check it works with \`invoicer --version\`.
+
+## Use
+
+\`\`\`sh
+invoicer hours.csv --client "Acme Ltd" --out march.pdf
+\`\`\`
+
+- Rates come from \`rates.toml\`.
+- Dates are read as *day/month/year*.
+
+> Tip: keep one CSV per client.
+
+| Flag    | Meaning              |
+|---------|----------------------|
+| \`--out\` | Where to save the PDF |`,
+    shows: [
+      {
+        concept: "headings and emphasis",
+        text: "`#` starts the main heading and `##` a section heading; they came out as `<h1>` and `<h2>`. Two stars make bold and one makes italic: `**PDF invoice**` became `<strong>` and `*day/month/year*` became `<em>`. `[changelog](CHANGELOG.md)` is a link with its text in the brackets and its address in the parentheses.",
+      },
+      {
+        concept: "lists",
+        text: "Lines starting with a number and a dot make a numbered list, and lines starting with `-` a bullet list. The numbers you type don't have to count up: writing `1.` on every line still gave one `<ol>` with three items. Only the first number matters, and a list that starts at `3.` became `<ol start=\"3\">`.",
+      },
+      {
+        concept: "code",
+        text: "Single backticks mark code inside a sentence, such as `rates.toml`. Three backticks on their own lines fence a block, and the word after them names the language: the block came out as `<pre><code class=\"language-sh\">`, with the quotes in the command escaped as `&quot;`.",
+      },
+      {
+        concept: "quotes and tables",
+        text: "`>` makes a quote, `<blockquote>`. A table is rows of cells between `|` marks, and the row of dashes splits the header from the body: the renderer made `<th>` cells for Flag and Meaning and `<td>` cells below. The columns don't have to line up for it to work.",
+      },
+    ],
+    notes: [
+      "Rendered with markdown-it 15.0.3, which follows CommonMark and also renders tables like the one here.",
+      "A `#` needs a space after it: `#Install` stayed a normal paragraph with the `#` showing.",
+      "Underscores inside a word are left alone: `get_user_name` came out as written. Stars are not: `2*3*4` turned the 3 into italics, and `2\\*3\\*4` with backslashes showed the stars.",
+      "Four spaces at the start of a line, after a blank line, make a code block: the indented line came out in `<pre><code>`.",
+    ],
+    watchOut:
+      "A single line break doesn't start a new line. `Line one` and `Line two` on back-to-back lines came out in one paragraph and show as one line. End the first line with two spaces or a backslash to get a `<br>`, or leave a blank line between them to make two paragraphs.",
+  },
+  {
     id: "go",
     fileName: "counts.go",
     lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
