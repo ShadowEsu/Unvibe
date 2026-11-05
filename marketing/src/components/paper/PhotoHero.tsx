@@ -197,7 +197,7 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
  * Homepage hero, direction N: the promise in white on the violet field, the giant wordmark behind the demo window,
  * and the light hill carrying one action for this device. The H1 and the wordmark never animate (LCP). Where the
  * browser has no scroll-driven animations, one rAF-throttled scroll handler moves the window and the wordmark while
- * the hero is on screen. The first-visit intro (app/page.tsx) ends on any click, wheel, touch or key.
+ * the hero is on screen.
  */
 export function PhotoHero() {
   const [device, setDevice] = useState<VisitorDevice>("mac");
@@ -217,20 +217,6 @@ export function PhotoHero() {
     if (!detected || device === "phone" || !actionsRef.current) return undefined;
     return watchDownloadCtaView(actionsRef.current, "hero", device);
   }, [detected, device]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (!root.classList.contains("has-intro") || root.classList.contains("intro-done")) return undefined;
-    const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
-    const end = () => {
-      root.classList.add("intro-done");
-      for (const type of events) window.removeEventListener(type, end, true);
-      window.clearTimeout(timer);
-    };
-    for (const type of events) window.addEventListener(type, end, { capture: true, passive: true });
-    const timer = window.setTimeout(end, 900);
-    return end;
-  }, []);
 
   useEffect(() => {
     const hero = heroRef.current, par = parRef.current, word = wordRef.current;

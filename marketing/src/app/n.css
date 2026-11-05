@@ -18,16 +18,12 @@
   --n-v700: #4a2fc4;
   --n-lime: #d6f45a;
   --n-e: cubic-bezier(0.19, 1, 0.22, 1);
-  --n-io: 0ms;
   --n-float: 0 0 0 1px rgb(29 20 80 / 0.07), 0 2px 4px rgb(29 20 80 / 0.06), 0 30px 60px -28px rgb(40 22 130 / 0.38);
   --n-float-up: 0 0 0 1px rgb(29 20 80 / 0.08), 0 4px 8px rgb(29 20 80 / 0.06), 0 40px 70px -30px rgb(40 22 130 / 0.5);
   color: var(--n-ink);
   font-size: 16px;
   line-height: 1.6;
 }
-/* The load sequence waits for the intro when it runs. */
-.has-intro .n-home { --n-io: 350ms; }
-
 /* The site's code-field backdrop and its glass are not part of N: the home page is plain ground. */
 html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 
@@ -221,26 +217,18 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .nband .n-lead { margin: 10px auto 30px; color: #ece7ff; }
 .nband__card { width: min(760px, 100%); margin: 0 auto; text-align: left; }
 
-/* ---------- Intro (first visit, once per session, skippable; the page renders underneath) ---------- */
-.nintro { display: none; }
-.has-intro:not(.intro-done) .nintro {
-  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: linear-gradient(180deg, #33209a, #5236d6);
-  animation: n-out 400ms var(--n-e) 450ms both;
-}
-.has-intro .nintro svg { width: 88px; height: auto; animation: n-mark 450ms var(--n-e) both; }
-
 /* ---------- Motion: only with JS and without reduced motion ---------- */
 @media (prefers-reduced-motion: no-preference) {
-  .n-load .nhero__field { animation: n-fade 200ms var(--n-e) var(--n-io) both; }
-  .n-load:has(.n-home) .mnav { animation: n-drop 500ms var(--n-e) calc(100ms + var(--n-io)) both; }
-  .n-load .nhero__sub { animation: n-rise12 500ms var(--n-e) calc(150ms + var(--n-io)) both; }
-  .n-load .nhero__base > * { animation: n-rise12 500ms var(--n-e) calc(450ms + var(--n-io)) both; }
+  .n-load .nhero__field { animation: n-fade 200ms var(--n-e) both; }
+  .n-load:has(.n-home) .mnav { animation: n-drop 500ms var(--n-e) 100ms both; }
+  .n-load .nhero__sub { animation: n-rise12 500ms var(--n-e) 150ms both; }
+  .n-load .nhero__base > * { animation: n-rise12 500ms var(--n-e) 450ms both; }
 
   /* Demo loop: 8 s, from when the window has landed (1000 ms); paused off screen. */
   .js .ndemo .ndemo__bar, .js .ndemo .ndemo__plain, .js .ndemo .ndemo__ink, .js .ndemo .ndemo__key, .js .ndemo .ndemo__key::after,
   .js .ndemo .ndemo__panel img, .js .ndemo .ndemo__cover i {
     animation-duration: 8s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: var(--n-e);
-    animation-delay: calc(1000ms + var(--n-io) + var(--k, 0) * 150ms);
+    animation-delay: calc(1000ms + var(--k, 0) * 150ms);
   }
   .js .ndemo .ndemo__sel--1 .ndemo__bar { animation-name: d-bar1; }
   .js .ndemo .ndemo__sel--2 .ndemo__bar { animation-name: d-bar2; }
@@ -262,7 +250,6 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 /* Reduced motion, or no JS: the finished frame of the demo, the panel and every answer line visible. */
 @media (prefers-reduced-motion: reduce) {
   .ndemo__bar { transform: none; }
-  .has-intro .nintro { display: none; }
   .ndock, .nstory__steps li, .nstory__steps li::after, .nstory__figs img, .nrow__a, .nrow__in, .nrow__plus, .nprice__plan, .nprice__plan::after,
   .nhero__base .paper-join { transition: none; }
   .nstory__figs img, .nstory__figs img.is-past { transform: translate(-50%, -50%); }

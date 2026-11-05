@@ -8,7 +8,6 @@ import { BackingStrip } from "@/components/paper/BackingStrip";
 import { ExpandRows } from "@/components/paper/ExpandRows";
 import { HomeDock } from "@/components/paper/HomeDock";
 import { HowItWorks } from "@/components/paper/HowItWorks";
-import { Vibe } from "@/components/paper/Vibe";
 import { STEPS } from "@/data/howItWorks";
 import { WhatLeaves } from "@/components/paper/WhatLeaves";
 import { HomePricing } from "@/components/paper/HomePricing";
@@ -48,11 +47,11 @@ export const revalidate = 300;
 export const viewport: Viewport = { themeColor: "#33209a" };
 
 /**
- * Before first paint: `n-load` turns on the load sequence (n.css) for this first load only, and the first visit of
- * a session with motion allowed gets the short intro. A client-side visit runs neither (React doesn't run this
- * script), so the page is simply there. The intro ends at 850 ms, or at once on any click, wheel, touch or key.
+ * Before first paint: `n-load` turns on the load sequence (n.css) for this first load only. A client-side visit
+ * doesn't run it (React doesn't run this script), so the page is simply there. (A first-visit intro was measured
+ * on the real build and cost up to +212 ms LCP at 390 against live, over the +50 ms budget, so N has none.)
  */
-const BOOT = `(function(){try{var d=document.documentElement;d.classList.add("n-load");if(matchMedia("(prefers-reduced-motion: reduce)").matches||sessionStorage.getItem("uv-intro"))return;sessionStorage.setItem("uv-intro","1");d.classList.add("has-intro")}catch(e){}})()`;
+const BOOT = `document.documentElement.classList.add("n-load")`;
 
 /**
  * Direction N (Design, agents/design/unvibe-new-N): the violet hero with the demo playing itself, the real
@@ -66,8 +65,6 @@ export default function HomePage() {
       {homeJsonLd.map((value) => (
         <script key={String(value["@type"])} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(value) }} />
       ))}
-      <div className="nintro" aria-hidden="true"><Vibe size={88} /></div>
-
       <PhotoHero />
 
       <div className="n-sec n-wrap">
