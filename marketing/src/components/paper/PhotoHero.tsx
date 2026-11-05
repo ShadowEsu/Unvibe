@@ -163,14 +163,14 @@ export function PhotoHero() {
         {/* One glass plate holds the promise, the action and the trust line (Design 466). No entrance motion: the h1 is the LCP. */}
         <div className="u-sheet vhero__plate">
           <h1 id="hero-title">
-            <span className="vhero__lead">Understand the code</span> your AI just wrote.
+            <span className="vhero__lead">Explain <span className="vhero__nowrap">AI-written</span> code</span> in plain English.
           </h1>
           <p className="vhero__kicker">
             {device === "phone" ? (
-              "Select code on your Mac or PC, press one shortcut, and Vibe explains it in plain English beside your editor."
+              "Unvibe is a free app for Mac and Windows. Select code on your computer, press one shortcut, and Vibe explains it beside your editor."
             ) : (
               <>
-                Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it in plain English beside your editor.
+                Unvibe is a free app for Mac and Windows. Select code in any app, press <kbd>{shortcut}</kbd>, and Vibe explains it beside your editor.
               </>
             )}
           </p>

@@ -25,6 +25,7 @@ import { ScrollVibe } from "@/components/paper/ScrollVibe";
 import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
 import { ReminderToast } from "@/components/paper/ReminderToast";
 import { Nav } from "@/components/Nav";
+import { PRODUCT_FEATURES, PRODUCT_HOW, PRODUCT_SENTENCE } from "@/lib/productFacts";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { BOOT_SCRIPT } from "@/lib/theme";
@@ -60,30 +61,30 @@ const monoWhenWanted = `(function(){var done=false,events=["scroll","pointerdown
 
 const siteUrl = SITE_URL;
 
+const defaultTitle = "Unvibe: explain AI-written code in plain English";
+const defaultDescription = `${PRODUCT_SENTENCE} Select code in any app, press one shortcut, and read it beside your editor. No API key needed.`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Unvibe: understand the code AI writes for you",
+    default: defaultTitle,
     template: "%s · Unvibe",
   },
-  description:
-    "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+  description: defaultDescription,
   // Fallback for pages without pageMetadata() (404, private pages). No og:url here: a page that
   // inherited one would point its preview at the home page.
   openGraph: {
     type: "website",
-    title: "Unvibe: understand the code AI writes for you",
-    description:
-      "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+    title: defaultTitle,
+    description: defaultDescription,
     siteName: "Unvibe",
     locale: "en_US",
     images: [{ url: OG_CARDS.home.file, ...OG_CARD_SIZE, alt: OG_CARDS.home.alt }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unvibe: understand the code AI writes for you",
-    description:
-      "Free for Mac and Windows. Select code in any app, press one shortcut, and Vibe explains it in plain English beside your editor. No API key needed.",
+    title: defaultTitle,
+    description: defaultDescription,
     images: [{ url: OG_CARDS.home.file, alt: OG_CARDS.home.alt }],
   },
   robots: { index: true, follow: true },
@@ -99,17 +100,26 @@ export const metadata: Metadata = {
   },
 };
 
+/** The app, on every page. No aggregateRating or review: there are no public reviews to cite. */
 const softwareJsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
+  "@id": `${siteUrl}/#app`,
   name: "Unvibe",
+  url: siteUrl,
   applicationCategory: "DeveloperApplication",
-  operatingSystem: "macOS, Windows",
+  applicationSubCategory: "Code explainer",
+  operatingSystem: "macOS, Windows 10, Windows 11",
   // The release the site installs (betaInstallScript.test pins it to the install tag), without the tag's "v".
   softwareVersion: BETA_INSTALL_VERSION.replace(/^v/, ""),
   downloadUrl: `${siteUrl}/beta`,
-  description:
-    "A desktop overlay for Mac and Windows that explains selected AI-generated code in place.",
+  releaseNotes: `${siteUrl}/releases`,
+  screenshot: `${siteUrl}/product/unvibe-0148-debounce-1180.webp`,
+  description: `${PRODUCT_SENTENCE} ${PRODUCT_HOW}`,
+  featureList: PRODUCT_FEATURES,
+  isAccessibleForFree: true,
+  inLanguage: "en",
+  publisher: { "@id": `${siteUrl}/#org` },
   offers: {
     "@type": "Offer",
     price: "0",
@@ -121,9 +131,11 @@ const softwareJsonLd = {
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${siteUrl}/#org`,
   name: "Unvibe",
   url: siteUrl,
   logo: `${siteUrl}/icon.png`,
+  description: "Unvibe makes a free desktop app for Mac and Windows that explains AI-written code in plain English.",
   email: "support@unvibe.site",
   // Only profiles that exist: TikTok and X are left out until their accounts do.
   sameAs: [

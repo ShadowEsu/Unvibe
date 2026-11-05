@@ -7,24 +7,35 @@ import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
 import { TypingFaq } from "@/components/paper/TypingFaq";
 import { HowItWorks } from "@/components/paper/HowItWorks";
+import { STEPS } from "@/data/howItWorks";
 import { ScrollSyncedList } from "@/components/paper/ScrollSyncedList";
 import { WhatLeaves } from "@/components/paper/WhatLeaves";
 import { HomePricing } from "@/components/paper/HomePricing";
 import { Arrive } from "@/components/paper/Arrive";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
-import { jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
+import { faqPageJsonLd, howToJsonLd, jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
 import { explainLanguage, explainPages } from "@/lib/explainPages";
 import { pageMetadata } from "@/lib/pageMeta";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",
-  title: "Unvibe: Code Explainer for Mac and Windows, Free",
+  title: "Unvibe: Explain AI-Written Code in Plain English, Free",
   absolute: true,
-  description: `Select code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor. Free, no API key.`,
+  description: `Unvibe is a free code explainer for Mac and Windows. Select AI-written code in any app, press ${SHORTCUTS.mac.anywhere} (${SHORTCUTS.windows.anywhere} on Windows), and read it in plain English.`,
 });
 
 const homeFaq = faqItems.filter((item) => ["which-shortcut", "editors", "sent", "accuracy"].includes(item.id));
+
+/** Only what the page shows: the four answers in the questions section and the four How it works steps. */
+const homeJsonLd = [
+  websiteJsonLd,
+  faqPageJsonLd(homeFaq),
+  howToJsonLd(
+    "How to understand AI-written code with Unvibe",
+    STEPS.map((step) => ({ name: step.title, text: step.body ? `${step.title} ${step.body}` : step.title, image: step.image?.src })),
+  ),
+];
 
 /** The language pages linked from the Try it section, so search engines reach them from the homepage. */
 const HOME_LANGUAGES = ["python", "javascript", "typescript", "sql", "bash"];
@@ -40,7 +51,9 @@ export const revalidate = 300;
 export default function HomePage() {
   return (
     <div className="home-page">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd) }} />
+      {homeJsonLd.map((value) => (
+        <script key={String(value["@type"])} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(value) }} />
+      ))}
       <PhotoHero />
 
       <AppTour />

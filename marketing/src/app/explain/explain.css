@@ -72,6 +72,11 @@
   margin-top: 2rem;
 }
 
+/* /faq: each question sits 6px above its answer (Design, #153). */
+.explain-faq__q {
+  margin: 0 0 6px;
+}
+
 .explain-card p,
 .explain-card li,
 .explain-card dd {

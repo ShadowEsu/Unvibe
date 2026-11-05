@@ -78,7 +78,7 @@ export const faqItems: FaqItem[] = [
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded. If you add your own API key in Settings, the app sends the request straight to that provider instead.",
     category: "privacy",
   },
   {
