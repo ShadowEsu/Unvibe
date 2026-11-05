@@ -972,6 +972,57 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
   },
   {
+    id: "cron",
+    fileName: "crontab",
+    lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
+    description:
+      "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup, weekday reports and a monthly job.",
+    sampleSummary: "A crontab for an app server: a check every 15 minutes, a nightly backup with a log, a weekday report, a monthly archive job and one schedule that runs far more often than meant.",
+    sample: `# Jobs for the app server. Edit with: crontab -e
+# minute  hour  day-of-month  month  day-of-week  command
+MAILTO=ops@example.com
+
+# Every 15 minutes: check the site is up.
+*/15 * * * *   /opt/app/bin/healthcheck.sh
+
+# 02:30 every night: back up the database, keeping a log.
+30 2 * * *     /opt/app/bin/backup-db.sh >> /var/log/backup.log 2>&1
+
+# 08:00 Monday to Friday: email yesterday's sales report.
+0 8 * * 1-5    /opt/app/bin/sales-report.sh
+
+# 03:00 on the 1st of every month: rotate the archive.
+0 3 1 * *      /opt/app/bin/rotate-archive.sh
+
+# Meant as 09:00 on the first Monday of the month.
+0 9 1-7 * 1    /opt/app/bin/monthly-review.sh`,
+    shows: [
+      {
+        concept: "five time fields",
+        text: "Each job line starts with five fields: minute, hour, day of the month, month and day of the week, then the command. `*` means every value, so `30 2 * * *` is 02:30 every day. Counted from Thursday 5 November at 08:40, the backup's next runs were Fri 6 Nov 02:30 and Sat 7 Nov 02:30.",
+      },
+      {
+        concept: "steps and ranges",
+        text: "`*/15` in the minute field means every 15 minutes counting from 0, so the check's next runs were 08:45, 09:00 and 09:15. `1-5` in the day-of-week field is Monday to Friday, with 0 as Sunday, so after Fri 6 Nov the sales report skipped the weekend and ran next on Mon 9 Nov.",
+      },
+      {
+        concept: "day-of-month and day-of-week",
+        text: "When both day fields are set, a day that matches either one runs the job; it doesn't have to match both. The POSIX rule for crontab says \"any day matching either the month and day of month, or the day of week, shall be matched.\" When one of them is `*`, only the other one counts, which is why `0 3 1 * *` runs on the 1st alone: Tue 1 Dec, then Fri 1 Jan 2027.",
+      },
+      {
+        concept: "commands and output",
+        text: "Everything after the fifth field is the command, run with `sh`. `>> /var/log/backup.log` adds the job's output to the end of the log, and `2>&1` sends its error messages there as well. Run with sh, `{ echo out; echo err >&2; } >> file 2>&1` wrote both lines to the file.",
+      },
+    ],
+    notes: [
+      "The run times on this page were worked out with croniter 6.2.4, a Python library that follows cron's rules, from Thursday 5 November 2026 at 08:40. No cron daemon ran these jobs.",
+      "`MAILTO=` is a setting, not a job. In cronie, if `MAILTO` is set, mail goes to that address whenever a job sends output, and `MAILTO=\"\"` turns the mail off. The backup line writes its output to a log instead, so it sends none.",
+      "croniter rejected `60 * * * *`, because minutes go from 0 to 59, and `*/15 * * *`, which has only four time fields.",
+    ],
+    watchOut:
+      "`0 9 1-7 * 1` is not the first Monday. Because both day fields are set, it runs every day from the 1st to the 7th and also every Monday: its next runs were Thu 5, Fri 6 and Sat 7 Nov, then Mon 9, 16 and 23 Nov, 31 runs from November to January in place of 3. Keep `*` for the weekday and test it in the command: `0 9 1-7 * * [ \"$(date +\\%u)\" = 1 ] && /opt/app/bin/monthly-review.sh`. Run with sh for 1 to 7 November 2026, that test passed only on Monday the 2nd. The `\\%` is needed because cron turns a bare `%` into a new line.",
+  },
+  {
     id: "dart",
     fileName: "track.dart",
     lead: "Paste Dart, Flutter app code included, and Vibe explains where null is allowed, what a constructor does with its arguments and what each type cast checks.",

@@ -228,6 +228,16 @@ export const languages: Language[] = [
     sample: String.raw`^\d{3}-\d{4}$`,
   },
   {
+    id: "cron",
+    name: "cron",
+    categories: ["scripting", "systems"],
+    blurb: "Schedules that run commands at set minutes, hours and days.",
+    concepts: ["five time fields", "steps and ranges", "day-of-month and day-of-week", "commands and output"],
+    frameworks: ["crontab", "cronie", "GitHub Actions schedule", "Kubernetes CronJob"],
+    learningPath: ["The five fields", "Steps and ranges", "Day rules", "Output and mail"],
+    sample: `*/15 * * * * /opt/app/bin/healthcheck.sh`,
+  },
+  {
     id: "dart",
     name: "Dart",
     categories: ["mobile", "web"],
