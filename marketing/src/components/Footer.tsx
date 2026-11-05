@@ -21,6 +21,7 @@ const product = [
   ["Pricing", "/pricing"],
   ["Changelog", "/releases"],
   ["Install help", "/install-help"],
+  ["FAQ", "/faq"],
   ["Resources", "/resources"],
 ];
 
