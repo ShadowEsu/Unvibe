@@ -80,7 +80,11 @@ import {
   type Account as BackendAccount,
   warmBackend,
   networkFetch,
+  aiAuthHeaders,
+  postPmfAnswer,
 } from './backend';
+import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
+import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
 import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
@@ -709,6 +713,12 @@ app.whenReady().then(() => {
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
+  try {
+    // Records this install's first run once (the PMF survey's 3-day rule); a full disk only delays it.
+    store().firstRunAt();
+  } catch {
+    // Asked again when the survey card checks eligibility.
+  }
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
@@ -1415,6 +1425,53 @@ app.whenReady().then(() => {
     return { ok: true };
   });
   ipcMain.handle('feedback:send', (_event, input: FeedbackInput | undefined) => sendFeedback(input, { fetcher: networkFetch, appVersion: app.getVersion() }));
+  // The PMF survey card in the panel (FE-09). Nothing is sent until pmf:send, which the Send button calls.
+  // Shown in one run of the app only: this flag lives in memory, so a restart never brings it back.
+  let pmfShownThisRun = false;
+  const pmfDeps = (): PmfDeps => ({
+    now: () => new Date(),
+    explanations: () => completedExplanations(store().events()),
+    firstRunAt: (now) => store().firstRunAt(now),
+    status: () => store().pmfStatus(),
+    draft: () => store().pmfDraft(),
+    saveDraft: (draft) => store().savePmfDraft(draft),
+    setStatus: (status) => store().setPmfStatus(status),
+    shownThisRun: () => pmfShownThisRun,
+    markShownThisRun: () => { pmfShownThisRun = true; },
+    installId: () => store().installId(),
+    post: trialBuildEnabled() ? (body) => postPmfAnswer(body, aiAuthHeaders(null)) : null,
+    appVersion: app.getVersion(),
+  });
+  ipcMain.handle('pmf:state', () => {
+    try {
+      return pmfCardState(pmfDeps());
+    } catch {
+      return { show: false, draft: { ...EMPTY_PMF_DRAFT } };
+    }
+  });
+  ipcMain.on('pmf:draft', (_event, input: unknown) => {
+    try {
+      savePmfDraft(input, pmfDeps());
+    } catch {
+      // The panel keeps the answers on screen; the next change or Send saves again.
+    }
+  });
+  ipcMain.handle('pmf:dismiss', () => {
+    try {
+      dismissPmf(pmfDeps());
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Could not save that.' };
+    }
+  });
+  ipcMain.handle('pmf:send', async (_event, input: unknown) => {
+    try {
+      return await sendPmfAnswer(input, pmfDeps());
+    } catch {
+      // A full disk while saving the draft: the answers are still on screen.
+      return { ok: false, error: PMF_SEND_FAILED };
+    }
+  });
   ipcMain.handle('app:reportFeedback', (_event, context: { screen?: unknown; version?: unknown }) => {
     const screen = typeof context.screen === 'string' ? context.screen.slice(0, 120) : 'Unknown screen';
     const version = typeof context.version === 'string' ? context.version.slice(0, 48) : app.getVersion();
