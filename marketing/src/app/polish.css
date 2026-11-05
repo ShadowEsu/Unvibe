@@ -47,8 +47,6 @@
   border-radius: var(--radius-card);
   background: linear-gradient(150deg, var(--glass-top), var(--glass-bottom));
   box-shadow: inset 0 1px 0 var(--glass-hi), var(--glass-shadow);
-  backdrop-filter: blur(22px) saturate(1.6);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
   transition: transform 420ms var(--ease-out-soft), box-shadow 420ms var(--ease-out-soft), border-color 420ms ease;
 }
 
@@ -107,8 +105,6 @@
   border-radius: var(--radius-pill);
   background: rgb(255 255 255 / 0.28);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .paper-center > .paper-text-link {
@@ -124,8 +120,6 @@
   font-size: 0.85rem;
   font-weight: 500;
   text-decoration: none;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: background 240ms ease, transform 240ms var(--ease-out-soft);
 }
 
@@ -212,8 +206,6 @@
   border-radius: var(--radius-card);
   background: linear-gradient(150deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.1));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   transition: background 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
 }
 
@@ -297,11 +289,6 @@
   }
 }
 
-html[data-performance="lite"] .ambient,
-html[data-performance="lite"] .paper-hero > img {
-  animation: none;
-}
-
 /* ════════ Round 2: interaction and delight ════════ */
 
 ::selection {
@@ -337,16 +324,13 @@ html[data-performance="lite"] .paper-hero > img {
   padding: 1rem 1.1rem 1.1rem;
   border: 1px solid var(--u-line);
   border-radius: 18px;
-  background: var(--u-veil);
+  background: var(--u-sheet);
   box-shadow: var(--u-lift-1);
-  backdrop-filter: blur(24px) saturate(1.7);
-  -webkit-backdrop-filter: blur(24px) saturate(1.7);
   color: var(--u-text);
   animation: selIn 0.38s var(--ease-out-soft) both;
 }
 
-/* Both users (.sel-card, .palette__panel) carry a backdrop-filter, so the entrance moves only: no opacity or filter
-   on a glass element (glass-spec §3). */
+/* The entrance moves only (.sel-card, .palette__panel): no opacity or filter. */
 @keyframes selIn {
   from { transform: translateY(8px) scale(0.97); }
   to { transform: none; }
@@ -427,7 +411,7 @@ html[data-performance="lite"] .paper-hero > img {
   color: var(--ink);
 }
 
-/* Tint only, no blur: a backdrop-filter here would stop the glass sheet inside it seeing the page. */
+/* Tint only: the dimmed page behind the ⌘K sheet. */
 .palette {
   position: fixed;
   inset: 0;
@@ -443,7 +427,7 @@ html[data-performance="lite"] .paper-hero > img {
   from { opacity: 0; }
 }
 
-/* Glisse Glass (SitePalette): its fill, blur and refraction come from .lg-glass; glass.css sets the sheet values. */
+/* The ⌘K sheet (SitePalette): a solid sheet; its fill and shadow are in glass.css. */
 .palette__panel {
   width: min(36rem, 100%);
   overflow: hidden;
@@ -764,6 +748,6 @@ html[data-performance="lite"] .paper-hero > img {
 /* ── Performance pass: no always-on motion. Last block wins. ── */
 .ambient { display: none; }
 .paper-glass, .resources-card, .paper-quotes blockquote, .marketing-plan-card {
-  backdrop-filter: none; -webkit-backdrop-filter: none; transition: border-color 200ms ease;
+  transition: border-color 200ms ease;
 }
 .paper-glass::after, .resources-card::after, .paper-quotes blockquote::after, .marketing-plan-card::after { display: none; }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
 import { BetaInstall } from "@/components/paper/BetaInstall";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
 import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -161,12 +160,10 @@ export default function BetaDownloadsPage() {
         <div className="paper-wrap paper-center">
           <div className="beta-page__trust">
             <div className="beta-page__trust-item">
-              <GlassPlate />
               <ShieldIcon />
               <p>Unvibe checks your code for keys and tokens on your device and stops a known key before anything is sent. Your repo is never uploaded.</p>
             </div>
             <div className="beta-page__trust-item">
-              <GlassPlate />
               <MonitorIcon />
               <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>

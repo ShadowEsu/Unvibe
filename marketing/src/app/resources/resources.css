@@ -775,8 +775,3 @@
     transition: none;
   }
 }
-
-html[data-performance="lite"] .resources-swatch:hover {
-  transform: none;
-  transition: none;
-}

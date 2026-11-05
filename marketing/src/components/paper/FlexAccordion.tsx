@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useRef, useState, type KeyboardEvent } from "react";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { Arrive } from "@/components/paper/Arrive";
 
 export interface FlexAccordionItem {
@@ -54,7 +53,6 @@ export function FlexAccordion({ items, shape, label, numbered = true }: FlexAcco
         const bodyId = `${base}-b-${item.id}`;
         return (
           <article key={item.id} className={isOpen ? "flexacc__item is-open" : "flexacc__item"}>
-            <GlassPlate />
             <h3 className="flexacc__head">
               <button
                 ref={(node) => { buttons.current[index] = node; }}

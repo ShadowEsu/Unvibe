@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
-import { Button, Glass, Input } from "glisse";
+import { Button, Input } from "glisse";
 import { Vibe } from "@/components/paper/Vibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
@@ -17,7 +17,7 @@ function words(text: string): number {
   return trimmed ? trimmed.split(/\s+/).length : 0;
 }
 
-/** A small "Feedback" tab on every page: stars plus up to 100 words. The tab and the dialog are Glisse glass. */
+/** A small "Feedback" tab on every page: stars plus up to 100 words. The tab is a Glisse Button; the dialog is a solid sheet. */
 export function FeedbackWidget() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
@@ -110,7 +110,7 @@ export function FeedbackWidget() {
       </Button>
       {open ? (
         <div className="fb-overlay" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) reset(); }}>
-          <Glass className="fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fb-title" ref={dialogRef}>
+          <div className="fb-dialog" role="dialog" aria-modal="true" aria-labelledby="fb-title" ref={dialogRef}>
             <Button className="fb-close" aria-label="Close" onClick={reset}>×</Button>
             {status === "done" ? (
               <div className="fb-done">
@@ -160,7 +160,7 @@ export function FeedbackWidget() {
                 </Button>
               </form>
             )}
-          </Glass>
+          </div>
         </div>
       ) : null}
     </>

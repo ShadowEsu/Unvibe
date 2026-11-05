@@ -105,9 +105,6 @@
   .try__levels button { transition: none; }
   .try__levels button:hover:not(:disabled) { transform: none; }
 }
-html[data-performance="lite"] .try__state--thinking p,
-html[data-performance="lite"] .try__state--thinking > i::after,
-html[data-performance="lite"] .try__answer { animation: none; }
 
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }

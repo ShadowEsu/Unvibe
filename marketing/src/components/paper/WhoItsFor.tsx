@@ -1,5 +1,3 @@
-import { GlassPlate } from "@/components/glass/GlassPlate";
-
 /** The three audiences, shared by the homepage band and /about so the copy lives in one place. */
 const AUDIENCES = [
   {
@@ -20,7 +18,6 @@ const AUDIENCES = [
 export function WhoItsForCards() {
   return (
     <div className="who-panel">
-      <GlassPlate />
       {AUDIENCES.map((audience) => (
         <article key={audience.title} className="who-panel__item">
           <h3>{audience.title}</h3>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { DownloadLink } from "@/components/paper/DownloadLink";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 
 const links = [
   { label: "Product", href: "/#product" },
@@ -48,7 +47,6 @@ export function Nav() {
         if (open && next instanceof Node && !menu.current?.contains(next) && !toggle.current?.contains(next)) setOpen(false);
       }}
     >
-      <GlassPlate />
       <nav className="mnav__bar paper-wrap" aria-label="Primary">
         <Link href="/" aria-label="Unvibe home" className="mnav__home"><Logo /></Link>
         <ul className="mnav__links">

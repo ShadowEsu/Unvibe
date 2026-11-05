@@ -4,7 +4,6 @@ import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import HomePage from "@/app/page";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { GLISSE_STYLES_ID, GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 
 // tsx compiles JSX to React.createElement, so rendering components here needs React in scope.
@@ -32,26 +31,9 @@ describe("Glisse styles stay CSP-clean (Security, glisse 0.5.0 review finding 1)
   });
 });
 
-describe("glass plates", () => {
-  it("are decoration only: an empty aria-hidden Glisse Glass", () => {
-    assert.equal(renderToStaticMarkup(createElement(GlassPlate)), '<div class="lg-glass glass-plate" aria-hidden="true"></div>');
-  });
-
-  it("never sit under consent or long reading text: the Try it, What leaves and FAQ sections and the analytics bar have no glass", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    for (const marker of ['id="try-it"', 'id="what-leaves"', 'aria-labelledby="faq-title"']) {
-      const start = html.indexOf(marker);
-      assert.ok(start > 0, `${marker} is on home`);
-      assert.doesNotMatch(html.slice(start, html.indexOf("</section>", start)), /glass-plate/, `${marker} has no plate`);
-    }
-    assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse|GlassPlate/);
-  });
-
-  it("one layer only: a plate is never inside another plated surface", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    // A section sheet carries no plate of its own; plates sit on cards and panels inside it.
-    assert.doesNotMatch(html, /class="paper-wrap u-sheet[^"]*"><div class="lg-glass glass-plate"/);
-    assert.match(html, /<figure class="vhero__still"><div class="lg-glass glass-plate" aria-hidden="true"><\/div><img/);
+describe("home surfaces", () => {
+  it("the analytics consent bar uses no Glisse component", () => {
+    assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
   it("the hero still is the real 0.1.48 frame with its size and a description", () => {

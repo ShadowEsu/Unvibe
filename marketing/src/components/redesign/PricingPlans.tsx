@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/Button';
-import { GlassPlate } from '@/components/glass/GlassPlate';
 import { track } from '@/lib/analytics';
 import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
@@ -75,7 +74,6 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
       <div className="marketing-plan-grid marketing-plan-grid--core">
         {copy.plans.map((plan) => (
           <article key={plan.id} id={plan.id} className={`marketing-plan-card${plan.featured ? ' featured' : ''}`}>
-            <GlassPlate />
             <span className="plan-badge">{plan.badge}</span>
             <h3>{plan.name}</h3>
             <p className="plan-kicker">{plan.eyebrow}</p>

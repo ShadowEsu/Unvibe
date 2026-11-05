@@ -7,7 +7,6 @@ import { delight } from "@/lib/delight";
 import { DOWNLOADS, downloadChoice, type DownloadBuild } from "@/lib/downloadCard";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import {
   BETA_FEEDBACK_URL,
   BETA_INSTALL_COMMAND,
@@ -86,7 +85,6 @@ export function BetaInstall({
 
   return (
     <div className={tone === "hero" ? "paper-beta paper-beta--hero dl-card" : "paper-beta paper-beta--page dl-card"}>
-      <GlassPlate />
       {title ? <p className="paper-beta__title">{title}</p> : null}
 
       {primary === null ? (

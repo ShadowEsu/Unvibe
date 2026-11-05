@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AutoPlayVideo } from "@/components/paper/AutoPlayVideo";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 
 /**
  * The site demo cut (1920x1080, music only). Files in public/videos are named by the first 8 hex of the
@@ -44,7 +43,6 @@ export function AppTour() {
         <h2 id="tour-title">Watch it explain a <mark className="u-mark">real function</mark>.</h2>
       </div>
       <div className="vtour__window">
-        <GlassPlate />
         <div className="vtour__bar" aria-hidden="true">
           <i /><i /><i />
           <span>Unvibe 0.1.43 and 0.1.44</span>

@@ -27,9 +27,8 @@
 .vhero a:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 3px; }
 .vtour h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
 
-/* Three hard brand discs behind the hero plate, so its glass blurs real colour (Design, ledger 466). They have no
-   blur of their own, never move, and sit under the plate. They're pseudo-elements, never ancestors of the plate,
-   so nothing here can become a WebKit backdrop root. */
+/* Three hard brand discs behind the hero plate (Design, ledger 466), showing around its edges. They have no blur
+   of their own, never move, and sit under the plate. */
 .home-page .vhero::before,
 .home-page .vhero::after,
 .home-page .vhero__copy::before {
