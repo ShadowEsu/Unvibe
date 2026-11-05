@@ -1362,6 +1362,60 @@ clean:
       "Each command line has to start with a tab, not spaces. With the tabs turned into four spaces, which some editors do on save, make stopped at the first command with `Makefile:10: *** missing separator.  Stop.` and built nothing.",
   },
   {
+    id: "gitignore",
+    fileName: ".gitignore",
+    lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
+    description:
+      "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with a few exceptions kept in.",
+    sampleSummary: "A .gitignore for a web project: dependencies, build output, logs, secrets and editor files left out, with the example settings file, one editor file and an empty folder kept in.",
+    sample: `# Dependencies and build output
+node_modules/
+dist/
+*.log
+
+# Local settings and secrets: keep the example, never the real one
+.env
+.env.*
+!.env.example
+
+# Editor and OS files, but share the recommended extensions
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Only the build folder at the top, not src/build/
+/build/
+
+# Keep the empty uploads folder, not what people upload
+uploads/*
+!uploads/.gitkeep`,
+    shows: [
+      {
+        concept: "patterns",
+        text: "Each line is a pattern, and `#` starts a comment. `*` matches any run of characters except `/`, so `*.log` left out both `debug.log` at the top and `logs/today.log` one folder down: a pattern with no slash in it matches in every folder. `.env.*` caught `.env.local`.",
+      },
+      {
+        concept: "slashes and folders",
+        text: "A slash at the end, as in `dist/`, matches only folders and everything inside them: a plain file called `dist` was still listed by `git status`. A slash at the start ties the pattern to the folder the .gitignore is in, so `/build/` left out `build/out.js` but kept `src/build/helper.js`.",
+      },
+      {
+        concept: "negation",
+        text: "A line starting with `!` brings back a file an earlier line left out, and the last line that matches wins. That kept `.env.example`, `.vscode/extensions.json` and `uploads/.gitkeep` while the rest of `.env.*`, `.vscode/` and `uploads/` stayed out.",
+      },
+      {
+        concept: "tracked files",
+        text: "A .gitignore only affects files git isn't tracking yet. With `.env` already committed, adding it here changed nothing: `git status` still showed ` M .env` after an edit. `git rm --cached .env` stopped tracking it and left the file on disk, and from then on git ignored it.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 on a test project with 15 files besides the .gitignore, `git status` listed only `.gitignore`, `.env.example`, `.vscode/extensions.json`, `src/app.js`, `src/build/helper.js` and `uploads/.gitkeep`; everything else was left out.",
+      "`git check-ignore -v <file>` prints the line that decides a file, with its line number. For a file a `!` line keeps, it prints that `!` line, so check that the pattern it names doesn't start with `!` before reading the file as ignored.",
+      "Commit the .gitignore itself, so everyone working on the project gets the same rules. Rules that are only yours go in `.git/info/exclude`, which works the same way and is never shared: `notes-to-self.md` listed there was left out of `git status` in this repo only.",
+    ],
+    watchOut:
+      "`!` can't bring back a file whose folder is left out, because git never looks inside that folder. With `logs/` and then `!logs/keep.txt`, `git status` still didn't list `logs/keep.txt`. Writing `logs/*` leaves out the folder's contents instead of the folder, and then `!logs/keep.txt` worked.",
+  },
+  {
     id: "perl",
     fileName: "slow_pages.pl",
     lead: "Paste Perl and Vibe explains what each regular expression captures, whether a sigil means one value, a list or a hash, and what a `sort` block compares.",
