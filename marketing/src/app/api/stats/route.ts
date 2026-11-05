@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       { ok: true, stats, ...publicAnalytics, installs, funnel, downloads },
       {
         headers: {
-          // Founder dashboard polls this; avoid CDN serving stale install/waitlist totals.
+          // The console dashboard polls this; avoid CDN serving stale install/waitlist totals.
           "Cache-Control": includeWaitlist ? "no-store, private" : "public, s-maxage=15, stale-while-revalidate=45",
         },
       },

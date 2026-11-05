@@ -6,7 +6,7 @@ const ANON_KEY = "unvibe_anon_id";
 function shouldSkip(pathname: string): boolean {
   return (
     /\/waitlist(?:-admin)?(?:\/|$)/.test(pathname) ||
-    /\/(?:stats(?:\.html)?|founder)(?:\/|$)/i.test(pathname) ||
+    /\/(?:stats(?:\.html)?|console)(?:\/|$)/i.test(pathname) ||
     pathname.startsWith("/api/")
   );
 }
@@ -28,7 +28,7 @@ function anonId(): string {
 }
 
 /**
- * Anonymous page-view beacon for founder stats.html: no PII, no code. Sent at most once per page,
+ * Anonymous page-view beacon for the private stats.html: no PII, no code. Sent at most once per page,
  * and only once the visitor has allowed analytics, including when they press Allow on this page.
  * Returns the cleanup for the consent listener.
  */

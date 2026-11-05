@@ -7,7 +7,7 @@ function supabaseConfig(): { url: string; key: string } | null {
   return url && key ? { url, key } : null;
 }
 
-function allowedFounderEmails(): Set<string> {
+function allowedConsoleEmails(): Set<string> {
   return new Set(
     (process.env.FOUNDER_EMAILS || process.env.FOUNDER_EMAIL || "")
       .split(",")
@@ -16,10 +16,10 @@ function allowedFounderEmails(): Set<string> {
   );
 }
 
-export async function verifyFounderRequest(request: Request): Promise<boolean> {
+export async function verifyConsoleRequest(request: Request): Promise<boolean> {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   const config = supabaseConfig();
-  const allowed = allowedFounderEmails();
+  const allowed = allowedConsoleEmails();
   if (!token || !config || allowed.size === 0) return false;
   const client = createClient(config.url, config.key, {
     auth: { autoRefreshToken: false, persistSession: false },

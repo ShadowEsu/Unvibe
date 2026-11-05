@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPrivateStats, statsKeyMatches } from "@/lib/privateStats";
-import { FounderAnalytics } from "@/components/FounderAnalytics";
+import { ConsoleAnalytics } from "@/components/ConsoleAnalytics";
 import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 
 export const dynamic = "force-dynamic";
@@ -113,7 +113,7 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
       <section className="pstats__admin">
         <h2>Admin tools</h2>
         <p>Signup details and deleting entries still need your admin token.</p>
-        <FounderAnalytics embedded />
+        <ConsoleAnalytics embedded />
       </section>
     </article>
   );
