@@ -58,6 +58,16 @@ export const languages: Language[] = [
     sample: `const total = items.reduce((a, b) => a + b, 0);`,
   },
   {
+    id: "jquery",
+    name: "jQuery",
+    categories: ["web"],
+    blurb: "A JavaScript library for selecting page elements with $(), handling events and simple effects.",
+    concepts: ["selectors", "events", "traversal", "effects"],
+    frameworks: ["jQuery 4", "jQuery UI", "WordPress", "Bootstrap 4"],
+    learningPath: ["Selecting elements", "Events", "Moving through the page", "Effects"],
+    sample: `$(".remove").on("click", function () { $(this).closest("li").remove(); });`,
+  },
+  {
     id: "python",
     name: "Python",
     categories: ["backend", "data", "scripting"],
