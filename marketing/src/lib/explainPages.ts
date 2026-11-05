@@ -406,7 +406,7 @@ export default [
     notes: [
       "Run with ESLint 9.39.5, @eslint/js 9.39.5 and globals 17.14.0 on a test project with one file in each folder.",
       "A block with only `ignores` leaves those paths out everywhere. Asked to check `dist/bundle.js` directly, ESLint printed `File ignored because of a matching ignore pattern`.",
-      "`npx eslint --fix` didn't change the `==` to `===`; that one you change yourself.",
+      "`npx eslint --fix` only changes `==` where it's safe: it turned `typeof x == \"string\"` into `===` but left `items.length == 0` as it was, for you to change.",
     ],
     watchOut:
       "`ignores` only works for every file when it's alone in its block. Adding `rules: { semi: \"error\" }` next to `ignores: [\"dist/\"]` made ESLint check dist again, and it failed on the build output with `Parsing error: Unexpected token ;`. Moving `js.configs.recommended` to the end of the list has a similar surprise: it turned `no-unused-vars` back into an error.",
