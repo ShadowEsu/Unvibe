@@ -48,6 +48,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   awk: "/og/og-explain-awk-2360d439.png",
   make: "/og/og-explain-make-34d992b1.png",
   perl: "/og/og-explain-perl-6a375c1e.png",
+  sed: "/og/og-explain-sed-052acff4.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
