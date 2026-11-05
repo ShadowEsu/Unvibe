@@ -478,6 +478,10 @@ function Widget() {
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
   activeRef.current = activeTabId;
+  /** Test me in the action bar: focus returns here when Test me closes. */
+  const testMeRef = useRef<HTMLButtonElement>(null);
+  /** The Test me question: focus moves here when a question opens, so a screen reader reads it first. */
+  const questionRef = useRef<HTMLDivElement>(null);
 
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0]!;
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
@@ -712,7 +716,12 @@ function Widget() {
       if (e.defaultPrevented) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'w') window.unvibe.closeWidget();
-      else if (e.key === 'Escape') toggleCollapse();
+      else if (e.key === 'Escape') {
+        // An open Test me closes first; otherwise Esc collapses the panel.
+        const tab = tabsRef.current.find((t) => t.id === activeRef.current);
+        if (tab?.quiz && !tab.quizHidden) hideQuiz();
+        else toggleCollapse();
+      }
       else if (mod && e.key >= '1' && e.key <= '5') pick(LEVELS[Number(e.key) - 1]!.id);
     };
     window.addEventListener('keydown', onKey);
@@ -955,7 +964,22 @@ function Widget() {
   };
 
   const inAnswer = phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'stopped';
-  const hideQuiz = () => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }));
+  /** Closing Test me (Cancel, Hide, Hide question, Esc) puts focus back on the Test me button. */
+  const hideQuiz = () => {
+    setTabs((prev) => patchTab(prev, activeRef.current, { quizHidden: true }));
+    testMeRef.current?.focus();
+  };
+  // A question opening (Test me, Another question, or Test me again on a hidden one) moves focus to it. Only that
+  // transition: re-renders, choosing an option and switching tabs leave focus where it is.
+  const openQuestion = active.quiz && !active.quizHidden && active.quiz.phase === 'answering'
+    ? `${active.quiz.index ?? 1}:${active.quiz.question ?? ''}`
+    : null;
+  const lastQuestion = useRef({ tab: active.id, question: openQuestion });
+  useEffect(() => {
+    const before = lastQuestion.current;
+    lastQuestion.current = { tab: active.id, question: openQuestion };
+    if (openQuestion && before.tab === active.id && before.question !== openQuestion) questionRef.current?.focus();
+  }, [active.id, openQuestion]);
   const gotIt = () => {
     setBuddyMood('celebrate');
     window.unvibe.gotIt();
@@ -1249,7 +1273,7 @@ function Widget() {
                         {active.quiz.conceptLabel && (
                           <div className="quiz__concept">{active.quiz.conceptLabel}</div>
                         )}
-                        <div className="quiz__q">{active.quiz.question}</div>
+                        <div className="quiz__q" ref={questionRef} tabIndex={-1}>{active.quiz.question}</div>
                         <div className="quiz__opts">
                           {active.quiz.options?.map((o, i) => {
                             const graded = active.quiz!.phase === 'graded';
@@ -1480,6 +1504,7 @@ function Widget() {
                       <CountUp value={last7Count} label={(n) => `${n} explained in the last 7 days`} storageKey="unvibe.weekCountShown" reduced={reduced} />
                     ) : undefined}
                     onGotIt={gotIt}
+                    testMeRef={testMeRef}
                     onTestMe={() => openQuiz()}
                     onStop={() => window.unvibe.cancel()}
                     onCelebrationEnd={endCelebration}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import type { ExplanationLevel } from '../../core/protocol';
 import { linesLabel } from '../../core/linesLabel';
 import { languageName, waitingStatus } from '../shared/shortAnswer';
@@ -283,7 +283,7 @@ export function moreMenuItems(opts: {
  * than falling to the page. It lasts for this explanation only (the panel resets `understood` on a new one) and
  * the panel stays open. A Got it celebration plays inside the primary's place only.
  */
-export function ActionBar({ answerReady, understood, streaming, celebration, reduced, moreItems, recentCount, onGotIt, onTestMe, onStop, onCelebrationEnd }: {
+export function ActionBar({ answerReady, understood, streaming, celebration, reduced, moreItems, recentCount, testMeRef, onGotIt, onTestMe, onStop, onCelebrationEnd }: {
   /** The answer is all on screen, so it can be marked understood or tested. */
   answerReady: boolean;
   understood: boolean;
@@ -294,12 +294,13 @@ export function ActionBar({ answerReady, understood, streaming, celebration, red
   moreItems: MenuItem[];
   /** "N explained in the last 7 days", or nothing. */
   recentCount?: ReactNode;
+  /** The Test me button, which takes focus after Got it and again when Test me closes. */
+  testMeRef: RefObject<HTMLButtonElement | null>;
   onGotIt: () => void;
   onTestMe: () => void;
   onStop: () => void;
   onCelebrationEnd: () => void;
 }) {
-  const testMe = useRef<HTMLButtonElement>(null);
   return (
     <div className="sw-actions">
       <span className="celebrate-host">
@@ -310,7 +311,7 @@ export function ActionBar({ answerReady, understood, streaming, celebration, red
             disabled={!answerReady}
             onClick={() => {
               // Got it is about to leave the page; hand focus to the next control first.
-              testMe.current?.focus();
+              testMeRef.current?.focus();
               onGotIt();
             }}
           >
@@ -329,7 +330,7 @@ export function ActionBar({ answerReady, understood, streaming, celebration, red
         </span>
         <Celebration run={celebration} reduced={reduced} onEnd={onCelebrationEnd} />
       </span>
-      <button ref={testMe} type="button" className="sw-btn sw-btn--secondary" disabled={!answerReady} onClick={onTestMe}>Test me</button>
+      <button ref={testMeRef} type="button" className="sw-btn sw-btn--secondary" disabled={!answerReady} onClick={onTestMe}>Test me</button>
       <MenuButton className="sw-btn sw-btn--quiet" items={moreItems} placement="up" menuLabel="More actions">
         More
         {chevron}

@@ -1495,6 +1495,9 @@ code.inline {
 .card .verdict { display: flex; align-items: center; gap: 8px; }
 :root[data-panel] .card.card .verdict.ok { color: var(--sw-mint-ink); }
 :root[data-panel] .card.card .verdict.no { color: var(--sw-amber-ink); }
+/* The question takes focus when Test me opens (for screen readers); a ring only when focus came from the keyboard. */
+.card .quiz__q:focus { outline: none; }
+.card .quiz__q:focus-visible { outline: 2px solid var(--p-focus); outline-offset: 3px; border-radius: 6px; }
 
 @container widget (max-width: 420px) {
   :root[data-panel] .card.card .body { padding: 16px 16px 26px; }

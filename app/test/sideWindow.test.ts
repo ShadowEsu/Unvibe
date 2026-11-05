@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
+import { createElement, createRef } from 'react';
 import { ActionBar, MenuList, TabStrip, loadingStep, menuKey, moreMenuItems, type MenuItem } from '../src/renderer/widget/sideWindow';
 import { AnswerWait, waitingStatus } from '../src/renderer/shared/shortAnswer';
 
@@ -25,6 +25,7 @@ function bar(props: Partial<Parameters<typeof ActionBar>[0]> = {}): string {
     celebration: null,
     reduced: false,
     moreItems: more(),
+    testMeRef: createRef<HTMLButtonElement>(),
     onGotIt: noop,
     onTestMe: noop,
     onStop: noop,

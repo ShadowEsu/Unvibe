@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
+import { createElement, createRef } from 'react';
 import { Celebration, CountUp, claimCelebration, countUpValue, type DayStore } from '../src/renderer/shared/motion';
 import { countUpMs } from '../src/renderer/shared/motionTokens';
 import { ActionBar } from '../src/renderer/widget/sideWindow';
@@ -37,7 +37,7 @@ test('storage that fails means no celebration rather than one every time', () =>
 test('reduced motion adds no animation classes: no burst and no pop, only the check and the colour', () => {
   const props = {
     answerReady: true, understood: true, streaming: false, celebration: 1, moreItems: [],
-    onGotIt: noop, onTestMe: noop, onStop: noop, onCelebrationEnd: noop,
+    testMeRef: createRef<HTMLButtonElement>(), onGotIt: noop, onTestMe: noop, onStop: noop, onCelebrationEnd: noop,
   };
   const moving = renderToStaticMarkup(createElement(ActionBar, { ...props, reduced: false }));
   assert.match(moving, /class="celebrate"/);
