@@ -176,7 +176,7 @@ $(function () {
       },
       {
         concept: "events",
-        text: "`.on(\"input\", ...)` runs on every keystroke in the search box, and inside the handler `this` is the element the event fired on. `.on(\"click\", \".remove\", ...)` is a delegated handler: it sits on the list and runs for any `.remove` button inside it, so a Remove button added after the page loaded worked too.",
+        text: "`.on(\"input\", ...)` runs on every keystroke in the search box, and inside the handler `this` is the element the handler runs for, here the search box. `.on(\"click\", \".remove\", ...)` is a delegated handler: it sits on the list and runs for any `.remove` button inside it, with `this` set to that button, so a Remove button added after the page loaded worked too.",
       },
       {
         concept: "traversal",
