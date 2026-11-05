@@ -682,12 +682,15 @@
   & .ob__confetti i:nth-child(4n+4) { background: var(--lilac); border-radius: 50%; width: 12px; height: 12px; }
 }
 /* Short windows (the Mac default clamps to about 674 tall): tighter gaps, and companion.tsx's SHORT_WINDOW gives
-   step 1 a 64px Vibe, so step 1 fits whole. */
+   step 1 a 64px Vibe, so step 1 fits whole. The step-2 grid and level question are tightened too, so step 2 still
+   fits with no scroll range once the level question shows (QA 0.1.50 run 42076357551: 6px at 1024x674). */
 @media (max-height: 760px) {
   :root[data-ui="v3"][data-v7] .ob2__card { gap: 10px; padding-block: 18px 16px; }
   :root[data-ui="v3"][data-v7] .ob2__body { gap: 10px; }
   :root[data-ui="v3"][data-v7] .ob--scene-0 .ob2__vibe { gap: 8px; }
   :root[data-ui="v3"][data-v7] .ob2__speech { padding-block: 10px; }
+  :root[data-ui="v3"][data-v7] .ob2__try { gap: 10px; }
+  :root[data-ui="v3"][data-v7] .ob2__level { padding-block: 8px; gap: 6px; }
 }
 @keyframes v7Blink { 50% { opacity: 0; } }
 @keyframes obConfetti { to { transform: translateY(105vh) rotate(540deg); } }
