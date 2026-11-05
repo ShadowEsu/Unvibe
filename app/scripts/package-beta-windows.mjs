@@ -16,7 +16,7 @@ try { url = new URL(backend); } catch { fail('UNVIBE_BACKEND must be an absolute
 if (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) fail('UNVIBE_BACKEND must be a non-local HTTPS URL.');
 if (!existsSync('build/icon.png')) fail('tracked build/icon.png is missing.');
 
-const extraResources = existsSync(join('..', 'extension', 'release', 'unvibe-desktop-bridge-0.1.2.vsix'))
+const extraResources = existsSync(join('..', 'extension', 'release', 'unvibe-desktop-bridge-0.1.3.vsix'))
   ? []
   : [['--config.extraResources', '[]']];
 const env = { ...process.env, UNVIBE_BACKEND: backend, UNVIBE_TRIAL_TOKEN: trialToken, CSC_IDENTITY_AUTO_DISCOVERY: 'false' };

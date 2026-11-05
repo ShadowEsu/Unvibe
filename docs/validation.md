@@ -120,13 +120,13 @@ the event is stored and, when signed in, synced. Happy-path-only is NOT done.
 - **SupabaseStore** (prod DB path) — code-complete, no project/keys here; SQL migration
   unapplied.
 - **Real Anthropic API** (streaming + comprehension) — mock only; no key here.
-- **Extension inside a live editor (F5)** — detection, webview rendering, consent flow,
-  comprehension UI, and sign-in polling are typechecked + logic-tested but not run in VS Code.
+- **Desktop Bridge inside a live editor**: its one command (selection → clipboard →
+  `unvibe://review`) is typechecked in CI, not run in VS Code there.
 - **Auth hardening** — `/auth/approve` still auto-creates a user without a real login gate;
   production must gate approval behind real Supabase Auth.
 
 ## How to reproduce the E2E
 1. `cd web && npm install && npm run dev` (dev store + mock AI; no keys).
-2. `cd extension && npm install && npm run build`, open in VS Code/Cursor, press F5.
-3. In the dev host: run **Uncode: Sign In**, approve in the browser, review code, use
-   **Test me**, then **Uncode: Open Dashboard** to see synced progress.
+2. `cd extension && npm ci && npm run package`, then install
+   `release/unvibe-desktop-bridge-0.1.3.vsix` in VS Code or Cursor.
+3. Select code in the editor and press ⌘U (Ctrl+U): the desktop app opens and explains it.

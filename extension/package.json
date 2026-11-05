@@ -2,7 +2,7 @@
   "name": "uncode",
   "displayName": "Unvibe",
   "description": "Understand, verify, and retain AI-generated code. Send a selected snippet to the private Unvibe desktop review flow.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "uncode",
   "license": "UNLICENSED",
   "engines": {
@@ -12,73 +12,13 @@
     "Education",
     "Other"
   ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "uncode",
-          "title": "Uncode",
-          "icon": "media/activity-icon.svg"
-        }
-      ]
-    },
-    "views": {
-      "uncode": [
-        {
-          "id": "uncode.reviewPanel",
-          "name": "Review",
-          "type": "webview"
-        }
-      ]
-    },
     "commands": [
-      {
-        "command": "uncode.openPanel",
-        "title": "Uncode: Open Review Panel"
-      },
-      {
-        "command": "uncode.reviewSelection",
-        "title": "Uncode: Review Selected Code"
-      },
       {
         "command": "uncode.reviewSelectionInDesktop",
         "title": "Unvibe: Understand Selection in Desktop App"
-      },
-      {
-        "command": "uncode.reviewFile",
-        "title": "Uncode: Review Current File"
-      },
-      {
-        "command": "uncode.reviewDiff",
-        "title": "Uncode: Review Recent Changes (Git Diff)"
-      },
-      {
-        "command": "uncode.reviewProject",
-        "title": "Uncode: Review Project (Architecture Overview)"
-      },
-      {
-        "command": "uncode.showProgress",
-        "title": "Uncode: Show Progress"
-      },
-      {
-        "command": "uncode.signIn",
-        "title": "Uncode: Sign In"
-      },
-      {
-        "command": "uncode.signOut",
-        "title": "Uncode: Sign Out"
-      },
-      {
-        "command": "uncode.openDashboard",
-        "title": "Uncode: Open Dashboard"
-      },
-      {
-        "command": "uncode.dismissPrompt",
-        "title": "Uncode: Dismiss Review Prompt"
       }
     ],
     "menus": {
@@ -87,11 +27,6 @@
           "command": "uncode.reviewSelectionInDesktop",
           "when": "editorHasSelection",
           "group": "uncode@0"
-        },
-        {
-          "command": "uncode.reviewSelection",
-          "when": "uncode.hasSelection",
-          "group": "uncode@1"
         }
       ]
     },
@@ -101,49 +36,13 @@
         "key": "ctrl+u",
         "mac": "cmd+u",
         "when": "editorTextFocus && editorHasSelection"
-      },
-      {
-        "command": "uncode.reviewSelection",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
-        "when": "editorTextFocus"
       }
-    ],
-    "configuration": {
-      "title": "Uncode",
-      "properties": {
-        "uncode.explanationLevel": {
-          "type": "string",
-          "enum": [
-            "beginner",
-            "intermediate",
-            "advanced"
-          ],
-          "default": "intermediate",
-          "description": "Default explanation level for code reviews."
-        },
-        "uncode.notifications.offerReview": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show a quiet, non-modal notification when Uncode detects changed files."
-        },
-        "uncode.detection.minChangedFiles": {
-          "type": "number",
-          "default": 1,
-          "description": "Minimum number of changed files before Uncode offers a review."
-        },
-        "uncode.backendUrl": {
-          "type": "string",
-          "default": "http://localhost:8787",
-          "description": "URL of the Uncode AI service that generates explanations."
-        }
-      }
-    }
+    ]
   },
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "vsce package --out release/unvibe-desktop-bridge-0.1.2.vsix",
+    "package": "vsce package --out release/unvibe-desktop-bridge-0.1.3.vsix",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/**/*.test.ts",
     "vscode:prepublish": "npm run build"

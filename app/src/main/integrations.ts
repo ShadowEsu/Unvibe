@@ -72,7 +72,7 @@ const PLACE = process.platform === 'darwin' ? 'this Mac' : 'this computer';
 function desktopBridgePath(): string | null {
   const candidates = [
     path.join(process.resourcesPath, 'Unvibe Desktop Bridge.vsix'),
-    path.resolve(app.getAppPath(), '..', 'extension', 'release', 'unvibe-desktop-bridge-0.1.2.vsix'),
+    path.resolve(app.getAppPath(), '..', 'extension', 'release', 'unvibe-desktop-bridge-0.1.3.vsix'),
   ];
   return candidates.find(existsSync) ?? null;
 }

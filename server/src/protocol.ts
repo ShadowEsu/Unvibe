@@ -1,6 +1,6 @@
 /**
- * Wire contract — mirror of extension/src/protocol.ts (source of truth). Kept in sync by hand
- * during MVP; a shared package is a post-MVP cleanup.
+ * Wire contract: a frozen copy of the original extension contract (3 levels). This dev harness
+ * is superseded by web/; app/src/core/protocol.ts is the source of truth.
  */
 
 export type ReviewScope = 'selection' | 'file' | 'diff' | 'project';

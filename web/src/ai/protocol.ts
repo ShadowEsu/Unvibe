@@ -1,5 +1,5 @@
 /**
- * Wire contract — mirror of extension/src/protocol.ts (source of truth). Kept in sync by hand
+ * Wire contract: mirror of app/src/core/protocol.ts (source of truth). Kept in sync by hand
  * during MVP; a shared package is a post-MVP cleanup.
  */
 
