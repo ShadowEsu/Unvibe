@@ -41,7 +41,7 @@ let a11yMs = 0; // kept out of the timed first-run measurement
 // real default window (1024x674 on the runner's Mac). Its time is kept out of the timed measurement too.
 async function footerCheck(label, forwardName, size = null) {
   const start = Date.now();
-  await checkFooter(companion, `QA footer: ${label}`, forwardName, { log, size });
+  await checkFooter(companion, `QA footer: ${label}`, forwardName, { log, size, shotDir: out });
   a11yMs += Date.now() - start;
 }
 

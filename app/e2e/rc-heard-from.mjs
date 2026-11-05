@@ -115,7 +115,7 @@ const settingOn = (userData) => {
 };
 
 // First-run footer in view (footer-check.mjs). Case a on a Mac measures at exactly 1024x674; `emulated` labels it.
-const checkFooter = (page, label, forwardName, size = null) => footerCheck(page, label, forwardName, { log, size });
+const checkFooter = (page, label, forwardName, size = null) => footerCheck(page, label, forwardName, { log, size, shotDir: out });
 let emulated = '';
 
 // Case a goes on through every first-run step and checks the footer on each: step 2 before and after the
@@ -163,9 +163,17 @@ async function walkSteps(app, companion, name) {
         agreed = true;
         note(`${name}: first own code: send agreement shown, boxes ticked, Continue`);
       }
-      if (!explainClicked && await panel.locator('#confirm-title').count()) {
-        await panel.getByRole('button', { name: 'Explain', exact: true }).first().click({ timeout: 8000 }).catch(() => {});
+      // The clipboard paste stops on "Explain this code?" in the panel (nothing is sent before Explain). The
+      // panel's side rail has an Explain tab too, so the click is scoped to the innermost block holding both
+      // that question and its Cancel button.
+      const sheet = panel.locator('div, section, form, [role="dialog"]')
+        .filter({ has: panel.getByText('Explain this code?', { exact: true }) })
+        .filter({ has: panel.getByRole('button', { name: 'Cancel', exact: true }) }).last();
+      const explain = sheet.getByRole('button', { name: 'Explain', exact: true }).first();
+      if (!explainClicked && await explain.isVisible().catch(() => false)) {
+        await explain.click({ timeout: 8000 });
         explainClicked = true;
+        note(`${name}: step 3 paste: the panel asked "Explain this code?", pressed Explain`);
       }
       await sleep(500);
     }
