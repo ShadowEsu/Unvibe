@@ -59,10 +59,11 @@ const SETUP_PROGRESS_REVISION = 1;
 
 const IS_WIN = process.platform === 'win32';
 /**
- * Ctrl+U is a global grab on Windows (it steals the key from every app and from the
- * VS Code / Cursor bridge, which binds ctrl+u there), so Windows gets a free chord instead.
+ * Ctrl+U is a global grab on Windows and Linux (it steals the key from every app — terminals,
+ * browsers' view-source — and from the VS Code / Cursor bridge, which binds ctrl+u there), so
+ * both get a free chord instead. Mac apps use ⌘ for their own shortcuts, so Control+U is free there.
  */
-const DEFAULT_SHORTCUT = IS_WIN ? 'Control+Alt+U' : 'Control+U';
+const DEFAULT_SHORTCUT = process.platform === 'darwin' ? 'Control+U' : 'Control+Alt+U';
 
 export interface Settings {
   /** Internal — when lower than SETTINGS_REVISION, onboarded is reset once. */
