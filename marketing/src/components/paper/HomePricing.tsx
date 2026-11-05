@@ -1,7 +1,6 @@
 import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { Arrive } from "@/components/paper/Arrive";
 
 /**
@@ -22,7 +21,6 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
           </div>
           <div className="plans-strip">
             <div className="plans-strip__card">
-              <GlassPlate />
               <p className="plans-strip__tag">Available now</p>
               <h3>Free</h3>
               <p className="plans-strip__price">$0</p>
@@ -35,7 +33,6 @@ export function HomePricing({ paused = AI_MAINTENANCE }: { paused?: boolean }) {
               </ul>
             </div>
             <div className="plans-strip__card plans-strip__card--pro">
-              <GlassPlate />
               <p className="plans-strip__tag">Opens soon</p>
               <h3>Pro</h3>
               <p className="plans-strip__price">${PRICING.proMonthly} <small>a month, or ${PRICING.proAnnual} a year</small></p>

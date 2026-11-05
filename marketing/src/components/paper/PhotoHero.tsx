@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from "rea
 import { DownloadLink } from "@/components/paper/DownloadLink";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { Vibe } from "@/components/paper/Vibe";
-import { GlassPlate } from "@/components/glass/GlassPlate";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
@@ -191,7 +190,6 @@ export function PhotoHero() {
         </div>
       </div>
       <figure className="vhero__still">
-        <GlassPlate />
         {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size still with its own srcSet */}
         <img
           src="/product/unvibe-0148-debounce-1180.webp"

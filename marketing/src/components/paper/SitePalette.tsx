@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Glass, SearchField } from "glisse";
+import { SearchField } from "glisse";
 import { track } from "@/lib/analytics";
 import { BETA_INSTALL_COMMAND, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { trackDownloadClick } from "@/lib/downloadTracking";
@@ -121,8 +121,8 @@ export function SitePalette() {
   return (
     <div className="palette" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       {/* tabIndex -1 keeps focus on the panel when its text is clicked, so Tab and Escape still land here.
-          The panel is a Glisse glass sheet; the search box is Glisse's SearchField (the same <input> inside). */}
-      <Glass
+          The panel is a solid sheet; the search box is Glisse's SearchField (the same <input> inside). */}
+      <div
         className="palette__panel"
         role="dialog"
         aria-modal="true"
@@ -183,7 +183,7 @@ export function SitePalette() {
           <span><kbd>↵</kbd> open</span>
           <span><kbd>esc</kbd> close</span>
         </footer>
-      </Glass>
+      </div>
     </div>
   );
 }

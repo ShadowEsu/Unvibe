@@ -110,7 +110,6 @@ pre, code, kbd, samp, textarea, .font-mono {
   --glass-fill: rgb(255 255 255 / 0.16);
   --glass-edge: rgb(255 255 255 / 0.34);
   --glass-field: rgb(255 255 255 / 0.22);
-  --glass-blur: blur(14px) saturate(1.85);
   --shadow-glass: inset 0 1px 0 rgb(255 255 255 / 0.4);
   --ink: #12110f;
   --ink-muted: #12110f;

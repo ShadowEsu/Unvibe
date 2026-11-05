@@ -181,8 +181,6 @@ h2 {
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
   font-family: var(--font-mono);
   font-size: clamp(0.62rem, 1.2vw, 0.74rem);
@@ -201,8 +199,6 @@ h2 {
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
   text-align: left;
 }
@@ -287,8 +283,6 @@ h2 {
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
   color: var(--hero-type);
   font-family: var(--font-sans);
@@ -328,8 +322,6 @@ h2 {
 .paper-beta--page .paper-beta__survey {
   background: var(--glass-field);
   border-color: var(--glass-edge);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
 }
 
@@ -525,8 +517,6 @@ h2 {
   background: var(--glass);
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
 }
 
@@ -577,8 +567,6 @@ h2 {
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-key);
   background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
   color: var(--brand);
   font-family: var(--font-mono);
@@ -650,11 +638,6 @@ html[data-performance="lite"] .paper-marquee__track,
 html[data-performance="lite"] .paper-follow,
 html[data-performance="lite"] .paper-keys,
 html[data-performance="lite"] .paper-faq__caret { animation: none; will-change: auto; }
-html[data-performance="lite"] .paper-glass,
-html[data-performance="lite"] .paper-frame,
-html[data-performance="lite"] .paper-footer,
-html[data-performance="lite"] .mnav,
-html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 .paper-follow {
   display: flex;
@@ -942,8 +925,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-pill);
   background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
   transition: transform 200ms var(--ease-calm), color 200ms var(--ease-calm);
 }
@@ -1345,8 +1326,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   background: var(--glass);
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
 }
 
@@ -1623,8 +1602,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-pill);
   background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
 }
 
@@ -2063,8 +2040,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-pill);
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 500;
@@ -2075,8 +2050,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   color: var(--ink);
   border-color: var(--hairline);
   background: var(--paper-raised);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .paper-beta__step-num {
@@ -2123,8 +2096,6 @@ html[data-performance="lite"] .pricing-comparison__scroll { backdrop-filter: non
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-pill);
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-glass);
 }
 

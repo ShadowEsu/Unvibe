@@ -100,7 +100,7 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
 .inv { margin: 6.5rem auto 3rem; padding: clamp(28px, 5vw, 64px); }
 .inv-hero { min-height: 0; }
 .build-page .paper-section > .paper-wrap { padding: clamp(24px, 4.5vw, 56px); }
-.build-page .paper-section > .paper-wrap .paper-center > .paper-meta { padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.build-page .paper-section > .paper-wrap .paper-center > .paper-meta { padding: 0; border: 0; background: none; box-shadow: none; }
 @media (max-width: 520px) {
   .inv, .build-page .paper-section > .paper-wrap { width: calc(100% - 1.5rem); padding: 22px 16px; border-radius: 22px; }
 }

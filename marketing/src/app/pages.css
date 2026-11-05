@@ -230,8 +230,6 @@ body:has(.paper-pricing) .fb-tab {
   border-radius: var(--v-radius);
   background: var(--v-card);
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   color: var(--v-ink);
 }
 
@@ -394,8 +392,6 @@ body:has(.paper-pricing) .fb-tab {
   border-radius: var(--v-radius);
   background: #fffdf6;
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   color: var(--v-ink);
 }
 

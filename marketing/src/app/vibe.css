@@ -162,8 +162,6 @@ p { font-size: 17px; }
 .paper-glass, .paper-faq details, .stats-strip__item, .paper-invite__card, .paper-beta,
 .paper-log-wrap, .pg, .resources-card, .paper-quotes blockquote, .inv-card, .inv-stat, .inv-table, .inv-roadmap li {
   background: var(--u-card) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
   border: 1px solid var(--u-line-strong) !important;
   border-radius: var(--v-radius) !important;
   box-shadow: none !important;
@@ -353,7 +351,7 @@ p { font-size: 17px; }
 .invite__copy, .invite__result { min-width: 0; max-width: 100%; }
 .invite :is(input, button):focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 
-/* ── Feedback: the tab, dialog and close button are Glisse glass; their fills and blur are in glass.css ── */
+/* ── Feedback: the tab and close button are Glisse Buttons, the dialog a solid sheet; their fills are in glass.css ── */
 .fb-tab {
   position: fixed; left: 20px; bottom: 20px; z-index: 60; min-height: 40px; padding: 0.45rem 1rem; border: 1px solid var(--u-line);
   border-radius: 999px; color: var(--u-text); font: 700 var(--u-step--1) var(--font-sans);
@@ -591,10 +589,9 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .fos-page .fos-page__help { max-width: 760px; margin: 18px auto 0; padding: 14px 18px; border: 2px solid var(--v-ink); border-radius: 14px; background: var(--v-card); color: var(--u-text-2) !important; }
 .fos-page .fos-page__help a { color: var(--u-text) !important; font-weight: 700; }
 
-/* ── Top bar: a translucent paper sheet over the dusk, ink type, one ink call to action ── */
+/* ── Top bar: a solid paper sheet over the dusk, ink type, one ink call to action ── */
 .mnav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 40; background: var(--u-veil); color: var(--u-text); border-bottom: 1px solid var(--u-line);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 40; background: var(--u-sheet); color: var(--u-text); border-bottom: 1px solid var(--u-line);
 }
 .mnav__bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 4rem; }
 .mnav .paper-logo__word { color: var(--u-text); }

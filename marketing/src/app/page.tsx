@@ -34,9 +34,8 @@ export const revalidate = 300;
 
 /**
  * One promise, the real app recorded, how it works, try it, what leaves, pricing, backing, questions,
- * then the download. Each section is a tinted glass plate (Design 466) that rises in as it scrolls into
- * view: the Arrive sits between the section and its plate, so the motion is on the plate itself and no
- * ancestor of a plate is transformed (WebKit backdrop root).
+ * then the download. Each section is a tinted plate (Design 466) that rises in as it scrolls into
+ * view: the Arrive sits between the section and its plate, so the motion is on the plate itself.
  */
 export default function HomePage() {
   return (
