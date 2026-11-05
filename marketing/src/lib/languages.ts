@@ -88,6 +88,16 @@ export const languages: Language[] = [
     sample: `"scripts": { "build": "node build.js" }`,
   },
   {
+    id: "eslint-config",
+    name: "ESLint config",
+    categories: ["web", "scripting"],
+    blurb: "The eslint.config.js file: which files ESLint checks, which rules apply and how blocks override each other.",
+    concepts: ["a list of blocks", "files and globals", "rules and severity", "later blocks win"],
+    frameworks: ["ESLint", "@eslint/js", "globals", "npm"],
+    learningPath: ["Blocks and files", "Globals", "Rules and severity", "Order and ignores"],
+    sample: `export default [{ rules: { eqeqeq: "error" } }];`,
+  },
+  {
     id: "python",
     name: "Python",
     categories: ["backend", "data", "scripting"],

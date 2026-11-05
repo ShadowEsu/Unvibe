@@ -355,6 +355,63 @@ export async function userLabel(id: number): Promise<string> {
       "Extra arguments for the script go after `--`. `npm run hello -- --loud` ran `echo ... --loud` and printed `shop v1.2.0 --loud`, but `npm test --watch` without the `--` gave the flag to npm itself: `npm warn Unknown cli config \"--watch\"`, and `node --test` ran without it.",
   },
   {
+    id: "eslint-config",
+    fileName: "eslint.config.js",
+    lead: "Paste an eslint.config.js and Vibe explains which files each block covers, which rules it turns on and which block wins when two of them disagree.",
+    description:
+      "Paste an ESLint config and get it explained in plain English, free online. The sample ignores a build folder, starts from the recommended rules and sets different globals and rules for browser code and Node scripts.",
+    sampleSummary: "An ESLint flat config: a build folder left out, the recommended rules, browser globals and three rules for src, and Node globals for scripts.",
+    sample: `// eslint.config.js: which files ESLint checks and which rules apply to them.
+import js from "@eslint/js";
+import globals from "globals";
+
+export default [
+  { ignores: ["dist/"] },
+
+  js.configs.recommended,
+
+  {
+    files: ["src/**/*.js"],
+    languageOptions: { globals: globals.browser },
+    rules: {
+      "no-unused-vars": "warn",
+      eqeqeq: "error",
+      "no-console": ["warn", { allow: ["error"] }],
+    },
+  },
+
+  {
+    files: ["scripts/**/*.js"],
+    languageOptions: { globals: globals.node },
+  },
+];`,
+    shows: [
+      {
+        concept: "a list of blocks",
+        text: "The file exports a list, and ESLint applies every block that matches a file, in order. On a test project, `npx eslint .` reported `src/cart.js` with `4 problems (2 errors, 2 warnings)` and exited with code 1, which is what makes a CI step fail.",
+      },
+      {
+        concept: "files and globals",
+        text: "`files` limits a block to matching paths, and `globals` tells ESLint which names exist there. `document` passed in src, because `globals.browser` has it, but `process` was flagged `'process' is not defined`. The same `process` in `scripts/build.js` passed, because that block uses `globals.node`.",
+      },
+      {
+        concept: "rules and severity",
+        text: "Each rule is `\"off\"`, `\"warn\"` or `\"error\"`, and some take options after it. `no-console` with `allow: [\"error\"]` warned about `console.log` and let `console.error` through. Only errors change the exit code: warnings alone would still exit with 0.",
+      },
+      {
+        concept: "later blocks win",
+        text: "`js.configs.recommended` sets `no-unused-vars` to error, and the src block below it sets warn. Later wins: `npx eslint --print-config src/cart.js` showed `no-unused-vars` at 1, which is warn, and the unused variable was reported as a warning.",
+      },
+    ],
+    notes: [
+      "Run with ESLint 9.39.5, @eslint/js 9.39.5 and globals 17.14.0 on a test project with one file in each folder.",
+      "A block with only `ignores` leaves those paths out everywhere. Asked to check `dist/bundle.js` directly, ESLint printed `File ignored because of a matching ignore pattern`.",
+      "`npx eslint --fix` didn't change the `==` to `===`; that one you change yourself.",
+    ],
+    watchOut:
+      "`ignores` only works for every file when it's alone in its block. Adding `rules: { semi: \"error\" }` next to `ignores: [\"dist/\"]` made ESLint check dist again, and it failed on the build output with `Parsing error: Unexpected token ;`. Moving `js.configs.recommended` to the end of the list has a similar surprise: it turned `no-unused-vars` back into an error.",
+  },
+  {
     id: "sql",
     fileName: "report.sql",
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
