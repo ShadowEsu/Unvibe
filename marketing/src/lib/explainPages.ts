@@ -200,6 +200,56 @@ export async function userLabel(id: number): Promise<string> {
       "`getJson` never throws: every failure becomes `{ ok: false }`. A caller that reads `.value` without checking `ok` first gets a compile error, which is the point of the pattern.",
   },
   {
+    id: "tsconfig",
+    fileName: "tsconfig.json",
+    lead: "Paste a tsconfig.json and Vibe explains what each compiler option changes, which files TypeScript checks and why `strict` suddenly finds errors.",
+    description:
+      "Paste a tsconfig.json and get a plain English explanation, free online. The sample builds a Node project from src/ to dist/ with strict checks on.",
+    sampleSummary: "A tsconfig.json that compiles a small Node project from src/ to dist/ with strict checks, Node's own module rules, type files and source maps, and leaves test files out.",
+    sample: `{
+  // Compile src/ to dist/ for Node 20 and later. Run: npx tsc
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "declaration": true,
+    "sourceMap": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}`,
+    shows: [
+      {
+        concept: "compilerOptions",
+        text: "`target` is the JavaScript version to write, `rootDir` and `outDir` say where the .ts files are and where the .js files go. `declaration` adds a .d.ts type file next to each .js file and `sourceMap` a .js.map, so one `npx tsc` wrote six files for two sources: `index.js`, `index.d.ts`, `index.js.map` and the same three for `prices`.",
+      },
+      {
+        concept: "strict checks",
+        text: "`strict` turns on a group of checks. One of them stopped `function double(x)` with `error TS7006: Parameter 'x' implicitly has an 'any' type.` `noUncheckedIndexedAccess` isn't part of `strict`: it treats `prices[0]` as maybe missing, so `first.toFixed(2)` failed with `'first' is possibly 'undefined'.` and passed with the option off.",
+      },
+      {
+        concept: "modules",
+        text: "`NodeNext` makes TypeScript follow Node's own rules for imports, which depend on package.json's `\"type\": \"module\"`. Under them a relative import needs its file extension, and you write `.js` even though the file on disk is .ts: `import { total } from \"./prices\"` failed with `error TS2835: Relative import paths need explicit file extensions`, and `\"./prices.js\"` worked. Without the `\"type\"` line, the same import compiled.",
+      },
+      {
+        concept: "include and exclude",
+        text: "`include` lists the files to start from and `exclude` takes some of them back out, so `npx tsc --listFilesOnly` named `src/prices.ts` and `src/index.ts` but not the test file. Patterns use `**` for any number of folders.",
+      },
+    ],
+    notes: [
+      "Run with TypeScript 5.9.3 on a two-file project: `npx tsc` finished with no errors, and `node dist/index.js` printed `total 19.75` and `cheapest 3.25`.",
+      "Unlike package.json, a tsconfig.json may have `//` comments, and the compiler read this one, comment included, without complaint.",
+      "`skipLibCheck` skips checking every .d.ts file, the ones in installed packages and any you write yourself (TypeScript's docs: \"Skip type checking of declaration files.\"). Builds get faster, and errors inside those files go unreported; your .ts files are still checked.",
+    ],
+    watchOut:
+      "`exclude` only changes where TypeScript starts, not what it compiles. When `src/run-tests.ts` imported `./prices.test.js`, the test file was checked and written to `dist/` anyway, and `--listFilesOnly` listed it. To keep a file out of the build, nothing the build includes may import it.",
+  },
+  {
     id: "sql",
     fileName: "report.sql",
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",

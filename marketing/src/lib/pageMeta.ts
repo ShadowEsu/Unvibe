@@ -43,6 +43,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   rust: "/og/og-explain-rust-42bddce3.png",
   csharp: "/og/og-explain-csharp-9e33a411.png",
   kotlin: "/og/og-explain-kotlin-8d6079b3.png",
+  tsconfig: "/og/og-explain-tsconfig-9d597468.png",
   regex: "/og/og-explain-regex-118d334c.png",
   dart: "/og/og-explain-dart-b66aa93c.png",
   lua: "/og/og-explain-lua-a54ac404.png",
