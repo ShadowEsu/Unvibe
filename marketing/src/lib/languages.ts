@@ -288,6 +288,16 @@ export const languages: Language[] = [
     sample: `alias ll='ls -lah'`,
   },
   {
+    id: "chmod",
+    name: "chmod",
+    categories: ["systems", "scripting"],
+    blurb: "The command that sets who can read, change or run a file: 755, 644, u+x and the rest.",
+    concepts: ["the three digits", "letter modes", "folders", "running scripts"],
+    frameworks: ["chmod", "ls -l", "umask", "coreutils"],
+    learningPath: ["Read, write, run", "The three digits", "Letter modes", "Folders and -R"],
+    sample: `chmod 755 deploy.sh`,
+  },
+  {
     id: "regex",
     name: "Regex",
     categories: ["scripting", "data"],

@@ -33,6 +33,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   bash: "/og/og-explain-bash-f04ec8df.png",
   powershell: "/og/og-explain-powershell-c4ef5527.png",
   bashrc: "/og/og-explain-bashrc-17882b99.png",
+  chmod: "/og/og-explain-chmod-8db5af98.png",
   c: "/og/og-explain-c-fbf7085c.png",
   cpp: "/og/og-explain-cpp-91334837.png",
   swift: "/og/og-explain-swift-4c89d84c.png",
