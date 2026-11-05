@@ -448,16 +448,17 @@ const SAMPLE_LINES = [
 ];
 
 /**
- * First run, built so the first real explanation lands within a minute: 1 hello (name optional),
- * 2 explain a sample for real (no permission needed), then one skippable level question, 3 try it on
- * your own code. On a Mac, step 3 is one paste target (no permission), and step 4 offers the shortcut
- * only once that own code has been explained (onboarding:ownCodeDone): value first, permission second.
- * Windows needs no permission, so it keeps its three steps. Google sign-in and editor bridges are
- * optional and stay reachable later.
+ * First run, built so the first real explanation lands within a minute: 1 hello (name and where you
+ * heard about Unvibe, both optional), 2 explain a sample for real (no permission needed), then one
+ * skippable level question, 3 try it on your own code. On a Mac, step 3 is one paste target (no
+ * permission), and step 4 offers the shortcut only once that own code has been explained
+ * (onboarding:ownCodeDone): value first, permission second. Windows needs no permission, so it keeps
+ * its three steps. Google sign-in and editor bridges are optional and stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState('');
+  const [heardFrom, setHeardFrom] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -587,6 +588,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
                 : { label: 'Start using Unvibe', finishes: true };
   const advance = () => {
+    // Optional and never awaited: a blank answer sends nothing and setup never waits on it.
+    if (step === 0 && heardFrom.trim()) window.unvibe.answerHeardFrom(heardFrom);
     if (forward.finishes) void finish();
     else go(step + 1);
   };
@@ -638,6 +641,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                   <span>What should I call you? <em className="ob2__opt">optional</em></span>
                   <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
                     onChange={(event) => setDisplayName(event.target.value)} />
+                </label>
+                <label>
+                  <span>Where did you hear about Unvibe? <em className="ob2__opt">optional</em></span>
+                  <input className="field" value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
+                    onChange={(event) => setHeardFrom(event.target.value)} />
                 </label>
                 <button type="submit" hidden />
               </form>
@@ -1880,7 +1888,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">On-device secret scan</div><div className="sd">Selections, questions, and Chat messages are checked for keys, tokens, and passwords before they leave your {deviceName}.</div></div><span className="status-pill setting-status" data-tone="current">Always on</span></div>
               <div className="setrow"><div><div className="sl">The service never reads your repo</div><div className="sd">Unvibe sends only what you ask about, after the secret scan: the code you select, your questions and Chat messages. Change Briefs and diff explanations send the git diff you chose.</div></div></div>
               <div className="setrow"><div><div className="sl">Include nearby files (Pro)</div><div className="sd">Also sends parts of up to 2 files that the selected code imports from the same project, for better explanations. Off unless you turn it on.</div></div><Toggle label="Include nearby files" on={settings.nearbyFiles === true} onClick={() => onSettings({ nearbyFiles: settings.nearbyFiles !== true })} /></div>
-              {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
+              {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question, plus where you heard about Unvibe if you answered that. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
               <div className="setrow"><div><div className="sl">Support</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div>

@@ -69,8 +69,8 @@ export function aiAuthHeaders(sessionToken?: string | null): Record<string, stri
 }
 
 /** One setup-progress ping (see progress.ts). Returns the HTTP status, or null when nothing came back. */
-export function postTrialProgress(step: string, headers: Record<string, string>): Promise<number | null> {
-  return postForStatus('/api/v1/trial/progress', { step }, headers);
+export function postTrialProgress(step: string, headers: Record<string, string>, answer?: string): Promise<number | null> {
+  return postForStatus('/api/v1/trial/progress', answer === undefined ? { step } : { step, answer }, headers);
 }
 
 /**

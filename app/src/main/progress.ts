@@ -5,6 +5,8 @@
  * trial builds send; dev and founder builds and the "Send setup progress" setting off send
  * nothing. A step is marked sent on 2xx or 400 (a bad step is never retried); anything else (offline,
  * 409 no install row yet, 429, 5xx) is retried by `syncProgress` on the next launch.
+ * `heard_from` also carries the optional first-run answer to "Where did you hear about Unvibe?"
+ * (`answerHeardFrom`), kept locally only until the server has it.
  */
 import { aiAuthHeaders, postTrialProgress } from './backend';
 import { settings } from './settings';
@@ -18,7 +20,8 @@ export type ProgressStep =
   | 'accessibility_asked'
   | 'level_answered'
   | 'login_prompt_shown'
-  | 'login_prompt_accepted';
+  | 'login_prompt_accepted'
+  | 'heard_from';
 
 export interface ProgressDeps {
   /** Sealed trial build, not a founder build, and the setting is on. */
@@ -26,20 +29,35 @@ export interface ProgressDeps {
   platform: NodeJS.Platform;
   sent: (step: ProgressStep) => boolean;
   markSent: (step: ProgressStep) => void;
-  /** HTTP status, or null when the request never completed. */
-  post: (step: ProgressStep) => Promise<number | null>;
+  /** The first-run answer waiting to be sent, or null. */
+  heardFrom: () => string | null;
+  saveHeardFrom: (answer: string) => void;
+  /** HTTP status, or null when the request never completed. `answer` only for `heard_from`. */
+  post: (step: ProgressStep, answer?: string) => Promise<number | null>;
 }
+
+/** The server keeps at most this many characters of the answer (web `sanitizeHeardFrom`). */
+const HEARD_FROM_MAX_CHARS = 200;
 
 const inFlight = new Set<ProgressStep>();
 /** Windows has no Accessibility grant to ask for or report. */
 const MAC_ONLY: Partial<Record<ProgressStep, true>> = { accessibility: true, accessibility_asked: true };
 
+/** The answer as the server would store it: control characters dropped, whitespace collapsed, capped. */
+export function cleanHeardFrom(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const clean = value.replace(/[^\P{Cc}\s]|\p{Cf}|\p{Cs}/gu, '').replace(/\s+/g, ' ').trim();
+  return Array.from(clean).slice(0, HEARD_FROM_MAX_CHARS).join('').trimEnd();
+}
+
 /** Testable core of `reportProgress`. */
 export async function sendProgress(step: ProgressStep, deps: ProgressDeps): Promise<void> {
   if ((MAC_ONLY[step] && deps.platform !== 'darwin') || !deps.enabled() || deps.sent(step) || inFlight.has(step)) return;
+  const answer = step === 'heard_from' ? deps.heardFrom() : undefined;
+  if (answer === null) return;
   inFlight.add(step);
   try {
-    const status = await deps.post(step).catch(() => null);
+    const status = await deps.post(step, answer).catch(() => null);
     if (status !== null && ((status >= 200 && status < 300) || status === 400)) deps.markSent(step);
   } finally {
     inFlight.delete(step);
@@ -51,12 +69,25 @@ const liveDeps: ProgressDeps = {
   platform: process.platform,
   sent: (step) => store().progressSent(step),
   markSent: (step) => store().markProgressSent(step),
+  heardFrom: () => store().heardFromAnswer(),
+  saveHeardFrom: (answer) => store().saveHeardFromAnswer(answer),
   // aiAuthHeaders(null): the install ID and the session token never travel together.
-  post: (step) => postTrialProgress(step, aiAuthHeaders(null)),
+  post: (step, answer) => postTrialProgress(step, aiAuthHeaders(null), answer),
 };
 
 export function reportProgress(step: ProgressStep): void {
   void sendProgress(step, liveDeps);
+}
+
+/**
+ * The optional first-run answer. Skipped (empty) sends nothing; with progress off it is neither kept
+ * nor sent. Otherwise it is kept until the server has it and sent once, like every step.
+ */
+export async function answerHeardFrom(answer: unknown, deps: ProgressDeps = liveDeps): Promise<void> {
+  const clean = cleanHeardFrom(answer);
+  if (!clean || !deps.enabled() || deps.sent('heard_from')) return;
+  deps.saveHeardFrom(clean);
+  await sendProgress('heard_from', deps);
 }
 
 /**
@@ -71,5 +102,7 @@ export async function syncProgress(
     local.onboarded ? sendProgress('onboarded', deps) : undefined,
     local.accessibilityGranted ? sendProgress('accessibility', deps) : undefined,
     local.signedIn ? sendProgress('signed_in', deps) : undefined,
+    // Sends only when a first-run answer is still waiting.
+    sendProgress('heard_from', deps),
   ]);
 }

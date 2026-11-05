@@ -36,6 +36,8 @@ export interface TrialUsageLine {
 
 interface TrialInstallRecord {
   startedAt: string;
+  /** Memory backend only (dev/tests): the first-run answer, see `recordHeardFrom`. */
+  heardFrom?: string;
 }
 
 /**
@@ -231,6 +233,52 @@ async function readInstall(installKey: string, now = new Date(), meta: TrialInst
   if (error) console.error('trial install record read failed', error.message);
   const startedAt = typeof data?.started_at === 'string' ? data.started_at : now.toISOString();
   return { startedAt };
+}
+
+/** Longest stored first-run answer; the heard_from check in 20261105084501_trial_heard_from.sql. */
+export const HEARD_FROM_MAX_CHARS = 200;
+
+/**
+ * The optional first-run answer to "Where did you hear about Unvibe?", made safe to store: control,
+ * format and lone surrogate characters dropped, whitespace collapsed to one space, trimmed, then cut
+ * to 200 characters (code points, as Postgres `char_length` counts). Null when nothing is left.
+ */
+export function sanitizeHeardFrom(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const clean = value.replace(/[^\P{Cc}\s]|\p{Cf}|\p{Cs}/gu, '').replace(/\s+/g, ' ').trim();
+  return Array.from(clean).slice(0, HEARD_FROM_MAX_CHARS).join('').trimEnd() || null;
+}
+
+/**
+ * Store an install's first-run answer (`sanitizeHeardFrom`) on its trial_installs row. Like a progress
+ * marker, only for an install that already has its row: an answer never creates an install. The first
+ * non-empty answer wins: the update only matches a row whose heard_from is still null, so a repeat
+ * send cannot overwrite it. Returns 'no_install' when the row is missing and 'unavailable' on a logged
+ * storage error, including before 20261105084501_trial_heard_from.sql adds the column (the app retries
+ * both on its next launch), else 'done' (stored now or before, or nothing left to store). Never throws.
+ */
+export async function recordHeardFrom(installKey: string, answer: unknown): Promise<'done' | 'no_install' | 'unavailable'> {
+  const heardFrom = sanitizeHeardFrom(answer);
+  if (!heardFrom) return 'done';
+  const db = serviceSupabase();
+  if (!db) {
+    const record = installMemoryBucket().get(installKey);
+    if (!record) return 'no_install';
+    record.heardFrom ??= heardFrom;
+    return 'done';
+  }
+  const { data, error } = await db.from('trial_installs').select('install_key').eq('install_key', installKey).maybeSingle();
+  if (error) {
+    console.error('heard_from install read failed', error.message);
+    return 'unavailable';
+  }
+  if (!data) return 'no_install';
+  const { error: writeError } = await db.from('trial_installs').update({ heard_from: heardFrom }).eq('install_key', installKey).is('heard_from', null);
+  if (writeError) {
+    console.error('heard_from write failed', writeError.message);
+    return 'unavailable';
+  }
+  return 'done';
 }
 
 async function readUsed(installKey: string, kind: TrialKind): Promise<number> {

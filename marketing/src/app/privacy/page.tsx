@@ -137,7 +137,10 @@ export default function PrivacyPage() {
           random install ID, system and app version as above, never your sign-in token. We keep only
           the step and the time it arrived (for signing in, only the day), never your code, file
           names, email or IP address. A step that does not get through is sent
-          again on a later launch. From version 0.1.45 this is off unless you turn it on, and updating
+          again on a later launch. If you answer the optional first-run question &ldquo;Where did
+          you hear about Unvibe?&rdquo;, your answer (up to 200 characters) is sent the same way and
+          stored with the same anonymous install record; leave it blank and nothing is sent. From
+          version 0.1.45 this is off unless you turn it on, and updating
           to 0.1.45 switches it off once even if it was on before. Version 0.1.44 sends it until you
           switch it off. To turn it on or off, open Settings, then Privacy &amp; Data, and use Send setup
           progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does

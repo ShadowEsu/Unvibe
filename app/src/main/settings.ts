@@ -133,7 +133,8 @@ export interface Settings {
   liveSnoozeUntil?: string;
   /**
    * Send setup progress (instrumentation spec 5 and 10): one date each for setup
-   * finished, Accessibility allowed, signed in and similar steps, tied to the random install ID.
+   * finished, Accessibility allowed, signed in and similar steps, plus the optional first-run
+   * answer to "Where did you hear about Unvibe?", tied to the random install ID.
    * Off until the person turns it on.
    */
   shareSetupProgress: boolean;

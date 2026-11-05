@@ -64,7 +64,10 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   (`app/src/main/progress.ts`): setup finished, Accessibility asked and allowed (Mac), signed in
   (UTC day only), level question answered, and the launch-at-login question shown and accepted
   (`app/src/main/main.ts`, `askLaunchAtLogin`). One timestamp per step, no code, file names, email
-  or IP. Settings, Privacy & Data, "Send setup progress" turns these on (off by default from 0.1.45;
+  or IP. The optional first-run answer to "Where did you hear about Unvibe?" goes the same way
+  (step `heard_from`, up to 200 characters, nothing sent when blank) and is stored with the
+  anonymous install record (`trial_installs.heard_from`), never on the stats page.
+  Settings, Privacy & Data, "Send setup progress" turns these on (off by default from 0.1.45;
   updating switches existing installs off once; 0.1.44's switch reads "Send anonymous setup
   progress" and starts on); it does not
   cover the rows above, which come from requests the app makes anyway. Both are described on
