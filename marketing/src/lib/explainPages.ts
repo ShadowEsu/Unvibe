@@ -1374,7 +1374,7 @@ APP_URL=http://localhost:\${PORT}`,
     shows: [
       {
         concept: "names and values",
-        text: "Each line is `NAME=value`, and the app reads it as an environment variable: `process.env.PORT` in Node, `os.environ[\"PORT\"]` in Python. Lines starting with `#` are comments, and blank lines are skipped.",
+        text: "Each line is `NAME=value`, and the app reads it as an environment variable: `process.env[\"PORT\"]` in Node, `os.environ[\"PORT\"]` in Python. Lines starting with `#` are comments, and blank lines are skipped.",
       },
       {
         concept: "quotes and comments",
@@ -1382,7 +1382,7 @@ APP_URL=http://localhost:\${PORT}`,
       },
       {
         concept: "text only",
-        text: "Every value arrives as a string. In Node, `process.env.PORT + 1` printed `30001`, not 3001, and `process.env.DEBUG === true` was false while `=== \"true\"` was true. Numbers and true/false have to be converted in your code.",
+        text: "Every value arrives as a string. In Node, `process.env[\"PORT\"] + 1` printed `30001`, not 3001, and `process.env[\"DEBUG\"] === true` was false while `=== \"true\"` was true. Numbers and true/false have to be converted in your code.",
       },
       {
         concept: "loading the file",
