@@ -18,6 +18,13 @@ trap 'kill $shots 2>/dev/null' EXIT
 store_dir="$HOME/Library/Application Support/Unvibe"; store="$store_dir/unvibe-store.json"
 mkdir -p "$store_dir"; printf '{"installId":"%s"}' "$INSTALL_ID" > "$store"
 r "seeded install id $INSTALL_ID"
+# Flagged BEFORE anything installs or launches (#201's order, the lead): the route keeps a matched:false row and the
+# app's later registration stays qa=true, so a hang or a cancel never leaves this install counted as real.
+pre=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+  -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+  --data "{\"installId\":\"$INSTALL_ID\"}") || pre=$'\ncurl failed'
+r "QA pre-flag before install: $(printf '%s' "$pre" | tail -n 1) $(printf '%s' "$pre" | head -n 1 | grep -o '"matched":[a-z]*')"
+[ "$(printf '%s' "$pre" | tail -n 1)" = 200 ] || { r "FAIL  QA pre-flag: not 200, so nothing is installed"; exit 1; }
 
 flag() { # POST the id as QA; retried until the server has the install row (the app registers on launch)
   local i code matched answer

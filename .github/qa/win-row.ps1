@@ -62,6 +62,15 @@ function Flag($label) {
   }
   Note "QA flag ($label): matched=$m after 60 s"; $false
 }
+# Flagged BEFORE anything installs or launches (#201's order, the lead): the route keeps a matched:false row and the
+# app's later registration stays qa=true, so a hang or a cancel never leaves this install counted as real.
+try {
+  $pre = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+    -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
+    -Body (@{ installId = $env:INSTALL_ID } | ConvertTo-Json -Compress)
+  Note "QA pre-flag before install: $($pre.StatusCode) matched=$(($pre.Content | ConvertFrom-Json).matched)"
+} catch { $pre = $null; Note "QA pre-flag before install: $($_.Exception.Message)" }
+if (-not $pre -or $pre.StatusCode -ne 200) { Note 'FAIL  QA pre-flag: not 200, so nothing is installed'; exit 1 }
 
 $exe = $null
 if ($Kind -eq 'ps1') {
