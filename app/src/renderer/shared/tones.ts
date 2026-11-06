@@ -11,7 +11,7 @@ let context: AudioContext | null = null;
 /**
  * No AudioContext before this window's first click or key press. Created earlier (0.1.50 RC: a tone
  * while onboarding types, in a window that now opens focused), it made macOS on an Intel Mac ask
- * for the microphone with nothing pressed (QA run 42203353164); after a click it never asked.
+ * for the microphone with nothing pressed (QA run 42203353164; not with sounds off).
  */
 function userHasInteracted(): boolean {
   const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
