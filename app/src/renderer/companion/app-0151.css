@@ -60,7 +60,7 @@
 :root[data-ui="v3"][data-v7] .layout .side--compact .side-settings svg { background: transparent; color: currentColor; transform: none; }
 
 /* Meter, then where things are saved (Q9: "Free on this computer" on trial builds, 8 px over the bar). */
-:root[data-ui="v3"][data-v7] .layout .side-usage { padding: 10px; border: 0; border-radius: 10px; background: transparent; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .side-usage { gap: 0; padding: 10px; border: 0; border-radius: 10px; background: transparent; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .layout .side-usage:hover { background: rgb(255 255 255 / 0.55); }
 :root[data-ui="v3"][data-v7] .layout .side-usage__row { justify-content: flex-start; gap: 0; color: var(--u-ink-2); font: 500 12.5px/1.4 var(--u-sans); letter-spacing: 0; }
 :root[data-ui="v3"][data-v7] .layout .side-usage__row b { color: var(--u-ink-2); font-weight: 500; }
@@ -68,7 +68,8 @@
 :root[data-ui="v3"][data-v7] .layout .side-usage__bar { height: 4px; margin-top: 8px; border-radius: 4px; background: var(--u-plate); }
 :root[data-ui="v3"][data-v7] .layout .side-usage__bar i { border-radius: 4px; background: var(--u-violet); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .layout .sync-state { padding: 2px 10px 10px; color: var(--u-ink-3); font: 400 12.5px/1.4 var(--u-sans); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .layout .sync-state--local .sync-state__dot { display: none; }
+/* The words say it on the wide sidebar; the narrow one hides the words, so its dot stays. */
+:root[data-ui="v3"][data-v7] .layout .side:not(.side--compact) .sync-state--local .sync-state__dot { display: none; }
 :root[data-ui="v3"][data-v7] .layout .acct-trigger { border-top: 1px solid var(--u-plate); }
 :root[data-ui="v3"][data-v7] .layout .acct-trigger:hover { background: rgb(255 255 255 / 0.55); }
 :root[data-ui="v3"][data-v7] .layout .acct-avatar { background: var(--u-plate); color: var(--u-ink); box-shadow: none; font-weight: 600; }

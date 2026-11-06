@@ -90,11 +90,11 @@ function GoalCheck({ done }: { done: boolean }) {
 /** Today's two steps on one quiet line. No count of days and no celebration. */
 function TodayGoalLine({ goal }: { goal: TodayGoal }) {
   return (
-    <p className="home-goal" aria-label="Today's goal">
+    <div className="home-goal" role="group" aria-label="Today's goal">
       <span className="home-goal__label">Today</span>
       <span><GoalCheck done={goal.explained} /> explain 1 piece of code</span>
       <span><GoalCheck done={goal.answered} /> answer 1 question</span>
-    </p>
+    </div>
   );
 }
 

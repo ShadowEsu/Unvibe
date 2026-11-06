@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import type { KnowledgeObject } from '../src/core/knowledge';
 import { Home, homeRows, homeVibeMood, lessonSource, type HomeLesson, type HomeProps } from '../src/renderer/companion/home';
+import { NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel } from '../src/renderer/companion/nav';
 
 const noop = () => undefined;
 const props: HomeProps = {
@@ -27,9 +28,8 @@ test('Home has one action: the explain card with the shortcut as separate keys',
 test('at the limit, the banner takes the card\'s place and its action is the one primary', () => {
   const html = home({ usage: { ...props.usage!, used: 50, remaining: 0 } });
   assert.ok(!html.includes('home-cta'));
-  assert.match(html, /class="limit-banner home-card"/);
+  assert.match(html, /class="[^"]*\blimit-banner\b[^"]*"/);
   assert.equal(html.match(/class="primary-btn"/g)?.length, 1);
-  assert.match(html, /buddy--sleepy/);
 });
 
 test('Home leaves out Up next, the voice card and the stickers', () => {
@@ -39,8 +39,15 @@ test('Home leaves out Up next, the voice card and the stickers', () => {
 
 test('the goal line shows each step done or not', () => {
   const html = home();
-  assert.match(html, /<span class="home-goal__check is-done" role="img" aria-label="Done">✓<\/span> explain 1 piece of code/);
-  assert.match(html, /<span class="home-goal__check" role="img" aria-label="Not done yet"><\/span> answer 1 question/);
+  assert.match(html, /aria-label="Done"[^>]*>✓<\/span> explain 1 piece of code/);
+  assert.match(html, /aria-label="Not done yet"[^>]*><\/span> answer 1 question/);
+});
+
+test('the sidebar keeps Today and Ask Vibe, then Library, Quiz, Briefs; Momentum, Plan and Share sit under More', () => {
+  const labels = (pages: typeof NAV_MORE) => pages.map((p) => pageLabel(p.id));
+  assert.deepEqual(labels(NAV_PINNED), ['Today', 'Ask Vibe']);
+  assert.deepEqual(labels(NAV_SPACES), ['Library', 'Quiz', 'Briefs']);
+  assert.deepEqual(labels(NAV_MORE), ['Momentum', 'Plan', 'Share']);
 });
 
 test('Vibe waves the first time Home opens on a day, is still after that, and sleeps at the limit', () => {

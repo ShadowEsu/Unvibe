@@ -21,14 +21,14 @@ import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { Home, type TodayGoal } from './home';
+import { IC } from './icons';
+import { MORE_ICON, NAV, NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { SUPPORT_EMAIL } from '../../core/support';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
-
-type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -178,37 +178,6 @@ function collectUsageMeters(
   return meters;
 }
 
-const IC = {
-  home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
-  progress: 'M4 16V9 M10 16V4 M16 16v-6',
-  projects: 'M3 6a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
-  study: 'M4 4h9a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H4z M4 4v9',
-  history: 'M10 3a7 7 0 1 0 7 7 M10 6v4l3 2',
-  quiz: 'M10 3a7 7 0 1 0 7 7 M8.2 8.1a2 2 0 1 1 3.4 1.4c-.8.7-1.6 1.1-1.6 2.3 M10 15h.01',
-  chat: 'M4 5h12v8H8l-4 4z',
-  concepts: 'M10 3l2.1 4.9L17 10l-4.9 2.1L10 17l-2.1-4.9L3 10l4.9-2.1z',
-  notebook: 'M5 3h9a1 1 0 0 1 1 1v13l-3-2-3 2-3-2V4a1 1 0 0 1 1-1z M8 7h5 M8 10h5',
-  briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
-  library: 'M4 3h3v14H4z M9 3h3v14H9z M14 4l3 .8-3.4 12.6-2.9-.8z',
-  profile: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5',
-  spark: 'M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8',
-  eye: 'M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z M10 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
-  layers: 'M10 3l7 4-7 4-7-4z M3 11l7 4 7-4',
-  check: 'M4 10l4 4 8-9',
-  clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
-  map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
-  plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
-  gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
-  general: 'M4 5h12 M7 3v4 M4 10h12 M13 8v4 M4 15h12 M9 13v4',
-  island: 'M4 7.5C4 5.6 5.6 4 7.5 4h5C14.4 4 16 5.6 16 7.5v5c0 1.9-1.6 3.5-3.5 3.5h-5C5.6 16 4 14.4 4 12.5z M8 10h4',
-  sound: 'M4 8h3l4-3v10l-4-3H4z M14 7.5c1.5 1.4 1.5 3.6 0 5 M16 5.5c2.6 2.5 2.6 6.5 0 9',
-  privacy: 'M10 2.5 16 5v4.4c0 3.8-2.5 6.7-6 8.1-3.5-1.4-6-4.3-6-8.1V5z M7.5 10l1.7 1.8 3.5-4',
-  integrations: 'M7 3v4H3 M13 17v-4h4 M4.5 7A6.5 6.5 0 0 1 15 4.7 M15.5 13A6.5 6.5 0 0 1 5 15.3',
-  ai: 'M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11 3.5 9 8 7z',
-  account: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5 M15.5 3.5v4 M13.5 5.5h4',
-  info: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 9v5 M10 6h.01',
-};
-
 const SETTINGS_ICONS: Record<string, string> = {
   General: IC.general,
   Island: IC.island,
@@ -259,28 +228,6 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
   ] },
 };
-
-const NAV_PINNED: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home },
-  { id: 'Chat', icon: IC.chat },
-];
-
-const NAV_SPACES: Array<{ id: PageId; icon: string }> = [
-  { id: 'Learn', icon: IC.study },
-  { id: 'Quiz', icon: IC.quiz },
-  { id: 'Briefings', icon: IC.briefings },
-];
-
-/** Under "More" in the sidebar (frozen `app.html`): open whenever one of these pages is showing. */
-const NAV_MORE: Array<{ id: PageId; icon: string }> = [
-  { id: 'Progress', icon: IC.progress },
-  { id: 'Plan', icon: IC.plan },
-  { id: 'Gift', icon: IC.gift },
-];
-
-const NAV = [...NAV_PINNED, ...NAV_SPACES, ...NAV_MORE];
-const MORE_ICON = 'M5 10h.01 M10 10h.01 M15 10h.01';
-
 
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
@@ -886,17 +833,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
       </FadeIn>
     </div>
   );
-}
-
-function pageLabel(id: string): string {
-  if (id === 'Home') return 'Today';
-  if (id === 'Chat') return 'Ask Vibe';
-  if (id === 'Learn') return 'Library';
-  if (id === 'Quiz') return 'Quiz';
-  if (id === 'Briefings') return 'Briefs';
-  if (id === 'Progress') return 'Momentum';
-  if (id === 'Gift') return 'Share';
-  return id;
 }
 
 function Progress({ profile }: { profile: Profile | null }) {
