@@ -65,16 +65,71 @@ function isSelfApp(name: string | null): boolean {
 
 /** Last non-Unvibe frontmost app — used when Unvibe itself is focused (companion click). */
 let lastForeignApp: string | null = null;
-let watchTimer: ReturnType<typeof setInterval> | null = null;
+let watchTimer: NodeJS.Timeout | null = null;
+let watchPolling = false;
 
+const MAC_FRONTMOST_SCRIPT = 'tell application "System Events" to get name of first application process whose frontmost is true';
+
+/**
+ * Polls the frontmost app through System Events. That is an Apple Event, so the first poll raises
+ * macOS's "control System Events" question: start it only once the person knows what the shortcut
+ * does (after setup), never at a fresh install's first launch.
+ */
 export function startFrontmostWatch(): void {
   if (watchTimer) return;
   if (!isMac) return;
   watchTimer = setInterval(() => {
-    void frontmostApp().then((name) => {
-      if (name && !isSelfApp(name)) lastForeignApp = name;
-    });
+    // One osascript at a time: while macOS shows its question, a call can wait up to 5 s.
+    if (watchPolling) return;
+    watchPolling = true;
+    osascript(MAC_FRONTMOST_SCRIPT)
+      .then((name) => {
+        if (name && !isSelfApp(name)) lastForeignApp = name;
+      }, (error: unknown) => {
+        // Automation is switched off: every poll would fail, so stop until a capture works again.
+        if (macCaptureFailure(error) === 'automation_denied') stopFrontmostWatch();
+      })
+      .finally(() => {
+        watchPolling = false;
+      });
   }, 600);
+}
+
+function stopFrontmostWatch(): void {
+  clearInterval(watchTimer ?? undefined);
+  watchTimer = null;
+}
+
+/**
+ * Why a macOS copy failed. `automation_denied`: macOS refused Unvibe's Apple Events to System Events
+ * (error -1743, the Automation switch is off, and macOS won't ask again). `automation_timeout`: the
+ * call ran out of time (killed by our cap, or AppleEvent timed out -1712), which is what happens
+ * while macOS is still showing its question. Exported for tests.
+ */
+export function macCaptureFailure(error: unknown): 'automation_denied' | 'automation_timeout' | 'failed' {
+  const e = (error ?? {}) as { message?: unknown; killed?: unknown };
+  const message = typeof e.message === 'string' ? e.message : '';
+  if (/\(-1743\)|not authori[sz]ed to send apple events/i.test(message)) return 'automation_denied';
+  if (e.killed === true || /\(-1712\)/.test(message)) return 'automation_timeout';
+  return 'failed';
+}
+
+export type CaptureBlock = 'automation_denied' | 'automation_timeout' | null;
+
+/**
+ * What the panel should say about System Events after a review starts. Only a shortcut press reads
+ * through System Events, so only its result changes the answer: a refusal or timeout is kept until
+ * the next press, anything else clears it. The sample, an already captured selection and clipboard
+ * explains leave it as it was.
+ */
+export function nextCaptureBlock(
+  previous: CaptureBlock,
+  options: { sample?: boolean; captured?: unknown; preferClipboard?: boolean },
+  capture: { code: string | null; error?: string },
+): CaptureBlock {
+  if (options.sample || options.captured || options.preferClipboard) return previous;
+  if (capture.code) return null;
+  return capture.error === 'automation_denied' || capture.error === 'automation_timeout' ? capture.error : null;
 }
 
 /**
@@ -103,9 +158,7 @@ export async function frontmostApp(): Promise<string | null> {
       return name || null;
     }
     if (!isMac) return null;
-    return await osascript(
-      'tell application "System Events" to get name of first application process whose frontmost is true',
-    );
+    return await osascript(MAC_FRONTMOST_SCRIPT);
   } catch {
     return null;
   }
@@ -153,8 +206,8 @@ export interface CaptureResult {
   code: string | null;
   /** The app the selection was read from, when capture already looked it up (Windows). */
   sourceApp?: string | null;
-  /** Why no code came back: nothing was copied, or the copy itself failed. */
-  error?: 'empty' | 'failed' | 'unsupported';
+  /** Why no code came back: nothing was copied, the copy itself failed, or macOS blocked or is still asking about System Events. */
+  error?: 'empty' | 'failed' | 'unsupported' | 'automation_denied' | 'automation_timeout';
 }
 
 /** Windows: one PowerShell launch finds the foreground app and sends the copy keystroke. */
@@ -207,16 +260,20 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
       // to write into it. Without this, VS Code can occasionally return the prior item.
       await delay(120);
       await syntheticCopy();
+      // System Events answered, so the frontmost watch can run (again) without asking anything.
+      startFrontmostWatch();
       grabbed = await waitForCopiedText();
       if (!grabbed) {
         await syntheticCopy();
         grabbed = await waitForCopiedText();
       }
     }
-    if (grabbed.trim().length > 0) return { code: grabbed, sourceApp };
+    if (grabbed.trim().length > 0) {
+      return { code: grabbed, sourceApp };
+    }
     return { code: null, sourceApp, error: 'empty' };
-  } catch {
-    return { code: null, sourceApp, error: 'failed' };
+  } catch (error) {
+    return { code: null, sourceApp, error: isMac ? macCaptureFailure(error) : 'failed' };
   } finally {
     clipboard.writeText(previous);
   }
