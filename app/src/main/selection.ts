@@ -103,14 +103,33 @@ function stopFrontmostWatch(): void {
 /**
  * Why a macOS copy failed. `automation_denied`: macOS refused Unvibe's Apple Events to System Events
  * (error -1743, the Automation switch is off, and macOS won't ask again). `automation_timeout`: the
- * call ran out of time, which is what happens while macOS is still showing its question. Exported for tests.
+ * call ran out of time (killed by our cap, or AppleEvent timed out -1712), which is what happens
+ * while macOS is still showing its question. Exported for tests.
  */
 export function macCaptureFailure(error: unknown): 'automation_denied' | 'automation_timeout' | 'failed' {
   const e = (error ?? {}) as { message?: unknown; killed?: unknown };
   const message = typeof e.message === 'string' ? e.message : '';
   if (/\(-1743\)|not authori[sz]ed to send apple events/i.test(message)) return 'automation_denied';
-  if (e.killed === true) return 'automation_timeout';
+  if (e.killed === true || /\(-1712\)/.test(message)) return 'automation_timeout';
   return 'failed';
+}
+
+export type CaptureBlock = 'automation_denied' | 'automation_timeout' | null;
+
+/**
+ * What the panel should say about System Events after a review starts. Only a shortcut press reads
+ * through System Events, so only its result changes the answer: a refusal or timeout is kept until
+ * the next press, anything else clears it. The sample, an already captured selection and clipboard
+ * explains leave it as it was.
+ */
+export function nextCaptureBlock(
+  previous: CaptureBlock,
+  options: { sample?: boolean; captured?: unknown; preferClipboard?: boolean },
+  capture: { code: string | null; error?: string },
+): CaptureBlock {
+  if (options.sample || options.captured || options.preferClipboard) return previous;
+  if (capture.code) return null;
+  return capture.error === 'automation_denied' || capture.error === 'automation_timeout' ? capture.error : null;
 }
 
 /**
@@ -241,6 +260,8 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
       // to write into it. Without this, VS Code can occasionally return the prior item.
       await delay(120);
       await syntheticCopy();
+      // System Events answered, so the frontmost watch can run (again) without asking anything.
+      startFrontmostWatch();
       grabbed = await waitForCopiedText();
       if (!grabbed) {
         await syntheticCopy();
@@ -248,8 +269,6 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
       }
     }
     if (grabbed.trim().length > 0) {
-      // System Events answered, so the frontmost watch can run (again) without asking anything.
-      startFrontmostWatch();
       return { code: grabbed, sourceApp };
     }
     return { code: null, sourceApp, error: 'empty' };

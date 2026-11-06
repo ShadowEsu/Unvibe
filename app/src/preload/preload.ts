@@ -143,6 +143,11 @@ const api = {
   explainAfterGrant: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('perms:explainAfterGrant'),
   /** macOS: why the last shortcut press read nothing, when System Events (Automation) was the cause. */
   captureBlock: (): Promise<'automation_denied' | 'automation_timeout' | null> => ipcRenderer.invoke('perms:captureBlock'),
+  onCaptureBlock: (cb: (block: 'automation_denied' | 'automation_timeout' | null) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, block: 'automation_denied' | 'automation_timeout' | null) => cb(block);
+    ipcRenderer.on('perms:captureBlock', listener);
+    return () => ipcRenderer.removeListener('perms:captureBlock', listener);
+  },
   openAutomation: () => ipcRenderer.invoke('perms:openAutomation'),
 
   // privacy

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { macCaptureFailure } from '../src/main/selection';
+import { macCaptureFailure, nextCaptureBlock } from '../src/main/selection';
 
 test('a Mac copy refused by Automation (-1743) is told apart, so the person learns which switch to turn on', () => {
   // execFile's error message carries osascript's stderr.
@@ -15,6 +15,28 @@ test('a Mac copy refused by Automation (-1743) is told apart, so the person lear
 test('a Mac copy that ran out of time (macOS still asking) is not reported as a refusal', () => {
   const timedOut = Object.assign(new Error('Command failed: osascript -e …'), { killed: true, signal: 'SIGTERM' });
   assert.equal(macCaptureFailure(timedOut), 'automation_timeout');
+  // osascript's own AppleEvent timeout, seen on a runner while macOS's question was still up.
+  const appleEventTimeout = Object.assign(
+    new Error('Command failed: osascript\n84:116: execution error: System Events got an error: AppleEvent timed out. (-1712)'),
+    { code: 1, killed: false },
+  );
+  assert.equal(macCaptureFailure(appleEventTimeout), 'automation_timeout');
+});
+
+test('only a shortcut press changes what the panel says about System Events', () => {
+  const press = {};
+  // A refused press is remembered, and the next press that copies something clears it.
+  const denied = nextCaptureBlock(null, press, { code: null, error: 'automation_denied' });
+  assert.equal(denied, 'automation_denied');
+  assert.equal(nextCaptureBlock(denied, press, { code: 'const a = 1;' }), null);
+  // A press that fails for another reason (nothing selected) is not a System Events problem any more.
+  assert.equal(nextCaptureBlock(denied, press, { code: null, error: 'empty' }), null);
+  assert.equal(nextCaptureBlock(null, press, { code: null, error: 'automation_timeout' }), 'automation_timeout');
+  // The sample, an already captured selection and clipboard explains never touch System Events.
+  for (const options of [{ sample: true }, { captured: { code: 'x', sourceApp: 'Code' } }, { preferClipboard: true }]) {
+    assert.equal(nextCaptureBlock(denied, options, { code: null, error: 'empty' }), 'automation_denied');
+    assert.equal(nextCaptureBlock(null, options, { code: 'x' }), null);
+  }
 });
 
 test('other Mac copy failures, such as a missing Accessibility grant, stay plain failures', () => {

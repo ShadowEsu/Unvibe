@@ -230,11 +230,10 @@ function EmptyPicker({
   const [automation, setAutomation] = useState<'automation_denied' | 'automation_timeout' | null>(null);
   useEffect(() => {
     let alive = true;
-    const read = () => void window.unvibe.captureBlock().then((block) => { if (alive) setAutomation(block); });
-    read();
-    // Another press with the panel already open lands here without a remount.
-    window.addEventListener('focus', read);
-    return () => { alive = false; window.removeEventListener('focus', read); };
+    void window.unvibe.captureBlock().then((block) => { if (alive) setAutomation(block); });
+    // A press with the panel already open keeps this mounted; main sends the new answer.
+    const off = window.unvibe.onCaptureBlock(setAutomation);
+    return () => { alive = false; off(); };
   }, []);
   useEffect(() => {
     let alive = true;
@@ -246,8 +245,13 @@ function EmptyPicker({
       setNeedsAccess(nowMissing);
       // The grant just arrived: explain the selection already made, or say what to do in one line.
       if (missing && !nowMissing) {
-        void window.unvibe.explainAfterGrant().then((result) => {
-          if (alive && !result.explained) setGrantNote(`Unvibe can read your selection now. Select the code again and press ${shortcut}.`);
+        void window.unvibe.explainAfterGrant().then(async (result) => {
+          if (!alive || result.explained) return;
+          // The copy may still fail on System Events; then the Automation note says what to do instead.
+          const block = await window.unvibe.captureBlock();
+          if (!alive) return;
+          setAutomation(block);
+          if (!block) setGrantNote(`Unvibe can read your selection now. Select the code again and press ${shortcut}.`);
         });
       }
       missing = nowMissing;
