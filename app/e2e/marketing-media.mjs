@@ -13,6 +13,7 @@
 //      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog).
 import { launchApp } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
@@ -294,6 +295,98 @@ const explained = firstRun && await step('first explanation', async () => {
   await shot(done, 'panel-explained-top');
 });
 
+const TAKES = process.env.MEDIA_TAKES ?? 'film4';
+/** What each take pasted: its label, sha256, and when it was sent (s from the start of the run). */
+const pasted = [];
+const FILM4_TAKES = {
+  // agents/marketing/films-1105/film4-sample/src/auth/retry.ts (sha256 3fe5657662788cb4…), lines 11-26.
+  retry: {
+    sha256: 'aabf7d5e2bddb457aab0ca6c42fa29d18a80d73b9d47fd960148306b43675e0c',
+    text: [
+      'export async function withRetry<T>(',
+      '  task: () => Promise<T>,',
+      '  attempts = 3,',
+      '  baseDelayMs = 500,',
+      '): Promise<T> {',
+      '  let lastError: unknown;',
+      '  for (let i = 0; i < attempts; i++) {',
+      '    try {',
+      '      return await task();',
+      '    } catch (err) {',
+      '      lastError = err;',
+      '      if (i < attempts - 1) await sleep(baseDelayMs * 2 ** i + Math.random() * 100);',
+      '    }',
+      '  }',
+      '  throw lastError;',
+      '}',
+    ].join('\n'),
+  },
+  // agents/marketing/git-lesson/sample/login-callback.diff (sha256 f09025ebbac4c5ef…), its one hunk: the @@ line to the end.
+  diff: {
+    sha256: '282e4674ef88f9ff550aa8c259430cf0dc490995c7e4925e22ab34214a70c6b1',
+    text: [
+      '@@ -12,7 +12,8 @@ export async function GET(req: Request) {',
+      '   const code = new URL(req.url).searchParams.get("code") ?? "";',
+      '   const token = await exchangeCode(code);',
+      '   const res = NextResponse.redirect(new URL("/dashboard", req.url));',
+      '-  res.cookies.set("session", token, { httpOnly: true, secure: true, sameSite: "lax" });',
+      '+  res.cookies.set("theme", "dark", { sameSite: "strict" });',
+      '+  res.cookies.set("session", token, { httpOnly: true, secure: true, sameSite: "strict" });',
+      '   return res;',
+      ' }',
+    ].join('\n'),
+  },
+};
+
+/**
+ * One take: the text goes in through the panel's paste box at Beginner (widget:usePaste, the page's text, never the
+ * OS clipboard). A fresh install asks for the send agreement before its first own code goes out: agree as a new user
+ * would, then send the same text again. The full answer streams, and the finished panel is held 4 s as the app left
+ * it (the film's tail); only after that is it scrolled to the top for a still.
+ */
+async function pasteTake(label, { sha256, text }, expect) {
+  const actual = createHash('sha256').update(text).digest('hex');
+  if (actual !== sha256) {
+    failures.push(`${label}: text sha256 ${actual} is not Marketing's ${sha256}; nothing sent`);
+    console.log(`FAIL ${label}: text sha256 mismatch`);
+    return false;
+  }
+  return step(label, async () => {
+    const panel = await windowWith('widget.html');
+    await resize(panel, 560, 720);
+    await sleep(1500);
+    const send = async () => {
+      pasted.push({ label, sha256, sentAt: (Date.now() - t0) / 1000 });
+      mark(`${label}: sent`);
+      await (await windowWith('widget.html')).evaluate(([t]) => window.unvibe.usePaste({ text: t, level: 'beginner' }), [text]);
+    };
+    await send();
+    if (await agreeIfAsked(await windowWith('widget.html'))) await send();
+    await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: expect }).first().waitFor({ timeout: 30000 });
+    await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).then(() => mark(`${label}: streaming`)).catch(() => {});
+    const done = await settledPanel();
+    mark(`${label}: answer done`);
+    const depth = (await done.locator('.lvl.on').first().innerText().catch(() => '')).trim();
+    if (!/^beginner$/i.test(depth)) throw new Error(`the answer is at ${depth || 'no depth'}, not Beginner`);
+    await saveAnswer(done, label);
+    await sleep(4000);
+    mark(`${label}: end`);
+    await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+    await sleep(600);
+    await shot(done, label.replace(/[^a-z0-9]+/gi, '-'));
+  });
+}
+// --- Film 4 (ledger 537, Marketing): the person's own code pasted into the panel at Beginner ----------------------
+// This capture branch (media/film4-paste) runs only these takes unless MEDIA_TAKES=all. Each text is Marketing's
+// sample, word for word: checked against its sha256 before it is sent, and recorded in timeline.json.
+if (TAKES === 'film4') {
+  if (explained) {
+    await pasteTake('film4 retry.ts 11-26', FILM4_TAKES.retry, 'withRetry');
+    await pasteTake('film4 login-callback hunk', FILM4_TAKES.diff, 'GET(req');
+  }
+  await finish();
+}
+
 if (explained) {
   await step('beginner depth', async () => {
     await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
@@ -573,12 +666,17 @@ await step('brief open', async () => {
   await shot(companion, 'briefs-open');
 });
 
-for (const v of videos) v.stop();
-await app.close();
-// Every recording was ended above; wait for the encoders to write their files.
-await Promise.race([Promise.all(videos.map((v) => v.done)), sleep(30000)]);
-const files = videos.map((v) => ({ window: v.window, opened: v.opened, closed: v.closed, path: existsSync(v.path) ? v.path : null }));
-writeFileSync(path.join(out, 'timeline.json'), JSON.stringify({ version, marks, videos: files, failures }, null, 2));
-writeFileSync(path.join(out, 'snippets.json'), JSON.stringify({ version, snippets }, null, 2));
-console.log(JSON.stringify({ version, failures, videos: files }, null, 2));
-process.exit(failures.length ? 1 : 0);
+await finish();
+
+/** Ends every recording, closes the app, writes timeline.json and snippets.json, and exits (1 if a step failed). */
+async function finish() {
+  for (const v of videos) v.stop();
+  await app.close();
+  // Every recording was ended above; wait for the encoders to write their files.
+  await Promise.race([Promise.all(videos.map((v) => v.done)), sleep(30000)]);
+  const files = videos.map((v) => ({ window: v.window, opened: v.opened, closed: v.closed, path: existsSync(v.path) ? v.path : null }));
+  writeFileSync(path.join(out, 'timeline.json'), JSON.stringify({ version, takes: TAKES, marks, videos: files, failures, pasted }, null, 2));
+  writeFileSync(path.join(out, 'snippets.json'), JSON.stringify({ version, snippets }, null, 2));
+  console.log(JSON.stringify({ version, failures, videos: files }, null, 2));
+  process.exit(failures.length ? 1 : 0);
+}
