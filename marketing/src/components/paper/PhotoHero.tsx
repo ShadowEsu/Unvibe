@@ -152,10 +152,13 @@ function useRecordingSync(key: RefObject<HTMLSpanElement>, video: RefObject<HTML
     const node = video.current;
     const press = key.current?.getAnimations?.()[0];
     if (!on || !node || !press) return undefined;
+    // A browser that refuses to play it (iPhone Low Power Mode refuses muted autoplay) keeps the poster: no frozen
+    // frame that jumps on every re-sync.
+    let refused = false;
     const tick = () => {
       const local = Number(press.currentTime ?? 0) - LOOP_DELAY_MS;
       const into = local < 0 ? -1 : (local % LOOP_MS) - PRESS_MS;
-      if (press.playState !== "running" || into < 0) {
+      if (refused || press.playState !== "running" || into < 0) {
         node.pause();
         node.classList.remove("is-on");
         if (into < 0 && node.currentTime !== 0) node.currentTime = 0;
@@ -165,7 +168,10 @@ function useRecordingSync(key: RefObject<HTMLSpanElement>, video: RefObject<HTML
       // Shown only once it has a frame to show: a recording still loading leaves the poster in view.
       if (node.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (Math.abs(node.currentTime - want) > 0.35) node.currentTime = want;
-      if (want < HERO_RECORDING.seconds && node.paused) void node.play().catch(() => undefined);
+      if (want < HERO_RECORDING.seconds && node.paused) {
+        node.play().then(() => node.classList.add("is-on"), () => { refused = true; node.classList.remove("is-on"); });
+        return;
+      }
       node.classList.add("is-on");
     };
     const timer = window.setInterval(tick, 200);
