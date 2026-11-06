@@ -69,9 +69,7 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 /* The demo window: the editor as real text and the real panel capture, playing by itself. */
 .ndemo__frame { display: flex; gap: 14px; padding: 14px; background: var(--n-ground); border-radius: 24px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.55), 0 50px 90px -40px rgb(20 10 70 / 0.75); }
 .ndemo__editor { position: relative; flex: 1; min-width: 0; padding: 22px 26px; border-radius: 14px; background: #141414; color: #e9e9e4; overflow: hidden; }
-/* The path and the keycaps pin JetBrains Mono's own normal line-height (1.32): the face attaches 4 s after load
-   (layout.tsx monoWhenWanted), and with line-height normal the fallback's metrics moved the caption below by 1 px. */
-.ndemo__path { margin: 0 0 16px; font: 13px/1.32 var(--font-mono), ui-monospace, monospace; color: #a9a8a2; }
+.ndemo__path { margin: 0 0 16px; font: 13px var(--font-mono), ui-monospace, monospace; color: #a9a8a2; }
 .ndemo__code { margin: 0; font: 15px/1.75 var(--font-mono), ui-monospace, monospace; white-space: pre; }
 .ndemo__code .k { color: #b8a6ff; }
 .ndemo__sel { position: relative; display: inline-block; }
@@ -80,14 +78,15 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .ndemo__ink { position: absolute; left: 0; top: 0; overflow: hidden; color: #141414; }
 .ndemo__ink > span { display: inline-block; }
 .ndemo__keys { display: flex; gap: 6px; margin-top: 28px; }
-.ndemo__key { position: relative; padding: 6px 11px; border-radius: 8px; background: #2a2a2a; color: #fff; box-shadow: inset 0 -2px 0 #000; font: 600 13px/1.32 var(--font-mono), ui-monospace, monospace; }
+.ndemo__key { position: relative; padding: 6px 11px; border-radius: 8px; background: #2a2a2a; color: #fff; box-shadow: inset 0 -2px 0 #000; font: 600 13px var(--font-mono), ui-monospace, monospace; }
 .ndemo__key::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px var(--n-v300); opacity: 0; }
 .ndemo__panel { position: relative; flex: none; width: 360px; }
 .ndemo__panel img, .ndemo__rec { display: block; width: 100%; height: auto; border-radius: 10px; }
 /* The recording sits on its poster and shows only while it plays (PhotoHero useRecordingSync). */
 .ndemo__rec { position: absolute; inset: 0; opacity: 0; }
 .ndemo__rec.is-on { opacity: 1; }
-.nhero__base .nhero__cap { margin: 0 0 16px; color: #4a4a46; font: 500 12px/1.4 var(--font-mono), ui-monospace, monospace; }
+/* Inter, not mono (Design #197): the site's mono face attaches 4 s after load, and a mono caption's text moved when it did. */
+.nhero__base .nhero__cap { margin: 0 0 16px; color: #4a4a46; font: 500 12px/1.4 var(--font-sans); }
 
 /* The hill: a light ellipse rising over the field, carrying the download, the browser try and the trust line. */
 .nhero__base { position: relative; z-index: 4; margin-top: -64px; padding: 28px 24px 56px; text-align: center; }
