@@ -76,7 +76,7 @@ export const GALLERY: readonly GalleryCard[] = [
   {
     id: "key-check",
     title: "Key check",
-    line: "Code with a key in it is stopped on your computer. Nothing is sent.",
+    line: "Code with a known key in it is stopped on your computer. Nothing is sent.",
     shots: [KEY_CHECK_SHOT],
   },
   {
