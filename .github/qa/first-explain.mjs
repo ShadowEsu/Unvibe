@@ -7,7 +7,7 @@
 //      UNVIBE_OS (mac | windows). Writes OUT/explain-report.txt; exit 1 on any FAIL.
 import { launchApp, readStore } from './cdp-launch.mjs';
 import { execFile, execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const exe = process.env.UNVIBE_EXE;
@@ -75,10 +75,11 @@ end tell`], (err, stdout) => { if (!err) for (const m of String(stdout).split('|
 }, 1500) : null;
 
 const errors = [];
-app.onWindow((page) => {
+const watchPage = (page) => {
   page.on('console', (m) => { if (m.type() === 'error' && !/^https?:/.test(page.url())) errors.push(`console ${page.url().split('/').pop()}: ${m.text().slice(0, 200)}`); });
   page.on('pageerror', (e) => errors.push(`pageerror ${page.url().split('/').pop()}: ${e.message.split('\n')[0]}`));
-});
+};
+app.onWindow(watchPage);
 const companion = await app.windowWith('companion.html', 60000);
 if (!companion) { log(false, 'companion window opens'); desktop('no-companion'); await app.close(); finish(); }
 await companion.waitForLoadState('domcontentloaded');
@@ -89,9 +90,9 @@ await shot(companion, '1-first-screen');
 desktop('1-first-screen');
 
 // Every Island notice as the app draws it (bar.html): text, the screen-reader copy, the dot colour, the class, when.
-const islandBar = await app.windowWith('bar.html', 15000);
-if (islandBar) {
-  await islandBar.evaluate(() => {
+async function logNotices(page) {
+  if (!page) return;
+  await page.evaluate(() => {
     if (window.__qaNotes) return;
     window.__qaNotes = []; let last = null;
     const read = () => {
@@ -105,6 +106,8 @@ if (islandBar) {
     read();
   }).catch((e) => note(`Island notice log: ${e.message.split('\n')[0]}`));
 }
+let islandBar = await app.windowWith('bar.html', 15000);
+await logNotices(islandBar);
 const islandNotes = async () => (islandBar ? await islandBar.evaluate(() => window.__qaNotes || []).catch(() => []) : []);
 
 const steps = os === 'windows' ? 3 : 4;
@@ -235,6 +238,48 @@ if (process.env.NOTICES === '1' && panel) {
       } else log(false, "N-4 (#220) the card shows '% AI used' and 'N AI'", `pct ${pct?.[0] ?? 'missing'}, left ${left?.[0] ?? 'missing'}`);
       await islandBar.keyboard.press('Escape').catch(() => {});
     }
+    // N-5..N-7: an info notice (live watch: uncommitted changes in the last project, liveWatch.ts) has the neutral
+    // grey dot; a problem pressed within 15 s after it still shows, amber; no info replaces a problem while it shows.
+    // A throwaway sample repo (no personal data); the app restarts with live watch on and that repo as its project.
+    const GREY = 'rgb(180, 180, 180)';
+    const repo = path.join(out, 'qa-live-sample');
+    mkdirSync(path.join(repo, 'src'), { recursive: true });
+    const git = (...a) => execFileSync('git', ['-c', 'user.name=Sample Dev', '-c', 'user.email=sample@example.com', '-c', 'commit.gpgsign=false', ...a], { cwd: repo, stdio: 'ignore' });
+    const files = { 'src/cart.js': 'export const add = (a, b) => a + b;\n', 'src/total.js': 'export const total = (xs) => xs.length;\n', 'README.md': '# Sample cart\n' };
+    for (const [f, t] of Object.entries(files)) writeFileSync(path.join(repo, f), t);
+    git('init', '-q'); git('add', '.'); git('commit', '-q', '-m', 'Sample base');
+    for (const [f, t] of Object.entries(files)) writeFileSync(path.join(repo, f), `${t}// changed\n`);
+    await app.close();
+    const sfile = path.join(userData, 'unvibe-settings.json');
+    const s = JSON.parse(readFileSync(sfile, 'utf8').replace(/^\uFEFF/, ''));
+    s.features = { ...(s.features || {}), live: true }; s.notifications = true; s.lastProjectRoot = repo;
+    writeFileSync(sfile, JSON.stringify(s));
+    note(`relaunch with live watch on, project ${repo} (3 files changed, uncommitted)`);
+    app = await launchApp({ exe, userData, timeout: 120000 });
+    app.onWindow(watchPage);
+    const tL = Date.now();
+    islandBar = await app.windowWith('bar.html', 30000);
+    await logNotices(islandBar);
+    const comp2 = await app.windowWith('companion.html', 30000);
+    let infoN = null;
+    for (let i = 0; i < 360 && !infoN; i++) { await sleep(250); infoN = (await islandNotes()).find((n) => /files changed/i.test(n.text || n.sr)) ?? null; }
+    log(!!infoN && infoN.dot === GREY, 'N-5 an info notice (live watch) has the neutral grey dot', infoN ? `'${infoN.text || infoN.sr}' ${Math.round((infoN.at - tL) / 1000)} s after launch; dot ${infoN.dot} (grey is ${GREY}); class '${infoN.cls}'` : 'no live-watch notice within 90 s');
+    if (infoN && comp2) {
+      setClipboard('');
+      const tP2 = Date.now();
+      await comp2.evaluate(() => window.unvibe.explainClipboard());
+      let p2 = null;
+      for (let i = 0; i < 60 && !p2; i++) { await sleep(250); p2 = (await islandNotes()).find((n) => n.at >= tP2 && isProblem(n)) ?? null; }
+      if (p2 && islandBar) await islandBar.locator('.island').first().screenshot({ path: path.join(out, 'explain-notice-problem-after-info.png') }).catch(() => {});
+      log(!!p2 && p2.dot === AMBER, 'N-6 a problem pressed right after an info notice still shows, amber', p2 ? `'${p2.text || p2.sr}' ${Math.round((p2.at - tP2) / 100) / 10} s after the press, ${Math.round((tP2 - infoN.at) / 100) / 10} s after the info; dot ${p2.dot}; class '${p2.cls}'` : 'none within 15 s of the press');
+      if (p2) {
+        await sleep(9500);
+        const replaced = (await islandNotes()).filter((n) => n.at > p2.at && n.at < p2.at + 9000 && n.text && !isProblem(n));
+        if (replaced.length) log(false, 'N-7 no info notice replaces a showing problem', replaced.map((n) => `'${n.text}' at +${Math.round((n.at - p2.at) / 100) / 10} s`).join(' | '));
+        else note('N-7 nothing replaced the problem during its 9 s (no info was due then; the replace case itself is the PR\'s unit test)');
+      }
+    }
+    writeFileSync(path.join(out, 'island-notices-live.json'), JSON.stringify(await islandNotes(), null, 1));
   } catch (e) {
     log(false, 'N notice rows', e.message.split('\n')[0]);
     await shot(panel, 'notices-stuck'); desktop('notices-stuck');

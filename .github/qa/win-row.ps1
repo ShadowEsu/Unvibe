@@ -216,7 +216,7 @@ $env:UNVIBE_EXE = $exe; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE
 if ($env:RC_DIR) { $env:NOTICES = '1' }
 $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru
 $null = $j.Handle
-if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation: no result in 7 min' }
+if (-not $j.WaitForExit(600000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation (and the RC notice rows): no result in 10 min' }
 Note "first explanation (exit $($j.ExitCode)):"
 if (Test-Path "$Out\explain-report.txt") { Get-Content "$Out\explain-report.txt" | ForEach-Object { Note "  $_" } }
 Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
