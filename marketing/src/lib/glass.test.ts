@@ -36,11 +36,16 @@ describe("home surfaces", () => {
     assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
-  it("the hero's demo window shows the real panel capture with its size and a description", () => {
+  it("the hero's panel serves the recording's real poster frame, sized and described, and no video without JS", () => {
     const html = renderToStaticMarkup(createElement(HomePage));
-    const panel = html.slice(html.indexOf('<div class="ndemo__panel">'), html.indexOf('<div class="ndemo__cover"'));
-    assert.match(panel, /src="\/unvibe\/real\/panel-explained-top\.webp"/);
-    assert.match(panel, /width="880" height="1131"/);
-    assert.match(panel, /alt="The Unvibe panel explaining a JavaScript debounce function, with depth buttons along the top"/);
+    const panel = html.slice(html.indexOf('<div class="ndemo__panel">'), html.indexOf('<div class="nhero__base"'));
+    assert.match(panel, /src="\/unvibe\/real\/0149\/hero-panel-0149-poster\.webp"/);
+    assert.match(panel, /width="622" height="800"/);
+    assert.match(panel, /alt="Unvibe&#x27;s panel explaining the debounce sample at Advanced depth"/);
+    assert.match(html, /<p class="nhero__cap">Real app, sample code · Unvibe 0\.1\.49<\/p>/);
+    // The recording is added only in the browser with motion allowed, so no-JS and reduced motion fetch no video.
+    const hero = html.slice(html.indexOf('<section class="nhero"'), html.indexOf("</section>", html.indexOf('<section class="nhero"')));
+    assert.ok(hero.includes("ndemo__panel"), "the slice is the hero");
+    assert.doesNotMatch(hero, /<video\b/);
   });
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { InstallBox } from "@/components/paper/InstallBox";
 import { ShareStep } from "@/components/paper/ShareStep";
-import { STEPS } from "@/data/howItWorks";
+import { HERO_RECORDING } from "@/data/homeGallery";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
@@ -135,31 +135,61 @@ function Selected({ line, text }: { line: 1 | 2; text: string }) {
   );
 }
 
-/**
- * The panel body's masks, as % of the capture, revealed in turn: the selected-code block first, then each answer
- * line. The panel's chrome (title row, tabs, Depth row, rail, buttons) is never masked, so the window reads as the
- * app from frame 0 (Design).
- */
-const BODY_MASKS: readonly [top: number, height: number][] = [
-  [20.2, 26.0],
-  [47.5, 3.9], [52.1, 3.6], [55.6, 3.5], [59.1, 3.5], [62.5, 3.8], [67.6, 3.9], [72.1, 3.6], [75.8, 3.6], [79.3, 6.1],
-];
+/** When the drawn shortcut press lands in the demo loop (n.css `d-key2` at 4.417% of 24 s, after a 1 s delay). */
+const LOOP_MS = 24000;
+const LOOP_DELAY_MS = 1000;
+const PRESS_MS = 1060;
 
 /**
- * The window over the field: the selection as real editor text beside the real panel capture (data/howItWorks
- * step 1). CSS plays it in an 8 s loop (n.css `d-*`); off screen it pauses. Reduced motion and no JS show its
- * finished frame. Nothing in the capture is redrawn: the masks are the panel's own ground colour.
+ * Keeps the recording in step with the drawn editor: it starts from its first frame at the shortcut press of each
+ * loop, holds its last frame until the loop starts again, and stops whenever the demo is paused (off screen or a
+ * hidden tab). It shows only while it plays, so before each press the poster underneath is what is seen.
+ */
+function useRecordingSync(key: RefObject<HTMLSpanElement>, video: RefObject<HTMLVideoElement>, on: boolean) {
+  useEffect(() => {
+    const node = video.current;
+    const press = key.current?.getAnimations?.()[0];
+    if (!on || !node || !press) return undefined;
+    const tick = () => {
+      const local = Number(press.currentTime ?? 0) - LOOP_DELAY_MS;
+      const into = local < 0 ? -1 : (local % LOOP_MS) - PRESS_MS;
+      if (press.playState !== "running" || into < 0) {
+        node.pause();
+        node.classList.remove("is-on");
+        if (into < 0 && node.currentTime !== 0) node.currentTime = 0;
+        return;
+      }
+      const want = Math.min(into / 1000, HERO_RECORDING.seconds);
+      if (Math.abs(node.currentTime - want) > 0.35) node.currentTime = want;
+      if (want < HERO_RECORDING.seconds && node.paused) void node.play().catch(() => undefined);
+      node.classList.add("is-on");
+    };
+    const timer = window.setInterval(tick, 200);
+    return () => window.clearInterval(timer);
+  }, [key, video, on]);
+}
+
+/**
+ * The window over the field: the selection drawn as editor text, and beside it the real panel at work (Unvibe
+ * 0.1.49's own recording, data/homeGallery HERO_RECORDING). CSS plays the editor in a 24 s loop (n.css `d-*`); the
+ * recording starts at its shortcut press. Off screen both pause. Reduced motion and no JS show the poster, the
+ * recording's finished Advanced answer, and request no video at all.
  */
 function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
   const ref = useRef<HTMLDivElement>(null);
+  const keyRef = useRef<HTMLSpanElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [moving, setMoving] = useState(false);
   useEffect(() => {
+    setMoving(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") return undefined;
     const io = new IntersectionObserver(([entry]) => node.classList.toggle("is-paused", !entry.isIntersecting));
     io.observe(node);
     return () => io.disconnect();
   }, []);
-  const panel = STEPS[0].image;
+  useRecordingSync(keyRef, videoRef, moving);
+  const poster = HERO_RECORDING.poster;
   const keys = shortcut === "windows" ? ["Ctrl", "Alt", "U"] : ["Control", "U"];
   return (
     <div className="ndemo" ref={ref}>
@@ -176,19 +206,21 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
             {"}"}
           </pre>
           <div className="ndemo__keys">
-            {keys.map((key, index) => (
-              <span key={key} className={`ndemo__key ndemo__key--${index === keys.length - 1 ? 2 : 1}`}>{key}</span>
-            ))}
+            {keys.map((key, index) => {
+              const last = index === keys.length - 1;
+              return <span key={key} ref={last ? keyRef : undefined} className={`ndemo__key ndemo__key--${last ? 2 : 1}`}>{key}</span>;
+            })}
           </div>
         </div>
         <div className="ndemo__panel">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size capture */}
-          <img src={panel.src} width={panel.width} height={panel.height} alt={panel.alt} decoding="async" />
-          <div className="ndemo__cover" aria-hidden="true">
-            {BODY_MASKS.map(([top, height], k) => (
-              <i key={top} style={{ "--k": k, top: `${top}%`, height: `${height}%` } as CSSProperties} />
-            ))}
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the recording's poster, a fixed-size real frame */}
+          <img src={poster.src} width={poster.width} height={poster.height} alt={HERO_RECORDING.alt} decoding="async" />
+          {moving ? (
+            <video ref={videoRef} className="ndemo__rec" width={poster.width} height={poster.height} muted playsInline preload="auto" aria-hidden="true">
+              <source src={HERO_RECORDING.webm} type="video/webm" />
+              <source src={HERO_RECORDING.mp4} type="video/mp4" />
+            </video>
+          ) : null}
         </div>
       </div>
     </div>
@@ -271,6 +303,9 @@ export function PhotoHero() {
         <DemoWindow shortcut={device === "windows" ? "windows" : "mac"} />
       </div>
       <div className="nhero__base" id="hill-cta">
+        {/* The demo's label, on the hill right under the window (the hill overlaps the window's foot): the panel is
+            the app's own recording; the editor beside it is drawn. */}
+        <p className="nhero__cap">{HERO_RECORDING.caption}</p>
         {device === "phone" ? (
           <>
             <EmailMeLink />
