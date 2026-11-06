@@ -609,9 +609,10 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .ninst__cmd:focus-visible { outline: 2px solid #5b3df5; outline-offset: -2px; }
 .ninst__cmd code { font: 500 15px/1 var(--font-mono); white-space: nowrap; color: var(--ninst-ink); background: none; padding: 0; }
 /* The fade says "there is more" when the line scrolls; it sits just left of the Copy button. */
-.ninst__box::after { content: ""; position: absolute; top: 1px; bottom: 1px; right: 52px; width: 28px; pointer-events: none;
+.ninst__box::after { content: ""; position: absolute; top: 1px; bottom: 1px; right: 72px; width: 28px; pointer-events: none;
   background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff); }
-.ninst__copy { flex: 0 0 auto; width: 44px; min-width: 44px; height: 44px; margin: 0 4px 0 0; padding: 0; border: 0; border-radius: 9px;
+/* 64 wide in both states, so "Copied" fits at 12/600 and the box doesn't jump (Design). */
+.ninst__copy { flex: 0 0 auto; width: 64px; min-width: 64px; height: 44px; margin: 0 4px 0 0; padding: 0; border: 0; border-radius: 9px;
   background: var(--ninst-ink); color: #fff; font: 600 12px/1 var(--font-sans); cursor: pointer; transition: background-color 0.2s ease, transform 0.12s ease; }
 .ninst__copy:hover { background: #2a2a2a; }
 .ninst__copy:active { transform: scale(0.96); }
