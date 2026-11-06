@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from "react";
 import { InstallBox } from "@/components/paper/InstallBox";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { HERO_RECORDING } from "@/data/homeGallery";
@@ -122,14 +122,16 @@ export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" 
 }
 
 /**
- * The demo's selected lines: a lime bar sweeps under each, and the ink copy of the text is revealed with it (a
- * transform-only window), so the swept part is ink on lime from its first frame, never white on lime (Design).
+ * One selected line of the demo: a lime bar sweeps under it, and the ink copy of the text is revealed with it (a
+ * transform-only window), so the swept part is ink on lime from its first frame, never white on lime (Design). All
+ * 7 lines of the function are selected, top to bottom, 70 ms apart (`--ln`), because the recorded panel explains
+ * those 7 lines (Security + Design #197 MUST). `children` is the line as the editor colours it before the sweep.
  */
-function Selected({ line, text }: { line: 1 | 2; text: string }) {
+function Selected({ line, text, children }: { line: number; text: string; children: ReactNode }) {
   return (
-    <span className={`ndemo__sel ndemo__sel--${line}`}>
+    <span className="ndemo__sel" style={{ "--ln": line } as CSSProperties}>
       <i className="ndemo__bar" />
-      <span className="ndemo__plain">{text}</span>
+      <span className="ndemo__plain">{children}</span>
       <span className="ndemo__ink" aria-hidden="true"><span>{text}</span></span>
     </span>
   );
@@ -216,13 +218,13 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
         <div className="ndemo__editor" aria-hidden="true">
           <p className="ndemo__path">src › debounce.js</p>
           <pre className="ndemo__code">
-            <span className="k">function</span> debounce(fn, wait) {"{"}{"\n"}
-            {"  "}<span className="k">let</span> timer;{"\n"}
-            {"  "}<span className="k">return</span> (...args) =&gt; {"{"}{"\n"}
-            <Selected line={1} text="    clearTimeout(timer);" />{"\n"}
-            <Selected line={2} text="    timer = setTimeout(() => fn(...args), wait);" />{"\n"}
-            {"  };\n"}
-            {"}"}
+            <Selected line={0} text="function debounce(fn, wait) {"><span className="k">function</span> debounce(fn, wait) {"{"}</Selected>{"\n"}
+            <Selected line={1} text="  let timer;">{"  "}<span className="k">let</span> timer;</Selected>{"\n"}
+            <Selected line={2} text="  return (...args) => {">{"  "}<span className="k">return</span> (...args) =&gt; {"{"}</Selected>{"\n"}
+            <Selected line={3} text="    clearTimeout(timer);">{"    clearTimeout(timer);"}</Selected>{"\n"}
+            <Selected line={4} text="    timer = setTimeout(() => fn(...args), wait);">{"    timer = setTimeout(() => fn(...args), wait);"}</Selected>{"\n"}
+            <Selected line={5} text="  };">{"  };"}</Selected>{"\n"}
+            <Selected line={6} text="}">{"}"}</Selected>
           </pre>
           <div className="ndemo__keys">
             {keys.map((key, index) => {

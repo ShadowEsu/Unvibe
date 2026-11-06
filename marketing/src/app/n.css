@@ -279,18 +279,17 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
     animation-duration: 24s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: var(--n-e);
     animation-delay: calc(1000ms + var(--k, 0) * 150ms);
   }
-  .js .ndemo .ndemo__sel--1 .ndemo__bar { animation-name: d-bar1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__bar { animation-name: d-bar2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__ink { animation-name: d-on1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__ink { animation-name: d-on2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__plain { animation-name: d-off1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__plain { animation-name: d-off2; }
+  /* The selection's parts start 70 ms later per line, top to bottom (one keyframe set, n.css d-bar/on/in/off). */
+  .js .ndemo .ndemo__sel .ndemo__bar, .js .ndemo .ndemo__sel .ndemo__plain, .js .ndemo .ndemo__sel .ndemo__ink,
+  .js .ndemo .ndemo__sel .ndemo__ink > span { animation-delay: calc(1000ms + var(--ln, 0) * 70ms); }
+  .js .ndemo .ndemo__bar { animation-name: d-bar; }
+  .js .ndemo .ndemo__ink { animation-name: d-on; }
+  .js .ndemo .ndemo__plain { animation-name: d-off; }
+  .js .ndemo .ndemo__ink > span { animation-name: d-in; }
   .js .ndemo .ndemo__key--1 { animation-name: d-key1; }
   .js .ndemo .ndemo__key--2 { animation-name: d-key2; }
   .js .ndemo .ndemo__key--1::after { animation-name: d-glow1; }
   .js .ndemo .ndemo__key--2::after { animation-name: d-glow2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__ink > span { animation-name: d-in1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__ink > span { animation-name: d-in2; }
   .ndemo__rec { transition: opacity 160ms var(--n-e); }
   .ndemo.is-paused *, .ndemo.is-paused *::after { animation-play-state: paused !important; }
 
@@ -329,18 +328,15 @@ html:not(.js) .ndemo__plain { opacity: 0; }
 @keyframes n-drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes n-rise32 { from { opacity: 0; transform: translateY(32px); } }
 @keyframes n-rise12 { from { opacity: 0; transform: translateY(12px); } }
-/* Demo cycle (24000 ms; 1% = 240 ms): 200-500 line 1 selection sweeps, its ink revealed with the bar; 448-752 line 2;
-   900 Control press; 1060 U press, and the panel's real recording starts (PhotoHero useRecordingSync; 18.1 s long, it
-   holds its last frame after); 23300-23700 the selection fades back; loop. */
-@keyframes d-bar1 { 0%, 0.833% { transform: scaleX(0); opacity: 1; } 2.083%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
-@keyframes d-bar2 { 0%, 1.867% { transform: scaleX(0); opacity: 1; } 3.133%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
+/* Demo cycle (24000 ms; 1% = 240 ms): from 150 ms the selection sweeps down the function's 7 lines, each line's bar
+   250 ms, 70 ms after the line above (`--ln`, PhotoHero Selected; the last is done by 820), its ink revealed with the
+   bar; 900 Control press; 1060 U press, and the panel's real recording starts (PhotoHero useRecordingSync; 18.1 s
+   long, it holds its last frame after); 23300-23700 (+ the line's stagger) the selection fades back; loop. */
+@keyframes d-bar { 0%, 0.625% { transform: scaleX(0); opacity: 1; } 1.667%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
 /* The ink copy's window slides in with the bar while its text counter-slides, so the text stays put. */
-@keyframes d-on1 { 0%, 0.833% { transform: translateX(-100%); opacity: 1; } 2.083%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
-@keyframes d-on2 { 0%, 1.867% { transform: translateX(-100%); opacity: 1; } 3.133%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
-@keyframes d-in1 { 0%, 0.833% { transform: translateX(100%); } 2.083%, 100% { transform: none; } }
-@keyframes d-in2 { 0%, 1.867% { transform: translateX(100%); } 3.133%, 100% { transform: none; } }
-@keyframes d-off1 { 0%, 2.083% { opacity: 1; } 2.167%, 97.083% { opacity: 0; } 98.75%, 100% { opacity: 1; } }
-@keyframes d-off2 { 0%, 3.133% { opacity: 1; } 3.217%, 97.083% { opacity: 0; } 98.75%, 100% { opacity: 1; } }
+@keyframes d-on { 0%, 0.625% { transform: translateX(-100%); opacity: 1; } 1.667%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
+@keyframes d-in { 0%, 0.625% { transform: translateX(100%); } 1.667%, 100% { transform: none; } }
+@keyframes d-off { 0%, 1.667% { opacity: 1; } 1.75%, 97.083% { opacity: 0; } 98.75%, 100% { opacity: 1; } }
 @keyframes d-key1 { 0%, 3.75% { transform: none; } 4% { transform: scale(0.94); } 4.5%, 100% { transform: none; } }
 @keyframes d-key2 { 0%, 4.167% { transform: none; } 4.417% { transform: scale(0.94); } 4.917%, 100% { transform: none; } }
 @keyframes d-glow1 { 0%, 3.75% { opacity: 0; } 4% { opacity: 1; } 5%, 100% { opacity: 0; } }
