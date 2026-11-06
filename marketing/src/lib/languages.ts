@@ -547,6 +547,36 @@ export const languages: Language[] = [
     learningPath: ["Search a file", "Flags", "Folders", "Patterns and exit codes"],
     sample: `grep -in "error" app.log`,
   },
+  {
+    id: "git-diff",
+    name: "git diff",
+    categories: ["systems", "scripting"],
+    blurb: "What changed in your code, line by line: the edits you or your AI made, before you commit them.",
+    concepts: ["file headers", "hunks", "added and removed lines", "renames"],
+    frameworks: ["git", "GitHub pull requests", "git add", "git log"],
+    learningPath: ["Reading a hunk", "Staged and unstaged", "Renames", "--stat and --word-diff"],
+    sample: `git diff --staged`,
+  },
+  {
+    id: "react-useeffect",
+    name: "React useEffect",
+    categories: ["web"],
+    blurb: "The React hook that runs code after a render: data fetching, subscriptions and timers, and the cleanup that stops them.",
+    concepts: ["when it runs", "the dependency array", "cleanup", "StrictMode"],
+    frameworks: ["React", "Next.js", "React Native", "Vite"],
+    learningPath: ["When effects run", "Dependencies", "Cleanup", "StrictMode"],
+    sample: `useEffect(() => { document.title = name; }, [name]);`,
+  },
+  {
+    id: "python-traceback",
+    name: "Python traceback",
+    categories: ["backend", "data", "scripting"],
+    blurb: "What Python prints when a program crashes: the calls that led there and the error that stopped it.",
+    concepts: ["reading order", "frames", "the error line", "chained errors"],
+    frameworks: ["Python", "pytest", "Django", "FastAPI"],
+    learningPath: ["Read the last line", "Find your line", "Common errors", "Chained errors"],
+    sample: `KeyError: 'qty'`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

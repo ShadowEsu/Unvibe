@@ -50,6 +50,7 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
         '- Write a DETAILED explanation the reader can reopen later. Prefer several short sections over a one-line summary.',
         '- Cover: what this code is, how it works step by step, why it is here, risks or edge cases, and what to check next.',
         '- Prefer short paragraphs or simple markdown bullets (* item). Bold sparingly with **words**.',
+        '- No markdown tables: the app shows them as raw | rows. For steps or a timeline, use a short numbered or bulleted list.',
         '- When citing a real file from the context, you may use [[cite:FILE:LINE]] or [[cite:FILE:START-END]].',
         '  The app renders these as small chips — never invent files. For clipboard/selection-only',
         '  context, write plain words ("line 12") instead of cite markers.',

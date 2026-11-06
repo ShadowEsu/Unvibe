@@ -1,6 +1,7 @@
 import { Arrive } from "@/components/paper/Arrive";
 import { KEY_CHECK_SHOT, SHOT_CAPTION } from "@/data/homeGallery";
 import { ExpandRows } from "@/components/paper/ExpandRows";
+import { PixelIcon } from "@/components/paper/PixelIcon";
 
 /**
  * "What leaves your computer." (Design W4): what an explanation sends and what stays, as two lists.
@@ -28,10 +29,17 @@ export const KEPT: readonly string[] = [
 export function WhatLeaves() {
   return (
     <section className="n-sec n-wrap nleaves" id="what-leaves" aria-labelledby="what-leaves-title">
-      <Arrive className="n-head">
-        <h2 id="what-leaves-title">What leaves your computer.</h2>
-        <p className="n-lead">Only what&apos;s needed to explain what you ask about.</p>
-      </Arrive>
+      <div>
+        <Arrive className="n-head">
+          <h2 id="what-leaves-title">What leaves your computer.</h2>
+          <p className="n-lead">Only what&apos;s needed to explain what you ask about.</p>
+        </Arrive>
+        {/* Margin art in the column's empty space under the heading (spec §13.7: Keys, the floppy and the magnifier). */}
+        <div className="nleaves__px">
+          <PixelIcon name="13-floppy" className="nleaves__px1" />
+          <PixelIcon name="17-magnifier" className="nleaves__px2" />
+        </div>
+      </div>
       <div>
         <ExpandRows
           rows={[

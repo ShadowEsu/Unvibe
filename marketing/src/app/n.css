@@ -81,9 +81,17 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .ndemo__key { position: relative; padding: 6px 11px; border-radius: 8px; background: #2a2a2a; color: #fff; box-shadow: inset 0 -2px 0 #000; font: 600 13px var(--font-mono), ui-monospace, monospace; }
 .ndemo__key::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px var(--n-v300); opacity: 0; }
 .ndemo__panel { position: relative; flex: none; width: 360px; }
-.ndemo__panel img { display: block; width: 100%; height: auto; border-radius: 10px; }
-.ndemo__cover { position: absolute; left: 11.8%; width: 85%; top: 0; bottom: 0; pointer-events: none; }
-.ndemo__cover i { position: absolute; left: 0; right: 0; background: #fcfaf6; opacity: 0; }
+.ndemo__panel img, .ndemo__rec { display: block; width: 100%; height: auto; border-radius: 10px; }
+/* The recording sits on its poster and shows only while it plays (PhotoHero useRecordingSync). */
+.ndemo__rec { position: absolute; inset: 0; opacity: 0; }
+.ndemo__rec.is-on { opacity: 1; }
+/* Inter, not mono (Design #197): the site's mono face attaches 4 s after load, and a mono caption's text moved when it did. */
+.nhero__base .nhero__cap { margin: 0 0 16px; color: #4a4a46; font: 500 12px/1.4 var(--font-sans); }
+/* Phones: the hill overlaps the window's last 64 px and its curve dips at the sides, so the caption goes under the
+   window's edge, on the ivory, never over the curve or the panel (Design #197 MUST, 390). */
+@media (max-width: 600px) {
+  .nhero__base .nhero__cap { max-width: calc(100% - 48px); margin: 52px auto 16px; text-wrap: balance; }
+}
 
 /* The hill: a light ellipse rising over the field, carrying the download, the browser try and the trust line. */
 .nhero__base { position: relative; z-index: 4; margin-top: -64px; padding: 28px 24px 56px; text-align: center; }
@@ -235,6 +243,20 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .nleaves__shot { margin: 28px 0 0; }
 .nleaves__shot img { display: block; width: min(100%, 352px); height: auto; border-radius: 14px; box-shadow: var(--n-float); }
 
+/* ---------- Pixel margin art (Design 530 spec §13.7) ----------
+   Motion's 32×32 icons at ×4 (128 px), ink, greys and violet. Only from 1280 px, where the room beside the content
+   is at least 176 px (128 + the 48 px gap): the gallery's middle row leaves its first and last grid columns empty
+   (167 px wide + the 24 px gap), and What leaves has the column under its heading. Narrower, they're not shown. */
+.npx { display: none; image-rendering: pixelated; }
+@media (min-width: 1280px) {
+  .npx { display: block; width: 128px; height: 128px; }
+  .ngal__px { grid-row: 2; align-self: center; }
+  .ngal__px--l { grid-column: 1; justify-self: start; }
+  .ngal__px--r { grid-column: 6; justify-self: end; }
+  .nleaves__px { display: flex; gap: 72px; margin-top: 96px; padding-left: 8px; }
+  .nleaves__px2 { margin-top: 96px; }
+}
+
 /* ---------- Backing line ---------- */
 .n-home .nback { margin-top: 96px; }
 
@@ -257,30 +279,38 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
   .n-load .nhero__sub { animation: n-rise12 500ms var(--n-e) 150ms both; }
   .n-load .nhero__base > * { animation: n-rise12 500ms var(--n-e) 450ms both; }
 
-  /* Demo loop: 8 s, from when the window has landed (1000 ms); paused off screen. */
+  /* Demo loop: 24 s, from when the window has landed (1000 ms); paused off screen. */
   .js .ndemo .ndemo__bar, .js .ndemo .ndemo__plain, .js .ndemo .ndemo__ink, .js .ndemo .ndemo__ink > span, .js .ndemo .ndemo__key,
-  .js .ndemo .ndemo__key::after, .js .ndemo .ndemo__cover i {
-    animation-duration: 8s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: var(--n-e);
+  .js .ndemo .ndemo__key::after {
+    animation-duration: 24s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: var(--n-e);
     animation-delay: calc(1000ms + var(--k, 0) * 150ms);
   }
-  .js .ndemo .ndemo__sel--1 .ndemo__bar { animation-name: d-bar1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__bar { animation-name: d-bar2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__ink { animation-name: d-on1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__ink { animation-name: d-on2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__plain { animation-name: d-off1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__plain { animation-name: d-off2; }
+  /* The selection's parts start 70 ms later per line, top to bottom (one keyframe set, n.css d-bar/on/in/off). */
+  .js .ndemo .ndemo__sel .ndemo__bar, .js .ndemo .ndemo__sel .ndemo__plain, .js .ndemo .ndemo__sel .ndemo__ink,
+  .js .ndemo .ndemo__sel .ndemo__ink > span { animation-delay: calc(1000ms + var(--ln, 0) * 70ms); }
+  .js .ndemo .ndemo__bar { animation-name: d-bar; }
+  .js .ndemo .ndemo__ink { animation-name: d-on; }
+  .js .ndemo .ndemo__plain { animation-name: d-off; }
+  .js .ndemo .ndemo__ink > span { animation-name: d-in; }
   .js .ndemo .ndemo__key--1 { animation-name: d-key1; }
   .js .ndemo .ndemo__key--2 { animation-name: d-key2; }
   .js .ndemo .ndemo__key--1::after { animation-name: d-glow1; }
   .js .ndemo .ndemo__key--2::after { animation-name: d-glow2; }
-  .js .ndemo .ndemo__sel--1 .ndemo__ink > span { animation-name: d-in1; }
-  .js .ndemo .ndemo__sel--2 .ndemo__ink > span { animation-name: d-in2; }
-  .js .ndemo .ndemo__cover i { animation-name: d-cov; }
+  .ndemo__rec { transition: opacity 160ms var(--n-e); }
   .ndemo.is-paused *, .ndemo.is-paused *::after { animation-play-state: paused !important; }
 
   /* The Free card rises further and lands last (Arrive staggers by --arrive-i, set inline, hence !important). */
   .n-home .nprice__plans > .nprice__plan--on { --arrive-dist: 28px; --arrive-i: 3 !important; }
+
+  /* Pixel margin art (PixelIcon; Motion's kit sections.css data-pixel): rise 16 px over 600 ms, then 1 grid pixel
+     (4 px at ×4) up every 200 ms for 2 s, and stop. Vertical only, so its gap to the content never shrinks. */
+  .npx[data-px="wait"] { opacity: 0; transform: translateY(16px); }
+  .npx[data-px="go"] { animation: n-px-rise 600ms var(--n-e) backwards, n-px-drift 2000ms steps(10, end) 600ms forwards; }
+  .nleaves__px2[data-px="go"] { animation-delay: 150ms, 750ms; }
+  .ngal__px--r[data-px="go"] { animation-delay: 150ms, 750ms; }
 }
+@keyframes n-px-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes n-px-drift { to { transform: translateY(-40px); } }
 /* Reduced motion, or no JS: the finished frame of the demo, the panel and every answer line visible. */
 @media (prefers-reduced-motion: reduce) {
   .ndemo__bar { transform: none; }
@@ -304,23 +334,19 @@ html:not(.js) .ndemo__plain { opacity: 0; }
 @keyframes n-drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes n-rise32 { from { opacity: 0; transform: translateY(32px); } }
 @keyframes n-rise12 { from { opacity: 0; transform: translateY(12px); } }
-/* Demo cycle (8000 ms; 1% = 80 ms): 200-500 line 1 selection sweeps, its ink revealed with the bar; 450-750 line 2;
-   900 Control press; 1000 U press; from 1150 the panel body appears, the code block then each answer line, 150 ms
-   apart (the panel's chrome is there from frame 0); hold; 7300-7700 the selection and the body fade back; loop. */
-@keyframes d-bar1 { 0%, 2.5% { transform: scaleX(0); opacity: 1; } 6.25%, 91.25% { transform: none; opacity: 1; } 96.25%, 100% { transform: none; opacity: 0; } }
-@keyframes d-bar2 { 0%, 5.6% { transform: scaleX(0); opacity: 1; } 9.4%, 91.25% { transform: none; opacity: 1; } 96.25%, 100% { transform: none; opacity: 0; } }
+/* Demo cycle (24000 ms; 1% = 240 ms): from 150 ms the selection sweeps down the function's 7 lines, each line's bar
+   250 ms, 70 ms after the line above (`--ln`, PhotoHero Selected; the last is done by 820), its ink revealed with the
+   bar; 900 Control press; 1060 U press, and the panel's real recording starts (PhotoHero useRecordingSync; 18.1 s
+   long, it holds its last frame after); 23300-23700 (+ the line's stagger) the selection fades back; loop. */
+@keyframes d-bar { 0%, 0.625% { transform: scaleX(0); opacity: 1; } 1.667%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
 /* The ink copy's window slides in with the bar while its text counter-slides, so the text stays put. */
-@keyframes d-on1 { 0%, 2.5% { transform: translateX(-100%); opacity: 1; } 6.25%, 91.25% { transform: none; opacity: 1; } 96.25%, 100% { transform: none; opacity: 0; } }
-@keyframes d-on2 { 0%, 5.6% { transform: translateX(-100%); opacity: 1; } 9.4%, 91.25% { transform: none; opacity: 1; } 96.25%, 100% { transform: none; opacity: 0; } }
-@keyframes d-in1 { 0%, 2.5% { transform: translateX(100%); } 6.25%, 100% { transform: none; } }
-@keyframes d-in2 { 0%, 5.6% { transform: translateX(100%); } 9.4%, 100% { transform: none; } }
-@keyframes d-off1 { 0%, 6.25% { opacity: 1; } 6.5%, 91.25% { opacity: 0; } 96.25%, 100% { opacity: 1; } }
-@keyframes d-off2 { 0%, 9.4% { opacity: 1; } 9.65%, 91.25% { opacity: 0; } 96.25%, 100% { opacity: 1; } }
-@keyframes d-key1 { 0%, 11.25% { transform: none; } 12% { transform: scale(0.94); } 13.5%, 100% { transform: none; } }
-@keyframes d-key2 { 0%, 12.5% { transform: none; } 13.25% { transform: scale(0.94); } 14.75%, 100% { transform: none; } }
-@keyframes d-glow1 { 0%, 11.25% { opacity: 0; } 12% { opacity: 1; } 15%, 100% { opacity: 0; } }
-@keyframes d-glow2 { 0%, 12.5% { opacity: 0; } 13.25% { opacity: 1; } 16.25%, 100% { opacity: 0; } }
-@keyframes d-cov { 0%, 14.4% { opacity: 1; } 16.9%, 91.25% { opacity: 0; } 96.25%, 100% { opacity: 1; } }
+@keyframes d-on { 0%, 0.625% { transform: translateX(-100%); opacity: 1; } 1.667%, 97.083% { transform: none; opacity: 1; } 98.75%, 100% { transform: none; opacity: 0; } }
+@keyframes d-in { 0%, 0.625% { transform: translateX(100%); } 1.667%, 100% { transform: none; } }
+@keyframes d-off { 0%, 1.667% { opacity: 1; } 1.75%, 97.083% { opacity: 0; } 98.75%, 100% { opacity: 1; } }
+@keyframes d-key1 { 0%, 3.75% { transform: none; } 4% { transform: scale(0.94); } 4.5%, 100% { transform: none; } }
+@keyframes d-key2 { 0%, 4.167% { transform: none; } 4.417% { transform: scale(0.94); } 4.917%, 100% { transform: none; } }
+@keyframes d-glow1 { 0%, 3.75% { opacity: 0; } 4% { opacity: 1; } 5%, 100% { opacity: 0; } }
+@keyframes d-glow2 { 0%, 4.167% { opacity: 0; } 4.417% { opacity: 1; } 5.417%, 100% { opacity: 0; } }
 
 /* ---------- Phone ---------- */
 @media (max-width: 760px) {
@@ -340,7 +366,8 @@ html:not(.js) .ndemo__plain { opacity: 0; }
   .ndemo__keys { position: absolute; right: 12px; top: 10px; margin: 0; }
   .ndemo__key { padding: 3px 7px; border-radius: 6px; font-size: 10.5px; }
   .ndemo__panel { width: 212px; margin: -26px 0 0 auto; }
-  .ndemo__panel img { border-radius: 12px; box-shadow: 0 30px 50px -24px rgb(20 10 70 / 0.7); }
+  .ndemo__panel img, .ndemo__rec { border-radius: 12px; }
+  .ndemo__panel img { box-shadow: 0 30px 50px -24px rgb(20 10 70 / 0.7); }
   .nhero__base { padding: 24px 16px 48px; }
   .nhero__base::before { width: 1000px; height: max(500px, calc(100% + 240px)); margin-left: -500px; }
   .nhero__base .vhero__actions { flex-direction: column; gap: 14px; }
