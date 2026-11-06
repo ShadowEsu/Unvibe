@@ -348,7 +348,9 @@ function loadCodeIntoSession(
   session.recorded = false;
   session.reviewId = randomUUID();
   session.awaitingConfirm = false;
-  // Clipboard, paste and file explains never use a selected-code credit; one left from an earlier capture must not carry over.
+  // Clipboard, paste and file explains never use a selected-code credit. One still held by a capture whose
+  // explanation this replaces goes back first (that answer never came), then none carries over.
+  if (session.selectionCredit === 'held') store().refundBetaSelectedCodePrompt();
   session.selectionCredit = undefined;
   session.payload = undefined;
   session.mode = 'selection';
