@@ -12,11 +12,7 @@ describe("standalone text link targets", () => {
 
   it("cover the links Design measured under 24 px", () => {
     const selectors = (rule?.[1] ?? "").replace(/\/\*[\s\S]*?\*\//g, "").split(",").map((selector) => selector.trim());
-    for (const selector of [
-      ".home-langs .paper-text-link",
-      ".beta-page__steps-list p > a.paper-text-link",
-      ".paper-beta__update > a",
-      ".paper-invite__card .paper-caption > a",
-    ]) assert.ok(selectors.includes(selector), selector);
+    // The home language row, the old /beta steps and the invite card went with the package-1106 home.
+    for (const selector of [".paper-beta__update > a"]) assert.ok(selectors.includes(selector), selector);
   });
 });
