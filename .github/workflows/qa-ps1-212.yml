@@ -1,0 +1,90 @@
+name: QA install.ps1 per-user setup check
+
+# QA only (#212, BOSS row 545; Security P-1..P-4): #212's install.ps1 at ed91d6e2 (committed copy of the preview's
+# rendered script, so CI never fetches unvibe.site), on clean Windows Server 2022 + 2025, in Windows PowerShell 5.1
+# and pwsh. Rows: fresh, over today's portable install, over v0.1.49 setup /S, over an all-users v0.1.49, and a
+# tampered download. Each profile's qa- id is flagged before anything installs.
+# Runs on a push to qa/install-matrix whose commit message holds "[ps1-212]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-ps1-212
+  cancel-in-progress: false
+
+jobs:
+  row:
+    if: contains(github.event.head_commit.message, '[ps1-212]')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+        shell: [powershell, pwsh]
+        kind: [fresh, portable, setup, allusers, tamper]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      INSTALL_ID: qa-ps1-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}
+    steps:
+      - name: Flag this id as QA before anything installs
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Parse the row script
+        shell: powershell
+        run: |
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$env:GITHUB_WORKSPACE\.github\qa\ps1-row.ps1", [ref]$null, [ref]$errs)
+          if ($errs) { $errs | ForEach-Object { "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
+          'ps1-row.ps1 parses'
+
+      - name: Playwright for the first explanation
+        if: matrix.kind != 'tamper'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+
+      - name: Install with #212's install.ps1, check, first explanation, uninstall
+        shell: powershell
+        run: .github\qa\ps1-row.ps1 -Kind "${{ matrix.kind }}" -Shell "${{ matrix.shell }}" -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag again (whatever happened)
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          taskkill //IM Unvibe.exe //F > /dev/null 2>&1 || true
+          ids="$INSTALL_ID"
+          s="$APPDATA/Unvibe/unvibe-store.json"
+          [ -f "$s" ] && ids="$ids $(grep -o '"installId":"[^"]*"' "$s" | cut -d'"' -f4)"
+          for x in $(echo $ids | tr ' ' '\n' | sort -u); do
+            printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w " %{http_code} $x\n" \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$x\"}"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ps1-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14

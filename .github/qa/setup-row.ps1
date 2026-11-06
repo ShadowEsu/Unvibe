@@ -36,7 +36,7 @@ function Links() { Get-ChildItem (Join-Path $env:APPDATA 'Microsoft\Windows\Star
 function State($label) {
   Note "STATE $label"
   Note "  exes: $((@(Exes)) -join ' | ')"
-  Note "  Apps entries: $((@(Entries) | ForEach-Object { "[$($_.Hive)] '$($_.Name)' $($_.Version) at $($_.Location)" }) -join ' | ')"
+  Note "  Apps entries: $((@(Entries) | ForEach-Object { "[$($_.Hive)] key '$($_.Key)' '$($_.Name)' $($_.Version) at $($_.Location)" }) -join ' | ')"
   Note "  Start menu: $((@(Links)) -join ' | ')"
   Note "  desktop shortcut: $(Test-Path (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Unvibe.lnk')), public desktop: $(Test-Path (Join-Path $env:PUBLIC 'Desktop\Unvibe.lnk'))"
   Note "  Unvibe running: $(@(Get-Process Unvibe -ErrorAction SilentlyContinue).Count) processes"
