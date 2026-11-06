@@ -41,7 +41,7 @@ export function siteCommands(push: (href: string) => void): Command[] {
     { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#see-it") },
     { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
     { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
-    { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/install-help") },
+    { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },
     { id: "changelog", label: "Changelog", hint: "What shipped", keywords: "change log releases", run: go("/releases") },
     { id: "growth", label: "Growth", hint: "Building in public", run: go("/build") },
     { id: "privacy", label: "Privacy", hint: "What leaves your machine", keywords: "data security secrets policy", run: go("/privacy") },
