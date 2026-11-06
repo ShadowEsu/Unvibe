@@ -237,6 +237,20 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .nleaves__shot { margin: 28px 0 0; }
 .nleaves__shot img { display: block; width: min(100%, 352px); height: auto; border-radius: 14px; box-shadow: var(--n-float); }
 
+/* ---------- Pixel margin art (Design 530 spec §13.7) ----------
+   Motion's 32×32 icons at ×4 (128 px), ink, greys and violet. Only from 1280 px, where the room beside the content
+   is at least 176 px (128 + the 48 px gap): the gallery's middle row leaves its first and last grid columns empty
+   (167 px wide + the 24 px gap), and What leaves has the column under its heading. Narrower, they're not shown. */
+.npx { display: none; image-rendering: pixelated; }
+@media (min-width: 1280px) {
+  .npx { display: block; width: 128px; height: 128px; }
+  .ngal__px { grid-row: 2; align-self: center; }
+  .ngal__px--l { grid-column: 1; justify-self: start; }
+  .ngal__px--r { grid-column: 6; justify-self: end; }
+  .nleaves__px { display: flex; gap: 72px; margin-top: 96px; padding-left: 8px; }
+  .nleaves__px2 { margin-top: 96px; }
+}
+
 /* ---------- Backing line ---------- */
 .n-home .nback { margin-top: 96px; }
 
@@ -282,7 +296,16 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 
   /* The Free card rises further and lands last (Arrive staggers by --arrive-i, set inline, hence !important). */
   .n-home .nprice__plans > .nprice__plan--on { --arrive-dist: 28px; --arrive-i: 3 !important; }
+
+  /* Pixel margin art (PixelIcon; Motion's kit sections.css data-pixel): rise 16 px over 600 ms, then 1 grid pixel
+     (4 px at ×4) up every 200 ms for 2 s, and stop. Vertical only, so its gap to the content never shrinks. */
+  .npx[data-px="wait"] { opacity: 0; transform: translateY(16px); }
+  .npx[data-px="go"] { animation: n-px-rise 600ms var(--n-e) backwards, n-px-drift 2000ms steps(10, end) 600ms forwards; }
+  .nleaves__px2[data-px="go"] { animation-delay: 150ms, 750ms; }
+  .ngal__px--r[data-px="go"] { animation-delay: 150ms, 750ms; }
 }
+@keyframes n-px-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes n-px-drift { to { transform: translateY(-40px); } }
 /* Reduced motion, or no JS: the finished frame of the demo, the panel and every answer line visible. */
 @media (prefers-reduced-motion: reduce) {
   .ndemo__bar { transform: none; }
