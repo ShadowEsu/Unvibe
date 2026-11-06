@@ -259,6 +259,111 @@ try {
     mark('explanation complete');
     say('EXPLANATION', `${result.explanation.length} characters, ${Math.round((Date.now() - clicked) / 100) / 10} s after the click`);
     writeFileSync(path.join(out, `${label}-explanation.txt`), `${result.explanation}\n`);
+  } else if (mode === 'design') {
+    // Design package stills: Briefs with one real brief, then Settings → Privacy & Data. Clicks go through the page's
+    // own buttons (as first-explain.mjs does); the folder comes from the app's own folder dialog (PICK_PATH, typed into
+    // macOS's Go to Folder) unless the app already knows the project (SKIP_PICK=1). Each screen: a 1x capture of the
+    // real companion window, then a 2x capture through Emulation.setDeviceMetricsOverride (EMU_W x EMU_H, scale 2).
+    const emuW = Number(process.env.EMU_W || 1180), emuH = Number(process.env.EMU_H || 820);
+    const companion = await page(browser, 'companion.html', 60000);
+    if (!companion) throw new Error('no companion window');
+    await companion.waitForLoadState('domcontentloaded');
+    await sleep(2500);
+    const info = await companion.evaluate(() => window.unvibe?.appInfo?.()).catch(() => null);
+    result.version = info?.version ?? 'unknown';
+    result.realWindow = await companion.evaluate(() => ({ innerWidth, innerHeight, outerWidth, outerHeight, dpr: devicePixelRatio, x: screenX, y: screenY }));
+    say('VERSION', result.version);
+    say('REAL_WINDOW', JSON.stringify(result.realWindow));
+    const shot1x = (file) => {
+      try {
+        const found = execFileSync(process.env.GKWIN, ['find', 'Unvibe']).toString().trim().split(' ');
+        execFileSync('screencapture', ['-x', '-o', '-l', found[0], path.join(out, file)]);
+        say('SHOT_1X', `${file} window ${found.slice(1).join(' ')}`);
+      } catch (e) { say('SHOT_1X', `${file} failed: ${e.message.split('\n')[0]}`); }
+    };
+    const cdpSession = await companion.context().newCDPSession(companion);
+    // Text that the layout cuts (overflow hidden/clip, or ellipsis) inside the given root, at the current viewport.
+    const clippedText = (root) => companion.evaluate((sel) => {
+      const hits = [];
+      for (const el of document.querySelectorAll(`${sel} *`)) {
+        const s = getComputedStyle(el);
+        if (!el.childNodes.length || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        const cut = (el.scrollWidth > el.clientWidth + 1 && /(hidden|clip)/.test(s.overflowX)) || (el.scrollHeight > el.clientHeight + 1 && /(hidden|clip)/.test(s.overflowY) && s.webkitLineClamp !== 'none');
+        if (cut && el.getBoundingClientRect().width > 0) hits.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}: "${el.textContent.trim().slice(0, 60)}"`);
+      }
+      return hits.slice(0, 12);
+    }, root);
+    const shot2x = async (file, root) => {
+      await cdpSession.send('Emulation.setDeviceMetricsOverride', { width: emuW, height: emuH, deviceScaleFactor: 2, mobile: false });
+      await sleep(1200);
+      const vp = await companion.evaluate(() => ({ innerWidth, innerHeight, dpr: devicePixelRatio }));
+      const cut = await clippedText(root);
+      const { data } = await cdpSession.send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(path.join(out, file), Buffer.from(data, 'base64'));
+      await cdpSession.send('Emulation.clearDeviceMetricsOverride');
+      await sleep(800);
+      say('SHOT_2X', `${file} viewport ${vp.innerWidth}x${vp.innerHeight} CSS px at dpr ${vp.dpr}; clipped text: ${cut.length ? cut.join(' | ') : 'none'}`);
+      return { file, viewport: vp, clipped: cut };
+    };
+
+    // Briefs.
+    await companion.getByRole('button', { name: 'Briefs', exact: true }).first().click({ timeout: 10000 });
+    say('STEP', 'opened Briefs from the sidebar');
+    const card = companion.locator('.briefings__card');
+    if (process.env.SKIP_PICK !== '1') {
+      const choose = companion.getByRole('button', { name: 'Choose a project', exact: true });
+      await choose.waitFor({ timeout: 20000 });
+      await choose.click();
+      say('STEP', 'pressed "Choose a project" (the app opens macOS\'s folder dialog)');
+      await sleep(2500);
+      const osa = (...lines) => execFileSync('osascript', lines.flatMap((l) => ['-e', l]), { timeout: 20000 }).toString().trim();
+      try {
+        execFileSync('open', ['-a', '/Applications/Unvibe.app']); // the dialog's app in front, through LaunchServices
+        await sleep(1500);
+        osa('tell application "System Events" to keystroke "g" using {command down, shift down}');
+        await sleep(1500);
+        osa(`tell application "System Events" to keystroke "${process.env.PICK_PATH}"`);
+        await sleep(1200);
+        osa('tell application "System Events" to key code 36'); // Go
+        await sleep(2000);
+        osa('tell application "System Events" to key code 36'); // Open (chooses the folder now shown)
+        say('STEP', `typed ${process.env.PICK_PATH} into Go to Folder, Return, then Return (Open)`);
+      } catch (e) { say('STEP', `folder dialog keystrokes failed: ${e.message.split('\n')[0]}`); }
+    }
+    await card.waitFor({ timeout: 20000 }).catch(() => {});
+    if (!(await card.count())) {
+      say('PICK', 'no brief after the folder dialog');
+      execFileSync('screencapture', ['-x', path.join(out, 'briefs-pick-failed-full.png')]);
+      throw new Error('PICK_FAILED');
+    }
+    say('PICK', 'a brief is showing');
+    await companion.getByRole('tab', { name: 'Latest commit', exact: true }).click({ timeout: 10000 });
+    say('STEP', 'chose the "Latest commit" scope');
+    await sleep(1500);
+    await card.waitFor({ timeout: 20000 });
+    await companion.locator('.briefings__busy').waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
+    await sleep(1200);
+    result.brief = await companion.evaluate(() => {
+      const c = document.querySelector('.briefings__card');
+      const list = (sel) => [...c.querySelectorAll(sel)].map((n) => n.textContent.trim());
+      return { meta: list('.briefings__meta > *'), mainChanges: list('ul:not(.briefings__files) > li'), understand: list('ol > li'), note: c.querySelector('.briefings__note')?.textContent.trim(),
+        files: list('.briefings__file'), agentReview: document.querySelector('.agent-review')?.innerText.replace(/\s+/g, ' ').trim().slice(0, 600) ?? null };
+    });
+    say('BRIEF', JSON.stringify(result.brief));
+    shot1x('briefs-open-1x.png');
+    result.briefs2x = await shot2x('briefs-open-2x.png', '.briefings');
+
+    // Settings → Privacy & Data.
+    await companion.locator('.side-settings').click({ timeout: 10000 });
+    const overlay = companion.locator('.overlay[aria-label="Settings"]');
+    await overlay.waitFor({ timeout: 10000 });
+    await overlay.getByRole('button', { name: 'Privacy & Data' }).click({ timeout: 10000 });
+    await sleep(1200);
+    result.privacy = await companion.evaluate(() => [...document.querySelectorAll('.overlay .mbody .setrow')].map((row) => ({
+      label: row.querySelector('.sl')?.textContent.trim(), control: row.querySelector('[role="switch"], .toggle, button, input')?.outerHTML.slice(0, 120) ?? null })));
+    say('PRIVACY_ROWS', JSON.stringify(result.privacy.map((r) => r.label)));
+    shot1x('settings-privacy-1x.png');
+    result.privacy2x = await shot2x('settings-privacy-2x.png', '.overlay');
   }
 } catch (e) {
   result.error = e.message.split('\n')[0];
