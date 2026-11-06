@@ -19,9 +19,9 @@ export function HomeGallery() {
               <div className="ngal__shots">
                 {card.shots.map((shot) => (
                   <div key={shot.src} className="ngal__shot">
+                    {shot.depth ? <p className="ngal__depth" aria-hidden="true">{shot.depth}</p> : null}
                     {/* eslint-disable-next-line @next/next/no-img-element -- fixed-size real captures, lazy below the fold */}
                     <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} loading="lazy" decoding="async" />
-                    {shot.depth ? <p className="ngal__depth" aria-hidden="true">{shot.depth}</p> : null}
                   </div>
                 ))}
               </div>
