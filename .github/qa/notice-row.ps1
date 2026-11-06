@@ -29,6 +29,21 @@ public static class W {
   }
 }
 "@
+# The window is larger than the pill it draws (transparent margin): the visible pill is the box of its near-black fill.
+Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
+using System; using System.Drawing;
+public static class Dark {
+  public static int[] Box(Bitmap b, int x, int y, int w, int h) {
+    int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
+    for (int j = Math.Max(0, y); j < Math.Min(b.Height, y + h); j++)
+      for (int i = Math.Max(0, x); i < Math.Min(b.Width, x + w); i++) {
+        Color c = b.GetPixel(i, j);
+        if (c.R < 40 && c.G < 40 && c.B < 40) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
+      }
+    return x1 < 0 ? null : new int[] { x0, y0, x1, y1 };
+  }
+}
+"@
 function Pids() { $s = New-Object 'System.Collections.Generic.HashSet[uint32]'; Get-Process Unvibe -ErrorAction SilentlyContinue | ForEach-Object { [void]$s.Add([uint32]$_.Id) }; , $s }
 function Rect($h) { $r = New-Object 'W+R'; [void][W]::GetWindowRect($h, [ref]$r); $r }
 function Crop($r, $name, $pad) {
@@ -38,6 +53,9 @@ function Crop($r, $name, $pad) {
   $bmp = New-Object System.Drawing.Bitmap $w, $ht
   [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($x, $y, 0, 0, $bmp.Size)
   $bmp.Save("$Out\$name.png")
+  # The visible pill inside the window rect, in screen coordinates (nothing when no near-black fill is found).
+  $bx = [Dark]::Box($bmp, $r.L - $x, $r.T - $y, $r.Rt - $r.L, $r.B - $r.T)
+  if ($bx) { [pscustomobject]@{ L = $x + $bx[0]; T = $y + $bx[1]; R = $x + $bx[2] + 1; B = $y + $bx[3] + 1 } }
 }
 function Full($name) {
   $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -72,8 +90,10 @@ Start-Sleep 600
 '@
 $env:HOLD_LOG = "$Out\hotkey-holder.txt"
 $hp = Start-Process powershell.exe -ArgumentList '-NoProfile', '-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($holder)) -PassThru -WindowStyle Hidden
-for ($i = 0; $i -lt 40 -and -not (Test-Path $env:HOLD_LOG); $i++) { Start-Sleep -Milliseconds 250 }
-Note "hotkey holder: $(Get-Content $env:HOLD_LOG -ErrorAction SilentlyContinue)"
+# Cold Windows PowerShell plus Add-Type can take well over 10 s on a runner: wait for the holder before starting Unvibe.
+for ($i = 0; $i -lt 240 -and -not (Test-Path $env:HOLD_LOG); $i++) { Start-Sleep -Milliseconds 250 }
+$held = Get-Content $env:HOLD_LOG -ErrorAction SilentlyContinue
+Verdict ($held -match 'True') "another process holds Ctrl+Alt+U before Unvibe starts ($held)"
 
 $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Note "work area: $($wa.Left),$($wa.Top) to $($wa.Right),$($wa.Bottom); screen $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width)x$([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)"
@@ -87,23 +107,24 @@ while (((Get-Date) - $t0).TotalSeconds -lt 14) {
   $s = [Math]::Round(((Get-Date) - $t0).TotalSeconds, 2)
   if ($h -ne [IntPtr]::Zero) {
     $r = Rect $h
-    $frames += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T }
-    Crop $r ("frame-{0:00.00}s" -f $s) 30
+    $pill = Crop $r ("frame-{0:00.00}s" -f $s) 30
+    $frames += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T; PL = $pill.L; PT = $pill.T; PR = $pill.R; PB = $pill.B }
   }
   if ($s -ge 1 -and -not (Test-Path "$Out\full-1s.png")) { Full 'full-1s' }
   if ($s -ge 5 -and -not (Test-Path "$Out\full-5s.png")) { Full 'full-5s' }
   Start-Sleep -Milliseconds 200
 }
-$frames | ForEach-Object { "{0,6}s  L {1} T {2} R {3} B {4}  ({5}x{6})" -f $_.S, $_.L, $_.T, $_.R, $_.B, $_.W, $_.H } | Set-Content "$Out\island-bounds.txt"
+$frames | ForEach-Object { "{0,6}s  window L {1} T {2} R {3} B {4} ({5}x{6})  pill L {7} T {8} R {9} B {10}" -f $_.S, $_.L, $_.T, $_.R, $_.B, $_.W, $_.H, $_.PL, $_.PT, $_.PR, $_.PB } | Set-Content "$Out\island-bounds.txt"
 Note "Island frames: $($frames.Count); sizes seen: $(($frames | ForEach-Object { "$($_.W)x$($_.H)" } | Select-Object -Unique) -join ', ')"
 $big = @($frames | Where-Object { $_.H -ge (($frames | Measure-Object H -Minimum).Minimum + 40) })
 $small = @($frames | Where-Object { $_.H -lt (($frames | Measure-Object H -Minimum).Minimum + 40) })
 Verdict ($big.Count -gt 0) "a notice grows the Island (from $(if ($big) { "$($big[0].S) s to $($big[-1].S) s, $($big[0].W)x$($big[0].H)" } else { 'never' }))"
 if ($big) { Note "NOTE  notice shown for about $([Math]::Round($big[-1].S - $big[0].S, 1)) s (9 s expected); compact after: $(@($small | Where-Object { $_.S -gt $big[-1].S }).Count) frames" }
-$outside = @($frames | Where-Object { $_.L -lt $wa.Left -or $_.T -lt $wa.Top -or $_.R -gt $wa.Right -or $_.B -gt $wa.Bottom })
-Verdict ($frames.Count -gt 0 -and $outside.Count -eq 0) "the Island stays inside the work area in every frame ($($outside.Count) outside)"
-$bottoms = @($frames | ForEach-Object { $_.B } | Select-Object -Unique)
-Verdict ($bottoms.Count -eq 1) "no jump: the bottom-centre Island keeps its bottom edge through the notice and its end (bottom edges seen: $($bottoms -join ', '))"
+$seen = @($frames | Where-Object { $null -ne $_.PB })
+$outside = @($seen | Where-Object { $_.PL -lt $wa.Left -or $_.PT -lt $wa.Top -or $_.PR -gt $wa.Right -or $_.PB -gt $wa.Bottom })
+Verdict ($seen.Count -gt 0 -and $outside.Count -eq 0) "the visible pill stays inside the work area in every frame ($($seen.Count) frames with a pill, $($outside.Count) outside; pill bottoms $(($seen | ForEach-Object { $_.PB } | Select-Object -Unique) -join ', '), work area bottom $($wa.Bottom))"
+$bottoms = @($seen | ForEach-Object { $_.PB } | Measure-Object -Minimum -Maximum)
+Verdict ($seen.Count -gt 0 -and ($bottoms.Maximum - $bottoms.Minimum) -le 1) "no jump: the bottom-centre pill keeps its bottom edge through the notice and its end (bottom edge $($bottoms.Minimum)-$($bottoms.Maximum))"
 
 # Second start (#218): click the Island while the notice shows, then picture the expanded card and its note.
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
@@ -113,9 +134,9 @@ for ($i = 0; $i -lt 80 -and $h -eq [IntPtr]::Zero; $i++) { Start-Sleep -Millisec
 Start-Sleep 2
 if ($h -ne [IntPtr]::Zero) {
   $r = Rect $h
-  Crop $r 'click-before' 30
-  # The compact row sits at the bottom of a bottom pill while the notice shows above it.
-  $cx = [int](($r.L + $r.Rt) / 2); $cy = $r.B - 22
+  $pb = Crop $r 'click-before' 30
+  # The compact row is the bottom of a bottom pill while the notice shows above it: click its middle.
+  $cx = if ($pb) { [int](($pb.L + $pb.R) / 2) } else { [int](($r.L + $r.Rt) / 2) }; $cy = if ($pb) { $pb.B - 18 } else { $r.B - 22 }
   [void][W]::SetCursorPos($cx, $cy); Start-Sleep -Milliseconds 300
   [W]::mouse_event(0x2, 0, 0, 0, [IntPtr]::Zero); Start-Sleep -Milliseconds 80; [W]::mouse_event(0x4, 0, 0, 0, [IntPtr]::Zero)
   Start-Sleep 1.5
