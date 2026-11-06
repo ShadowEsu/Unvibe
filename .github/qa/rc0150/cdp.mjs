@@ -7,6 +7,8 @@
 //                                         the exact .island__left text and the gap from the </> chip to the count
 //   node cdp.mjs sample <out> <label>    the onboarding sample explanation (the companion's "Explain this code" IPC,
 //                                         window.unvibe.explainSample), waits for the complete AI explanation
+//   node cdp.mjs onboard <out> <label>   onboarding step 1 → "Let's go" → step 2 → "Explain this code" (first-explain.mjs's
+//                                         steps, on the already running app), epoch-ms timestamps of each screen
 // Prints "KEY value" lines for the shell and writes <out>/cdp-<label>.json; element stills go to <out>/<label>-*.png.
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -230,6 +232,33 @@ try {
     writeFileSync(path.join(out, `${label}-explanation.txt`), `${result.explanation}\n`);
     await panel.screenshot({ path: path.join(out, `${label}-panel.png`) }).catch(() => {});
     say('EXPLANATION', `${result.explanation.length} characters, ${result.seconds} s after the request`);
+  } else if (mode === 'onboard') {
+    // Each screen's time goes out as it happens, so a dialog's time can be placed on a screen.
+    const mark = (what) => { say('SCREEN', `${Date.now()} ${what}`); };
+    const companion = await page(browser, 'companion.html', 60000);
+    if (!companion) throw new Error('no companion window');
+    await companion.waitForLoadState('domcontentloaded');
+    const info = await companion.evaluate(() => window.unvibe?.appInfo?.()).catch(() => null);
+    say('VERSION', String(info?.version ?? 'unknown'));
+    await companion.locator('.ob2__count').filter({ hasText: '1 / 4' }).waitFor({ timeout: 30000 });
+    mark('onboarding 1/4');
+    await companion.getByPlaceholder('Your name').fill('QA Mic');
+    await companion.getByRole('button', { name: "Let's go", exact: true }).click({ timeout: 8000 });
+    await companion.locator('.ob2__count').filter({ hasText: '2 / 4' }).waitFor({ timeout: 8000 });
+    mark('onboarding 2/4 (after typing a name and pressing "Let\'s go")');
+    await companion.getByRole('button', { name: 'Explain this code', exact: true }).click({ timeout: 8000 });
+    const clicked = Date.now();
+    mark('pressed "Explain this code"');
+    const panel = await page(browser, 'widget.html', 20000);
+    if (!panel) throw new Error('the review panel did not open');
+    await panel.locator('.card--done .local-save-note').waitFor({ timeout: 120000 });
+    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 });
+    const body = await panel.locator('.body').innerText();
+    const code = await panel.locator('.code-context').innerText();
+    result.explanation = body.replace(code, '').trim();
+    mark('explanation complete');
+    say('EXPLANATION', `${result.explanation.length} characters, ${Math.round((Date.now() - clicked) / 100) / 10} s after the click`);
+    writeFileSync(path.join(out, `${label}-explanation.txt`), `${result.explanation}\n`);
   }
 } catch (e) {
   result.error = e.message.split('\n')[0];

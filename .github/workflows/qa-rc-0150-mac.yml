@@ -47,6 +47,12 @@ jobs:
           - { item: rc2-r2-explain, runner: macos-15, rc: "42199536258" }
           - { item: rc2-r2-explain, runner: macos-15-intel, rc: "42199536258" }
           - { item: rc2-r3-mic-input, runner: macos-15, rc: "42199536258" }
+          # Mic rows: does a fresh install ask for the microphone on onboarding step 1? Published 0.1.49 vs RC-2 with
+          # interface sounds off (the only audio API, tones.ts, is gated on settings.soundEffects). Twice each.
+          - { item: mic-049-1, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-049-2, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-rc2-soundoff-1, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-rc2-soundoff-2, runner: macos-15-intel, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
@@ -163,6 +169,24 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           DMG_DIR: ${{ runner.temp }}/build
         run: bash .github/qa/rc0150/rc2-explain-mic.sh "$RUNNER_TEMP/m" "${{ matrix.item == 'rc2-r3-mic-input' && 'input' || 'plain' }}"
+
+      - name: "Mic row: fresh install, 75 s untouched on onboarding 1/4, then onboarding + the sample, dialogs watched"
+        if: env.SKIP != '1' && startsWith(matrix.item, 'mic-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          ITEM: ${{ matrix.item }}
+        run: |
+          if [[ "$ITEM" == mic-049-* ]]; then
+            d="$RUNNER_TEMP/v049"; mkdir -p "$d"
+            curl -fsSL -o "$d/Unvibe-0.1.49-mac-x64.dmg" https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/Unvibe-0.1.49-mac-x64.dmg
+            curl -fsSL -o "$d/SHA256SUMS-mac.txt" https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/SHA256SUMS-mac.txt
+            want=$(awk '$NF ~ /Unvibe-0\.1\.49-mac-x64\.dmg$/ {print $1}' "$d/SHA256SUMS-mac.txt"); got=$(shasum -a 256 "$d/Unvibe-0.1.49-mac-x64.dmg" | cut -d' ' -f1)
+            echo "0.1.49 x64 dmg sha256 $got; SHA256SUMS-mac.txt says ${want:-nothing}: $([ "$got" = "$want" ] && echo MATCH || echo MISMATCH)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+            [ "$got" = "$want" ] || exit 1
+            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$d/Unvibe-0.1.49-mac-x64.dmg" "$ITEM"
+          else
+            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" soundoff
+          fi
 
       - name: Flag the install as QA (again, whatever happened)
         if: always() && env.SKIP != '1'
