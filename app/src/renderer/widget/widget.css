@@ -239,7 +239,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   margin-left: auto;
   -webkit-app-region: no-drag;
 }
-@keyframes statusPulse { 50% { opacity:.42; transform:translateY(1px); } }
 .head__context { min-width: 0; display: flex; align-items: baseline; gap: 8px; flex: 1; }
 .quota {
   -webkit-app-region: no-drag;
@@ -1103,7 +1102,6 @@ code.inline {
 .card .detected span { background: var(--p-raised); color: var(--p-muted); border-color: var(--p-line); }
 @keyframes pShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes pSpin { to { transform: rotate(360deg); } }
-@keyframes pPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
   .card .think-status__verb, .card .thinking__lines i, .card .thinking__steps li.is-now i { animation: none; }
 }
@@ -1545,6 +1543,8 @@ code.inline {
 .pm-menu {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
   min-width: 216px; padding: 6px;
+  /* At the panel's 460 px minimum the 12 rows don't fit: the menu scrolls instead of being cut off. */
+  max-height: calc(100vh - 72px); overflow-y: auto;
   display: flex; flex-direction: column;
   background: var(--u-canvas); border-radius: var(--u-radius-control);
   box-shadow: var(--u-shadow-whisper), 0 12px 32px -12px rgb(20 20 20 / 0.22);
@@ -1566,6 +1566,14 @@ code.inline {
 /* Night look. */
 :root[data-panel="dark"] .card.card .head,
 :root[data-panel="dark"] .card.card .head-bar { background: var(--u-dark-canvas); }
+/* While the panel is "away" (another app is in front) it fades; the header and its row fade with it. */
+:root .card.card.card--away .head,
+:root .card.card.card--away .head-bar,
+:root[data-panel="dark"] .card.card.card--away .head,
+:root[data-panel="dark"] .card.card.card--away .head-bar { background: transparent; }
+/* Collapsed, the window is 52 px tall (main.ts): the header fits it (32 px buttons + 10 + 10), title alone. */
+:root .card.card.card--collapsed .head { padding-block: 10px; }
+:root .card.card.card--collapsed .head__source { display: none; }
 :root[data-panel="dark"] .card.card .head__title { color: var(--u-dark-ink); }
 :root[data-panel="dark"] .card.card .head__source,
 :root[data-panel="dark"] .card.card .head-bar .local-save-note { color: var(--u-dark-ink-3); }

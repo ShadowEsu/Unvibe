@@ -25,11 +25,11 @@
 }
 .vibe-bubble--large .vibe-bubble__name { font-size: 12px; }
 
-/* The panel's night look (widget.tsx sets data-theme): a raised dark surface; the name in Vibe's lilac,
+/* The panel's night look (widget.tsx sets data-panel): a raised dark surface; the name in Vibe's lilac,
    since violet is too dark there. */
-:root[data-theme="dark"]:not([data-panel="light"]) .vibe-bubble {
+:root[data-panel="dark"] .vibe-bubble {
   background: var(--u-dark-raised);
   color: var(--u-dark-ink);
   box-shadow: 0 0 0 1px var(--u-dark-line);
 }
-:root[data-theme="dark"]:not([data-panel="light"]) .vibe-bubble__name { color: var(--u-lilac); }
+:root[data-panel="dark"] .vibe-bubble__name { color: var(--u-lilac); }

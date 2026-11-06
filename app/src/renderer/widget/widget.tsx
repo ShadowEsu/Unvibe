@@ -425,6 +425,11 @@ function Widget() {
   const [tabs, setTabs] = useState<TabState[]>([newTab('1', 'Review')]);
   const [activeTabId, setActiveTabId] = useState('1');
   const [collapsed, setCollapsed] = useState(false);
+  // Collapsing from ⋯ unmounts the menu button; focus goes to the Expand button that replaces it.
+  const expandRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (collapsed && (!document.activeElement || document.activeElement === document.body)) expandRef.current?.focus();
+  }, [collapsed]);
   // Panel look is a per-device preference: paper (default) or an ink terminal.
   const [panelTheme, setPanelTheme] = useState<'dark' | 'light'>(() => {
     try { return window.localStorage.getItem(PANEL_THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
@@ -874,7 +879,6 @@ function Widget() {
     features,
     teachOpen,
     dark: panelTheme === 'dark',
-    collapsed,
     usage: usage ? { remaining: usage.remaining, resetsOn: new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) } : undefined,
   }, {
     explain: () => document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
@@ -890,7 +894,7 @@ function Widget() {
   });
 
   return (
-    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}${collapsed ? ' card--collapsed' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -902,9 +906,16 @@ function Widget() {
         </div>
         <span className="sr-only" role="status">{phaseLabel}</span>
         <div className="head__actions">
-          <MenuButton className="head__glyph head__more" items={menuItems} menuLabel="Panel" ariaLabel="More" title="More">
-            <span aria-hidden="true">⋯</span>
-          </MenuButton>
+          {collapsed ? (
+            // A collapsed panel is 52 px tall (main.ts), too short for the menu: the way back is right here.
+            <button ref={expandRef} className="head__glyph" aria-label="Expand panel" aria-expanded="false" title="Expand" onClick={toggleCollapse}>
+              <span aria-hidden="true">▾</span>
+            </button>
+          ) : (
+            <MenuButton className="head__glyph head__more" items={menuItems} menuLabel="Panel" ariaLabel="More" title="More">
+              <span aria-hidden="true">⋯</span>
+            </MenuButton>
+          )}
           <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
             <span aria-hidden="true">✕</span>
           </button>

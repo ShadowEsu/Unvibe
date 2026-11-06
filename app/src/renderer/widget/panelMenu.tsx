@@ -10,8 +10,9 @@ export interface MenuItem {
   id: string;
   label: string;
   onSelect: () => void;
-  /** Radio items say which one is on. */
+  /** Choice items say which one is on: one of several (radio) or a toggle on its own (checkbox). */
   checked?: boolean;
+  toggle?: boolean;
   disabled?: boolean;
   /** A line that only tells something (the status, what's left): not dimmed, does nothing. */
   info?: boolean;
@@ -35,10 +36,16 @@ export function menuKey(key: string, index: number, count: number): MenuMove {
   }
 }
 
-/** Where focus goes when a menu opens: a choice menu's chosen item, otherwise the first item that does something. */
-export function openFocus(items: MenuItem[]): number {
-  if (items.every((item) => item.checked !== undefined)) return items.findIndex((item) => item.checked);
-  return items.findIndex((item) => !item.info && !item.disabled);
+/**
+ * Where focus goes when a menu opens: a choice menu's chosen item, otherwise the first (or, opened with ArrowUp,
+ * the last) item that does something.
+ */
+export function openFocus(items: MenuItem[], from: 'first' | 'last' = 'first'): number {
+  if (items.every((item) => item.checked !== undefined && !item.toggle)) return items.findIndex((item) => item.checked);
+  const live = (item: MenuItem) => !item.info && !item.disabled;
+  if (from === 'first') return items.findIndex(live);
+  for (let i = items.length - 1; i >= 0; i--) if (live(items[i])) return i;
+  return -1;
 }
 
 /** An open menu below its button, aligned to the button's right edge. */
@@ -57,7 +64,7 @@ export function MenuList({ id, label, items, itemRefs, onKeyDown, onPick }: {
           key={item.id}
           ref={(el) => { if (itemRefs) itemRefs.current[index] = el; }}
           type="button"
-          role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+          role={item.checked === undefined ? 'menuitem' : item.toggle ? 'menuitemcheckbox' : 'menuitemradio'}
           aria-checked={item.checked}
           aria-disabled={item.disabled || item.info || undefined}
           tabIndex={-1}
@@ -91,13 +98,22 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, chil
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  // ArrowUp on the button opens the menu at its end (WAI-ARIA menu button pattern).
+  const openFrom = useRef<'first' | 'last'>('first');
 
   useEffect(() => {
     if (!open) return undefined;
-    itemRefs.current[Math.max(0, openFocus(items))]?.focus();
-    const onOutside = (event: PointerEvent) => { if (!(event.target instanceof Node) || !wrap.current?.contains(event.target)) setOpen(false); };
+    itemRefs.current[Math.max(0, openFocus(items, openFrom.current))]?.focus();
+    openFrom.current = 'first';
+    const close = () => setOpen(false);
+    const onOutside = (event: PointerEvent) => { if (!(event.target instanceof Node) || !wrap.current?.contains(event.target)) close(); };
     document.addEventListener('pointerdown', onOutside);
-    return () => document.removeEventListener('pointerdown', onOutside);
+    // The header is a drag region, where no pointerdown arrives; leaving the window closes the menu too.
+    window.addEventListener('blur', close);
+    return () => {
+      document.removeEventListener('pointerdown', onOutside);
+      window.removeEventListener('blur', close);
+    };
     // Focus moves only when the menu opens, not when its items re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -134,6 +150,7 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, chil
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
           event.preventDefault();
+          openFrom.current = event.key === 'ArrowUp' ? 'last' : 'first';
           setOpen(true);
         }}
       >
@@ -158,14 +175,16 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, chil
   );
 }
 
-/** What the panel's `⋯` holds, in the inventory's order. Tools that need a finished answer wait for one. */
+/**
+ * What the panel's `⋯` holds, in the inventory's order. Tools that need a finished answer wait for one. The menu
+ * shows only while the panel is open; a collapsed panel's header has its own Expand button.
+ */
 export function panelMenuItems(state: {
   status: string;
   answerReady: boolean;
   features: { whyExists?: boolean; teachBack?: boolean };
   teachOpen: boolean;
   dark: boolean;
-  collapsed: boolean;
   usage?: { remaining: number; resetsOn: string };
 }, act: {
   explain: () => void; depth: () => void; testMe: () => void; ask: () => void; why: () => void; teach: () => void;
@@ -179,12 +198,12 @@ export function panelMenuItems(state: {
     { id: 'ask', label: 'Ask a follow-up', onSelect: act.ask },
   ];
   if (state.features.whyExists) items.push({ id: 'why', label: 'Why does this exist?', disabled: !state.answerReady, onSelect: act.why });
-  if (state.features.teachBack) items.push({ id: 'teach', label: 'Teach it back', checked: state.teachOpen, disabled: !state.answerReady, onSelect: act.teach });
+  if (state.features.teachBack) items.push({ id: 'teach', label: 'Teach it back', checked: state.teachOpen, toggle: true, disabled: !state.answerReady, onSelect: act.teach });
   items.push(
     { id: 'tab', label: 'New review tab', onSelect: act.newTab },
     { id: 'saved', label: 'Saved explanations', onSelect: act.saved },
     { id: 'theme', label: state.dark ? 'Light panel' : 'Dark panel', onSelect: act.theme },
-    { id: 'collapse', label: state.collapsed ? 'Expand panel' : 'Collapse panel', onSelect: act.collapse },
+    { id: 'collapse', label: 'Collapse panel', onSelect: act.collapse },
   );
   if (state.usage) items.push({ id: 'left', label: `${state.usage.remaining} left`, info: true, title: `Resets ${state.usage.resetsOn}`, onSelect: () => undefined });
   return items;

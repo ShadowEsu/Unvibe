@@ -363,7 +363,7 @@ async function waitForExplanation(label, expectedCode, { confirm = false } = {})
       await sleep(1500);
       assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
       await shot(panel, `${label}-confirm`);
-      // The confirm sheet's own Explain; the panel's side rail has an Explain tab as well.
+      // The confirm sheet's own Explain; the panel's ⋯ menu has an Explain item as well.
       await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
     }
     const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });

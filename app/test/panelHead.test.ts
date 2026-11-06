@@ -8,15 +8,14 @@ const noop = () => undefined;
 const act = { explain: noop, depth: noop, testMe: noop, ask: noop, why: noop, teach: noop, newTab: noop, saved: noop, theme: noop, collapse: noop };
 const state = (over: Partial<Parameters<typeof panelMenuItems>[0]> = {}) => ({
   status: 'Ready to learn', answerReady: true, features: { whyExists: true, teachBack: true }, teachOpen: false,
-  dark: false, collapsed: false, usage: { remaining: 29, resetsOn: 'December 1' }, ...over,
+  dark: false, usage: { remaining: 29, resetsOn: 'December 1' }, ...over,
 });
 const ids = (items: ReturnType<typeof panelMenuItems>) => items.map((item) => item.id);
 
 test('every tool the rail had is reachable from ⋯, with the status and what is left', () => {
   assert.deepEqual(ids(panelMenuItems(state(), act)), ['status', 'explain', 'depth', 'test', 'ask', 'why', 'teach', 'tab', 'saved', 'theme', 'collapse', 'left']);
-  const items = panelMenuItems(state({ dark: true, collapsed: true }), act);
+  const items = panelMenuItems(state({ dark: true }), act);
   assert.equal(items.find((i) => i.id === 'theme')?.label, 'Light panel');
-  assert.equal(items.find((i) => i.id === 'collapse')?.label, 'Expand panel');
   assert.equal(items.find((i) => i.id === 'left')?.label, '29 left');
 });
 
@@ -38,9 +37,10 @@ test('in an open menu Esc closes it, Tab closes it, and the arrows wrap', () => 
   assert.equal(menuKey('a', 0, 5), null);
 });
 
-test('opening ⋯ focuses the first thing that does something, not the status line or an open Teach', () => {
+test('opening ⋯ focuses the first thing that does something (the last with ArrowUp), never the status line', () => {
   const items = panelMenuItems(state({ teachOpen: true }), act);
   assert.equal(items[openFocus(items)].id, 'explain');
+  assert.equal(items[openFocus(items, 'last')].id, 'collapse', '"N left" is a line, not an action');
   const levels = ['new', 'beginner', 'expert'].map((id) => ({ id, label: id, checked: id === 'beginner', onSelect: noop }));
   assert.equal(levels[openFocus(levels)].id, 'beginner', 'a choice menu opens on the chosen one');
 });
@@ -49,7 +49,7 @@ test('an open ⋯ is a role=menu of menu items; Teach says whether it is open; i
   const html = renderToStaticMarkup(createElement(MenuList, { id: 'm', label: 'Panel', onPick: noop, items: panelMenuItems(state({ teachOpen: true }), act) }));
   assert.match(html, /^<div class="pm-menu" id="m" role="menu" aria-label="Panel">/);
   assert.equal((html.match(/role="menuitem"/g) ?? []).length, 11);
-  assert.match(html, /role="menuitemradio" aria-checked="true"[^>]*><span>Teach it back/);
+  assert.match(html, /role="menuitemcheckbox" aria-checked="true"[^>]*><span>Teach it back/, 'Teach is a toggle, not a lone radio');
   assert.match(html, /aria-disabled="true"[^>]*class="pm-menu__item pm-menu__item--info"><span>Ready to learn/);
 });
 
