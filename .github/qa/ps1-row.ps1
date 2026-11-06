@@ -1,12 +1,13 @@
-# One row of qa-ps1-212.yml: #212's install.ps1 (per-user setup.exe /S /currentuser, then open the installed app),
-# run as a person pastes it, in Windows PowerShell 5.1 or pwsh, on a clean Windows runner.
-# Usage: ps1-row.ps1 -Kind fresh|portable|setup|allusers|tamper -Shell powershell|pwsh -Out <dir>   Env: INSTALL_ID
-#   fresh     nothing installed before
-#   portable  over today's prod install.ps1 (portable exe) with launch at login on and a send agreement (P-1)
-#   setup     over v0.1.49 setup.exe /S (per-user): one Apps entry, the exe from the HKCU entry (P-4)
-#   allusers  over v0.1.49 setup.exe /allusers /S: the warning, no admin step, the HKLM copy untouched (P-2, P-4)
-#   tamper    the downloaded setup.exe has one byte more: must stop with "does not match", nothing installed (P-3)
-# Each run copy of a script changes only its $track line (the anonymous count goes nowhere), and for tamper its $url.
+# One row of qa-ps1-212.yml: #212's install.ps1 (per-user setup.exe /S with one retry on 0xC0000005, then open the
+# installed app) installing the 0.1.50 RC setup, run as a person pastes it, in Windows PowerShell 5.1 or pwsh.
+# Usage: ps1-row.ps1 -Kind <kind> -Shell powershell|pwsh -Out <dir>   Env: INSTALL_ID, SCRIPT, RC_DIR
+#   fresh        nothing installed before (repeated on 2025 for the crash rate: each 'Trying once more' = a crash)
+#   portable     over today's prod install.ps1 (portable exe) with launch at login on and a send agreement (P-1)
+#   setup        over v0.1.49 setup.exe /S (per-user): one Apps entry, the exe from the HKCU entry (P-4)
+#   allusers     over v0.1.49 setup.exe /allusers /S: the warning, no admin step, the HKLM copy untouched (P-2, P-4)
+#   tamper       the downloaded setup.exe has one byte more: must stop with "does not match", nothing installed (P-3)
+#   retrystub    a stand-in setup returns 0xC0000005 once, then runs the RC setup: 2 starts, installed
+#   tamperretry  the stand-in returns 0xC0000005 once and changes its own file in the wait: stops, nothing installed
 param([string]$Kind, [string]$Shell, [string]$Out)
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force $Out | Out-Null
@@ -104,34 +105,87 @@ $lua = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Polici
 Note "ROW ps1-212 $Kind in $Shell on $($os.Caption) build $($os.BuildNumber); runner user admin: $(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)); UAC EnableLUA=$lua"
 New-Item -ItemType Directory -Force $storeDir | Out-Null
 Set-Content -Path $store -Value "{`"installId`":`"$env:INSTALL_ID`"}" -Encoding ascii -NoNewline
-$new = RunCopy "$PSScriptRoot\install-212-ed91d6e2.ps1" 'install-212.run.ps1' $null
+# The install.ps1 under test (env SCRIPT: a committed copy of the preview's script) installs the RC's setup.exe
+# (env RC_DIR: the build-only run's artifact), served from 127.0.0.1 with a SHA256SUMS line, as the release will.
+# Its run copy changes only $url, $sumsUrl and $track; the asset name comes from its own UNVIBE_BETA_ASSET hook.
+function Sha($f) { (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() }
+$rcSetup = (Get-ChildItem $env:RC_DIR -Recurse -Filter '*-win-x64-setup.exe' | Select-Object -First 1).FullName
+$asset = Split-Path $rcSetup -Leaf
+$env:UNVIBE_BETA_ASSET = $asset
+Note "RC setup: $asset, $((Get-Item $rcSetup).Length) bytes, sha256 $(Sha $rcSetup), version $((Get-Item $rcSetup).VersionInfo.ProductVersion)"
+$serve = "$env:RUNNER_TEMP\serve"; New-Item -ItemType Directory -Force $serve | Out-Null
+function Serve($file, $sum, $what) {
+  Copy-Item $file "$serve\$asset" -Force
+  Set-Content "$serve\SHA256SUMS-windows.txt" "$sum  $asset" -Encoding ascii
+  Note "served as $asset ($what): $((Get-Item "$serve\$asset").Length) bytes, sha256 $(Sha "$serve\$asset"); SHA256SUMS line: $sum  $asset"
+}
+$srv = Start-Process python -ArgumentList '-m', 'http.server', '47192', '--bind', '127.0.0.1', '--directory', $serve -PassThru -WindowStyle Hidden
+Start-Sleep 3
+$local = { param($t) ($t -replace '(?m)^\$url = .*$', '$url = "http://127.0.0.1:47192/$asset"') -replace '(?m)^\$sumsUrl = .*$', '$sumsUrl = "http://127.0.0.1:47192/SHA256SUMS-windows.txt"' }
+$new = RunCopy (Join-Path $PSScriptRoot $env:SCRIPT) 'install-212.run.ps1' $local
 State 'clean runner'
 
-if ($Kind -eq 'tamper') {
-  $dir = "$env:RUNNER_TEMP\tamper"; New-Item -ItemType Directory -Force $dir | Out-Null
-  Copy-Item (OldSetup) "$dir\Unvibe-0.1.49-win-x64-setup.exe"
-  $fs = [IO.File]::Open("$dir\Unvibe-0.1.49-win-x64-setup.exe", 'Append'); $fs.WriteByte(0); $fs.Close()
-  Note "tampered copy: $((Get-Item "$dir\Unvibe-0.1.49-win-x64-setup.exe").Length) bytes (one more), sha256 $((Get-FileHash "$dir\Unvibe-0.1.49-win-x64-setup.exe").Hash.ToLower())"
-  $srv = Start-Process python -ArgumentList '-m', 'http.server', '47191', '--bind', '127.0.0.1', '--directory', $dir -PassThru -WindowStyle Hidden
-  Start-Sleep 3
-  $tam = RunCopy "$PSScriptRoot\install-212-ed91d6e2.ps1" 'install-212-tamper.run.ps1' { param($t) $t -replace '(?m)^\$url = .*$', '$url = "http://127.0.0.1:47191/$asset"' }
-  $r = Install $tam 'install-tamper'
+# A stand-in setup.exe (Security's forced-retry rows): its first start returns -1073741819 (0xC0000005) and, for
+# 'tamper', appends to its own file about 2 s later, inside the script's 5 s wait. A later start runs the RC setup
+# with the same arguments. Padded past the script's 1 MB size check; every start is logged.
+$starts = "$serve\stub-starts.txt"
+function Stub($mode) {
+  $src = @"
+using System; using System.IO; using System.Diagnostics;
+class P { static int Main(string[] a) {
+  string self = Process.GetCurrentProcess().MainModule.FileName;
+  File.AppendAllText(@"$starts", "start " + DateTime.Now.ToString("HH:mm:ss.fff") + " args " + string.Join(" ", a) + " from " + self + "\r\n");
+  if (File.ReadAllLines(@"$starts").Length == 1) {
+    if ("$mode" == "tamper") Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 3 127.0.0.1 >nul & echo tampered>>\"" + self + "\"") { CreateNoWindow = true, UseShellExecute = false });
+    return -1073741819;
+  }
+  Process p = Process.Start(new ProcessStartInfo(@"$rcSetup", string.Join(" ", a)) { UseShellExecute = false });
+  p.WaitForExit();
+  return p.ExitCode;
+} }
+"@
+  $exe = "$env:RUNNER_TEMP\stub-$mode.exe"
+  Add-Type -TypeDefinition $src -OutputAssembly $exe -OutputType WindowsApplication
+  $fs = [IO.File]::Open($exe, 'Append'); $fs.Write((New-Object byte[] 1200000), 0, 1200000); $fs.Close()
+  $exe
+}
+function Retries($text) { ([regex]::Matches($text, 'Trying once more')).Count }
+function StubStarts() { @(Get-Content $starts -ErrorAction SilentlyContinue).Count }
+
+if ($Kind -in 'tamper', 'tamperretry') {
+  if ($Kind -eq 'tamper') {
+    $bad = "$env:RUNNER_TEMP\tampered-$asset"; Copy-Item $rcSetup $bad
+    $fs = [IO.File]::Open($bad, 'Append'); $fs.WriteByte(0); $fs.Close()
+    Serve $bad (Sha $rcSetup) 'the RC setup plus one byte; SHA256SUMS keeps the genuine hash'
+  } else {
+    $stub = Stub 'tamper'; Serve $stub (Sha $stub) 'stand-in: 0xC0000005 once, then changes its own file during the wait'
+  }
+  $r = Install $new "install-$Kind"
   $srv | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep 3
-  State 'after the tampered download'
+  State "after $Kind"
   Verdict ($r.Code -ne 0) "P-3 the script stops (exit $($r.Code))"
   Verdict ($r.Text -match 'does not match the published checksum') 'P-3 the message says the download does not match the published checksum'
   Verdict (@(Exes).Count -eq 0 -and @(Entries).Count -eq 0 -and -not (Get-Process Unvibe -ErrorAction SilentlyContinue)) 'P-3 nothing installed, nothing started'
   Verdict ((Temps) -eq 0) "the script's temp folder is gone ($(Temps) left)"
+  if ($Kind -eq 'tamperretry') {
+    Verdict ((Retries $r.Text) -eq 1) "exactly one 'Trying once more' ($(Retries $r.Text))"
+    Verdict ((StubStarts) -eq 1) "the changed file was not started again ($(StubStarts) start(s): $((Get-Content $starts -ErrorAction SilentlyContinue) -join ' | '))"
+  }
   if (Select-String -Path "$Out\report.txt" -Pattern '^\s*FAIL' -Quiet) { exit 1 }
   exit 0
 }
+if ($Kind -eq 'retrystub') { $stub = Stub 'retry'; Serve $stub (Sha $stub) 'stand-in: 0xC0000005 once, then the RC setup' }
+else { Serve $rcSetup (Sha $rcSetup) 'the RC setup' }
 
 $before = $null
 switch ($Kind) {
   'portable' {
     $prod = RunCopy "$PSScriptRoot\install-prod-39633d79.ps1" 'install-prod.run.ps1' $null
+    # Today's script reads the same UNVIBE_BETA_ASSET hook; it installs its own default (the 0.1.49 portable exe).
+    Remove-Item Env:UNVIBE_BETA_ASSET
     [void](Install $prod 'install-prod')
+    $env:UNVIBE_BETA_ASSET = $asset
     Start-Sleep 5; Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
     # A real first use on the portable copy: onboarding, an explanation, a follow-up so the send agreement is made.
     $env:UNVIBE_EXE = $portable; $env:USER_DATA = $storeDir; $env:OUT = "$Out\portable"; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"; $env:AGREE = '1'
@@ -170,6 +224,10 @@ Start-Sleep 15 # the installed app's first start points an existing login item a
 Shot 'after-install-212'
 State 'after #212'
 Verdict ($r.Code -eq 0) "install.ps1 exit $($r.Code)"
+Note "NOTE  crash count: $(Retries $r.Text) 'Trying once more' line(s) (setup starts that returned 0xC0000005)"
+if ($Kind -eq 'retrystub') {
+  Verdict ((Retries $r.Text) -eq 1 -and (StubStarts) -eq 2) "forced retry: one 'Trying once more', 2 starts ($((Get-Content $starts -ErrorAction SilentlyContinue) -join ' | '))"
+}
 Verdict (Test-Path $perUser) "installed at $perUser"
 $hkcu = Exact 'HKCU'
 Verdict ([bool]$hkcu) "P-4 HKCU\$UNINST\$GUID exists (keys present: $((@(Entries) | ForEach-Object { "$($_.Hive)\$($_.Key)" }) -join ', '))"

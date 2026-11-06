@@ -61,11 +61,27 @@ $storeDir = Join-Path $env:APPDATA 'Unvibe'; New-Item -ItemType Directory -Force
 Set-Content -Path (Join-Path $storeDir 'unvibe-store.json') -Value "{`"installId`":`"$env:INSTALL_ID`"}" -Encoding ascii -NoNewline
 State 'clean runner'
 
+# #208: a background watcher pictures the first visible main window the moment it shows (first-paint.ps1).
+function Watch($tag) { Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\first-paint.ps1", '-Out', $Out, '-Tag', $tag -PassThru -WindowStyle Hidden }
+function WatchResult($p, $tag) {
+  if (-not $p) { return }
+  $null = $p.Handle; [void]$p.WaitForExit(180000)
+  $lines = @(Get-Content (Join-Path $Out "first-paint-$tag.txt") -ErrorAction SilentlyContinue)
+  $lines | ForEach-Object { Note "  #208 $tag`: $_" }
+  $first = $lines | Where-Object { $_ -like 'first visible*' } | Select-Object -First 1
+  $later = $lines | Where-Object { $_ -like '3 s later*' } | Select-Object -First 1
+  $pct = if ($first -match 'most common colour ([\d.]+)%') { [double]$Matches[1] } else { 100 }
+  Note "$(if ($first -and $pct -lt 97) { 'PASS' } else { 'FAIL' })  #208 $tag`: the window is painted when it first shows (most common colour $pct%; a blank window is ~100%)"
+  Note "$(if ($first -match 'in front: True') { 'PASS' } else { 'FAIL' })  #208 $tag`: in front when it first shows"
+  Note "$(if ($later -match 'main windows: 1;') { 'PASS' } else { 'FAIL' })  #208 $tag`: one main window 3 s later"
+}
+$watch = $null
 function DoubleClick($file) {
   $dl = "$env:USERPROFILE\Downloads\$(Split-Path $file -Leaf)"
   Copy-Item $file $dl -Force
   Set-Content -Path $dl -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=https://github.com/ShadowEsu/Unvibe/releases/download/x/$(Split-Path $file -Leaf)"
   Note "double-click $(Split-Path $dl -Leaf) (Mark of the Web ZoneId=3)"
+  if ($Kind -eq 'dblclick') { $script:watch = Watch 'first-launch' }
   Start-Process explorer.exe -ArgumentList "`"$dl`""
   Start-Sleep 10
   Shot 'smartscreen'
@@ -156,12 +172,18 @@ switch ($Kind) {
 # First window: the build opens itself after a double-click (runAfterFinish); /S needs a launch, as install.ps1 does.
 $win = Get-Process Unvibe -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
 $exe = if (Test-Path $want) { $want } else { ($exes | Select-Object -First 1) -replace ' \(.*\)$', '' }
-if (-not $win -and $Kind -eq 'silent') { Note "launching $exe (as install.ps1 will)"; Start-Process $exe }
+# #208 reopen while loading: the silent row starts the app, then starts it again 300 ms later, before it has painted.
+if (-not $win -and $Kind -eq 'silent') {
+  $watch = Watch 'reopen-while-loading'; Start-Sleep 1
+  Note "launching $exe (as install.ps1 will), and again 300 ms later"
+  Start-Process $exe; Start-Sleep -Milliseconds 300; Start-Process $exe
+}
 if ($Kind -eq 'dblclick' -and -not $win) { Note 'FAIL  the installer did not open Unvibe (runAfterFinish)' }
 for ($i = 0; $i -lt 45 -and -not $win; $i++) { Start-Sleep 2; $win = Get-Process Unvibe -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1 }
 $front = Front
 Shot 'first-window'
 if ($win) { Note "$(if ($front -like 'Unvibe: *') { 'PASS' } else { 'FAIL' })  first window in front ('$front'), from $($win.Path)" } else { Note 'FAIL  no Unvibe window' }
+WatchResult $watch $(if ($Kind -eq 'silent') { 'reopen-while-loading' } else { 'first-launch' })
 
 # First explanation on the same profile.
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3

@@ -1,16 +1,17 @@
 name: QA install.ps1 per-user setup check
 
-# QA only (#212, BOSS row 545; Security P-1..P-4): #212's install.ps1 at ed91d6e2 (committed copy of the preview's
-# rendered script, so CI never fetches unvibe.site), on clean Windows Server 2022 + 2025, in Windows PowerShell 5.1
-# and pwsh. Rows: fresh, over today's portable install, over v0.1.49 setup /S, over an all-users v0.1.49, and a
-# tampered download. Each profile's qa- id is flagged before anything installs.
-# Runs on a push to qa/install-matrix whose commit message holds "[ps1-212]".
+# QA only (#212 re-pin, BOSS row 545; Security P-1..P-4 + forced-retry rows): #212's install.ps1 (committed copy of
+# the preview's rendered script, so CI never fetches unvibe.site) installing the 0.1.50 RC setup from a build-only
+# run, served from 127.0.0.1 with its SHA256SUMS line, on clean Windows Server 2022 + 2025, in Windows PowerShell
+# 5.1 and pwsh. Extra fresh tries on 2025 measure the 0xC0000005 rate. Each profile's qa- id is flagged first.
+# Runs on a push to qa/install-matrix whose commit message holds "[ps1-212" and "[rc:<build-only run id>]".
 on:
   push:
     branches: [qa/install-matrix]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: qa-ps1-212
@@ -18,25 +19,41 @@ concurrency:
 
 jobs:
   row:
-    if: contains(github.event.head_commit.message, '[ps1-212')
+    if: contains(github.event.head_commit.message, '[ps1-212') && contains(github.event.head_commit.message, '[rc:')
     strategy:
       fail-fast: false
       matrix:
         runner: [windows-2022, windows-2025]
         shell: [powershell, pwsh]
-        kind: [fresh, portable, setup, allusers, tamper]
+        kind: [fresh, portable, setup, allusers, tamper, retrystub, tamperretry]
+        attempt: [1]
+        include:
+          - { runner: windows-2025, shell: powershell, kind: fresh, attempt: 2 }
+          - { runner: windows-2025, shell: powershell, kind: fresh, attempt: 3 }
+          - { runner: windows-2025, shell: powershell, kind: fresh, attempt: 4 }
+          - { runner: windows-2025, shell: powershell, kind: fresh, attempt: 5 }
+          - { runner: windows-2025, shell: pwsh, kind: fresh, attempt: 2 }
+          - { runner: windows-2025, shell: pwsh, kind: fresh, attempt: 3 }
+          - { runner: windows-2025, shell: pwsh, kind: fresh, attempt: 4 }
+          - { runner: windows-2025, shell: pwsh, kind: fresh, attempt: 5 }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
     env:
-      INSTALL_ID: qa-ps1-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}
+      INSTALL_ID: qa-ps1-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}-${{ matrix.attempt }}
+      SCRIPT: install-212-a84c2796.ps1
+      MSG: ${{ github.event.head_commit.message }}
     steps:
       # "[ps1-212:portable]" in the message runs only that kind; plain "[ps1-212]" runs every row.
-      - name: Pick this row
+      - name: Pick this row and the RC build
+        id: pick
         shell: bash
         env:
-          MSG: ${{ github.event.head_commit.message }}
           KIND: ${{ matrix.kind }}
-        run: if [[ "$MSG" == *"[ps1-212:"* && "$MSG" != *"[ps1-212:$KIND]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped"; fi
+        run: |
+          if [[ "$MSG" == *"[ps1-212:"* && "$MSG" != *"[ps1-212:$KIND]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped"; exit 0; fi
+          rc=$(printf '%s' "$MSG" | sed -n 's/.*\[rc:\([0-9]*\)\].*/\1/p' | head -1)
+          [[ "$rc" =~ ^[0-9]+$ ]] || { echo "::error::no [rc:<run id>] in the commit message"; exit 1; }
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"; echo "RC_DIR=$RUNNER_TEMP/rc" >> "$GITHUB_ENV"; echo "RC build run $rc"
 
       - name: Flag this id as QA before anything installs
         if: env.SKIP != '1'
@@ -56,6 +73,15 @@ jobs:
             .github
             app/e2e
 
+      - name: Get the RC build's setup.exe
+        if: env.SKIP != '1'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: ${{ steps.pick.outputs.rc }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/rc
+
       - name: Parse the row script
         if: env.SKIP != '1'
         shell: powershell
@@ -66,7 +92,7 @@ jobs:
           'ps1-row.ps1 parses'
 
       - name: Playwright for the first explanation
-        if: matrix.kind != 'tamper' && env.SKIP != '1'
+        if: matrix.kind != 'tamper' && matrix.kind != 'tamperretry' && env.SKIP != '1'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
@@ -97,6 +123,6 @@ jobs:
         if: always() && env.SKIP != '1'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ps1-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}
+          name: ps1-${{ matrix.runner }}-${{ matrix.shell }}-${{ matrix.kind }}-${{ matrix.attempt }}
           path: ${{ runner.temp }}/m
           retention-days: 14
