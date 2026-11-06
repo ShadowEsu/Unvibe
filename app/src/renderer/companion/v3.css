@@ -146,7 +146,7 @@
   color: var(--v-ink); font-family: var(--font-sans);
 }
 :root[data-ui="v3"] .side-usage:hover { border-color: var(--v-faint); }
-:root[data-ui="v3"] .side-usage__row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--v-muted); }
+:root[data-ui="v3"] .side-usage__row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--v-muted); }
 :root[data-ui="v3"] .side-usage__row b { color: var(--v-ink); font-weight: 600; }
 :root[data-ui="v3"] .side-usage__bar { display: block; height: 4px; border-radius: 999px; background: var(--v-line-2); overflow: hidden; }
 :root[data-ui="v3"] .side-usage__bar i { display: block; height: 100%; border-radius: inherit; background: var(--v-ink); min-width: 4px; }
