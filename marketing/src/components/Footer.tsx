@@ -33,6 +33,7 @@ const company = [
   ["Terms", "/terms"],
   ["Refunds", "/refund"],
   ["Open-source notices", "/licenses"],
+  ["Listed on", "/listed-on"],
   ["Contact", "mailto:support@unvibe.site"],
 ];
 
