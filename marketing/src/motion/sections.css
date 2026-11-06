@@ -1,0 +1,214 @@
+/* sections.css: the section motion parts for unvibe.site and jaymini.org (Motion). Specs: Design's motion bar
+ * (agents/design/specs/motion-bar-2026-11-05.md) and the Unvibe 530 spec §4, §8, §9, §13. Framework-free: data attributes
+ * + sections.js `initSections()`. Works beside appear.css (the hero's load entrances).
+ *
+ * THE SAFETY RULE: nothing gets a start state unless sections.js staged its group, and it stages only groups that start
+ * below the fold with motion allowed. Server HTML, no JS, reduced motion and anything on screen at load show the final
+ * frame. Transforms, opacity and clip-path only (CLS 0). Never put a part on the H1 or the LCP image.
+ *
+ * Reveal group:  <section data-reveal [data-at=".15"]>   once, when that share of it is visible (default 15 %)
+ *   data-rise            opacity 0 → 1, translateY 20 px → 0, 600 ms                     (heads, cards, list items)
+ *   data-rise="image"    opacity 0 → 1, translateY 24 px → 0, scale .98 → 1, 700 ms      (images, captures)
+ *   data-panel-open      clip inset from the right 100 % → 0, 500 ms; opacity 1 throughout
+ *   data-answer          its children (lines) reveal top-down 90 ms apart, opacity + 6 px rise, 400 ms
+ *   data-typing          types at 100 ms a character, +200 ms after a space (user-typed text only, bar §2.6)
+ *   data-press           a keycap press: scale .95 over 120 ms, back over 180 ms with the pop ease
+ *   data-strike          a 2 px violet strike drawn left → right over 300 ms (an absolutely placed child of the token)
+ *   data-fill            the background fades from --fill-from to --fill over 300 ms
+ *   data-seg             segmented control: [data-seg-pill] slides from [data-seg-from] to [data-seg-to] (300 ms)
+ *   data-pixel           margin pixel art: rises 16 px + fades over 600 ms, then steps 1 grid pixel (--px) every 200 ms
+ *                        for 2 s along (--dx, --dy) and stops (films-1105 DESIGN §5)
+ *   Every part takes --d: its delay in ms after the group goes.
+ *
+ * Bar patterns:
+ *   .sx-stage-hero       #1 the product frame tilt-settles on load (rotateX 10° translateY 48 px scale .96 → none, 1.2 s,
+ *                        200 ms after the H1), with a one-time 1 px highlight sweep along its top edge. The capture
+ *                        inside stays opacity 1 from the first frame. CSS only.
+ *   data-sticky          #2 a sticky product stage: [data-sticky-stage] (with [data-stage-item]s) pins while the
+ *                        [data-step]s scroll; the item matching the step in view wipes in over 420 ms over the last one;
+ *                        [data-sticky-rail] fills with scroll. ≤ 900 px wide: no pin, each step shows its own item.
+ *   data-scroll          #3 scroll-linked rise (animation-timeline: view(), range entry 10 % → cover 45 %); where that
+ *                        isn't supported, a one-shot rise at 30 % in view. Below the fold only.
+ *   data-spot            #5 a spotlight border: sets --mx / --my; .sx-spot draws the 1 px radial border
+ *   data-tilt            #5 ≤ 3° pointer tilt, 120 ms lerp (product frames)
+ *   data-magnet          #5 ≤ 6 px pull toward the pointer within 80 px (the primary CTA)
+ *   .sx-btn .sx-link .sx-focus .sx-disclosure   #6 micro-interactions; data-copy for copy buttons
+ *   data-tone            #7 the band's ground interpolates --tone-from → --tone-to over its first 20vh of scroll
+ *   data-scrub           sets --p (0 → 1) as the element crosses the viewport, for your own scroll-tied CSS
+ *   #5, tilt, magnet and spotlight run only under (hover: hover) and (pointer: fine).
+ */
+:root {
+  --sx-ease: var(--m-ease-smooth, cubic-bezier(0.22, 1, 0.36, 1));
+  --sx-pop: var(--m-ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+  --sx-settle: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ---- reveal group parts ---- */
+[data-reveal="wait"] [data-rise] { opacity: 0; transform: translateY(20px); }
+[data-reveal="wait"] [data-rise="image"] { transform: translateY(24px) scale(0.98); }
+[data-reveal="go"] [data-rise] { animation: sx-rise 600ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+[data-reveal="go"] [data-rise="image"] { animation: sx-rise-image 700ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-rise { from { opacity: 0; transform: translateY(20px); } }
+@keyframes sx-rise-image { from { opacity: 0; transform: translateY(24px) scale(0.98); } }
+
+[data-reveal="wait"] [data-panel-open] { clip-path: inset(0 0 0 100%); }
+[data-reveal="go"] [data-panel-open] { animation: sx-open 500ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-open { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+
+[data-reveal="wait"] [data-answer] > * { opacity: 0; transform: translateY(6px); }
+[data-reveal="go"] [data-answer] > * { animation: sx-line 400ms var(--sx-ease) calc((var(--d, 0) + var(--i, 0) * 90) * 1ms) backwards; }
+@keyframes sx-line { from { opacity: 0; transform: translateY(6px); } }
+
+[data-reveal="go"] [data-press] { animation: sx-press 300ms linear calc(var(--d, 0) * 1ms) both; }
+@keyframes sx-press {
+  0% { transform: scale(1); animation-timing-function: var(--sx-ease); }
+  40% { transform: scale(0.95); animation-timing-function: var(--sx-pop); }
+  100% { transform: scale(1); }
+}
+
+[data-strike] { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--strike, #5a3fe0); transform-origin: 0 50%; pointer-events: none; }
+[data-reveal="wait"] [data-strike] { transform: scaleX(0); }
+[data-reveal="go"] [data-strike] { animation: sx-strike 300ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-strike { from { transform: scaleX(0); } }
+
+[data-fill] { background-color: var(--fill, #efeaff); }
+[data-reveal="wait"] [data-fill] { background-color: var(--fill-from, transparent); }
+[data-reveal="go"] [data-fill] { animation: sx-fill 300ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-fill { from { background-color: var(--fill-from, transparent); } }
+
+/* segmented control: without JS (or under reduced motion) [data-seg-to] is simply the active item; once sections.js
+   takes over (data-seg-live) a pill slides from [data-seg-from] to it */
+[data-seg] { position: relative; }
+[data-seg]:not([data-seg-live]) [data-seg-to] { background: var(--seg-bg, #efeaff); }
+[data-seg-pill] { display: none; position: absolute; top: 0; bottom: 0; left: 0; z-index: 0; width: var(--seg-w, 0); background: var(--seg-bg, #efeaff); border-radius: inherit; transform: translateX(var(--seg-x, 0)); transition: transform 300ms var(--sx-ease), width 300ms var(--sx-ease); }
+[data-seg][data-seg-live] [data-seg-pill] { display: block; }
+[data-seg] > :not([data-seg-pill]) { position: relative; z-index: 1; }
+
+[data-pixel] { image-rendering: pixelated; }
+[data-reveal="wait"] [data-pixel] { opacity: 0; transform: translateY(16px); }
+[data-reveal="go"] [data-pixel] {
+  animation: sx-rise-16 600ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards,
+    sx-drift 2000ms steps(10, end) calc((var(--d, 0) + 600) * 1ms) forwards;
+}
+@keyframes sx-rise-16 { from { opacity: 0; transform: translateY(16px); } }
+@keyframes sx-drift { to { transform: translate(calc(var(--px, 4px) * 10 * var(--dx, 1)), calc(var(--px, 4px) * 10 * var(--dy, 0))); } }
+
+/* ---- #1 product stage hero (load; the frame moves, the capture inside never fades) ---- */
+.sx-stage-hero { position: relative; transform-origin: 50% 100%; animation: sx-stage 1200ms var(--sx-settle) var(--stage-d, 200ms) backwards; }
+@keyframes sx-stage { from { transform: perspective(1600px) rotateX(10deg) translateY(48px) scale(0.96); } }
+.sx-stage-hero::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--sweep, rgba(255, 255, 255, 0.9)) 50%, transparent) no-repeat;
+  background-size: 40% 100%; background-position: -60% 0; opacity: 0;
+  animation: sx-sweep 900ms var(--sx-ease) calc(var(--stage-d, 200ms) + 900ms) 1;
+}
+@keyframes sx-sweep { 0% { opacity: 1; background-position: -60% 0; } 100% { opacity: 1; background-position: 160% 0; } }
+
+/* ---- #2 sticky product stage ---- */
+/* column gap only: the stage spans 99 implicit rows, and a row gap would add 98 × gap of empty space under the last step */
+[data-sticky] { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); column-gap: var(--sticky-gap, 64px); row-gap: 0; }
+[data-sticky-stage] { position: sticky; top: var(--sticky-top, 12vh); align-self: start; grid-column: 2; grid-row: 1 / span 99; }
+[data-sticky-stage] { display: grid; }
+[data-sticky-stage] [data-stage-item] { grid-area: 1 / 1; }
+[data-sticky]:not([data-sticky-live]) [data-stage-item]:not(:first-child) { visibility: hidden; }
+[data-sticky-live] [data-stage-item] { visibility: hidden; }
+[data-sticky-live] [data-stage-item][data-on], [data-sticky-live] [data-stage-item][data-was] { visibility: visible; }
+[data-sticky-live] [data-stage-item][data-on] { z-index: 1; animation: sx-open 420ms var(--sx-ease) both; }
+[data-step] { grid-column: 1; min-height: var(--step-h, 70vh); display: flex; flex-direction: column; justify-content: center; }
+[data-sticky] [data-step-item] { display: none; }
+[data-sticky-rail] { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--rail-bg, rgba(20, 20, 20, 0.12)); }
+[data-sticky-rail]::after { content: ""; position: absolute; inset: 0; background: var(--rail, #141414); transform-origin: 50% 0; transform: scaleY(var(--p, 1)); }
+@media (max-width: 900px) {
+  [data-sticky] { display: block; }
+  [data-sticky-stage], [data-sticky-rail] { display: none; }
+  [data-step] { min-height: 0; padding: 24px 0; }
+  [data-sticky] [data-step-item] { display: block; margin-top: 16px; }
+}
+
+/* ---- #3 scroll-linked rise; fallback = one-shot at 30 % (sections.js) ---- */
+[data-scroll="wait"] { opacity: 0; transform: translateY(24px); }
+[data-scroll="go"] { animation: sx-rise-image 700ms var(--sx-ease) calc(var(--d, 0) * 1ms) backwards; }
+@supports (animation-timeline: view()) {
+  [data-scroll="live"] { animation: sx-rise-image linear both; animation-timeline: view(); animation-range: entry 10% cover 45%; }
+}
+
+/* ---- #5 spotlight border (the JS sets --mx/--my under a fine pointer) ---- */
+.sx-spot { position: relative; }
+.sx-spot::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), var(--spot, rgba(90, 63, 224, 0.16)), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  transition: opacity 200ms var(--sx-ease);
+}
+@media (hover: hover) and (pointer: fine) { .sx-spot:hover::before { opacity: 1; } }
+[data-tilt], [data-magnet] { transform: var(--sx-t, none); }
+
+/* ---- #6 micro-interactions ---- */
+.sx-btn { transition: transform 220ms var(--sx-pop), box-shadow 220ms var(--sx-ease); }
+@media (hover: hover) { .sx-btn:hover { transform: translateY(-1px); box-shadow: var(--btn-shadow-hover, 0 6px 18px rgba(20, 20, 20, 0.14)); } }
+.sx-btn:active { transform: scale(0.97); transition-duration: 90ms; }
+.sx-link { text-decoration: none; background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0 1px; transition: background-size 200ms var(--sx-ease); }
+.sx-link:hover, .sx-link:focus-visible { background-size: 100% 1px; }
+.sx-focus:focus-visible, .sx-btn:focus-visible, .sx-link:focus-visible { outline: 2px solid var(--focus, #5a3fe0); outline-offset: 2px; animation: sx-focus 120ms var(--sx-ease); }
+@keyframes sx-focus { from { outline-color: transparent; } }
+.sx-disclosure > summary { list-style: none; cursor: pointer; }
+.sx-disclosure > summary::-webkit-details-marker { display: none; }
+.sx-disclosure > summary::after { content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin-left: 0.5em; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-0.15em) rotate(45deg); transition: transform 260ms var(--sx-ease); }
+.sx-disclosure[open] > summary::after { transform: translateY(0.1em) rotate(225deg); }
+.sx-disclosure[open] > :not(summary) { animation: sx-line 260ms var(--sx-ease); }
+[data-copy][data-copied] .sx-copy-label::after { content: attr(data-done); }
+
+/* ---- #7 tone band ---- */
+[data-tone] { background-color: color-mix(in srgb, var(--tone-to, #141414) calc(var(--tp, 1) * 100%), var(--tone-from, #fbfaf7)); }
+[data-tone="return"] { background-color: color-mix(in srgb, var(--tone-to, #fbfaf7) calc(var(--tp, 1) * 100%), var(--tone-from, #000)); }
+
+/* ---- "manual" variants (row 545 direction B: pixel art as the system; hard edges, steps(), no blur) ----
+ * .sx-key               a pressable keycap: 2 px ink border, radius 4, hard shadow 4 px. [data-pressing] plays one
+ *                       press: 3 px travel + the shadow 4 → 1 px, 120 ms down / 180 ms up, not stepped (pressKeys()).
+ * .sx-key-drop          load entrance for hero keycaps: drops from −24 px in steps(4) over 240 ms after --d ms
+ * data-pixel="build"    the icon builds top-down row by row in steps(8) over 267 ms (8 frames), then drifts --drift-n
+ *                       whole grid px (--px each) over 2 s along (--dx, --dy) and stops: x8 → 2 (default), x3 → 5
+ * data-seg="steps"      the seg pill moves in steps(6)
+ * data-strike="steps"   the strike draws in steps(4)
+ * data-tick             a 16 px pixel tick (kit pixel/tick-16.svg) wiping in left → right in steps(4) over 200 ms; in a
+ *                       reveal group it plays when the group goes; elsewhere set data-tick="wait" then "go" yourself
+ */
+.sx-key { display: inline-grid; place-items: center; border: 2px solid var(--key-ink, #000); border-radius: 4px; background: var(--key-face, #fff); box-shadow: 4px 4px 0 var(--key-ink, #000); }
+.sx-key[data-pressing] { animation: sx-key-press 300ms linear calc(var(--press-d, 0) * 1ms) both; }
+@keyframes sx-key-press {
+  0% { transform: none; box-shadow: 4px 4px 0 var(--key-ink, #000); animation-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+  40% { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--key-ink, #000); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+  100% { transform: none; box-shadow: 4px 4px 0 var(--key-ink, #000); }
+}
+.sx-key-drop { animation: sx-key-drop 240ms steps(4, end) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-key-drop { from { opacity: 0; transform: translateY(-24px); } }
+[data-reveal="wait"] [data-pixel="build"] { opacity: 1; transform: none; clip-path: inset(0 0 100% 0); }
+[data-reveal="go"] [data-pixel="build"] {
+  animation: sx-build 267ms steps(8, end) calc(var(--d, 0) * 1ms) backwards,
+    sx-drift-n 2000ms steps(var(--drift-n, 2), end) calc((var(--d, 0) + 267) * 1ms) forwards;
+}
+@keyframes sx-build { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+/* Design B: 12-16 px of drift in total, whole grid px: x8 → --drift-n 2 (16 px, a step every 30 f), x3 → 5 (15 px, every 12 f) */
+@keyframes sx-drift-n { to { transform: translate(calc(var(--px, 8px) * var(--drift-n, 2) * var(--dx, 1)), calc(var(--px, 8px) * var(--drift-n, 2) * var(--dy, 0))); } }
+[data-seg="steps"] [data-seg-pill] { transition-timing-function: steps(6, end); }
+[data-reveal="go"] [data-strike="steps"] { animation-timing-function: steps(4, end); }
+[data-tick] { display: inline-block; width: 16px; height: 16px; image-rendering: pixelated; vertical-align: -2px; }
+[data-tick="wait"], [data-reveal="wait"] [data-tick] { clip-path: inset(0 100% 0 0); }
+[data-tick="go"], [data-reveal="go"] [data-tick] { animation: sx-tick 200ms steps(4, end) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes sx-tick { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ---- reduced motion: every end state at rest; colour and underline changes only ---- */
+@media (prefers-reduced-motion: reduce), print {
+  [data-reveal] [data-rise], [data-reveal] [data-panel-open], [data-reveal] [data-answer] > *, [data-reveal] [data-press],
+  [data-reveal] [data-strike], [data-reveal] [data-pixel], [data-scroll], .sx-stage-hero, .sx-stage-hero::after,
+  [data-sticky-live] [data-stage-item][data-on], .sx-disclosure[open] > :not(summary),
+  .sx-key[data-pressing], .sx-key-drop, [data-tick] { animation: none !important; opacity: 1; transform: none; clip-path: none; }
+  .sx-key { box-shadow: 4px 4px 0 var(--key-ink, #000); }
+  .sx-stage-hero::after { opacity: 0; }
+  [data-reveal] [data-fill] { animation: none !important; background-color: var(--fill, #efeaff); }
+  [data-seg-pill], .sx-btn, .sx-disclosure > summary::after { transition: none !important; }
+  .sx-btn:hover, .sx-btn:active { transform: none; }
+  [data-tilt], [data-magnet] { transform: none !important; }
+  [data-tone] { background-color: var(--tone-to, #141414); }
+  [data-tone="return"] { background-color: var(--tone-to, #fbfaf7); }
+}

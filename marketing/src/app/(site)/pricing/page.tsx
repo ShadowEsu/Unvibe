@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { PricingPlans } from "@/components/redesign/PricingPlans";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
+import { SitePage } from "@/site/parts";
+import { PricingCards } from "@/site/PricingCards";
 
 /** Re-read the API's payments status at most every 5 minutes (PAYMENTS_STATUS_REVALIDATE_SECONDS). */
 export const revalidate = 300;
@@ -18,16 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-/** One heading, then the tier cards: the first viewport answers "how much" at 1440 and on a phone. */
+/** One heading, then the tier cards (Design package-1106): the first viewport answers "how much" at 1440 and on a phone. */
 export default async function PricingPage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <article className="launch-subpage paper-pricing">
-      <section className="paper-section" aria-labelledby="pricing-title">
-        <div className="paper-wrap">
-          <PricingPlans paymentsOpen={paymentsOpen} />
-        </div>
-      </section>
-    </article>
+    <SitePage>
+      <section className="ap" aria-labelledby="pricing-title"><PricingCards copy={pricingCopy(paymentsOpen)} paymentsOpen={paymentsOpen} /></section>
+    </SitePage>
   );
 }

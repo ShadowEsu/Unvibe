@@ -16,17 +16,17 @@ const marketingRoot = fileURLToPath(new URL("../..", import.meta.url));
  * NEXT_PUBLIC_AI_MAINTENANCE is read once when aiMaintenance.ts loads (Next inlines it at build time),
  * so each flag state renders in its own process: the Try box, the hero and the kit, as the build would.
  */
-function renderWithFlag(flag: "1" | ""): { tryIt: string; hero: string; kit: string } {
+function renderWithFlag(flag: "1" | ""): { tryIt: string; home: string; kit: string } {
   const script = [
     'const React = require("react");',
     'const { renderToStaticMarkup } = require("react-dom/server");',
     "Object.assign(globalThis, { React });",
     'const { TryIt } = require("@/components/paper/TryIt");',
-    'const { PhotoHero } = require("@/components/paper/PhotoHero");',
+    'const { Home } = require("@/site/Home");',
     'const { kitMarkdown } = require("@/lib/kit");',
     "process.stdout.write(JSON.stringify({",
     "  tryIt: renderToStaticMarkup(React.createElement(TryIt)),",
-    "  hero: renderToStaticMarkup(React.createElement(PhotoHero)),",
+    "  home: renderToStaticMarkup(React.createElement(Home, { paymentsOpen: false })),",
     "  kit: kitMarkdown(),",
     "}));",
   ].join("\n");
@@ -82,15 +82,19 @@ describe("Try it disclosure", () => {
   });
 });
 
+/** The home's hero section, from its labelled section tag to the end of that section. */
+const hero = (home: string) => home.slice(home.indexOf('aria-labelledby="hero-title"'), home.indexOf("</section>", home.indexOf('aria-labelledby="hero-title"')));
+
 describe("hero Try link", () => {
-  it("with Try it on, the hero links to the Try box as before", () => {
-    assert.match(live.hero, /<a class="vhero__try" href="#try-it">Or try it online first<\/a>/);
+  it("with Try it on, the hero links to the Try box", () => {
+    assert.match(hero(live.home), /<a href="#try-it" class="ah__textlink">Try it in your browser <span aria-hidden="true">→<\/span><\/a>/);
   });
 
-  it("while Try it is paused, the hero renders no link to it and no stand-in", () => {
-    assert.doesNotMatch(paused.hero, /vhero__try/);
-    assert.doesNotMatch(paused.hero, /#try-it/);
-    assert.doesNotMatch(paused.hero, /try it online/i);
-    assert.doesNotMatch(paused.hero, /Watch the demo/);
+  it("while Try it is paused, the home links nowhere to it and the price card carries the pause note", () => {
+    assert.doesNotMatch(paused.home, /href="#try-it"/);
+    assert.doesNotMatch(hero(paused.home), /try it/i);
+    const price = paused.home.slice(paused.home.indexOf('id="pricing-title"'));
+    assert.match(price.slice(0, price.indexOf("</section>")), new RegExp(`<p class="lx-sub" role="status">${PAUSED_LINE.replace(/\./g, "\\.")}</p>`));
+    assert.doesNotMatch(live.home, new RegExp(PAUSED_LINE.replace(/\./g, "\\.")));
   });
 });

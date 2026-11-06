@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import BetaDownloadsPage from "@/app/beta/page";
+import { Download } from "@/site/Download";
 import { BETA_INSTALL_ASSET, BETA_INSTALL_TAG, BETA_WINDOWS_ASSET } from "./betaInstallScript";
 import { DOWNLOAD_SIZES, MAC_INTEL_META, MAC_META, MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "./downloadMeta";
 
@@ -22,9 +22,8 @@ describe("download meta lines", () => {
     assert.equal(MAC_INTEL_META, "Intel Mac. Version 0.1.49, about 116 MB.");
   });
 
-  it("/beta gives Windows its meta line, the two steps after the click and the SHA-256 for each file", () => {
-    const page = renderToStaticMarkup(createElement(BetaDownloadsPage)).replace(/\s+/g, " ");
-    assert.ok(page.includes(`On Windows: ${WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.`));
+  it("/beta links the SHA-256 for each file", () => {
+    const page = renderToStaticMarkup(createElement(Download)).replace(/\s+/g, " ");
     assert.ok(page.includes(`href="${MAC_SHA256_URL}"`));
     assert.ok(page.includes(`href="${WINDOWS_SHA256_URL}"`));
     assert.equal(WINDOWS_SHA256_URL, "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/SHA256SUMS-windows.txt");

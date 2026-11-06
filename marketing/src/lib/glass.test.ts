@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import HomePage from "@/app/page";
+import { Home } from "@/site/Home";
 import { GLISSE_STYLES_ID, GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 
 // tsx compiles JSX to React.createElement, so rendering components here needs React in scope.
@@ -37,15 +37,13 @@ describe("home surfaces", () => {
   });
 
   it("the hero's panel serves the recording's real poster frame, sized and described, and no video without JS", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    const panel = html.slice(html.indexOf('<div class="ndemo__panel">'), html.indexOf('<div class="nhero__base"'));
-    assert.match(panel, /src="\/unvibe\/real\/0149\/hero-panel-0149-poster\.webp"/);
-    assert.match(panel, /width="622" height="800"/);
-    assert.match(panel, /alt="Unvibe&#x27;s panel explaining the debounce sample at Advanced depth"/);
-    assert.match(html, /<p class="nhero__cap">The panel is a real recording · sample code · Unvibe 0\.1\.49<\/p>/);
-    // The recording is added only in the browser with motion allowed, so no-JS and reduced motion fetch no video.
-    const hero = html.slice(html.indexOf('<section class="nhero"'), html.indexOf("</section>", html.indexOf('<section class="nhero"')));
+    const html = renderToStaticMarkup(createElement(Home, { paymentsOpen: false }));
+    const hero = html.slice(html.indexOf('aria-labelledby="hero-title"'), html.indexOf("</section>", html.indexOf('aria-labelledby="hero-title"')));
+    const panel = hero.slice(hero.indexOf('<div class="ndemo__panel">'));
     assert.ok(hero.includes("ndemo__panel"), "the slice is the hero");
+    assert.match(panel, /^<div class="ndemo__panel"><img src="\/unvibe\/real\/0149\/hero-panel-0149-poster\.webp" width="622" height="800" alt="Unvibe&#x27;s panel explaining the debounce sample at Advanced depth"/);
+    assert.match(hero, /<span class="lx-cap">Real screen, sample code · Unvibe 0\.1\.49<\/span>/);
+    // The recording is added only in the browser with motion allowed, so no-JS and reduced motion fetch no video.
     assert.doesNotMatch(hero, /<video\b/);
   });
 });

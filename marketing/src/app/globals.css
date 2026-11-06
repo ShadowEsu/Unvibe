@@ -345,8 +345,6 @@ header, main, footer, .admin-shell {
 @keyframes toolBreathC { from { transform: translate3d(-4px, 5px, 0) rotate(-.3deg); } to { transform: translate3d(2px, -9px, 0) rotate(.4deg); } }
 .disclosure { max-width: 740px; margin: 1.5rem auto 0; text-align: center; color: rgb(var(--fg-faint)); font-size: .75rem; }
 
-.marketing-plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: stretch; }
-.marketing-plan-card { display: flex; flex-direction: column; min-width: 0; padding: clamp(1.4rem, 3vw, 2.2rem); border: 1px solid #aa91d2; background: var(--paper); box-shadow: 7px 7px 0 #d6c6f2; }.marketing-plan-card.featured { border: 2px solid var(--purple); transform: translateY(-8px); }.plan-badge { min-height: 24px; color: var(--purple); font: 750 .67rem var(--font-mono); text-transform: uppercase; }.marketing-plan-card h3 { margin: .5rem 0; font-size: 1.4rem; }.marketing-plan-price { min-height: 58px; font-size: clamp(1.75rem, 3vw, 2.7rem); line-height: 1; letter-spacing: -.05em; }.marketing-plan-card > small { min-height: 43px; margin-top: .5rem; color: rgb(var(--fg-muted)); line-height: 1.45; }.marketing-plan-card ul { flex: 1; list-style: none; display: grid; align-content: start; gap: .7rem; margin: 1.5rem 0; padding: 0; }.marketing-plan-card li { display: flex; align-items: start; gap: .5rem; color: rgb(var(--fg-muted)); font-size: .75rem; line-height: 1.4; }.marketing-plan-card li svg { flex: 0 0 auto; color: rgb(var(--green)); }.pricing-button { width: 100%; justify-content: center; background: var(--purple) !important; color: white !important; }.pricing-disclosure { max-width: 850px; margin: 1.8rem auto 0; color: rgb(var(--fg-faint)); text-align: center; font-size: .72rem; line-height: 1.6; }
 .spin { animation: spin 1s linear infinite; }@keyframes spin { to { transform: rotate(360deg); } }
 
 .faq-layout { display: grid; grid-template-columns: .65fr 1.35fr; gap: clamp(3rem, 8vw, 8rem); }
@@ -359,7 +357,7 @@ header, main, footer, .admin-shell {
 
 @media (max-width: 900px) {
   .demo-grid, .level-window, .curriculum-grid, .privacy-layout, .waitlist-layout, .faq-layout { grid-template-columns: 1fr; }
-  .marketing-plan-grid { grid-template-columns: 1fr; }.marketing-plan-card.featured { transform: none; }
+
   .level-tabs { overflow-x: auto; grid-template-columns: repeat(5, minmax(130px, 1fr)); }
   .context-ladder { grid-template-columns: 1fr; }.context-rail { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid #554268; }.context-rail button { min-width: 125px; border-right: 1px solid #4b3b5c; border-bottom: 0; }.context-card { min-height: 390px; }
   .faq-heading { position: static; }}
@@ -368,7 +366,7 @@ header, main, footer, .admin-shell {
 .center-intro h2, .split-intro h2, .curriculum-grid h2, .privacy-copy h2, .pricing-copy h2, .waitlist-copy h2, .faq-heading h2 { font-size: clamp(2.65rem, 12.5vw, 3.8rem); }
   .level-window { min-height: 0; }.level-code { font-size: .68rem; min-height: 220px; }.level-copy { min-height: 330px; }
   .context-card { padding: 1.5rem; min-height: 360px; }.context-card h3 { font-size: 2rem; }.context-card p { font-size: .94rem; }
-  .tool-orbit { min-height: 560px; }  .marketing-plan-card { padding: 1.3rem; box-shadow: 5px 5px 0 #d6c6f2; }
+  .tool-orbit { min-height: 560px; }
   .faq-list summary { grid-template-columns: 30px 1fr 18px; gap: .6rem; min-height: 82px; font-size: .95rem; }.faq-list details p { margin-left: 40px; }
 }
 

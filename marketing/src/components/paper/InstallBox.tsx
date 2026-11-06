@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import {
@@ -99,7 +99,8 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
   }, [copied]);
 
   const copy = INSTALL_COPY[os];
-  const titleId = `ninst-${surface}-title`;
+  // Unique per box: a page can carry both computers' boxes for the same surface (the home's Get Unvibe).
+  const titleId = useId();
   const fileHref = os === "mac" && intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : copy.fileHref;
 
   const copyCommand = async () => {

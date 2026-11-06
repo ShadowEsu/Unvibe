@@ -1,0 +1,173 @@
+/* The redesigned pages' structure (home, /pricing, /beta; Design package-1106). home.css sets the look on `.site`;
+ * this file lays the parts out. The site-wide nav, footer, phone bar and floating Vibe aren't rendered on these
+ * pages (components/ClassicChrome). */
+
+/* The site-wide Feedback tab stays in the page but hidden: the footer's Feedback link opens its dialog. */
+body:has(.site) .fb-tab { display: none !important; }
+html:has(.site) body::before { background: var(--lx-ground) !important; }
+
+.site {
+  --lx-wrap: 1200px;
+  --lx-gap-sec: 128px;
+  /* Rhythm (Design A round 1 #2, craft board): H2 → lede 16, lede → content 40, action row → install line 16. */
+  --lx-gap-sub: 16px; --lx-gap-content: 40px;
+  background: var(--lx-ground); color: var(--lx-ink);
+  font-family: var(--font-sans-face), Inter, system-ui, sans-serif;
+  overflow-x: clip;
+}
+/* Resets at zero specificity, so every part's own margin and font win (a .site p reset was eating them). */
+:where(.site) :where(h1, h2, h3, p) { margin: 0; }
+:where(.site) :where(kbd) { font: inherit; }
+.lx-wrap { width: min(var(--lx-wrap), calc(100% - 48px)); margin: 0 auto; }
+.lx-sec { padding-top: var(--lx-gap-sec); scroll-margin-top: 24px; }
+.lx-center { margin-top: 20px; text-align: center; }
+.lx-nowrap { white-space: nowrap; }
+.site a:focus-visible, .site button:focus-visible, .site summary:focus-visible { outline: 2px solid var(--lx-focus, var(--lx-accent)); outline-offset: 2px; }
+
+/* ---------- header ---------- */
+.lx-header { display: flex; align-items: center; gap: 32px; height: 72px; }
+.lx-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--lx-ink); font-weight: 650; font-size: 17px; letter-spacing: -0.01em; text-decoration: none; }
+.lx-nav { display: flex; gap: 4px; margin-left: auto; }
+.lx-nav__a { padding: 8px 12px; border-radius: 8px; color: var(--lx-ink-2); font-size: 14.5px; font-weight: 500; text-decoration: none; transition: color 200ms; }
+.lx-nav__a:hover { color: var(--lx-ink); }
+
+/* ---------- buttons ---------- */
+.lx-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: var(--lx-btn-r, 12px);
+  font-size: 16px; font-weight: 600; letter-spacing: -0.005em; text-decoration: none; white-space: nowrap;
+}
+.lx-btn--sm { min-height: 40px; padding: 0 16px; font-size: 14.5px; }
+.lx-btn--solid { background: var(--lx-accent); color: var(--lx-on-accent, #fff); }
+
+.lx-phone { margin-top: 28px; }
+.lx-truth { margin-top: 22px; max-width: 560px; }
+
+.lx-truth__cmd { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 6px 6px 6px 14px; border-radius: var(--lx-btn-r, 12px); background: var(--lx-cmd-ground, #f3f3f1); box-shadow: inset 0 0 0 1px var(--lx-line); }
+.lx-truth__cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 500 14px var(--font-mono), ui-monospace, monospace; color: var(--lx-ink); }
+.lx-truth__copy { flex: none; min-height: 36px; padding: 0 14px; border: 0; border-radius: calc(var(--lx-btn-r, 12px) - 4px); background: var(--lx-ink); color: var(--lx-ground); font: 600 13.5px var(--font-sans-face), Inter, sans-serif; cursor: pointer; }
+
+/* ---------- hero type ---------- */
+.lx-h1 { font-size: var(--lx-h1, 72px); line-height: var(--lx-h1-lh, 1.06); letter-spacing: var(--lx-h1-ls, -0.035em); font-weight: var(--lx-h1-w, 600); }
+.lx-h1__line { display: block; overflow: clip; overflow-clip-margin: 0.12em; padding-bottom: 0.04em; }
+.lx-h1__in { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  /* Translate only, inside the line's clip: the H1 is painted at full opacity from the first frame (LCP). */
+  .site-load .lx-h1__in { animation: lx-mask 700ms var(--sx-ease) calc(var(--i, 0) * 80ms) backwards; }
+}
+@keyframes lx-mask { from { transform: translateY(var(--lx-h1-rise, 24px)); } }
+.lx-lede { max-width: 34em; margin-top: 22px; font-size: 19px; line-height: 1.55; color: var(--lx-ink-2); }
+.lx-lede kbd { padding: 1px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--lx-line-strong, var(--lx-line)); font: 500 0.88em var(--font-mono), ui-monospace, monospace; color: var(--lx-ink); }
+
+/* ---------- section heads ---------- */
+.lx-head { max-width: 720px; }
+.lx-head--center { margin: 0 auto; text-align: center; }
+.site h2 { font-size: var(--lx-h2, 48px); line-height: var(--lx-h2-lh, 1.12); letter-spacing: var(--lx-h2-ls, -0.02em); font-weight: var(--lx-h2-w, 600); color: var(--lx-ink); }
+.site h3 { font-size: 18px; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; color: var(--lx-ink); }
+.lx-sub { margin-top: var(--lx-gap-sub); font-size: 17px; line-height: 27px; color: var(--lx-ink-2); }
+.lx-cap { display: inline-block; font: 500 13px/1.4 var(--font-sans-face), Inter, system-ui, sans-serif; color: var(--lx-ink-2); }
+.lx-link { color: var(--lx-link, var(--lx-accent)); font-weight: 600; }
+.lx-fine { margin-top: 18px; font-size: 14px; color: var(--lx-ink-2); }
+
+/* ---------- figures ---------- */
+.lx-fig { margin: 0; }
+.lx-fig__frame { overflow: hidden; border-radius: var(--lx-fig-r, 14px); box-shadow: var(--lx-fig-shadow, none); border: var(--lx-fig-border, 0); background: #fcfaf6; }
+.lx-fig__frame img { display: block; width: 100%; height: auto; }
+.lx-fig figcaption { margin-top: 12px; }
+
+/* ---------- keycaps (ours, outside every capture) ---------- */
+.lx-keys { display: inline-flex; align-items: center; }
+
+.lx-key {
+  display: inline-block; min-width: 42px; padding: 9px 13px; border-radius: var(--lx-key-r, 9px); text-align: center;
+  background: var(--lx-key-bg, #1a1a1a); color: var(--lx-key-fg, #fff); box-shadow: var(--lx-key-shadow, inset 0 -2px 0 #000);
+  font: 600 14px/1 var(--font-mono), ui-monospace, monospace;
+}
+
+/* ---------- try it ---------- */
+.lx-try__box { margin-top: var(--lx-gap-content); }
+
+/* ---------- keys ---------- */
+.lx-keysec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: 72px; align-items: center; }
+
+/* ---------- works with ---------- */
+.lx-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: var(--lx-gap-content) 0 0; padding: 0; list-style: none; }
+.lx-head--center + .lx-chips, .lx-works:has(.lx-head--center) .lx-chips { justify-content: center; }
+
+.lx-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: var(--lx-chip-r, 999px); box-shadow: inset 0 0 0 1px var(--lx-line-strong, var(--lx-line)); font-size: 15.5px; font-weight: 500; color: var(--lx-ink); }
+
+/* ---------- pricing teaser + programs ---------- */
+.lx-price { text-align: center; }
+
+/* ---------- faq ---------- */
+.lx-faq__rows { max-width: 760px; margin: var(--lx-gap-content) auto 0; }
+
+/* ---------- fine print ---------- */
+.lx-foot { padding: 72px 0 48px; margin-top: var(--lx-gap-sec); border-top: 1px solid var(--lx-line); }
+.lx-foot__grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 48px; }
+.lx-foot__grid > * { min-width: 0; }
+.lx-foot__blurb { max-width: 300px; margin-top: 14px; font-size: 14px; line-height: 1.5; color: var(--lx-ink-2); }
+.lx-foot__col .lx-foot__h { margin: 0 0 16px; font-size: 13px; line-height: 1.4; letter-spacing: 0; font-weight: 600; color: var(--lx-ink-3, var(--lx-ink-2)); }
+.lx-foot__col ul { list-style: none; margin: 0; padding: 0; }
+.lx-foot__col li { font-size: 14.5px; line-height: 2.1; color: var(--lx-ink-2); }
+.lx-foot__col a, .lx-foot__col button { color: inherit; }
+.lx-foot__base { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px 24px; margin-top: 56px; font-size: 14px; color: var(--lx-ink-2); }
+
+/* ---------- phones ---------- */
+@media (max-width: 900px) {
+  .site { --lx-gap-sec: 80px; --lx-gap-sub: 12px; --lx-gap-content: 28px; }
+  .lx-nav { display: none; }
+  .lx-header { justify-content: space-between; height: 64px; }
+
+  .lx-keysec { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+
+}
+@media (max-width: 760px) {
+  .lx-wrap { width: calc(100% - 40px); }
+  .site h2 { font-size: var(--lx-h2-m, 32px); }
+  .lx-lede { font-size: 17px; }
+
+  .lx-foot__grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .lx-foot__grid > :first-child { grid-column: 1 / -1; }
+}
+
+/* ---------- More professional (Design copy deck, row 551): no floating mascot or Feedback pill (it is a footer link,
+   which clicks the hidden tab), no mascot in the Try widget's empty state. The mascot stays inside app captures. ---------- */
+.site .try__state:not(.try__state--thinking) > :not(p) { display: none; }
+/* Lime lives inside captures only (Design deck palette): the Try widget's run button and selected depth use the
+   page's one action colour; the widget's words and consent stay exact. */
+.site .try__go { background: var(--lx-accent, #5a3fe0); color: #fff; font-weight: 600; letter-spacing: -0.01em; }
+.site .try__go:hover:not(:disabled):not([aria-disabled="true"]) { background: #4a2fc4; }
+.site .try__levels button.is-on { border-color: #141414; background: #141414; color: #fff; }
+.site .try__bar i:nth-child(3) { background: #cfcdc7; }
+.lx-foot__fb { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+
+/* ---------- phones: every capture at a readable scale (code ≥ 10 px, Design A round 1 #10) ----------
+   A 0.1.49 panel (704 px, code 15.2 px) is shown at 0.68 with its icon rail (75 px) cut off; the 0.1.48 panel
+   (568 px, code 13 px) at 0.8; the 0.1.48 scene (765 px, code 19 px) at 0.55. What runs past the frame's right edge
+   fades out, so the cut reads as a crop, not a fault. */
+@media (max-width: 600px) {
+  .lx-fig__frame { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent); mask-image: linear-gradient(90deg, #000 86%, transparent); }
+  .site img[src*="/0149/panel-"] { width: 479px !important; max-width: none !important; margin-left: -51px; }
+  .site img[src*="/0148/how-panel"] { width: 455px !important; max-width: none !important; }
+  .site img[src*="/0148/how-scene"] { width: 421px !important; max-width: none !important; }
+  .site img[src*="/0148/how-select"] { width: 360px !important; max-width: none !important; }
+  .site img[src*="/0149/library"], .site img[src*="/0149/briefs-open"], .site img[src*="/0149/settings-privacy"] { width: 520px !important; max-width: none !important; }
+
+}
+
+/* ---------- Vibe, the guide (3 moments only) ---------- */
+.lx-vibe { display: inline-block; line-height: 0; pointer-events: none; }
+.lx-vibe .vibe { --look-x: inherit; --look-y: inherit; }
+
+@media (prefers-reduced-motion: no-preference) {
+
+  .lx-vibe--happy { transition: opacity 240ms ease, transform 240ms ease; }
+  /* Download: a wave (two rocks from the base) once the section is in view */
+  [data-reveal="go"] .lx-vibe--wave .vibe__float { animation: lx-vibe-wave 1100ms ease-in-out 300ms 1 both; }
+}
+@keyframes lx-vibe-hop { 0% { transform: none; } 30% { transform: translateY(-12px) scale(.96, 1.05); } 62% { transform: translateY(0) scale(1.08, .92); } 100% { transform: none; } }
+@keyframes lx-vibe-smile { 0%, 100% { transform: none; } 20%, 70% { transform: scaleY(.3); } }
+@keyframes lx-vibe-wave { 0%, 100% { transform: none; } 20% { transform: rotate(-12deg); } 45% { transform: rotate(10deg); } 70% { transform: rotate(-8deg); } 88% { transform: rotate(4deg); } }
+
+/* Both computers' words ship in the HTML; OS_BOOT picks one before the first paint (no hydration swap, CLS 0). */
+html:not(.os-win) .lx-win, html.os-win .lx-mac { display: none !important; }

@@ -109,13 +109,6 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
    (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
 .u-sheet .claude-startups { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .u-sheet .paper-beta { width: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
-.u-sheet .paper-faq { gap: 0; max-width: none; }
-.u-sheet .paper-faq details {
-  margin: 0; padding: 1.1rem 0.25rem !important; border: 0 !important; border-bottom: 1px solid var(--u-line) !important;
-  border-radius: 0 !important; background: none !important; box-shadow: none !important;
-}
-.u-sheet .paper-faq details:first-child { border-top: 1px solid var(--u-line) !important; }
-.u-sheet .paper-faq summary::after { border-color: var(--u-line); background: var(--u-card); color: var(--u-text); }
 
 /* Two-column sheet: the heading stays in view on the left while the content scrolls on the right. */
 @media (min-width: 900px) {

@@ -49,17 +49,6 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), var(--u-lift-1);
 }
 
-/* One word per heading on the marker: lime, or sky on the lime plate. Upright, the heading's own ink. */
-.u-mark {
-  padding-inline: 0.08em;
-  border-radius: 0.12em;
-  background: var(--u-sheet-mark, var(--u-mark));
-  color: inherit;
-  font-style: normal;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
 /* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .u-sheet {
@@ -71,60 +60,10 @@
   }
 }
 
-
-/* The /beta troubleshooting list: one solid container with hairline rows, like the home FAQ. */
-.beta-page .paper-faq {
-  gap: 0;
-  padding: 0.25rem clamp(1rem, 3vw, 1.6rem);
-  border: 1px solid var(--u-line);
-  border-radius: 20px;
-  background: var(--surface-solid);
-}
-
-.beta-page .paper-faq details {
-  margin: 0;
-  padding: 1.1rem 0.25rem !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: none !important;
-}
-
-.beta-page .paper-faq details + details {
-  border-top: 1px solid var(--u-line) !important;
-}
-
-/* The /beta install steps are reading text: solid #fffdf6 with a hairline (recipe §2). */
-.beta-page__steps {
-  border: 1px solid var(--u-line);
-  border-radius: 20px;
-  background: var(--surface-solid);
-}
-
-/* ── Text on the backdrop: short lines read on a solid plate ────────────── */
-
-.pricing-plans__intro > p,
-.beta-page__head > p {
-  justify-self: center;
-  width: fit-content;
-  max-width: min(44rem, 100%);
-  margin-inline: auto;
-  padding: 0.4rem 0.9rem !important;
-  border-radius: 12px;
-  background: var(--surface-solid) !important;
-  box-shadow: inset 0 0 0 1px var(--glass-edge);
-  color: var(--u-text);
-}
-
 /* The phone email note (unsubscribe and Privacy line) sits on the hero plate like the rest of the hero copy:
    the sky plate gives it at least 7:1 (Design, ledger 466). Its text keeps the full ink colour. */
 .vhero__phone .vhero__fine {
   color: var(--u-text);
-}
-
-/* The pricing disclosure is long reading text: solid. */
-.paper-pricing .pricing-disclosure {
-  border: 1px solid var(--u-line);
-  background: var(--surface-solid);
 }
 
 /* ── Cards and panels ───────────────────────────────────────────────────── */
@@ -148,25 +87,13 @@
   box-shadow: var(--glass-highlight) !important;
 }
 
-/* Lime Pro: the lime fill. Four classes, so it beats the card rule above (its edge stays the card hairline). */
-.launch-subpage.paper-pricing .marketing-plan-card.featured {
-  background: var(--v-lime) !important;
-}
-
-/* Inside a card nothing else has a fill: the window's bars and the still's image sit on the card. */
-.vtour__window :is(.vtour__bar, .vtour__caption) {
-  background: transparent;
-}
-
 /* Secondary link buttons inside cards: outlined, no fill of their own (links stay links). */
-.dl-card__other,
-.pricing-plans .pricing-button.pricing-button--quiet {
+.dl-card__other {
   background: transparent !important;
   box-shadow: none;
 }
 
-.dl-card__other:hover,
-.pricing-plans .pricing-button.pricing-button--quiet:hover {
+.dl-card__other:hover {
   background: rgb(20 20 20 / 0.06) !important;
 }
 
@@ -283,9 +210,7 @@
   }
 
   [class^="lg-"],
-  [class*=" lg-"],
-  .pricing-plans__intro > p,
-  .beta-page__head > p {
+  [class*=" lg-"] {
     background: Canvas !important;
     border: 1px solid CanvasText;
   }

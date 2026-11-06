@@ -8,15 +8,10 @@
 .sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
 .sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
 .sec-head > .paper-lead .paper-text-link { font-size: inherit; }
-/* Home: the language pages under Try it. Underlined, since the links sit inside a sentence. */
-.home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-align: center; text-wrap: pretty; }
-.home-langs .paper-text-link { font-size: inherit; text-decoration: underline; text-underline-offset: 0.18em; }
 
 /* Standalone text links get a 32 px tall target (Design W21): the language links, which wrap as whole
    items instead of breaking mid-name, /beta's "Show me how", the download card's "Show me how" and
    the closing card's "Install steps and requirements". */
-.home-langs .paper-text-link,
-.beta-page__steps-list p > a.paper-text-link,
 .paper-beta__update > a,
 .paper-invite__card .paper-caption > a {
   display: inline-block;
@@ -131,12 +126,6 @@
 .claude-startups__tag { color: #141414; }
 .claude-startups__copy a { color: var(--u-text); font-weight: 700; }
 
-/* ── FAQ: vibe.css turns each row into an ink card; space the cards and keep answers readable in dark. ── */
-.paper-faq { display: grid; gap: 0.8rem; max-width: 50rem; }
-.paper-faq details { padding: 1.1rem 1.3rem; }
-.paper-faq summary { display: flex; align-items: center; min-height: 2.75rem; font-size: clamp(1.2rem, 2.4vw, 1.6rem); text-shadow: none; }
-.paper-faq summary:focus-visible { outline: 3px solid var(--u-focus); outline-offset: 4px; }
-
 /* ── Invite ── */
 .invite__copy { display: grid; justify-items: center; gap: 0.7rem; text-align: center; }
 .invite__copy > * { margin: 0; }
@@ -171,32 +160,6 @@ a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
 /* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
 .paper-beta__builds { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem 0.6rem; }
-/* The home hero's other-system download ("Get it for Windows" on a Mac) is a plain inline link in the
-   trust line (Security, 2026-11-04); hero.css underlines it. */
-.vhero__trust a { font-weight: 700; }
-
-/* ── Demo video: its native controls are several Tab stops inside the video. Each one shows the same ring,
-   on the window (against the page) and inside the video's edge, since focus in the controls has no ring of its own. ── */
-.vtour__window:focus-within { outline: 3px solid #3c2fb8; outline-offset: 4px; }
-.vtour__window video:focus-within { outline: 3px solid #3c2fb8; outline-offset: -3px; }
-/* While the video autoplays, keep the responsive poster above its undecoded first frames, letting clicks through.
-   Without autoplay (lite visitors, refused autoplay) it stays under the player, so the native controls show. */
-.vtour__media.is-auto:not(.is-playing) .vtour__poster { z-index: 1; pointer-events: none; }
-.vtour__media.is-playing .vtour__poster { visibility: hidden; }
-/* "Sound on" in the demo's bottom right corner, above the native controls' scrubber and clear of the poster's title
-   (Design). The pill is the switch's label; the Glisse Switch inside shows whether sound is on. */
-.vtour__sound {
-  position: absolute; right: 0.75rem; bottom: 3.75rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.5rem;
-  min-height: 2.5rem; padding: 0 0.7rem 0 0.9rem; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414;
-  font: 700 0.9rem var(--font-sans); cursor: pointer;
-}
-/* Phones: the poster fills the whole small frame, so the toggle sits right-aligned under the video instead, in a
-   row the frame reserves only when the toggle is there. */
-@media (max-width: 639px) {
-  .vtour__media:has(.vtour__sound) { margin-bottom: 3.25rem; }
-  .vtour__sound { top: calc(100% + 0.6rem); right: 0; bottom: auto; }
-}
-.vtour__sound .lg-switch:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 4px; }
 
 /* ── Newsletter signup (footer, /about, homepage): field and button on one row, the consent box under them. ── */
 .newsletter { display: grid; gap: 0.6rem; width: min(30rem, 100%); }

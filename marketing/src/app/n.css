@@ -29,42 +29,8 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 
 .n-home h2 { margin: 0; font-size: 32px; line-height: 1.18; letter-spacing: -0.022em; font-weight: 600; color: var(--n-ink); }
 .n-home h3 { margin: 0; font-size: 17px; line-height: 1.35; letter-spacing: -0.01em; font-weight: 600; }
-.n-wrap { width: min(1120px, calc(100% - 48px)); margin: 0 auto; }
-.n-lead { margin: 10px 0 0; font-size: 17px; color: var(--n-ink-2); }
-.n-note { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--n-ink-2); }
-.n-center { text-align: center; }
-.n-sec { margin-top: 140px; }
-.n-head { max-width: 640px; }
-.n-head.n-center { margin: 0 auto; }
-.n-link {
-  font-weight: 600; font-size: 15px; color: var(--n-ink);
-  text-decoration: underline; text-decoration-color: var(--n-v300); text-decoration-thickness: 2px; text-underline-offset: 5px;
-}
-.n-home a:focus-visible, .n-home button:focus-visible { outline: 3px solid var(--n-v600); outline-offset: 3px; }
 
-/* ---------- Hero ---------- */
-.nhero { position: relative; overflow: hidden; background: #33209a; isolation: isolate; }
-.nhero__field {
-  position: absolute; inset: 0; z-index: 0;
-  background:
-    radial-gradient(55% 42% at 50% 62%, rgb(236 231 255 / 0.5), rgb(236 231 255 / 0) 70%),
-    radial-gradient(36% 46% at 96% 14%, rgb(184 166 255 / 0.32), rgb(184 166 255 / 0) 70%),
-    radial-gradient(40% 45% at 4% 72%, rgb(255 184 148 / 0.2), rgb(255 184 148 / 0) 70%),
-    linear-gradient(180deg, #33209a 0%, #4529bd 20%, #6247ea 44%, #9580ff 70%, #c6b8ff 100%);
-}
-.nhero__copy { position: relative; z-index: 3; width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding-top: 112px; color: #fff; text-align: center; }
-.nhero__copy h1 { margin: 0; max-width: none; font-size: 48px; line-height: 1.1; letter-spacing: -0.028em; font-weight: 600; color: #fff; }
-.nhero__nowrap { white-space: nowrap; }
-.nhero__sub { max-width: 46rem; margin: 14px auto 0; font-size: 17px; line-height: 1.5; color: #fff; text-wrap: balance; }
-.nhero__sub kbd {
-  display: inline-block; padding: 1px 7px; border-radius: 6px; border: 1px solid rgb(255 255 255 / 0.34);
-  background: rgb(29 20 80 / 0.4); color: #fff; font: 500 0.86em/1.4 var(--font-mono), ui-monospace, monospace; white-space: nowrap;
-}
-.nhero__wm {
-  position: absolute; z-index: 1; top: 196px; left: 0; right: 0; text-align: center; pointer-events: none;
-  font: 700 280px/1 var(--font-sans), system-ui, sans-serif; letter-spacing: -0.05em; color: rgb(255 255 255 / 0.9); white-space: nowrap;
-}
-.nhero__par { position: relative; z-index: 2; width: min(1000px, calc(100% - 48px)); margin: 166px auto 0; transform-origin: 50% 0; }
+.n-home a:focus-visible, .n-home button:focus-visible { outline: 3px solid var(--n-v600); outline-offset: 3px; }
 
 /* The demo window: the editor as real text and the real panel capture, playing by itself. */
 .ndemo__frame { display: flex; gap: 14px; padding: 14px; background: var(--n-ground); border-radius: 24px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.55), 0 50px 90px -40px rgb(20 10 70 / 0.75); }
@@ -85,89 +51,9 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 /* The recording sits on its poster and shows only while it plays (PhotoHero useRecordingSync). */
 .ndemo__rec { position: absolute; inset: 0; opacity: 0; }
 .ndemo__rec.is-on { opacity: 1; }
-/* Inter, not mono (Design #197): the site's mono face attaches 4 s after load, and a mono caption's text moved when it did. */
-.nhero__base .nhero__cap { margin: 0 0 16px; color: #4a4a46; font: 500 12px/1.4 var(--font-sans); }
-/* Phones: the hill overlaps the window's last 64 px and its curve dips at the sides, so the caption goes under the
-   window's edge, on the ivory, never over the curve or the panel (Design #197 MUST, 390). */
-@media (max-width: 600px) {
-  .nhero__base .nhero__cap { max-width: calc(100% - 48px); margin: 52px auto 16px; text-wrap: balance; }
-}
-
-/* The hill: a light ellipse rising over the field, carrying the download, the browser try and the trust line. */
-.nhero__base { position: relative; z-index: 4; margin-top: -64px; padding: 28px 24px 56px; text-align: center; }
-/* At least its old size, and always 240 px taller than what it carries, so the install box with its open steps
-   never runs off the ivory onto the violet (#192 at 390). */
-.nhero__base::before {
-  content: ""; position: absolute; z-index: -1; top: 0; left: 50%; width: 2000px; height: max(800px, calc(100% + 240px)); margin-left: -1000px;
-  border-radius: 50%; background: var(--n-ground);
-}
-.nhero__base .vhero__cta { display: grid; justify-items: center; gap: 16px; }
-.nhero__base .vhero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 22px; }
-.nhero__base .paper-join {
-  min-height: 54px; padding: 0 30px; border: 0; border-radius: 99px; background: var(--n-v600); color: #fff;
-  font-size: 16px; font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 8px 18px -10px rgb(74 47 196 / 0.8);
-  transition: transform 160ms var(--n-e);
-}
-.nhero__base .paper-join:hover { background: var(--n-v700); }
-.nhero__base .paper-join:active { transform: scale(0.97); }
-.nhero__base .paper-join svg { fill: currentColor; }
-.nhero__base .vhero__try {
-  min-height: 0; padding: 0; border-radius: 0; background: none; color: var(--n-ink); font-weight: 600; font-size: 15px;
-  text-decoration: underline; text-decoration-color: var(--n-v300); text-decoration-thickness: 2px; text-underline-offset: 5px;
-}
-.nhero__base .vhero__try:hover { background: none; text-decoration-color: var(--n-v600); }
-.nhero__base .vhero__trust { max-width: 44rem; margin: 0 auto; color: var(--n-ink-2); font-size: 13.5px; font-weight: 500; line-height: 1.55; }
-.nhero__base .vhero__trust a { color: var(--n-ink); text-decoration: underline; text-underline-offset: 3px; }
-.nhero__base .vhero__phone { margin: 0 auto; width: min(26rem, 100%); }
-.nhero__base .vhero__phone p, .nhero__base .vhero__fine { color: var(--n-ink-2); font-weight: 500; }
-.nhero__base .vhero__fine a { color: var(--n-ink); }
-.nhero__base .vhero__claims { margin: 14px auto 0; font-size: 13px; }
-.nhero__base .vhero__claims + .vhero__try { display: inline-block; margin-top: 14px; }
-
-/* ---------- Persistent download pill ---------- */
-.ndock {
-  position: fixed; z-index: 25; left: 50%; bottom: 20px; transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
-  transition: transform 500ms var(--n-e), opacity 300ms var(--n-e);
-}
-.ndock.is-on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
-.ndock .paper-join {
-  min-height: 54px; padding: 0 30px; border: 0; border-radius: 99px; background: var(--n-v600); color: #fff; font-size: 16px; font-weight: 600;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.3), 0 14px 30px -10px rgb(29 20 80 / 0.6);
-}
-.ndock .paper-join:hover { background: var(--n-v700); }
-.ndock .paper-join svg { fill: currentColor; }
-
-/* ---------- Story: numbered steps pinned left, the active one ruled; one capture right that changes per step ---------- */
-.nstory__track { position: relative; height: 1920px; margin-top: 56px; }
-.nstory__pin { position: sticky; top: 112px; height: 600px; display: grid; grid-template-columns: 330px 1fr; column-gap: 72px; align-items: center; }
-.nstory__steps { display: grid; gap: 30px; margin: 0; padding: 0; list-style: none; }
-.nstory__steps li { position: relative; padding-left: 22px; opacity: 0.8; transition: opacity 400ms var(--n-e); }
-.nstory__steps li::before, .nstory__steps li::after { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 2px; border-radius: 2px; background: var(--n-line); }
-.nstory__steps li::after { background: linear-gradient(180deg, var(--n-v500), var(--n-v700)); transform: scaleY(0); transform-origin: 50% 0; transition: transform 500ms var(--n-e); }
-.nstory__steps li.is-on { opacity: 1; }
-.nstory__steps li.is-on::after { transform: none; }
-.nstory__num { font: 600 12.5px var(--font-mono), ui-monospace, monospace; color: var(--n-v700); }
-.nstory__steps h3 { margin-top: 4px; }
-.nstory__steps p { margin: 6px 0 0; font-size: 15.5px; color: var(--n-ink-2); }
-.nstory__figs { position: relative; height: 100%; }
-.nstory__figs::before {
-  content: ""; position: absolute; inset: -40px -80px; z-index: -1;
-  background: radial-gradient(closest-side at 55% 50%, rgb(184 166 255 / 0.55), rgb(184 166 255 / 0.2) 55%, rgb(184 166 255 / 0));
-}
-.nstory__figs img {
-  position: absolute; left: 50%; top: 50%; width: auto; height: 560px; max-width: none; border-radius: 14px; box-shadow: var(--n-float);
-  transform: translate(-50%, calc(-50% + 16px)); opacity: 0; transition: transform 550ms var(--n-e), opacity 450ms var(--n-e);
-}
-.nstory__figs img.is-wide { width: 100%; height: auto; }
-.nstory__figs img.is-on { transform: translate(-50%, -50%); opacity: 1; }
-.nstory__figs img.is-past { transform: translate(-50%, calc(-50% - 16px)); }
-.nstory__marks { position: absolute; inset: 0; pointer-events: none; }
-.nstory__marks i { position: absolute; left: 0; right: 0; height: 440px; }
 
 /* ---------- Try it ---------- */
 .ntry__box { margin-top: 36px; }
-.ntry .home-langs { margin: 20px 0 0; font-size: 14.5px; color: var(--n-ink-2); }
-.ntry .home-langs a { color: var(--n-ink); }
 
 /* ---------- Expanding rows (what leaves, short answers) ---------- */
 .nrows { border-top: 1px solid var(--n-line); }
@@ -187,61 +73,6 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .nrow.is-open .nrow__plus { transform: rotate(45deg); }
 .nrow__in p { margin: 0; }
 .nrow__in ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; font-size: 15px; }
-.nleaves { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 64px; align-items: start; }
-.nleaves__notes { margin-top: 18px; display: grid; gap: 8px; }
-.nleaves__notes a { font-size: 13.5px; }
-.nfaq { width: min(720px, 100%); margin: 40px auto 0; text-align: left; }
-.nfaq__more { margin-top: 18px; text-align: center; }
-
-/* ---------- Pricing: the mark centred, the Free card raised, Pro level ---------- */
-.nprice .n-head svg { display: block; margin: 0 auto 20px; }
-.nprice__plans { display: grid; grid-template-columns: repeat(2, minmax(0, 360px)); justify-content: center; align-items: center; gap: 24px; margin-top: 48px; text-align: left; }
-.nprice__plan { position: relative; padding: 28px 28px 30px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--n-line); transition: transform 350ms var(--n-e); }
-.nprice__plan::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--n-float-up); opacity: 0; transition: opacity 350ms var(--n-e); pointer-events: none; }
-.nprice__plan:hover { transform: translateY(-2px); }
-.nprice__plan:hover::after { opacity: 1; }
-.nprice__plan--on { padding: 38px 28px 42px; box-shadow: var(--n-float); }
-.nprice__tag { position: absolute; top: 24px; right: 24px; margin: 0; padding: 4px 10px; border-radius: 99px; background: var(--n-v100); color: var(--n-v700); font: 600 12px var(--font-mono), ui-monospace, monospace; }
-.nprice__plan:not(.nprice__plan--on) .nprice__tag { background: #f1f0ec; color: var(--n-ink-2); }
-.nprice__price { margin: 14px 0 0; font-size: 44px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.nprice__unit { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--n-ink-2); }
-.nprice__plan hr { margin: 22px 0 16px; border: 0; border-top: 1px solid var(--n-line); }
-.nprice__plan .n-note { font-size: 14.5px; }
-.nprice__plan .paper-join { width: 100%; margin-top: 24px; min-height: 44px; border: 0; border-radius: 99px; background: var(--n-v600); color: #fff; font-size: 15px; font-weight: 600; justify-content: center; }
-.nprice__plan .paper-join:hover { background: var(--n-v700); }
-.nprice__plan .paper-join svg { fill: currentColor; }
-.nprice__all { display: inline-flex; margin-top: 32px; padding: 11px 20px; border-radius: 99px; background: #fff; box-shadow: 0 0 0 1px var(--n-line); color: var(--n-ink); font-size: 14.5px; font-weight: 550; text-decoration: none; }
-.nprice__paused { margin: 20px auto 0; max-width: 40rem; }
-
-/* ---------- Real app gallery (Design's ledger 530 spec §5, static) and the shot captions ---------- */
-.ngal__grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; margin-top: 48px; }
-.ngal__card { grid-column: span 2; display: flex; flex-direction: column; margin: 0; padding: 12px 12px 18px; border-radius: 22px; background: #fff; box-shadow: 0 0 0 1px var(--n-line); }
-.ngal__card--wide { grid-column: span 4; }
-/* 7 cards over 3 rows, grouped by picture shape so no card stretches around empty space: the wide Depths card and
-   Follow-up (panels), Test me and Key check centred (panels), then Library, Briefs and Privacy (windows). */
-.ngal__card:nth-child(3) { grid-column: 2 / span 2; }
-.ngal__card:nth-child(4) { grid-column: 4 / span 2; }
-.ngal__window { overflow: hidden; border-radius: 14px; background: var(--n-ground); box-shadow: 0 0 0 1px var(--n-line); }
-.ngal__bar { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-bottom: 1px solid var(--n-line); }
-.ngal__bar i { width: 9px; height: 9px; border-radius: 50%; background: rgb(20 20 20 / 0.14); }
-.ngal__shots { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1px; background: var(--n-line); }
-.ngal__shot { position: relative; margin: 0; background: var(--n-ground); }
-.ngal__shot img { display: block; width: 100%; height: auto; }
-/* In flow above its shot, so it never covers the panel's own UI (Design S-1 #191 MUST). */
-.ngal__depth {
-  position: static; display: inline-block; margin: 10px 0 8px 10px; padding: 3px 9px; border-radius: 99px; background: #141414; color: #fff;
-  font: 600 12px/1.4 var(--font-mono), ui-monospace, monospace;
-}
-.ngal__text { padding: 16px 6px 0; }
-.ngal__text h3 { font-size: 16px; }
-.ngal__text p { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--n-ink-2); }
-.ngal__label, .n-shot-cap {
-  display: inline-block; margin: 12px 0 0; padding: 4px 8px; border-radius: 6px; background: #f1f0ec; color: #4a4a46;
-  font: 500 12px/1.45 var(--font-mono), ui-monospace, monospace;
-}
-/* The key check beside "What leaves your computer": the panel's real refusal. */
-.nleaves__shot { margin: 28px 0 0; }
-.nleaves__shot img { display: block; width: min(100%, 352px); height: auto; border-radius: 14px; box-shadow: var(--n-float); }
 
 /* ---------- Pixel margin art (Design 530 spec §13.7) ----------
    Motion's 32×32 icons at ×4 (128 px), ink, greys and violet. Only from 1280 px, where the room beside the content
@@ -250,34 +81,11 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .npx { display: none; image-rendering: pixelated; }
 @media (min-width: 1280px) {
   .npx { display: block; width: 128px; height: 128px; }
-  .ngal__px { grid-row: 2; align-self: center; }
-  .ngal__px--l { grid-column: 1; justify-self: start; }
-  .ngal__px--r { grid-column: 6; justify-self: end; }
-  .nleaves__px { display: flex; gap: 72px; margin-top: 96px; padding-left: 8px; }
-  .nleaves__px2 { margin-top: 96px; }
-}
 
-/* ---------- Backing line ---------- */
-.n-home .nback { margin-top: 96px; }
-
-/* ---------- Closing band: the download ---------- */
-.nband {
-  margin-top: 140px; padding: 104px 0 112px; color: #fff; text-align: center;
-  background:
-    radial-gradient(70% 100% at 86% 0%, rgb(184 166 255 / 0.34), rgb(184 166 255 / 0) 70%),
-    radial-gradient(60% 90% at 6% 100%, rgb(123 92 255 / 0.4), rgb(123 92 255 / 0) 70%),
-    linear-gradient(120deg, #1d1450 0%, #2f1f8a 52%, #4a2fc4 100%);
 }
-.nband h2 { color: #fff; }
-.nband .n-lead { margin: 10px auto 30px; color: #ece7ff; }
-.nband__card { width: min(760px, 100%); margin: 0 auto; text-align: left; }
 
 /* ---------- Motion: only with JS and without reduced motion ---------- */
 @media (prefers-reduced-motion: no-preference) {
-  .n-load .nhero__field { animation: n-fade 200ms var(--n-e) both; }
-  .n-load:has(.n-home) .mnav { animation: n-drop 500ms var(--n-e) 100ms both; }
-  .n-load .nhero__sub { animation: n-rise12 500ms var(--n-e) 150ms both; }
-  .n-load .nhero__base > * { animation: n-rise12 500ms var(--n-e) 450ms both; }
 
   /* Demo loop: 24 s, from when the window has landed (1000 ms); paused off screen. */
   .js .ndemo .ndemo__bar, .js .ndemo .ndemo__plain, .js .ndemo .ndemo__ink, .js .ndemo .ndemo__ink > span, .js .ndemo .ndemo__key,
@@ -299,34 +107,21 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
   .ndemo__rec { transition: opacity 160ms var(--n-e); }
   .ndemo.is-paused *, .ndemo.is-paused *::after { animation-play-state: paused !important; }
 
-  /* The Free card rises further and lands last (Arrive staggers by --arrive-i, set inline, hence !important). */
-  .n-home .nprice__plans > .nprice__plan--on { --arrive-dist: 28px; --arrive-i: 3 !important; }
-
   /* Pixel margin art (PixelIcon; Motion's kit sections.css data-pixel): rise 16 px over 600 ms, then 1 grid pixel
      (4 px at ×4) up every 200 ms for 2 s, and stop. Vertical only, so its gap to the content never shrinks. */
   .npx[data-px="wait"] { opacity: 0; transform: translateY(16px); }
   .npx[data-px="go"] { animation: n-px-rise 600ms var(--n-e) backwards, n-px-drift 2000ms steps(10, end) 600ms forwards; }
-  .nleaves__px2[data-px="go"] { animation-delay: 150ms, 750ms; }
-  .ngal__px--r[data-px="go"] { animation-delay: 150ms, 750ms; }
+
 }
 @keyframes n-px-rise { from { opacity: 0; transform: translateY(16px); } }
 @keyframes n-px-drift { to { transform: translateY(-40px); } }
 /* Reduced motion, or no JS: the finished frame of the demo, the panel and every answer line visible. */
 @media (prefers-reduced-motion: reduce) {
   .ndemo__bar { transform: none; }
-  .ndock, .nstory__steps li, .nstory__steps li::after, .nstory__figs img, .nrow__a, .nrow__in, .nrow__plus, .nprice__plan, .nprice__plan::after,
-  .nhero__base .paper-join { transition: none; }
-  .nstory__figs img, .nstory__figs img.is-past { transform: translate(-50%, -50%); }
+  .nrow__a, .nrow__in, .nrow__plus { transition: none; }
+
 }
 html:not(.js) .ndemo__plain { opacity: 0; }
-
-/* Parallax, scroll-driven where the browser supports it (PhotoHero runs a rAF fallback only where it does not). */
-@supports (animation-timeline: scroll()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .nhero__par { animation: n-par-win linear both; animation-timeline: scroll(root); animation-range: 0 800px; }
-    .nhero__wm { animation: n-par-wm linear both; animation-timeline: scroll(root); animation-range: 0 800px; }
-  }
-}
 @keyframes n-par-win { to { transform: translate3d(0, -40px, 0) scale(0.96); } }
 @keyframes n-par-wm { to { transform: translate3d(0, -12px, 0); } }
 
@@ -351,14 +146,7 @@ html:not(.js) .ndemo__plain { opacity: 0; }
 /* ---------- Phone ---------- */
 @media (max-width: 760px) {
   .n-home h2 { font-size: 24px; }
-  .n-lead { font-size: 16px; }
-  .n-wrap { width: calc(100% - 32px); }
-  .n-sec { margin-top: 96px; }
-  .nhero__copy { width: calc(100% - 32px); padding-top: 88px; }
-  .nhero__copy h1 { font-size: 32px; line-height: 1.12; }
-  .nhero__sub { margin-top: 12px; padding: 0 6px; font-size: 15px; }
-  .nhero__wm { top: 240px; font-size: 100px; }
-  .nhero__par { width: calc(100% - 32px); margin-top: 98px; }
+
   .ndemo__frame { display: block; padding: 0; background: none; border-radius: 0; box-shadow: none; }
   .ndemo__editor { padding: 14px 14px 16px; border-radius: 12px; box-shadow: 0 30px 50px -30px rgb(20 10 70 / 0.8); }
   .ndemo__path { margin-bottom: 8px; font-size: 11px; }
@@ -368,33 +156,5 @@ html:not(.js) .ndemo__plain { opacity: 0; }
   .ndemo__panel { width: 212px; margin: -26px 0 0 auto; }
   .ndemo__panel img, .ndemo__rec { border-radius: 12px; }
   .ndemo__panel img { box-shadow: 0 30px 50px -24px rgb(20 10 70 / 0.7); }
-  .nhero__base { padding: 24px 16px 48px; }
-  .nhero__base::before { width: 1000px; height: max(500px, calc(100% + 240px)); margin-left: -500px; }
-  .nhero__base .vhero__actions { flex-direction: column; gap: 14px; }
-  .nhero__base .vhero__actions .paper-join { width: 100%; }
-  .nhero__base .vhero__trust { font-size: 12.5px; }
-  .ndock { left: 16px; right: 16px; bottom: 14px; transform: translateY(140%); }
-  .ndock.is-on { transform: none; }
-  .ndock .paper-join { width: 100%; min-height: 52px; justify-content: center; }
-  .nstory__track { height: auto; margin-top: 8px; }
-  .nstory__pin { position: static; height: auto; display: flex; flex-direction: column; }
-  .nstory__steps, .nstory__figs { display: contents; }
-  .nstory__steps li { opacity: 1; margin-top: 36px; }
-  .nstory__steps li::after { transform: none; }
-  .nstory__steps li:nth-child(1) { order: 1; } .nstory__steps li:nth-child(2) { order: 3; }
-  .nstory__steps li:nth-child(3) { order: 5; } .nstory__steps li:nth-child(4) { order: 7; }
-  .nstory__figs img, .nstory__figs img.is-on, .nstory__figs img.is-past {
-    position: relative; left: auto; top: auto; width: 86%; height: auto; margin: 22px auto 0; opacity: 1; transform: none;
-  }
-  .nstory__figs img.is-wide { width: 100%; }
-  .nstory__figs img:nth-of-type(1) { order: 2; } .nstory__figs img:nth-of-type(2) { order: 4; }
-  .nstory__figs img:nth-of-type(3) { order: 6; } .nstory__figs img:nth-of-type(4) { order: 8; }
-  .nstory__figs::before, .nstory__marks { display: none; }
-  .nleaves { grid-template-columns: 1fr; gap: 24px; }
-  .nprice__plans { grid-template-columns: 1fr; gap: 18px; }
-  .nprice__price { font-size: 38px; }
-  .nband { margin-top: 96px; padding: 80px 0 88px; }
-  .ngal__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 32px; }
-  .ngal__card, .ngal__card--wide, .ngal__card:nth-child(3), .ngal__card:nth-child(4) { grid-column: auto; }
-  .ngal__shots { grid-auto-flow: row; }
+
 }

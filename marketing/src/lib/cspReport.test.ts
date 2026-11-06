@@ -121,9 +121,14 @@ describe("/api/csp-report keeps only directive, origin and path (Security C3 con
       const file = path.join(dir, name);
       return statSync(file).isDirectory() ? hasPage(file) : name === "page.tsx";
     });
-    const folders = readdirSync(app)
-      .filter((name) => name !== "api" && statSync(path.join(app, name)).isDirectory() && hasPage(path.join(app, name)))
-      .sort();
+    // A route group, "(name)", adds nothing to the URL: its folders are top-level routes.
+    const routeFolders = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+      const full = path.join(dir, name);
+      if (!statSync(full).isDirectory()) return [];
+      if (/^\(.+\)$/.test(name)) return routeFolders(full);
+      return name !== "api" && hasPage(full) ? [name] : [];
+    });
+    const folders = routeFolders(app).sort();
     assert.deepEqual(Array.from(SITE_ROUTES).sort(), folders);
   });
 

@@ -75,204 +75,11 @@
   background: var(--u-sheet);
 }
 
-.pricing-plans__intro > p:not(.paper-meta),
-.resources-section__head > .paper-lead,
-.paper-pricing .pricing-disclosure {
+.resources-section__head > .paper-lead {
   padding: 0.75rem 1rem;
   border-radius: 14px;
   background: var(--u-sheet);
   color: var(--u-text);
-}
-
-.paper-pricing .pricing-disclosure {
-  max-width: 46rem;
-  margin: 2rem auto 0;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  text-align: center;
-}
-
-/* ── Pricing: one heading, then the tier cards inside the first viewport at 1440 and 390 ── */
-
-/* .launch-subpage's 4rem clears the fixed bar; vibe.css pads every section 4.5-8rem !important.
-   The bottom matches the top, and the page drops .launch-subpage's 110px bottom padding, so the note doesn't float
-   in an empty band above the footer (Design S2, 3 Nov). */
-.paper-pricing > .paper-section {
-  padding-top: clamp(1.5rem, 4vw, 3rem) !important;
-  padding-bottom: clamp(2rem, 5vw, 3.5rem) !important;
-}
-
-.launch-subpage.paper-pricing {
-  padding-bottom: 0;
-}
-
-/* The fixed Feedback tab (vibe.css .fb-tab, left 20px, bottom 20px) sits on the Free card's left edge here, and
-   Design's rule is fixed only where measured clear: on /pricing it goes inline after the footer, as on phones (S3). */
-body:has(.paper-pricing) .fb-tab {
-  position: relative;
-  left: auto;
-  bottom: auto;
-  display: block;
-  margin: 0 auto 1.5rem;
-  min-height: 44px;
-}
-
-.paper-pricing .pricing-plans__intro {
-  margin-bottom: 1.5rem;
-}
-
-.paper-pricing .pricing-plans__intro h1 {
-  margin: 0.5rem 0 0;
-  font-size: clamp(2rem, 4.4vw, 3.4rem);
-  font-weight: 750;
-  line-height: 1.04;
-  text-wrap: balance;
-}
-
-.paper-pricing .pricing-plans__intro > p:not(.paper-meta) {
-  display: inline-block;
-  margin-top: 0.75rem;
-  padding: 0.4rem 0.9rem;
-}
-
-.paper-pricing .pricing-toggle {
-  margin-bottom: 1.5rem;
-}
-
-/* ── Beta ───────────────────────────────────────────────────────────────── */
-
-/* No photo band (Design, ledger 443): a plain heading block that clears the 4rem bar, then the install card
-   follows closely, so the download button sits on the first screen at 1440x900, 1280x720 and 390x844. */
-.beta-page {
-  padding-top: 0;
-}
-
-.beta-page__head {
-  display: grid;
-  justify-items: center;
-  gap: 0.75rem;
-  padding: 7rem 1.25rem 0;
-  text-align: center;
-}
-
-.beta-page__head h1 {
-  margin: 0;
-  font-size: clamp(2.6rem, 5.2vw, 4.4rem);
-}
-
-.beta-page__head > p {
-  max-width: 40rem;
-  margin: 0;
-  font-size: 1.1rem;
-  line-height: 1.5;
-}
-
-/* Beats vibe.css `.paper-section { padding-block … !important }`. */
-.beta-page > #install {
-  padding-top: clamp(1.25rem, 3vw, 2rem) !important;
-}
-
-/* Beats vibe.css `.paper-section h2 { font-size … !important }` inside the steps card. */
-.beta-page .beta-page__steps h2 {
-  font-size: clamp(1.7rem, 3.2vw, 2.3rem) !important;
-}
-
-/* Trust tiles are glass cards (glass.css) with a hairline edge. */
-.beta-page__trust-item {
-  position: relative;
-  isolation: isolate;
-  border: 1px solid var(--u-line-strong);
-  background: var(--u-card);
-  color: var(--v-ink);
-}
-
-.beta-page__trust-item svg {
-  color: var(--v-ink);
-}
-
-.beta-page__trust-item a.paper-text-link {
-  color: var(--v-ink);
-}
-
-/* The feedback ask closes the page, after the download and the fixes (W12). */
-.beta-page__feedback {
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-  max-width: 34rem;
-  margin: 1.5rem auto 0;
-  padding: 1rem 1.25rem;
-  border: 1.5px solid var(--v-ink);
-  border-radius: 14px;
-  background: var(--u-card);
-  box-shadow: 3px 3px 0 var(--v-ink);
-  color: var(--v-ink);
-  text-align: center;
-}
-
-.beta-page__feedback p {
-  margin: 0;
-}
-
-.beta-page__feedback a.paper-text-link {
-  color: var(--v-ink);
-  font-weight: 700;
-}
-
-/* ── Pricing: glass cards (glass.css) on this solid base ───────────────────── */
-
-.paper-pricing .marketing-plan-card {
-  --ink: var(--v-ink);
-  --ink-muted: var(--u-text-2);
-  position: relative;
-  isolation: isolate;
-  border: 1px solid var(--u-line-strong);
-  border-radius: var(--v-radius);
-  background: var(--v-card);
-  box-shadow: none;
-  color: var(--v-ink);
-}
-
-.paper-pricing .marketing-plan-card.featured {
-  border: 2px solid var(--v-ink);
-  background: var(--v-lime);
-}
-
-.paper-pricing .marketing-plan-card:hover {
-  border-color: var(--v-ink);
-}
-
-.paper-pricing .marketing-plan-card .plan-badge {
-  color: var(--v-ink);
-}
-
-/* A card with nothing to buy yet: one line under the price, one under the list, no button. */
-.paper-pricing .marketing-plan-card .plan-note {
-  margin: 0.5rem 0 0;
-  color: var(--v-ink);
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.paper-pricing .marketing-plan-card .plan-after {
-  margin: 0 0 1.25rem;
-  color: var(--v-ink);
-  font-size: 0.95rem;
-  line-height: 1.45;
-}
-
-@media (min-width: 1120px) {
-  .paper-pricing .marketing-plan-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* The fixed Vibe button (vibe.css .svibe: 52px + 4px shadow at right: clamp(10px, 2vw, 28px), shown from 821px)
-   must never sit on the rightmost plan card: reserve its footprint plus 12px (Design, 27 Oct). */
-@media (min-width: 821px) {
-  .paper-pricing .pricing-plans {
-    margin-right: max(0px, calc(clamp(10px, 2vw, 28px) + 68px - (100vw - 100%) / 2));
-  }
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */
@@ -424,12 +231,10 @@ body:has(.paper-pricing) .fb-tab {
 .resources-filter-pill:focus-visible,
 .resources-depth-tab:focus-visible,
 .resources-swatch:focus-visible,
-.pricing-plans .pricing-toggle .lg-tab:focus-visible,
 .kit__toc a:focus-visible,
 .kit__btn:focus-visible,
 .nf__btn:focus-visible,
 .about-page__btn:focus-visible,
-.beta-page__trust-item a:focus-visible,
 .fos-page__help a:focus-visible {
   outline: 3px solid var(--v-ink);
   outline-offset: 2px;
@@ -438,8 +243,6 @@ body:has(.paper-pricing) .fb-tab {
 /* ── Motion: no hover lifts for reduced motion or the lite experience ──── */
 
 @media (prefers-reduced-motion: reduce) {
-  .paper-pricing .marketing-plan-card,
-  .paper-pricing .marketing-plan-card:hover,
   :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
   .resources-card:hover,
   .about-page__btn:hover {

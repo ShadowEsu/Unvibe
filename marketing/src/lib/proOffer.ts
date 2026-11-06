@@ -15,8 +15,3 @@ const FRIEND_MONTHS = "plus a month for each friend who signs in and enters your
 export function proSentence(paused: boolean = AI_MAINTENANCE): string {
   return paused ? NOT_ON_SALE : `${NOT_ON_SALE} You can try it now: new accounts get a free month, ${FRIEND_MONTHS}`;
 }
-
-/** The /pricing Pro card's line under its list (the card says "Not on sale yet" under the price); none while paused. */
-export function proTryToday(paused: boolean = AI_MAINTENANCE): string | null {
-  return paused ? null : `Try Pro today: a new account gets a free month, ${FRIEND_MONTHS}`;
-}
