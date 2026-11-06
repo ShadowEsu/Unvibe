@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { GALLERY, KEY_CHECK_SHOT, SHOT_CAPTION } from "./homeGallery";
 import { STEPS } from "./howItWorks";
+import { INSTALL_COPY } from "@/components/paper/InstallBox";
 
 /** Width and height of a lossy or lossless WebP, read from its header. */
 function webpSize(file: string): { width: number; height: number } {
@@ -19,7 +20,8 @@ function webpSize(file: string): { width: number; height: number } {
   throw new Error(`${file}: unknown WebP chunk ${kind}`);
 }
 
-const shots = [...GALLERY.flatMap((card) => card.shots), KEY_CHECK_SHOT, ...STEPS.filter((s) => s.caption).map((s) => s.image)];
+const installShots = Object.values(INSTALL_COPY).flatMap((copy) => copy.stepShots.filter((shot) => shot !== null));
+const shots = [...GALLERY.flatMap((card) => card.shots), KEY_CHECK_SHOT, ...STEPS.filter((s) => s.caption).map((s) => s.image), ...installShots];
 
 test("every real screenshot's width and height match its file, so nothing shifts as it loads", () => {
   for (const shot of shots) {
