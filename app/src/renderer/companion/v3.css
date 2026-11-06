@@ -406,9 +406,6 @@
 :root[data-ui="v3"] .modal .setrow + div > .perm-head,
 :root[data-ui="v3"] .modal .perm-head { margin-top: 14px; }
 
-/* ── Onboarding ───────────────────────────────────────────────────────────── */
-:root[data-ui="v3"] .kbd-lg { border: 1px solid var(--v-line); border-bottom-width: 3px; border-radius: 10px; background: var(--v-sunken); color: var(--v-ink); box-shadow: none; }
-
 /* ── Sign-in gate details, account menu, share page ───────────────────────── */
 :root[data-ui="v3"] .login__card,
 :root[data-ui="v3"] .login__local {

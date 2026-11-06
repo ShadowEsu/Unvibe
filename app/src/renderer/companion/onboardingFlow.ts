@@ -11,10 +11,15 @@ export function onboardingSteps(windows: boolean): string[] {
   return windows ? ['Hello', 'Try it', 'Your code'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
 }
 
+/** The first word of the name typed on Hello, or '': Vibe's greeting stays within 8 words whatever was typed. */
+export function firstNameOf(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] ?? '';
+}
+
 export interface OnboardingState {
   step: number;
   windows: boolean;
-  /** The first word of the name typed on Hello, or ''. */
+  /** firstNameOf(the name typed on Hello). */
   firstName: string;
   /** The sample was sent to the panel (step 2). */
   explained: boolean;

@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState, type ShortcutOffer } from '../src/renderer/companion/onboardingFlow';
+import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState, type ShortcutOffer } from '../src/renderer/companion/onboardingFlow';
 
 /** Every state first run can be in, on both systems. */
 function allStates(): OnboardingState[] {
   const out: OnboardingState[] = [];
   for (const windows of [false, true]) {
     for (let step = 0; step < onboardingSteps(windows).length; step++) {
-      for (const firstName of ['', 'Bartholomew']) {
+      for (const firstName of ['', firstNameOf('  Mary Ann  Smith-Jones ')]) {
         for (const explained of [false, true]) {
           for (const pasteStarted of [false, true]) {
             for (const ownCodeDone of [false, true]) {
@@ -28,10 +28,18 @@ test('a Mac has four steps ending on the shortcut; Windows needs no permission a
   assert.deepEqual(onboardingSteps(true), ['Hello', 'Try it', 'Your code']);
 });
 
-test('Vibe says 8 words or fewer on every step and state, the longest name included', () => {
+test('Vibe says 8 words or fewer on every step and state, whatever name was typed', () => {
   for (const s of allStates()) assert.ok(words(vibeLine(s)) <= 8, `${JSON.stringify(s)}: "${vibeLine(s)}"`);
   for (const started of [false, true]) assert.ok(words(welcomeBackLine(started)) <= 8);
   assert.equal(vibeLine({ ...allStates()[0]!, step: 0 }), "Hey! I'm Vibe. I explain your AI's code.");
+});
+
+test('the greeting uses only the first word of the typed name, and none when it is blank', () => {
+  assert.equal(firstNameOf('  Mary Ann  Smith-Jones '), 'Mary');
+  assert.equal(firstNameOf('   '), '');
+  const tryIt = (displayName: string) => vibeLine({ ...allStates()[0]!, step: 1, firstName: firstNameOf(displayName) });
+  assert.equal(tryIt('Mary Ann Smith'), 'Nice to meet you, Mary. Let\'s try one.');
+  assert.equal(tryIt(''), "Let's do one for real.");
 });
 
 test('each step has one primary button, except where the action is elsewhere: the paste target, System Settings', () => {

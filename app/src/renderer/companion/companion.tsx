@@ -21,7 +21,7 @@ import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { VibeBubble } from '../shared/vibeBubble';
-import { forwardAction, onboardingSteps, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
+import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
 import { Home, type TodayGoal } from './home';
 import { IC } from './icons';
 import { MORE_ICON, NAV, NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
@@ -429,7 +429,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const steps = onboardingSteps(isWindows);
   const pasteStep = step === 2;
   const macShortcut = !isWindows && step === 3;
-  const firstName = displayName.trim().split(/\s+/)[0] ?? '';
+  const firstName = firstNameOf(displayName);
   const keys = prettyAccel(shortcut);
   // Glyphs on the key caps; words in sentences, since many people don't know ⌃ is Control.
   const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
@@ -569,7 +569,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       </div>
       <div className="onboard__vibe">
         <Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} />
-        <VibeBubble large>{said}</VibeBubble>
+        {/* The bubble types its line out, so it isn't live: screen readers hear each whole line once, from the status. */}
+        <VibeBubble large live={false}>{said}</VibeBubble>
+        <p className="sr-only" role="status">{line}</p>
       </div>
 
       <FadeIn animKey={step} className="onboard__body">
@@ -601,7 +603,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <pre>{SAMPLE_LINES.join('\n')}</pre>
             </div>
             {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
-            <button type="button" className={explained ? 'onboard__quiet' : 'onboard__primary'} onClick={explainSample} aria-disabled={explained}>
+            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={explainSample} aria-disabled={explained}>
               {explained ? 'Explaining in the panel →' : 'Explain this code'}
             </button>
             <p className="onboard__lead">{explained
@@ -643,7 +645,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             <h1 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h1>
             {shortcutCard('Select code in any app, then press it', 'No copying, no pasting.', false)}
             <p className="onboard__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
-            <button type="button" className="onboard__primary" onClick={() => void turnOn()}>Turn on the shortcut</button>
+            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={() => void turnOn()}>Turn on the shortcut</button>
             <p className="onboard__lead">Pasting keeps working without it.</p>
           </>
         )}
@@ -735,12 +737,14 @@ function LockGlyph() {
  */
 function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
   const { started, fileError, explainPaste, chooseFile, attempt } = useOwnCodePaste();
-  const said = useVibeSays(welcomeBackLine(started), soundEffects);
+  const line = welcomeBackLine(started);
+  const said = useVibeSays(line, soundEffects);
   return (
     <div className="onboard onboard--welcome">
       <div className="onboard__vibe">
         <Buddy mood={started ? 'reading' : 'wave'} size={72} follow label="Vibe" />
-        <VibeBubble large>{said}</VibeBubble>
+        <VibeBubble large live={false}>{said}</VibeBubble>
+        <p className="sr-only" role="status">{line}</p>
       </div>
       <div className="onboard__body">
         <div className="onboard__paste">

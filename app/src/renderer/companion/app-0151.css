@@ -274,7 +274,10 @@
 :root[data-ui="v3"][data-v7] .onboard .paste-target__box pre { border: 0; border-radius: 12px; background: #fff; color: var(--u-ink); font-family: var(--u-mono); box-shadow: var(--u-shadow-whisper); }
 :root[data-ui="v3"][data-v7] .onboard .paste-target__error { color: #b42318; font: 500 13.5px/1.45 var(--u-sans); }
 :root[data-ui="v3"][data-v7] .onboard__paste > .onboard__more { justify-self: center; }
-:root[data-ui="v3"][data-v7] .onboard__integrations { margin-top: 12px; text-align: left; }
+/* The Integrations panel inside setup, as before: no lead sentence or card blurbs (first run shows names and states
+   only), and a capped height that scrolls, so the step keeps its footer in view. */
+:root[data-ui="v3"][data-v7] .onboard__integrations { max-height: 290px; overflow: auto; margin-top: 12px; padding-right: 5px; text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__integrations :is(.integ__lead, .integ-card__body p) { display: none; }
 
 /* Shortcut (Mac): the permission card of screen 7 (keycaps, what it does, "Allowed" once on), the why, one primary. */
 :root[data-ui="v3"][data-v7] .onboard__perm {
@@ -300,15 +303,16 @@
 :root[data-ui="v3"][data-v7] .onboard .shortcut-pill { border: 0; background: #fff; color: var(--u-ink); font: 500 13px/1 var(--u-sans); box-shadow: var(--u-shadow-whisper); }
 :root[data-ui="v3"][data-v7] .onboard .shortcut-pill--busy i { background: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.16); }
 
-/* Finish: 48 pieces fall once (SPEC §4); setup skips them under reduced motion and companion.css stops every animation. */
+/* Finish: 48 pieces fall once (SPEC §4); setup skips them under reduced motion and companion.css stops every animation.
+   Only the action and understood colours plus neutrals: amber means a problem and lilac is Vibe's own (tokens.css). */
 :root[data-ui="v3"][data-v7] .onboard__confetti { position: fixed; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
 :root[data-ui="v3"][data-v7] .onboard__confetti i {
   position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border-radius: 3px; background: var(--u-lime);
   animation: onboardConfetti 1.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; animation-delay: calc(var(--i) * 18ms);
 }
-:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+2) { background: var(--u-lilac); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+2) { background: var(--u-violet-lip); }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+3) { background: var(--u-violet); }
-:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+4) { width: 12px; height: 12px; border-radius: 50%; background: var(--u-amber); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+4) { width: 12px; height: 12px; border-radius: 50%; background: var(--u-plate); }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n) { animation-duration: 2s; margin-left: -30px; }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n+1) { animation-duration: 1.3s; margin-left: 20px; }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(5n) { top: -60px; }

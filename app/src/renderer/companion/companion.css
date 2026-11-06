@@ -2694,8 +2694,6 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 :root[data-theme="light"] .change-hero { border:1px solid #e7e3f4; border-radius:16px; background:linear-gradient(120deg,#fff9f5,#f1efff 54%,#f2f8ff); }
 :root[data-theme="light"] .ask-dock { background:linear-gradient(145deg,#fff,#fbfaff); box-shadow:0 16px 38px rgba(47,36,88,.14),inset 0 1px #fff; }
 
-/* First run: quiet, bright, and paced as a sequence instead of a dense dialog. */
-
 /* Sign in mirrors the same calm first-run surface. */
 .login { background:linear-gradient(145deg,#fff 0%,#f9f8ff 52%,#f3f6ff 100%); color:#302e37; }
 .login .sanFranWash { opacity:.2; }
