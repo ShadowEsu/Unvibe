@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DownloadLink } from "@/components/paper/DownloadLink";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
 /**
@@ -44,9 +43,10 @@ export function HomeDock() {
   }, []);
 
   const platform = device === "windows" ? "windows" : "mac";
+  // To the page's install box, not the file: the downloaded .dmg isn't notarized yet, so the Terminal line goes first.
   return (
     <aside className={on ? "ndock is-on" : "ndock"} aria-label="Get Unvibe" aria-hidden={!on} {...((on ? {} : { inert: "" }) as Record<string, string>)}>
-      <DownloadLink href={platform === "windows" ? BETA_WINDOWS_DIRECT_DOWNLOAD : BETA_MAC_DIRECT_DOWNLOAD} platform={platform} surface="mobile_bar" />
+      <DownloadLink href="#install" platform={platform} surface="mobile_bar" />
     </aside>
   );
 }

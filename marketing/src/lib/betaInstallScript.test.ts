@@ -464,9 +464,11 @@ describe("Mac install script text", () => {
     assert.match(script, /"event":"installed"/);
   });
 
-  it("ends by pointing at install help", () => {
+  it("ends by pointing at install help, then calls main on the very last line", () => {
     const lines = script.trimEnd().split("\n");
-    assert.ok(lines[lines.length - 1].includes(`If macOS blocks it, see ${HELP_URL}`), lines[lines.length - 1]);
+    assert.equal(lines[lines.length - 1], "main", "main runs only once the whole script has arrived");
+    assert.equal(lines[lines.length - 3], "}");
+    assert.ok(lines[lines.length - 4].includes(`If macOS blocks it, see ${HELP_URL}`), lines[lines.length - 4]);
   });
 });
 
