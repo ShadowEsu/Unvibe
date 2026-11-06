@@ -1,0 +1,351 @@
+name: QA Gatekeeper proof
+
+# QA only, on the qa/gatekeeper-proof branch (BOSS P0, Thu 5 Nov 17:2x: "could not verify Unvibe"; PR download-fix).
+# Each job is a fresh runner.
+#  mac-curl  The site's one-line Terminal install (curl -fsSL https://unvibe.site/install.sh | bash) on macOS 15,
+#            then open -a Unvibe: the installed app has no quarantine attribute and opens with no Gatekeeper dialog.
+#  mac-dmg   The release DMG marked the way a browser download is (com.apple.quarantine), opened like a
+#            double-click, the app copied to Applications by the Finder, then opened: macOS 15 blocks it.
+#            Screenshots of the "Not Opened" dialog and of Privacy & Security at Open Anyway, at native size.
+#  windows   Best effort: the setup exe with a Mark of the Web, opened through the shell like a double-click,
+#            to see whether SmartScreen's "Windows protected your PC" shows on a Windows Server runner.
+# install.sh's anonymous 'installed' count is pointed at 127.0.0.1 (the only change; the diff is in the
+# artifact), and any install that saved an install id is flagged as QA, as real-device-test.yml does.
+on:
+  push:
+    branches: [qa/gatekeeper-proof]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  V: "0.1.49"
+
+jobs:
+  mac-curl:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/gk"
+
+      - name: Terminal install, then open -a Unvibe
+        run: |
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/gk"; W="$RUNNER_TEMP/gkwin"
+          r() { echo "$*" | tee -a "$out/report.txt"; }
+          r "macOS $(sw_vers -productVersion) ($(sw_vers -buildVersion)), $(uname -m), $(spctl --status)"
+          curl -fsSL https://unvibe.site/install.sh -o "$out/install.sh.live"
+          r "install.sh (live) sha256 $(shasum -a 256 "$out/install.sh.live" | cut -d' ' -f1)"
+          # The one-liner as the site gives it, with only the anonymous 'installed' count sent nowhere.
+          curl -fsSL https://unvibe.site/install.sh | sed 's#^TRACK=.*#TRACK="http://127.0.0.1:9/qa-no-count"#' | bash 2>&1 | tee "$out/install.log"
+          curl -fsSL https://unvibe.site/install.sh | sed 's#^TRACK=.*#TRACK="http://127.0.0.1:9/qa-no-count"#' > "$out/install.sh.run"
+          diff "$out/install.sh.live" "$out/install.sh.run" > "$out/install.sh.diff" || true
+          r "the script that ran differs from the live one only in: $(grep '^[<>]' "$out/install.sh.diff" | tr '\n' ' ')"
+          sleep 12
+          xattr -lr /Applications/Unvibe.app > "$out/xattr-app.txt" 2>&1 || true
+          q=$(grep -c 'com.apple.quarantine' "$out/xattr-app.txt" || true)
+          r "quarantine attributes anywhere in /Applications/Unvibe.app: $q"
+          spctl --assess --type execute -vv /Applications/Unvibe.app > "$out/spctl-app.txt" 2>&1 || true
+          r "spctl --assess on the installed app (Gatekeeper's verdict if it checked): $(tr '\n' ' ' < "$out/spctl-app.txt")"
+          codesign -dvv /Applications/Unvibe.app 2>&1 | grep -E '^(Authority|TeamIdentifier|Identifier)=' > "$out/codesign.txt" || true
+          r "signature: $(tr '\n' ' ' < "$out/codesign.txt")"
+          p1=$(pgrep -x Unvibe | head -1 || true)
+          "$W" list > "$out/windows-after-install.txt"
+          g1=$(awk -F'\t' '$2=="CoreServicesUIAgent"' "$out/windows-after-install.txt" | wc -l | tr -d ' ')
+          screencapture -x "$out/curl-1-after-install-sh.png"
+          r "after install.sh's own 'open': Unvibe pid ${p1:-NONE}; Gatekeeper (CoreServicesUIAgent) windows on screen: $g1"
+
+          osascript -e 'tell application id "com.unvibe.app" to quit' >/dev/null 2>&1 || true
+          sleep 3; pkill -x Unvibe 2>/dev/null || true; sleep 2
+          r "Unvibe stopped: $([ -z "$(pgrep -x Unvibe)" ] && echo yes || echo no)"
+          open -a Unvibe
+          sleep 12
+          p2=$(pgrep -x Unvibe | head -1 || true)
+          "$W" list > "$out/windows-open-a.txt"
+          g2=$(awk -F'\t' '$2=="CoreServicesUIAgent"' "$out/windows-open-a.txt" | wc -l | tr -d ' ')
+          u2=$(awk -F'\t' '$2=="Unvibe"' "$out/windows-open-a.txt" | wc -l | tr -d ' ')
+          screencapture -x "$out/curl-2-open-a.png"
+          sleep 5
+          alive=$([ -n "$p2" ] && kill -0 "$p2" 2>/dev/null && echo yes || echo no)
+          r "open -a Unvibe: pid ${p2:-NONE}, still running 17 s later: $alive; Unvibe windows on screen: $u2; Gatekeeper (CoreServicesUIAgent) windows: $g2"
+          log show --last 5m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' > "$out/gk-log.txt" 2>&1 || true
+          grep -i -E 'unvibe' "$out/gk-log.txt" | tail -40 > "$out/gk-log-unvibe.txt" || true
+          r "syspolicyd/CoreServicesUIAgent log lines naming Unvibe (last 5 min): $(wc -l < "$out/gk-log-unvibe.txt" | tr -d ' ')"
+          if [ "$q" = 0 ] && [ -n "$p2" ] && [ "$alive" = yes ] && [ "$g2" = 0 ]; then
+            r "PASS  Terminal install: no quarantine, open -a Unvibe launched it, no Gatekeeper dialog"
+          else
+            r "FAIL  Terminal install: quarantine=$q pid=${p2:-none} alive=$alive gatekeeper_windows=$g2"; exit 1
+          fi
+
+      - name: Flag the install as QA
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          osascript -e 'tell application id "com.unvibe.app" to quit' >/dev/null 2>&1 || true
+          sleep 2; pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          if [ ! -f "$store" ]; then echo "QA install flag: skipped, the app saved no store"; exit 0; fi
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store")
+          if [ -z "$id" ]; then echo "QA install flag: skipped, no installId in the store"; exit 0; fi
+          answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+            --data "{\"installId\":\"$id\"}") || answer=$'\ncurl failed'
+          code=$(printf '%s' "$answer" | tail -n 1)
+          matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2)
+          echo "QA install flag: $code matched=${matched:-none}"
+          if [ "$code" = 200 ] && [ "$matched" = true ]; then exit 0; fi
+          if [ "$code" = 200 ]; then echo "QA install flag: no install row for this id on the server (the app never reached the API), so nothing counts"; exit 0; fi
+          exit 1
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gk-mac-curl
+          path: ${{ runner.temp }}/gk
+          retention-days: 14
+
+  mac-dmg:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/gk"
+
+      - name: Browser-style DMG download, Finder copy, open
+        run: |
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/gk"; W="$RUNNER_TEMP/gkwin"
+          r() { echo "$*" | tee -a "$out/report.txt"; }
+          r "macOS $(sw_vers -productVersion) ($(sw_vers -buildVersion)), $(uname -m), $(spctl --status)"
+          dmg="$HOME/Downloads/Unvibe-$V-mac-arm64.dmg"
+          curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/Unvibe-$V-mac-arm64.dmg"
+          # A browser download carries com.apple.quarantine; curl's doesn't, so it is added here as Safari writes it.
+          xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$dmg"
+          r "DMG quarantine: $(xattr -p com.apple.quarantine "$dmg")"
+          spctl --assess --type open --context context:primary-signature -vv "$dmg" > "$out/spctl-dmg.txt" 2>&1 || true
+          r "spctl on the DMG: $(tr '\n' ' ' < "$out/spctl-dmg.txt")"
+          # Double-click: the Finder's disk image mounter.
+          open "$dmg"
+          vol=""
+          for i in $(seq 1 60); do vol=$(ls -d /Volumes/*/Unvibe.app 2>/dev/null | head -1 || true); [ -n "$vol" ] && break; sleep 1; done
+          [ -n "$vol" ] || { r "FAIL  the DMG did not mount"; exit 1; }
+          vol=$(dirname "$vol")
+          mount | grep -F "$vol" | tee "$out/mount.txt"
+          r "mounted at $vol; quarantine on the app in the DMG: $(xattr -p com.apple.quarantine "$vol/Unvibe.app" 2>/dev/null || echo none)"
+          # Drag to Applications = a Finder copy.
+          if osascript -e "set src to (POSIX file \"$vol/Unvibe.app\") as alias" -e 'set dst to (POSIX file "/Applications") as alias' \
+            -e 'with timeout of 300 seconds' -e 'tell application "Finder" to duplicate src to dst with replacing' -e 'end timeout' > "$out/finder-copy.txt" 2>&1; then
+            r "copied to /Applications by the Finder"
+          else
+            r "Finder copy failed ($(tr '\n' ' ' < "$out/finder-copy.txt")); copied with ditto, which keeps extended attributes as the Finder does"
+            ditto "$vol/Unvibe.app" /Applications/Unvibe.app
+          fi
+          qa=$(xattr -p com.apple.quarantine /Applications/Unvibe.app 2>/dev/null || true)
+          r "quarantine on /Applications/Unvibe.app: ${qa:-NONE}"
+          if [ -z "$qa" ]; then
+            xattr -w com.apple.quarantine "$(xattr -p com.apple.quarantine "$dmg")" /Applications/Unvibe.app
+            r "NOTE the copy lost the attribute, so the DMG's was put on the app (what a Finder drag from a quarantined DMG keeps)"
+          fi
+          spctl --assess --type execute -vv /Applications/Unvibe.app > "$out/spctl-app.txt" 2>&1 || true
+          r "spctl --assess on the app: $(tr '\n' ' ' < "$out/spctl-app.txt")"
+
+          # Double-click the app.
+          open /Applications/Unvibe.app 2> "$out/open.txt" || true
+          sleep 8
+          p=$(pgrep -x Unvibe | head -1 || true)
+          "$W" list > "$out/windows-blocked.txt"
+          screencapture -x "$out/dmg-0-full-screen-blocked.png"
+          dlg=$("$W" find CoreServicesUIAgent || true)
+          if [ -n "$dlg" ]; then
+            read -r did dx dy dw dh <<< "$dlg"
+            screencapture -x -o -l "$did" "$out/dmg-1-not-opened-dialog.png"
+            r "Gatekeeper dialog: CoreServicesUIAgent window $did at $dx,$dy, ${dw}x${dh} points"
+          else
+            r "no CoreServicesUIAgent window on screen"
+          fi
+          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get value of every static text of window 1' > "$out/dialog-text.txt" 2>&1 || true
+          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get name of every button of window 1' > "$out/dialog-buttons.txt" 2>&1 || true
+          r "dialog text: $(tr '\n' ' ' < "$out/dialog-text.txt")"
+          r "dialog buttons: $(tr '\n' ' ' < "$out/dialog-buttons.txt")"
+          r "Unvibe running after open: ${p:-NO}"
+          # Done, the way the person closes it.
+          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1 || true
+          sleep 2
+
+          # Privacy & Security, scrolled to Open Anyway.
+          open "x-apple.systempreferences:com.apple.preference.security"
+          sleep 8
+          S() { osascript .github/qa/settings.applescript "$@" 2>&1 | tail -1; }
+          r "System Settings window: $(S grow)"
+          sleep 1
+          res=$(S scroll); echo "first look: $res"
+          dir=-3
+          for i in $(seq 1 14); do
+            read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
+            want=down; by=0
+            if [[ $res == found* ]]; then
+              read -r _ bx by bw bh <<< "$res"
+              if (( by >= wy + 260 && by + bh <= wy + wh - 40 )); then break; fi
+              (( by + bh > wy + wh - 40 )) || want=up
+            fi
+            lines=$dir; [ "$want" = up ] && lines=$(( -dir ))
+            "$W" scroll $(( wx + ww * 2 / 3 )) $(( wy + wh / 2 )) "$lines" 2
+            sleep 1
+            res=$(S find)
+            if [[ $res == found* && $want == down && $by -gt 0 ]]; then
+              read -r _ _ by2 _ _ <<< "$res"
+              (( by2 > by )) && dir=$(( -dir ))
+            fi
+          done
+          echo "Open Anyway: $res" | tee -a "$out/report.txt"
+          sleep 1
+          read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
+          [ "$wid" != 0 ] && screencapture -x -o -l "$wid" "$out/dmg-2-privacy-security-open-anyway.png"
+          screencapture -x "$out/dmg-3-full-screen-settings.png"
+          S texts > "$out/settings-texts.txt" 2>&1 || true
+          r "Privacy & Security text naming Unvibe: $(tr '\n' ' ' < "$out/settings-texts.txt")"
+          log show --last 6m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' > "$out/gk-log.txt" 2>&1 || true
+          grep -i -E 'unvibe' "$out/gk-log.txt" | tail -60 > "$out/gk-log-unvibe.txt" || true
+          r "syspolicyd/CoreServicesUIAgent log lines naming Unvibe: $(wc -l < "$out/gk-log-unvibe.txt" | tr -d ' ')"
+          if [ -z "$p" ] && [ -n "$dlg" ] && grep -q rejected "$out/spctl-app.txt" && [[ $res == found* ]]; then
+            r "PASS  DMG from a browser: blocked with the 'Not Opened' dialog, app not running, Open Anyway shown in Privacy & Security"
+          else
+            r "CHECK DMG path: running=${p:-no} dialog=${dlg:-none} open_anyway=$res"; exit 1
+          fi
+
+      - name: Flag any install as QA
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          if [ ! -f "$store" ]; then echo "QA install flag: skipped, the app never ran (no store)"; exit 0; fi
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store")
+          if [ -z "$id" ]; then echo "QA install flag: skipped, no installId in the store"; exit 0; fi
+          answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+            --data "{\"installId\":\"$id\"}") || answer=$'\ncurl failed'
+          code=$(printf '%s' "$answer" | tail -n 1)
+          matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2)
+          echo "QA install flag: $code matched=${matched:-none}"
+          [ "$code" = 200 ] || exit 1
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gk-mac-dmg
+          path: ${{ runner.temp }}/gk
+          retention-days: 14
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Require the QA flag token
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { Write-Error 'UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed.'; exit 1 }
+          'QA flag token present'
+
+      - name: Setup exe with a Mark of the Web, opened like a double-click
+        shell: powershell
+        run: |
+          $out = "$env:RUNNER_TEMP\gk"; New-Item -ItemType Directory -Force $out | Out-Null
+          function R($s) { $s | Tee-Object -FilePath "$out\report.txt" -Append }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing, UIAutomationClient, UIAutomationTypes
+          function Shot($name) {
+            $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+            $bmp.Save("$out\$name.png")
+          }
+          $os = Get-CimInstance Win32_OperatingSystem
+          R "Windows: $($os.Caption) $($os.Version) build $($os.BuildNumber)"
+          foreach ($k in 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer', 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System') {
+            $p = Get-ItemProperty $k -ErrorAction SilentlyContinue
+            R "$k SmartScreenEnabled=$($p.SmartScreenEnabled) EnableSmartScreen=$($p.EnableSmartScreen)"
+          }
+          $f = "$env:USERPROFILE\Downloads\Unvibe-$env:V-win-x64-setup.exe"
+          $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/Unvibe-$env:V-win-x64-setup.exe"
+          Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing
+          # What a browser writes on a download: the Internet zone.
+          Set-Content -Path $f -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
+          R "Zone.Identifier: $((Get-Content $f -Stream Zone.Identifier) -join ' ')"
+          $sig = Get-AuthenticodeSignature $f
+          R "Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
+          Start-Process explorer.exe -ArgumentList "`"$f`""
+          Start-Sleep 15
+          Shot 'win-1-after-double-click'
+          $wins = Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }
+          R "windows with titles: $($wins -join ' | ')"
+          $root = [System.Windows.Automation.AutomationElement]::RootElement
+          $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'More info')
+          $more = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
+          if ($more) {
+            R 'SmartScreen: "More info" found'
+            try { $more.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch { R "More info click: $($_.Exception.Message)" }
+            Start-Sleep 3
+            Shot 'win-2-smartscreen-more-info'
+            $run = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'Run anyway')))
+            R "SmartScreen: 'Run anyway' shown: $([bool]$run)"
+            $dont = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, "Don't run")))
+            if ($dont) { try { $dont.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch {} }
+          } else {
+            R 'SmartScreen: no "More info" on screen (no SmartScreen prompt on this runner)'
+          }
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | ForEach-Object { R "stopping $($_.ProcessName)"; Stop-Process -Id $_.Id -Force }
+
+      - name: Flag any install as QA
+        if: always()
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          $store = Join-Path $env:APPDATA 'Unvibe\unvibe-store.json'
+          if (-not (Test-Path $store)) { 'QA install flag: skipped, the app never ran (no store)'; exit 0 }
+          $installId = (Get-Content $store -Raw | ConvertFrom-Json -AsHashtable)['installId']
+          if (-not $installId) { 'QA install flag: skipped, no installId in the store'; exit 0 }
+          $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+            -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
+            -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
+          "QA install flag: $($r.StatusCode) matched=$(($r.Content | ConvertFrom-Json).matched)"
+          if ($r.StatusCode -ne 200) { exit 1 }
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gk-windows
+          path: ${{ runner.temp }}/gk
+          retention-days: 14
