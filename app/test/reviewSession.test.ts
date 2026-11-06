@@ -43,7 +43,9 @@ net.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<R
     if (reviewRefusal) return Response.json(reviewRefusal.body, { status: reviewRefusal.status });
     const text = body.question
       ? `ANSWER to "${body.question}"`
-      : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
+      : body.detail === 'short'
+        ? `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''}, short: it delays a call until input goes quiet.`
+        : `EXPLANATION at ${body.level}${body.variant === 'different' ? ' (different)' : ''} of a debounce helper that waits for quiet input.`;
     const events = reviewEvents ?? [{ type: 'token', text }, { type: 'done', model: 'test', mock: false }];
     return new Response(events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } });
   }
@@ -117,6 +119,51 @@ test('"Explain differently" applies to that request only', async () => {
   assert.match(lesson(s.reviewId)?.explanation ?? '', /\(different\)/);
   await runReview(win, s, { level: 'advanced' });
   assert.equal(reviewBodies().at(-1)?.variant, 'default');
+});
+
+test('a selection explanation asks for the short answer; More detail sends it back and streams under it', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('beginner');
+  await runReview(win, s, { level: 'beginner' });
+  const first = reviewBodies().at(-1);
+  assert.equal(first?.detail, 'short');
+  assert.equal(first?.shortAnswer, undefined);
+  const shortText = 'EXPLANATION at beginner, short: it delays a call until input goes quiet.';
+  assert.equal(events.find((ev) => ev.type === 'status')?.short, true, 'the panel knows the answer is short before it streams');
+  assert.equal(events.find((ev) => ev.type === 'done')?.short, true);
+  assert.equal(lesson(s.reviewId)?.explanation, shortText);
+
+  events.length = 0;
+  await runReview(win, s, { level: 'beginner', moreDetail: true });
+  const detail = reviewBodies().at(-1);
+  assert.equal(detail?.detail, 'full');
+  assert.equal(detail?.shortAnswer, shortText);
+  assert.equal(detail?.question, undefined);
+  // Every event of the detail run is tagged, so the panel keeps the short answer above it.
+  assert.ok(events.filter((ev) => ev.type !== 'usage').every((ev) => ev.part === 'detail'), JSON.stringify(events));
+  assert.equal(events.find((ev) => ev.type === 'status')?.resetQuiz, false);
+  // The lesson keeps both, short answer first.
+  assert.equal(lesson(s.reviewId)?.explanation, `${shortText}\n\nEXPLANATION at beginner of a debounce helper that waits for quiet input.`);
+
+  // A new explanation (another depth) is short again and forgets the old short answer.
+  await runReview(win, s, { level: 'advanced' });
+  assert.equal(reviewBodies().at(-1)?.detail, 'short');
+  assert.equal(reviewBodies().at(-1)?.shortAnswer, undefined);
+  assert.equal(lesson(s.reviewId)?.explanation, 'EXPLANATION at advanced, short: it delays a call until input goes quiet.');
+});
+
+test('More detail without a finished short answer is an ordinary explanation; follow-up questions stay full', async () => {
+  received.length = 0;
+  const { win, events } = panel();
+  const s = session('beginner');
+  await runReview(win, s, { level: 'beginner', moreDetail: true });
+  assert.equal(reviewBodies().at(-1)?.detail, 'short', 'nothing to go on from, so it is a new short answer');
+  assert.ok(events.every((ev) => ev.part === undefined));
+
+  await runReview(win, s, { level: 'beginner', question: 'Why wait?' });
+  assert.equal(reviewBodies().at(-1)?.detail, 'full');
+  assert.equal(reviewBodies().at(-1)?.shortAnswer, undefined);
 });
 
 test('a link-captured review sends nothing until Explain, then exactly one request', async () => {
@@ -309,18 +356,41 @@ test('streamed token, done and error events reach the panel with only their chec
     reviewEvents = null;
   }
   const streamed = events.filter((ev) => ev.type === 'token' || ev.type === 'done' || ev.type === 'error');
+  // `short` is the app's own flag (this run asked for the short answer), never a field the service sent.
   assert.deepEqual(streamed, [
     { type: 'token', text: 'Kept words.', tabId: '1' },
     { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
-    { type: 'done', model: 'service-model', mock: false, tabId: '1' },
-    { type: 'done', model: undefined, mock: true, tabId: '1' },
-    { type: 'done', model: 'm'.repeat(80), mock: false, tabId: '1' },
+    { type: 'done', model: 'service-model', mock: false, short: true, tabId: '1' },
+    { type: 'done', model: undefined, mock: true, short: true, tabId: '1' },
+    { type: 'done', model: 'm'.repeat(80), mock: false, short: true, tabId: '1' },
   ]);
   for (const ev of streamed) {
-    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'tabId', 'type'];
+    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'short', 'tabId', 'type'];
     assert.deepEqual(Object.keys(ev).sort(), expected);
     assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
   }
+});
+
+test("the service's error is the last word: a stream that ends on it shows that message, not the cut-off notice", async () => {
+  const { win, events } = panel();
+  reviewEvents = [{ type: 'error', message: 'AI features are paused for maintenance. Back soon.' }];
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.deepEqual(events.filter((ev) => ev.type === 'error').map((ev) => ev.message), ['AI features are paused for maintenance. Back soon.']);
+});
+
+test('a stream that stops with neither done nor an error still says it was cut off', async () => {
+  const { win, events } = panel();
+  reviewEvents = [{ type: 'token', text: 'Half an' }];
+  try {
+    await runReview(win, session('intermediate'), { level: 'intermediate' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.deepEqual(events.filter((ev) => ev.type === 'error').map((ev) => ev.message), ['The explanation ended before it was complete. Please try again.']);
 });
 
 test('Test me asks quick-check, scenario, recall, then makes no fourth request', async () => {
@@ -418,4 +488,81 @@ test('question allowance refusals keep the explanation and use the existing plan
   await startComprehension(win, s);
   assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1, 'refusals do not consume a question position');
   assert.match(lesson(s.reviewId)?.explanation ?? '', /^EXPLANATION/);
+});
+
+/** A capture in a trial build: the app took one selection credit before the request (main.ts takeSelectionCredit). */
+function capturedWithCredit(level: ReviewSession['level']): ReviewSession {
+  assert.equal(store().consumeBetaSelectedCodePrompt().ok, true);
+  return { ...session(level), selectionCredit: 'held' };
+}
+const creditsUsed = () => store().betaSelectedCodeUsage().used;
+
+test('REG-83: a refused or broken explanation gives its selection credit back; a finished one keeps it', async () => {
+  const { win } = panel();
+  const refusals: Array<[string, () => void]> = [
+    ['AI paused (streamed error)', () => { reviewEvents = [{ type: 'error', message: 'AI features are paused for maintenance. Back soon.' }]; }],
+    ['503 from the service', () => { reviewRefusal = { status: 503, body: { error: 'ai_paused', message: 'AI features are paused for maintenance. Back soon.' } }; }],
+    ['a stream cut off before done', () => { reviewEvents = [{ type: 'token', text: 'Half an' }]; }],
+  ];
+  for (const [label, refuse] of refusals) {
+    const before = creditsUsed();
+    const s = capturedWithCredit('beginner');
+    assert.equal(creditsUsed(), before + 1);
+    refuse();
+    try {
+      await runReview(win, s, { level: 'beginner' });
+    } finally {
+      reviewEvents = null;
+      reviewRefusal = null;
+    }
+    assert.equal(creditsUsed(), before, `${label}: the credit is back`);
+    assert.equal(s.selectionCredit, 'returned', label);
+  }
+
+  const before = creditsUsed();
+  const s = capturedWithCredit('beginner');
+  await runReview(win, s, { level: 'beginner' });
+  assert.equal(creditsUsed(), before + 1, 'an explanation that arrives uses its credit');
+  assert.equal(s.selectionCredit, undefined);
+  // Later runs on the same capture (another depth, a follow-up) neither take nor give back a credit.
+  reviewRefusal = { status: 503, body: { error: 'ai_paused', message: 'Paused.' } };
+  try {
+    await runReview(win, s, { level: 'advanced' });
+    await runReview(win, s, { level: 'advanced', question: 'Why?' });
+  } finally {
+    reviewRefusal = null;
+  }
+  assert.equal(creditsUsed(), before + 1);
+});
+
+test('REG-83: trying again after a refund takes the credit again, and is refused once credits are used up', async () => {
+  const { win, events } = panel();
+  const before = creditsUsed();
+  const s = capturedWithCredit('beginner');
+  reviewEvents = [{ type: 'error', message: 'Paused.' }];
+  try {
+    await runReview(win, s, { level: 'beginner' });
+  } finally {
+    reviewEvents = null;
+  }
+  assert.equal(creditsUsed(), before);
+  await runReview(win, s, { level: 'beginner' });
+  assert.equal(creditsUsed(), before + 1, 'the retry that explained paid for it');
+  assert.equal(s.selectionCredit, undefined);
+
+  // Credits used up while a refunded capture waits: its retry sends nothing and says why.
+  const t = capturedWithCredit('beginner');
+  reviewEvents = [{ type: 'error', message: 'Paused.' }];
+  try {
+    await runReview(win, t, { level: 'beginner' });
+  } finally {
+    reviewEvents = null;
+  }
+  while (store().consumeBetaSelectedCodePrompt().ok) { /* use up the rest */ }
+  received.length = 0;
+  events.length = 0;
+  await runReview(win, t, { level: 'beginner' });
+  assert.equal(reviewBodies().length, 0, 'no request without a credit');
+  assert.match(String(events.find((ev) => ev.type === 'error')?.message), /selected-code prompts/);
+  assert.equal(t.selectionCredit, 'returned');
 });

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
-import { RichText } from '../src/renderer/shared/richText';
+import { createElement, Fragment } from 'react';
+import { renderSummary, RichText } from '../src/renderer/shared/richText';
 
 function markup(text: string, streaming = false): string {
   return renderToStaticMarkup(createElement(RichText, { text, streaming }));
@@ -56,4 +56,11 @@ test('streaming leaves finished lines and open fenced blocks alone', () => {
   const finished = markup('Use a ` mark like this.\nAnd go on', true);
   assert.match(finished, /Use a ` mark like this\./);
   assert.match(markup('```js\nconst a = `x', true), / a = `x<\/pre>/);
+});
+
+test('a saved explanation preview shows no raw heading or citation markup (QA 0.1.46 P3)', () => {
+  const summary = '## What it does\nRetries `fetch` up to 3 times [[cite:src/lib/retry.ts:1-24]] with **backoff**.';
+  const html = renderToStaticMarkup(createElement(Fragment, null, ...renderSummary(summary)));
+  assert.doesNotMatch(html, /##|\[\[|cite:|\*\*/);
+  assert.match(html, /^What it does Retries <code class="inline">fetch<\/code> up to 3 times <span class="cite"[^>]*>[^<]*retry\.ts[^<]*<\/span> with <strong>backoff<\/strong>\.$/);
 });

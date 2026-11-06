@@ -36,6 +36,10 @@ export interface ReviewRequestPayload {
   context: ReviewContext;
   question?: string;
   variant?: 'default' | 'different';
+  /** 'short': 2 to 4 plain sentences (the default for a selection). 'full': the full depth ("More detail"). */
+  detail?: 'short' | 'full';
+  /** With detail 'full' after a short answer: that answer, so the detail goes on from it without repeating it. */
+  shortAnswer?: string;
   quizMode?: QuizMode;
 }
 

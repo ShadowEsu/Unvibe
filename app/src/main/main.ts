@@ -283,16 +283,31 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
   return { win, fresh: true };
 }
 
+/** A picked file's name, project and path on the session, as the panel's own file picker records them. */
+interface FileMeta { file?: string; project?: string; sourceFilePath?: string }
+
+function applyFileMeta(session: ReviewSession, meta: FileMeta | undefined): void {
+  if (!meta) return;
+  session.file = meta.file;
+  session.project = meta.project;
+  session.sourceFilePath = meta.sourceFilePath;
+  session.snapshotText = meta.sourceFilePath && session.code ? session.code.slice(0, 12_000) : undefined;
+}
+
 function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
   confirmFrom: ConfirmReason | null = null,
+  meta?: FileMeta,
+  credit: SelectionCredit = 'free',
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  applyFileMeta(session, meta);
+  if (credit === 'held') session.selectionCredit = 'held';
   if (confirmFrom && code) {
     session.awaitingConfirm = true;
     session.confirmFrom = confirmFrom;
@@ -305,12 +320,15 @@ function beginCaptureOnActiveTab(
   if (start) void runReview(win, session, { level: session.level });
 }
 
-/** Trial builds count selected-code prompts on this computer. False, with a notice, once they're used up. */
-function allowSelectedCodePrompt(): boolean {
-  if (!trialBuildEnabled() || fullProductBuildEnabled()) return true;
-  if (store().consumeBetaSelectedCodePrompt().ok) return true;
+/** 'held': a trial build took one local selected-code credit; 'free': this build doesn't count them. */
+type SelectionCredit = 'held' | 'free';
+
+/** Trial builds count selected-code prompts on this computer. Null, with a notice, once they're used up. */
+function takeSelectionCredit(): SelectionCredit | null {
+  if (!trialBuildEnabled() || fullProductBuildEnabled()) return 'free';
+  if (store().consumeBetaSelectedCodePrompt().ok) return 'held';
   notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
-  return false;
+  return null;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -565,7 +583,7 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
  * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
  */
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -633,7 +651,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   // A link-started (or Linux PRIMARY) capture is counted when Explain is pressed (widget:request), not when it arrives.
-  if (code && !confirmFrom && !allowSelectedCodePrompt()) return;
+  const credit = code && !confirmFrom ? takeSelectionCredit() : 'free';
+  if (credit === null) return;
   if (code && confirmFrom) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
   // An open panel keeps its empty state mounted, so tell it the new answer (a fresh one asks on mount).
@@ -643,6 +662,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
     const session = makeSession(activeTabId, code, sourceApp);
+    applyFileMeta(session, options.captured?.meta);
+    if (credit === 'held') session.selectionCredit = 'held';
     if (confirmFrom && code) {
       session.awaitingConfirm = true;
       session.confirmFrom = confirmFrom;
@@ -650,7 +671,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom);
+  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -951,7 +972,9 @@ app.whenReady().then(() => {
     if (!win || !session) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
-      if (!allowSelectedCodePrompt()) return;
+      const credit = takeSelectionCredit();
+      if (credit === null) return;
+      if (credit === 'held') session.selectionCredit = 'held';
       session.awaitingConfirm = false;
     }
     void runReview(win, session, opts);
@@ -1003,12 +1026,19 @@ app.whenReady().then(() => {
     }
     return { ok: true as const };
   });
-  // The companion's paste step offers a file too; it explains in the panel like a shortcut press.
+  // The companion's paste step offers a file too; it explains in the panel like a shortcut press, and
+  // records the file and project as the panel's picker does (QA 0.1.46 P3: Library said "selection").
   ipcMain.handle('companion:pickFile', async () => {
     if (!companion || companion.isDestroyed()) return { ok: false as const };
     const picked = await chooseCodeFile(companion);
     if (!picked.ok) return picked;
-    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath) } });
+    const root = await resolveRepoRoot(path.dirname(picked.filePath));
+    const meta: FileMeta = {
+      file: root ? path.relative(root, picked.filePath) : path.basename(picked.filePath),
+      project: root ? path.basename(root) : undefined,
+      sourceFilePath: picked.filePath,
+    };
+    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath), meta } });
     return { ok: true as const };
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {

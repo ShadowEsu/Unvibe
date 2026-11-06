@@ -6,6 +6,7 @@ import { playTone } from '../shared/tones';
 import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { linesLabel } from '../../core/linesLabel';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -55,7 +56,7 @@ function clockTime(iso: string): string {
 function LessonCode({ code, language, tall = false }: { code: string; language?: string; tall?: boolean }) {
   return (
     <div className={`lesson-code${tall ? ' lesson-code--tall' : ''}`}>
-      <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{code.split('\n').length} lines</span></div>
+      <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{linesLabel(code.split('\n').length)}</span></div>
       <pre><code>{code}</code></pre>
     </div>
   );
@@ -698,7 +699,7 @@ export function Learn({
                           <span className="survey-pick__body">
                             <strong>{item.title}</strong>
                             <span>
-                              {item.file || item.project || item.meta || `${item.lines} lines`}
+                              {item.file || item.project || item.meta || linesLabel(item.lines)}
                               {' · '}
                               {dayGroup(item.ts)}
                             </span>
