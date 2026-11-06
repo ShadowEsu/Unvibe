@@ -341,7 +341,7 @@ const FILM4_TAKES = {
 /**
  * One take: the text goes in through the panel's paste box at Beginner (widget:usePaste, the page's text, never the
  * OS clipboard). A fresh install asks for the send agreement before its first own code goes out: agree as a new user
- * would, then send the same text again. The full answer streams, and the finished panel is held 4 s as the app left
+ * would; the panel then explains the waiting code itself (sent again only if it doesn't). The full answer streams, and the finished panel is held 4 s as the app left
  * it (the film's tail); only after that is it scrolled to the top for a still.
  */
 async function pasteTake(label, { sha256, text }, expect) {
@@ -363,7 +363,14 @@ async function pasteTake(label, { sha256, text }, expect) {
       await (await windowWith('widget.html')).evaluate(([t]) => window.unvibe.usePaste({ text: t, level: 'beginner' }), [text]);
     };
     await send();
-    if (await agreeIfAsked(await windowWith('widget.html'))) await send();
+    // After Continue the panel explains the code that waited by itself (widget.tsx onAgreed → request). Sending
+    // again would abort that run after the server counted it (run 42155987974: one answer, two explanations spent),
+    // so only send again if the panel did not start on its own within 5 s.
+    if (await agreeIfAsked(await windowWith('widget.html'))) {
+      mark(`${label}: agreed`);
+      const resumed = await (await windowWith('widget.html')).locator('.body .cursor, .card--done').first().waitFor({ timeout: 5000 }).then(() => true, () => false);
+      if (!resumed) await send();
+    }
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: expect }).first().waitFor({ timeout: 30000 });
     await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).then(() => mark(`${label}: streaming`)).catch(() => {});
     const done = await settledPanel();
