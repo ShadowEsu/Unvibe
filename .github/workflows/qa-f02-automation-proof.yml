@@ -17,15 +17,21 @@ jobs:
         include:
           - build: fix
             tag: fix
+            run: "42187582954"
+          # #206 before its review fixes: leg C should catch its System Events lookup on a clipboard explain.
+          - build: fixv1
+            tag: fixv1
+            run: "42184191246"
           - build: v0.1.49
             tag: v0149
+            run: ""
     runs-on: macos-15
     timeout-minutes: 25
     env:
-      FIX_BUILD_RUN: "42184191246"
       # Install ids allow only letters, digits, - and _ (qa-install answers 400 to a dot).
       ID_A: qa-f02a-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
       ID_B: qa-f02b-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
+      ID_C: qa-f02c-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
     steps:
       - name: Flag this run's install ids as QA before any launch
         shell: bash
@@ -33,7 +39,7 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
-          for id in "$ID_A" "$ID_B"; do
+          for id in "$ID_A" "$ID_B" "$ID_C"; do
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
               -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
               --data "{\"installId\":\"$id\"}") || { echo "::error::pre-flag $id: curl failed"; exit 1; }
@@ -44,11 +50,11 @@ jobs:
           done
 
       - name: Get the fix build
-        if: matrix.build == 'fix'
+        if: matrix.run != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
-          run-id: ${{ env.FIX_BUILD_RUN }}
+          run-id: ${{ matrix.run }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/build
 
@@ -56,7 +62,7 @@ jobs:
         shell: bash
         run: |
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
-          if [ "${{ matrix.build }}" = fix ]; then cp "$(ls "$RUNNER_TEMP"/build/*-mac-$arch.dmg | head -1)" "$RUNNER_TEMP/Unvibe.dmg"
+          if [ -n "${{ matrix.run }}" ]; then cp "$(ls "$RUNNER_TEMP"/build/*-mac-$arch.dmg | head -1)" "$RUNNER_TEMP/Unvibe.dmg"
           else curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/Unvibe-0.1.49-mac-$arch.dmg"; fi
           mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt" "$RUNNER_TEMP/shots"
           hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/Unvibe.dmg"
@@ -91,6 +97,29 @@ jobs:
           screencapture -x "$RUNNER_TEMP/shots/a-first-launch-${{ matrix.build }}.png"
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
           echo "A: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
+
+      - name: "C: before setup is done, an IDE-link clipboard explain (consent given)"
+        shell: bash
+        run: |
+          ud="$HOME/Library/Application Support/Unvibe"
+          rm -rf "$ud"; mkdir -p "$ud"
+          printf '{"installId":"%s"}' "$ID_C" > "$ud/unvibe-store.json"
+          printf '{"records":[{"items":["ai_send","terms","age_18"],"provider":"unvibe","policyVersion":"2026-10-30","agreedAt":"%s"}]}' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$ud/unvibe-consent.json"
+          open -a /Applications/Unvibe.app
+          pid=""; for i in $(seq 1 40); do pid=$(pgrep -x Unvibe | head -1 || true); [ -n "$pid" ] && break; sleep 0.5; done
+          echo "Unvibe pid ${pid:-none}"
+          sleep 6
+          before=0
+          for i in $(seq 1 10); do n=$( (pgrep -P "${pid:-0}" -x osascript || true) | wc -l | tr -d ' '); [ "$n" -gt 0 ] && before=$((before + 1)); sleep 0.5; done
+          echo "C: samples (of 10) with an osascript child before the link: $before"
+          printf 'const total = items.reduce((sum, item) => sum + item.price, 0);\n' | pbcopy
+          open 'unvibe://review?source=ide'
+          spawned=0
+          for i in $(seq 1 30); do n=$( (pgrep -P "${pid:-0}" -x osascript || true) | wc -l | tr -d ' '); [ "$n" -gt 0 ] && spawned=$((spawned + 1)); sleep 0.5; done
+          echo "C: samples (of 30, over 15 s) with an osascript child after the clipboard explain: $spawned"
+          screencapture -x "$RUNNER_TEMP/shots/c-clipboard-before-setup-${{ matrix.build }}.png"
+          osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
+          echo "C: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
 
       - name: "B: set up, then Don't Allow System Events, then Control+U in TextEdit"
         shell: bash
@@ -129,7 +158,7 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
-          for id in "$ID_A" "$ID_B"; do
+          for id in "$ID_A" "$ID_B" "$ID_C"; do
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
               -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
               --data "{\"installId\":\"$id\"}") || answer=$'\ncurl failed'
