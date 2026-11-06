@@ -1,0 +1,43 @@
+/* Round 08 (CODE-SPEC-07-10 §2): the scroll layer varies by what each section is, on the kit's own trigger
+ * (motion/sections: data-reveal="wait" → "go" at its threshold; data-scroll live/wait/go). Under reduced motion and
+ * without JS, sections.js never sets "wait", so every element below is at its end state from the server HTML.
+ * Rules carry `.site` so they win over the kit's generic [data-rise] rules whatever the CSS order.
+ *
+ *   data-rise="mask"   section headings: the heading rises out from behind its own bottom edge (translate and clip
+ *                      move together, so the visible part never crosses the final baseline). One element, no wrapper.
+ *   data-rise="fade"   ledes and lines: opacity only, after the heading
+ *   data-rise="wipe"   a capture that is "checked": a left → right clip wipe
+ *   gallery crops       data-scroll (the kit's scroll-linked rise); the 2nd column rises a beat later
+ * Lists keep the kit's 60-90 ms stagger. Transform, opacity and clip-path only. */
+
+.site [data-reveal="wait"] [data-rise="mask"] { opacity: 1; transform: translateY(100%); clip-path: inset(0 0 100% 0); }
+.site [data-reveal="go"] [data-rise="mask"] { animation: mx-mask 720ms var(--sx-ease, cubic-bezier(0.19, 1, 0.22, 1)) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes mx-mask { from { transform: translateY(100%); clip-path: inset(0 0 100% 0); } to { transform: none; clip-path: inset(0); } }
+
+.site [data-reveal="wait"] [data-rise="fade"] { opacity: 0; transform: none; }
+.site [data-reveal="go"] [data-rise="fade"] { animation: mx-fade 520ms cubic-bezier(0.2, 0.6, 0.25, 1) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes mx-fade { from { opacity: 0; } }
+
+.site [data-reveal="wait"] [data-rise="wipe"] { opacity: 1; transform: none; clip-path: inset(0 100% 0 0); }
+.site [data-reveal="go"] [data-rise="wipe"] { animation: mx-wipe 760ms cubic-bezier(0.65, 0, 0.35, 1) calc(var(--d, 0) * 1ms) backwards; }
+@keyframes mx-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+
+/* gallery: two columns at > 900 px, the second rising a beat behind the first as you scroll */
+@media (min-width: 901px) {
+  @supports (animation-timeline: view()) {
+    .site .a-gal__card[data-scroll="live"]:nth-child(even) { animation-range: entry 18% cover 53%; }
+  }
+}
+
+/* Vibe moments only (§2): the hero's idle blink is the page's one Vibe loop; every other Vibe (the tour's happy hop,
+   Get's wave, the Try-it widget's states) blinks 3 times and rests. vibe.css stops them all under reduced motion. */
+.site .vibe__eyes { animation-iteration-count: 3; }
+.site .mx-hs__vibe .vibe__eyes { animation-iteration-count: infinite; }
+/* The body's idle goo morphs the SVG path `d` (vibe.css vibeGoo), outside motion bar §3's transform/opacity/clip-path
+   and not one of §2's moments; the transform squish and the blink carry the idle life */
+.site .vibe__body { animation: none; }
+
+/* The Try-it code's edge cue is scroll-linked (sections.css): none under reduced motion (census r07: the one leftover) */
+@media (prefers-reduced-motion: reduce), print {
+  .try__code::after { animation: none !important; }
+}

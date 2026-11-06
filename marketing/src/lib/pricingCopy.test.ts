@@ -2,15 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PricingPlans } from "@/components/redesign/PricingPlans";
+import { PricingCards } from "@/site/PricingCards";
 import { PRICING } from "./pricing";
 import { pricingCopy, type PricingCopy } from "./pricingCopy";
 
 Object.assign(globalThis, { React });
 
+/** The rendered /pricing page body. */
+const page = (paymentsOpen: boolean) => renderToStaticMarkup(createElement(PricingCards, { copy: pricingCopy(paymentsOpen), paymentsOpen }));
+
 /** The rendered /pricing card for one plan, from its article tag to the next. */
 function planCard(paymentsOpen: boolean, id: string): string {
-  const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen }));
+  const markup = page(paymentsOpen);
   const start = markup.indexOf(`<article id="${id}"`);
   assert.ok(start >= 0, `no card ${id}`);
   return markup.slice(start, markup.indexOf("</article>", start));
@@ -19,7 +22,7 @@ function planCard(paymentsOpen: boolean, id: string): string {
 function allText(copy: PricingCopy): string {
   return [
     copy.heading.lead, copy.heading.emphasis, copy.heading.tail, copy.description, copy.disclosure, copy.termsNote ?? "",
-    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.note ?? "", plan.detail, plan.cta ?? "", plan.after ?? "", ...plan.features]),
+    ...copy.plans.flatMap((plan) => [plan.badge, plan.eyebrow, plan.note ?? "", plan.detail, plan.cta ?? "", ...plan.features]),
   ].join("\n");
 }
 
@@ -33,21 +36,21 @@ describe("pricing copy while payments are closed", () => {
 
   it("says 'soon' once, in the heading, and each paid card says Not on sale yet", () => {
     assert.match(closed.heading.lead + closed.heading.emphasis + closed.heading.tail, /^Start free today\. Pro and Teams open soon\.$/);
-    const page = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false })).replace(/<[^>]+>/g, " ");
-    assert.equal(page.match(/soon/gi)?.length, 1, page);
-    for (const id of ["pro", "teams"]) assert.match(planCard(false, id), /<p class="plan-note">Not on sale yet<\/p>/, id);
+    const words = page(false).replace(/<[^>]+>/g, " ");
+    assert.equal(words.match(/soon/gi)?.length, 1, words);
+    for (const id of ["pro", "teams"]) assert.match(planCard(false, id), /<span class="ap-r6__tag">[^<]* · Not on sale yet<\/span>/, id);
     assert.equal(closed.plans.find((plan) => plan.id === "pro")?.detail, "One developer account. Your Free plan keeps working until then.");
     assert.match(closed.disclosure, /not on sale yet, so nothing is billed today/);
     assert.match(closed.termsNote ?? "", /^Pro and Teams are not on sale yet\. Until they open, nothing is billed and your Free plan keeps working\.$/);
   });
 
-  it("has no Monthly/Annual toggle; each paid card states both prices in one line", () => {
-    const markup = renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: false }));
-    assert.doesNotMatch(markup, /radiogroup|pricing-toggle/);
-    const line = (id: string) => planCard(false, id).replace(/<[^>]+>/g, "").match(/\$\d+ a (seat a )?month, or \$\d+ a year/)?.[0];
-    assert.equal(line("pro"), `$${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year`);
-    assert.equal(line("teams"), `$${PRICING.teamsSeatMonthly} a seat a month, or $${PRICING.teamsSeatAnnual} a year`);
-    assert.match(renderToStaticMarkup(createElement(PricingPlans, { paymentsOpen: true })), /role="radiogroup" aria-label="Billing interval"/);
+  it("has no Monthly/Annual toggle; each paid card states both prices in one line, in either state", () => {
+    for (const paymentsOpen of [false, true]) {
+      assert.doesNotMatch(page(paymentsOpen), /radiogroup|pricing-toggle/);
+      const line = (id: string) => planCard(paymentsOpen, id).replace(/<[^>]+>/g, "").match(/\$\d+ a (seat a )?month, or \$\d+ a year/)?.[0];
+      assert.equal(line("pro"), `$${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year`);
+      assert.equal(line("teams"), `$${PRICING.teamsSeatMonthly} a seat a month, or $${PRICING.teamsSeatAnnual} a year`);
+    }
   });
 
   it("keeps the real prices visible", () => {
@@ -61,14 +64,12 @@ describe("pricing copy while payments are closed", () => {
     }
   });
 
-  it("gives the Pro card an outlined Download free, says it isn't on sale and how to try it today", () => {
+  // Council R07 / Design round 06: a "try Pro today" line or a button beside "Not on sale yet" reads as an offer.
+  it("gives the Pro card no button and no try-it-today line; it says it isn't on sale", () => {
     const pro = planCard(false, "pro");
-    assert.match(pro, /<a [^>]*href="\/beta"[^>]*>Download free<\/a>/);
-    assert.match(pro, /class="[^"]*pricing-button--quiet/);
-    assert.doesNotMatch(pro, /upgrade|checkout|subscribe/i);
-    assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
-    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who signs in and enters your gift code in the app, if their account hasn&#x27;t had a gift yet \(up to five\)\.<\/p>/);
-    assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
+    assert.doesNotMatch(pro, /<a\b|<button\b/);
+    assert.doesNotMatch(pro, /upgrade|checkout|subscribe|Try Pro today|gift code/i);
+    assert.match(pro, /<span class="ap-r6__tag">Individual · Not on sale yet<\/span>/);
     // Free keeps its download, Teams its email.
     assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
     assert.match(planCard(false, "teams"), /href="mailto:support@unvibe\.site/);

@@ -40,12 +40,6 @@ export interface GalleryShot {
   depth?: string;
 }
 
-export interface GalleryCard {
-  id: string;
-  title: string;
-  line: string;
-  shots: GalleryShot[];
-}
 
 const PANEL = { width: 704, height: 905 };
 const WINDOW = { width: 704, height: 440 };
@@ -56,51 +50,3 @@ export const KEY_CHECK_SHOT: GalleryShot = {
   height: 854,
   alt: "Unvibe's panel showing Blocked: credential detected, stripe-key, with the key masked, and Nothing was sent.",
 };
-
-export const GALLERY: readonly GalleryCard[] = [
-  {
-    id: "depths",
-    title: "Depths",
-    line: "The same code at Beginner and at Advanced. Pick the depth that fits you.",
-    shots: [
-      { src: `${CAPTURE_DIR}/panel-beginner.webp`, ...PANEL, depth: "Beginner", alt: "Unvibe's panel explaining the debounce sample at Beginner depth." },
-      { src: `${CAPTURE_DIR}/panel-advanced.webp`, ...PANEL, depth: "Advanced", alt: "Unvibe's panel explaining the same debounce sample at Advanced depth." },
-    ],
-  },
-  {
-    id: "follow-up",
-    title: "Follow-up",
-    line: "Ask about the code in your own words. The answer goes under the explanation.",
-    shots: [{ src: `${CAPTURE_DIR}/panel-follow-up.webp`, ...PANEL, alt: "Unvibe's panel answering a follow-up question about the debounce sample under its explanation." }],
-  },
-  {
-    id: "test-me",
-    title: "Test me",
-    line: "A question about the code you just read, with choices to pick from.",
-    shots: [{ src: `${CAPTURE_DIR}/panel-test-me.webp`, ...PANEL, alt: "Unvibe's Test me question about the debounce sample, with its answer choices, beside the explanation." }],
-  },
-  {
-    id: "key-check",
-    title: "Key check",
-    line: "Code with a known key in it is stopped on your computer. Nothing is sent.",
-    shots: [KEY_CHECK_SHOT],
-  },
-  {
-    id: "library",
-    title: "Library",
-    line: "Every explanation is saved on your computer, to read again later.",
-    shots: [{ src: `${CAPTURE_DIR}/library.webp`, ...WINDOW, alt: "Unvibe's Library listing 4 saved explanations from today." }],
-  },
-  {
-    id: "briefs",
-    title: "Briefs",
-    line: "A recap of what changed in a project, read from local git.",
-    shots: [{ src: `${CAPTURE_DIR}/briefs-open.webp`, ...WINDOW, alt: "Unvibe's Change Brief for a sample project's change to upload.js: 1 file changed, 4 lines added." }],
-  },
-  {
-    id: "privacy",
-    title: "Privacy",
-    line: "What is sent, what stays on your computer, and the switches for it.",
-    shots: [{ src: `${CAPTURE_DIR}/settings-privacy.webp`, ...WINDOW, alt: "Unvibe's Settings open at Privacy & Data." }],
-  },
-];

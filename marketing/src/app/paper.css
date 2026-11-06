@@ -475,17 +475,11 @@ h2 {
   padding-top: 0.4rem;
 }
 
-.paper-backing {
-  padding: clamp(4rem, 8vw, 7rem) 0 clamp(2.5rem, 5vw, 4rem);
-  border-bottom: 1px solid rgb(18 17 15 / 0.12);
-  background: rgb(246 242 249 / 0.64);
-}
-
 /* Startup programs (ProgramList in BackingStrip.tsx: homepage, /investors, /about). Names in our own type, no brand
    colours. Only MongoDB shows a logo: its official file, unmodified, on a white chip so the dark colourway keeps
    its contrast in both themes, and smaller than Unvibe's own mark (30px), as MongoDB asks. */
 .program-list { text-align: center; }
-.paper-backing .program-list { margin-top: clamp(20px, 3vw, 32px); padding-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
+
 .program-list__items { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
 .program-list__item { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.9rem; border: 1.5px solid var(--u-line); border-radius: 12px; color: var(--u-text); font-size: 0.95rem; font-weight: 650; }
 .program-list__logo { display: inline-flex; padding: 4px 8px; border-radius: 8px; background: #fff; }
@@ -625,9 +619,6 @@ h2 {
     animation: none;
   }
 }
-
-.pricing-plans__intro { max-width: 46rem; margin: 0 auto 2.5rem; text-align: center; }
-.pricing-plans__intro > p:last-child { margin-top: 0.85rem; color: var(--ink-muted); line-height: 1.6; }
 
 @supports (content-visibility: auto) {
   main > .paper-section:not(.paper-install--front) { content-visibility: auto; contain-intrinsic-size: 1px 850px; }
@@ -891,85 +882,6 @@ h2 {
   }
 }
 
-.paper-faq {
-  max-width: 48rem;
-  margin-inline: auto;
-  text-align: left;
-}
-
-.paper-faq details {
-  border-bottom: 1px solid var(--hairline);
-  padding: 1.35rem 0.4rem;
-  transition: background 320ms var(--ease-calm);
-}
-
-.paper-faq details:hover,
-.paper-faq details[open] {
-  background: var(--row-hover);
-}
-
-.paper-faq summary {
-  position: relative;
-  list-style: none;
-  padding-right: 2.2rem;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: clamp(1.35rem, 2.8vw, 2.05rem);
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  text-shadow: var(--glow-copy);
-  transition: color 320ms var(--ease-calm);
-}
-
-.paper-faq summary::-webkit-details-marker {
-  display: none;
-}
-
-.paper-faq summary::after {
-  content: "+";
-  position: absolute;
-  top: 50%;
-  right: 0.2rem;
-  transform: translateY(-50%);
-  font-family: var(--font-sans);
-  font-size: 1.4rem;
-  font-weight: 300;
-  line-height: 1;
-  color: var(--brand);
-  transition: transform 240ms var(--ease-calm);
-}
-
-.paper-faq details[open] summary::after {
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.paper-faq summary:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 4px;
-  border-radius: 4px;
-}
-
-.paper-faq summary:hover {
-  color: var(--brand);
-}
-
-.paper-faq p {
-  margin: 0.9rem 0 0;
-  color: var(--ink);
-  font-size: 1.12rem;
-  line-height: 1.55;
-}
-
-.paper-faq ol {
-  margin: 0.9rem 0 0;
-  padding-left: 1.4rem;
-  list-style: decimal;
-  color: var(--ink);
-  font-size: 1.12rem;
-  line-height: 1.55;
-}
-
 .paper-invite {
   position: relative;
   width: min(36rem, 100%);
@@ -1172,22 +1084,11 @@ h2 {
   box-shadow: none !important;
 }
 
-.launch-subpage .marketing-plan-card,
 .launch-subpage .marketing-billing-toggle {
   border-color: var(--hairline);
   background: var(--paper-raised);
   box-shadow: var(--shadow-card);
   color: var(--ink);
-}
-
-.launch-subpage .marketing-plan-card.featured {
-  border-color: var(--brand);
-  transform: none;
-  box-shadow: var(--shadow-card);
-}
-
-.launch-subpage .plan-badge {
-  color: var(--ink-muted);
 }
 
 .paper-listings {
@@ -1238,12 +1139,6 @@ h2 {
   color: var(--brand);
 }
 
-.launch-subpage .marketing-plan-price,
-.launch-subpage .marketing-plan-card h3 {
-  color: var(--ink);
-}
-
-.launch-subpage .marketing-plan-card li svg,
 .launch-subpage .marketing-billing-toggle button span {
   color: var(--ink-muted);
 }
@@ -1299,74 +1194,6 @@ h2 {
 
 .paper-photo-band .paper-join-row {
   margin-top: 1.2rem;
-}
-
-.paper-pricing .marketing-plan-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  max-width: none;
-  margin-inline: 0;
-}
-
-@media (min-width: 760px) {
-  .paper-pricing .marketing-plan-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (min-width: 1120px) {
-  .paper-pricing .marketing-plan-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.paper-pricing .plan-kicker,
-.paper-pricing .plan-badge,
-.paper-pricing .annual-savings-note,
-.paper-pricing .pricing-disclosure,
-.paper-pricing .marketing-plan-card,
-.paper-pricing .marketing-plan-card h3,
-.paper-pricing .marketing-plan-card > small,
-.paper-pricing .marketing-plan-card li,
-.paper-pricing .marketing-plan-card li svg,
-.paper-pricing .marketing-plan-price {
-  color: var(--ink);
-}
-
-.paper-pricing .plan-kicker {
-  margin: 0 0 0.4rem;
-  font-size: 0.92rem;
-}
-
-/* Labels: Inter 600 at 14 px, sentence case as written, no tracking (Design, ledger 443). */
-.paper-pricing .plan-badge {
-  font: 600 14px/1.4 var(--font-sans);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.paper-pricing .marketing-plan-card > small {
-  font-size: max(13px, 0.8rem);
-}
-
-.paper-pricing .marketing-plan-card li {
-  font-size: max(13px, 0.75rem);
-}
-
-.paper-pricing .marketing-plan-card {
-  transition: transform 200ms ease, border-color 200ms ease;
-}
-
-.paper-pricing .marketing-plan-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--brand);
-}
-
-.paper-pricing .marketing-plan-price {
-  font-family: var(--font-sans);
-  font-size: clamp(1.7rem, 2.8vw, 2.5rem);
-  font-weight: 400;
 }
 
 .paper-key {
@@ -2237,139 +2064,9 @@ h2 {
   opacity: 1;
 }
 
-/* ── /beta download page ── */
-
-.beta-page {
-  background: transparent;
-  color: var(--ink);
-}
-
-.beta-page h1 {
-  font-family: var(--font-sans);
-  font-weight: 700;
-}
-
-/* The steps card is glass (glass.css); this is its solid base for the fallbacks. */
-.beta-page__steps {
-  position: relative;
-  isolation: isolate;
-  width: min(100%, 42rem);
-  margin-inline: auto;
-  padding: clamp(1.8rem, 4vw, 2.8rem);
-}
-
-.beta-page__steps h2 {
-  margin: 0 0 1.4rem;
-  font-size: clamp(1.4rem, 2.6vw, 1.9rem);
-  text-align: center;
-}
-
-.beta-page__steps-list {
-  display: grid;
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Step rows sit clear on the card, split by hairlines: no boxes inside the box. */
-.beta-page__steps-list li {
-  display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  padding: 1rem 0;
-  border-top: 1px solid var(--u-line);
-}
-
-.beta-page__step-badge {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--v-ink);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.beta-page__steps-list strong {
-  display: block;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.beta-page__steps-list p {
-  margin: 0.25rem 0 0;
-  font-size: 0.84rem;
-  line-height: 1.5;
-  color: var(--ink-muted);
-}
-
-.beta-page__trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.2rem;
-  justify-content: center;
-  max-width: 42rem;
-  margin-inline: auto;
-}
-
-.beta-page__trust-item {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.85rem 1.1rem;
-  border-radius: 20px;
-  font-size: 0.95rem;
-}
-
-.beta-page__trust-item svg {
-  flex-shrink: 0;
-  color: var(--brand);
-}
-
-.beta-page__trust-item p {
-  margin: 0;
-}
-
-.beta-page__trust-item a {
-  color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
-.beta-page__trust-item a:hover {
-  opacity: 0.78;
-}
-
 /* ── Resources page shell (the hub's own rules live in app/resources/resources.css) ── */
 
 .paper-resources-page {
   padding-bottom: 5rem;
-}
-
-/* Pricing buttons wrap instead of overflowing their pill. */
-.paper-pricing .pricing-button {
-  white-space: normal;
-  text-align: center;
-  line-height: 1.25;
-  padding-inline: 1rem;
-}
-
-/* Download free on the Free card is the only filled pricing button; Pro and Teams use this outline. */
-.pricing-button.pricing-button--quiet {
-  border: 1px solid var(--purple);
-  background: transparent !important;
-  color: var(--purple) !important;
-  box-shadow: none;
-}
-
-.pricing-button.pricing-button--quiet:hover {
-  background: color-mix(in srgb, var(--purple) 8%, transparent) !important;
 }
 

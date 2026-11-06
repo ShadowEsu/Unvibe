@@ -3,8 +3,8 @@ import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import HomePage from "@/app/page";
-import BetaDownloadsPage from "@/app/beta/page";
+import { Download } from "@/site/Download";
+import { Home } from "@/site/Home";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { INSTALL_COPY } from "@/components/paper/InstallBox";
 import {
@@ -69,23 +69,39 @@ describe("install.sh: a download cut off part way runs nothing", () => {
   });
 });
 
-describe("download card: the same card on home #install and /beta", () => {
-  for (const [name, Page] of [["home", HomePage], ["/beta", BetaDownloadsPage]] as const) {
-    it(`${name} renders it inside #install`, () => {
-      const html = renderToStaticMarkup(createElement(Page));
-      const install = html.slice(html.indexOf('id="install"'));
-      assert.ok(html.includes('id="install"'), `${name} has no #install`);
-      assert.match(install, /^[^]*?class="paper-beta paper-beta--page dl-card"/);
-      assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
+const pages = [["home", () => renderToStaticMarkup(createElement(Home, { paymentsOpen: false }))], ["/beta", () => renderToStaticMarkup(createElement(Download))]] as const;
+
+describe("Get Unvibe: the same install boxes on home #install and /beta", () => {
+  for (const [name, render] of pages) {
+    it(`${name} renders one box per computer under the Get Unvibe heading, the Mac one Terminal line first`, () => {
+      const html = render();
+      const get = html.slice(html.indexOf('id="install-title"'));
+      assert.equal(count(get, /<div class="ninst" data-os="mac">/), 1, name);
+      assert.equal(count(get, /<div class="ninst" data-os="windows">/), 1, name);
+      const mac = get.slice(get.indexOf('data-os="mac"'), get.indexOf('data-os="windows"'));
+      assert.ok(mac.indexOf(`<code>${escaped(BETA_INSTALL_COMMAND)}</code>`) > 0, `${name}: the Mac box shows the served command`);
+      assert.ok(mac.indexOf(`href="${BETA_MAC_DIRECT_DOWNLOAD}"`) > mac.indexOf(`<code>${escaped(BETA_INSTALL_COMMAND)}</code>`), `${name}: the .dmg comes after the command`);
+    });
+
+    it(`${name}: no button downloads the .dmg (it isn't notarized yet; the Terminal line leads)`, () => {
+      assert.doesNotMatch(render(), new RegExp(`<a [^>]*href="${BETA_MAC_DIRECT_DOWNLOAD}"[^>]*class="[^"]*lx-btn`));
+      assert.doesNotMatch(render(), new RegExp(`<a [^>]*class="[^"]*lx-btn[^"]*"[^>]*href="${BETA_MAC_DIRECT_DOWNLOAD}"`));
     });
   }
-});
 
-describe("home has one download card", () => {
-  it("the install section closes the page, with no closing card repeating it (Design 466)", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
-    assert.doesNotMatch(html, /class="paper-invite__card/);
+  // Council R06 / Security 0152: on Windows the primary is the .exe itself; on a Mac it opens /beta, where the
+  // Terminal line leads. /beta has no link back to itself.
+  for (const [name, render, toBeta] of [["home", pages[0][1], true], ["/beta", pages[1][1], false]] as const) {
+    it(`${name}: Download for Windows is the .exe${toBeta ? ", Download for Mac opens /beta" : " and nothing links back to /beta"}`, () => {
+      const html = render();
+      const get = html.slice(html.indexOf('id="install-title"'));
+      assert.match(get, new RegExp(`<a [^>]*href="${BETA_WINDOWS_DIRECT_DOWNLOAD}"[^>]*>Download for Windows</a>`));
+      assert.equal(/<a [^>]*href="\/beta"[^>]*>Download for Mac<\/a>/.test(get), toBeta);
+    });
+  }
+
+  it("home: Get Unvibe is the last section", () => {
+    const html = renderToStaticMarkup(createElement(Home, { paymentsOpen: false }));
     assert.equal(html.lastIndexOf("<section"), html.lastIndexOf("<section", html.indexOf('id="install"')), "#install is the last section");
   });
 });

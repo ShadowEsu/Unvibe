@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { InviteFriend } from "@/components/paper/InviteFriend";
-import { proSentence, proTryToday } from "./proOffer";
+import { proSentence } from "./proOffer";
 import { AI_MAINTENANCE_NOTE } from "./aiMaintenance";
 
 Object.assign(globalThis, { React });
@@ -30,13 +30,14 @@ function surfacesWithFlag(flag: "1" | ""): Record<"beta" | "pricing" | "faq" | "
     'const { renderToStaticMarkup } = require("react-dom/server");',
     "Object.assign(globalThis, { React });",
     'const text = (el) => renderToStaticMarkup(el).replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "\'").replace(/\\s+/g, " ");',
-    'const Beta = require("@/app/beta/page").default;',
-    'const { PricingPlans } = require("@/components/redesign/PricingPlans");',
+    'const { Download } = require("@/site/Download");',
+    'const { PricingCards } = require("@/site/PricingCards");',
+    'const { pricingCopy } = require("@/lib/pricingCopy");',
     'const { faqItems } = require("@/data/faq");',
     'const { kitMarkdown } = require("@/lib/kit");',
     "process.stdout.write(JSON.stringify({",
-    "  beta: text(React.createElement(Beta)),",
-    "  pricing: text(React.createElement(PricingPlans, { paymentsOpen: false })),",
+    "  beta: text(React.createElement(Download)),",
+    "  pricing: text(React.createElement(PricingCards, { copy: pricingCopy(false), paymentsOpen: false })),",
     '  faq: faqItems.find((item) => item.id === "pro-annual").answer,',
     "  kit: kitMarkdown(),",
     "}));",
@@ -56,18 +57,17 @@ const paused = surfacesWithFlag("1");
 describe("the Pro sentence", () => {
   it("drops the try-now half while AI features are paused", () => {
     assert.equal(proSentence(true), "Pro isn't on sale yet.");
-    assert.equal(proTryToday(true), null);
     assert.match(proSentence(false), /^Pro isn't on sale yet\. You can try it now: /);
-    assert.match(proTryToday(false) ?? "", /^Try Pro today: /);
   });
 
-  it("is the one Pro line on /beta, the FAQ and the kit, in full with AI on", () => {
+  it("is the one Pro line on /beta, the FAQ and the kit, in full with AI on; /pricing makes no Pro offer", () => {
     for (const name of ["beta", "faq", "kit"] as const) {
       assert.ok(live[name].includes(proSentence(false)), `${name} lacks the Pro sentence`);
       assert.doesNotMatch(live[name], OLD, name);
       assert.doesNotMatch(live[name], /Try Pro today/, name);
     }
-    assert.ok(live.pricing.includes(proTryToday(false) ?? "missing"), "pricing lacks Try Pro today");
+    // Council R07 / Design round 06: next to "Not on sale yet" a try-it line reads as an offer.
+    assert.doesNotMatch(live.pricing, /Try Pro today|You can try it now|gift code/);
   });
 
   it("says only 'Pro isn't on sale yet.' on /beta, the FAQ and the kit while paused, and /pricing has no Try Pro line", () => {

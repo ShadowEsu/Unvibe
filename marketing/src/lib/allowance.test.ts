@@ -5,9 +5,10 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import BetaDownloadsPage from "@/app/beta/page";
 import AboutPage from "@/app/about/page";
-import { PricingPlans } from "@/components/redesign/PricingPlans";
+import { Download } from "@/site/Download";
+import { PricingCards } from "@/site/PricingCards";
+import { pricingCopy } from "./pricingCopy";
 import { faqItems } from "@/data/faq";
 import { ALLOWANCE } from "./allowance";
 
@@ -24,7 +25,7 @@ describe("explanation allowances", () => {
 
   it("/pricing states signed out, Free and Pro numbers", () => {
     for (const paymentsOpen of [false, true]) {
-      const page = text(createElement(PricingPlans, { paymentsOpen }));
+      const page = text(createElement(PricingCards, { copy: pricingCopy(paymentsOpen), paymentsOpen }));
       assert.match(page, /50 explanations in your first 30 days without signing in, then 50 explanations a month when you sign in\./);
       assert.match(page, /200 AI explanations a month/);
       assert.doesNotMatch(page, /100 (AI )?explanations/);
@@ -33,7 +34,7 @@ describe("explanation allowances", () => {
   });
 
   it("/beta states the trial and the Free month", () => {
-    const page = text(createElement(BetaDownloadsPage));
+    const page = text(createElement(Download));
     assert.match(page, /you get 50 explanations \(follow-up questions count toward these\) and 50 Test me questions in your first 30 days\. Signing in gives you 50 explanations a month on Free/);
     assert.doesNotMatch(page, VAGUE);
   });

@@ -38,7 +38,7 @@ export function siteCommands(push: (href: string) => void): Command[] {
     { id: "win", label: "Install on Windows", hint: "PowerShell line or .exe", keywords: "download install get pc exe", run: () => { trackDownloadPageClick("palette"); push("/beta"); } },
     { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
     { id: "home", label: "Home", hint: "/", run: go("/") },
-    { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },
+    { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#see-it") },
     { id: "pricing", label: "Pricing", hint: "Free, Pro, Teams", keywords: "price cost plans pay subscription lifetime", run: go("/pricing") },
     { id: "resources", label: "Resources and guides", hint: "Depths, shortcuts, privacy", run: go("/resources") },
     { id: "help", label: "Installation help", hint: "Sign-in and shortcut fixes", keywords: "support stuck login google windows smartscreen troubleshoot", run: go("/beta#help") },

@@ -55,10 +55,9 @@ h3 { font-family: var(--font-sans); font-size: 1.25rem; font-weight: 600; letter
   66% { d: path("M23 8C32 7.6 38 13.6 39.6 22C41.2 30.6 43.4 38.2 38 41.2C32.4 43.8 16.4 43.8 10.6 40.8C5.4 38 6.8 31.4 8.4 23C10 14.4 14.6 8.4 23 8Z"); }
 }
 
-/* ── Hero helpers (the N hero, components/paper/PhotoHero.tsx; n.css lays them out) ── */
+/* ── The phone's email-me-the-link form (components/paper/EmailMeLink.tsx) ── */
 .vhero__fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.vhero__cta { display: grid; justify-items: center; gap: 0.6rem; }
-.vhero__try { color: var(--v-ink); font-weight: 600; font-size: 0.95rem; text-decoration: underline; text-underline-offset: 3px; }
+
 .vhero__phone { display: grid; justify-items: center; gap: 0.7rem; width: min(26rem, 100%); }
 .vhero__phone p { margin: 0; color: var(--v-ink); font-size: 0.98rem; font-weight: 550; }
 .vhero__email { display: grid; gap: 0.55rem; width: 100%; }
@@ -75,28 +74,11 @@ h3 { font-family: var(--font-sans); font-size: 1.25rem; font-weight: 600; letter
 .share-step__actions { display: flex; gap: 0.5rem; }
 .share-step__actions button { flex: 1; min-height: 2.75rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--u-card); color: var(--v-ink); font: 600 0.95rem var(--font-sans); cursor: pointer; }
 .share-step__actions button.is-ink { background: var(--u-cta); color: var(--u-on-cta); }
-/* ── App tour ─────────────────────────────────────────────────────────────── */
-.vtour { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 1.4rem; padding: 1.5rem 1.25rem 5rem; }
-.vtour__head { text-align: center; }
-.vtour h2 { margin: 0; font-size: clamp(2rem, 4.4vw, 3.4rem); }
-/* A glass window (glass.css) with the video inside; no offset shadow. */
-.vtour__window {
-  position: relative; isolation: isolate; width: min(1080px, 100%); overflow: hidden; border: 1px solid var(--u-line-strong); border-radius: 20px; background: transparent;
-}
-.vtour__bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--u-line); background: var(--u-card); color: var(--u-text); }
-.vtour__bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--u-line); }
-.vtour__bar span { margin-left: 8px; font: 700 0.85rem var(--font-sans); letter-spacing: -0.02em; }
-.vtour__media { position: relative; }
-.vtour__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.vtour__window video { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
-.vtour__caption { margin: 0; padding: 0.7rem 1rem; border-top: 1px solid var(--u-line); background: var(--u-raise); color: var(--u-text-2); font-size: var(--u-step--1); text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
   .vibe__float, .vibe__body, .vibe__eyes, .vibe__shadow { animation: none; }
 }
 
-.vhero__try { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.35rem 1rem; border-radius: 12px; background: var(--u-veil); color: var(--u-text); transition: background-color var(--u-dur-hover) var(--u-ease); }
-.vhero__try:hover { background: var(--u-sheet); }
 .paper-logo__word { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.04em; }
 
 /* ═════════════════════════════════════════════════════════════════════════════
@@ -110,12 +92,12 @@ body { line-height: 1.55; }
 p { font-size: 17px; }
 .paper-section { padding-block: clamp(4.5rem, 9vw, 8rem) !important; }
 /* Section headings: Inter 700, one clear step below the hero h1 (Design, ledger 443). */
-.paper-section h2, .vtour h2, .inv h2 { font-size: clamp(2rem, 3.6vw, 3rem) !important; line-height: 1.05; }
+.paper-section h2, .inv h2 { font-size: clamp(2rem, 3.6vw, 3rem) !important; line-height: 1.05; }
 .paper-lead, .paper-caption { font-size: 1.12rem !important; color: var(--u-text-2) !important; }
-.paper-meta, .inv-eyebrow, .vtour__eyebrow { font-size: 14px !important; font-weight: 600; color: var(--v-ink) !important; }
+.paper-meta, .inv-eyebrow { font-size: 14px !important; font-weight: 600; color: var(--v-ink) !important; }
 
 /* One card style everywhere: solid surface, a hairline edge, no offset shadow. Glass cards override the fill in glass.css. */
-.paper-glass, .paper-faq details, .stats-strip__item, .paper-invite__card, .paper-beta,
+.paper-glass, .stats-strip__item, .paper-invite__card, .paper-beta,
 .paper-log-wrap, .pg, .resources-card, .paper-quotes blockquote, .inv-card, .inv-stat, .inv-table, .inv-roadmap li {
   background: var(--u-card) !important;
   border: 1px solid var(--u-line-strong) !important;
@@ -123,7 +105,7 @@ p { font-size: 17px; }
   box-shadow: none !important;
   color: var(--u-text);
 }
-.paper-glass p, .resources-card p, .paper-faq p { color: var(--u-text-2); }
+.paper-glass p, .resources-card p { color: var(--u-text-2); }
 .resources-card { padding: 2rem 1.9rem !important; }
 .resources-card h3 { font-family: var(--font-sans); font-size: 1.45rem; font-weight: 750; letter-spacing: -0.03em; }
 .resources-card__step {
@@ -471,11 +453,7 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .fos__cmd { min-width: 0; }
 .fos__cmd code { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
-/* Claude for Startups: one big, plain callout above the program list. */
-.claude-startups { display: grid; gap: 8px; margin: 0 0 28px; color: var(--u-text); text-align: center; }
 .claude-startups__tag { justify-self: center; color: var(--u-text-2); font: 600 14px/1.4 var(--font-sans); }
-.claude-startups__title { margin: 0; font: 700 clamp(28px, 5vw, 48px)/1.05 var(--font-sans); letter-spacing: -0.025em; color: var(--u-text); }
-.claude-startups__copy { margin: 0 auto; max-width: 560px; font-size: 16px; line-height: 1.5; color: var(--u-text-2); }
 
 /* Rewards: paper and ink like the rest of the site (the old dark panel hid its own heading). */
 .reward-page { background: color-mix(in srgb, var(--u-sheet) 88%, transparent) !important; color: var(--u-text) !important; }
@@ -595,7 +573,6 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
   .mnav__toggle span, .mnav__toggle span::before { transition: none; animation: none; }
 }
 
-
 /* ---------- Install box (BOSS P0 download-fix, Design S-1 rules 5 Nov): the Terminal / PowerShell line first,
    the file second with its first-open steps open under it. One component on every surface. ---------- */
 .ninst { --ninst-ink: #141414; --ninst-ink-2: #4a4a46; --ninst-line: rgb(20 20 20 / 0.1);
@@ -635,7 +612,4 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .ninst[data-os="windows"] .ninst__shot img { max-width: min(100%, 360px); }
 .ninst__shot figcaption { margin-top: 4px; font: 500 12px/1.4 var(--font-mono); color: var(--ninst-ink-2); }
 .ninst__help { margin: 6px 0 0; font: 400 14px/1.5 var(--font-sans); }
-/* Centred in the hero's call to action. */
-.vhero__cta .ninst { margin: 0 auto; }
-/* vibe.css loads before n.css, so this outranks n.css's row layout for the hero actions by one more class. */
-.nhero__base .vhero__actions.vhero__actions--install { flex-direction: column; flex-wrap: nowrap; width: min(560px, 100%); }
+

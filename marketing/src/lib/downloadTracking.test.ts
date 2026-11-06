@@ -7,7 +7,7 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { FooterLinks } from "@/components/Footer";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { siteCommands } from "@/components/paper/SitePalette";
-import { trackPlanCta } from "@/components/redesign/PricingPlans";
+import { trackPlanCta } from "@/site/PricingCards";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD } from "./betaOffer";
 import {
   DOWNLOADED_EVENT,

@@ -28,9 +28,6 @@ Easing:
   onto elapsed time, looping every ~12.5s. It exposes a pause/play control, pauses when
   scrolled out of view (IntersectionObserver), and renders a complete static frame when
   reduced motion is set.
-- **Scroll storytelling** (`HowItWorks.tsx`) reads `useScroll` progress over a tall track
-  and maps it to a discrete step for a sticky visual. Without JS or with reduced motion,
-  the steps simply stack and stay readable.
 - **Shared-layout animation** (`WorksWhere.tsx`) uses a `layoutId` pill that slides
   between active tabs.
 

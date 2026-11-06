@@ -89,7 +89,7 @@ const posterAt = segments.onboarding[1] + Math.min(4, segments.panel[1] / 3);
 const posterPng = join(mediaDir, "poster.png");
 execFileSync("ffmpeg", ["-v", "error", "-y", "-ss", posterAt.toFixed(2), "-i", out, "-frames:v", "1", posterPng]);
 execFileSync("cwebp", ["-quiet", "-q", "78", posterPng, "-o", poster]);
-// Phones render the window about 350 CSS px wide (700 device px); AppTour's srcset picks this one there.
+// Phones render the video about 350 CSS px wide (700 device px); a 720 px poster covers them.
 execFileSync("cwebp", ["-quiet", "-q", "78", "-resize", "720", "0", posterPng, "-o", posterPhone]);
 
 const realDir = join(site, "public/unvibe/real");

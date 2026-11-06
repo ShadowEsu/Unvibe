@@ -1,6 +1,5 @@
 import { FREE_MONTHLY_ALLOWANCE, PRO_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { PRICING } from "@/lib/pricing";
-import { proTryToday } from "@/lib/proOffer";
 
 /**
  * Pricing copy for both billing states. While payments are closed (see lib/paymentsStatus), prices
@@ -23,8 +22,6 @@ export type PlanCopy = {
   href: string;
   /** A short line under the price. */
   note?: string;
-  /** A line under the feature list. */
-  after?: string;
   featured: boolean;
   /** Filled button. Quiet (outlined) when false. */
   primary: boolean;
@@ -84,10 +81,9 @@ const CLOSED: PricingCopy = {
   description: `Unvibe is free to download and use, with no card. Pro adds the Expert depth for $${PRICING.proMonthly} a month or $${PRICING.proAnnual} a year; payments open soon.`,
   plans: [
     free,
-    // Lead, 31 Oct: this card already says "Not on sale yet" under the price, so its line under the list is the
-    // "try it" half only, and nothing while AI features are paused (Security MUST-Q2). Its outlined Download free
-    // is that try path's next step and lines the three buttons up (Design S1, 3 Nov; production has the same button).
-    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: proTryToday() ?? undefined, cta: "Download free", href: "/beta", featured: true, primary: false },
+    // /pricing (site/PricingCards) shows this card with no button while payments are closed: next to "Not on sale
+    // yet" a button or a try-it line read as an offer (Council R07, Design round 06). cta and href keep the plan shape.
+    { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, cta: "Download free", href: "/beta", featured: true, primary: false },
     { id: "teams", name: "Teams", badge: "Early access", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Seats start by email. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
