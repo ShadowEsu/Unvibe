@@ -155,21 +155,34 @@ function useRecordingSync(key: RefObject<HTMLSpanElement>, video: RefObject<HTML
     // A browser that refuses to play it (iPhone Low Power Mode refuses muted autoplay) keeps the poster: no frozen
     // frame that jumps on every re-sync.
     let refused = false;
-    const tick = () => {
+    /** Where the recording should be now: seconds since this loop's drawn press (negative before it). */
+    const wanted = () => {
       const local = Number(press.currentTime ?? 0) - LOOP_DELAY_MS;
-      const into = local < 0 ? -1 : (local % LOOP_MS) - PRESS_MS;
+      return local < 0 ? -1 : ((local % LOOP_MS) - PRESS_MS) / 1000;
+    };
+    const tick = () => {
+      const into = wanted();
       if (refused || press.playState !== "running" || into < 0) {
         node.pause();
         node.classList.remove("is-on");
         if (into < 0 && node.currentTime !== 0) node.currentTime = 0;
         return;
       }
-      const want = Math.min(into / 1000, HERO_RECORDING.seconds);
+      const want = Math.min(into, HERO_RECORDING.seconds);
       // Shown only once it has a frame to show: a recording still loading leaves the poster in view.
       if (node.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-      if (Math.abs(node.currentTime - want) > 0.35) node.currentTime = want;
+      // A paused recording starts exactly where the loop is: this tick can come up to 200 ms after the press, and
+      // starting from 0 then left it that far behind the drawn press for the whole loop (0.19 s at 1440 on
+      // 55756d55's preview). A playing one is re-seeked only when it is well off, so it never stutters.
+      const starting = node.paused && want < HERO_RECORDING.seconds;
+      if (Math.abs(node.currentTime - want) > (starting ? 0.04 : 0.35)) node.currentTime = want;
       if (want < HERO_RECORDING.seconds && node.paused) {
-        node.play().then(() => node.classList.add("is-on"), () => { refused = true; node.classList.remove("is-on"); });
+        node.play().then(() => {
+          // play() settles once the decoder runs; catch up the time that took, once.
+          const now = Math.min(wanted(), HERO_RECORDING.seconds);
+          if (now >= 0 && Math.abs(node.currentTime - now) > 0.06) node.currentTime = now;
+          node.classList.add("is-on");
+        }, () => { refused = true; node.classList.remove("is-on"); });
         return;
       }
       node.classList.add("is-on");
