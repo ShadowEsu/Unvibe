@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SearchField } from "glisse";
 import { track } from "@/lib/analytics";
-import { BETA_INSTALL_COMMAND, BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
-import { trackDownloadClick } from "@/lib/downloadTracking";
+import { BETA_INSTALL_COMMAND } from "@/lib/betaOffer";
+import { trackDownloadPageClick } from "@/lib/downloadTracking";
 
 interface Command {
   id: string;
@@ -33,8 +33,9 @@ function matches(haystack: string, query: string): boolean {
 export function siteCommands(push: (href: string) => void): Command[] {
   const go = (href: string) => () => push(href);
   return [
-    { id: "mac", label: "Download for Mac", hint: ".dmg for M1 or newer", keywords: "install get macos apple", run: () => { trackDownloadClick("palette", "mac"); window.location.href = BETA_MAC_DIRECT_DOWNLOAD; } },
-    { id: "win", label: "Download for Windows", hint: ".exe for x64", keywords: "install get pc", run: () => { trackDownloadClick("palette", "windows"); window.location.href = BETA_WINDOWS_DIRECT_DOWNLOAD; } },
+    // The download page's install box, not the file: the downloaded .dmg isn't notarized yet (BOSS P0, 5 Nov).
+    { id: "mac", label: "Install on Mac", hint: "Terminal line or .dmg", keywords: "download install get macos apple dmg", run: () => { trackDownloadPageClick("palette"); push("/beta"); } },
+    { id: "win", label: "Install on Windows", hint: "PowerShell line or .exe", keywords: "download install get pc exe", run: () => { trackDownloadPageClick("palette"); push("/beta"); } },
     { id: "copy", label: "Copy the Mac install command", hint: "Terminal", run: () => { void navigator.clipboard?.writeText(BETA_INSTALL_COMMAND).catch(() => undefined); } },
     { id: "home", label: "Home", hint: "/", run: go("/") },
     { id: "demo", label: "Watch the demo", hint: "Real recording", run: go("/#tour") },

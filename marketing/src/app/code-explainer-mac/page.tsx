@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { DownloadLink } from "@/components/paper/DownloadLink";
+import { InstallBox } from "@/components/paper/InstallBox";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { faqItems } from "@/data/faq";
-import { BETA_MAC_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -42,7 +41,7 @@ export default function CodeExplainerMacPage() {
           panel beside your editor.
         </p>
         <div className="os-get">
-          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" tone="dark" />
+          <InstallBox os="mac" surface="seo_mac" />
         </div>
       </header>
 
@@ -115,7 +114,7 @@ export default function CodeExplainerMacPage() {
         <h2 id="mac-get">Get Unvibe for Mac</h2>
         <p>Free, with no card and no API key.</p>
         <div className="os-get">
-          <DownloadLink href={BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface="seo_mac" tone="dark" />
+          <InstallBox os="mac" surface="seo_mac" />
         </div>
         <p>
           On Windows? <Link className="paper-text-link" href="/code-explainer-windows">Unvibe for Windows</Link>.

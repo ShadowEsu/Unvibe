@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from "react";
-import { DownloadLink } from "@/components/paper/DownloadLink";
+import { InstallBox } from "@/components/paper/InstallBox";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { STEPS } from "@/data/howItWorks";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
-import { trackDownloadClick, watchDownloadCtaView } from "@/lib/downloadTracking";
+import { watchDownloadCtaView } from "@/lib/downloadTracking";
 import { markRefUsed, storedRef } from "@/lib/referral";
 import { SHORTCUTS, detectVisitorDevice, type VisitorDevice } from "@/lib/shortcuts";
 
@@ -101,27 +100,22 @@ function TryInBrowser({ device }: { device: VisitorDevice }) {
 }
 
 /**
- * Desktop: one download button for this computer, the browser demo beside it, the other OS in the trust line.
- * `actionsRef` marks the main call to action for the viewed event.
+ * Desktop: the install box for this computer (Terminal / PowerShell line first, the file second with its first-open
+ * steps; the other OS one click away inside it), the browser demo under it. `actionsRef` marks the main call to
+ * action for the viewed event.
  */
 export function DownloadForThisComputer({ device, actionsRef }: { device: "mac" | "windows"; actionsRef: RefObject<HTMLDivElement> }) {
-  const other = device === "mac" ? "windows" : "mac";
   return (
     <div className="vhero__cta">
-      <div className="vhero__actions" ref={actionsRef}>
-        <DownloadLink href={device === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} platform={device} surface="hero" />
+      <div className="vhero__actions vhero__actions--install" ref={actionsRef}>
+        <InstallBox os={device} surface="hero" />
         <TryInBrowser device={device} />
       </div>
-      {/* Security-approved wording (2026-11-04); the other OS stays a plain link. */}
+      {/* Security-approved wording (2026-11-04). */}
       <p className="vhero__trust">
         <span className="vhero__trust-item">Free for Mac and Windows.</span>{" "}
         <span className="vhero__trust-item">No API key.</span>{" "}
-        <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>{" "}
-        <span className="vhero__trust-item">
-          <a href={other === "mac" ? BETA_MAC_DIRECT_DOWNLOAD : BETA_WINDOWS_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick("hero_other_os", other)}>
-            {other === "mac" ? "Get it for Mac" : "Get it for Windows"}
-          </a>
-        </span>
+        <span className="vhero__trust-item">Checks for keys and tokens on your computer.</span>
       </p>
     </div>
   );

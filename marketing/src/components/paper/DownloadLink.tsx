@@ -6,7 +6,6 @@ import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking
 // clsx, not cn(): these classes are BEM names, so tailwind-merge (27 KB, on every page's first load) has nothing to resolve.
 import { clsx } from "clsx";
 import { delight } from "@/lib/delight";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import { detectVisitorDevice } from "@/lib/shortcuts";
 
 interface DownloadLinkProps {
@@ -89,17 +88,17 @@ export function DownloadLink({
 }
 
 /**
- * Mac and Windows buttons with their logos. With no href they download the
- * installer directly from the current GitHub release.
+ * Mac and Windows buttons with their logos, both to `href` (the download page; the files themselves are offered
+ * only inside InstallBox, under the Terminal line, since the .dmg isn't notarized yet).
  */
-export function DownloadRow({ href, surface }: { href?: string; surface: DownloadSurface }) {
+export function DownloadRow({ href, surface }: { href: string; surface: DownloadSurface }) {
   const [phone, setPhone] = useState(false);
   useEffect(() => setPhone(detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints) === "phone"), []);
   if (phone) return <div className="paper-join-row"><DownloadLink href="/#email-link" surface={surface} /></div>;
   return (
     <div className="paper-join-row">
-      <DownloadLink href={href ?? BETA_MAC_DIRECT_DOWNLOAD} platform="mac" surface={surface} />
-      <DownloadLink href={href ?? BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" surface={surface} />
+      <DownloadLink href={href} platform="mac" surface={surface} />
+      <DownloadLink href={href} platform="windows" surface={surface} />
     </div>
   );
 }
