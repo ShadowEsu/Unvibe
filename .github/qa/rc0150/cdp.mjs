@@ -306,8 +306,16 @@ try {
       return { file, viewport: vp, clipped: cut };
     };
 
-    // Briefs.
-    await companion.getByRole('button', { name: 'Briefs', exact: true }).first().click({ timeout: 10000 });
+    // Briefs. A returning launch can open with the "Welcome back" paste card over the app; it is closed the user's way.
+    const notNow = companion.getByRole('button', { name: 'Not now', exact: true });
+    if (await notNow.count() && await notNow.first().isVisible()) { await notNow.first().click(); say('STEP', 'pressed "Not now" on the welcome card'); await sleep(1000); }
+    try {
+      await companion.locator('#companion-sidebar nav button[aria-label="Briefs"]').click({ timeout: 10000 });
+    } catch (e) {
+      execFileSync('screencapture', ['-x', path.join(out, 'briefs-nav-failed-full.png')]);
+      say('STEP', `buttons on screen: ${(await companion.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.offsetParent).map((b) => b.getAttribute('aria-label') || b.textContent.trim()).slice(0, 40).join(' | ')))}`);
+      throw e;
+    }
     say('STEP', 'opened Briefs from the sidebar');
     const card = companion.locator('.briefings__card');
     if (process.env.SKIP_PICK !== '1') {
