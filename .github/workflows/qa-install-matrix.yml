@@ -1,0 +1,163 @@
+name: QA install matrix
+
+# QA only, on the qa/install-matrix branch (BOSS row 545 B, Thu 5 Nov 23:5x: "make sure it really works").
+# Every install path the site offers, on clean runners, through first launch and a first real explanation,
+# with pictures and the exact warnings:
+#   Mac:     the Terminal one-liner, the .dmg (arm64), the Intel .dmg
+#   Windows: the PowerShell one-liner, the .exe (portable)
+# macOS 14 can't be a row: GitHub retired its macOS 14 images on 2 Nov 2026 (actions/runner-images README).
+# Windows 10/11 aren't offered as hosted runners; Server 2022 and 2025 are the closest.
+# Each install's id is qa- prefixed before its first launch and flagged as QA right after its first contact, and
+# again at the end. The installers' anonymous 'installed' count is pointed at 127.0.0.1 (the only change).
+on:
+  push:
+    branches: [qa/install-matrix]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel a run between an install and its QA flag (run 42120662869 left a fake 'real' install).
+concurrency:
+  group: qa-install-matrix
+  cancel-in-progress: false
+
+env:
+  V: "0.1.49"
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-15, path: curl }
+          - { runner: macos-15, path: dmg }
+          - { runner: macos-26, path: curl }
+          - { runner: macos-26, path: dmg }
+          - { runner: macos-15-intel, path: curl }
+          - { runner: macos-15-intel, path: dmg }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Playwright for the first explanation
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: Install, first launch, QA flag, first explanation
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/mac-row.sh "${{ matrix.path }}" "$RUNNER_TEMP/m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          echo "store install id: ${id:-none} (seeded $INSTALL_ID)"
+          for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | sort -u); do
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$x\"}") || answer=$'\ncurl failed'
+            echo "QA install flag $x: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*')"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: matrix-${{ matrix.runner }}-${{ matrix.path }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-2022, path: ps1 }
+          - { runner: windows-2022, path: exe }
+          - { runner: windows-2025, path: ps1 }
+          - { runner: windows-2025, path: exe }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
+    steps:
+      - name: Require the QA flag token
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { Write-Error 'UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed.'; exit 1 }
+          'QA flag token present'
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Playwright for the first explanation
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+
+      - name: Install, first launch, QA flag, first explanation
+        shell: powershell
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: .github\qa\win-row.ps1 -Kind "${{ matrix.path }}" -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          $ids = @($env:INSTALL_ID)
+          Get-ChildItem $env:APPDATA, $env:LOCALAPPDATA -Recurse -Filter 'unvibe-store.json' -ErrorAction SilentlyContinue | ForEach-Object {
+            $i = (Get-Content $_.FullName -Raw | ConvertFrom-Json -AsHashtable)['installId']; if ($i) { $ids += $i }; "store $($_.FullName): $i"
+          }
+          foreach ($x in ($ids | Sort-Object -Unique)) {
+            try {
+              $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+                -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
+                -Body (@{ installId = $x } | ConvertTo-Json -Compress)
+              "QA install flag ${x}: $($r.StatusCode) matched=$(($r.Content | ConvertFrom-Json).matched)"
+            } catch { "QA install flag ${x}: $($_.Exception.Message)" }
+          }
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: matrix-${{ matrix.runner }}-${{ matrix.path }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
