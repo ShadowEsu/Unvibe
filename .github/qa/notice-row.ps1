@@ -133,9 +133,9 @@ function Watch($seconds, $prefix) { # the Island's bounds and a crop every ~250 
   $list | ForEach-Object { "{0,6}s  window L {1} T {2} R {3} B {4} ({5}x{6})  pill L {7} T {8} R {9} B {10}" -f $_.S, $_.L, $_.T, $_.R, $_.B, $_.W, $_.H, $_.PL, $_.PT, $_.PR, $_.PB } | Set-Content "$Out\$prefix-bounds.txt"
   , $list
 }
-function Grown($list) { # frames whose window is at least 40 px taller than the smallest seen
+function Grown($list) { # frames whose window is at least 30 px taller than the smallest seen (a one-line notice adds 38)
   $min = ($list | Measure-Object H -Minimum).Minimum
-  @($list | Where-Object { $_.H -ge $min + 40 })
+  @($list | Where-Object { $_.H -ge $min + 30 })
 }
 function Press() { # Ctrl+Alt+U
   [W]::keybd_event(0x11, 0, 0, [IntPtr]::Zero); [W]::keybd_event(0x12, 0, 0, [IntPtr]::Zero); [W]::keybd_event(0x55, 0, 0, [IntPtr]::Zero)
@@ -165,7 +165,7 @@ if (-not $nh -or $nh -eq [IntPtr]::Zero) { $nh = (Get-Process notepad -ErrorActi
 try { [System.Windows.Forms.Clipboard]::Clear(); Note "clipboard cleared" } catch { Note "clipboard clear: $($_.Exception.Message)" }
 Full 'b-before-press'
 Press
-$b = Watch 14 'b-notice'
+$b = Watch 24 'b-notice' # the notice comes ~5.5 s after the press (the copy attempt), then shows for 9 s
 Full 'b-after'
 Note "B. Island frames: $($b.Count); window sizes seen: $(($b | ForEach-Object { "$($_.W)x$($_.H)" } | Select-Object -Unique) -join ', ')"
 $gb = @(Grown $b)
@@ -173,7 +173,7 @@ Verdict ($gb.Count -gt 0) "B. a notice grows the Island (from $(if ($gb) { "$($g
 if ($gb) {
   $mid = $gb[[int]($gb.Count / 2)]; X4 $mid.File "$Out\island-notice-x4.png"; Copy-Item $mid.File "$Out\island-notice.png"
   $after = @($b | Where-Object { $_.S -gt $gb[-1].S })
-  Verdict ($after.Count -gt 0) "B. the notice ends and the Island is compact again within the 14 s watch (shown about $([Math]::Round($gb[-1].S - $gb[0].S, 1)) s; 9 s expected; $($after.Count) compact frames after)"
+  Verdict ($after.Count -gt 0) "B. the notice ends and the Island is compact again within the 24 s watch (shown from $($gb[0].S) s to $($gb[-1].S) s, about $([Math]::Round($gb[-1].S - $gb[0].S, 1)) s; 9 s expected; $($after.Count) compact frames after)"
 }
 $seen = @($b | Where-Object { $null -ne $_.PB })
 $outside = @($seen | Where-Object { $_.PL -lt $wa.Left -or $_.PT -lt $wa.Top -or $_.PR -gt $wa.Right -or $_.PB -gt $wa.Bottom })
@@ -186,8 +186,17 @@ if ($last) { X4 $last.File "$Out\island-compact-x4.png"; Note "compact Island af
 # C. #218: press again (past notify's 15 s gap), click the compact row while the notice shows, picture the card.
 Start-Sleep 3
 [void][W]::SetForegroundWindow($nh); Start-Sleep 1
-Press; Start-Sleep 1.5
-$h = [W]::Island((Pids))
+$compactH = ($b | Measure-Object H -Minimum).Minimum
+Press
+# Wait for the notice (the copy attempt takes ~5.5 s), then click while it shows.
+$h = [IntPtr]::Zero; $t = Get-Date
+while (((Get-Date) - $t).TotalSeconds -lt 12) {
+  $h = [W]::Island((Pids))
+  if ($h -ne [IntPtr]::Zero -and ((Rect $h).B - (Rect $h).T) -ge $compactH + 30) { break }
+  Start-Sleep -Milliseconds 200
+}
+Start-Sleep 1
+Note "C. notice up $([Math]::Round(((Get-Date) - $t).TotalSeconds, 1)) s after the second press"
 if ($h -ne [IntPtr]::Zero) {
   $r = Rect $h
   $pb = Crop $r 'c-click-before' 30
