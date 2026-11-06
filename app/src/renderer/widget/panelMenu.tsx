@@ -16,9 +16,12 @@ export interface MenuItem {
   disabled?: boolean;
   /** A line that only tells something (the status, what's left): not dimmed, does nothing. */
   info?: boolean;
-  /** A short tag after the label, such as "Pro". */
+  /** A short tag after the label, such as "Pro"; `locked` adds a lock before it. */
   tag?: string;
+  locked?: boolean;
   title?: string;
+  /** The depth menu's items keep the `data-level` the e2e scripts select by. */
+  dataLevel?: string;
 }
 
 export type MenuMove = { focus: number } | { close: 'escape' | 'tab' } | null;
@@ -48,17 +51,18 @@ export function openFocus(items: MenuItem[], from: 'first' | 'last' = 'first'): 
   return -1;
 }
 
-/** An open menu below its button, aligned to the button's right edge. */
-export function MenuList({ id, label, items, itemRefs, onKeyDown, onPick }: {
+/** An open menu below its button, aligned to the button's right edge (or left, `start`). */
+export function MenuList({ id, label, items, align = 'end', itemRefs, onKeyDown, onPick }: {
   id: string;
   label: string;
   items: MenuItem[];
+  align?: 'start' | 'end';
   itemRefs?: { current: Array<HTMLButtonElement | null> };
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onPick: (item: MenuItem) => void;
 }) {
   return (
-    <div className="pm-menu" id={id} role="menu" aria-label={label} onKeyDown={onKeyDown}>
+    <div className={`pm-menu${align === 'start' ? ' pm-menu--start' : ''}`} id={id} role="menu" aria-label={label} onKeyDown={onKeyDown}>
       {items.map((item, index) => (
         <button
           key={item.id}
@@ -69,10 +73,12 @@ export function MenuList({ id, label, items, itemRefs, onKeyDown, onPick }: {
           aria-disabled={item.disabled || item.info || undefined}
           tabIndex={-1}
           title={item.title}
+          data-level={item.dataLevel}
           className={`pm-menu__item${item.info ? ' pm-menu__item--info' : ''}`}
           onClick={() => onPick(item)}
         >
           <span>{item.label}</span>
+          {item.locked ? <svg className="pm-menu__lock" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="5.5" width="7" height="5" rx="1.2" /><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" /></svg> : null}
           {item.tag ? <span className="pm-menu__tag">{item.tag}</span> : null}
           {item.checked ? <svg className="pm-menu__on" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.6l4.5-5" /></svg> : null}
         </button>
@@ -85,12 +91,14 @@ export function MenuList({ id, label, items, itemRefs, onKeyDown, onPick }: {
  * A button that opens a menu. Opening focuses the chosen (or first) item; arrows move, Esc closes and puts focus
  * back on the button, a click outside or Tab just closes.
  */
-export function MenuButton({ className, items, menuLabel, ariaLabel, title, children }: {
+export function MenuButton({ className, items, menuLabel, ariaLabel, title, align, disabled = false, children }: {
   className: string;
   items: MenuItem[];
   menuLabel: string;
   ariaLabel?: string;
   title?: string;
+  align?: 'start' | 'end';
+  disabled?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -143,6 +151,7 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, chil
         className={className}
         title={title}
         aria-label={ariaLabel}
+        disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -161,6 +170,7 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, chil
           id={id}
           label={menuLabel}
           items={items}
+          align={align}
           itemRefs={itemRefs}
           onKeyDown={onMenuKey}
           onPick={(item) => {

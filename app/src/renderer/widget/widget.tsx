@@ -14,6 +14,7 @@ import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { selectionSource, selectionTitle } from '../shared/languageName';
 import { MenuButton, TabStrip, panelMenuItems } from './panelMenu';
+import { LEVELS, LevelChip } from './levelChip';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -107,14 +108,6 @@ interface DetailState {
   error: string;
   open: boolean;
 }
-
-const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
-  { id: 'new', label: 'New' },
-  { id: 'beginner', label: 'Beginner' },
-  { id: 'intermediate', label: 'Intermediate' },
-  { id: 'advanced', label: 'Advanced' },
-  { id: 'expert', label: 'Expert' },
-];
 
 /** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
 function ThinkingCard({ hasCode }: { hasCode: boolean }) {
@@ -515,11 +508,12 @@ function Widget() {
     return () => mq.removeEventListener('change', onScheme);
   }, []);
 
-  // Keep typography in proportion when someone makes the compact panel smaller.
+  // Keep typography in proportion when someone makes the panel much smaller than its 440×740 opening size.
+  // Height counts from 640 down, so a panel the screen shortened on opening (fitPanelBounds) still reads at 1.
   // The native window owns size; the renderer only exposes a bounded visual scale.
   useEffect(() => {
     const updateScale = () => {
-      const scale = Math.max(0.78, Math.min(1, Math.min(window.innerWidth / 560, window.innerHeight / 640)));
+      const scale = Math.max(0.78, Math.min(1, Math.min(window.innerWidth / 440, window.innerHeight / 640)));
       document.documentElement.style.setProperty('--widget-scale', scale.toFixed(3));
     };
     updateScale();
@@ -872,6 +866,9 @@ function Widget() {
       }));
     });
   };
+  // The row under the header: the depth chip while there's code to explain, "Saved on this Mac" once it's saved.
+  const showDepth = !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot');
+  const showSaveNote = !active.mock && phase === 'done';
 
   const menuItems = panelMenuItems({
     status: phaseLabel.charAt(0).toUpperCase() + phaseLabel.slice(1),
@@ -882,7 +879,7 @@ function Widget() {
     usage: usage ? { remaining: usage.remaining, resetsOn: new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) } : undefined,
   }, {
     explain: () => document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-    depth: () => document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+    depth: () => (document.querySelector('.depth-chip') as HTMLButtonElement | null)?.click(),
     testMe: () => openQuiz(),
     ask: () => requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus()),
     why: askWhy,
@@ -921,9 +918,12 @@ function Widget() {
           </button>
         </div>
       </div>
-      {!collapsed && !active.mock && phase === 'done' ? (
+      {!collapsed && (showDepth || showSaveNote) ? (
         <div className="head-bar">
-          <span className="local-save-note">Saved on this {deviceName}</span>
+          {showDepth ? (
+            <LevelChip level={active.level} plan={usage?.plan} disabled={outOfExplanations} onPick={(id) => { setProGate(false); pick(id); }} />
+          ) : <span />}
+          {showSaveNote ? <span className="local-save-note">Saved on this {deviceName}</span> : null}
         </div>
       ) : null}
 
@@ -952,39 +952,6 @@ function Widget() {
         </div>
       ) : null}
 
-      {!collapsed && !sessionPaused && (phase === 'ready' || phase === 'streaming' || phase === 'done' || phase === 'boot') && (
-        <div className="levels" role="group" aria-label="Explanation depth">
-          <span className="levels__label">Depth</span>
-          {LEVELS.map((l) => {
-            const expertLocked = l.id === 'expert' && usage?.plan !== 'pro' && usage?.plan !== 'teams' && usage?.plan !== 'full';
-            return (
-              <button
-                key={l.id}
-                data-level={l.id}
-                className={`lvl${l.id === active.level ? ' on' : ''}${expertLocked ? ' lvl--locked' : ''}`}
-                disabled={outOfExplanations || expertLocked}
-                title={expertLocked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
-                aria-label={expertLocked ? `${l.label}, included with Unvibe Pro` : undefined}
-                onClick={() => {
-                  if (expertLocked) {
-                    setProGate(true);
-                    setTabs((prev) => patchTab(prev, activeRef.current, {
-                      phase: 'error',
-                      error: 'Expert explanations are included with Unvibe Pro. Pro connects explanations across files and project history so you can understand more than the selected code.',
-                    }));
-                    return;
-                  }
-                  setProGate(false);
-                  pick(l.id);
-                }}
-              >
-                {l.label}
-                {expertLocked ? <span className="lvl__pro" aria-hidden="true">Pro</span> : null}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {!collapsed && !sessionPaused && (
         <>

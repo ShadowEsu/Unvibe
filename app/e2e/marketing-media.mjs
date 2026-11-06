@@ -252,7 +252,7 @@ const firstRun = await step('onboarding', async () => {
 
 const explained = firstRun && await step('first explanation', async () => {
   const panel = await windowWith('widget.html', 20000);
-  await resize(panel, 560, 720);
+  await resize(panel, 440, 740);
   await panel.locator('.body .cursor').waitFor({ timeout: 60000 }).catch(() => {});
   await sleep(2500);
   await shot(panel, 'panel-streaming');
@@ -266,7 +266,9 @@ const explained = firstRun && await step('first explanation', async () => {
 
 if (explained) {
   await step('beginner depth', async () => {
-    await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
+    const panel = await windowWith('widget.html');
+    await panel.locator('.depth-chip').click();
+    await panel.locator('.pm-menu [data-level="beginner"]').click();
     await sleep(1500);
     await shot(await settledPanel(), 'panel-beginner');
   });

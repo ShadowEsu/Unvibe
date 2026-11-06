@@ -7,9 +7,9 @@ const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-/** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 560;
-const DEFAULT_WIDGET_H = 640;
+/** Opening size for the review panel (0.1.51 design, Design Q3): tall and narrow, beside the editor. */
+const DEFAULT_WIDGET_W = 440;
+const DEFAULT_WIDGET_H = 740;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
@@ -223,21 +223,43 @@ function snap(win: BrowserWindow): void {
   if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
 }
 
+/**
+ * The panel inside a work area: 12 px from every edge (24 in all, Design Q3) and, when the Island sits at the
+ * top, clear of it: a panel that would reach under the Island starts 8 px below it and gets shorter instead.
+ * (At 1024 px wide a 440 px panel can't step aside, and QA saw its corner under the Island there.) Only a real
+ * overlap counts (the Island may be on another display), and only if the room below still fits the minimum height.
+ */
+export function fitPanelBounds(bounds: Electron.Rectangle, workArea: Electron.Rectangle, island?: Electron.Rectangle): Electron.Rectangle {
+  const width = Math.min(bounds.width, workArea.width - 24);
+  let height = Math.min(bounds.height, workArea.height - 24);
+  const x = Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12);
+  let y = Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12);
+  if (island && x < island.x + island.width && x + width > island.x && y < island.y + island.height && y + height > island.y) {
+    const below = island.y + island.height + 8;
+    const room = workArea.y + workArea.height - 12 - below;
+    if (room >= Math.min(height, WIDGET_MIN_H)) {
+      y = below;
+      height = Math.min(height, room);
+    }
+  }
+  return { x, y, width, height };
+}
+
+/** Where the compact Island is when it sits at the top of the display it's on; undefined for a bottom bar. */
+function topIslandRect(): Electron.Rectangle | undefined {
+  const position = settings().all().barPosition;
+  if (!position.startsWith('top')) return undefined;
+  const { width, height } = barSize(position, false);
+  return { ...barBounds(position, width, height), width, height };
+}
+
 function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
   const displays = screen.getAllDisplays();
   const visible = displays.find(({ workArea }) =>
     bounds.x < workArea.x + workArea.width && bounds.x + bounds.width > workArea.x &&
     bounds.y < workArea.y + workArea.height && bounds.y + bounds.height > workArea.y,
   );
-  const workArea = (visible ?? screen.getPrimaryDisplay()).workArea;
-  const width = Math.min(bounds.width, workArea.width - 24);
-  const height = Math.min(bounds.height, workArea.height - 24);
-  return {
-    width,
-    height,
-    x: Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12),
-    y: Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12),
-  };
+  return fitPanelBounds(bounds, (visible ?? screen.getPrimaryDisplay()).workArea, topIslandRect());
 }
 
 function defaultWidgetBounds(): Electron.Rectangle {
@@ -253,20 +275,20 @@ function defaultWidgetBounds(): Electron.Rectangle {
   };
 }
 
-/** Restore user size/position. Stock tiny panels get the current opening size. */
+/** Opening sizes earlier versions saved for everyone; a panel still at one of them gets today's opening size. */
+const STOCK_PANEL_SIZES: ReadonlyArray<readonly [number, number]> = [
+  [300, 360], [280, 240], [340, 440], [360, 480], [440, 560], [480, 600], [540, 720], [680, 720], [560, 640],
+];
+
+export function isStockPanelSize(width: number, height: number): boolean {
+  return STOCK_PANEL_SIZES.some(([w, h]) => w === width && h === height);
+}
+
+/** Restore user size/position. A panel at an old stock size gets the current opening size; sizes people chose stay. */
 function resolveWidgetBounds(): Electron.Rectangle {
   const saved = settings().all().lastWidgetBounds;
   if (!saved) return defaultWidgetBounds();
-  const stockTiny =
-    (saved.width === 300 && saved.height === 360) ||
-    (saved.width === 280 && saved.height === 240) ||
-    (saved.width === 340 && saved.height === 440) ||
-    (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 480 && saved.height === 600) ||
-    (saved.width === 540 && saved.height === 720) ||
-    (saved.width === 680 && saved.height === 720);
-  if (stockTiny) {
+  if (isStockPanelSize(saved.width, saved.height)) {
     return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
   }
   return { ...saved };
@@ -371,9 +393,13 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     if (win.isDestroyed()) return;
     settings().set({ lastWidgetBounds: win.getBounds() });
   };
+  // Moving saves where the panel is, not a height the screen shortened it to (fitPanelBounds): the size stays the
+  // one someone chose (resizing saves that, here and in main.ts) or, before any, the size it opened at.
   win.on('moved', () => {
     snap(win);
-    persist();
+    if (win.isDestroyed()) return;
+    const size = settings().all().lastWidgetBounds ?? bounds;
+    settings().set({ lastWidgetBounds: { ...win.getBounds(), width: size.width, height: size.height } });
   });
   win.on('resized', persist);
 
