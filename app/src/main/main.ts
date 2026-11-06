@@ -41,7 +41,7 @@ import {
   showBar,
   type WidgetResizeEdge,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, startFrontmostWatch, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -539,6 +539,12 @@ function asset(...parts: string[]): string {
  */
 let pendingGrant: PendingGrant | null = null;
 /**
+ * Why the last shortcut capture got nothing on macOS, when System Events was the cause: refused
+ * (Automation switched off after Don't Allow; macOS never asks again) or timed out while macOS was
+ * still asking. The panel's empty state reads it and says which switch to turn on.
+ */
+let captureBlock: CaptureBlock = null;
+/**
  * A clipboard explain asked for before the person agreed to sending code (QA F1): nothing was read
  * then. After Agree, the panel asks main to read it and show the confirm sheet; `heldReviewToRun`
  * drops requests older than five minutes. Any other review started meanwhile replaces or clears it.
@@ -593,10 +599,15 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   const capture = await reviewCapture(options, agreed, () => captureSelection(options));
   const code = capture.code;
   const confirmFrom = captureConfirmReason(options);
-  // Windows capture already looked up the foreground app in the same PowerShell call.
-  const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
+  // Windows capture already looked up the foreground app in the same PowerShell call. A clipboard
+  // explain during setup (step 3's paste) names no app: asking System Events for it would put
+  // macOS's Automation question in the middle of setup, for a paste that needs no permission.
+  const sourceApp = capture.sourceApp !== undefined
+    ? capture.sourceApp
+    : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
   if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
   if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
@@ -617,6 +628,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (code && !confirmFrom && !allowSelectedCodePrompt()) return;
   if (code && confirmFrom) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
+  // An open panel keeps its empty state mounted, so tell it the new answer (a fresh one asks on mount).
+  if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
@@ -732,7 +745,9 @@ app.whenReady().then(() => {
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
-  startFrontmostWatch();
+  // The watch asks macOS for System Events, so a fresh install gets that question once setup is done
+  // (onboarding:complete), or at its first shortcut press if that comes sooner.
+  if (s.onboarded) startFrontmostWatch();
   startLiveWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
@@ -1520,6 +1535,12 @@ app.whenReady().then(() => {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
     return { ok: true };
   });
+  ipcMain.handle('perms:captureBlock', () => captureBlock);
+  ipcMain.handle('perms:openAutomation', () => {
+    if (isMac)
+      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation');
+    return { ok: true };
+  });
   /**
    * The panel saw the grant arrive: go back to the app the shortcut was pressed in and explain the
    * selection already made. `explained: false` when there is nothing to go back to or nothing was
@@ -1536,6 +1557,8 @@ app.whenReady().then(() => {
     // Turned off since the press: capture nothing.
     if (!codeConsented(providerInUse())) return { explained: false };
     const capture = await captureSelection({ fromApp });
+    // Accessibility is on now, but System Events may still be refused: the panel says which switch.
+    captureBlock = nextCaptureBlock(captureBlock, {}, capture);
     if (!capture.code) return { explained: false };
     await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
     return { explained: true };
@@ -1563,6 +1586,7 @@ app.whenReady().then(() => {
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     reportProgress('onboarded');
+    startFrontmostWatch();
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });
