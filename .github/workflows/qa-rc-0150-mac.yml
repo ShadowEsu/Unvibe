@@ -8,6 +8,10 @@ name: QA 0.1.50 RC Mac stills
 #   3 The first real explanation from the DMG (Gatekeeper dialog, then quarantine removed), arm64 x2 and Intel.
 # Every install id is qa- prefixed in the profile before the first launch and flagged as QA before launch, after
 # first contact and again at the end (if: always()).
+# RC-2 (app-release run 42199536258 on main 3190b6d0 = RC-1 + #219), rows tagged rc2-* with matrix.rc:
+#   r1 the compact Island before and after the first explanation, 4x crops, chip → count gap (#213/#219);
+#   r2 + r3 DMG install + first explanation on arm64 and Intel, audio devices and every privacy dialog watched;
+#   r3 also once on arm64 with a virtual microphone (BlackHole 2ch), to see whether an input device brings the question.
 on:
   push:
     branches: [qa/rc-0150-mac]
@@ -39,6 +43,10 @@ jobs:
           - { item: i3-explain, runner: macos-15 }
           - { item: i3-explain, runner: macos-26 }
           - { item: i3-explain, runner: macos-15-intel }
+          - { item: rc2-r1-island, runner: macos-15, rc: "42199536258" }
+          - { item: rc2-r2-explain, runner: macos-15, rc: "42199536258" }
+          - { item: rc2-r2-explain, runner: macos-15-intel, rc: "42199536258" }
+          - { item: rc2-r3-mic-input, runner: macos-15, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
@@ -72,21 +80,28 @@ jobs:
             .github
             app/e2e
 
-      - name: Get the RC build (run 42194700935) and check its DMGs
+      - name: Get the RC build (${{ matrix.rc || env.RC_RUN }})
         if: env.SKIP != '1'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
-          run-id: ${{ env.RC_RUN }}
+          run-id: ${{ matrix.rc || env.RC_RUN }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/build
 
       - name: Check the RC DMGs
         if: env.SKIP != '1'
+        env:
+          RC: ${{ matrix.rc }}
         run: |
           cd "$RUNNER_TEMP/build"; ls -la
-          echo "$SHA_ARM64  Unvibe-$V-mac-arm64.dmg" > sums; echo "$SHA_X64  Unvibe-$V-mac-x64.dmg" >> sums
-          shasum -a 256 -c sums | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
+          if [ -n "$RC" ]; then
+            echo "RC-2 build $RC (no expected sums given; recorded here):" | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
+            shasum -a 256 Unvibe-$V-mac-*.dmg | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          else
+            echo "$SHA_ARM64  Unvibe-$V-mac-arm64.dmg" > sums; echo "$SHA_X64  Unvibe-$V-mac-x64.dmg" >> sums
+            shasum -a 256 -c sums | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
+          fi
 
       - name: Playwright (debug-port reads and the first explanation)
         if: env.SKIP != '1'
@@ -100,8 +115,8 @@ jobs:
         if: env.SKIP != '1'
         run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
 
-      - name: Install the RC from its DMG and allow Accessibility (items 1 and 2)
-        if: env.SKIP != '1' && matrix.item != 'i3-explain'
+      - name: Install the RC from its DMG and allow Accessibility (items 1 and 2, RC-2 row 1)
+        if: env.SKIP != '1' && (startsWith(matrix.item, 'i1-') || matrix.item == 'i2-island' || matrix.item == 'rc2-r1-island')
         run: |
           arch=$([ "$(uname -m)" = arm64 ] && echo arm64 || echo x64)
           mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
@@ -135,6 +150,19 @@ jobs:
           bash .github/qa/mac-row.sh dmg "$RUNNER_TEMP/m"; rc=$?
           echo "app bundle version: $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString)" | tee -a "$RUNNER_TEMP/m/report.txt"
           exit $rc
+
+      - name: "RC-2 row 1: compact Island before/after the first explanation (#213/#219)"
+        if: env.SKIP != '1' && matrix.item == 'rc2-r1-island'
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/rc0150/rc2-row1.sh "$RUNNER_TEMP/m"
+
+      - name: "RC-2 rows 2+3: DMG install, first explanation, audio devices and privacy dialogs"
+        if: env.SKIP != '1' && (matrix.item == 'rc2-r2-explain' || matrix.item == 'rc2-r3-mic-input')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          DMG_DIR: ${{ runner.temp }}/build
+        run: bash .github/qa/rc0150/rc2-explain-mic.sh "$RUNNER_TEMP/m" "${{ matrix.item == 'rc2-r3-mic-input' && 'input' || 'plain' }}"
 
       - name: Flag the install as QA (again, whatever happened)
         if: always() && env.SKIP != '1'

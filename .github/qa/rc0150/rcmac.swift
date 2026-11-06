@@ -10,10 +10,13 @@
 //       waits (20 s max) for the window to grow past h0 + 20 (t0 = the notice is up), then at each t0 + second:
 //       reads the window's bounds and starts `screencapture -x -R region` (not waited on, so the cadence holds);
 //       prints a CSV line per frame: planned_s,actual_ms,x,y,w,h,file
+//   rcmac enlarge <in.png> <out.png> <n>  nearest-neighbour n× enlargement (every source pixel an n×n block)
+//   rcmac move <x> <y>                    moves the pointer there (no click)
 import AppKit
 import ApplicationServices
 import CoreGraphics
 import Foundation
+import ImageIO
 
 func windows(_ options: CGWindowListOption, _ id: CGWindowID = kCGNullWindowID) -> [[String: Any]] {
   (CGWindowListCopyWindowInfo(options, id) as? [[String: Any]]) ?? []
@@ -142,6 +145,30 @@ case "timeline" where a.count > 7:
     fflush(stdout)
   }
   for p in shots { p.waitUntilExit() }
+case "enlarge" where a.count > 4:
+  let n = Int(a[4]) ?? 4
+  guard let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: a[2]) as CFURL, nil),
+        let img = CGImageSourceCreateImageAtIndex(src, 0, nil) else { print("cannot read \(a[2])"); exit(1) }
+  // Same colour space as the capture, so no pixel value is converted; no interpolation, so every pixel is a sharp block.
+  let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+  func context(_ s: CGColorSpace) -> CGContext? {
+    CGContext(data: nil, width: img.width * n, height: img.height * n, bitsPerComponent: 8, bytesPerRow: 0,
+              space: s, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+  }
+  guard let ctx = context(img.colorSpace ?? srgb) ?? context(srgb) else { print("no bitmap context"); exit(1) }
+  print("colour space: \(ctx.colorSpace?.name.map { $0 as String } ?? "unnamed (the capture's own profile)")")
+  ctx.interpolationQuality = .none
+  ctx.setShouldAntialias(false)
+  ctx.draw(img, in: CGRect(x: 0, y: 0, width: img.width * n, height: img.height * n))
+  guard let big = ctx.makeImage(),
+        let dst = CGImageDestinationCreateWithURL(URL(fileURLWithPath: a[3]) as CFURL, "public.png" as CFString, 1, nil) else { exit(1) }
+  CGImageDestinationAddImage(dst, big, nil)
+  guard CGImageDestinationFinalize(dst) else { exit(1) }
+  print("\(img.width)x\(img.height) -> \(big.width)x\(big.height)")
+case "move" where a.count > 3:
+  let p = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
+  CGWarpMouseCursorPosition(p)
+  CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
 default:
   exit(2)
 }

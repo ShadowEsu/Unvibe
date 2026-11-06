@@ -3,6 +3,10 @@
 //   node cdp.mjs note206 <out> <label>   waits for the panel's Automation-denied note; text, button, geometry, contrast
 //   node cdp.mjs island <out> <label>    the Island window: screen position/size, placement classes, notice text + colours
 //   node cdp.mjs islandnote <out> <label> the expanded card's .island__note: text and colour (#218)
+//   node cdp.mjs islandcount <out> <label> waits for the COMPACT Island (count showing, no notice, not expanded), then
+//                                         the exact .island__left text and the gap from the </> chip to the count
+//   node cdp.mjs sample <out> <label>    the onboarding sample explanation (the companion's "Explain this code" IPC,
+//                                         window.unvibe.explainSample), waits for the complete AI explanation
 // Prints "KEY value" lines for the shell and writes <out>/cdp-<label>.json; element stills go to <out>/<label>-*.png.
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -164,6 +168,68 @@ try {
       const n = result[k];
       say(k.toUpperCase(), n ? `"${n.text}" colour ${n.color} on ${n.on} = ${n.contrast}:1, dot ${n.dot ?? 'none'}, ${Math.round(n.rect.w)}x${Math.round(n.rect.h)} px, clipped by ${n.clippedBy.join(',') || 'nothing'}` : 'none');
     }
+  } else if (mode === 'islandcount') {
+    const bar = await page(browser, 'bar.html', 20000);
+    if (!bar) throw new Error('no Island window (bar.html)');
+    const waitStart = Date.now();
+    const until = Date.now() + Number(process.env.COMPACT_WAIT || 30000);
+    let state = null;
+    while (Date.now() < until) {
+      state = await bar.evaluate(() => ({ cls: document.querySelector('.island')?.className ?? '', count: !!document.querySelector('.island__left') }));
+      if (state.count && !/island--(notice|expanded|closing)/.test(state.cls)) break;
+      await sleep(250);
+    }
+    await sleep(700); // any resize or fade finishes
+    Object.assign(result, await inPage(bar, () => {
+      const island = document.querySelector('.island');
+      const chip = document.querySelector('.island__wing--left .island__tool');
+      const count = document.querySelector('.island__left');
+      const r = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, w: b.width, h: b.height }; };
+      // The first painted character of the count: its own box, not the span's.
+      let first = null;
+      if (count) { const w = document.createTreeWalker(count, NodeFilter.SHOW_TEXT); let t;
+        while ((t = w.nextNode())) { const i = t.textContent.search(/\S/); if (i >= 0) { const g = document.createRange(); g.setStart(t, i); g.setEnd(t, i + 1);
+          const b = g.getBoundingClientRect(); first = { char: t.textContent[i], left: b.left, right: b.right }; break; } } }
+      const chipBox = r(chip), countBox = r(count);
+      return { window: win(), islandClass: island?.className ?? null, islandRect: r(island), countText: count ? count.textContent : null,
+        countInner: count ? count.innerText : null, chip: chipBox, count: countBox, firstChar: first,
+        wingLeft: r(document.querySelector('.island__wing--left')), wingRight: r(document.querySelector('.island__wing--right')),
+        notch: r(document.querySelector('.island__notch')),
+        gapSpan: chipBox && countBox ? Math.round((countBox.left - chipBox.right) * 100) / 100 : null,
+        gapFirstChar: chipBox && first ? Math.round((first.left - chipBox.right) * 100) / 100 : null };
+    }));
+    result.compactReached = !!(state?.count && !/island--(notice|expanded|closing)/.test(state.cls));
+    await bar.screenshot({ path: path.join(out, `${label}-bar-page.png`) }).catch(() => {});
+    const w = result.window, f = (n) => Math.round(n * 100) / 100;
+    say('BAR_WINDOW', `${w.screenX} ${w.screenY} ${w.outerWidth} ${w.outerHeight} dpr ${w.devicePixelRatio}`);
+    result.waitedMs = Date.now() - waitStart;
+    say('ISLAND_CLASS', `${result.islandClass ?? 'none'} (compact reached: ${result.compactReached ? 'yes' : 'no'})`);
+    say('COUNT_TEXT', JSON.stringify(result.countText));
+    say('CHIP', result.chip ? `left ${f(result.chip.left)} right ${f(result.chip.right)} (${f(result.chip.w)}x${f(result.chip.h)})` : 'none');
+    say('COUNT', result.count ? `left ${f(result.count.left)} right ${f(result.count.right)} (${f(result.count.w)}x${f(result.count.h)}); first char "${result.firstChar?.char}" left ${f(result.firstChar?.left ?? NaN)}` : 'none');
+    say('WAITED', `${result.waitedMs} ms until the compact state was read (from the start of this read)`);
+    say('WINGS', `left ${f(result.wingLeft?.left ?? NaN)}..${f(result.wingLeft?.right ?? NaN)}, notch ${f(result.notch?.left ?? NaN)}..${f(result.notch?.right ?? NaN)}, right ${f(result.wingRight?.left ?? NaN)}..${f(result.wingRight?.right ?? NaN)}`);
+    say('GAP', `${result.gapFirstChar} px (first character's left − chip's right); span ${result.gapSpan} px`);
+  } else if (mode === 'sample') {
+    const pages = () => browser.contexts().flatMap((c) => c.pages()).filter((p) => !p.isClosed());
+    let host = await page(browser, 'companion.html', 10000);
+    if (!host) for (const p of pages()) if (await p.evaluate(() => typeof window.unvibe?.explainSample === 'function').catch(() => false)) { host = p; break; }
+    if (!host) throw new Error('no window with window.unvibe.explainSample');
+    say('SAMPLE_FROM', host.url().split('/').pop());
+    const clicked = Date.now();
+    await host.evaluate(() => window.unvibe.explainSample());
+    const panel = await page(browser, 'widget.html', 20000);
+    if (!panel) throw new Error('the review panel did not open');
+    await panel.locator('.code-context code').filter({ hasText: 'function debounce(fn, wait) {' }).waitFor({ timeout: 30000 });
+    await panel.locator('.card--done .local-save-note').waitFor({ timeout: 120000 });
+    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 });
+    const body = await panel.locator('.body').innerText();
+    const code = await panel.locator('.code-context').innerText();
+    result.explanation = body.replace(code, '').trim();
+    result.seconds = Math.round((Date.now() - clicked) / 100) / 10;
+    writeFileSync(path.join(out, `${label}-explanation.txt`), `${result.explanation}\n`);
+    await panel.screenshot({ path: path.join(out, `${label}-panel.png`) }).catch(() => {});
+    say('EXPLANATION', `${result.explanation.length} characters, ${result.seconds} s after the request`);
   }
 } catch (e) {
   result.error = e.message.split('\n')[0];
