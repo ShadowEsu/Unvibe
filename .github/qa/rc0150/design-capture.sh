@@ -65,7 +65,7 @@ r "profile: onboarded, light, Automation Allow seeded (no System Events question
 launch
 sleep 10
 flag first-contact || { r "FAIL  QA flag after first contact"; fail=1; }
-GKWIN="$W" PICK_PATH="$repo" t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" design "$out" design > "$out/cdp-design.txt" 2>&1
+RCMAC="$R" GKWIN="$W" PICK_PATH="$repo" t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" design "$out" design > "$out/cdp-design.txt" 2>&1
 if grep -q '^ERROR PICK_FAILED' "$out/cdp-design.txt"; then
   r "the folder dialog could not be driven; SEEDING lastProjectRoot (what a pick stores) and starting again"
   sed 's/^/  cdp (pick attempt): /' "$out/cdp-design.txt" | tee -a "$out/report.txt"
@@ -75,7 +75,7 @@ import json, sys
 p = sys.argv[1]; s = json.load(open(p)); s["lastProjectRoot"] = sys.argv[2]; json.dump(s, open(p, "w"))
 EOF
   launch; sleep 10
-  SKIP_PICK=1 GKWIN="$W" t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" design "$out" design > "$out/cdp-design.txt" 2>&1
+  SKIP_PICK=1 RCMAC="$R" GKWIN="$W" t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" design "$out" design > "$out/cdp-design.txt" 2>&1
   r "PROJECT seeded lastProjectRoot (not picked through the dialog)"
 else
   r "PROJECT chosen through the app's folder dialog"

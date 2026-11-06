@@ -8,9 +8,12 @@
 # A watcher records every UserNotificationCenter window throughout: seconds after the launch, its words, pictures.
 # The microphone question is never answered. A System Events question (0.1.49 asks at launch, F-02) is answered
 # Allow, as most people do, so it can't hold the microphone question back.
-# Usage: mic-row.sh <out dir> <dmg> <label> [soundoff]
+# Re-sign (Security H-1/H-2), after the copy to /Applications and before any launch:
+#   runtime    ad-hoc as a publish run signs: --deep, ENTITLEMENTS (main's app/build/entitlements.mac.plist), --options runtime
+#   noruntime  plain ad-hoc: --deep, no entitlements, no hardened runtime
+# Usage: mic-row.sh <out dir> <dmg> <label> [default|soundoff] [none|runtime|noruntime]
 set +e -uo pipefail
-out="$1"; dmg="$2"; label="$3"; sounds="${4:-default}"; mkdir -p "$out"
+out="$1"; dmg="$2"; label="$3"; sounds="${4:-default}"; resign="${5:-none}"; mkdir -p "$out"
 . "$(dirname "$0")/lib.sh"
 ms() { perl -MTime::HiRes=time -e 'printf "%d\n", time * 1000'; }
 
@@ -24,6 +27,25 @@ hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" > /dev/null
 ditto "$mnt/Unvibe.app" /Applications/Unvibe.app; hdiutil detach "$mnt" -force > /dev/null
 xattr -cr /Applications/Unvibe.app
 r "installed $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString) from $(basename "$dmg") (sha256 $(shasum -a 256 "$dmg" | cut -d' ' -f1)); quarantine removed (the Gatekeeper path is RC-1/RC-2 row 3's)"
+sig() { # <tag>: the signature as it stands, into files and the report
+  codesign -dv --verbose=4 /Applications/Unvibe.app > "$out/codesign-$1.txt" 2>&1
+  codesign -d --entitlements :- /Applications/Unvibe.app > "$out/entitlements-$1.plist" 2> "$out/entitlements-$1.err"
+  r "signature ($1): $(grep -E '^(Signature|flags|CodeDirectory|TeamIdentifier|Authority)' "$out/codesign-$1.txt" | tr '\n' ' ')"
+  r "entitlements ($1): $(grep -o '<key>[^<]*</key>' "$out/entitlements-$1.plist" | sed 's/<[^>]*>//g' | tr '\n' ' ' || true)$( [ -s "$out/entitlements-$1.plist" ] || echo none)"
+}
+sig as-shipped
+if [ "$resign" = runtime ]; then
+  codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" --options runtime /Applications/Unvibe.app > "$out/resign.txt" 2>&1
+  r "RE-SIGNED ad-hoc with hardened runtime + $ENTITLEMENTS (sha256 $(shasum -a 256 "$ENTITLEMENTS" | cut -d' ' -f1)): exit $?; $(tail -2 "$out/resign.txt" | tr '\n' ' ')"
+elif [ "$resign" = noruntime ]; then
+  codesign --force --deep --sign - /Applications/Unvibe.app > "$out/resign.txt" 2>&1
+  r "RE-SIGNED ad-hoc WITHOUT hardened runtime and WITHOUT entitlements: exit $?; $(tail -2 "$out/resign.txt" | tr '\n' ' ')"
+fi
+if [ "$resign" != none ]; then
+  xattr -cr /Applications/Unvibe.app
+  sig resigned
+  r "codesign --verify --deep --strict: $(codesign --verify --deep --strict -v /Applications/Unvibe.app 2>&1 | tr '\n' ' ')"
+fi
 
 rm -rf "$ud"; mkdir -p "$ud"
 printf '{"installId":"%s"}' "$INSTALL_ID" > "$ud/unvibe-store.json"

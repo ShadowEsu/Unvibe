@@ -318,36 +318,51 @@ try {
     }
     say('STEP', 'opened Briefs from the sidebar');
     const card = companion.locator('.briefings__card');
+    // Briefs is idle when its Refresh button is enabled (it reads "Reading…" while a build or the folder dialog runs)
+    // or when the "Choose a project" invitation shows (needsRepo and not busy).
+    const idle = () => companion.evaluate(() => [...document.querySelectorAll('.briefings__actions button')].some((b) => b.textContent.trim() === 'Refresh' && !b.disabled)
+      || [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Choose a project'));
+    const waitIdle = async (ms) => { const t = Date.now(); while (Date.now() - t < ms) { if (await idle()) return true; await sleep(300); } return false; };
+    const snap = (name) => { try { execFileSync('screencapture', ['-x', path.join(out, name)]); } catch { /* best effort */ } };
     if (process.env.SKIP_PICK !== '1') {
       const choose = companion.getByRole('button', { name: 'Choose a project', exact: true });
       await choose.waitFor({ timeout: 20000 });
       await choose.click();
       say('STEP', 'pressed "Choose a project" (the app opens macOS\'s folder dialog)');
       await sleep(2500);
+      snap('briefs-pick-1-dialog.png');
+      try { writeFileSync(path.join(out, 'briefs-pick-dialog-ax.txt'), execFileSync(process.env.RCMAC, ['ax', 'Unvibe'], { timeout: 20000 }).toString()); } catch { /* best effort */ }
       const osa = (...lines) => execFileSync('osascript', lines.flatMap((l) => ['-e', l]), { timeout: 20000 }).toString().trim();
       try {
         execFileSync('open', ['-a', '/Applications/Unvibe.app']); // the dialog's app in front, through LaunchServices
         await sleep(1500);
         osa('tell application "System Events" to keystroke "g" using {command down, shift down}');
         await sleep(1500);
+        snap('briefs-pick-2-goto.png');
         osa(`tell application "System Events" to keystroke "${process.env.PICK_PATH}"`);
         await sleep(1200);
+        snap('briefs-pick-3-typed.png');
         osa('tell application "System Events" to key code 36'); // Go
         await sleep(2000);
-        osa('tell application "System Events" to key code 36'); // Open (chooses the folder now shown)
+        snap('briefs-pick-4-went.png');
+        if (!(await idle())) osa('tell application "System Events" to key code 36'); // Open (chooses the folder now shown)
         say('STEP', `typed ${process.env.PICK_PATH} into Go to Folder, Return, then Return (Open)`);
       } catch (e) { say('STEP', `folder dialog keystrokes failed: ${e.message.split('\n')[0]}`); }
+      if (!(await waitIdle(6000))) {
+        snap('briefs-pick-5-still-open.png');
+        let pressed = '';
+        try { pressed = execFileSync(process.env.RCMAC, ['axpress', 'Unvibe', 'Open'], { timeout: 20000 }).toString().trim(); } catch (e) { pressed = `failed: ${String(e.stdout ?? e.message).split('\n')[0]}`; }
+        say('STEP', `dialog still open; AXPress "Open": ${pressed}`);
+      }
     }
-    // A project is chosen once Briefs shows its repo controls ("Choose repo") instead of "Choose a project". The
-    // working tree of the sample is clean, so that scope says "No documented changes"; the brief is the latest commit.
-    const chosen = companion.getByRole('button', { name: 'Choose repo', exact: true });
-    await chosen.waitFor({ timeout: 20000 }).catch(() => {});
-    if (!(await chosen.count()) || await companion.getByRole('button', { name: 'Choose a project', exact: true }).count()) {
-      say('PICK', 'no project after the folder dialog');
-      execFileSync('screencapture', ['-x', path.join(out, 'briefs-pick-failed-full.png')]);
+    const wasIdle = await waitIdle(20000);
+    if (!wasIdle || await companion.getByRole('button', { name: 'Choose a project', exact: true }).count()) {
+      say('PICK', `no project after the folder dialog (Briefs idle: ${wasIdle})`);
+      snap('briefs-pick-failed-full.png');
+      try { execFileSync('osascript', ['-e', 'tell application "System Events" to key code 53']); } catch { /* close a dialog left open */ }
       throw new Error('PICK_FAILED');
     }
-    say('PICK', `a project is chosen; working tree: ${(await companion.locator('.briefings__empty').allInnerTexts()).join(' | ').slice(0, 120) || 'a brief'}`);
+    say('PICK', `a project is chosen; Briefs says: ${(await companion.locator('.briefings__empty').allInnerTexts()).join(' | ').slice(0, 160) || 'a brief'}`);
     await companion.getByRole('tab', { name: 'Latest commit', exact: true }).click({ timeout: 10000 });
     say('STEP', 'chose the "Latest commit" scope');
     await sleep(1500);

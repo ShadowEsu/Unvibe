@@ -56,6 +56,12 @@ jobs:
           # Control for the two above: the same script and RC-2 build with interface sounds left on (the default).
           - { item: mic-rc2-soundon-1, runner: macos-15-intel, rc: "42199536258" }
           - { item: mic-rc2-soundon-2, runner: macos-15-intel, rc: "42199536258" }
+          # Security H-1: RC-2 re-signed ad-hoc WITH hardened runtime + main's entitlements (as a publish run signs).
+          - { item: mic-rc2-h1-runtime-1, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-rc2-h1-runtime-2, runner: macos-15-intel, rc: "42199536258" }
+          # Security H-2: published 0.1.49 re-signed ad-hoc WITHOUT hardened runtime and without entitlements.
+          - { item: mic-049-h2-noruntime-1, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-049-h2-noruntime-2, runner: macos-15-intel, rc: "42199536258" }
           # Design package stills (Briefs with one real brief of a sample repo, Settings → Privacy & Data), RC-2 arm64.
           - { item: design-briefs, runner: macos-15, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
@@ -186,7 +192,15 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           ITEM: ${{ matrix.item }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          resign=none
+          [[ "$ITEM" == *h1-runtime* ]] && resign=runtime
+          [[ "$ITEM" == *h2-noruntime* ]] && resign=noruntime
+          # main 3190b6d0's entitlements, as a publish run signs with them (H-1).
+          export ENTITLEMENTS="$RUNNER_TEMP/entitlements.mac.plist"
+          gh api "repos/ShadowEsu/Unvibe/contents/app/build/entitlements.mac.plist?ref=3190b6d09a89b0b6dd9adc234d6123b68b1fab2b" -H "Accept: application/vnd.github.raw" > "$ENTITLEMENTS"
+          cp "$ENTITLEMENTS" "$RUNNER_TEMP/m/entitlements.mac.plist-3190b6d0"
           if [[ "$ITEM" == mic-049-* ]]; then
             d="$RUNNER_TEMP/v049"; mkdir -p "$d"
             curl -fsSL -o "$d/Unvibe-0.1.49-mac-x64.dmg" https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/Unvibe-0.1.49-mac-x64.dmg
@@ -194,9 +208,9 @@ jobs:
             want=$(awk '$NF ~ /Unvibe-0\.1\.49-mac-x64\.dmg$/ {print $1}' "$d/SHA256SUMS-mac.txt"); got=$(shasum -a 256 "$d/Unvibe-0.1.49-mac-x64.dmg" | cut -d' ' -f1)
             echo "0.1.49 x64 dmg sha256 $got; SHA256SUMS-mac.txt says ${want:-nothing}: $([ "$got" = "$want" ] && echo MATCH || echo MISMATCH)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
             [ "$got" = "$want" ] || exit 1
-            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$d/Unvibe-0.1.49-mac-x64.dmg" "$ITEM"
+            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$d/Unvibe-0.1.49-mac-x64.dmg" "$ITEM" default "$resign"
           else
-            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" "$([[ "$ITEM" == *soundoff* ]] && echo soundoff || echo default)"
+            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" "$([[ "$ITEM" == *soundoff* ]] && echo soundoff || echo default)" "$resign"
           fi
 
       - name: Flag the install as QA (again, whatever happened)
