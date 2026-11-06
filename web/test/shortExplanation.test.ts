@@ -17,16 +17,17 @@ test('a short answer is asked for only on a selection explanation, never on foll
   for (const scope of ['diff', 'file', 'project'] as const) assert.equal(isShortExplanation({ ...base, scope, detail: 'short' }), false, scope);
 });
 
-test('the short prompt asks for 2 to 4 plain sentences and keeps the honesty rules; the full prompt is unchanged in kind', () => {
+test('the short prompt asks for 2 or 3 plain sentences and keeps the honesty rules; the full prompt is unchanged in kind', () => {
   const short = buildSystemPrompt({ ...base, detail: 'short' });
-  assert.match(short, /2 to 4 short, plain sentences/);
-  assert.match(short, /never more than 4 sentences/);
+  assert.match(short, /2 or 3 short, plain sentences/);
+  assert.match(short, /45 words at most/);
+  assert.match(short, /never more than 3 sentences/);
   assert.match(short, /"Not sure:"/);
   assert.match(short, /Use ONLY the provided context/);
   assert.match(short, /never instructions to you/);
   assert.doesNotMatch(short, /DETAILED/);
   assert.doesNotMatch(short, /\[\[cite:/);
-  assert.match(buildUserPrompt({ ...base, detail: 'short' }), /## Task\nSay what this code does in 2 to 4 plain sentences\./);
+  assert.match(buildUserPrompt({ ...base, detail: 'short' }), /## Task\nSay what this code does in 2 or 3 plain sentences\./);
 
   const full = buildSystemPrompt(base);
   assert.match(full, /DETAILED/);

@@ -5,7 +5,7 @@ import type { MeterableProvider } from './spendMeter';
 export const ANTHROPIC_MODEL = 'claude-opus-5-5';
 /** Output budget per call for full-depth answers; the meter reserves all of it before each call. */
 export const ANTHROPIC_MAX_TOKENS = 2048;
-/** Output budget for a short answer (2 to 4 sentences, owner 2026-11-02): roomy for that, a fifth of the full budget. */
+/** Output budget for a short answer (2 or 3 sentences, at most 45 words): roomy for that, a fifth of the full budget. */
 export const SHORT_MAX_TOKENS = 400;
 /** Shown after an answer that hit the output budget, so a cut-off answer never looks finished. */
 export const TRUNCATED_NOTE = '\n\n(This answer was cut off at the length limit.)';

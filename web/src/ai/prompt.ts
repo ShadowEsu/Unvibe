@@ -41,9 +41,9 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
     '- Never claim you changed, saved, ran, or applied anything; you only explain.',
     ...(short
       ? [
-        '- Answer in 2 to 4 short, plain sentences (each under about 25 words, 75 words at most in all) that say what the selected code does. However long the selection is, never more than 4 sentences: say what it does overall, not every detail.',
+        '- Answer in 2 or 3 short, plain sentences (each under about 18 words, 45 words at most in all) that say what the selected code does. However long the selection is, never more than 3 sentences: say what it does overall, not every detail. The reader can ask for more detail.',
         '- No headings, no bullets, no lists, no bold, no code blocks, no cite markers. One paragraph. Put names from the code (functions, variables, files) in single backticks, like `total`.',
-        '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain.',
+        '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, end with one short sentence that starts with "Not sure:" and names what is uncertain (it counts toward the 45 words).',
       ]
       : [
         '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
@@ -108,7 +108,7 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   if (payload.question) {
     parts.push(`\n## Follow-up question\n${payload.question}`);
   } else if (isShortExplanation(payload)) {
-    parts.push('\n## Task\nSay what this code does in 2 to 4 plain sentences.');
+    parts.push('\n## Task\nSay what this code does in 2 or 3 plain sentences.');
   } else {
     const shown = isMoreDetail(payload) ? String(payload.shortAnswer).trim().slice(0, SHORT_ANSWER_MAX_CHARS) : '';
     if (shown) {
