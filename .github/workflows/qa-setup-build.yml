@@ -7,16 +7,11 @@ name: QA setup.exe build check
 #   machine    v0.1.49 setup for "Anyone who uses this computer" (/allusers /S), then this build: what happens
 # Each row: install path, Start menu, Apps entry, first window in front, first explanation, then uninstall.
 # Each profile's qa- id is flagged before anything installs.
+# Runs on a push to qa/install-matrix whose commit message holds "[setupbuild:<build-only run id>]" (a workflow that
+# only lives on this branch can't be dispatched). OLD is the release the upgrade and machine rows install first.
 on:
-  workflow_dispatch:
-    inputs:
-      build_run:
-        description: "Build-only Desktop app release run id whose unvibe-windows-latest artifact is tested"
-        required: true
-      old:
-        description: "Release installed first by the upgrade and machine rows"
-        required: false
-        default: "0.1.49"
+  push:
+    branches: [qa/install-matrix]
 
 permissions:
   contents: read
@@ -28,6 +23,7 @@ concurrency:
 
 jobs:
   row:
+    if: contains(github.event.head_commit.message, '[setupbuild:')
     strategy:
       fail-fast: false
       matrix:
@@ -37,16 +33,18 @@ jobs:
     timeout-minutes: 30
     env:
       INSTALL_ID: qa-setup-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.kind }}
-      OLD: ${{ inputs.old }}
+      OLD: "0.1.49"
+      MSG: ${{ github.event.head_commit.message }}
     steps:
       - name: Check inputs, flag this id as QA before anything installs
+        id: pick
         shell: bash
         env:
-          BUILD_RUN: ${{ inputs.build_run }}
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
-          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]] || { echo "::error::build_run must be a run id"; exit 1; }
-          [[ "$OLD" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::old must look like 0.1.49"; exit 1; }
+          BUILD_RUN=$(printf '%s' "$MSG" | sed -n 's/.*\[setupbuild:\([0-9]*\)\].*/\1/p' | head -1)
+          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]] || { echo "::error::no [setupbuild:<run id>] in the commit message"; exit 1; }
+          echo "build_run=$BUILD_RUN" >> "$GITHUB_OUTPUT"; echo "testing build run $BUILD_RUN"
           [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
           code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
             -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
@@ -62,7 +60,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-windows-latest
-          run-id: ${{ inputs.build_run }}
+          run-id: ${{ steps.pick.outputs.build_run }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/build
 
