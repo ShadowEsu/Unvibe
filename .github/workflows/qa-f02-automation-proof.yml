@@ -15,16 +15,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Design stills for #206 (f7ba3aa2): timeout note, denied note at the panel's minimum size, light + dark.
+          # (fix vs pre-review vs v0.1.49 was run 42188351965.)
           - build: fix
             tag: fix
             run: "42187582954"
-          # #206 before its review fixes: leg C should catch its System Events lookup on a clipboard explain.
-          - build: fixv1
-            tag: fixv1
-            run: "42184191246"
-          - build: v0.1.49
-            tag: v0149
-            run: ""
     runs-on: macos-15
     timeout-minutes: 25
     env:
@@ -32,6 +27,8 @@ jobs:
       ID_A: qa-f02a-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
       ID_B: qa-f02b-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
       ID_C: qa-f02c-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
+      ID_D: qa-f02d-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
+      ID_E: qa-f02e-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
     steps:
       - name: Flag this run's install ids as QA before any launch
         shell: bash
@@ -39,7 +36,7 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
-          for id in "$ID_A" "$ID_B" "$ID_C"; do
+          for id in "$ID_A" "$ID_B" "$ID_C" "$ID_D" "$ID_E"; do
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
               -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
               --data "{\"installId\":\"$id\"}") || { echo "::error::pre-flag $id: curl failed"; exit 1; }
@@ -121,22 +118,15 @@ jobs:
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
           echo "C: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
 
-      - name: "B: set up, then Don't Allow System Events, then Control+U in TextEdit"
+      - name: "D: set up, macOS still asking about System Events, Control+U (timeout note)"
         shell: bash
         run: |
           ud="$HOME/Library/Application Support/Unvibe"
           rm -rf "$ud"; mkdir -p "$ud"
-          printf '{"installId":"%s"}' "$ID_B" > "$ud/unvibe-store.json"
-          printf '{"onboarded":true}' > "$ud/unvibe-settings.json"
+          printf '{"installId":"%s"}' "$ID_D" > "$ud/unvibe-store.json"
+          # settingsRevision 8 keeps it set up (an older revision resets onboarding); the panel at its 420x460 minimum.
+          printf '{"settingsRevision":8,"appearanceRevision":2,"onboarded":true,"theme":"light","lastWidgetBounds":{"x":40,"y":60,"width":420,"height":460}}' > "$ud/unvibe-settings.json"
           printf '{"records":[{"items":["ai_send","terms","age_18"],"provider":"unvibe","policyVersion":"2026-10-30","agreedAt":"%s"}]}' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$ud/unvibe-consent.json"
-          # What "Don't Allow" stores: Automation for com.unvibe.app → System Events, denied.
-          udb="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
-          for d in "$udb"; do
-            sqlite3 "$d" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags) VALUES('kTCCServiceAppleEvents','com.unvibe.app',0,0,2,1,0,'com.apple.systemevents',0);" \
-              || sudo sqlite3 "$d" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags) VALUES('kTCCServiceAppleEvents','com.unvibe.app',0,0,2,1,0,'com.apple.systemevents',0);"
-            sqlite3 "$d" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';" || sudo sqlite3 "$d" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';"
-          done
-          killall -u "$USER" tccd 2>/dev/null || true
           printf 'function selectedTotal(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}\n' > "$RUNNER_TEMP/unvibe-sample.js"
           open -a /Applications/Unvibe.app
           sleep 8
@@ -144,13 +134,39 @@ jobs:
           osascript -e 'tell application "TextEdit" to activate' -e 'delay 1' -e 'tell application "System Events" to keystroke "a" using command down'
           sleep 1
           osascript -e 'tell application "System Events" to keystroke "u" using control down'
-          for t in 3 7 12; do sleep $([ $t = 3 ] && echo 3 || echo 4); screencapture -x "$RUNNER_TEMP/shots/b-after-dont-allow-${t}s-${{ matrix.build }}.png"; done
-          prompt=$(osascript -e 'tell application "System Events" to if exists process "UserNotificationCenter" then get name of every window of process "UserNotificationCenter"' 2>&1 || true)
-          echo "B: UserNotificationCenter windows: [${prompt}]"
-          # The bar's words, as macOS Accessibility reads them (best effort; the screenshots are the record).
-          osascript -e 'tell application "System Events" to tell process "Unvibe" to get value of every static text of every UI element of every window' 2>&1 | tr ',' '\n' | grep -iE "macOS|System Events|Select code|Allow|shortcut" | head -10 || true
+          for t in 4 8 14; do sleep $([ $t = 4 ] && echo 4 || { [ $t = 8 ] && echo 4 || echo 6; }); screencapture -x "$RUNNER_TEMP/shots/d-macos-asking-${t}s-${{ matrix.build }}.png"; done
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true
-          echo "B: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
+          echo "D: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
+
+      - name: "B: set up, Don't Allow System Events, Control+U in TextEdit (light, then dark; panel at its minimum size)"
+        shell: bash
+        run: |
+          # What "Don't Allow" stores: Automation for com.unvibe.app → System Events, denied.
+          udb="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+          sqlite3 "$udb" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags) VALUES('kTCCServiceAppleEvents','com.unvibe.app',0,0,2,1,0,'com.apple.systemevents',0);" \
+            || sudo sqlite3 "$udb" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags) VALUES('kTCCServiceAppleEvents','com.unvibe.app',0,0,2,1,0,'com.apple.systemevents',0);"
+          sqlite3 "$udb" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';" || sudo sqlite3 "$udb" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';"
+          killall -u "$USER" tccd 2>/dev/null || true
+          # Any question still up from leg D goes away with the app.
+          killall UserNotificationCenter 2>/dev/null || true
+          ud="$HOME/Library/Application Support/Unvibe"
+          for theme in light dark; do
+            id="$ID_B"; [ "$theme" = dark ] && id="$ID_E"
+            rm -rf "$ud"; mkdir -p "$ud"
+            printf '{"installId":"%s"}' "$id" > "$ud/unvibe-store.json"
+            printf '{"settingsRevision":8,"appearanceRevision":2,"onboarded":true,"theme":"%s","lastWidgetBounds":{"x":40,"y":60,"width":420,"height":460}}' "$theme" > "$ud/unvibe-settings.json"
+            printf '{"records":[{"items":["ai_send","terms","age_18"],"provider":"unvibe","policyVersion":"2026-10-30","agreedAt":"%s"}]}' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$ud/unvibe-consent.json"
+            open -a /Applications/Unvibe.app
+            sleep 8
+            open -a TextEdit "$RUNNER_TEMP/unvibe-sample.js"; sleep 3
+            osascript -e 'tell application "TextEdit" to activate' -e 'delay 1' -e 'tell application "System Events" to keystroke "a" using command down'
+            sleep 1
+            osascript -e 'tell application "System Events" to keystroke "u" using control down'
+            for t in 3 7 12; do sleep $([ $t = 3 ] && echo 3 || echo 4); screencapture -x "$RUNNER_TEMP/shots/b-denied-$theme-min-${t}s-${{ matrix.build }}.png"; done
+            osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
+            echo "B ($theme): store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
+            echo "B ($theme): settings after launch: $(grep -o '"onboarded":[a-z]*\|"theme":"[a-z]*"\|"lastWidgetBounds":{[^}]*}' "$ud/unvibe-settings.json" | tr '\n' ' ')"
+          done
 
       - name: Flag the ids again (the app has registered them now)
         if: always()
@@ -158,7 +174,7 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
-          for id in "$ID_A" "$ID_B" "$ID_C"; do
+          for id in "$ID_A" "$ID_B" "$ID_C" "$ID_D" "$ID_E"; do
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
               -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
               --data "{\"installId\":\"$id\"}") || answer=$'\ncurl failed'
