@@ -9,7 +9,7 @@ import {
   BETA_INSTALL_ASSET,
   BETA_INSTALL_TAG,
   BETA_MAC_SIGNING_REQUIREMENT,
-  BETA_WINDOWS_ASSET,
+  BETA_WINDOWS_SETUP_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
 } from "./betaInstallScript";
@@ -485,10 +485,10 @@ describe("Windows install script text", () => {
 
   it("stops before running anything when the checksum can't be confirmed", () => {
     assert.ok(script.includes("SHA256SUMS-windows.txt"));
-    assert.ok(script.includes(BETA_WINDOWS_ASSET));
+    assert.ok(script.includes(BETA_WINDOWS_SETUP_ASSET));
     assert.ok(startAt > 0);
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
-    assert.ok(verifiedAt > 0 && verifiedAt < startAt, "checksum is confirmed before the app runs");
+    assert.ok(verifiedAt > 0 && verifiedAt < startAt, "checksum is confirmed before the installer runs");
     const check = script.slice(script.indexOf("SHA256SUMS-windows.txt"), verifiedAt);
     // Each failure (fetch error, no line, mismatch) goes through the stop helper.
     assert.match(check, /catch \{\s*Stop-UnvibeInstall "Could not download the published checksums/);
@@ -497,14 +497,15 @@ describe("Windows install script text", () => {
     assert.doesNotMatch(check, /catch \{\}/);
   });
 
-  it("stops with a visible error and removes only the unverified download", () => {
+  it("stops with a visible error and removes only its own temp folder", () => {
     const helper = script.slice(script.indexOf("function Stop-UnvibeInstall"));
     const body = helper.slice(0, helper.indexOf("\n}"));
-    assert.match(body, /Remove-Item[^\n]*\$download/);
-    assert.doesNotMatch(body, /\$dest\b/);
+    assert.match(body, /Remove-Item -Recurse -Force \$work /);
+    assert.doesNotMatch(body, /LOCALAPPDATA|\$installed/);
     // exit closes the window under `irm | iex`, so the help link would never be seen.
     assert.doesNotMatch(body, /\bexit\b/);
     assert.match(body, /throw "\$message Nothing was installed\. For help, see https:\/\/unvibe\.site\/install-help"/);
+    assert.match(script, /\$work = Join-Path \(\[IO\.Path\]::GetTempPath\(\)\) \("unvibe-install-" \+ \[guid\]::NewGuid\(\)/, "a fresh temp folder per run");
   });
 
   it("matches the checksum line on the exact file name", () => {
@@ -512,29 +513,35 @@ describe("Windows install script text", () => {
     assert.doesNotMatch(script, /-match \[regex\]::Escape\(\$asset\)/);
   });
 
-  it("keeps the installed app until the new download is verified", () => {
-    assert.ok(script.includes(`$download = "$dest.download"`));
-    assert.match(script, /curl\.exe [^\n]*-o \$download /);
-    assert.match(script, /Invoke-WebRequest -Uri \$url -OutFile \$download /);
+  it("closes Unvibe only after verification, then runs the verified download silently and waits for that process only", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
-    const moveAt = script.indexOf("Move-Item -Force -Path $download -Destination $dest");
     const stopAt = script.indexOf("Stop-Process");
-    assert.ok(verifiedAt > 0 && stopAt > verifiedAt, "running Unvibe is closed only after verification");
-    assert.ok(moveAt > stopAt && moveAt < startAt, "the verified download replaces the app before it runs");
-    const beforeMove = script.slice(0, moveAt);
-    assert.doesNotMatch(beforeMove, /Remove-Item[^\n]*\$dest\b(?!\.)/, "nothing deletes the installed exe");
-    assert.doesNotMatch(beforeMove, /(-o|-OutFile|-Path) \$dest\b/, "nothing writes or hashes the installed exe before the move");
+    assert.ok(verifiedAt > 0 && stopAt > verifiedAt && stopAt < startAt, "running Unvibe is closed after verification, before the installer");
+    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S" -PassThru`));
+    // Start-Process -Wait also waits for processes the installer starts (QA's install-matrix hang).
+    assert.doesNotMatch(script, /^(?!\s*#)[^\n]*Start-Process[^\n]*-Wait\b/m);
+    assert.match(script, /\$setup\.WaitForExit\(300000\)/);
+    const exitAt = script.indexOf("if ($setup.ExitCode -ne 0) {");
+    const openAt = script.lastIndexOf("Start-Process $installed");
+    assert.ok(exitAt > startAt && openAt > exitAt, "Unvibe opens only after the installer exited 0");
   });
 
-  it("adds a Start menu shortcut to the installed exe", () => {
-    assert.ok(script.includes(`Join-Path $env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Unvibe.lnk"`));
-    assert.match(script, /New-Object -ComObject WScript\.Shell/);
-    assert.match(script, /\.CreateShortcut\(\$shortcutPath\)/);
-    assert.match(script, /\.TargetPath = \$dest/);
-    assert.match(script, /\$shortcut\.Save\(\)/);
+  it("opens the installed app, not the download, and looks where the per-user installer puts it first", () => {
+    const candidates = script.slice(script.indexOf("$installed = @("), script.indexOf(") | Where-Object { Test-Path $_ }"));
+    assert.ok(candidates.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`) > 0, candidates);
+    assert.ok(candidates.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`) < candidates.indexOf("ProgramFiles"));
+    assert.doesNotMatch(script, /Start-Process \$download(?! -ArgumentList "\/S")/);
+    assert.match(script, /if \(-not \$installed\) \{\n  throw "The installer finished, but Unvibe\.exe is not under/);
   });
 
-  it("ends by saying where Unvibe lives", () => {
-    assert.match(script, /Unvibe is in your Start menu and tray\./);
+  it("removes only the portable copy earlier versions of the script left in LOCALAPPDATA\\Unvibe", () => {
+    const removals = script.split("\n").filter((line) => /Remove-Item/.test(line) && /LOCALAPPDATA/.test(line));
+    assert.equal(removals.length, 1, removals.join("\n"));
+    assert.ok(script.includes(`foreach ($old in @("Unvibe.exe", "Unvibe.exe.download")) {`));
+    assert.doesNotMatch(removals[0], /-Recurse/);
+  });
+
+  it("ends by saying where Unvibe lives and how to remove it", () => {
+    assert.match(script, /Unvibe is installed for your Windows user, in your Start menu and tray\. To remove it, use Settings > Apps > Installed apps\./);
   });
 });
