@@ -518,7 +518,7 @@ describe("Windows install script text", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
     const stopAt = script.indexOf("Stop-Process");
     assert.ok(verifiedAt > 0 && stopAt > verifiedAt && stopAt < startAt, "running Unvibe is closed after verification, before the installer");
-    // Plain /S: the one-click per-user setup never asks for admin; /currentuser crashed the old assisted setup.
+    // Plain /S: the one-click per-user setup never asks for admin and never reads the assisted setup's per-user switch.
     assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S" -PassThru`));
     assert.ok(!script.includes("/currentuser"));
     // Start-Process -Wait also waits for processes the installer starts (QA's install-matrix hang).
@@ -527,9 +527,15 @@ describe("Windows install script text", () => {
     const handleAt = script.indexOf("$null = $setup.Handle");
     const waitAt = script.indexOf("$setup.WaitForExit(300000)");
     assert.ok(handleAt > startAt && waitAt > handleAt, "the handle is read right after the start, before the wait");
-    const exitAt = script.indexOf("if ($setup.ExitCode -ne 0) {");
+    const exitAt = script.indexOf("if ($setupExit -ne 0) {");
     const openAt = script.lastIndexOf("Start-Process $installed");
     assert.ok(exitAt > waitAt && openAt > exitAt, "Unvibe opens only after the installer exited 0");
+    // 0xC0000005 gets exactly one more start of the same file, re-checked against the same checksum first.
+    const retry = script.slice(script.indexOf("if ($setupExit -eq -1073741819) {"), exitAt);
+    assert.equal(script.split("$setupExit = Invoke-UnvibeSetup").length - 1, 2, "one first start, one retry");
+    assert.ok(retry.indexOf("(Get-FileHash -Path $download -Algorithm SHA256).Hash.ToLower() -ne $expected") > 0, retry);
+    assert.ok(retry.indexOf("Get-FileHash") < retry.indexOf("$setupExit = Invoke-UnvibeSetup"), "the file is re-checked before the retry");
+    assert.doesNotMatch(retry, /curl|Invoke-WebRequest/);
   });
 
   it("opens this user's installed app: its Apps entry first, then the per-user default, never an all-users copy", () => {
