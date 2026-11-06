@@ -54,6 +54,37 @@ jobs:
           fi
           echo "QA flag token present"
 
+      # Flag every install id this run will use before anything launches, so a run cancelled or timed
+      # out mid-way still leaves only QA rows (run 42120662869 was cancelled before its after-run flag).
+      # The route writes a flagged row for an id the API hasn't seen yet (matched false), and the app's
+      # first contact keeps it (trialAccess readInstall upserts with ignoreDuplicates). The after-run
+      # steps below still require matched true. Security file 2332, B-1..B-4.
+      - name: Flag this run's install ids as QA before any launch
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          WALK_INSTALL_ID: qa-walkthrough-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
+          PORTABLE_INSTALL_ID: qa-portable-${{ github.run_id }}-${{ github.run_attempt }}
+          OS_LABEL: ${{ matrix.label }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
+          ids="$WALK_INSTALL_ID"
+          if [ "$OS_LABEL" = mac ]; then ids="$ids $MEDIA_INSTALL_ID"; else ids="$ids $PORTABLE_INSTALL_ID"; fi
+          for id in $ids; do
+            # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$id\"}") || { echo "::error::pre-flag $id: curl failed; nothing was launched"; exit 1; }
+            code=$(printf '%s' "$answer" | tail -n 1)
+            # || true: the runner's bash has -e -o pipefail, and a body without "matched" (a 401) must still reach the error below.
+            matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2) || true
+            echo "QA pre-flag $id: $code matched=${matched:-none}"
+            if [ "$code" != 200 ] || { [ "$matched" != true ] && [ "$matched" != false ]; }; then
+              echo "::error::pre-flag $id was not stored; nothing was launched"; exit 1
+            fi
+          done
+
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
@@ -175,6 +206,8 @@ jobs:
         env:
           V: ${{ steps.ver.outputs.v }}
           BUILD_RUN: ${{ inputs.build_run }}
+          # Pre-flagged above; seeded into the profile so the portable app uses it instead of a random id.
+          PORTABLE_INSTALL_ID: qa-portable-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           $v = $env:V
           $exe = "$env:RUNNER_TEMP\portable\Unvibe.exe"
@@ -188,6 +221,10 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           Start-Sleep -Seconds 2
           $env:UNVIBE_USER_DATA = "$env:RUNNER_TEMP\portable-profile"
+          $seed = Join-Path $env:UNVIBE_USER_DATA 'unvibe-store.json'
+          New-Item -ItemType Directory -Force $env:UNVIBE_USER_DATA | Out-Null
+          # No BOM: the app's JSON.parse would reject one and start a fresh store with a random id.
+          if (-not (Test-Path $seed)) { [IO.File]::WriteAllText($seed, (@{ installId = $env:PORTABLE_INSTALL_ID } | ConvertTo-Json -Compress)) }
           Start-Process -FilePath $exe
           $win = $null
           for ($i = 0; $i -lt 45 -and -not $win; $i++) {
@@ -209,6 +246,10 @@ jobs:
           $bmp.Save("$env:RUNNER_TEMP\shots\portable-first-launch.png")
           "PASS  Portable exe opens and stays open"
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          # The seeded store still loads: the id is unchanged and the app added its own keys to it.
+          $after = Get-Content $seed -Raw | ConvertFrom-Json -AsHashtable
+          "portable store after launch: installId=$($after['installId']) keys=$((@($after.Keys) | Sort-Object) -join ',')"
+          if ($after['installId'] -ne $env:PORTABLE_INSTALL_ID) { Write-Error 'The portable app replaced the seeded QA install id'; exit 1 }
 
       # Leave this run's installs out of founder stats: the walkthrough's profile on both systems and,
       # on Windows, the portable exe's. Only this step has the admin token, and Unvibe is stopped

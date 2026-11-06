@@ -40,8 +40,10 @@ export type PricingCopy = {
   termsNote: string | null;
 };
 
+// Teams has no price on the page and no checkout (6 Nov): the "Founding pilot" badge and "Founding price" promised a
+// price nobody can see or pay, so the card says what is true, early access by email.
 const TEAMS_MAILTO =
-  "mailto:support@unvibe.site?subject=Unvibe%20Teams%20founding%20pilot&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20the%20Teams%20founding%20pilot%20(workspace%20%2B%20who%20reviewed%20what).";
+  "mailto:support@unvibe.site?subject=Unvibe%20Teams%20early%20access&body=Company%20email%3A%20%0ASeats%20wanted%20(2%E2%80%9320)%3A%20%0A%0AWe%20want%20Teams%20early%20access%20(workspace%20%2B%20who%20reviewed%20what).";
 
 const SEATS = `${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats`;
 
@@ -71,9 +73,9 @@ const OPEN: PricingCopy = {
   plans: [
     free,
     { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", detail: "One developer account. Upgrade, manage or cancel from the Plan page in the app.", features: FEATURES.pro, cta: "Download, then upgrade", href: "/beta", featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "teams", name: "Teams", badge: "Early access", eyebrow: "Share a workspace and see who reviewed what.", price: "", detail: `Seats start by email. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Request Teams seats", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
-  disclosure: "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.",
+  disclosure: "Prices in USD. Pro renews until you cancel. Explanation text is not shared across seats.",
   termsNote: null,
 };
 
@@ -86,7 +88,7 @@ const CLOSED: PricingCopy = {
     // "try it" half only, and nothing while AI features are paused (Security MUST-Q2). Its outlined Download free
     // is that try path's next step and lines the three buttons up (Design S1, 3 Nov; production has the same button).
     { id: "pro", name: "Pro", badge: "Individual", eyebrow: "Go deeper and keep the context.", price: "", note: "Not on sale yet", detail: "One developer account. Your Free plan keeps working until then.", features: FEATURES.pro, after: proTryToday() ?? undefined, cta: "Download free", href: "/beta", featured: true, primary: false },
-    { id: "teams", name: "Teams", badge: "Founding pilot", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Founding seats start by email. Founding price. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
+    { id: "teams", name: "Teams", badge: "Early access", eyebrow: "Share a workspace and see who reviewed what.", price: "", note: "Not on sale yet", detail: `Seats start by email. ${SEATS}. Each person keeps their explanations on their own computer.`, features: FEATURES.teams, cta: "Email about Teams", href: TEAMS_MAILTO, featured: false, primary: false },
   ],
   disclosure: "Prices in USD. Pro and Teams are not on sale yet, so nothing is billed today. Explanation text is not shared across seats.",
   termsNote: "Pro and Teams are not on sale yet. Until they open, nothing is billed and your Free plan keeps working.",

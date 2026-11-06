@@ -7,6 +7,7 @@ import {
   saveWaitlistEntry,
   updateWaitlistDetails,
 } from "@/lib/waitlistStore";
+import { dayKey } from "@/lib/siteStatsStore";
 
 export type BetaInstallEvent = "copied" | "fetched" | "installed" | "survey";
 
@@ -265,6 +266,52 @@ export function parseBetaInstallEvent(value: unknown): BetaInstallEvent | null {
 
 export function isBetaInstallStatsEmail(email: string | null | undefined): boolean {
   return (email ?? "").trim().toLowerCase() === BETA_INSTALL_STATS_EMAIL;
+}
+
+/**
+ * Install script requests per Pacific day (migration 0012), beside the all-time counts above:
+ * the server's day, the event and +1. Nothing about the request (IP, user agent, headers) is passed.
+ */
+export type InstallScriptDayEvent = "mac_fetched" | "win_fetched" | "installed";
+
+export type InstallScriptDayRpc = (day: string, event: InstallScriptDayEvent) => Promise<{ error: unknown }>;
+
+/** The service-role call, or null when Supabase isn't configured. */
+export function supabaseInstallScriptDayRpc(): InstallScriptDayRpc | null {
+  if (!supabaseConfigured()) return null;
+  const client = supabaseClient();
+  return async (day, event) => {
+    const { error } = await client.rpc("record_install_script_day", { p_day: day, p_event: event });
+    return { error };
+  };
+}
+
+/** Longest a script response waits on the day count (it runs alongside the all-time write, so normally ~0 extra). */
+export const INSTALL_SCRIPT_DAY_WAIT_MS = 1000;
+
+/**
+ * Best effort: true when counted. Never throws and never waits longer than `waitMs`, so a storage
+ * failure or a hung call can't stop or slow a script being served. (Executor-form timer, not
+ * Promise.withResolvers: nothing pins the deployed Node version to one that has it.)
+ */
+export async function recordInstallScriptDay(
+  event: InstallScriptDayEvent,
+  rpc: InstallScriptDayRpc | null = supabaseInstallScriptDayRpc(),
+  now = new Date(),
+  waitMs = INSTALL_SCRIPT_DAY_WAIT_MS,
+): Promise<boolean> {
+  if (!rpc) return false;
+  let stopTimer = () => {};
+  const timedOut = new Promise<{ error: unknown }>((resolve) => {
+    const id = setTimeout(() => resolve({ error: new Error(`no answer within ${waitMs} ms`) }), waitMs);
+    stopTimer = () => clearTimeout(id);
+  });
+  const { error } = await Promise.race([rpc(dayKey(now), event).catch((e: unknown) => ({ error: e })), timedOut]);
+  stopTimer();
+  if (!error) return true;
+  // A fixed string only (Security E1-4): nothing about the request or the storage error is logged.
+  console.error("install script day count failed");
+  return false;
 }
 
 export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<BetaInstallCounts> {

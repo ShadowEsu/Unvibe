@@ -42,6 +42,7 @@ export function HowItWorks() {
                 <span className="nstory__num">{String(index + 1).padStart(2, "0")}</span>
                 <h3>{step.title}</h3>
                 {step.body ? <p>{step.body}</p> : null}
+                {step.caption ? <span className="n-shot-cap">{step.caption}</span> : null}
               </li>
             ))}
           </ol>

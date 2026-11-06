@@ -26,6 +26,9 @@ export function betaInstallScript(): string {
 # Sends one anonymous 'installed' count to unvibe.site when it finishes. No code or personal data.
 set -euo pipefail
 
+# Everything is inside main, called on the very last line, so a curl | bash cut off mid-download runs nothing.
+main() {
+
 TAG="\${UNVIBE_BETA_TAG:-${BETA_INSTALL_TAG}}"
 VERSION="\${TAG#v}"
 ASSET="\${UNVIBE_BETA_ASSET:-${BETA_INSTALL_ASSET}}"
@@ -154,6 +157,9 @@ echo "Opening Unvibe…"
 open "$DEST"
 curl -fsS -m 4 -X POST "$TRACK" -H "Content-Type: application/json" -d '{"event":"installed"}' >/dev/null 2>&1 || true
 echo "Done. If macOS blocks it, see ${BETA_INSTALL_HELP_URL}"
+}
+
+main
 `;
 }
 

@@ -3,13 +3,12 @@ import { ANALYTICS_KEYS, restoreAnalyticsKeys } from "./testWithoutAnalyticsKeys
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as React from "react";
-import { createRef, isValidElement, type ReactElement, type ReactNode } from "react";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { FooterLinks } from "@/components/Footer";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
-import { DownloadForThisComputer } from "@/components/paper/PhotoHero";
 import { siteCommands } from "@/components/paper/SitePalette";
 import { trackPlanCta } from "@/components/redesign/PricingPlans";
-import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "./betaOffer";
+import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD } from "./betaOffer";
 import {
   DOWNLOADED_EVENT,
   installHelpSource,
@@ -154,29 +153,16 @@ describe("download clicks", () => {
     assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
   });
 
-  for (const [id, platform, href] of [
-    ["mac", "mac", BETA_MAC_DIRECT_DOWNLOAD],
-    ["win", "windows", BETA_WINDOWS_DIRECT_DOWNLOAD],
-  ] as const) {
-    it(`palette "${id}" item sends surface palette, platform ${platform}, then downloads`, () => {
-      const location = installWindow();
-      const command = siteCommands(() => undefined).find((item) => item.id === id);
+  for (const id of ["mac", "win"] as const) {
+    it(`palette "${id}" item opens the download page's install box, not the file, and sends surface palette`, () => {
+      const pushed: string[] = [];
+      const command = siteCommands((href) => void pushed.push(href)).find((item) => item.id === id);
       assert.ok(command);
       command.run();
-      assert.deepEqual(sent, [downloadClick("palette", platform)]);
-      assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
-      assert.equal(location.href, href);
-    });
-  }
-
-  for (const [device, other, href] of [
-    ["mac", "windows", BETA_WINDOWS_DIRECT_DOWNLOAD],
-    ["windows", "mac", BETA_MAC_DIRECT_DOWNLOAD],
-  ] as const) {
-    it(`hero other-OS link on a ${device} sends surface hero_other_os, platform ${other}`, () => {
-      click(link(DownloadForThisComputer({ device, actionsRef: createRef<HTMLDivElement>() }), href));
-      assert.deepEqual(sent, [downloadClick("hero_other_os", other)]);
-      assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
+      assert.deepEqual(sent, [downloadClick("palette", "other")]);
+      assert.deepEqual(pushed, ["/beta"]);
+      // Nothing downloads, so the "Downloading!" toast must not open.
+      assert.deepEqual(dispatched, []);
     });
   }
 
@@ -291,7 +277,6 @@ describe("opt-out", () => {
     it(`sends nothing for ${label}`, () => {
       installWindow({ ...options, referrer: "https://unvibe.site/" });
       for (const command of siteCommands(() => undefined).filter((item) => item.id === "mac" || item.id === "win")) command.run();
-      click(link(DownloadForThisComputer({ device: "mac", actionsRef: createRef<HTMLDivElement>() }), BETA_WINDOWS_DIRECT_DOWNLOAD));
       click(link(MacBuildLinks({ intelMac: false, surface: "beta" }), BETA_MAC_INTEL_DIRECT_DOWNLOAD));
       for (const plan of pricingCopy(false).plans) trackPlanCta(plan);
       click(link(FooterLinks({ heading: "Product", links: [["Download", "/beta"]] }), "/beta"));

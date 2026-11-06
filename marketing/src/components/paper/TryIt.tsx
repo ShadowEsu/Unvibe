@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Vibe } from "@/components/paper/Vibe";
-import { DownloadRow } from "@/components/paper/DownloadLink";
 import { GetUnvibe } from "@/components/paper/GetUnvibe";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
@@ -54,9 +53,9 @@ function render(text: string): string {
   return out.join("");
 }
 
-/** After a failed request: desktop gets the download buttons; a phone can't run the app, so it gets the email link. */
+/** After a failed request: desktop gets the install box; a phone can't run the app, so it gets the email link. */
 function GetIt({ phone, surface, emailHref }: { phone: boolean; surface: DownloadSurface; emailHref: string }) {
-  if (!phone) return <DownloadRow surface={surface} />;
+  if (!phone) return <GetUnvibe surface={surface} />;
   return (
     <a className="try__phone" href={emailHref} onClick={() => track("email_link_cta_clicked", { surface })}>
       Email me the link

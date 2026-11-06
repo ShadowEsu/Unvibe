@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel, QuizMode } from '../../core/protocol';
@@ -6,6 +6,8 @@ import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
+import { ShortAnswer } from '../shared/shortAnswer';
+import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -92,6 +94,17 @@ interface TabState {
   confirmFromHighlight: boolean;
   /** Who Explain sends the code to, for the confirm sheet (Security U10). */
   providerName: string;
+  /** The answer is the short default (2 to 4 sentences), so "More detail" is offered under it. */
+  short: boolean;
+  /** "More detail": the full-depth text streamed under the short answer, and whether it is shown. */
+  detail: DetailState;
+}
+
+interface DetailState {
+  phase: 'idle' | 'streaming' | 'done' | 'error';
+  text: string;
+  error: string;
+  open: boolean;
 }
 
 const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
@@ -141,6 +154,8 @@ function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'libr
   return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
 }
 
+const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+
 function newTab(id: string, label: string): TabState {
   return {
     id,
@@ -169,6 +184,8 @@ function newTab(id: string, label: string): TabState {
     confirmAfterAgree: false,
     confirmFromHighlight: false,
     providerName: CONSENT_PROVIDERS.unvibe,
+    short: false,
+    detail: NO_DETAIL,
   };
 }
 
@@ -226,6 +243,15 @@ function EmptyPicker({
   const [needsAccess, setNeedsAccess] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [grantNote, setGrantNote] = useState('');
+  // macOS refused (or is still asking about) System Events, so the shortcut's copy read nothing.
+  const [automation, setAutomation] = useState<'automation_denied' | 'automation_timeout' | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void window.unvibe.captureBlock().then((block) => { if (alive) setAutomation(block); });
+    // A press with the panel already open keeps this mounted; main sends the new answer.
+    const off = window.unvibe.onCaptureBlock(setAutomation);
+    return () => { alive = false; off(); };
+  }, []);
   useEffect(() => {
     let alive = true;
     let missing = false;
@@ -236,8 +262,13 @@ function EmptyPicker({
       setNeedsAccess(nowMissing);
       // The grant just arrived: explain the selection already made, or say what to do in one line.
       if (missing && !nowMissing) {
-        void window.unvibe.explainAfterGrant().then((result) => {
-          if (alive && !result.explained) setGrantNote(`Unvibe can read your selection now. Select the code again and press ${shortcut}.`);
+        void window.unvibe.explainAfterGrant().then(async (result) => {
+          if (!alive || result.explained) return;
+          // The copy may still fail on System Events; then the Automation note says what to do instead.
+          const block = await window.unvibe.captureBlock();
+          if (!alive) return;
+          setAutomation(block);
+          if (!block) setGrantNote(`Unvibe can read your selection now. Select the code again and press ${shortcut}.`);
         });
       }
       missing = nowMissing;
@@ -311,6 +342,14 @@ function EmptyPicker({
         Let’s make that code click. Select a snippet and press {shortcut}, or paste it below.
       </div>
       {grantNote ? <div className="access-note" role="status">{grantNote}</div> : null}
+      {automation === 'automation_denied' ? (
+        <div className="access-note" role="status">
+          macOS is blocking Unvibe from copying your selection. In System Settings, open Privacy &amp; Security, then Automation, and turn on System Events under Unvibe. Then press {shortcut} again.
+          <div className="empty-actions"><button className="btn ghost" onClick={() => void window.unvibe.openAutomation()}>Open Automation settings</button></div>
+        </div>
+      ) : automation === 'automation_timeout' ? (
+        <div className="access-note" role="status">If macOS asked to let Unvibe control System Events, choose Allow, then press {shortcut} again.</div>
+      ) : null}
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
           Explain my clipboard
@@ -424,6 +463,22 @@ function Widget() {
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
   const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
+  /**
+   * When a short answer arrives (its More detail block mounts once typing ends), scroll the body just
+   * enough to show the button plus 12 px, never past the top of the short answer (Design, 2 Nov). Instant,
+   * once per answer; showing or hiding the detail later never scrolls.
+   */
+  const revealMoreDetail = useCallback((block: HTMLDivElement | null) => {
+    const body = bodyRef.current;
+    if (!block || !body) return;
+    const bodyBox = body.getBoundingClientRect();
+    const toggle = block.querySelector<HTMLElement>('.more-detail__toggle') ?? block;
+    const hidden = toggle.getBoundingClientRect().bottom + 12 - bodyBox.bottom;
+    if (hidden <= 0) return;
+    const answer = body.querySelector<HTMLElement>('.short-answer');
+    const answerTop = answer ? answer.getBoundingClientRect().top - bodyBox.top + body.scrollTop : Number.POSITIVE_INFINITY;
+    body.scrollTop = Math.min(body.scrollTop + hidden, Math.max(body.scrollTop, answerTop));
+  }, []);
   const tabsRef = useRef(tabs);
   const activeRef = useRef(activeTabId);
   tabsRef.current = tabs;
@@ -502,6 +557,22 @@ function Widget() {
         const tab = prev.find((t) => t.id === tabId);
         if (!tab) return prev;
 
+        // "More detail" streams under the short answer; the answer and its actions stay as they are.
+        if ('part' in ev && ev.part === 'detail') {
+          const detail = tab.detail;
+          switch (ev.type) {
+            case 'status':
+              return patchTab(prev, tabId, { detail: { phase: 'streaming', text: '', error: '', open: true } });
+            case 'token':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'streaming', text: detail.text + (ev.text ?? '') } });
+            case 'done':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'done' } });
+            case 'error':
+              return patchTab(prev, tabId, { detail: { ...detail, phase: 'error', error: ev.message ?? 'Something went wrong.' } });
+          }
+          return prev;
+        }
+
         switch (ev.type) {
           case 'init': {
             const history = archiveCurrent(tab);
@@ -515,6 +586,8 @@ function Widget() {
                 preview: ev.preview,
               },
               text: '',
+              short: false,
+              detail: NO_DETAIL,
               quiz: null,
               error: '',
               mock: false,
@@ -532,7 +605,7 @@ function Widget() {
             return prev;
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consentNeeded':
             return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
@@ -547,7 +620,7 @@ function Widget() {
             );
           case 'done':
             playTone('done');
-            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done' });
+            return patchTab(prev, tabId, { mock: Boolean(ev.mock), phase: 'done', short: ev.short === true });
           case 'error':
             return patchTab(prev, tabId, {
               error: ev.message ?? 'Something went wrong.',
@@ -558,7 +631,7 @@ function Widget() {
             return patchTab(prev, tabId, { quiz: { phase: 'failed', error: ev.message } });
           // understood: no UI reset — Got it collapses separately
           case 'cancelled':
-            return patchTab(prev, tabId, { text: '', quiz: null, phase: 'ready' });
+            return patchTab(prev, tabId, { text: '', short: false, detail: NO_DETAIL, quiz: null, phase: 'ready' });
           case 'question':
             return patchTab(prev, tabId, {
               quiz: {
@@ -660,6 +733,23 @@ function Widget() {
     window.unvibe.request({ level: active.level, ...opts });
   };
 
+  /**
+   * "More detail" under a short answer: the first press streams the full depth below the short
+   * answer (nothing above it moves); after that the button only shows or hides it. A failed run
+   * can be asked for again. Focus stays on the button.
+   */
+  const toggleDetail = () => {
+    const detail = active.detail;
+    if (detail.phase === 'done' || detail.phase === 'streaming') {
+      setTabs((prev) => patchTab(prev, activeRef.current, { detail: { ...detail, open: !detail.open } }));
+      return;
+    }
+    setTabs((prev) => patchTab(prev, activeRef.current, { detail: { phase: 'streaming', text: '', error: '', open: true } }));
+    // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
+    // allowance must not replace the answer on screen; a refusal shows under the short answer.
+    window.unvibe.request({ level: active.level, moreDetail: true });
+  };
+
   const openQuiz = (another = false) => {
     setActiveTool('quiz');
     if (!another && active.quiz && active.quiz.phase !== 'failed') {
@@ -715,7 +805,7 @@ function Widget() {
   const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   const src = active.meta.lines ? (
     <span className="src">
-      <b>{active.meta.lines} lines</b>
+      <b>{linesLabel(active.meta.lines ?? 0)}</b>
       {active.meta.language && active.meta.language !== 'plaintext' ? ` · ${active.meta.language}` : ''}
       {active.meta.sourceApp ? ` · from ${active.meta.sourceApp}` : ''}
     </span>
@@ -990,7 +1080,7 @@ function Widget() {
               <div className="big">Reading your code in context…</div>
               <div className="detected">
                 <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
-                <span>{active.meta.lines ?? 0} lines</span>
+                <span>{linesLabel(active.meta.lines ?? 0)}</span>
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               <div className="sub">Parsing your selection and generating the explanation.</div>
@@ -1002,7 +1092,7 @@ function Widget() {
               <div className="big" id="confirm-title">Explain this code?</div>
               <div className="detected">
                 <span>{active.meta.language && active.meta.language !== 'plaintext' ? active.meta.language : 'Code selection'}</span>
-                <span>{active.meta.lines ?? 0} lines</span>
+                <span>{linesLabel(active.meta.lines ?? 0)}</span>
                 {active.meta.sourceApp && <span>{active.meta.sourceApp}</span>}
               </div>
               {active.meta.preview ? (
@@ -1109,10 +1199,32 @@ function Widget() {
                 </section>
               ) : null}
               {showText
-                ? renderRich(showText, stillTyping)
+                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
                 : (
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
+              {active.short && phase === 'done' && !stillTyping ? (
+                <div className="more-detail" ref={revealMoreDetail}>
+                  <button
+                    type="button"
+                    className="more-detail__toggle"
+                    aria-expanded={active.detail.open}
+                    aria-controls={`more-detail-${active.id}`}
+                    onClick={toggleDetail}
+                  >
+                    {active.detail.open ? 'Less detail' : 'More detail'}
+                    <svg className="more-detail__chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+                  </button>
+                  {active.detail.open ? (
+                    <div className="more-detail__body" id={`more-detail-${active.id}`}>
+                      {active.detail.text
+                        ? renderRich(active.detail.text, active.detail.phase === 'streaming')
+                        : active.detail.phase === 'streaming' ? <p className="more-detail__wait" role="status">Writing more detail…</p> : null}
+                      {active.detail.phase === 'error' ? <p className="more-detail__error" role="alert">{active.detail.error}</p> : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {pmf && pmfReady ? (
                 <PmfCard
                   model={pmf}

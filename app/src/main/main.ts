@@ -29,6 +29,7 @@ import { homedir, userInfo } from 'node:os';
 import {
   applyWidgetResize,
   createBar,
+  companionLoading,
   createCompanion,
   currentWidget,
   focusPanelForPaste,
@@ -37,10 +38,11 @@ import {
   positionBar,
   raiseLimitPause,
   resizeBar,
+  setBarNotice,
   showBar,
   type WidgetResizeEdge,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, startFrontmostWatch, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -57,7 +59,8 @@ import { applyLoginItem, loginItemState, settings, type Settings } from './setti
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
-import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
+import { SUPPORT_EMAIL } from '../core/support';
+import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
 import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
 import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
@@ -208,15 +211,14 @@ function makeSession(
     recorded: false,
     level,
     isSample: () => session.code === FIRST_RUN_SAMPLE,
+    // No Island notice for success: the Island's own pulse already says Ready, then Understood.
     onRecorded: () => {
-      notify('Added to your learning history');
       // First run: step 2 asks its one level question once the sample answer has finished, and
       // the Mac setup offers the shortcut once the user's own code has been explained.
       const event = firstRunEvent(session.isSample?.() === true);
       if (event && companion && !companion.isDestroyed()) companion.webContents.send(event);
       void askLaunchAtLogin(!session.isSample?.());
     },
-    onUnderstood: () => notify('Nice — concept understood'),
   };
   return session;
 }
@@ -281,16 +283,31 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
   return { win, fresh: true };
 }
 
+/** A picked file's name, project and path on the session, as the panel's own file picker records them. */
+interface FileMeta { file?: string; project?: string; sourceFilePath?: string }
+
+function applyFileMeta(session: ReviewSession, meta: FileMeta | undefined): void {
+  if (!meta) return;
+  session.file = meta.file;
+  session.project = meta.project;
+  session.sourceFilePath = meta.sourceFilePath;
+  session.snapshotText = meta.sourceFilePath && session.code ? session.code.slice(0, 12_000) : undefined;
+}
+
 function beginCaptureOnActiveTab(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
   confirmFrom: ConfirmReason | null = null,
+  meta?: FileMeta,
+  credit: SelectionCredit = 'free',
 ): void {
   const prev = sessionFor(activeTabId);
   prev?.abort?.abort();
   // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
   const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  applyFileMeta(session, meta);
+  if (credit === 'held') session.selectionCredit = 'held';
   if (confirmFrom && code) {
     session.awaitingConfirm = true;
     session.confirmFrom = confirmFrom;
@@ -303,12 +320,15 @@ function beginCaptureOnActiveTab(
   if (start) void runReview(win, session, { level: session.level });
 }
 
-/** Trial builds count selected-code prompts on this computer. False, with a notice, once they're used up. */
-function allowSelectedCodePrompt(): boolean {
-  if (!trialBuildEnabled() || fullProductBuildEnabled()) return true;
-  if (store().consumeBetaSelectedCodePrompt().ok) return true;
-  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
-  return false;
+/** 'held': a trial build took one local selected-code credit; 'free': this build doesn't count them. */
+type SelectionCredit = 'held' | 'free';
+
+/** Trial builds count selected-code prompts on this computer. Null, with a notice, once they're used up. */
+function takeSelectionCredit(): SelectionCredit | null {
+  if (!trialBuildEnabled() || fullProductBuildEnabled()) return 'free';
+  if (store().consumeBetaSelectedCodePrompt().ok) return 'held';
+  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`, { problem: true });
+  return null;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -327,6 +347,10 @@ function loadCodeIntoSession(
   session.recorded = false;
   session.reviewId = randomUUID();
   session.awaitingConfirm = false;
+  // Clipboard, paste and file explains never use a selected-code credit. One still held by a capture whose
+  // explanation this replaces goes back first (that answer never came), then none carries over.
+  if (session.selectionCredit === 'held') store().refundBetaSelectedCodePrompt();
+  session.selectionCredit = undefined;
   session.payload = undefined;
   session.mode = 'selection';
   session.file = meta?.file;
@@ -427,7 +451,7 @@ function repairAccessibilityAfterUpdate(): void {
   try { writeFileSync(file, current); } catch { /* still repair this launch */ }
   if (!last || last === current || accessibilityGranted(false)) return;
   execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => {
-    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.');
+    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.', { problem: true });
   });
 }
 
@@ -436,16 +460,24 @@ app.on('before-quit', () => {
   quitting = true;
 });
 
+/** Menu items call this as `click`, so it takes no arguments (Electron passes the menu item first). */
 function openCompanion(): void {
+  openCompanionWindow(false);
+}
+
+/** `front`: a new companion window is brought in front of other apps once painted (first-run launch only). */
+function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
+    // Still loading (hidden until painted): its own reveal shows it, so don't show a blank window now.
+    if (companionLoading(companion)) return;
     if (companion.isMinimized()) companion.restore();
     companion.show();
     companion.focus();
     return;
   }
-  companion = createCompanion();
+  companion = createCompanion({ front });
   noteCompanionOpen();
   const win = companion;
   // Brought back from minimized (the Windows close button minimizes) is an open the user started too.
@@ -537,6 +569,12 @@ function asset(...parts: string[]): string {
  */
 let pendingGrant: PendingGrant | null = null;
 /**
+ * Why the last shortcut capture got nothing on macOS, when System Events was the cause: refused
+ * (Automation switched off after Don't Allow; macOS never asks again) or timed out while macOS was
+ * still asking. The panel's empty state reads it and says which switch to turn on.
+ */
+let captureBlock: CaptureBlock = null;
+/**
  * A clipboard explain asked for before the person agreed to sending code (QA F1): nothing was read
  * then. After Agree, the panel asks main to read it and show the confirm sheet; `heldReviewToRun`
  * drops requests older than five minutes. Any other review started meanwhile replaces or clears it.
@@ -549,7 +587,7 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
  * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
  */
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string } } = {}): Promise<void> {
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -591,17 +629,22 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   const capture = await reviewCapture(options, agreed, () => captureSelection(options));
   const code = capture.code;
   const confirmFrom = captureConfirmReason(options);
-  // Windows capture already looked up the foreground app in the same PowerShell call.
-  const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
+  // Windows capture already looked up the foreground app in the same PowerShell call. A clipboard
+  // explain during setup (step 3's paste) names no app: asking System Events for it would put
+  // macOS's Automation question in the middle of setup, for a paste that needs no permission.
+  const sourceApp = capture.sourceApp !== undefined
+    ? capture.sourceApp
+    : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
   if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
-  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
+  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
   if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
-    notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
+    notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`, { problem: true });
   }
   const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   if (needsGrant) {
@@ -612,14 +655,19 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Aisle + review panel only appear when you invoke a review (⌘U / start).
   showBar(bar);
   // A link-started (or Linux PRIMARY) capture is counted when Explain is pressed (widget:request), not when it arrives.
-  if (code && !confirmFrom && !allowSelectedCodePrompt()) return;
+  const credit = code && !confirmFrom ? takeSelectionCredit() : 'free';
+  if (credit === null) return;
   if (code && confirmFrom) pulseBar({ phase: 'idle', label: 'Ready' });
   const { win, fresh } = openPanel();
+  // An open panel keeps its empty state mounted, so tell it the new answer (a fresh one asks on mount).
+  if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
   if (fresh) {
     // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
     const session = makeSession(activeTabId, code, sourceApp);
+    applyFileMeta(session, options.captured?.meta);
+    if (credit === 'held') session.selectionCredit = 'held';
     if (confirmFrom && code) {
       session.awaitingConfirm = true;
       session.confirmFrom = confirmFrom;
@@ -627,7 +675,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     tabSessions.set(activeTabId, session);
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom);
+  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -730,7 +778,9 @@ app.whenReady().then(() => {
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
-  startFrontmostWatch();
+  // The watch asks macOS for System Events, so a fresh install gets that question once setup is done
+  // (onboarding:complete), or at its first shortcut press if that comes sooner.
+  if (s.onboarded) startFrontmostWatch();
   startLiveWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
@@ -780,12 +830,12 @@ app.whenReady().then(() => {
   screen.on('display-removed', restoreFloatingWindows);
   screen.on('display-metrics-changed', restoreFloatingWindows);
   if (!registerShortcut(s.shortcut)) {
-    notify('That shortcut is in use by another app. Pick a different one in Settings.');
+    notify('That shortcut is in use by another app. Pick a different one in Settings.', { problem: true });
   }
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch. A login launch after setup
   // starts quietly in the tray instead, so the shortcut is ready with no window.
   const loginLaunch = isLoginLaunch(process.platform, process.argv, isMac && loginItemState().wasOpenedAtLogin);
-  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanion();
+  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanionWindow(launchBringsWindowFront(loginLaunch, s.onboarded));
   repairAccessibilityAfterUpdate();
   if (pendingExternalReview) {
     const request = pendingExternalReview;
@@ -802,6 +852,7 @@ app.whenReady().then(() => {
     // The renderer decides whether a pointer entering the Island requests this.
     resizeBar(bar, Boolean(expanded));
   });
+  ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
@@ -834,7 +885,6 @@ app.whenReady().then(() => {
       linesUnderstood: profile.linesUnderstood,
       conceptsSeen: profile.conceptsSeen,
       conceptsStrong: profile.conceptsStrong,
-      usage: profile.usage[0] ?? null,
       quota,
       selections,
       heat: profile.heat.slice(-14),
@@ -926,7 +976,9 @@ app.whenReady().then(() => {
     if (!win || !session) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
-      if (!allowSelectedCodePrompt()) return;
+      const credit = takeSelectionCredit();
+      if (credit === null) return;
+      if (credit === 'held') session.selectionCredit = 'held';
       session.awaitingConfirm = false;
     }
     void runReview(win, session, opts);
@@ -978,12 +1030,19 @@ app.whenReady().then(() => {
     }
     return { ok: true as const };
   });
-  // The companion's paste step offers a file too; it explains in the panel like a shortcut press.
+  // The companion's paste step offers a file too; it explains in the panel like a shortcut press, and
+  // records the file and project as the panel's picker does (QA 0.1.46 P3: Library said "selection").
   ipcMain.handle('companion:pickFile', async () => {
     if (!companion || companion.isDestroyed()) return { ok: false as const };
     const picked = await chooseCodeFile(companion);
     if (!picked.ok) return picked;
-    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath) } });
+    const root = await resolveRepoRoot(path.dirname(picked.filePath));
+    const meta: FileMeta = {
+      file: root ? path.relative(root, picked.filePath) : path.basename(picked.filePath),
+      project: root ? path.basename(root) : undefined,
+      sourceFilePath: picked.filePath,
+    };
+    void startReview({ captured: { code: picked.text, sourceApp: path.basename(picked.filePath), meta } });
     return { ok: true as const };
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
@@ -1496,7 +1555,7 @@ app.whenReady().then(() => {
       '',
       'Optional: attach a screenshot if it makes the issue easier to see.',
     ].join('\n'));
-    void shell.openExternal(`mailto:hello@unvibe.site?subject=${subject}&body=${body}`);
+    void shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
     return { ok: true };
   });
 
@@ -1517,6 +1576,12 @@ app.whenReady().then(() => {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
     return { ok: true };
   });
+  ipcMain.handle('perms:captureBlock', () => captureBlock);
+  ipcMain.handle('perms:openAutomation', () => {
+    if (isMac)
+      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation');
+    return { ok: true };
+  });
   /**
    * The panel saw the grant arrive: go back to the app the shortcut was pressed in and explain the
    * selection already made. `explained: false` when there is nothing to go back to or nothing was
@@ -1533,6 +1598,8 @@ app.whenReady().then(() => {
     // Turned off since the press: capture nothing.
     if (!codeConsented(providerInUse())) return { explained: false };
     const capture = await captureSelection({ fromApp });
+    // Accessibility is on now, but System Events may still be refused: the panel says which switch.
+    captureBlock = nextCaptureBlock(captureBlock, {}, capture);
     if (!capture.code) return { explained: false };
     await startReview({ captured: { code: capture.code, sourceApp: fromApp } });
     return { explained: true };
@@ -1560,6 +1627,7 @@ app.whenReady().then(() => {
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     reportProgress('onboarded');
+    startFrontmostWatch();
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });

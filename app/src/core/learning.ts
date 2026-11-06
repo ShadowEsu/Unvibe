@@ -4,6 +4,8 @@
  * and the backend mirrors them when signed in. Unit tested.
  */
 
+import { linesLabel } from './linesLabel';
+
 export type Outcome = 'reviewed' | 'understood' | 'needs_review';
 export type ActivityType = 'explanation_completed' | 'day_active';
 export type SkillState = 'New' | 'Developing' | 'Familiar' | 'Strong' | 'Needs review' | 'Insufficient evidence';
@@ -256,7 +258,7 @@ function toLearningItem(e: LocalEvent, dueLabel?: string): LearningItem {
   return {
     id: e.id,
     ts: e.ts,
-    title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${e.lines} lines of ${e.language ?? 'code'}`),
+    title: e.conceptLabel ?? (e.file ? pathTitle(e.file) : `${linesLabel(e.lines)} of ${e.language ?? 'code'}`),
     meta: [e.scope && e.scope !== 'selection' ? e.scope : undefined, e.sourceApp, OUTCOME_LABEL[e.outcome]].filter(Boolean).join(' · '),
     outcome: e.outcome,
     concept: e.conceptLabel ?? e.concept,
