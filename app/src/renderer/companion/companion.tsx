@@ -486,10 +486,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
   // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer; Windows
-  // stays and finishes from there.
+  // stays and finishes from there, with a fresh paste target (no stale "Explaining in the panel").
   useEffect(() => window.unvibe.onOwnCodeDone(() => {
     setOwnCodeDone(true);
-    if (!isWindows) setStep((current) => (current === 2 ? 3 : current));
+    if (isWindows) paste.reset();
+    else setStep((current) => (current === 2 ? 3 : current));
   }), []);
   // Announce the card, without making Enter trigger the permission prompt.
   useEffect(() => {
@@ -518,10 +519,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     explained
       ? "That's me, explaining it in the panel. Read it, then press Test me."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    isWindows && ownCodeDone
-      ? `That was your own code. Next time, select some in any app and press ${spoken}.`
-      : paste.started
-        ? 'Got it. Your explanation is opening in the panel.'
+    paste.started
+      ? 'Got it. Your explanation is opening in the panel.'
+      : isWindows && ownCodeDone
+        ? `That was your own code. Next time, select some in any app and press ${spoken}.`
         : 'Now try your own code. Copy a few lines from any file, then paste them here.',
     offer === 'on'
       ? 'The shortcut is on. Try it anywhere.'
@@ -746,9 +747,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation.";
 
 /**
- * The own-code paste step's two ways in, used by setup's step 3 on a Mac and by the next open's
- * paste step: a paste explains the clipboard, which holds what was just pasted (main reads it there,
- * as Explain my clipboard does), and Choose a file explains a file. Neither needs a permission.
+ * The own-code paste step's two ways in, used by setup's step 3 and by the next open's paste step: a
+ * paste explains the clipboard, which holds what was just pasted (main reads it there, as Explain my
+ * clipboard does), and Choose a file explains a file. Neither needs a permission.
  */
 function useOwnCodePaste() {
   const [started, setStarted] = useState(false);
@@ -780,7 +781,12 @@ function useOwnCodePaste() {
     setStarted(false);
     setAttempt((n) => n + 1);
   }), []);
-  return { started, setStarted, fileError, explainPaste, chooseFile, attempt };
+  // A fresh target, for another paste after one was explained.
+  const reset = () => {
+    setStarted(false);
+    setAttempt((n) => n + 1);
+  };
+  return { started, setStarted, fileError, explainPaste, chooseFile, attempt, reset };
 }
 
 function LockGlyph() {
