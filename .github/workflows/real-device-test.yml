@@ -299,18 +299,26 @@ jobs:
       - name: Set up the editor and the screen for the whole-screen take (Mac)
         if: always() && matrix.label == 'mac' && inputs.media_takes == 'screen' && env.UNVIBE_EXE != ''
         continue-on-error: true
+        # A step that hangs is cut here and the job goes on, so its log survives (a cancelled job loses the log of
+        # the step it was in, as run 42183830953 did).
+        timeout-minutes: 20
         shell: bash
         run: |
           export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_ENV_HINTS=1
+          # tl S cmd...: run cmd for at most S seconds (the alarm survives exec; macOS has no timeout(1)).
+          tl() { perl -e 'alarm shift; exec @ARGV or die "exec $ARGV[0]: $!"' "$@"; }
+          phase() { echo "[$(date -u +%H:%M:%SZ)] $*"; }
           dir="$RUNNER_TEMP/screen"; mkdir -p "$dir"
           # ffmpeg with avfoundation (Playwright's own ffmpeg can only encode its screencasts), cliclick for real
           # mouse input, displayplacer to set the display mode.
-          brew install ffmpeg cliclick || echo "::warning::brew could not install ffmpeg or cliclick"
-          brew install jakehilborn/jakehilborn/displayplacer || echo "displayplacer: not installed, the display stays as it is"
+          phase "brew: ffmpeg, cliclick, displayplacer"
+          tl 600 brew install ffmpeg cliclick || echo "::warning::brew could not install ffmpeg or cliclick"
+          tl 300 brew install jakehilborn/jakehilborn/displayplacer || echo "displayplacer: not installed, the display stays as it is"
 
           # Editor, in Design's order: VS Code, else Xcode's editor, else TextEdit.
           editor=textedit
-          if brew install --cask visual-studio-code && [ -d "/Applications/Visual Studio Code.app" ]; then
+          phase "brew: visual-studio-code"
+          if tl 420 brew install --cask visual-studio-code && [ -d "/Applications/Visual Studio Code.app" ]; then
             app="/Applications/Visual Studio Code.app"
             # A cask download is quarantined; Gatekeeper's "downloaded from the Internet" sheet would sit over the take.
             xattr -dr com.apple.quarantine "$app" || true
@@ -423,8 +431,9 @@ jobs:
 
           # Display: the most pixels Design asked for that the runner offers (2560x1600, else 1920x1200, else 1080),
           # as a 1x mode first, else a Retina (scaling:on) mode with the same pixels.
+          phase "display"
           if command -v displayplacer >/dev/null; then
-            modes=$(displayplacer list || true)
+            modes=$(tl 30 displayplacer list || true)
             id=$(printf '%s\n' "$modes" | sed -n 's/^Persistent screen id: //p' | head -1)
             printf '%s\n' "$modes" | grep -E '^ *mode [0-9]+:' | head -40 || true
             picked=""
@@ -433,12 +442,12 @@ jobs:
               # Actions runs bash with -e and pipefail: a grep that finds no mode must not end the step.
               n=$(printf '%s\n' "$modes" | grep -E "mode [0-9]+: res:${w}x${h} " | grep -v 'scaling:on' | head -1 | sed -E 's/.*mode ([0-9]+):.*/\1/' || true)
               [ -n "$n" ] || n=$(printf '%s\n' "$modes" | grep -E "mode [0-9]+: res:$((w / 2))x$((h / 2)) .*scaling:on" | head -1 | sed -E 's/.*mode ([0-9]+):.*/\1/' || true)
-              if [ -n "$id" ] && [ -n "$n" ] && displayplacer "id:$id mode:$n origin:(0,0) degree:0"; then picked="$target (mode $n)"; break; fi
+              if [ -n "$id" ] && [ -n "$n" ] && tl 30 displayplacer "id:$id mode:$n origin:(0,0) degree:0"; then picked="$target (mode $n)"; break; fi
             done
             echo "Display mode set: ${picked:-none of 2560x1600, 1920x1200, 1920x1080 is offered; left as it was}"
             sleep 3
           fi
-          display=$(system_profiler SPDisplaysDataType | grep -E 'Resolution|UI Looks like' | sed 's/^ *//' | paste -sd ';' - || true)
+          display=$(tl 60 system_profiler SPDisplaysDataType | grep -E 'Resolution|UI Looks like' | sed 's/^ *//' | paste -sd ';' - || true)
           echo "Display now: $display"
           echo "SCREEN_DISPLAY=$display" >> "$GITHUB_ENV"
           # More room for the editor and the panel side by side: the Dock hides until the pointer reaches it.
@@ -448,6 +457,7 @@ jobs:
           # Screen Recording for whatever runs ffmpeg (node runs it in the media step; bash runs the test below), in
           # the style of the Accessibility grants above. It isn't granted on the runner today. Sequoia also asks again
           # each month unless replayd's approvals list has a later date for the client; harmless on older macOS.
+          phase "Screen Recording grants"
           db="/Library/Application Support/com.apple.TCC/TCC.db"
           ff=$(command -v ffmpeg || true)
           approvals="$HOME/Library/Group Containers/group.com.apple.replayd/ScreenCaptureApprovals.plist"
@@ -460,18 +470,22 @@ jobs:
           # A 1 s test capture: is the frame black? (Without the grant, macOS can also hand back only the wallpaper and
           # the menu bar, which is not black: the take's own frames are the proof that windows were recorded.)
           if [ -n "$ff" ]; then
-            "$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep -E 'AVFoundation|\[[0-9]+\]' || true
+            phase "avfoundation devices"
+            tl 20 "$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep -E 'AVFoundation|\[[0-9]+\]' || true
             # -list_devices always exits 1, hence the || true.
-            idx=$("$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | sed -nE 's/.*\[([0-9]+)\] Capture screen 0.*/\1/p' | head -1 || true)
+            idx=$(tl 20 "$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | sed -nE 's/.*\[([0-9]+)\] Capture screen 0.*/\1/p' | head -1 || true)
             echo "avfoundation screen device: ${idx:-none}"
             if [ -n "$idx" ]; then
-              "$ff" -hide_banner -loglevel error -f avfoundation -capture_cursor 1 -framerate 30 -pixel_format uyvy422 -i "$idx:none" -t 1 -y "$dir/test-capture.mov" || true
-              ymax=$("$ff" -v error -i "$dir/test-capture.mov" -vf "signalstats,metadata=print:key=lavfi.signalstats.YMAX:file=-" -f null - 2>/dev/null | sed -n 's/.*YMAX=//p' | sort -n | tail -1 || true)
+              phase "1 s test capture"
+              # 30 s: a capture that waits on a Screen Recording request never returns on its own.
+              tl 30 "$ff" -hide_banner -loglevel error -f avfoundation -capture_cursor 1 -framerate 30 -pixel_format uyvy422 -i "$idx:none" -t 1 -y "$dir/test-capture.mov" || echo "test capture: ffmpeg ended with $? (142 = cut at 30 s)"
+              ymax=$(tl 30 "$ff" -v error -i "$dir/test-capture.mov" -vf "signalstats,metadata=print:key=lavfi.signalstats.YMAX:file=-" -f null - 2>/dev/null | sed -n 's/.*YMAX=//p' | sort -n | tail -1 || true)
               if [ "${ymax%.*}" -gt 40 ] 2>/dev/null; then verdict="non-black"; else verdict="black or empty"; fi
               echo "1 s test capture: brightest luma ${ymax:-none}, $verdict"
               rm -f "$dir/test-capture.mov"
             fi
           fi
+          phase "setup done"
 
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)

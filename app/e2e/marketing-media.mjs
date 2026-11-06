@@ -707,7 +707,7 @@ end tell`);
 /** avfoundation's index for "Capture screen 0" (the main display), or null when this ffmpeg has none. */
 function screenDevice() {
   if (!ffmpeg) return null;
-  const listed = spawnSync(ffmpeg, ['-hide_banner', '-f', 'avfoundation', '-list_devices', 'true', '-i', ''], { encoding: 'utf8' });
+  const listed = spawnSync(ffmpeg, ['-hide_banner', '-f', 'avfoundation', '-list_devices', 'true', '-i', ''], { encoding: 'utf8', timeout: 20000 });
   return /\[(\d+)\] Capture screen 0/.exec(listed.stderr ?? '')?.[1] ?? null;
 }
 
