@@ -308,27 +308,21 @@ body:has(.paper-pricing) .fb-tab {
   text-underline-offset: 3px;
 }
 
-/* ── Listed on: plain lists of directory links ─────────────────────────── */
+/* ── Listed on: link lists inside the install-help reading cards (.verify) ── */
 
-.listed-on section {
-  margin-top: 2rem;
-}
-
-.listed-on__list {
+.fos-page .verify .listed-on__list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.listed-on__list a {
+.fos-page .verify .listed-on__list a {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
-  text-decoration: underline;
-  text-decoration-color: var(--v-lime);
-  text-decoration-thickness: 3px;
   text-underline-offset: 3px;
 }
 
