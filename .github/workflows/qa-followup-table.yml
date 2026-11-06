@@ -1,0 +1,81 @@
+name: QA follow-up table check
+
+# QA only (the lead, #204 post-deploy): the follow-up "What happens if I call it five times quickly?" at Advanced,
+# asked once in each of 5 fresh installs of the site's Windows build, with each answer's text kept.
+# Runs on a push whose message holds "[only:followup]". Each profile's qa- id is flagged before the app starts.
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-followup-table
+  cancel-in-progress: false
+
+env:
+  V: "0.1.49"
+
+jobs:
+  ask:
+    if: contains(github.event.head_commit.message, '[only:followup]')
+    strategy:
+      fail-fast: false
+      matrix:
+        n: [1, 2, 3, 4, 5]
+    runs-on: windows-2025
+    timeout-minutes: 15
+    env:
+      INSTALL_ID: qa-followup-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.n }}
+    steps:
+      - name: Flag this profile's id as QA before anything starts
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was started."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Get the app and Playwright
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" "$RUNNER_TEMP/profile" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/followup-table.mjs" .
+          curl -fsSL -o "$RUNNER_TEMP/Unvibe.exe" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/Unvibe-$V-win-x64-portable.exe"
+          printf '{"installId":"%s"}' "$INSTALL_ID" > "$RUNNER_TEMP/profile/unvibe-store.json"
+
+      - name: Ask the follow-up at Advanced
+        shell: bash
+        env:
+          UNVIBE_EXE: ${{ runner.temp }}/Unvibe.exe
+          USER_DATA: ${{ runner.temp }}/profile
+          OUT: ${{ runner.temp }}/out
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: cd "$RUNNER_TEMP/pw" && node followup-table.mjs
+
+      - name: Flag again (whatever happened)
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w ' %{http_code}\n' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}"
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: followup-${{ matrix.n }}
+          path: ${{ runner.temp }}/out
+          retention-days: 14
