@@ -115,10 +115,17 @@ $asset = Split-Path $rcSetup -Leaf
 $env:UNVIBE_BETA_ASSET = $asset
 Note "RC setup: $asset, $((Get-Item $rcSetup).Length) bytes, sha256 $(Sha $rcSetup), version $((Get-Item $rcSetup).VersionInfo.ProductVersion)"
 $serve = "$env:RUNNER_TEMP\serve"; New-Item -ItemType Directory -Force $serve | Out-Null
+# PB-2 (env PB2_SUMS: a committed copy of the publish draft's SHA256SUMS-windows.txt, next to this script): serve that
+# file as published instead of a generated line, and require it to list the served setup with this exact hash.
 function Serve($file, $sum, $what) {
   Copy-Item $file "$serve\$asset" -Force
-  Set-Content "$serve\SHA256SUMS-windows.txt" "$sum  $asset" -Encoding ascii
-  Note "served as $asset ($what): $((Get-Item "$serve\$asset").Length) bytes, sha256 $(Sha "$serve\$asset"); SHA256SUMS line: $sum  $asset"
+  if ($env:PB2_SUMS) {
+    $pinned = Join-Path $PSScriptRoot $env:PB2_SUMS
+    Copy-Item $pinned "$serve\SHA256SUMS-windows.txt" -Force
+    $listed = Select-String -Path $pinned -Pattern "^$sum\s+\*?$([regex]::Escape($asset))\s*$" -Quiet
+    Note "$(if ($listed) { 'PASS' } else { 'FAIL' })  PB-2: the draft's SHA256SUMS-windows.txt ($env:PB2_SUMS) lists $asset with sha256 $sum"
+  } else { Set-Content "$serve\SHA256SUMS-windows.txt" "$sum  $asset" -Encoding ascii }
+  Note "served as $asset ($what): $((Get-Item "$serve\$asset").Length) bytes, sha256 $(Sha "$serve\$asset"); SHA256SUMS: $(if ($env:PB2_SUMS) { "the draft's file" } else { "$sum  $asset" })"
 }
 $srv = Start-Process python -ArgumentList '-m', 'http.server', '47192', '--bind', '127.0.0.1', '--directory', $serve -PassThru -WindowStyle Hidden
 Start-Sleep 3
