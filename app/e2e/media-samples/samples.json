@@ -1,0 +1,7 @@
+[
+  { "file": "check.c", "sha256": "1e5c3bf884bcf96e1e7bcdcae406992e2dd6dcf5cea9094f40541c258d31a3b0", "marker": "check_token", "followUp": "Does verify ever run?" },
+  { "file": "assign-regex.js", "sha256": "7d62d2c06771caeee8d6657c48624840a45a4f1778b4283ad136d7890fde36aa", "marker": "looksLikeAssignment", "followUp": "How slow is this on a long line with no equals sign?" },
+  { "file": "pack-speed.js", "sha256": "3160616c3b6943499146e2576324c7f842a949970c8a75f7c5ee58ef85558e8b", "marker": "packSpeed", "followUp": "What does packSpeed(40000) return?" },
+  { "file": "lookup.py", "sha256": "6c43666346618ff2979e1aac7aa4d5880df2dd7f28fb7cedc0fb99535465531c", "marker": "elapsed_ms", "followUp": "What if the clock moves backwards during the lookup?" },
+  { "file": "days.c", "sha256": "d9169d434b12a999e5befb359f7d86508a86386b87e6a0002219f2873dd12e16", "marker": "year_from_days", "followUp": "What happens on day 366 of a leap year?" }
+]

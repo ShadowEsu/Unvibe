@@ -1,5 +1,6 @@
 // Records the real app for the website: screenshots of each screen and raw window videos of one
-// genuine session (first explanation, depth switch, follow-up, Test me, companion pages).
+// genuine session (first explanation, depth switch, follow-up, Test me, companion pages), and on request
+// marketing's own sample files (media-samples/).
 // Everything shown is produced live by the installed app and the hosted AI; nothing is mocked.
 // A release build is needed (it carries the trial token); a plain local build cannot explain.
 // The app is driven through Chromium's debug port (cdp-launch.mjs): release builds turn off the
@@ -10,10 +11,12 @@
 // Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (qa-prefixed;
 //      CI gives every run a fresh id and flags it as QA; an id reused across runs runs out of free
 //      explanations), FFMPEG (optional ffmpeg path; default: ffmpeg on PATH, else Playwright's),
-//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog).
+//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog),
+//      MEDIA_SAMPLES=1 (also explain each file in media-samples/samples.json; see that step).
 import { launchApp } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -247,6 +250,37 @@ async function agreeIfAsked(page, wait = 5000) {
   return true;
 }
 
+/** Asks `question` in the panel's follow-up row and returns the panel once the answer has finished. */
+async function askFollowUp(question) {
+  const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
+  await enterText((await askRow()).getByLabel('Follow-up question'), question);
+  await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+  // A question is the person's own text, so the agreement is asked here; then ask again.
+  if (await agreeIfAsked(await windowWith('widget.html'))) {
+    const again = (await askRow()).getByLabel('Follow-up question');
+    if ((await again.inputValue()).trim() !== question) await enterText(again, question);
+    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+  }
+  await sleep(1500);
+  return settledPanel();
+}
+
+/**
+ * The answer goes under the explanation (0.1.49 opens it with a "Short answer" heading; earlier builds used the
+ * question as its heading, matched by `questionPart`): bring that start to the top of the panel, so the still shows
+ * the answer, not the end.
+ */
+async function scrollToAnswer(panel, questionPart) {
+  const found = await panel.locator('.body').evaluate((body, part) => {
+    const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
+    const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => (el.textContent ?? '').toLowerCase().includes(part));
+    if (!heading) return false;
+    body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
+    return true;
+  }, questionPart.toLowerCase());
+  if (!found) throw new Error('the follow-up question is not in the panel');
+}
+
 const companion = await windowWith('companion.html', 60000);
 await companion.waitForLoadState('domcontentloaded');
 await resize(companion, 1280, 800, { center: true });
@@ -315,28 +349,8 @@ if (explained) {
   await step('follow-up', async () => {
     // A question with a prose answer: in 0.1.49 a markdown table in an answer shows as raw | rows (5 Nov run
     // 42132166462, "five times quickly" got a timeline table), which the site must not show as the app's look.
-    const question = 'Why does it call clearTimeout before setTimeout?';
-    const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
-    await enterText((await askRow()).getByLabel('Follow-up question'), question);
-    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
-    // A question is the person's own text, so the agreement is asked here; then ask again.
-    if (await agreeIfAsked(await windowWith('widget.html'))) {
-      const again = (await askRow()).getByLabel('Follow-up question');
-      if ((await again.inputValue()).trim() !== question) await enterText(again, question);
-      await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
-    }
-    await sleep(1500);
-    const done = await settledPanel();
-    // The answer goes under the explanation (0.1.49 opens it with a "Short answer" heading; earlier builds used the
-    // question as its heading): bring that start to the top of the panel, so the still shows the answer, not the end.
-    const found = await done.locator('.body').evaluate((body) => {
-      const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
-      const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => /clearTimeout before/i.test(el.textContent ?? ''));
-      if (!heading) return false;
-      body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
-      return true;
-    });
-    if (!found) throw new Error('the follow-up question is not in the panel');
+    const done = await askFollowUp('Why does it call clearTimeout before setTimeout?');
+    await scrollToAnswer(done, 'clearTimeout before');
     if (/\|\s*-{3,}\s*\|/.test(await done.locator('.body').innerText())) console.log('NOTE follow-up: the answer holds a raw markdown table (shown as | rows)');
     await sleep(600);
     await shot(done, 'panel-follow-up');
@@ -374,6 +388,45 @@ if (explained) {
       await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
       await settledPanel();
     });
+  }
+  // Marketing's sample files (media-samples/, each checked against its sha256 in samples.json), at Beginner in a
+  // 420 px panel, the narrowest the panel allows, so the text is as large as it gets when a 9:16 reel crops the
+  // still or the window video: each file's explanation, then the follow-up a viewer would type. Only on request
+  // (MEDIA_SAMPLES=1, the workflow's media_samples input), because their explanations also show in the Library still.
+  if (process.env.MEDIA_SAMPLES === '1') {
+    const dir = new URL('./media-samples/', import.meta.url);
+    const list = JSON.parse(readFileSync(new URL('samples.json', dir), 'utf8'));
+    for (const { file, sha256, marker, followUp } of list) {
+      const name = path.parse(file).name;
+      const explainedSample = await step(`sample ${file}`, async () => {
+        const bytes = readFileSync(new URL(file, dir));
+        const sum = createHash('sha256').update(bytes).digest('hex');
+        if (sum !== sha256) throw new Error(`${file} hashes to ${sum.slice(0, 16)}, samples.json says ${sha256.slice(0, 16)}`);
+        const panel = await windowWith('widget.html');
+        await resize(panel, 420, 720);
+        await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'beginner' }), [bytes.toString('utf8')]);
+        await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: marker }).first().waitFor({ timeout: 30000 });
+        await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
+        const done = await settledPanel();
+        await resize(done, 420, 720);
+        const depth = (await done.locator('.lvl.on').first().innerText().catch(() => '')).trim();
+        if (!/^beginner$/i.test(depth)) throw new Error(`the panel is at "${depth}", not Beginner`);
+        await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+        await sleep(600);
+        await shot(done, `sample-${name}-beginner`);
+        await saveAnswer(done, `sample ${file}`);
+      });
+      if (explainedSample) await step(`sample ${file} follow-up`, async () => {
+        const done = await askFollowUp(followUp);
+        await resize(done, 420, 720);
+        await scrollToAnswer(done, followUp);
+        await sleep(600);
+        await shot(done, `sample-${name}-follow-up`);
+        await saveAnswer(done, `sample ${file} follow-up`);
+      });
+    }
+    // Back to the size the other panel stills use.
+    await step('sample panel size', async () => resize(await windowWith('widget.html'), 560, 720));
   }
   // The key check: code holding a key-shaped string is refused on this computer before anything is
   // sent. 'sk_test_' + 24 x's matches the stripe-key rule (core/secretFilter.ts) and is plainly fake.

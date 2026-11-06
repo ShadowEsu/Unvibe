@@ -15,6 +15,11 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      media_samples:
+        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -256,8 +261,10 @@ jobs:
           # A fresh install per run: one reused id spends its 50 free explanations and then every
           # capture shows the limit instead of an answer. The next step flags it as QA.
           MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
         run: |
           cp app/e2e/marketing-media.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp -R app/e2e/media-samples "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
