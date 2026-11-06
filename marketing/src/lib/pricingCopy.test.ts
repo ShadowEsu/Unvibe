@@ -67,7 +67,7 @@ describe("pricing copy while payments are closed", () => {
     assert.match(pro, /class="[^"]*pricing-button--quiet/);
     assert.doesNotMatch(pro, /upgrade|checkout|subscribe/i);
     assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);
-    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who enters your gift code in the app \(up to five\)\.<\/p>/);
+    assert.match(pro, /<p class="plan-after">Try Pro today: a new account gets a free month, plus a month for each friend who signs in and enters your gift code in the app, if their account hasn&#x27;t had a gift yet \(up to five\)\.<\/p>/);
     assert.doesNotMatch(pro, /Pro isn&#x27;t on sale yet/);
     // Free keeps its download, Teams its email.
     assert.match(planCard(false, "free"), /href="\/beta"[^>]*>.*Download free/);
@@ -130,15 +130,15 @@ describe("pricing copy once payments open", () => {
     assert.equal(open.heading.emphasis, "earns a place");
     assert.match(open.description, new RegExp(`\\$${PRICING.proMonthly} a month or \\$${PRICING.proAnnual} a year\\.$`));
     assert.doesNotMatch(open.description, /open soon/);
-    // Teams has no checkout (founding seats start by email), so only Pro renews (Security SHOULD-LR3).
-    assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. “Founding pilot” means early access, not general availability. Explanation text is not shared across seats.");
+    // Teams has no checkout (seats start by email), so only Pro renews (Security SHOULD-LR3).
+    assert.equal(open.disclosure, "Prices in USD. Pro renews until you cancel. Explanation text is not shared across seats.");
     assert.equal(open.termsNote, null);
     assert.deepEqual(open.plans.map((plan) => [plan.id, plan.badge, plan.detail, plan.cta, plan.href]), [
       ["free", "No card needed", open.plans[0].detail, "Download free", "/beta"],
       ["pro", "Individual", "One developer account. Upgrade, manage or cancel from the Plan page in the app.", "Download, then upgrade", "/beta"],
-      ["teams", "Founding pilot", `Founding price. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
+      ["teams", "Early access", `Seats start by email. ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Each person keeps their explanations on their own computer.`, "Request Teams seats", open.plans[2].href],
     ]);
-    assert.match(open.plans[2].href, /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20founding%20pilot/);
+    assert.match(open.plans[2].href, /^mailto:support@unvibe\.site\?subject=Unvibe%20Teams%20early%20access/);
   });
 
   it("shares features and the featured card with the closed copy", () => {
