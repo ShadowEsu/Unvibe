@@ -15,7 +15,38 @@ permissions:
   contents: write
 
 jobs:
+  # The Mac check below starts the built app for 10 s, and every start registers an install. Flag
+  # that install as QA before the build exists, in a job that holds only the flag token (not the
+  # signing secrets), and stop the build if it can't be flagged (BUGS F-19, as #201 did for
+  # real-device-test).
+  preflag:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      smoke-id: ${{ steps.flag.outputs.smoke-id }}
+    steps:
+      - id: flag
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          SMOKE_ID: qa-release-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; the Mac smoke start would count as a real install"; exit 1; fi
+          # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
+          answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+            --data "{\"installId\":\"$SMOKE_ID\"}") || { echo "::error::pre-flag $SMOKE_ID: curl failed"; exit 1; }
+          code=$(printf '%s' "$answer" | tail -n 1)
+          # || true: the runner's bash has -e -o pipefail, and a body without "matched" (a 401) must still reach the error below.
+          matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2) || true
+          echo "QA pre-flag $SMOKE_ID: $code matched=${matched:-none}"
+          if [ "$code" != 200 ] || { [ "$matched" != true ] && [ "$matched" != false ]; }; then
+            echo "::error::pre-flag $SMOKE_ID was not stored"; exit 1
+          fi
+          echo "smoke-id=$SMOKE_ID" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: preflag
     strategy:
       fail-fast: false
       # One OS at a time so both jobs never race to create the same GitHub release.
@@ -221,6 +252,7 @@ jobs:
         shell: bash
         env:
           PUBLISH: ${{ startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true }}
+          SMOKE_ID: ${{ needs.preflag.outputs.smoke-id }}
         run: |
           set -euo pipefail
           for dmg in release/*.dmg; do
@@ -242,8 +274,11 @@ jobs:
               # Apple silicon kills binaries with a broken signature, so actually start it. The
               # RunAsNode fuse is off (scripts/afterPackHook.cjs), so ELECTRON_RUN_AS_NODE must be
               # ignored: Unvibe starts as itself and never runs the -e code.
+              # It starts on a fresh profile holding the install id the preflag job already flagged.
+              profile="$(mktemp -d)"
+              printf '{"installId":"%s"}\n' "$SMOKE_ID" > "$profile/unvibe-store.json"
               out="$(mktemp)"
-              ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Unvibe" -e "console.log('run-as-node-' + 'works')" >"$out" 2>&1 &
+              UNVIBE_USER_DATA="$profile" ELECTRON_RUN_AS_NODE=1 "$app/Contents/MacOS/Unvibe" -e "console.log('run-as-node-' + 'works')" >"$out" 2>&1 &
               pid=$!
               sleep 10
               if ! kill -0 "$pid" 2>/dev/null; then
@@ -253,6 +288,8 @@ jobs:
               kill "$pid"; wait "$pid" 2>/dev/null || true
               if grep -q 'run-as-node-works' "$out"; then echo "ELECTRON_RUN_AS_NODE still runs code: the RunAsNode fuse is on."; exit 1; fi
               echo "starts, and ignores ELECTRON_RUN_AS_NODE"
+              kept="$(grep -o '"installId":"[^"]*"' "$profile/unvibe-store.json" || true)"
+              if [ "$kept" != "\"installId\":\"$SMOKE_ID\"" ]; then echo "The app replaced the flagged install id ($kept), so this start may count as real."; exit 1; fi
             fi
             hdiutil detach "$mnt" -force >/dev/null
           done
