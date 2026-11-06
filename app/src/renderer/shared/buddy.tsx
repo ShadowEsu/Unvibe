@@ -28,12 +28,17 @@ interface BuddyProps {
    * render: pass a counter or an event id when something real happens (Got it, a quiz verdict).
    */
   react?: string | number;
-  /** Follow the window's shared mood (setBuddyMood); a reaction mood arriving that way also reacts. */
+  /**
+   * Follow the window's shared mood (setBuddyMood). A reaction mood heard that way reacts and shows for
+   * REACTION_HOLD_MS, then Vibe goes back to its own `mood`; other heard moods hold until `mood` changes.
+   */
   listen?: boolean;
 }
 
 /** Moods that mark something the user did or got (SPEC §3); arriving through setBuddyMood, they react. */
 const REACTION_MOODS: ReadonlySet<BuddyMood> = new Set(['happy', 'celebrate', 'confused', 'wave']);
+/** As long as the Island holds Vibe's happy face after Understood (bar.tsx). */
+const REACTION_HOLD_MS = 1800;
 
 const EVENT = 'unvibe:buddy';
 
@@ -105,6 +110,11 @@ export function Buddy({ mood: moodProp = 'idle', size = 40, follow = false, clas
     window.addEventListener(EVENT, onMood);
     return () => window.removeEventListener(EVENT, onMood);
   }, [listen]);
+  useEffect(() => {
+    if (!heard || !REACTION_MOODS.has(heard)) return undefined;
+    const back = window.setTimeout(() => setHeard(null), REACTION_HOLD_MS);
+    return () => window.clearTimeout(back);
+  }, [heard, reactions]);
   const mood = listen && heard ? heard : moodProp;
 
   // Pupils follow the pointer gently while idle.

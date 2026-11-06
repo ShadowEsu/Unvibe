@@ -12,7 +12,8 @@ import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
-import { UsageRings } from '../shared/usageRings';
+import { selectionSource, selectionTitle } from '../shared/languageName';
+import { MenuButton, TabStrip, panelMenuItems } from './panelMenu';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -139,19 +140,6 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
       </div>
     </div>
   );
-}
-
-function ToolIcon({ name }: { name: 'explain' | 'depth' | 'quiz' | 'ask' | 'library' | 'why' | 'teach' }) {
-  const paths = {
-    explain: 'M7 4 3 8l4 4 M13 4l4 4-4 4 M11 2 9 14',
-    depth: 'M3 4h14 M5 8h10 M7 12h6',
-    quiz: 'M6.5 6a3.5 3.5 0 1 1 5.1 3.1c-1.7.9-2.1 1.6-2.1 2.9 M9.5 16h.01',
-    ask: 'M4 15 16 3 M8 3h8v8',
-    library: 'M4 3h10a2 2 0 0 1 2 2v11H6a2 2 0 0 0-2 2V3z M6 16h10',
-    why: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M10 6v5 M10 13.5v.5',
-    teach: 'M3 7l7-3 7 3-7 3-7-3z M6 8.5V12c0 1.5 2 2.5 4 2.5s4-1 4-2.5V8.5',
-  } as const;
-  return <span className="widget-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d={paths[name]} /></svg></span>;
 }
 
 const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
@@ -461,7 +449,6 @@ function Widget() {
   // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
   const [proOpen, setProOpen] = useState(false);
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
-  const [activeTool, setActiveTool] = useState<'explain' | 'depth' | 'quiz' | 'ask'>('explain');
   const bodyRef = useRef<HTMLDivElement>(null);
   /**
    * When a short answer arrives (its More detail block mounts once typing ends), scroll the body just
@@ -751,7 +738,6 @@ function Widget() {
   };
 
   const openQuiz = (another = false) => {
-    setActiveTool('quiz');
     if (!another && active.quiz && active.quiz.phase !== 'failed') {
       setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: false }));
       return;
@@ -803,17 +789,10 @@ function Widget() {
 
   const phase = active.phase;
   const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
-  const src = active.meta.lines ? (
-    <span className="src">
-      <b>{linesLabel(active.meta.lines ?? 0)}</b>
-      {active.meta.language && active.meta.language !== 'plaintext' ? ` · ${active.meta.language}` : ''}
-      {active.meta.sourceApp ? ` · from ${active.meta.sourceApp}` : ''}
-    </span>
-  ) : (
-    <span className="src">
-      <b>Ready</b>
-    </span>
-  );
+  // The header names the selection ("7 lines of JavaScript", "from Cursor · debounce.js"); the status line
+  // lives in `⋯` and, for screen readers, in a hidden status region.
+  const headTitle = active.meta.lines ? selectionTitle(active.meta.lines, active.meta.language) : 'Ready';
+  const headSource = active.meta.lines ? selectionSource(active.meta.sourceApp, active.meta.file) : undefined;
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
@@ -889,104 +868,60 @@ function Widget() {
     });
   };
 
+  const menuItems = panelMenuItems({
+    status: phaseLabel.charAt(0).toUpperCase() + phaseLabel.slice(1),
+    answerReady: phase === 'done' && !stillTyping,
+    features,
+    teachOpen,
+    dark: panelTheme === 'dark',
+    collapsed,
+    usage: usage ? { remaining: usage.remaining, resetsOn: new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) } : undefined,
+  }, {
+    explain: () => document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    depth: () => document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+    testMe: () => openQuiz(),
+    ask: () => requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus()),
+    why: askWhy,
+    teach: () => setTeachOpen((open) => !open),
+    newTab: addTab,
+    saved: () => window.unvibe.openStudy(),
+    theme: () => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark')),
+    collapse: toggleCollapse,
+  });
+
   return (
     <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
-          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={26} label="Vibe" />
+          <Buddy mood={phase === 'streaming' ? (active.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={30} label="Vibe" listen />
         </span>
         <div className="head__context">
-          <span className="head__product">Unvibe</span>
-          {src}
+          <span className="head__title">{headTitle}</span>
+          {headSource ? <span className="head__source">{headSource}</span> : null}
         </div>
-        <span className={`head__status head__status--${phase}`} role="status"><i aria-hidden="true" />{phaseLabel}</span>
+        <span className="sr-only" role="status">{phaseLabel}</span>
         <div className="head__actions">
-          {usage && (
-            <span className="head__usage" title={`Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`}>
-              {usage.remaining} left
-            </span>
-          )}
-          <button
-            className="head__theme"
-            aria-label={panelTheme === 'dark' ? 'Switch panel to light mode' : 'Switch panel to dark mode'}
-            title={panelTheme === 'dark' ? 'Light mode' : 'Dark mode'}
-            onClick={() => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-          >
-            {panelTheme === 'dark' ? '☀' : '☾'}
-          </button>
-          <button aria-label="Open saved explanations" title="Saved explanations" onClick={() => window.unvibe.openStudy()}>
-            Saved
-          </button>
-          <button className="head__glyph" aria-label={collapsed ? 'Expand panel' : 'Collapse panel'} aria-expanded={!collapsed} title={collapsed ? 'Expand' : 'Collapse'} onClick={toggleCollapse}>
-            <span aria-hidden="true">{collapsed ? '▾' : '▴'}</span>
-          </button>
+          <MenuButton className="head__glyph head__more" items={menuItems} menuLabel="Panel" ariaLabel="More" title="More">
+            <span aria-hidden="true">⋯</span>
+          </MenuButton>
           <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
             <span aria-hidden="true">✕</span>
           </button>
         </div>
       </div>
+      {!collapsed && !active.mock && phase === 'done' ? (
+        <div className="head-bar">
+          <span className="local-save-note">Saved on this {deviceName}</span>
+        </div>
+      ) : null}
 
       {!collapsed ? (
         <div className="widget-workspace">
-          <aside className="widget-tools" aria-label="Review tools">
-            <button className={`tool--explain${activeTool === 'explain' ? ' on' : ''}`} type="button" title="Explanation" onClick={() => {
-              setActiveTool('explain');
-              document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}><ToolIcon name="explain" /><b>Explain</b></button>
-            <button className={`tool--depth${activeTool === 'depth' ? ' on' : ''}`} type="button" title="Difficulty" onClick={() => {
-              setActiveTool('depth');
-              document.querySelector('.levels')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }}><ToolIcon name="depth" /><b>Depth</b></button>
-            <button className={`tool--quiz${activeTool === 'quiz' ? ' on' : ''}`} type="button" title="Quiz" disabled={phase !== 'done' || stillTyping} onClick={() => openQuiz()}><ToolIcon name="quiz" /><b>Quiz</b></button>
-            <button className={`tool--ask${activeTool === 'ask' ? ' on' : ''}`} type="button" title="Ask a follow-up" onClick={() => {
-              setActiveTool('ask');
-              requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus());
-            }}><ToolIcon name="ask" /><b>Ask</b></button>
-            {features.whyExists ? (
-              <button type="button" className="tool--why" title="Why does this exist" disabled={phase !== 'done' || stillTyping} onClick={askWhy}><ToolIcon name="why" /><b>Why</b></button>
-            ) : null}
-            {features.teachBack ? (
-              <button type="button" className={`tool--teach${teachOpen ? ' on' : ''}`} title="Teach it back" aria-expanded={teachOpen} disabled={phase !== 'done' || stillTyping} onClick={() => setTeachOpen((open) => !open)}><ToolIcon name="teach" /><b>Teach</b></button>
-            ) : null}
-            <div className="widget-tools__spacer" />
-            <button type="button" className="tool--saved" title="Open saved learning" onClick={() => window.unvibe.openStudy()}><ToolIcon name="library" /><b>Saved</b></button>
-            {usage && (
-              <div className="widget-tools__usage" title={`${usage.used} of ${usage.limit} explanations used this month. Resets ${new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`}>
-                <span>Available</span>
-                <UsageRings ai={{ used: usage.used, limit: usage.limit, remaining: usage.remaining }} selections={usage.selections} size={26} tiny />
-              </div>
-            )}
-          </aside>
           <section className="widget-main">
 
       {!collapsed && !sessionPaused && (
-        <div className="tabs" role="group" aria-label="Review tabs">
-          {tabs.map((t) => (
-            <div key={t.id} className={`tab${t.id === activeTabId ? ' on' : ''}`}>
-              <button
-                type="button"
-                aria-pressed={t.id === activeTabId}
-                className="tab__label"
-                onClick={() => selectTab(t.id)}
-              >
-                {t.label}
-              </button>
-              <button
-                type="button"
-                className="tab__x"
-                aria-label={`Close ${t.label}`}
-                title={`Close ${t.label}`}
-                onClick={(e) => closeTab(t.id, e)}
-              >
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-          ))}
-          <button type="button" className="tab-add" aria-label="Add tab" title="Add another review tab" onClick={addTab}>
-            +
-          </button>
-        </div>
+        <TabStrip tabs={tabs} activeId={activeTabId} onSelect={selectTab} onClose={closeTab} />
       )}
 
       {!collapsed && sessionPaused && offer ? (
@@ -1417,7 +1352,6 @@ function Widget() {
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
-                {!active.mock && phase === 'done' && <span className="local-save-note">saved on this {deviceName}</span>}
               </div>
               {active.originOpen ? (
                 <div className="origin-panel" role="region" aria-label="Why this exists">

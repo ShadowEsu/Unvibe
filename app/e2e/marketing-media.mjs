@@ -286,7 +286,8 @@ if (explained) {
   });
   await step('test me', async () => {
     const panel = await windowWith('widget.html');
-    await panel.locator('.tool--quiz').first().click();
+    await panel.getByRole('button', { name: 'More', exact: true }).click();
+    await panel.getByRole('menuitem', { name: 'Test me', exact: true }).click();
     await panel.locator('.quiz__q').waitFor({ timeout: 60000 });
     await sleep(1200);
     await shot(panel, 'panel-test-me');
@@ -352,7 +353,8 @@ if (explained) {
     // Wait for the picked file's preview first, so the earlier finished card can't pass for this one.
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'MAX_ATTEMPTS' }).first().waitFor({ timeout: 30000 });
     const panel = await settledPanel();
-    await panel.locator('.tool--why').click();
+    await panel.getByRole('button', { name: 'More', exact: true }).click();
+    await panel.getByRole('menuitem', { name: 'Why does this exist?', exact: true }).click();
     await panel.locator('.origin-panel').waitFor({ timeout: 20000 });
     await panel.locator('.origin-panel').scrollIntoViewIfNeeded();
     await sleep(800);
