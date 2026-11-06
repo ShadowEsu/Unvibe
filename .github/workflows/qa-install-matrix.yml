@@ -42,7 +42,15 @@ jobs:
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
     steps:
+      # A commit message holding "[only:<path>]" runs just those rows; the others skip every step.
+      - name: Pick this row
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+          ROW: ${{ matrix.path }}
+        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+
       - name: Require the QA flag token
+        if: env.SKIP != '1'
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
@@ -50,27 +58,31 @@ jobs:
           echo "QA flag token present"
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SKIP != '1'
         with:
           sparse-checkout: |
             .github
             app/e2e
 
       - name: Playwright for the first explanation
+        if: env.SKIP != '1'
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
           npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
 
       - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        if: env.SKIP != '1'
         run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
 
       - name: Install, first launch, QA flag, first explanation
+        if: env.SKIP != '1'
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/mac-row.sh "${{ matrix.path }}" "$RUNNER_TEMP/m"
 
       - name: Flag the install as QA (again, whatever happened)
-        if: always()
+        if: always() && env.SKIP != '1'
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: |
@@ -86,7 +98,7 @@ jobs:
           done
 
       - name: Upload
-        if: always()
+        if: always() && env.SKIP != '1'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: matrix-${{ matrix.runner }}-${{ matrix.path }}
@@ -102,12 +114,22 @@ jobs:
           - { runner: windows-2022, path: exe }
           - { runner: windows-2025, path: ps1 }
           - { runner: windows-2025, path: exe }
+          - { runner: windows-2022, path: setup }
+          - { runner: windows-2025, path: setup }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
     steps:
+      - name: Pick this row
+        shell: bash
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+          ROW: ${{ matrix.path }}
+        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+
       - name: Require the QA flag token
+        if: env.SKIP != '1'
         shell: pwsh
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -116,12 +138,14 @@ jobs:
           'QA flag token present'
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SKIP != '1'
         with:
           sparse-checkout: |
             .github
             app/e2e
 
       - name: Playwright for the first explanation
+        if: env.SKIP != '1'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
@@ -129,13 +153,14 @@ jobs:
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
 
       - name: Install, first launch, QA flag, first explanation
+        if: env.SKIP != '1'
         shell: powershell
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: .github\qa\win-row.ps1 -Kind "${{ matrix.path }}" -Out "$env:RUNNER_TEMP\m"
 
       - name: Flag the install as QA (again, whatever happened)
-        if: always()
+        if: always() && env.SKIP != '1'
         shell: pwsh
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -155,7 +180,7 @@ jobs:
           }
 
       - name: Upload
-        if: always()
+        if: always() && env.SKIP != '1'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: matrix-${{ matrix.runner }}-${{ matrix.path }}

@@ -1,6 +1,8 @@
 # One Windows row of qa-install-matrix.yml: install Unvibe the way the site offers it, record every warning Windows
 # shows, see the first launch, flag the install as QA right away, then the first explanation (first-explain.mjs).
-# Usage: win-row.ps1 -Kind ps1|exe -Out <dir>      Env: INSTALL_ID (qa-…), UNVIBE_QA_FLAG_TOKEN, V (e.g. 0.1.49)
+# Usage: win-row.ps1 -Kind ps1|exe|setup -Out <dir>      Env: INSTALL_ID (qa-…), UNVIBE_QA_FLAG_TOKEN, V (e.g. 0.1.49)
+# "setup" is not on the site: the NSIS installer, the build today's CI walkthrough tests, kept as the comparison
+# for the two portable-exe paths the site does offer (the lead, row 545).
 param([string]$Kind, [string]$Out)
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force $Out | Out-Null
@@ -53,13 +55,31 @@ if ($Kind -eq 'ps1') {
   Note "install.ps1 sha256 $((Get-FileHash "$Out\install.ps1.live" -Algorithm SHA256).Hash); run copy changes only the `$track line: $((Compare-Object ($live -split "`n") ($run -split "`n") | ForEach-Object { $_.InputObject.Trim() }) -join ' => ')"
   $t0 = Get-Date
   $p = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "Get-Content -Raw '$Out\install.ps1.run' | Invoke-Expression" `
-    -RedirectStandardOutput "$Out\install.log" -RedirectStandardError "$Out\install.err" -PassThru -Wait
+    -RedirectStandardOutput "$Out\install.log" -RedirectStandardError "$Out\install.err" -PassThru
+  # Not Start-Process -Wait: that also waits for descendants, and install.ps1 ends by starting Unvibe, which keeps
+  # running (run 42181832386's ps1 rows sat here until their time limit; unvibe-app's diagnosis).
+  $null = $p.Handle # Windows PowerShell 5.1 reports no ExitCode unless the handle was read while the process ran
+  if (-not $p.WaitForExit(600000)) { Note 'FAIL  install: install.ps1 still running after 10 min'; $p | Stop-Process -Force }
   Note "install.ps1 exit $($p.ExitCode) after $([int]((Get-Date) - $t0).TotalSeconds) s; output: $((Get-Content "$Out\install.log" -Tail 4) -join ' / ') $((Get-Content "$Out\install.err" -Tail 4) -join ' / ')"
   if ($p.ExitCode -ne 0) { Note "FAIL  install: install.ps1 exit $($p.ExitCode)" }
   $exe = Join-Path $env:LOCALAPPDATA 'Unvibe\Unvibe.exe'
   $z = Get-Content $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue
   Note "installed exe: $(if (Test-Path $exe) { "$((Get-Item $exe).Length) bytes" } else { 'MISSING' }); Mark of the Web: $(if ($z) { $z -join ' ' } else { 'none (so SmartScreen does not ask)' })"
   Note "Start menu shortcut: $(Test-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Unvibe.lnk'))"
+} elseif ($Kind -eq 'setup') {
+  $setup = "$env:RUNNER_TEMP\Unvibe-$env:V-win-x64-setup.exe"
+  Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/Unvibe-$env:V-win-x64-setup.exe" -OutFile $setup -UseBasicParsing
+  $p = Start-Process -FilePath $setup -ArgumentList '/S' -PassThru
+  $null = $p.Handle
+  if (-not $p.WaitForExit(600000)) { Note 'FAIL  install: setup.exe still running after 10 min' }
+  Note "setup.exe /S exit $($p.ExitCode) (comparison row: the site doesn't offer this file)"
+  for ($i = 0; $i -lt 30 -and -not $exe; $i++) {
+    $exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+    if (-not $exe) { Start-Sleep 2 }
+  }
+  if (-not $exe) { Note 'FAIL  install: setup.exe left no Unvibe.exe' } else { Note "installed at $exe" }
+  # The installer doesn't open the app; a person opens it from the Start menu.
+  if ($exe) { Start-Process -FilePath $exe }
 } else {
   # The site's ".exe" link, saved as a browser does (Internet zone), opened like a double-click.
   $asset = "Unvibe-$env:V-win-x64-portable.exe"
