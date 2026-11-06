@@ -148,9 +148,10 @@
     },
     "nsis": {
       "artifactName": "Unvibe-${version}-${os}-${arch}-setup.${ext}",
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
+      "allowToChangeInstallationDirectory": false,
+      "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
