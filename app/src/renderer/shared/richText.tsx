@@ -58,9 +58,45 @@ function citeLabel(file: string, lines: string): string {
 /** Counts words across one render, so a word keeps its key (and plays its fade once) as the answer grows. */
 type WordCounter = { n: number };
 
-/** Each word as a `span.rich-w` keyed by its place in the answer; whitespace stays plain text (SPEC §6 word fade). */
+/** A token with a letter or digit; one without (`|`, `-`, `→`, `…`) is punctuation and never fades on its own. */
+export const HAS_WORD = /[\p{L}\p{N}]/u;
+
+/**
+ * Each word as a `span.rich-w` keyed by its place in the answer; whitespace between words stays plain text (SPEC §6
+ * word fade). A punctuation-only token joins the word before it, or, with none before it, the word after it, so it
+ * arrives with that word (Motion, app-0151: a row of table pipes no longer fades in as a burst of "words").
+ */
 function wrapWords(text: string, words: WordCounter): ReactNode[] {
-  return text.split(/(\s+)/).filter(Boolean).map((part) => (/^\s+$/.test(part) ? part : <span key={`w${words.n++}`} className="rich-w">{part}</span>));
+  const out: ReactNode[] = [];
+  let unit: string | null = null;
+  let unitHasWord = false;
+  let gap = '';
+  const flush = () => {
+    if (unit !== null) out.push(<span key={`w${words.n++}`} className="rich-w">{unit}</span>);
+    if (gap) out.push(gap);
+    unit = null;
+    gap = '';
+  };
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue;
+    if (/^\s/.test(part)) {
+      if (unit === null) out.push(part);
+      else gap = part;
+      continue;
+    }
+    const word = HAS_WORD.test(part);
+    if (unit !== null && (!word || !unitHasWord)) {
+      unit += gap + part;
+      gap = '';
+      unitHasWord ||= word;
+      continue;
+    }
+    flush();
+    unit = part;
+    unitHasWord = word;
+  }
+  flush();
+  return out;
 }
 
 /** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. With `words`, plain words fade in one by one. */

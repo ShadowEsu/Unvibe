@@ -32,22 +32,41 @@ function stream(full: string, chunk: number): string[] {
 
 const ANSWER = 'The debounce waits `wait` ms after the **last call**, then runs fn once with the latest args.';
 
-test('the reveal shows whole words only, never takes text back, and ends on the whole answer', () => {
-  for (const chunk of [1, 3, 7, 16, 40]) {
-    const shown = stream(ANSWER, chunk);
-    assert.equal(shown.at(-1), ANSWER, `chunk ${chunk}`);
-    shown.forEach((text, i) => {
-      if (i > 0) assert.ok(text.startsWith(shown[i - 1]!) && text.length > shown[i - 1]!.length, `chunk ${chunk}: grows`);
-      if (text !== ANSWER) assert.match(`${text.slice(-1)}${ANSWER.slice(text.length, text.length + 1)}`, /\s/, `chunk ${chunk}: "${text}" ends inside a word`);
-    });
+const TABLE = 'Assume calls at t = 0, 50:\n\n| t (ms) | Event |\n|:--|--:|\n| 0 | call 1: schedule A → t=300 |\n| 50 | call 2: cancel A … |\n\nThat is all.';
+
+/** The tokens either side of a cut: both must carry a letter or digit, with only whitespace between. */
+function assertWordCut(full: string, text: string, label: string) {
+  assert.match(full.slice(text.length), /^\s+\S/, `${label}: "${text}" ends inside a word`);
+  const before = /\S+$/.exec(text)![0];
+  const after = /^\s+(\S+)/.exec(full.slice(text.length))![1]!;
+  assert.ok(/[\p{L}\p{N}]/u.test(before) && /[\p{L}\p{N}]/u.test(after), `${label}: "${before}" | "${after}" splits a word from its punctuation`);
+}
+
+test('the reveal stops only between two words, never takes text back, and ends on the whole answer', () => {
+  for (const full of [ANSWER, TABLE]) {
+    for (const chunk of [1, 3, 7, 16, 40]) {
+      const shown = stream(full, chunk);
+      assert.equal(shown.at(-1), full, `chunk ${chunk}`);
+      shown.forEach((text, i) => {
+        if (i > 0) assert.ok(text.startsWith(shown[i - 1]!) && text.length > shown[i - 1]!.length, `chunk ${chunk}: grows`);
+        if (text !== full) assertWordCut(full, text, `chunk ${chunk}`);
+      });
+    }
   }
 });
 
-test('while streaming, a last word with no space after it yet waits; once done it shows', () => {
-  assert.deepEqual(revealStep('The ', 'The debounce wai', true), { text: 'The debounce', more: true });
-  assert.deepEqual(revealStep('The debounce', 'The debounce wai', true), { text: 'The debounce ', more: false });
-  assert.deepEqual(revealStep('The debounce ', 'The debounce wai', true), { text: 'The debounce ', more: false });
+test('while streaming, the reveal waits until the token after a word is known to be a word; once done the end shows', () => {
+  assert.deepEqual(revealStep('The', 'The debounce wai', true), { text: 'The debounce', more: false });
+  assert.deepEqual(revealStep('The debounce', 'The debounce wai', true), { text: 'The debounce', more: false });
+  assert.deepEqual(revealStep('The debounce', 'The debounce ', true), { text: 'The debounce', more: false });
+  assert.deepEqual(revealStep('A', 'A | | 50 | call', true), { text: 'A', more: false }, 'the pipes wait for the next word');
   assert.equal(revealStep('The debounce', 'The debounce wait', false).text, 'The debounce wait');
+});
+
+test('punctuation rides with a word: after it, or before the first word of a run', () => {
+  const row = html('A | | 50 | call 2: cancel A → t=300', true);
+  assert.deepEqual([...row.matchAll(/<span class="rich-w">([^<]*)<\/span>/g)].map((m) => m[1]), ['A | |', '50 |', 'call', '2:', 'cancel', 'A →', 't=300']);
+  assert.match(html('— and then it runs', true), /<span class="rich-w">— and<\/span>/);
 });
 
 test('word wrapping keeps the text, its spaces, code spans and bold exactly as without it', () => {
@@ -56,7 +75,8 @@ test('word wrapping keeps the text, its spaces, code spans and bold exactly as w
   assert.equal(textOf(wrapped), textOf(plain));
   assert.match(wrapped, /<code class="inline rich-w">wait<\/code>/);
   assert.match(wrapped, /<strong><span class="rich-w">last<\/span> <span class="rich-w">call<\/span><\/strong>/);
-  assert.equal(wrapped.match(/class="rich-w"/g)?.length, 17);
+  assert.match(wrapped, /<\/strong><span class="rich-w">, then<\/span>/, 'the comma after the bold rides with the next word');
+  assert.equal(wrapped.match(/class="rich-w"/g)?.length, 16);
 });
 
 test('without word fade (finished answers, reduced motion) nothing is wrapped', () => {
