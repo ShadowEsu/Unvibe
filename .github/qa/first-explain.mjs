@@ -214,6 +214,9 @@ if (process.env.NOTICES === '1' && panel) {
     if (problem) log(problem.dot === AMBER, 'N-3 the problem notice has the amber dot', `${problem.dot}; class '${problem.cls}'`);
     for (const n of all.filter((x) => x.text && !isProblem(x))) note(`info notice '${n.text}': dot ${n.dot} (amber is ${AMBER}); class '${n.cls}'`);
     // N-2c control: the same press with no notice in the last 15 s must show, so an N-2 miss means "swallowed".
+    // Notices wait 15 s after an earlier one of their kind (notify.ts), so the press comes 16 s after the last shown one.
+    const lastShown = Math.max(tP, ...(await islandNotes()).filter((n) => n.text).map((n) => n.at));
+    if (lastShown + 16000 > Date.now()) await sleep(lastShown + 16000 - Date.now());
     setClipboard('');
     const tC = Date.now();
     await companion.evaluate(() => window.unvibe.explainClipboard());
