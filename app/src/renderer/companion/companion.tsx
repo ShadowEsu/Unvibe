@@ -23,6 +23,7 @@ import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
+import { SUPPORT_EMAIL } from '../../core/support';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
@@ -1893,12 +1894,12 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               {info.sendsSetupProgress && <div className="setrow"><div><div className="sl">Send setup progress</div><div className="sd">Tells Unvibe when this install finished setup, was asked for and allowed Accessibility, signed in, and answered the level question. Tied to a random install ID, never your code, files or email. Off unless you turn it on. The dates of your first launch, first explanations and a first-week return come from free-allowance requests, so they are kept with this off too.</div></div><Toggle label="Send setup progress" on={settings.shareSetupProgress === true} onClick={() => onSettings({ shareSetupProgress: settings.shareSetupProgress !== true })} /></div>}
               <div className="setrow"><div><div className="sl">Privacy policy</div><div className="sd">Read how Unvibe handles your code and data on our website.</div></div><button className="act" onClick={() => window.unvibe.openPrivacy()}>Read →</button></div>
               <div className="setrow"><div><div className="sl">Report beta feedback</div><div className="sd">Opens a draft with your app version and current screen. Attach a screenshot only if it helps.</div></div><button className="act" onClick={() => void window.unvibe.reportFeedback({ screen: `Settings · ${tab}`, version: info.version })}>Report →</button></div>
-              <div className="setrow"><div><div className="sl">Support</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div>
+              <div className="setrow"><div><div className="sl">Support</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div>
             </>
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">hello@unvibe.site</div></div><button className="act" onClick={() => void window.open('mailto:hello@unvibe.site')}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div></>}
         </div>
       </div>
     </div>
