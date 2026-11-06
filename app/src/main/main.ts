@@ -57,6 +57,7 @@ import { applyLoginItem, loginItemState, settings, type Settings } from './setti
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
+import { SUPPORT_EMAIL } from '../core/support';
 import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
 import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
 import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
@@ -1502,7 +1503,7 @@ app.whenReady().then(() => {
       '',
       'Optional: attach a screenshot if it makes the issue easier to see.',
     ].join('\n'));
-    void shell.openExternal(`mailto:hello@unvibe.site?subject=${subject}&body=${body}`);
+    void shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
     return { ok: true };
   });
 
