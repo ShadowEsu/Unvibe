@@ -210,7 +210,7 @@
   & .field:focus, & input:focus, & textarea:focus, & select:focus { border-color: var(--v-ink); box-shadow: 0 0 0 3px rgb(214 244 90 / 0.6); }
 
   /* Cards: white paper, hairline edges. Interactive ones lift on hover. */
-  & .panel-card, & .rail-card, & .tile, & .how-card, & .feature, & .briefings__card, & .plan-pick__card, & .lesson-doc, & .metric-card, & .pstat {
+  & .panel-card, & .rail-card, & .tile, & .how-card, & .feature, & .briefings__card, & .plan-pick__card, & .lesson-doc, & .metric-card {
     border: 1.5px solid var(--v-line); border-radius: var(--v-radius); background: var(--v-surface); box-shadow: none; backdrop-filter: none;
   }
   & .metric-card::before, & .metric-card:nth-child(n)::before { display: none; }
@@ -219,7 +219,7 @@
   & .metric-card:nth-child(2) { background: color-mix(in srgb, var(--sky) 30%, #fff); }
   & .metric-card:nth-child(3) { background: color-mix(in srgb, var(--sun) 30%, #fff); }
   & .metric-card:nth-child(4) { background: color-mix(in srgb, var(--lilac) 28%, #fff); }
-  & .metric-card:hover, & .pstat:hover, & .tile:hover, & .briefings__card:hover { transform: translateY(-2px); border-color: var(--v-ink); }
+  & .metric-card:hover, & .tile:hover, & .briefings__card:hover { transform: translateY(-2px); border-color: var(--v-ink); }
   & .metric-card .v { font: 800 30px var(--font-display); letter-spacing: -0.04em; color: var(--v-ink); }
   & .metric-card .l { color: var(--v-ink); font-weight: 650; }
   & .status-pill { border: 1.5px solid var(--v-ink); border-radius: 99px; background: var(--v-surface); color: var(--v-ink); font: 700 10.5px var(--font-sans); padding: 0 7px; line-height: 17px; }
@@ -370,7 +370,6 @@
   & .modal .mside button, & .mside button { height: 34px; border: 1.5px solid transparent; color: var(--v-ink-2); font: 550 13.5px var(--font-sans); }
   & .mside button:hover { background: var(--v-hover); color: var(--v-ink); }
   & .mside button.on { background: var(--v-surface); border-color: var(--v-ink); color: var(--v-ink); font-weight: 700; box-shadow: var(--hard-sm); }
-  & .mside button.on .settings-nav-icon svg { color: var(--v-ink); }
   & .mbody { background: var(--v-surface); }
   & .mbody h2 { font: 800 26px var(--font-display); letter-spacing: -0.04em; }
   & .setrow { border-bottom: 1.5px solid var(--v-line-2); padding: 13px 0; }

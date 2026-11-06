@@ -318,3 +318,140 @@
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(5n) { top: -60px; }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(7n) { top: -120px; }
 @keyframes onboardConfetti { to { transform: translateY(105vh) rotate(540deg); } }
+
+/* ── Settings (rounds/06 screen 8): a band nav beside paper, calm groups of 60 px rows, helper text in ink-3 ──────── */
+/* Opens and switches tabs without motion (SPEC §6 names none). Every run of sibling rows is one group card, drawn here
+   with :has(), so the sub-panels (AI, Account & Plan) group without wrappers. */
+:root[data-ui="v3"][data-v7] .overlay { background: rgb(20 20 20 / 0.32); backdrop-filter: none; animation: none; }
+:root[data-ui="v3"][data-v7] .modal {
+  border: 0; border-radius: 16px; background: var(--u-canvas); color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
+  box-shadow: var(--u-shadow-float); animation: none;
+}
+:root[data-ui="v3"][data-v7] .modal .mside { width: 220px; padding: 28px 14px 16px; border-right: 0; background: var(--u-band); }
+:root[data-ui="v3"][data-v7] .modal .settings-brand { padding: 0 10px; color: var(--u-ink); font: 600 15px/1.2 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .mside-group { gap: 0; margin: 10px 0 0; }
+:root[data-ui="v3"][data-v7] .modal .mside .mh { padding: 14px 10px 8px; color: var(--u-ink-3); font: 600 12px/1 var(--u-sans); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .modal .mside button {
+  height: 38px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2);
+  font: 500 14px/1 var(--u-sans); letter-spacing: 0; box-shadow: none; transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal .mside button:hover { background: rgb(255 255 255 / 0.55); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-canvas); color: var(--u-ink); font-weight: 500; box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .modal .mside .ver { margin-top: auto; padding: 10px; color: var(--u-ink-3); font: 400 12.5px/1.4 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .settings-close {
+  top: 16px; right: 16px; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2); transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal .settings-close:hover { background: var(--u-band); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mbody { padding: 48px 56px 40px; background: var(--u-canvas); }
+:root[data-ui="v3"][data-v7] .modal .mbody h2 { margin: 0; padding-right: 48px; color: var(--u-ink); font: 600 26px/1.2 var(--u-sans); letter-spacing: -0.025em; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label { margin: 28px 0 0 4px; color: var(--u-ink-3); font: 600 11.5px/1 var(--u-sans); letter-spacing: 0.04em; }
+
+/* Rows: hairline between, a 1 px plate edge and 16 px corners around each run. */
+:root[data-ui="v3"][data-v7] .modal .setrow {
+  grid-template-columns: minmax(0, 1fr) auto; gap: 16px; min-height: 60px; box-sizing: border-box; margin: 0; padding: 12px 18px;
+  border: 1px solid var(--u-plate); border-bottom: 0; background: var(--u-canvas);
+}
+:root[data-ui="v3"][data-v7] .modal :not(.setrow) + .setrow,
+:root[data-ui="v3"][data-v7] .modal .setrow:first-child { margin-top: 22px; border-top-left-radius: 16px; border-top-right-radius: 16px; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label + .setrow { margin-top: 10px; }
+:root[data-ui="v3"][data-v7] .modal .setrow:not(:has(+ .setrow)) { border-bottom: 1px solid var(--u-plate); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sl { color: var(--u-ink); font: 500 14.5px/1.3 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sl--danger { color: #b42318; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sd { max-width: 40rem; margin-top: 2px; color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow--stack { padding-top: 14px; padding-bottom: 16px; }
+:root[data-ui="v3"][data-v7] .modal .setrow__end { display: flex; align-items: center; gap: 10px; }
+
+/* Controls: band fields, the mock's toggle, keycap-style shortcut, outline buttons (Q11: no lime or violet unless the
+   control is the screen's one action, as "Allow Accessibility" is while it shows). */
+:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input) {
+  height: 36px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 9px; background: var(--u-band); color: var(--u-ink);
+  font: 500 13.5px/1 var(--u-sans); letter-spacing: 0; box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .modal .setrow-field { width: 240px; }
+:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input):focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-violet), 0 0 0 4px rgb(90 63 224 / 0.12); }
+:root[data-ui="v3"][data-v7] .modal .field::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .modal .range { accent-color: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .modal .toggle { width: 40px; height: 24px; border: 0; border-radius: 999px; background: var(--u-plate); box-shadow: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle.on { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .modal .toggle .knob { top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle.on .knob { left: 19px; }
+:root[data-ui="v3"][data-v7] .modal .act {
+  display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border: 0; border-radius: 10px;
+  background: var(--u-canvas); color: var(--u-ink); font: 500 13.5px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate); transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal .act:hover:not(:disabled) { background: #fff; border: 0; transform: none; box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate); }
+:root[data-ui="v3"][data-v7] .modal .act:disabled { background: var(--u-band); color: var(--u-ink-3); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .act.danger { color: #b42318; }
+:root[data-ui="v3"][data-v7] .modal .act--primary,
+:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .modal .kbd-cap,
+:root[data-ui="v3"][data-v7] .modal .kbd-cap:hover:not(:disabled) { min-width: 0; padding: 0 12px; background: var(--u-band); box-shadow: none; font: 600 13px/1 var(--u-mono); }
+:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec { background: var(--u-violet); color: #fff; }
+:root[data-ui="v3"][data-v7] .modal :is(.act, .toggle, .mside button, .settings-close, .location-grid button):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .modal .link-btn { padding: 0; border: 0; background: none; color: var(--u-violet); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Status chips: "Allowed" and "Always on" are the mock's lime-tint chip; the others are neutral. */
+:root[data-ui="v3"][data-v7] .modal :is(.perm-chip, .setting-status) {
+  display: inline-block; padding: 7px 10px; border: 0; border-radius: var(--u-radius-chip); background: var(--u-band); color: var(--u-ink-2);
+  font: 500 13px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap;
+}
+:root[data-ui="v3"][data-v7] .modal :is(.perm-chip--ok, .setting-status[data-tone="current"]) { background: #eef6cf; color: #3c5200; }
+:root[data-ui="v3"][data-v7] .modal .perm-steps { margin: 8px 0 0; color: var(--u-ink); font: 400 13px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix { margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--u-band); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix p { margin: 0 0 10px; color: var(--u-ink-2); font: 400 13px/1.5 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .perm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Island: the preview on the band, the choices as a segmented control. */
+:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 0; border-radius: 16px; background: var(--u-band); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .location-grid { gap: 4px; padding: 4px; border-radius: 12px; background: var(--u-band); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button { min-height: 30px; border: 0; border-radius: 9px; background: transparent; color: var(--u-ink-2); font: 500 12.5px/1 var(--u-sans); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .location-grid button:hover { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button.on { background: var(--u-canvas); color: var(--u-ink); box-shadow: var(--u-shadow-whisper); }
+
+/* AI: the intro, the cost table on hairlines. */
+:root[data-ui="v3"][data-v7] .modal .ai-container { display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro { display: grid; gap: 4px; margin: 14px 0 0; padding: 0 4px; border: 0; background: none; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { color: var(--u-ink); font: 600 15px/1.3 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { margin: 0; color: var(--u-ink-2); font: 400 13px/1.5 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .cost-table { border: 1px solid var(--u-plate); border-radius: 12px; background: var(--u-canvas); }
+:root[data-ui="v3"][data-v7] .modal .cost-row { border-top-color: var(--u-plate); font: 400 12.5px/1.3 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .cost-row > span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head { background: var(--u-band); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head > span { color: var(--u-ink-3); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .modal .cost-row > span:first-child { color: var(--u-ink); font-weight: 500; }
+:root[data-ui="v3"][data-v7] .modal .cost-note { color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); }
+
+/* Integrations: one hairline card per tool; the state as a chip (lime tint only for what is set up). */
+:root[data-ui="v3"][data-v7] .modal .integ { gap: 24px; margin-top: 14px; }
+:root[data-ui="v3"][data-v7] .modal .integ__lead { margin: 0; color: var(--u-ink-2); font: 400 14px/1.5 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integ__message { border: 0; border-radius: 10px; background: var(--u-band); color: var(--u-ink-2); font: 400 13px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integ__group h3 { margin: 0 0 10px 4px; color: var(--u-ink-3); font: 600 11.5px/1 var(--u-sans); letter-spacing: 0.04em; }
+:root[data-ui="v3"][data-v7] .modal .integ-card { padding: 14px 16px; border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__mark { border: 0; border-radius: 10px; background: var(--u-band); color: var(--u-ink); font: 600 14px/1 var(--u-sans); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body b { color: var(--u-ink); font: 500 14.5px/1.3 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body small { color: var(--u-ink-2); font: 500 12px/1.3 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body p { color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integration-state { padding: 6px 9px; border: 0; border-radius: var(--u-radius-chip); background: var(--u-band); color: var(--u-ink-2); font: 500 12px/1 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integration-state.detected { background: #eef6cf; color: #3c5200; }
+
+/* Account & Plan: the plan cards and usage on the same hairline cards. */
+:root[data-ui="v3"][data-v7] .modal .plan-board { margin-top: 14px; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card { border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; transform: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current { border-color: var(--u-ink-3); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-upgrade { background: var(--u-band); border-color: transparent; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card h2 { color: var(--u-ink); font: 600 22px/1.15 var(--u-sans); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card :is(p, .plan-pick__terms) { color: var(--u-ink-2); font-family: var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal :is(.plan-board__signin, .plan-usage-card) { border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; }
+/* The sign-in and plan buttons inside Settings follow the same rule as .act: outline unless it is the one action. */
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn),
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):hover:not(:disabled) {
+  height: 40px; border: 0; border-radius: 10px; background: var(--u-canvas); color: var(--u-ink); font: 500 14px/1 var(--u-sans); letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate); transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):disabled { background: var(--u-band); color: var(--u-ink-3); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn,
+:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { border: 0; border-radius: 10px; background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); transform: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn, .primary-btn):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 2px; }

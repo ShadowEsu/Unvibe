@@ -22,6 +22,7 @@ import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { VibeBubble } from '../shared/vibeBubble';
 import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
+import { accessibilityRow, type AccessibilityState } from './settingsRows';
 import { Home, type TodayGoal } from './home';
 import { IC } from './icons';
 import { MORE_ICON, NAV, NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
@@ -181,18 +182,6 @@ function collectUsageMeters(
   return meters;
 }
 
-const SETTINGS_ICONS: Record<string, string> = {
-  General: IC.general,
-  Island: IC.island,
-  'Sound & alerts': IC.sound,
-  Learning: IC.study,
-  'Privacy & Data': IC.privacy,
-  Integrations: IC.integrations,
-  AI: IC.ai,
-  'Account & Plan': IC.account,
-  About: IC.info,
-};
-
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
@@ -322,16 +311,15 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   );
 }
 
-function PermRow({ compact }: { compact?: boolean }) {
-  const [state, setState] = useState<{ granted: boolean; platform: string } | null>(null);
-  const check = () => void window.unvibe.accessibility().then((r) => setState(r as { granted: boolean; platform: string }));
+function PermRow() {
+  const [state, setState] = useState<AccessibilityState | null>(null);
+  const check = () => void window.unvibe.accessibility().then((r) => setState(r as AccessibilityState));
   useEffect(() => {
     check();
     const t = setInterval(check, 2500); // reflect a grant made in System Settings without a manual re-check
     return () => clearInterval(t);
   }, []);
-  const granted = state?.granted ?? false;
-  const na = state?.platform !== 'darwin';
+  const row = accessibilityRow(state);
   const [asked, setAsked] = useState(false);
   // One button does what a person expects: macOS shows its prompt and the right Settings pane opens.
   const allow = async () => {
@@ -340,31 +328,29 @@ function PermRow({ compact }: { compact?: boolean }) {
     await window.unvibe.openAccessibility();
   };
   return (
-    <div className={compact ? '' : 'perm-block'}>
-      <div className="perm-head">
-        <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'Not needed' : granted ? 'Allowed' : 'Not allowed yet'}</span>
-        <span className="perm-title">Accessibility</span>
-      </div>
-      <div className="perm-why">{isWindows
-        ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
-        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
-      {!granted && !na && (
-        <div className="perm-actions">
-          <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
-        </div>
-      )}
-      {!granted && !na && asked && (
-        <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
-      )}
-      {!granted && !na && asked && (
-        <div className="perm-fix">
-          <p><b>Switched it on but it still says Not allowed?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
-          <div className="perm-actions">
-            <button className="act" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
-            <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+    <div className="setrow setrow--perm">
+      <div>
+        <div className="sl">Accessibility</div>
+        <div className="sd">{isWindows
+          ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
+          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
+        {row.canAllow && asked && (
+          <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
+        )}
+        {row.canAllow && asked && (
+          <div className="perm-fix">
+            <p><b>Switched it on but it still says Not allowed?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
+            <div className="perm-actions">
+              <button className="act" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+              <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="setrow__end">
+        {row.label ? <span className={`perm-chip perm-chip--${row.tone}`}>{row.label}</span> : null}
+        {row.canAllow ? <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button> : null}
+      </div>
     </div>
   );
 }
@@ -1514,11 +1500,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
             <div className="mh">Preferences</div>
-            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}>{t}</button>)}
           </div>
           <div className="mside-group">
             <div className="mh">Unvibe</div>
-            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}>{t}</button>)}
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
@@ -1533,7 +1519,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
-              <PermRow compact />
+              <PermRow />
             </>
           )}
 

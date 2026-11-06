@@ -1853,9 +1853,7 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .mside-group { display: flex; flex-direction: column; gap: 6px; margin: 18px 0 6px; }
 .mside .mh { font-family: var(--font-sans); font-size: 10px; font-weight: 700; letter-spacing: 0.09em; color: var(--faint); padding: 0 10px 4px; }
 .mside button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 10px; padding: 9px 10px; font-size: 13px; color: var(--ink); cursor: pointer; }
-.settings-nav-icon { display: inline-grid; place-items: center; width: 21px; height:21px; border-radius:7px; background:var(--line-soft); font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 .mside button.on, .mside button:hover { background: color-mix(in srgb, var(--accent-soft) 72%, transparent); color: var(--accent-strong); }
-.mside button.on .settings-nav-icon { color: var(--on-accent); background:var(--accent); }
 .mside .ver { font-family: var(--font-sans); font-size: 11px; color: var(--faint); padding: 14px 10px 0; }
 .modal .mbody { flex: 1; padding: 36px 42px; overflow-y: auto; }
 :root[data-theme="light"] .modal { background: #ffffff; }
@@ -2072,15 +2070,7 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 /* Update card's inline button */
 .field-btn.inline { width: auto; padding: 10px 20px; }
 
-/* permission block */
-.perm-block { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
-.perm-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.perm-title { font-weight: 600; font-size: 15px; }
-.pstat { font-family: var(--font-sans); font-size: 11px; font-weight: 600; border-radius: 6px; padding: 3px 8px; }
-.pstat.ok { background: #e7f0e9; color: #2c6b3f; }
-.pstat.no { background: #f7e9e6; color: #a1291f; }
-.pstat.na { background: var(--hover); color: var(--muted); }
-.perm-why { font-family: var(--font-sans); font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+/* The Accessibility row's Fix it / Restart Unvibe */
 .perm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* settings controls */
@@ -2710,7 +2700,7 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 :root[data-theme="light"] .overlay { background:rgba(43,39,53,.38); }
 :root[data-theme="light"] .modal { border-color:rgba(45,40,60,.09); border-radius:24px; box-shadow:0 30px 100px rgba(28,23,48,.18); }
 :root[data-theme="light"] .modal .mside { background:#fafafd; }
-:root[data-theme="light"] .mside button { font-size:12px; }.mside button.on { background:#ecebf1; color:#292832; }.mside button.on .settings-nav-icon { background:#ded9f8; color:#513bac; }
+:root[data-theme="light"] .mside button { font-size:12px; }.mside button.on { background:#ecebf1; color:#292832; }
 :root[data-theme="light"] .settings-preview { background:linear-gradient(135deg,#ffb28d,#8e6de5 53%,#74b7ef); }
 
 @media (max-width:900px) {
@@ -2761,8 +2751,6 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .side-spaces { font-size:13px;font-weight:650;letter-spacing:.01em; }
 .settings-brand { font-size:16px; }.settings-brand svg { width:24px;height:24px; }
 .mside button { min-height:46px;gap:12px;padding:9px 11px;font-size:14px;font-weight:560; }
-.settings-nav-icon { width:32px;height:32px;border-radius:10px;font-family:inherit;font-size:inherit; }
-.settings-nav-icon svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9; }
 .modal .mbody { scroll-behavior:auto;overscroll-behavior:contain; }
 .hello-spark { width:8px;height:8px;margin-right:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px var(--accent-soft);animation:uv-pop .35s ease-out; }
 

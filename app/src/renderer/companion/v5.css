@@ -187,10 +187,10 @@
 :root[data-ui="v3"] .survey-pick__go { background: var(--grad); color: #fff; border: 0; }
 
 /* Briefings, Momentum, Plan */
-:root[data-ui="v3"] .briefings__card, :root[data-ui="v3"] .panel-card, :root[data-ui="v3"] .plan-pick__card, :root[data-ui="v3"] .tile, :root[data-ui="v3"] .pstat {
+:root[data-ui="v3"] .briefings__card, :root[data-ui="v3"] .panel-card, :root[data-ui="v3"] .plan-pick__card, :root[data-ui="v3"] .tile {
   border-radius: 18px; box-shadow: var(--v-shadow); transition: transform 200ms var(--ease-emphatic), box-shadow 200ms ease;
 }
-:root[data-ui="v3"] .pstat:hover, :root[data-ui="v3"] .tile:hover, :root[data-ui="v3"] .briefings__card:hover { transform: translateY(-2px); }
+:root[data-ui="v3"] .tile:hover, :root[data-ui="v3"] .briefings__card:hover { transform: translateY(-2px); }
 :root[data-ui="v3"] .heat .a1, :root[data-ui="v3"] .heat-legend .a1 { background: #ddd6fe; }
 :root[data-ui="v3"] .heat .a2, :root[data-ui="v3"] .heat-legend .a2 { background: #c4b5fd; }
 :root[data-ui="v3"] .heat .a3, :root[data-ui="v3"] .heat-legend .a3 { background: #a78bfa; }
@@ -207,7 +207,6 @@
 :root[data-ui="v3"] .chat-starters button:hover { border-color: var(--c-violet); color: var(--c-violet); }
 
 /* Settings and palette pick up the accent */
-:root[data-ui="v3"] .mside button.on .settings-nav-icon svg { color: var(--c-violet); }
 :root[data-ui="v3"] .toggle.on { background: var(--grad); }
 :root[data-ui="v3"] .settings-brand { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.03em; }
 :root[data-ui="v3"] .mbody h2 { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.03em; }
