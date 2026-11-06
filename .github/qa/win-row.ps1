@@ -212,6 +212,8 @@ if (-not (Flag 'first-contact')) { Note 'FAIL  QA flag right after first contact
 Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep 3
 $env:UNVIBE_EXE = $exe; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+# RC builds: the lead's notice rows (N-0..N-3) after the first explanation.
+if ($env:RC_DIR) { $env:NOTICES = '1' }
 $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru
 $null = $j.Handle
 if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation: no result in 7 min' }

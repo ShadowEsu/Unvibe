@@ -88,6 +88,25 @@ await sleep(1500);
 await shot(companion, '1-first-screen');
 desktop('1-first-screen');
 
+// Every Island notice as the app draws it (bar.html): text, the screen-reader copy, the dot colour, the class, when.
+const islandBar = await app.windowWith('bar.html', 15000);
+if (islandBar) {
+  await islandBar.evaluate(() => {
+    if (window.__qaNotes) return;
+    window.__qaNotes = []; let last = null;
+    const read = () => {
+      const n = document.querySelector('.island__notice');
+      const text = (n?.textContent || '').trim();
+      const sr = (document.querySelector('.island__sr')?.textContent || '').trim();
+      if (text + '|' + sr === last) return; last = text + '|' + sr;
+      window.__qaNotes.push({ at: Date.now(), text, sr, dot: n ? getComputedStyle(n, '::before').backgroundColor : null, cls: n ? n.className : null });
+    };
+    new MutationObserver(read).observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+    read();
+  }).catch((e) => note(`Island notice log: ${e.message.split('\n')[0]}`));
+}
+const islandNotes = async () => (islandBar ? await islandBar.evaluate(() => window.__qaNotes || []).catch(() => []) : []);
+
 const steps = os === 'windows' ? 3 : 4;
 try {
   await companion.locator('.ob2__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
@@ -130,7 +149,7 @@ else {
       catch (e) { note(`Island shot: ${e.message.split('\n')[0]}`); }
       desktop('4-island-after');
     }
-    if (process.env.AGREE === '1') {
+    if (process.env.AGREE === '1' || process.env.NOTICES === '1') {
       // One question of the person's own: the send agreement comes first; its three boxes are ticked, so the profile
       // holds a consent record (unvibe-consent.json) for an upgrade check to compare.
       const row = panel.locator('.askrow');
@@ -150,6 +169,50 @@ else {
     await shot(panel, 'explanation-stuck'); desktop('explanation-stuck');
     const t = await panel.locator('body').innerText().catch(() => '');
     note(`panel text: ${t.replace(/\s+/g, ' ').slice(0, 400)}`);
+  }
+}
+
+// NOTICES=1 (0.1.50 RC-3, the lead's notice rows): success is silent, a problem is amber, and a problem right after an
+// explanation still shows (notify's 15 s gap must not let an info swallow it). Both explanations are real: the person's
+// own code from the clipboard, then the same button with the clipboard empty ("Your clipboard is empty", main.ts).
+if (process.env.NOTICES === '1' && panel) {
+  const AMBER = 'rgb(245, 165, 36)'; // #f5a524, bar.css .island__notice::before at 3190b6d0
+  const isProblem = (n) => /clipboard is empty/i.test(n.text || n.sr);
+  const setClipboard = (text) => {
+    if (os === 'mac') execFileSync('pbcopy', { input: text });
+    else execFileSync('powershell', ['-NoProfile', '-STA', '-Command', `Add-Type -AssemblyName System.Windows.Forms; ${text ? '[System.Windows.Forms.Clipboard]::SetText($env:QA_CLIP)' : '[System.Windows.Forms.Clipboard]::Clear()'}`], { env: { ...process.env, QA_CLIP: text } });
+  };
+  try {
+    await sleep(16000); // past notify's 15 s gap from any earlier notice
+    setClipboard('function sum(list) {\n  let total = 0;\n  for (const n of list) total += n;\n  return total;\n}\n');
+    const t1 = Date.now();
+    await companion.evaluate(() => window.unvibe.explainClipboard());
+    await panel.locator('.code-context code').filter({ hasText: 'function sum(list) {' }).first().waitFor({ timeout: 60000 });
+    await panel.locator('.card--done .local-save-note:visible').first().waitFor({ timeout: 120000 });
+    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 }).catch(() => {});
+    const tDone = Date.now();
+    log(true, 'N-0 a second real explanation (own code from the clipboard)', `${Math.round((tDone - t1) / 100) / 10} s`);
+    // At once: the same button with nothing copied.
+    setClipboard('');
+    const tP = Date.now();
+    await companion.evaluate(() => window.unvibe.explainClipboard());
+    let problem = null;
+    for (let i = 0; i < 60 && !problem; i++) { await sleep(250); problem = (await islandNotes()).find((n) => n.at >= tP && isProblem(n)) ?? null; }
+    if (problem && islandBar) {
+      await islandBar.locator('.island').first().screenshot({ path: path.join(out, 'explain-notice-problem.png') }).catch(() => {});
+      desktop('5-notice-problem');
+    }
+    await sleep(10000); // anything the explanation still shows after it, and the problem's own 9 s
+    const all = await islandNotes();
+    writeFileSync(path.join(out, 'island-notices.json'), JSON.stringify(all.map((n) => ({ ...n, sinceSecondExplain: Math.round((n.at - t1) / 100) / 10 })), null, 1));
+    const others = all.filter((n) => n.at >= t1 && (n.text || n.sr) && !isProblem(n));
+    log(others.length === 0, 'N-1 success is silent: no notice from the second explanation', others.map((n) => `'${n.text || n.sr}' (dot ${n.dot}) at +${Math.round((n.at - t1) / 100) / 10} s`).join(' | '));
+    log(!!problem, 'N-2 a problem right after an explanation still shows (not swallowed)', problem ? `'${problem.text || problem.sr}' ${Math.round((problem.at - tP) / 100) / 10} s after the press, ${Math.round((tP - tDone) / 100) / 10} s after the explanation finished` : `none within 15 s of the press; notices since the explanation: ${all.filter((n) => n.at >= t1).map((n) => `'${n.text || n.sr}'`).join(', ') || 'none'}`);
+    if (problem) log(problem.dot === AMBER, 'N-3 the problem notice has the amber dot', `${problem.dot}; class '${problem.cls}'`);
+    for (const n of all.filter((x) => x.text && !isProblem(x))) note(`info notice '${n.text}': dot ${n.dot} (amber is ${AMBER}); class '${n.cls}'`);
+  } catch (e) {
+    log(false, 'N notice rows', e.message.split('\n')[0]);
+    await shot(panel, 'notices-stuck'); desktop('notices-stuck');
   }
 }
 clearInterval(watch);
