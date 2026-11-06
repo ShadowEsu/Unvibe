@@ -353,7 +353,9 @@ async function pasteTake(label, { sha256, text }, expect) {
   }
   return step(label, async () => {
     const panel = await windowWith('widget.html');
-    await resize(panel, 560, 720);
+    // The panel's size is only for framing: a window macOS keeps a little shorter (run 42155987974's second take came
+    // up 560x679) still records the take, so a size miss is a note, not a failed take.
+    await resize(panel, 560, 720).catch((e) => console.log(`NOTE ${label}: ${e.message.split('\n')[0]}`));
     await sleep(1500);
     const send = async () => {
       pasted.push({ label, sha256, sentAt: (Date.now() - t0) / 1000 });
