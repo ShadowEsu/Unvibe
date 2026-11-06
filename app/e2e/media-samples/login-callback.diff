@@ -1,0 +1,9 @@
+@@ -12,7 +12,8 @@ export async function GET(req: Request) {
+   const code = new URL(req.url).searchParams.get("code") ?? "";
+   const token = await exchangeCode(code);
+   const res = NextResponse.redirect(new URL("/dashboard", req.url));
+-  res.cookies.set("session", token, { httpOnly: true, secure: true, sameSite: "lax" });
++  res.cookies.set("theme", "dark", { sameSite: "strict" });
++  res.cookies.set("session", token, { httpOnly: true, secure: true, sameSite: "strict" });
+   return res;
+ }
