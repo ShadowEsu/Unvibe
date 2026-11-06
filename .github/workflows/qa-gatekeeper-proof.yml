@@ -216,17 +216,22 @@ jobs:
           sleep 1
           # Bring the blocked-app message (it sits just above Open Anyway) into the window's upper middle.
           res=$(S anchor); echo "anchor: $res"
-          dir=-3
-          for i in $(seq 1 10); do
+          # About 10 points per wheel line here (run 42148712066 moved the message 600 points in 60 lines), so each round
+          # scrolls by the remaining distance.
+          sign=-1
+          for i in $(seq 1 12); do
             read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
             [[ $res == found* ]] || break
             read -r _ ax ay aw ah <<< "$res"
-            if (( ay >= wy + 140 && ay <= wy + wh - 220 )); then break; fi
-            lines=$dir; (( ay < wy + 140 )) && lines=$(( -dir ))
-            "$W" scroll $(( wx + ww * 2 / 3 )) $(( wy + wh / 2 )) "$lines" 2
+            target=$(( wy + 180 ))
+            if (( ay >= wy + 120 && ay <= wy + wh - 260 )); then break; fi
+            dist=$(( ay - target )); ticks=$(( (dist < 0 ? -dist : dist) / 30 + 1 )); (( ticks > 40 )) && ticks=40
+            lines=$(( dist > 0 ? 3 * sign : -3 * sign ))
+            "$W" scroll $(( wx + ww * 2 / 3 )) $(( wy + wh / 2 )) "$lines" "$ticks"
             sleep 1
             prev=$ay; res=$(S anchor)
-            if [[ $res == found* ]] && (( lines == dir )); then read -r _ _ ay2 _ _ <<< "$res"; (( ay2 > prev )) && dir=$(( -dir )); fi
+            # If the message moved the wrong way, this machine's wheel direction is the other one.
+            if [[ $res == found* ]]; then read -r _ _ ay2 _ _ <<< "$res"; if (( (dist > 0 && ay2 > prev) || (dist < 0 && ay2 < prev) )); then sign=$(( -sign )); fi; fi
           done
           r "blocked-app message: $res"
           oa=$(S find)
@@ -253,7 +258,9 @@ jobs:
             done
           }
           if [[ $oa == found* ]]; then
-            r "pressing Open Anyway: $(S press)"
+            read -r _ ox oy ow oh _ <<< "$oa"
+            "$W" click $(( ox + ow / 2 )) $(( oy + oh / 2 ))
+            r "clicked Open Anyway at $(( ox + ow / 2 )),$(( oy + oh / 2 ))"
             sleep 4
             dialogs 4-after-open-anyway
             # A confirm prompt with its own Open Anyway: press it once to see what comes next.

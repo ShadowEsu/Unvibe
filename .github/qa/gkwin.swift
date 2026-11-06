@@ -2,6 +2,7 @@
 //   gkwin list                         id, owner, title, layer, origin, size of every on-screen window
 //   gkwin find <owner>                 "id x y w h" of that owner's largest on-screen window (exit 1 if none)
 //   gkwin scroll <x> <y> <lines> <n>   moves the pointer to x,y (screen points) and sends n wheel ticks of <lines>
+//   gkwin click <x> <y>                a left click at x,y (screen points)
 import CoreGraphics
 import Foundation
 
@@ -42,6 +43,13 @@ case "scroll" where a.count > 5:
     CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1, wheel1: Int32(a[4]) ?? -3, wheel2: 0, wheel3: 0)?.post(tap: .cghidEventTap)
     usleep(80_000)
   }
+case "click" where a.count > 3:
+  let p = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
+  CGWarpMouseCursorPosition(p)
+  usleep(150_000)
+  CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
+  usleep(80_000)
+  CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
 default:
   exit(2)
 }

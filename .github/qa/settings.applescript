@@ -6,11 +6,14 @@
 --   texts    every static text in the window that mentions Unvibe, one per line
 on matchesOpenAnyway(e)
 	tell application "System Events"
-		repeat with k in {"name", "title", "description"}
+		repeat with k in {"name", "title", "description", "value"}
 			try
+				set v to ""
 				if (k as text) is "name" then set v to name of e as text
 				if (k as text) is "title" then set v to value of attribute "AXTitle" of e as text
 				if (k as text) is "description" then set v to description of e as text
+				-- A SwiftUI button can carry its label only on a static-text child.
+				if (k as text) is "value" then set v to value of e as text
 				if v contains "Open Anyway" then return true
 			end try
 		end repeat
@@ -57,7 +60,7 @@ on run argv
 								return "found " & ((item 1 of p) as integer) & " " & ((item 2 of p) as integer) & " " & ((item 1 of s) as integer) & " " & ((item 2 of s) as integer)
 							end if
 						end if
-					else if r is not "AXStaticText" and my matchesOpenAnyway(e) then
+					else if my matchesOpenAnyway(e) then
 						if mode is "press" then
 							try
 								perform action "AXPress" of e
