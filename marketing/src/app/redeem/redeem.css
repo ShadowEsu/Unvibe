@@ -163,9 +163,7 @@
   margin: 1.2rem 0;
   color: var(--ink-muted);
   font-size: max(13px, 0.8125rem);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .redeem-divider::before,
