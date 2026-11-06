@@ -308,6 +308,30 @@ body:has(.paper-pricing) .fb-tab {
   text-underline-offset: 3px;
 }
 
+/* ── Listed on: plain lists of directory links ─────────────────────────── */
+
+.listed-on section {
+  margin-top: 2rem;
+}
+
+.listed-on__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.listed-on__list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  text-decoration: underline;
+  text-decoration-color: var(--v-lime);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
 /* ── About ──────────────────────────────────────────────────────────────── */
 
 .about-page__btn {

@@ -73,3 +73,13 @@ export const listingLinks = [
   { name: "vibecoding.app", href: "https://vibecoding.app/tools/unvibe" },
   { name: "ToolIndex on Replit", href: "https://strategic-flow-audit.replit.app/directory/unvibe-185" },
 ] as const;
+
+/**
+ * Directories that want a link back while they review a free listing (row 550). Plain text links,
+ * or a directory's own logo copied to public/badges, never a "Featured on" or "Verified" badge:
+ * none of these listings exists yet. Shown on /listed-on only, not on the homepage.
+ */
+export const directoryLinks = [
+  { name: "Dang.ai", href: "https://dang.ai" },
+  { name: "ToolPilot", href: "https://www.toolpilot.ai", logo: { src: "/badges/toolpilot.svg", width: 120, height: 33 } },
+] as const;
