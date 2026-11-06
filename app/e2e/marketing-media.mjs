@@ -313,7 +313,9 @@ if (explained) {
     await saveAnswer(done, 'advanced depth');
   });
   await step('follow-up', async () => {
-    const question = 'What happens if I call it five times quickly?';
+    // A question with a prose answer: in 0.1.49 a markdown table in an answer shows as raw | rows (5 Nov run
+    // 42132166462, "five times quickly" got a timeline table), which the site must not show as the app's look.
+    const question = 'Why does it call clearTimeout before setTimeout?';
     const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
     await enterText((await askRow()).getByLabel('Follow-up question'), question);
     await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
@@ -329,12 +331,13 @@ if (explained) {
     // question as its heading): bring that start to the top of the panel, so the still shows the answer, not the end.
     const found = await done.locator('.body').evaluate((body) => {
       const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
-      const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => /five times/i.test(el.textContent ?? ''));
+      const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => /clearTimeout before/i.test(el.textContent ?? ''));
       if (!heading) return false;
       body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
       return true;
     });
     if (!found) throw new Error('the follow-up question is not in the panel');
+    if (/\|\s*-{3,}\s*\|/.test(await done.locator('.body').innerText())) console.log('NOTE follow-up: the answer holds a raw markdown table (shown as | rows)');
     await sleep(600);
     await shot(done, 'panel-follow-up');
     await saveAnswer(done, 'follow-up');
@@ -417,7 +420,9 @@ if (explained) {
 function uploadRepo() {
   // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
   // repo root through the link, so a /var file path would sit "outside" its own repo.
-  const repo = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-why-')));
+  // A neutral project name, since Library and Briefs show it: <tmp>/<random>/sample-app.
+  const repo = path.join(realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-media-repo-'))), 'sample-app');
+  mkdirSync(repo);
   const git = (...args) => execFileSync('git', args, {
     cwd: repo,
     env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
