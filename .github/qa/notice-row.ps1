@@ -1,6 +1,8 @@
 # Design's #213/#218 conditions on Windows, on an RC build: an Island notice, fully inside the work area, no jump when
-# it ends after 9 s, and the expanded card's note. Another process holds Ctrl+Alt+U (RegisterHotKey) before a set-up
-# profile starts, so the app says "That shortcut is in use by another app..." on its Island at startup (main.ts).
+# it ends after 9 s, and the expanded card's note. The notice: with an empty Notepad in front and the clipboard empty,
+# Ctrl+Alt+U can't copy anything, so the app says "Couldn't copy from Notepad..." on its Island (main.ts, win32).
+# First, a check of its own: the startup "That shortcut is in use by another app..." notice while another process
+# holds Ctrl+Alt+U (lost on 0.1.50: notify() fires before bar.html has loaded; a 0.1.51 fix).
 # Usage: notice-row.ps1 -Out <dir>   Env: INSTALL_ID, RC_DIR (the build-only run's Windows artifact)
 param([string]$Out)
 $ErrorActionPreference = 'Continue'
@@ -19,6 +21,8 @@ public static class W {
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out R r);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint x, uint y, uint d, IntPtr e);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, IntPtr extra);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   // The smallest visible window of these processes: the Island (the companion and panel are far larger).
   public static IntPtr Island(HashSet<uint> pids) {
     IntPtr best = IntPtr.Zero; long area = long.MaxValue;
@@ -29,8 +33,8 @@ public static class W {
   }
 }
 "@
-# The window is larger than the pill it draws (transparent margin, and on 2022 it reaches into the dark taskbar):
-# the visible pill is the box of pixels that differ from the same screen captured before Unvibe started.
+# The window is larger than the pill it draws (transparent margin; on 2022 it reaches into the dark taskbar): the
+# visible pill is the box of dark pixels (the Island's fill) that also differ from the screen before Unvibe started.
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
 using System; using System.Drawing;
 public static class Diff {
@@ -41,7 +45,7 @@ public static class Diff {
         int sx = ox + i, sy = oy + j;
         if (sx < 0 || sy < 0 || sx >= r.Width || sy >= r.Height) continue;
         Color a = f.GetPixel(i, j), b = r.GetPixel(sx, sy);
-        if (Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
+        if (a.R < 48 && a.G < 48 && a.B < 48 && Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
       }
     return x1 < 0 ? null : new int[] { x0, y0, x1, y1 };
   }
@@ -103,67 +107,90 @@ $utf8 = New-Object Text.UTF8Encoding $false
 [IO.File]::WriteAllText((Join-Path $ud 'unvibe-store.json'), "{`"installId`":`"$env:INSTALL_ID`"}", $utf8)
 [IO.File]::WriteAllText((Join-Path $ud 'unvibe-settings.json'), '{"settingsRevision":8,"appearanceRevision":2,"islandBehaviorRevision":4,"ideBridgeShortcutRevision":2,"sidebarDensityRevision":2,"windowsShortcutRevision":1,"setupProgressRevision":1,"onboarded":true,"theme":"light"}', $utf8)
 
-$held = [HK]::RegisterHotKey([IntPtr]::Zero, 1, 3, 0x55)
-Verdict $held "another process (this script) holds Ctrl+Alt+U before Unvibe starts"
-
 $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Note "work area: $($wa.Left),$($wa.Top) to $($wa.Right),$($wa.Bottom); screen $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width)x$([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)"
-
-# First start: the Island's bounds every 250 ms for 14 s, a crop of each frame, the full screen at 1 s and 5 s.
-$t0 = Get-Date
-Reference
-Start-Process $exe
-$frames = @(); $h = [IntPtr]::Zero
-while (((Get-Date) - $t0).TotalSeconds -lt 14) {
-  $h = [W]::Island((Pids))
-  $s = [Math]::Round(((Get-Date) - $t0).TotalSeconds, 2)
-  if ($h -ne [IntPtr]::Zero) {
-    $r = Rect $h
-    $pill = Crop $r ("frame-{0:00.00}s" -f $s) 30
-    $frames += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T; PL = $pill.L; PT = $pill.T; PR = $pill.R; PB = $pill.B; File = "$Out\$("frame-{0:00.00}s" -f $s).png" }
+function Watch($seconds, $prefix) { # the Island's bounds and a crop every ~250 ms
+  $t = Get-Date; $list = @()
+  while (((Get-Date) - $t).TotalSeconds -lt $seconds) {
+    $h = [W]::Island((Pids)); $s = [Math]::Round(((Get-Date) - $t).TotalSeconds, 2)
+    if ($h -ne [IntPtr]::Zero) {
+      $r = Rect $h; $name = "$prefix-{0:00.00}s" -f $s
+      $pill = Crop $r $name 30
+      $list += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T; PL = $pill.L; PT = $pill.T; PR = $pill.R; PB = $pill.B; File = "$Out\$name.png" }
+    }
+    Start-Sleep -Milliseconds 200
   }
-  if ($s -ge 1 -and -not (Test-Path "$Out\full-1s.png")) { Full 'full-1s' }
-  if ($s -ge 5 -and -not (Test-Path "$Out\full-5s.png")) { Full 'full-5s' }
-  Start-Sleep -Milliseconds 200
+  $list | ForEach-Object { "{0,6}s  window L {1} T {2} R {3} B {4} ({5}x{6})  pill L {7} T {8} R {9} B {10}" -f $_.S, $_.L, $_.T, $_.R, $_.B, $_.W, $_.H, $_.PL, $_.PT, $_.PR, $_.PB } | Set-Content "$Out\$prefix-bounds.txt"
+  , $list
 }
-$frames | ForEach-Object { "{0,6}s  window L {1} T {2} R {3} B {4} ({5}x{6})  pill L {7} T {8} R {9} B {10}" -f $_.S, $_.L, $_.T, $_.R, $_.B, $_.W, $_.H, $_.PL, $_.PT, $_.PR, $_.PB } | Set-Content "$Out\island-bounds.txt"
-Note "Island frames: $($frames.Count); sizes seen: $(($frames | ForEach-Object { "$($_.W)x$($_.H)" } | Select-Object -Unique) -join ', ')"
-$big = @($frames | Where-Object { $_.H -ge (($frames | Measure-Object H -Minimum).Minimum + 40) })
-$small = @($frames | Where-Object { $_.H -lt (($frames | Measure-Object H -Minimum).Minimum + 40) })
-Verdict ($big.Count -gt 0) "a notice grows the Island (from $(if ($big) { "$($big[0].S) s to $($big[-1].S) s, $($big[0].W)x$($big[0].H)" } else { 'never' }))"
-if ($big) { Note "NOTE  notice shown for about $([Math]::Round($big[-1].S - $big[0].S, 1)) s (9 s expected); compact after: $(@($small | Where-Object { $_.S -gt $big[-1].S }).Count) frames" }
-$seen = @($frames | Where-Object { $null -ne $_.PB })
-$outside = @($seen | Where-Object { $_.PL -lt $wa.Left -or $_.PT -lt $wa.Top -or $_.PR -gt $wa.Right -or $_.PB -gt $wa.Bottom })
-Verdict ($seen.Count -gt 0 -and $outside.Count -eq 0) "the visible pill stays inside the work area in every frame ($($seen.Count) frames with a pill, $($outside.Count) outside; pill bottoms $(($seen | ForEach-Object { $_.PB } | Select-Object -Unique) -join ', '), work area bottom $($wa.Bottom))"
-# Judged after the 1.5 s fade-in, when the pill is fully drawn.
-$settled = @($seen | Where-Object { $_.S -ge 1.5 })
-$bottoms = @($settled | ForEach-Object { $_.PB } | Measure-Object -Minimum -Maximum)
-Verdict ($settled.Count -gt 0 -and ($bottoms.Maximum - $bottoms.Minimum) -le 1) "no jump: the bottom-centre pill keeps its bottom edge through the notice and its end (bottom edge $($bottoms.Minimum)-$($bottoms.Maximum) over $($settled.Count) frames from 1.5 s)"
-# Design #213/#219: the compact Island at '0 left' after the notice ends, enlarged 4x.
-$last = $frames | Where-Object { $_.S -ge 1.5 } | Select-Object -Last 1
-if ($last) { X4 $last.File "$Out\island-compact-x4.png"; Note "compact Island 4x crop: island-compact-x4.png (from $([IO.Path]::GetFileName($last.File)), $($last.W)x$($last.H))" }
+function Grown($list) { # frames whose window is at least 40 px taller than the smallest seen
+  $min = ($list | Measure-Object H -Minimum).Minimum
+  @($list | Where-Object { $_.H -ge $min + 40 })
+}
+function Press() { # Ctrl+Alt+U
+  [W]::keybd_event(0x11, 0, 0, [IntPtr]::Zero); [W]::keybd_event(0x12, 0, 0, [IntPtr]::Zero); [W]::keybd_event(0x55, 0, 0, [IntPtr]::Zero)
+  Start-Sleep -Milliseconds 60
+  [W]::keybd_event(0x55, 0, 2, [IntPtr]::Zero); [W]::keybd_event(0x12, 0, 2, [IntPtr]::Zero); [W]::keybd_event(0x11, 0, 2, [IntPtr]::Zero)
+}
 
-# Second start (#218): click the Island while the notice shows, then picture the expanded card and its note.
+# A. The startup notice while another process (this script's thread) holds Ctrl+Alt+U.
+$held = [HK]::RegisterHotKey([IntPtr]::Zero, 1, 3, 0x55)
+Note "A. another process holds Ctrl+Alt+U before Unvibe starts: $held"
+Reference; Start-Process $exe
+$a = Watch 14 'a-startup'
+$ga = @(Grown $a)
+Note "$(if ($ga.Count) { 'NOTE ' } else { 'NOTE  KNOWN 0.1.51:' }) A. startup 'shortcut in use' notice $(if ($ga.Count) { "shown from $($ga[0].S) s, $($ga[0].W)x$($ga[0].H)" } else { 'never shown in 14 s' })"
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
-Reference
-Start-Process $exe
+[void][HK]::UnregisterHotKey([IntPtr]::Zero, 1)
+
+# B. The notice on a press that can't copy: empty Notepad in front, clipboard empty.
+Reference; Start-Process $exe
 $h = [IntPtr]::Zero
-for ($i = 0; $i -lt 80 -and $h -eq [IntPtr]::Zero; $i++) { Start-Sleep -Milliseconds 250; $h = [W]::Island((Pids)) }
-Start-Sleep 2
+for ($i = 0; $i -lt 120 -and $h -eq [IntPtr]::Zero; $i++) { Start-Sleep -Milliseconds 250; $h = [W]::Island((Pids)) }
+Start-Sleep 8 # the companion opens and settles; any first-run notice is over
+$np = Start-Process notepad.exe -PassThru; Start-Sleep 3
+$nh = (Get-Process -Id $np.Id -ErrorAction SilentlyContinue).MainWindowHandle
+if (-not $nh -or $nh -eq [IntPtr]::Zero) { $nh = (Get-Process notepad -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1).MainWindowHandle }
+[void][W]::SetForegroundWindow($nh); Start-Sleep 1
+try { [System.Windows.Forms.Clipboard]::Clear(); Note "clipboard cleared" } catch { Note "clipboard clear: $($_.Exception.Message)" }
+Full 'b-before-press'
+Press
+$b = Watch 14 'b-notice'
+Full 'b-after'
+Note "B. Island frames: $($b.Count); window sizes seen: $(($b | ForEach-Object { "$($_.W)x$($_.H)" } | Select-Object -Unique) -join ', ')"
+$gb = @(Grown $b)
+Verdict ($gb.Count -gt 0) "B. a notice grows the Island (from $(if ($gb) { "$($gb[0].S) s to $($gb[-1].S) s after the press, $($gb[0].W)x$($gb[0].H)" } else { 'never' }))"
+if ($gb) {
+  $mid = $gb[[int]($gb.Count / 2)]; X4 $mid.File "$Out\island-notice-x4.png"; Copy-Item $mid.File "$Out\island-notice.png"
+  $after = @($b | Where-Object { $_.S -gt $gb[-1].S })
+  Verdict ($after.Count -gt 0) "B. the notice ends and the Island is compact again within the 14 s watch (shown about $([Math]::Round($gb[-1].S - $gb[0].S, 1)) s; 9 s expected; $($after.Count) compact frames after)"
+}
+$seen = @($b | Where-Object { $null -ne $_.PB })
+$outside = @($seen | Where-Object { $_.PL -lt $wa.Left -or $_.PT -lt $wa.Top -or $_.PR -gt $wa.Right -or $_.PB -gt $wa.Bottom })
+Verdict ($seen.Count -gt 0 -and $outside.Count -eq 0) "B. the visible pill stays inside the work area in every frame ($($seen.Count) frames with a pill, $($outside.Count) outside; pill tops $(($seen | ForEach-Object { $_.PT } | Select-Object -Unique) -join ', '), bottoms $(($seen | ForEach-Object { $_.PB } | Select-Object -Unique) -join ', '); work area $($wa.Top)-$($wa.Bottom))"
+$bottoms = $seen | ForEach-Object { $_.PB } | Measure-Object -Minimum -Maximum
+Verdict ($seen.Count -gt 0 -and ($bottoms.Maximum - $bottoms.Minimum) -le 1) "B. no jump: the bottom-centre pill keeps its bottom edge through the notice and its end (bottom edge $($bottoms.Minimum)-$($bottoms.Maximum))"
+$last = $b | Select-Object -Last 1
+if ($last) { X4 $last.File "$Out\island-compact-x4.png"; Note "compact Island after the notice, 4x: island-compact-x4.png ($($last.W)x$($last.H))" }
+
+# C. #218: press again (past notify's 15 s gap), click the compact row while the notice shows, picture the card.
+Start-Sleep 3
+[void][W]::SetForegroundWindow($nh); Start-Sleep 1
+Press; Start-Sleep 1.5
+$h = [W]::Island((Pids))
 if ($h -ne [IntPtr]::Zero) {
   $r = Rect $h
-  $pb = Crop $r 'click-before' 30
+  $pb = Crop $r 'c-click-before' 30
   # The compact row is the bottom of a bottom pill while the notice shows above it: click its middle.
   $cx = if ($pb) { [int](($pb.L + $pb.R) / 2) } else { [int](($r.L + $r.Rt) / 2) }; $cy = if ($pb) { $pb.B - 18 } else { $r.B - 22 }
   [void][W]::SetCursorPos($cx, $cy); Start-Sleep -Milliseconds 300
   [W]::mouse_event(0x2, 0, 0, 0, [IntPtr]::Zero); Start-Sleep -Milliseconds 80; [W]::mouse_event(0x4, 0, 0, 0, [IntPtr]::Zero)
   Start-Sleep 1.5
   $h2 = [W]::Island((Pids)); $r2 = Rect $h2
-  Note "clicked $cx,$cy; Island before $($r.Rt - $r.L)x$($r.B - $r.T), after $($r2.Rt - $r2.L)x$($r2.B - $r2.T) at $($r2.L),$($r2.T)"
-  Full 'expanded-card'
-  Crop $r2 'expanded-card-crop' 30
-} else { Note 'FAIL  no Island on the second start' }
-Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
-$hp | Stop-Process -Force -ErrorAction SilentlyContinue
+  Verdict (($r2.B - $r2.T) -gt ($r.B - $r.T) + 40) "C. a click on the Island opens the expanded card (clicked $cx,$cy; window before $($r.Rt - $r.L)x$($r.B - $r.T), after $($r2.Rt - $r2.L)x$($r2.B - $r2.T) at $($r2.L),$($r2.T))"
+  Full 'c-expanded-card'
+  $null = Crop $r2 'c-expanded-card-crop' 30
+} else { Note 'FAIL  C. no Island for the click' }
+Get-Process Unvibe, notepad -ErrorAction SilentlyContinue | Stop-Process -Force
 if (Select-String -Path "$Out\report.txt" -Pattern '^\s*FAIL' -Quiet) { exit 1 }
 exit 0
