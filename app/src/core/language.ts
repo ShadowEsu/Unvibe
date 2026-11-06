@@ -45,12 +45,27 @@ const cppPattern = new RegExp([
   String.raw`\bconst\s+[\w:]+(?:<[^<>;=]*>)?\s*&\s*\w`,
 ].join('|'), 'm');
 
+/**
+ * TypeScript signals, none of them valid JavaScript: an interface, `as const`, a type annotation of a built-in type
+ * (`: unknown`, `let n: number`), a generic function (`function withRetry<T>(`), a return type of a generic utility
+ * type (`): Promise<T>`), and type arguments on a constructor after const/let (`new Map<string, number>(`; `var`
+ * is left out, C# writes `var xs = new List<int>()`). Pasted code has no file name, so these are all there is
+ * (Marketing's 6 Nov report: withRetry<T> with `: unknown` and `Promise<T>` was labelled javascript).
+ */
+const typescriptPattern = new RegExp([
+  String.raw`\binterface\s+\w+|\bas\s+const\b`,
+  String.raw`:\s*(?:string|number|boolean|unknown|any|void|never|bigint)\b`,
+  String.raw`\bfunction\b[^(\n]*<\w[^>\n]*>\s*\(`,
+  String.raw`\)\s*:\s*(?:Promise|Array|Record|Map|Set|Partial|Readonly|ReadonlyArray)<`,
+  String.raw`\b(?:const|let)\s+\w+\s*=\s*new\s+\w+<[^<>\n]+>\s*\(`,
+].join('|'));
+
 function detectLanguageFromContent(code: string): string | null {
   if (cppPattern.test(code)) return 'cpp';
   if (/\bfn\s+\w+\s*\(|\blet\s+mut\b|::<|\bimpl\b/.test(code)) return 'rust';
   if (/\bdef\s+\w+\s*\(|\bimport\s+\w+$|\bself\b/m.test(code)) return 'python';
   if (/\bfunc\s+\w+\s*\(|\bpackage\s+\w+$/m.test(code)) return 'go';
-  if (/\binterface\s+\w+|:\s*(string|number|boolean)\b|\bas\s+const\b/.test(code)) return 'typescript';
+  if (typescriptPattern.test(code)) return 'typescript';
   if (/\bconst\s|\bfunction\b|=>|\brequire\(/.test(code)) return 'javascript';
   if (/\bSELECT\b.*\bFROM\b/is.test(code)) return 'sql';
   if (/<\/?[a-z][\s\S]*>/i.test(code) && /<\/(div|span|p|html|body)>/i.test(code)) return 'html';
