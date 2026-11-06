@@ -1,4 +1,5 @@
 import { Arrive } from "@/components/paper/Arrive";
+import { KEY_CHECK_SHOT, SHOT_CAPTION } from "@/data/homeGallery";
 import { ExpandRows } from "@/components/paper/ExpandRows";
 
 /**
@@ -45,6 +46,12 @@ export function WhatLeaves() {
             <a className="n-link" href="/privacy">Privacy policy</a>
           </p>
         </div>
+        {/* The scan the lists name, as the app shows it: the real refusal of a fake key (sk_test_ + 24 x's). */}
+        <figure className="nleaves__shot">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size real capture, lazy below the fold */}
+          <img src={KEY_CHECK_SHOT.src} width={KEY_CHECK_SHOT.width} height={KEY_CHECK_SHOT.height} alt={KEY_CHECK_SHOT.alt} loading="lazy" decoding="async" />
+          <figcaption><span className="n-shot-cap">{SHOT_CAPTION}</span></figcaption>
+        </figure>
       </div>
     </section>
   );

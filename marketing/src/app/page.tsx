@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { PhotoHero } from "@/components/paper/PhotoHero";
 import { AppTour } from "@/components/paper/AppTour";
+import { HomeGallery } from "@/components/paper/HomeGallery";
 import { TryIt } from "@/components/paper/TryIt";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { BackingStrip } from "@/components/paper/BackingStrip";
@@ -66,6 +67,8 @@ export default function HomePage() {
         <script key={String(value["@type"])} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(value) }} />
       ))}
       <PhotoHero />
+
+      <HomeGallery />
 
       <div className="n-sec n-wrap">
         <AppTour />
