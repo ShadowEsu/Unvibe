@@ -197,6 +197,8 @@ html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
 .site .lx-get .ninst__shot img { margin-top: 10px; border-radius: 8px; box-shadow: var(--a-whisper); max-width: 100%; height: auto; }
 .site .lx-get .ninst__shot figcaption { margin-top: 6px; font-size: 12px; color: #6e6b64; }
 .site .lx-get .ninst__help { margin-top: 14px; font-size: 13.5px; line-height: 1.5; color: #6e6b64; }
+/* Design S-1 #225 NIT: the help link reads at its note's size (paper.css sets .paper-text-link to 0.9rem) */
+.site .lx-get .ninst__help .paper-text-link { font-size: inherit; }
 /* /download: the steps live on their own band below, so the box stops at the file links. */
 .site .lx-get--page .ninst__steps { display: none; }
 .site .ad { padding-top: 24px; }
