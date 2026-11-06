@@ -87,8 +87,10 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 
 /* The hill: a light ellipse rising over the field, carrying the download, the browser try and the trust line. */
 .nhero__base { position: relative; z-index: 4; margin-top: -64px; padding: 28px 24px 56px; text-align: center; }
+/* At least its old size, and always 240 px taller than what it carries, so the install box with its open steps
+   never runs off the ivory onto the violet (#192 at 390). */
 .nhero__base::before {
-  content: ""; position: absolute; z-index: -1; top: 0; left: 50%; width: 2000px; height: 800px; margin-left: -1000px;
+  content: ""; position: absolute; z-index: -1; top: 0; left: 50%; width: 2000px; height: max(800px, calc(100% + 240px)); margin-left: -1000px;
   border-radius: 50%; background: var(--n-ground);
 }
 .nhero__base .vhero__cta { display: grid; justify-items: center; gap: 16px; }
@@ -310,7 +312,7 @@ html:not(.js) .ndemo__plain { opacity: 0; }
   .ndemo__panel { width: 212px; margin: -26px 0 0 auto; }
   .ndemo__panel img { border-radius: 12px; box-shadow: 0 30px 50px -24px rgb(20 10 70 / 0.7); }
   .nhero__base { padding: 24px 16px 48px; }
-  .nhero__base::before { width: 1000px; height: 500px; margin-left: -500px; }
+  .nhero__base::before { width: 1000px; height: max(500px, calc(100% + 240px)); margin-left: -500px; }
   .nhero__base .vhero__actions { flex-direction: column; gap: 14px; }
   .nhero__base .vhero__actions .paper-join { width: 100%; }
   .nhero__base .vhero__trust { font-size: 12.5px; }
