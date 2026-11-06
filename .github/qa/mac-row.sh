@@ -39,6 +39,9 @@ prompts() { # <label>: every system prompt window on screen: picture, text, butt
     d=$("$W" find "$o" || true); [ -n "$d" ] || continue
     read -r i x y w h <<< "$d"
     screencapture -x -o -l "$i" "$out/$1-$o.png"
+    # The Automation consent (UserNotificationCenter) doesn't answer System Events (run 42181832386 timed out on
+    # every row), so its words come from the picture.
+    if [ "$o" = UserNotificationCenter ]; then r "  PROMPT $1: $o ${w}x${h} at $x,$y: words in $1-$o.png"; continue; fi
     txt=$(t 15 osascript -e "tell application \"System Events\" to tell process \"$o\" to get value of every static text of window 1" 2>&1 | tr '\n' ' ')
     btn=$(t 15 osascript -e "tell application \"System Events\" to tell process \"$o\" to get name of every button of window 1" 2>&1 | tr '\n' ' ')
     r "  PROMPT $1: $o ${w}x${h}: \"$txt\" buttons: $btn"
@@ -78,7 +81,13 @@ dmg)
   hdiutil detach "$vol" -force > /dev/null 2>&1
   # Double-click the app (in the background: open waits while Gatekeeper's dialog is up).
   ( open /Applications/Unvibe.app 2> "$out/open-1.txt" ) &
-  sleep 8
+  # Wait for Gatekeeper's verdict, not its "Verifying “Unvibe”…" progress (400x70; on the Intel runner it showed
+  # for longer than 8 s in run 42181832386, so the real dialog came up only later).
+  for i in $(seq 1 45); do
+    read -r _ _ _ gw gh <<< "$("$W" find CoreServicesUIAgent || echo '0 0 0 0 0')"
+    (( gh > 150 )) && break; sleep 2
+  done
+  r "Gatekeeper dialog ${gw}x${gh} after about $(( i * 2 )) s"
   prompts gatekeeper-1-double-click
   t 15 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1
   sleep 2
@@ -116,11 +125,14 @@ pid=$(pgrep -x Unvibe | head -1)
 prompts first-launch
 uw=$(awk -F'\t' '$2=="Unvibe"' "$out/windows-first-launch.txt" | wc -l | tr -d ' ')
 r "first launch: Unvibe pid ${pid:-NONE}, Unvibe windows on screen: $uw"
-# An Automation consent ("Unvibe wants access to control …"): pictured above; answered the way most people do.
-for o in UserNotificationCenter CoreServicesUIAgent; do
-  t 15 osascript -e "tell application \"System Events\" to tell process \"$o\" to click button \"Allow\" of window 1" > /dev/null 2>&1 \
-    || t 15 osascript -e "tell application \"System Events\" to tell process \"$o\" to click button \"OK\" of window 1" > /dev/null 2>&1
-done
+# The Automation consent ("“Unvibe” wants access to control “System Events”", Don't Allow / Allow; pictured above),
+# answered Allow, the way most people do. Its buttons are pressed by position: Allow is the right one, 30 points up.
+d=$("$W" find UserNotificationCenter || true)
+if [ -n "$d" ]; then
+  read -r _ px py pw ph <<< "$d"
+  "$W" click $(( px + pw * 3 / 4 )) $(( py + ph - 30 )); sleep 2
+  r "Automation consent: pressed Allow; still on screen after: $("$W" find UserNotificationCenter > /dev/null && echo yes || echo no)"
+fi
 sleep 5
 alive=no; [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && alive=yes
 if [ -n "$pid" ] && [ "$uw" -gt 0 ] && [ "$alive" = yes ]; then r "PASS  first launch: window shown, still running 20 s later"; else r "FAIL  first launch: pid=${pid:-none} windows=$uw alive=$alive"; fi

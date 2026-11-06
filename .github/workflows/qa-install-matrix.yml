@@ -116,6 +116,8 @@ jobs:
           - { runner: windows-2025, path: exe }
           - { runner: windows-2022, path: setup }
           - { runner: windows-2025, path: setup }
+          - { runner: windows-2022, path: setupexe }
+          - { runner: windows-2025, path: setupexe }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
