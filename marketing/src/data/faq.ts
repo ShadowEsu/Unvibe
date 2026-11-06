@@ -119,7 +119,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams isn't on sale yet; its seats are planned at $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
     category: "pricing",
   },
   {
