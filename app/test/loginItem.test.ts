@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isLoginLaunch, launchOpensWindow, LOGIN_LAUNCH_ARG, loginItemFallback, loginPromptStep } from '../src/core/loginItem';
+import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, LOGIN_LAUNCH_ARG, loginItemFallback, loginPromptStep } from '../src/core/loginItem';
 
 const off = () => false;
 const on = () => true;
@@ -35,6 +35,17 @@ test('a launch the user started opens the companion', () => {
   assert.equal(winClick, false);
   assert.equal(macClick, false);
   assert.equal(launchOpensWindow(macClick, true), true);
+});
+
+test('only a first run the user started brings the companion in front of other apps', () => {
+  const winClick = isLoginLaunch('win32', ['C:\\Unvibe\\Unvibe.exe'], false);
+  const winLogin = isLoginLaunch('win32', ['C:\\Unvibe\\Unvibe.exe', LOGIN_LAUNCH_ARG], false);
+  assert.equal(launchBringsWindowFront(winClick, false), true);
+  // Setup unfinished at login: the companion opens to finish it, but never jumps over what the person is doing.
+  assert.equal(launchOpensWindow(winLogin, false), true);
+  assert.equal(launchBringsWindowFront(winLogin, false), false);
+  // After setup, every launch keeps the usual placement.
+  assert.equal(launchBringsWindowFront(winClick, true), false);
 });
 
 test('the user is told where to turn it on only when the OS did not take the login item', () => {

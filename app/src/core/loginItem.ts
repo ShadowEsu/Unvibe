@@ -34,6 +34,15 @@ export function launchOpensWindow(loginLaunch: boolean, onboarded: boolean): boo
 }
 
 /**
+ * Whether the companion a launch opens is brought to the front: only a first run the user started.
+ * On Windows the first window can open behind the browser after SmartScreen's Run anyway (QA matrix
+ * 42181832386, Server 2025). A login launch, and every launch after setup, keeps the usual placement.
+ */
+export function launchBringsWindowFront(loginLaunch: boolean, onboarded: boolean): boolean {
+  return !loginLaunch && !onboarded;
+}
+
+/**
  * Read back after turning launch at login on. Returns the one line telling the user where to turn
  * it on by hand when the OS did not take it (possible on Macs without notarization), else null.
  */

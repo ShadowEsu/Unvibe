@@ -58,7 +58,7 @@ import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { SUPPORT_EMAIL } from '../core/support';
-import { isLoginLaunch, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
+import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
 import { firstRunEvent, noteCompanionOpen, ownCodeStepNotNow, ownCodeStepShown } from './ownCodeStep';
 import { grantReturnApp, heldReviewToRun, type HeldClipboardReview, type PendingGrant } from '../core/grantReturn';
 import { isBillingUrl } from '../core/permissions';
@@ -437,7 +437,13 @@ app.on('before-quit', () => {
   quitting = true;
 });
 
+/** Menu items call this as `click`, so it takes no arguments (Electron passes the menu item first). */
 function openCompanion(): void {
+  openCompanionWindow(false);
+}
+
+/** `front`: a new companion window is brought in front of other apps once painted (first-run launch only). */
+function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
@@ -446,7 +452,7 @@ function openCompanion(): void {
     companion.focus();
     return;
   }
-  companion = createCompanion();
+  companion = createCompanion({ front });
   noteCompanionOpen();
   const win = companion;
   // Brought back from minimized (the Windows close button minimizes) is an open the user started too.
@@ -786,7 +792,7 @@ app.whenReady().then(() => {
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch. A login launch after setup
   // starts quietly in the tray instead, so the shortcut is ready with no window.
   const loginLaunch = isLoginLaunch(process.platform, process.argv, isMac && loginItemState().wasOpenedAtLogin);
-  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanion();
+  if (launchOpensWindow(loginLaunch, s.onboarded)) openCompanionWindow(launchBringsWindowFront(loginLaunch, s.onboarded));
   repairAccessibilityAfterUpdate();
   if (pendingExternalReview) {
     const request = pendingExternalReview;
