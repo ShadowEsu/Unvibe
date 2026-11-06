@@ -170,9 +170,10 @@ export default function PrivacyPage() {
           If you press Allow on the analytics bar, unvibe.site uses Mixpanel to
           understand how visitors use the site, including page views, clicks, and session replays.
           Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
-          Global Privacy Control, Mixpanel does not load and nothing is recorded, except one thing: when
-          you press Allow or No thanks, unvibe.site adds one to that day&apos;s count of that answer. The
-          count has no ID, IP address, cookie, time or page address, so it can&apos;t be linked to you.
+          Global Privacy Control, Mixpanel does not load. unvibe.site still keeps daily totals: how
+          many times visitors pressed Allow or No thanks, and how many times the install scripts were
+          downloaded and finished installing. Each total is a day and a number, with no ID, IP
+          address, cookie, time or page address, so it can&apos;t be linked to you.
           The Analytics settings link at the bottom of every page changes your answer, and No thanks
           stops recording at once. Mixpanel receives your IP address with each event and uses it to
           estimate a rough location. Replays hide all page text and
