@@ -16,13 +16,16 @@ jobs:
       matrix:
         include:
           - build: fix
+            tag: fix
           - build: v0.1.49
+            tag: v0149
     runs-on: macos-15
     timeout-minutes: 25
     env:
-      FIX_BUILD_RUN: "42182546070"
-      ID_A: qa-f02a-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.build }}
-      ID_B: qa-f02b-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.build }}
+      FIX_BUILD_RUN: "42184191246"
+      # Install ids allow only letters, digits, - and _ (qa-install answers 400 to a dot).
+      ID_A: qa-f02a-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
+      ID_B: qa-f02b-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.tag }}
     steps:
       - name: Flag this run's install ids as QA before any launch
         shell: bash
@@ -87,6 +90,7 @@ jobs:
           echo "A: UserNotificationCenter windows: [${prompt}]"
           screencapture -x "$RUNNER_TEMP/shots/a-first-launch-${{ matrix.build }}.png"
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
+          echo "A: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
 
       - name: "B: set up, then Don't Allow System Events, then Control+U in TextEdit"
         shell: bash
@@ -117,6 +121,7 @@ jobs:
           # The bar's words, as macOS Accessibility reads them (best effort; the screenshots are the record).
           osascript -e 'tell application "System Events" to tell process "Unvibe" to get value of every static text of every UI element of every window' 2>&1 | tr ',' '\n' | grep -iE "macOS|System Events|Select code|Allow|shortcut" | head -10 || true
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true
+          echo "B: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
 
       - name: Flag the ids again (the app has registered them now)
         if: always()
