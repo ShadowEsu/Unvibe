@@ -428,7 +428,12 @@ export function clearLimitPause(): void {
   limitPauseActive = false;
 }
 
-export function createCompanion(): BrowserWindow {
+/**
+ * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
+ * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
+ * first-run launch the user started) then brings it above other apps.
+ */
+export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
@@ -441,12 +446,31 @@ export function createCompanion(): BrowserWindow {
       : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
     backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
     skipTaskbar: false,
+    show: false,
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
   // Setup is intentionally a full-window moment. Once it is complete, future
   // launches retain the normal companion size so the app stays out of the way.
-  if (!settings().all().onboarded) win.maximize();
+  const maximize = !settings().all().onboarded;
+  let shown = false;
+  const reveal = () => {
+    if (shown || win.isDestroyed()) return;
+    shown = true;
+    if (maximize) win.maximize();
+    win.show();
+    if (!front) return;
+    // Windows won't hand focus to a window whose process didn't get the foreground (it flashes the
+    // taskbar button instead); topmost and straight back puts it above the other windows anyway.
+    if (process.platform === 'win32') {
+      win.setAlwaysOnTop(true);
+      win.setAlwaysOnTop(false);
+    }
+    win.moveTop();
+    win.focus();
+  };
+  win.once('ready-to-show', reveal);
+  setTimeout(reveal, 5000);
   void win.loadFile(page('companion'));
   return win;
 }
