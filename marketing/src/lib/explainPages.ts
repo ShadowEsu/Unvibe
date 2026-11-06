@@ -2706,7 +2706,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
       "Paste git diff output and get a plain English explanation, free online. The sample is a staged change: a cart total gets tax, and a file moves into lib/.",
-    sampleSummary: "The output of `git diff --staged` for a small change of the kind an AI assistant makes: a tax rate added to a cart total, items with no quantity skipped, and utils.js moved to lib/money.js.",
+    sampleSummary: "The output of `git diff --staged` for a small change of the kind an AI assistant makes: a tax rate added to a cart total, items with a quantity of 0 or less skipped, and utils.js moved to lib/money.js.",
     sample: `$ git diff --staged
 diff --git a/cart.js b/cart.js
 index 9853b5d..97c2803 100644
@@ -2735,15 +2735,15 @@ rename to lib/money.js`,
     shows: [
       {
         concept: "file headers",
-        text: "Each file starts with `diff --git a/... b/...`, where `a/` is the old version and `b/` the new one. The `index 9853b5d..97c2803 100644` line gives short hashes of the file's contents before and after, and its mode: `100644` is an ordinary file. Then `--- a/cart.js` and `+++ b/cart.js` say which side the `-` and `+` lines come from.",
+        text: "Each file starts with `diff --git a/... b/...`, where `a/` is the old version and `b/` the new one. The `index 9853b5d..97c2803 100644` line gives short hashes of the file's contents before and after, and its mode: `100644` is an ordinary file that isn't executable (`100755` would be). Then `--- a/cart.js` and `+++ b/cart.js` say which side the `-` and `+` lines come from.",
       },
       {
         concept: "hunks",
-        text: "`@@ -1,11 +1,13 @@` reads: this part starts at line 1 and covers 11 lines in the old file, and starts at line 1 and covers 13 lines in the new one. Counting the sample agrees: 11 lines are context or `-`, and 13 are context or `+`. With `-U1`, git kept 1 line of context instead of 3 and split the change into two hunks; the second header, `@@ -5,5 +6,6 @@ function total(items) {`, ends with the function the change sits in.",
+        text: "`@@ -1,11 +1,13 @@` reads: this part starts at line 1 and covers 11 lines in the old file, and starts at line 1 and covers 13 lines in the new one. Counting the sample agrees: 11 lines are context or `-`, and 13 are context or `+`. With `-U1`, git kept 1 line of context instead of 3 and split the change into two hunks. The second header, `@@ -5,5 +6,6 @@ function total(items) {`, ends with the nearest line above the change that looks like a heading, here the function it sits in.",
       },
       {
         concept: "added and removed lines",
-        text: "A `-` line was removed, a `+` line was added, and a line that starts with a space is unchanged context. An edited line shows up as both: `-  return sum;` and then `+  return Math.round(sum * (1 + TAX));`. Before the change, `run.sh` printed `Total: $25.00`; after it, `Total: $27.00`.",
+        text: "A `-` line was removed, a `+` line was added, and a line that starts with a space is unchanged context. An edited line shows up as both: `-  return sum;` and then `+  return Math.round(sum * (1 + TAX));`. Before the change, `receipt()` for 2 items at 1250 cents printed `Total: $25.00`; after it, `Total: $27.00`.",
       },
       {
         concept: "renames",
@@ -2798,7 +2798,7 @@ export function Profile({ userId }) {
       },
       {
         concept: "the dependency array",
-        text: "`[userId]` tells React to run the effect again only when `userId` changes: changing it from 1 to 2 sent a second request. With `[]`, the effect ran once, so after the prop became 2 the page still showed `Ana`. With no array at all, it ran after every render, and each reply causes a render: 5 replies led to 11 requests, and the page never got past `Loading...`.",
+        text: "`[userId]` tells React to run the effect again only when `userId` changes: changing it from 1 to 2 sent a second request. With `[]`, the effect ran once, so after the prop became 2 the page still showed `Ana`. With no array at all, it ran after every render. Each reply set the user, which rendered and ran the effect, and the effect's `setUser(null)` rendered and ran it once more: 5 replies led to 11 requests, and after the 5th the page showed `Loading...` again.",
       },
       {
         concept: "cleanup",
@@ -2812,7 +2812,7 @@ export function Profile({ userId }) {
     notes: [
       "Run with React 19.3.1 and react-dom 19.3.1 in jsdom 29.1.1 on Node 25.7.0, with a stand-in `fetch` whose replies were sent by hand, so the order they arrived in could be chosen.",
       "A 404 reply resolves the `fetch` like any other, so the `res.ok` check is what turns it into an error: the page showed `Couldn't load: HTTP 404`.",
-      "`setUser(null)` and `setError(null)` at the start of the effect clear the last user's name or error, so switching users shows `Loading...` instead of the previous person.",
+      "`setUser(null)` and `setError(null)` at the start of the effect clear the last user's name or error. With user 1 loaded, switching to 2 showed `Loading...` once the effect ran, then `Sam` when 2 replied.",
     ],
     watchOut:
       "Without the cleanup, a slow reply can overwrite a newer one. With the `return () => controller.abort();` line taken out, the page switched from user 1 to 2, showed `Sam` when 2 replied, then went back to `Ana` when the late reply for 1 arrived. With the line in, request 1 was aborted and the page stayed on `Sam`.",
@@ -2842,7 +2842,7 @@ KeyError: 'qty'`,
     shows: [
       {
         concept: "reading order",
-        text: "`most recent call last` means the list runs from the first call at the top to the line that failed at the bottom: `main()` on line 19 called `order_total(order)` on line 16, and line 10 failed. The error itself is always the last line, so that's the place to start reading.",
+        text: "`most recent call last` means the list runs from the first call at the top to the line that failed at the bottom: `main()` on line 19 called `order_total(order)` on line 16, and line 10 failed. The error itself is on the last line, so that's the place to start reading.",
       },
       {
         concept: "frames",
