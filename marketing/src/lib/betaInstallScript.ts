@@ -283,10 +283,11 @@ if (Get-UnvibeUninstallEntry "HKLM:") {
 }
 
 Write-Host "Installing Unvibe for your Windows user (no administrator rights needed)..."
-# /currentuser keeps the install per-user even next to an all-users copy (which would need an admin prompt).
+# Plain /S: the setup is one-click per-user (no admin prompt, ever, even next to an all-users copy). The
+# per-user switch only means something to the older assisted setup, which crashed with it on Server 2025 (QA, 6 Nov).
 # Wait for the installer process only: Start-Process -Wait would also wait for anything it starts.
 try {
-  \$setup = Start-Process -FilePath \$download -ArgumentList "/S", "/currentuser" -PassThru
+  \$setup = Start-Process -FilePath \$download -ArgumentList "/S" -PassThru
 } catch {
   Stop-UnvibeInstall "Could not start the Unvibe installer. Details: \$_"
 }

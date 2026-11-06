@@ -518,8 +518,9 @@ describe("Windows install script text", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
     const stopAt = script.indexOf("Stop-Process");
     assert.ok(verifiedAt > 0 && stopAt > verifiedAt && stopAt < startAt, "running Unvibe is closed after verification, before the installer");
-    // /currentuser: never an all-users upgrade behind an admin prompt.
-    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S", "/currentuser" -PassThru`));
+    // Plain /S: the one-click per-user setup never asks for admin; /currentuser crashed the old assisted setup.
+    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S" -PassThru`));
+    assert.ok(!script.includes("/currentuser"));
     // Start-Process -Wait also waits for processes the installer starts (QA's install-matrix hang).
     assert.doesNotMatch(script, /^(?!\s*#)[^\n]*Start-Process[^\n]*-Wait\b/m);
     // Windows PowerShell 5.1 only keeps ExitCode if the handle was read while the process ran.
