@@ -10,8 +10,11 @@ import {
   BETA_WINDOWS_DIRECT_DOWNLOAD,
   BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
+import { MAC_SHA256_URL, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 
 export type InstallOs = "mac" | "windows";
+
+interface StepShot { src: string; width: number; height: number; alt: string; caption: string }
 
 /** What the box says for each computer. Mac and Windows copy is Design's (download-fix S-1 rules, 5 Nov). */
 export const INSTALL_COPY: Record<InstallOs, {
@@ -23,6 +26,12 @@ export const INSTALL_COPY: Record<InstallOs, {
   fileHref: string;
   stepsTitle: string;
   steps: readonly string[];
+  /**
+   * A real screenshot under a step, by the step's place (null for none): QA's fresh runners with the published 0.1.49
+   * files (macOS 15.8.2, run 42149346752; Windows Server 2025, run 42146227741), native size, cropped only, no
+   * overlays (Security C-4 GO, file 1824).
+   */
+  stepShots: readonly (StepShot | null)[];
   /** One line under the steps. */
   note: string;
 }> = {
@@ -39,6 +48,11 @@ export const INSTALL_COPY: Record<InstallOs, {
       "Open it once; macOS says it can't verify it. Click Done.",
       "System Settings › Privacy & Security › Open Anyway. Confirm, then enter your Mac password. The button shows for about an hour after you try to open Unvibe.",
     ],
+    stepShots: [
+      null,
+      { src: "/unvibe/install/macos15-not-opened.webp", width: 260, height: 232, alt: "macOS dialog: Unvibe Not Opened, with Done and Move to Trash", caption: "Real screen, macOS 15" },
+      { src: "/unvibe/install/macos15-open-anyway.webp", width: 476, height: 174, alt: "macOS Privacy & Security, Security section: Unvibe was blocked to protect your Mac, with the Open Anyway button", caption: "Real screen, macOS 15" },
+    ],
     note: "The Terminal line checks the download against the published SHA-256 and Unvibe's self-signed signature before it installs anything.",
   },
   windows: {
@@ -53,6 +67,11 @@ export const INSTALL_COPY: Record<InstallOs, {
       "Run the .exe you downloaded. If your browser warns, choose Keep.",
       "If Windows says it protected your PC, click More info.",
       "Click Run anyway.",
+    ],
+    stepShots: [
+      null,
+      { src: "/unvibe/install/windows-smartscreen-more-info.webp", width: 532, height: 498, alt: "Windows dialog: Windows protected your PC, with the More info link and Don't run", caption: "Real screen, Windows" },
+      { src: "/unvibe/install/windows-smartscreen-run-anyway.webp", width: 532, height: 498, alt: "Windows dialog after More info: App Unvibe-0.1.49-win-x64-portable.exe, Publisher Unknown publisher, with Run anyway and Don't run", caption: "Real screen, Windows" },
     ],
     note: "No Run anyway button? Work and school PCs can remove it, and Smart App Control (Windows 11) blocks apps that aren't signed and can't make an exception for one app. Email support@unvibe.site and we'll help.",
   },
@@ -124,11 +143,33 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
               </a>
             </>
           ) : null}
+          {/* For anyone taking the file: the release's published checksums (the Terminal and PowerShell lines check
+              them on their own). Restores what the old download card linked (QA, after #192). The separator wraps with
+              the link, so a narrow row never ends on a hanging "·" (QA #196). */}
+          {" "}
+          <span className="ninst__nowrap">
+            {"· "}
+            <a className="paper-text-link" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
+          </span>
         </p>
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
           <ol>
-            {copy.steps.map((step) => <li key={step}>{step}</li>)}
+            {copy.steps.map((step, index) => {
+              const shot = copy.stepShots[index];
+              return (
+                <li key={step}>
+                  {step}
+                  {shot ? (
+                    <figure className="ninst__shot">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size real screenshot, shown at its native size */}
+                      <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} loading="lazy" decoding="async" />
+                      <figcaption>{shot.caption}</figcaption>
+                    </figure>
+                  ) : null}
+                </li>
+              );
+            })}
           </ol>
           <p className="ninst__help">{copy.note} <a className="paper-text-link" href="/install-help">More help with the first open</a></p>
         </details>
