@@ -259,6 +259,8 @@ body:has(.paper-pricing) .fb-tab {
   color: var(--v-ink);
   font-size: 0.95rem;
   line-height: 1.45;
+  /* The gift terms end "(up to five)."; pretty keeps that from sitting alone on the card's last line (Design). */
+  text-wrap: pretty;
 }
 
 @media (min-width: 1120px) {
