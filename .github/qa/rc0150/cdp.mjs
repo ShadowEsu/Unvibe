@@ -338,13 +338,16 @@ try {
         say('STEP', `typed ${process.env.PICK_PATH} into Go to Folder, Return, then Return (Open)`);
       } catch (e) { say('STEP', `folder dialog keystrokes failed: ${e.message.split('\n')[0]}`); }
     }
-    await card.waitFor({ timeout: 20000 }).catch(() => {});
-    if (!(await card.count())) {
-      say('PICK', 'no brief after the folder dialog');
+    // A project is chosen once Briefs shows its repo controls ("Choose repo") instead of "Choose a project". The
+    // working tree of the sample is clean, so that scope says "No documented changes"; the brief is the latest commit.
+    const chosen = companion.getByRole('button', { name: 'Choose repo', exact: true });
+    await chosen.waitFor({ timeout: 20000 }).catch(() => {});
+    if (!(await chosen.count()) || await companion.getByRole('button', { name: 'Choose a project', exact: true }).count()) {
+      say('PICK', 'no project after the folder dialog');
       execFileSync('screencapture', ['-x', path.join(out, 'briefs-pick-failed-full.png')]);
       throw new Error('PICK_FAILED');
     }
-    say('PICK', 'a brief is showing');
+    say('PICK', `a project is chosen; working tree: ${(await companion.locator('.briefings__empty').allInnerTexts()).join(' | ').slice(0, 120) || 'a brief'}`);
     await companion.getByRole('tab', { name: 'Latest commit', exact: true }).click({ timeout: 10000 });
     say('STEP', 'chose the "Latest commit" scope');
     await sleep(1500);
