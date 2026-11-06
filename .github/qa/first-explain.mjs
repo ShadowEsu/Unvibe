@@ -119,6 +119,21 @@ else {
     writeFileSync(path.join(out, 'explanation.txt'), `${text}\n`);
     await shot(panel, '3-explanation');
     desktop('3-explanation');
+    if (process.env.AGREE === '1') {
+      // One question of the person's own: the send agreement comes first; its three boxes are ticked, so the profile
+      // holds a consent record (unvibe-consent.json) for an upgrade check to compare.
+      const row = panel.locator('.askrow');
+      await row.getByLabel('Follow-up question').fill('Why clear the timer first?');
+      await row.getByRole('button', { name: 'Ask', exact: true }).click();
+      const form = panel.locator('.consent-form');
+      await form.waitFor({ timeout: 15000 });
+      const boxes = form.locator('input[type="checkbox"]');
+      for (let i = 0; i < await boxes.count(); i++) await boxes.nth(i).check();
+      await form.getByRole('button', { name: 'Continue', exact: true }).click();
+      await form.waitFor({ state: 'detached', timeout: 10000 });
+      log(true, 'send agreement ticked (AGREE=1)');
+      await sleep(1500);
+    }
   } catch (e) {
     log(false, 'a complete AI explanation of the sample', e.message.split('\n')[0]);
     await shot(panel, 'explanation-stuck'); desktop('explanation-stuck');

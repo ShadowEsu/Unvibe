@@ -1,0 +1,100 @@
+name: QA setup.exe build check
+
+# QA only (#209, BOSS row 545): a build-only run's Windows setup.exe on clean Windows Server 2022 + 2025.
+#   dblclick   browser download (Mark of the Web), double-click: SmartScreen, then the installer, then the app
+#   silent     /S: exit code, the app must NOT start
+#   upgrade    v0.1.49 setup /S first, then this build double-clicked: one Apps entry, same folder
+#   machine    v0.1.49 setup for "Anyone who uses this computer" (/allusers /S), then this build: what happens
+# Each row: install path, Start menu, Apps entry, first window in front, first explanation, then uninstall.
+# Each profile's qa- id is flagged before anything installs.
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: "Build-only Desktop app release run id whose unvibe-windows-latest artifact is tested"
+        required: true
+      old:
+        description: "Release installed first by the upgrade and machine rows"
+        required: false
+        default: "0.1.49"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: qa-setup-build
+  cancel-in-progress: false
+
+jobs:
+  row:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+        kind: [dblclick, silent, upgrade, machine]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      INSTALL_ID: qa-setup-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.kind }}
+      OLD: ${{ inputs.old }}
+    steps:
+      - name: Check inputs, flag this id as QA before anything installs
+        shell: bash
+        env:
+          BUILD_RUN: ${{ inputs.build_run }}
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]] || { echo "::error::build_run must be a run id"; exit 1; }
+          [[ "$OLD" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::old must look like 0.1.49"; exit 1; }
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Get the build's setup.exe
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build
+
+      - name: Playwright for the first explanation
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+
+      - name: Install, check, first explanation, uninstall
+        shell: powershell
+        run: .github\qa\setup-row.ps1 -Kind "${{ matrix.kind }}" -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag again (whatever happened)
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          taskkill //IM Unvibe.exe //F > /dev/null 2>&1 || true
+          ids="$INSTALL_ID"
+          for s in "$APPDATA/Unvibe/unvibe-store.json"; do [ -f "$s" ] && ids="$ids $(grep -o '"installId":"[^"]*"' "$s" | cut -d'"' -f4)"; done
+          for x in $(echo $ids | tr ' ' '\n' | sort -u); do
+            printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w " %{http_code} $x\n" \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$x\"}"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: setup-${{ matrix.runner }}-${{ matrix.kind }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
