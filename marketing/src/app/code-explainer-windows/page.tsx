@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { DownloadLink } from "@/components/paper/DownloadLink";
+import { InstallBox } from "@/components/paper/InstallBox";
 import { BETA_WINDOWS_DIRECT_DOWNLOAD, BETA_WINDOWS_INSTALL_COMMAND } from "@/lib/betaOffer";
 import { BETA_WINDOWS_ASSET } from "@/lib/betaInstallScript";
 import { WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
@@ -41,7 +41,7 @@ export default function CodeExplainerWindowsPage() {
           writes a plain English explanation in a panel next to it.
         </p>
         <div className="os-get">
-          <DownloadLink href={BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" surface="seo_windows" />
+          <InstallBox os="windows" surface="seo_windows" />
         </div>
       </header>
 
@@ -120,7 +120,7 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-get">Get Unvibe for Windows</h2>
         <p>Free. No card, no API key.</p>
         <div className="os-get">
-          <DownloadLink href={BETA_WINDOWS_DIRECT_DOWNLOAD} platform="windows" surface="seo_windows" />
+          <InstallBox os="windows" surface="seo_windows" />
         </div>
         <p>
           Using a Mac? <Link className="paper-text-link" href="/code-explainer-mac">Unvibe for Mac</Link>. Not ready to

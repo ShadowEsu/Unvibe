@@ -119,7 +119,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "pro-annual",
     question: "Is Pro cheaper annually?",
-    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams seats are $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
+    answer: `Yes. Pro is $${PRICING.proMonthly} a month, or $${PRICING.proAnnual} a year (${PRICING.annualDiscountPercent}% off). Teams isn't on sale yet; its seats are planned at $${PRICING.teamsSeatMonthly} per seat per month, or $${PRICING.teamsSeatAnnual} per seat per year. ${proSentence()}`,
     category: "pricing",
   },
   {
@@ -144,7 +144,7 @@ export const faqItems: FaqItem[] = [
   {
     id: "teams",
     question: "Can educators or teams use it?",
-    answer: `Teams is a founding pilot at $${PRICING.teamsSeatMonthly} per seat per month, for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats in one shared workspace. Email support@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
+    answer: `Teams is in early access and isn't on sale yet: one shared workspace for ${PRICING.teamsMinSeats} to ${PRICING.teamsMaxSeats} seats. Email support@unvibe.site for seats, or about Enterprise if you need more than ${PRICING.teamsMaxSeats}.`,
     category: "platform",
   },
   {
