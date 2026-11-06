@@ -118,3 +118,18 @@ test('each TypeScript-only signal is enough on its own, and plain JavaScript sta
   assert.equal(guessLanguage('let total: Int = 5'), 'unknown');
   assert.equal(guessLanguage('var xs = new List<int>();'), 'unknown');
 });
+
+// Security #195 MUST-1: detection runs in the main process on any paste or selection, so a pathological line must
+// not stall it (the first draft of the generic-function rule took over 100 s here; the fixed one about 1 ms).
+test('content detection stays fast on a long line shaped to make a regex backtrack', () => {
+  const start = performance.now();
+  assert.equal(typeof guessLanguage('function <a '.repeat(4000)), 'string');
+  assert.equal(typeof guessLanguage('const a = new B<'.repeat(4000)), 'string');
+  assert.ok(performance.now() - start < 500, `took ${Math.round(performance.now() - start)} ms`);
+});
+
+test('the generic-function rule matches the common shapes', () => {
+  for (const code of ['export async function withRetry<T>(', 'function f<T, U>(a: T, b: U) {', 'export function pick<K extends keyof T>(', 'function* gen<T>(']) {
+    assert.equal(guessLanguage(code), 'typescript', code);
+  }
+});

@@ -55,7 +55,11 @@ const cppPattern = new RegExp([
 const typescriptPattern = new RegExp([
   String.raw`\binterface\s+\w+|\bas\s+const\b`,
   String.raw`:\s*(?:string|number|boolean|unknown|any|void|never|bigint)\b`,
-  String.raw`\bfunction\b[^(\n]*<\w[^>\n]*>\s*\(`,
+  // `<` stays out of the first class and `<`, `(` out of the second, so each `function` has one way to match: the
+  // looser `[^(\n]*<\w[^>\n]*>` backtracked cubically on a long line with no `(` (Security #195 MUST-1: a 24 KB
+  // paste of `function <a ` froze the main process 13.8 s). It gives up nested type arguments in the function's
+  // own `<…>`; those usually trip `: unknown` or `): Promise<` instead.
+  String.raw`\bfunction\b[^(<\n]*<\w[^<>(\n]*>\s*\(`,
   String.raw`\)\s*:\s*(?:Promise|Array|Record|Map|Set|Partial|Readonly|ReadonlyArray)<`,
   String.raw`\b(?:const|let)\s+\w+\s*=\s*new\s+\w+<[^<>\n]+>\s*\(`,
 ].join('|'));
