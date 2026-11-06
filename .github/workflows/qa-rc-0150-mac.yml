@@ -142,9 +142,11 @@ jobs:
           npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
           cp "$GITHUB_WORKSPACE/.github/qa/rc0150/cdp.mjs" rc0150-cdp.mjs
-          if [[ "$ITEM" == n-* || "$ITEM" == n3-* ]]; then
-            # The notice checks as they are on qa/install-matrix (571cd6c, "N-5..N-7 with a live-watch info notice"), unchanged.
+          if [[ "$ITEM" == n-* || "$ITEM" == n3-* || "$ITEM" == n3c-* ]]; then
+            # The notice checks as they are on qa/install-matrix, unchanged: 571cd6c ("N-5..N-7 with a live-watch info
+            # notice"); n3c-* take 4c9dd3f (the N-2c control presses 16 s after the last shown notice).
             src=571cd6c1ac87073f8cfbde12d0d03d8d2fbb1d9a
+            [[ "$ITEM" == n3c-* ]] && src=4c9dd3fceef50bd05ed96adf87fae98e8ce473e3
             gh api "repos/ShadowEsu/Unvibe/contents/.github/qa/first-explain.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > first-explain.mjs
             gh api "repos/ShadowEsu/Unvibe/contents/app/e2e/cdp-launch.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > cdp-launch.mjs
             echo "qa/install-matrix@$src .github/qa/first-explain.mjs + app/e2e/cdp-launch.mjs" > first-explain.source
