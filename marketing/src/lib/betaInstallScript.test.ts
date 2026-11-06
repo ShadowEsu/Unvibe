@@ -9,7 +9,8 @@ import {
   BETA_INSTALL_ASSET,
   BETA_INSTALL_TAG,
   BETA_MAC_SIGNING_REQUIREMENT,
-  BETA_WINDOWS_ASSET,
+  BETA_WINDOWS_APP_GUID,
+  BETA_WINDOWS_SETUP_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
 } from "./betaInstallScript";
@@ -474,7 +475,7 @@ describe("Mac install script text", () => {
 
 describe("Windows install script text", () => {
   const script = betaWindowsInstallScript();
-  const startAt = script.indexOf("Start-Process");
+  const startAt = script.indexOf("Start-Process -FilePath $download");
 
   it("discloses the installed count near the top and still sends it", () => {
     const head = script.split("\n").slice(0, 8).join("\n");
@@ -485,10 +486,10 @@ describe("Windows install script text", () => {
 
   it("stops before running anything when the checksum can't be confirmed", () => {
     assert.ok(script.includes("SHA256SUMS-windows.txt"));
-    assert.ok(script.includes(BETA_WINDOWS_ASSET));
+    assert.ok(script.includes(BETA_WINDOWS_SETUP_ASSET));
     assert.ok(startAt > 0);
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
-    assert.ok(verifiedAt > 0 && verifiedAt < startAt, "checksum is confirmed before the app runs");
+    assert.ok(verifiedAt > 0 && verifiedAt < startAt, "checksum is confirmed before the installer runs");
     const check = script.slice(script.indexOf("SHA256SUMS-windows.txt"), verifiedAt);
     // Each failure (fetch error, no line, mismatch) goes through the stop helper.
     assert.match(check, /catch \{\s*Stop-UnvibeInstall "Could not download the published checksums/);
@@ -497,14 +498,15 @@ describe("Windows install script text", () => {
     assert.doesNotMatch(check, /catch \{\}/);
   });
 
-  it("stops with a visible error and removes only the unverified download", () => {
+  it("stops with a visible error and removes only its own temp folder", () => {
     const helper = script.slice(script.indexOf("function Stop-UnvibeInstall"));
     const body = helper.slice(0, helper.indexOf("\n}"));
-    assert.match(body, /Remove-Item[^\n]*\$download/);
-    assert.doesNotMatch(body, /\$dest\b/);
+    assert.match(body, /Remove-Item -Recurse -Force \$work /);
+    assert.doesNotMatch(body, /LOCALAPPDATA|\$installed/);
     // exit closes the window under `irm | iex`, so the help link would never be seen.
     assert.doesNotMatch(body, /\bexit\b/);
     assert.match(body, /throw "\$message Nothing was installed\. For help, see https:\/\/unvibe\.site\/install-help"/);
+    assert.match(script, /\$work = Join-Path \(\[IO\.Path\]::GetTempPath\(\)\) \("unvibe-install-" \+ \[guid\]::NewGuid\(\)/, "a fresh temp folder per run");
   });
 
   it("matches the checksum line on the exact file name", () => {
@@ -512,29 +514,61 @@ describe("Windows install script text", () => {
     assert.doesNotMatch(script, /-match \[regex\]::Escape\(\$asset\)/);
   });
 
-  it("keeps the installed app until the new download is verified", () => {
-    assert.ok(script.includes(`$download = "$dest.download"`));
-    assert.match(script, /curl\.exe [^\n]*-o \$download /);
-    assert.match(script, /Invoke-WebRequest -Uri \$url -OutFile \$download /);
+  it("closes Unvibe only after verification, then runs the verified download silently and waits for that process only", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
-    const moveAt = script.indexOf("Move-Item -Force -Path $download -Destination $dest");
     const stopAt = script.indexOf("Stop-Process");
-    assert.ok(verifiedAt > 0 && stopAt > verifiedAt, "running Unvibe is closed only after verification");
-    assert.ok(moveAt > stopAt && moveAt < startAt, "the verified download replaces the app before it runs");
-    const beforeMove = script.slice(0, moveAt);
-    assert.doesNotMatch(beforeMove, /Remove-Item[^\n]*\$dest\b(?!\.)/, "nothing deletes the installed exe");
-    assert.doesNotMatch(beforeMove, /(-o|-OutFile|-Path) \$dest\b/, "nothing writes or hashes the installed exe before the move");
+    assert.ok(verifiedAt > 0 && stopAt > verifiedAt && stopAt < startAt, "running Unvibe is closed after verification, before the installer");
+    // Plain /S: the one-click per-user setup never asks for admin and never reads the assisted setup's per-user switch.
+    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S" -PassThru`));
+    assert.ok(!script.includes("/currentuser"));
+    // Start-Process -Wait also waits for processes the installer starts (QA's install-matrix hang).
+    assert.doesNotMatch(script, /^(?!\s*#)[^\n]*Start-Process[^\n]*-Wait\b/m);
+    // Windows PowerShell 5.1 only keeps ExitCode if the handle was read while the process ran.
+    const handleAt = script.indexOf("$null = $setup.Handle");
+    const waitAt = script.indexOf("$setup.WaitForExit(300000)");
+    assert.ok(handleAt > startAt && waitAt > handleAt, "the handle is read right after the start, before the wait");
+    const exitAt = script.indexOf("if ($setupExit -ne 0) {");
+    const openAt = script.lastIndexOf("Start-Process $installed");
+    assert.ok(exitAt > waitAt && openAt > exitAt, "Unvibe opens only after the installer exited 0");
+    // 0xC0000005 gets exactly one more start of the same file, re-checked against the same checksum first.
+    const retry = script.slice(script.indexOf("if ($setupExit -eq -1073741819) {"), exitAt);
+    assert.equal(script.split("$setupExit = Invoke-UnvibeSetup").length - 1, 2, "one first start, one retry");
+    assert.ok(retry.indexOf("(Get-FileHash -Path $download -Algorithm SHA256).Hash.ToLower() -ne $expected") > 0, retry);
+    assert.ok(retry.indexOf("Get-FileHash") < retry.indexOf("$setupExit = Invoke-UnvibeSetup"), "the file is re-checked before the retry");
+    assert.doesNotMatch(retry, /curl|Invoke-WebRequest/);
   });
 
-  it("adds a Start menu shortcut to the installed exe", () => {
-    assert.ok(script.includes(`Join-Path $env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Unvibe.lnk"`));
-    assert.match(script, /New-Object -ComObject WScript\.Shell/);
-    assert.match(script, /\.CreateShortcut\(\$shortcutPath\)/);
-    assert.match(script, /\.TargetPath = \$dest/);
-    assert.match(script, /\$shortcut\.Save\(\)/);
+  it("opens this user's installed app: its Apps entry first, then the per-user default, never an all-users copy", () => {
+    const lookup = script.slice(script.indexOf("$installed = $null"), script.indexOf("Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue\nif (-not $installed)"));
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntry "HKCU:"`) > 0, lookup);
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntry "HKCU:"`) < lookup.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`));
+    assert.doesNotMatch(lookup, /ProgramFiles|HKLM/);
+    assert.doesNotMatch(script, /Start-Process \$download(?! -ArgumentList "\/S")/);
+    assert.match(script, /if \(-not \$installed\) \{\n  throw "The installer finished, but Unvibe\.exe is not/);
   });
 
-  it("ends by saying where Unvibe lives", () => {
-    assert.match(script, /Unvibe is in your Start menu and tray\./);
+  it("finds Unvibe's Apps entry by the installer's GUID for app/package.json's appId, not by a display name", () => {
+    // electron-builder (NsisTarget): UUID v5 of the appId in namespace 50e065bc-3134-11e6-9bab-38c9862bdaf3.
+    const appId = JSON.parse(readFileSync(path.join(__dirname, "../../../app/package.json"), "utf8")).build.appId as string;
+    const ns = Buffer.from("50e065bc313411e69bab38c9862bdaf3", "hex");
+    const h = createHash("sha1").update(Buffer.concat([ns, Buffer.from(appId)])).digest().subarray(0, 16);
+    h[6] = (h[6] & 0x0f) | 0x50;
+    h[8] = (h[8] & 0x3f) | 0x80;
+    const hex = h.toString("hex");
+    const guid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    assert.equal(BETA_WINDOWS_APP_GUID, guid);
+    assert.ok(script.includes(`\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${guid}"`));
+    assert.doesNotMatch(script, /DisplayName -like/);
+  });
+
+  it("removes only the portable copy earlier versions of the script left in LOCALAPPDATA\\Unvibe", () => {
+    const removals = script.split("\n").filter((line) => /Remove-Item/.test(line) && /LOCALAPPDATA/.test(line));
+    assert.equal(removals.length, 1, removals.join("\n"));
+    assert.ok(script.includes(`foreach ($old in @("Unvibe.exe", "Unvibe.exe.download", "Unvibe.exe.old")) {`));
+    assert.doesNotMatch(removals[0], /-Recurse/);
+  });
+
+  it("ends by saying where Unvibe lives and how to remove it", () => {
+    assert.match(script, /Unvibe is installed for your Windows user: in your Start menu, on your desktop and in your tray\. To remove it, use Settings > Apps > Installed apps\./);
   });
 });
