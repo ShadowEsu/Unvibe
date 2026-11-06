@@ -202,7 +202,7 @@ html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
 .site .ad { padding-top: 24px; }
 .site .ad-first { margin-top: var(--lx-gap-sec); padding-top: var(--lx-gap-sec); }
 .lx-first h2 { font-size: 40px; }
-.lx-first__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 56px 0 0; padding: 0; list-style: none; }
+.lx-first__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 20px; margin: 56px 0 0; padding: 0; list-style: none; }
 .lx-first__step { min-width: 0; padding: 28px; border-radius: 22px; background: var(--lx-ground); box-shadow: inset 0 0 0 1px var(--lx-line); }
 .lx-first__step i { font: 500 13px/1 var(--font-mono), ui-monospace, monospace; font-style: normal; color: var(--lx-accent); }
 .lx-first__step p { margin-top: 14px; font-size: 15px; line-height: 1.55; color: var(--lx-ink-2); }
@@ -360,8 +360,9 @@ html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
 .site .lx-get .ninst__copy:active, .site .lx-truth__copy:active { transform: translateY(1px); }
 .site .lx-after__apps span { transition: none; }
 
-/* Design r08 SHOULD 1: on phones Try it's code wraps inside the editor (nothing runs past its right edge). */
-@media (max-width: 600px) { .site .try__code textarea { white-space: pre-wrap !important; overflow-wrap: anywhere; overflow-x: hidden; } }
+/* Design S-1 #225 SHOULD (replaces r08's wrap): on phones Try it's code keeps its lines and indentation, like the
+   code cards, and scrolls sideways inside the editor (nothing runs past its right edge). */
+@media (max-width: 600px) { .site .try__code textarea { white-space: pre !important; overflow-wrap: normal; overflow-x: auto; } }
 
 /* Design r09: on home the box's first-open steps are open, as plain text, under "Or download…" (the dialog screens
    stay on /download). The summary reads as a small heading, not a toggle. */
@@ -376,6 +377,8 @@ html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
 .at__ground--briefs picture { display: block; width: min(770px, 100%); }
 .at__ground--briefs img { display: block; width: 100%; max-height: none; }
 /* phones: four tabs plus Vibe's corner fit one row (Vibe sits at the stage's top right, ~44 px) */
+/* a held Briefs still (DemoTabs) keeps the phone capture's box, 380 × 444, until it loads */
+@media (max-width: 600px) { .at__ground--briefs img[data-held] { aspect-ratio: 380 / 444 !important; } }
 @media (max-width: 600px) { .at__ground--briefs { -webkit-mask-image: none; mask-image: none; } .at__ground--briefs img { max-width: 380px; } .site .at__bar { gap: 0; padding-right: 48px; } .site .at__tab { min-height: 34px; padding: 0 8px; font-size: 13px; } }
 
 /* The hero lede breaks after the shortcut on purpose (two sentences, two lines) at desktop widths, so its line count
@@ -385,9 +388,8 @@ html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
   .ah__side .lx-lede__after { display: block; }
 }
 
-/* Design (Council R10): on home the Mac box shows the real "cannot verify" dialog beside step 2, ~220 px wide;
-   the other screens stay on /download. */
-.site .lx-get:not(.lx-get--page) .lx-mac .ninst__steps li:nth-child(2) { overflow: hidden; }
-.site .lx-get:not(.lx-get--page) .lx-mac .ninst__steps li:nth-child(2) .ninst__shot { display: block; float: right; width: 220px; margin: 0 0 8px 16px; }
+/* Design (Council R10, S-1 #225 MUST 2): on home the Mac box shows the real "cannot verify" dialog under step 2's
+   text, ~220 px wide and left-aligned to it, with step 2 keeping its numeral (no overflow clip on the item, which
+   hid the outside marker); the other screens stay on /beta. */
+.site .lx-get:not(.lx-get--page) .lx-mac .ninst__steps li:nth-child(2) .ninst__shot { display: block; width: 220px; margin: 10px 0 4px; }
 .site .lx-get:not(.lx-get--page) .lx-mac .ninst__steps li:nth-child(2) .ninst__shot img { width: 100%; height: auto; margin-top: 0; }
-@media (max-width: 600px) { .site .lx-get:not(.lx-get--page) .lx-mac .ninst__steps li:nth-child(2) .ninst__shot { float: none; margin: 10px 0 0; } }

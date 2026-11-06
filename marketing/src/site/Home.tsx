@@ -64,6 +64,25 @@ const TABS = [
  */
 function DemoTabs({ device }: { device: VisitorDevice }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("explain");
+  // The hidden tabs' stills sit in the first view's layout (one shared cell), so Chrome fetched them before the first
+  // paint and raised them to High, which Lighthouse's simulated LCP waits for (#225: up to +1 s). They load once the
+  // page has loaded and the main thread is idle, or as soon as their tab is chosen.
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    let idle = 0;
+    let timer = 0;
+    const go = () => {
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(() => setWarm(true), { timeout: 2000 });
+      else timer = window.setTimeout(() => setWarm(true), 200);
+    };
+    if (document.readyState === "complete") go();
+    else window.addEventListener("load", go, { once: true });
+    return () => {
+      window.removeEventListener("load", go);
+      if (idle) window.cancelIdleCallback(idle);
+      window.clearTimeout(timer);
+    };
+  }, []);
   // WAI-ARIA tabs: one tab stop; arrows, Home and End move between tabs and select them.
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     const index = TABS.findIndex((t) => t.id === tab);
@@ -84,7 +103,14 @@ function DemoTabs({ device }: { device: VisitorDevice }) {
       <div className="at__cells">
         {TABS.map((t) => (
           <div key={t.id} role="tabpanel" id={`at-panel-${t.id}`} aria-labelledby={`at-tab-${t.id}`} className="at__cell" data-on={tab === t.id ? "" : undefined} {...(tab === t.id ? {} : INERT)}>
-            {"shot" in t ? (
+            {"shot" in t && !warm && tab !== t.id ? (
+              <figure className="at__still">
+                <div className={`at__ground${"phoneSrc" in t ? " at__ground--briefs" : ""}`}>
+                  {"phoneSrc" in t ? <picture><Img shot={t.shot} held /></picture> : <Img shot={t.shot} held />}
+                </div>
+                <figcaption><Cap>{t.caption}</Cap></figcaption>
+              </figure>
+            ) : "shot" in t ? (
               <figure className="at__still">
                 <div className={`at__ground${"phoneSrc" in t ? " at__ground--briefs" : ""}`}>
                   {"phoneSrc" in t ? (

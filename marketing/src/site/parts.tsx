@@ -123,10 +123,20 @@ export function VibeGuide({ mood, size, look = [0, 0], className = "" }: { mood:
   );
 }
 
-export function Img({ shot, eager, decorative, className }: { shot: Shot; eager?: boolean; decorative?: boolean; className?: string }) {
+/** A 1×1 transparent GIF: an inline placeholder, so a held image requests nothing. */
+const HELD_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+/**
+ * A real capture at its own size. `held` keeps the box (an explicit aspect-ratio, so the 1×1 placeholder lays out
+ * exactly as the capture will) but fetches nothing yet: for stills that are in the first view's layout but hidden,
+ * which `loading="lazy"` would still fetch before the first paint.
+ */
+export function Img({ shot, eager, decorative, held, className }: { shot: Shot; eager?: boolean; decorative?: boolean; held?: boolean; className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- fixed-size real captures
-    <img className={className} src={shot.src} width={shot.width} height={shot.height} alt={decorative ? "" : shot.alt} loading={eager ? undefined : "lazy"} decoding="async" />
+    <img className={className} src={held ? HELD_SRC : shot.src} width={shot.width} height={shot.height} alt={decorative ? "" : shot.alt}
+      loading={eager || held ? undefined : "lazy"} decoding="async" data-held={held ? "" : undefined}
+      style={held ? { aspectRatio: `${shot.width} / ${shot.height}` } : undefined} />
   );
 }
 
@@ -310,7 +320,7 @@ export function WorksBlock({ center }: { center?: boolean }) {
     <div className="lx-works" data-reveal>
       <SectionHead id="works-title" title={WORKS.h2} center={center} />
       <ul className="lx-chips" aria-label="Apps">
-        {WORKS.chips.map((chip, index) => <li key={chip} className="lx-chip" data-rise style={d(120 + index * 70)}>{chip}</li>)}
+        {WORKS.chips.map((chip, index) => <li key={chip} className={WORKS.macOnly.includes(chip) ? "lx-chip lx-mac" : "lx-chip"} data-rise style={d(120 + index * 70)}>{chip}</li>)}
       </ul>
     </div>
   );
@@ -367,7 +377,8 @@ export function GetUnvibe({ visitor, page }: { visitor: Visitor; page?: boolean 
           <PhoneEmail surface="phone_install" />
           <DownloadButtons surface={page ? "beta" : "home_install"} page={page} />
         </div>
-        <p className="lx-get__file" data-rise style={d(180)}><span className="lx-mac">Free · .dmg · Apple silicon and Intel</span><span className="lx-win">Free · .exe · Windows, 64-bit</span></p>
+        {/* the file line names the button above it; on /beta a Mac has no button (the Terminal box leads), so no line */}
+        <p className="lx-get__file" data-rise style={d(180)}>{page ? null : <span className="lx-mac">Free · .dmg · Apple silicon and Intel</span>}<span className="lx-win">Free · .exe · Windows, 64-bit</span></p>
       </div>
       <div className="lx-get__box" data-rise="image" style={d(200)}>
         {(["mac", "windows"] as const).map((os) => (
@@ -534,7 +545,7 @@ export function FirstOpenBand() {
         <div>
           <h2 data-rise="mask">Select code in any app</h2>
           <p data-rise="fade">{SHORTCUTS.mac.anywhere} on a Mac, {SHORTCUTS.windows.anywhere} on Windows, in any app.</p>
-          <p className="lx-after__apps" data-rise="fade">{["Cursor", "VS Code", "Xcode", "Terminal"].map((app) => <span key={app}>{app}</span>)}</p>
+          <p className="lx-after__apps" data-rise="fade">{WORKS.chips.map((app) => <span key={app} className={WORKS.macOnly.includes(app) ? "lx-mac" : undefined}>{app}</span>)}</p>
         </div>
         <div>
           <h2 data-rise="mask">Updating?</h2>

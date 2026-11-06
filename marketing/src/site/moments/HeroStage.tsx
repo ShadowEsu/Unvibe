@@ -55,7 +55,9 @@ export function HeroStage({ device, caption }: { device: VisitorDevice; caption:
 
   return (
     <div className="mx-hs" ref={root} style={{ "--mx-hs-rest": `url(${SHOTS.beginner.src})` } as CSSProperties}>
-      <link rel="preload" as="image" href={SHOTS.beginner.src} fetchPriority="high" />
+      {/* Low priority, like any image: Lighthouse's simulated LCP waits for every image fetched above Low before the
+          first paint, and fetchPriority="high" here cost #225 about 400 ms (3426 → 3009 ms with it blocked). */}
+      <link rel="preload" as="image" href={SHOTS.beginner.src} />
       <div className="mx-hs__stage sx-stage-hero" style={{ "--stage-d": "200ms" } as CSSProperties}>
         <span className="mx-hs__light" aria-hidden="true" />
         {/* Vibe at the stage (the site's own Vibe, blinking), watching the selection being made: over its top edge,

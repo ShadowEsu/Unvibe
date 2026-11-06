@@ -58,7 +58,8 @@ export const SHOTS = {
 /** "Real screen, sample code · Unvibe 0.1.xx" for each capture's own version (no scene mixes two versions). */
 export const CAPTION = { v0149: SHOT_CAPTION, recording: HERO_RECORDING.caption, version: CAPTURE_VERSION } as const;
 
-export const GALLERY_H2 = "Everything stays beside your code.";
+/** Security S-2 #225 SHOULD-R2: the old "Everything stays beside your code." read as a data claim above Keys. */
+export const GALLERY_H2 = "It all happens beside your code.";
 
 export const TRY = { h2: "Try it here.", lede: "Paste code. No download." } as const;
 
@@ -74,6 +75,8 @@ export const KEYS = {
 export const WORKS = {
   h2: "Works where you read code.",
   chips: ["Cursor", "VS Code", "Xcode", "Terminal"] as const,
+  /** Security S-2 #225 NIT: Xcode is Mac-only, so html.os-win hides its chip (no unverified Windows editor added). */
+  macOnly: ["Xcode"] as readonly string[],
 } as const;
 
 export const PRICING = { h2: "Free for Mac and Windows.", closedLine: "Payments open soon. Nothing is billed today.", link: { label: "Pricing", href: "/pricing" } } as const;
