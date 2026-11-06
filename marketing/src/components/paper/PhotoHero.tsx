@@ -188,7 +188,7 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
     let idle = 0;
     let timer = 0;
     const mount = () => {
-      if ("requestIdleCallback" in window) idle = window.requestIdleCallback(() => setMoving(true), { timeout: 2000 });
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(() => setMoving(true), { timeout: 2000 });
       else timer = window.setTimeout(() => setMoving(true), 200);
     };
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
