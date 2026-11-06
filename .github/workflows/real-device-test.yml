@@ -72,7 +72,8 @@ jobs:
               -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
               --data "{\"installId\":\"$id\"}") || { echo "::error::pre-flag $id: curl failed; nothing was launched"; exit 1; }
             code=$(printf '%s' "$answer" | tail -n 1)
-            matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2)
+            # || true: the runner's bash has -e -o pipefail, and a body without "matched" (a 401) must still reach the error below.
+            matched=$(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*' | cut -d: -f2) || true
             echo "QA pre-flag $id: $code matched=${matched:-none}"
             if [ "$code" != 200 ] || { [ "$matched" != true ] && [ "$matched" != false ]; }; then
               echo "::error::pre-flag $id was not stored; nothing was launched"; exit 1
