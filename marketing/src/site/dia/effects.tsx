@@ -58,26 +58,6 @@ function paint(chars: HTMLElement[], p: number, spread: number, pal: Palette) {
 }
 function finish(chars: HTMLElement[], pal: Palette) { paint(chars, 1, 0.35, pal); }
 
-/** The hero H1's load reveal (Halden: 1.25 s, spread .35), from a VISIBLE ghost: the line is painted at first paint
- * (it's the LCP), so opacity never starts at 0 and the blur stays small (Design gate). */
-export function useLoadReveal(ref: React.RefObject<HTMLElement>, pal: Palette) {
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return undefined;
-    const chars = Array.from(root.querySelectorAll<HTMLElement>(".d-ch"));
-    if (reduced()) { finish(chars, pal); return undefined; }
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const p = clamp((now - t0) / 1250);
-      paint(chars, p, 0.35, pal);
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [ref, pal]);
-}
-
 /* ───────────── bowl glow (Halden) ───────────── */
 
 const KEYS = { q: [0, 0.03, 0.08, 0.18, 0.4, 0.66, 0.87, 1.15, 1.43, 1.8], tip: [0.3, 0.45, 0.65, 0.8, 0.95, 1.05, 1.05, 1.1, 1.3, 2.4], half: [0.34, 0.38, 0.38, 0.38, 0.38, 0.46, 0.66, 0.9, 1.6, 3], soft: [0.22, 0.26, 0.22, 0.22, 0.19, 0.16, 0.13, 0.1, 0.1, 0.1] };
@@ -232,7 +212,8 @@ export function DarkSplit({ labelledBy, heading, row, media }: { labelledBy: str
 
 /* ───────────── count-up stats (video hero) ───────────── */
 
-export function Stats({ items }: { items: ReadonlyArray<{ value: number; label: string; icon: ReactNode }> }) {
+/** `value` counts up from 0; a `text` value (e.g. "No") shows as is and never counts. */
+export function Stats({ items }: { items: ReadonlyArray<{ value: number | string; label: ReactNode; icon: ReactNode }> }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = root.current;
@@ -263,9 +244,9 @@ export function Stats({ items }: { items: ReadonlyArray<{ value: number; label: 
   return (
     <div ref={root} className="d-stats">
       {items.map((item, i) => (
-        <div key={item.label} className="d-stat" data-d-enter="" style={{ "--d": `${500 + i * 80}ms` } as React.CSSProperties}>
+        <div key={i} className="d-stat" data-d-enter="" style={{ "--d": `${500 + i * 80}ms` } as React.CSSProperties}>
           <span className="d-stat__icon" aria-hidden="true">{item.icon}</span>
-          <span className="d-stat__value"><span data-count={item.value}>{item.value}</span></span>
+          <span className="d-stat__value">{typeof item.value === "number" ? <span data-count={item.value}>{item.value}</span> : item.value}</span>
           <span className="d-stat__label">{item.label}</span>
         </div>
       ))}
@@ -281,5 +262,3 @@ export function BtnDot() {
     </span>
   );
 }
-
-export const HERO_PAL: Palette = { ghost: hex("#e9e2ff"), accent: hex("#d6c4ff"), final: hex("#ffffff"), hi: hex("#ffffff"), minOpacity: 0.45, maxBlur: 3 };

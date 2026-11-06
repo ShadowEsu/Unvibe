@@ -30,13 +30,13 @@ export const D_DOWNLOAD = { mac: "/beta", windows: INSTALL_COPY.windows.fileHref
 export const D_STATS = [
   { value: 4, label: "depths, New to Advanced" },
   { value: 2, label: "platforms, Mac and Windows" },
-  { value: 1, label: "shortcut" },
-  { value: 0, label: "API keys needed" },
+  { value: 1, label: { mac: "shortcut, Control+U", windows: "shortcut, Ctrl+Alt+U" } },
+  { value: "No", label: "API key needed" },
 ] as const;
 
 export const D_STATEMENT = {
   label: "(The idea)",
-  lines: ["Select code in any app.", "Press one shortcut.", "Vibe explains it beside your editor,", "at the depth you choose."],
+  lines: ["Select code in any app.", "Press one shortcut.", "Unvibe explains it beside your editor,", "at the depth you choose."],
   em: "the depth you choose.",
 } as const;
 
@@ -61,15 +61,19 @@ export const D_BRIEF = {
   caption: "Real screen, sample repo · Unvibe 0.1.49",
 } as const;
 
-/** Four cards from real 0.1.49 captures (Design's map, section 4). */
+/**
+ * Four cards (Design's map, section 4; plan mock 06). Each capture (704 × 905, real 0.1.49) is cropped in CSS to the
+ * part its card names (`crop`, in capture pixels); no new image files. Card 04 is the editors as chips, words from
+ * its own body (the same OS rule: Xcode on Mac only).
+ */
 export const D_CARDS = {
   label: "(In the panel)",
   h2: { before: "Made for", em: "learning", after: " the code you ship." } as Title,
   items: [
-    { n: "(01)", title: "Pick your depth", body: "Beginner gets the plain idea. Advanced gets the mechanism.", shot: { src: "/unvibe/real/0149/panel-advanced.webp", alt: "Unvibe's panel explaining the debounce sample at Advanced depth." } },
-    { n: "(02)", title: "Ask a follow-up", body: "Why does this exist? What breaks if I remove it?", shot: { src: "/unvibe/real/0149/panel-follow-up.webp", alt: "Unvibe answering a follow-up question about the debounce sample." } },
-    { n: "(03)", title: "Test me", body: "Test me asks up to 3 questions about the code you just read.", shot: { src: "/unvibe/real/0149/panel-test-me.webp", alt: "Unvibe's Test me question about the debounce sample, with its answer choices." } },
-    { n: "(04)", title: "Works beside any editor", body: { mac: "Cursor, VS Code, Xcode, Terminal: wherever you read code.", windows: "Cursor, VS Code, Terminal: wherever you read code." }, shot: { src: "/unvibe/real/0149/panel-beginner.webp", alt: "Unvibe's panel explaining the debounce sample at Beginner depth." } },
+    { n: "(01)", title: "Pick your depth", body: "Beginner gets the plain idea. Advanced gets the mechanism.", shot: { src: "/unvibe/real/0149/panel-advanced.webp", alt: "Unvibe's panel at Advanced depth: the depth row and the selected debounce code.", crop: { x: 72, y: 128, w: 632, h: 300 } } },
+    { n: "(02)", title: "Ask a follow-up", body: "Why does this exist? What breaks if I remove it?", shot: { src: "/unvibe/real/0149/panel-follow-up.webp", alt: "Unvibe's panel: the answer's last lines, the Understand, Explain differently and Test me buttons, and the follow-up box.", crop: { x: 72, y: 648, w: 632, h: 257 } } },
+    { n: "(03)", title: "Test me", body: "Test me asks up to 3 questions about the code you just read.", shot: { src: "/unvibe/real/0149/panel-test-me.webp", alt: "Unvibe's Test me question about the debounce sample, with its answer choices.", crop: { x: 404, y: 128, w: 300, h: 456 } } },
+    { n: "(04)", title: "Works beside any editor", body: { mac: "Cursor, VS Code, Xcode, Terminal: wherever you read code.", windows: "Cursor, VS Code, Terminal: wherever you read code." }, editors: [{ name: "Cursor" }, { name: "VS Code" }, { name: "Xcode", macOnly: true }, { name: "Terminal" }] },
   ],
   caption: "Real screens, sample code · Unvibe 0.1.49",
 } as const;
@@ -93,6 +97,18 @@ export const D_PRIVACY = {
 } as const;
 
 export const D_CLOSE = { h2: { before: "Ready to understand your", em: "code", after: "?" } as Title } as const;
+
+/** /download (plan mock 11; Security 18:51Z GO, MUST-D12 OS-aware shortcut, SHOULD: "allow access" Mac only). */
+export const D_GET = {
+  h1: "Get Unvibe",
+  sub: "Free for Mac and Windows. Three steps.",
+  steps: [
+    "Download for your computer",
+    { mac: "Open it and allow access", windows: "Open it" },
+    { mac: "Select code, press Control+U", windows: "Select code, press Ctrl+Alt+U" },
+  ],
+  help: "Install help",
+} as const;
 
 export const D_FOOT = [
   { h: "Product", links: [["Download", "/beta"], ["Pricing", "/lab/d/pricing"], ["Changelog", "/releases"], ["Explain code", "/explain"], ["Use cases", "/use-cases"]] },

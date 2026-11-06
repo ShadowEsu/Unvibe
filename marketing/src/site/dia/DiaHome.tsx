@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { D_BRIEF, D_CARDS, D_CLOSE, D_HERO, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
 import { DiaDock, DiaFoot, DiaNav, DiaRoot, T } from "./DiaChrome";
-import { BtnDot, DarkSplit, HERO_PAL, Letters, Statement, Stats, useLoadReveal } from "./effects";
+import { BtnDot, DarkSplit, Letters, Statement, Stats } from "./effects";
 import { UnvibeDemo } from "./UnvibeDemo";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
@@ -33,45 +33,64 @@ function DemoWindow({ step, rise }: { step?: 0 | 1 | 2; rise?: boolean }) {
   );
 }
 
+/** The H1 is plain text, visible in the first frame (Design gate 1, MUST 1); it only rises (Motion's hero rise). */
 function Hero() {
-  const h1 = useRef<HTMLHeadingElement>(null);
-  useLoadReveal(h1, HERO_PAL);
   return (
     <section className="d-hero" aria-labelledby="d-hero-h">
       <div className="d-hero__bg" data-d-hero-bg="" aria-hidden="true" />
-      <h1 id="d-hero-h" ref={h1} className="d-hero__h1 d-serif" data-d-hero-rise="h1"><Letters parts={[{ text: D_HERO.h1 }]} /></h1>
+      <h1 id="d-hero-h" className="d-hero__h1 d-serif" data-d-hero-rise="h1">{D_HERO.h1}</h1>
       <p className="d-hero__mark d-serif" aria-hidden="true" data-d-hero-rise="wordmark">{D_HERO.wordmark}</p>
       <DemoWindow rise />
     </section>
   );
 }
 
+const stepTitle = (t: string | { mac: string; windows: string }) => (typeof t === "string" ? t : <><span className="lx-mac">{t.mac}</span><span className="lx-win">{t.windows}</span></>);
+
+/**
+ * Steps (Design gate 1, MUST 3; plan mock 04): at ≥ 821 px the list and ONE demo window are pinned together inside a
+ * 300vh track; three invisible markers ([data-d-shot], one viewport tall each) are Motion's scroll triggers, so the
+ * step whose marker crosses the viewport's middle is active (DiaMotion sets data-on) and the window jumps to that
+ * step's segment of the loop. The window is never blank. At ≤ 820 px each step is followed by its own window.
+ */
 function Steps() {
+  const root = useRef<HTMLElement>(null);
+  const [active, setActive] = useState<0 | 1 | 2>(0);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return undefined;
+    const steps = Array.from(el.querySelectorAll<HTMLElement>(".d-steps__list [data-d-step]"));
+    const mo = new MutationObserver(() => {
+      const on = steps.findIndex((s) => s.hasAttribute("data-on"));
+      if (on >= 0) setActive(on as 0 | 1 | 2);
+    });
+    for (const s of steps) mo.observe(s, { attributes: true, attributeFilter: ["data-on"] });
+    return () => mo.disconnect();
+  }, []);
   return (
-    <section className="d-steps" aria-labelledby="d-steps-h" data-d-steps="" data-d-arch="">
+    <section ref={root} className="d-steps" aria-labelledby="d-steps-h" data-d-steps="" data-d-arch="">
       <p className="d-label d-mono" data-d-enter="">{D_STEPS.label}</p>
-      <h2 id="d-steps-h" className="d-h2 d-serif" data-d-enter="" style={d(80)}><T t={D_STEPS.h2} /></h2>
-      <div className="d-steps__grid">
-        <ol className="d-steps__list">
-          {D_STEPS.items.map((item, i) => (
-            <li key={item.n}>
-              <a href={`#d-shot-${i}`} className="d-step" data-d-step={i}>
-                <span className="d-step__n d-mono">{item.n}</span>
-                <span className="d-step__t d-serif">
-                  {typeof item.title === "string" ? item.title : <><span className="lx-mac">{item.title.mac}</span><span className="lx-win">{item.title.windows}</span></>}
-                </span>
-                <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
-              </a>
-            </li>
-          ))}
-        </ol>
-        <div className="d-steps__shots">
-          {D_STEPS.items.map((item, i) => (
-            <div key={item.n} id={`d-shot-${i}`} className="d-steps__shot" data-d-shot={i}>
-              <p className="d-steps__mobile d-serif" aria-hidden="true">{item.n} {typeof item.title === "string" ? item.title : item.title.mac}</p>
-              <DemoWindow step={i as 0 | 1 | 2} />
-            </div>
-          ))}
+      <h2 id="d-steps-h" className="d-h2 d-serif" data-d-enter="" data-d-words="" style={d(80)}><T t={D_STEPS.h2} /></h2>
+      <div className="d-steps__track">
+        {D_STEPS.items.map((item, i) => <div key={item.n} id={`d-shot-${i}`} className="d-steps__mark" data-d-shot={i} aria-hidden="true" />)}
+        <div className="d-steps__pin">
+          <ol className="d-steps__list">
+            {D_STEPS.items.map((item, i) => (
+              <li key={item.n}>
+                <a href={`#d-shot-${i}`} className="d-step" data-d-step={i}>
+                  <span className="d-step__n d-mono">{item.n}</span>
+                  <span className="d-step__t d-serif"><Os v={item.title} /></span>
+                  <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
+                </a>
+                <div className="d-steps__mobile d-steps__card"><DemoWindow step={i as 0 | 1 | 2} /></div>
+              </li>
+            ))}
+          </ol>
+          <div className="d-steps__stage" data-d-stage={active}>
+            {/* The panel's own status chip (Awwwards/Giga, plan §6): real panel UI, not a new string */}
+            <p className="d-steps__status" aria-hidden="true"><span className="d-steps__dot" />{active === 1 ? "explaining" : "ready to learn"}</p>
+            <div className="d-steps__card"><DemoWindow step={active} /></div>
+          </div>
         </div>
       </div>
     </section>
@@ -90,7 +109,7 @@ function Brief() {
       </div>
       <div className="d-brief__in">
         <p className="d-label d-mono d-brief__kick" data-d-enter="">{D_BRIEF.label} {D_BRIEF.kicker}</p>
-        <h2 id="d-brief-h" className="d-h2 d-serif d-brief__h" data-d-enter="" style={d(80)}><T t={D_BRIEF.h2} /></h2>
+        <h2 id="d-brief-h" className="d-h2 d-serif d-brief__h" data-d-enter="" data-d-words="" style={d(80)}><T t={D_BRIEF.h2} /></h2>
         <figure className="d-brief__card" data-d-enter="" style={d(160)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
           <img src={D_BRIEF.shot.src} width={D_BRIEF.shot.width} height={D_BRIEF.shot.height} alt={D_BRIEF.shot.alt} loading="lazy" decoding="async" />
@@ -103,24 +122,45 @@ function Brief() {
   );
 }
 
+/** The capture, cropped in CSS to `crop` (capture pixels of a 704 × 905 image) and scaled to the box's width. */
+function Crop({ src, alt, crop }: { src: string; alt: string; crop: { x: number; y: number; w: number; h: number } }) {
+  const style = { "--cx": crop.x, "--cy": crop.y, "--cw": crop.w, aspectRatio: `${crop.w} / ${crop.h}` } as CSSProperties;
+  return (
+    <div className="d-crop" style={style}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a real capture, cropped to the part its card names */}
+      <img src={src} width={704} height={905} alt={alt} loading="lazy" decoding="async" />
+    </div>
+  );
+}
+
 function Cards() {
   return (
     <section className="d-cards" aria-labelledby="d-cards-h" data-d-arch="">
       <p className="d-label d-mono" data-d-enter="">{D_CARDS.label}</p>
-      <h2 id="d-cards-h" className="d-h2 d-serif" data-d-enter="" style={d(80)}><T t={D_CARDS.h2} /></h2>
+      <h2 id="d-cards-h" className="d-h2 d-serif" data-d-enter="" data-d-words="" style={d(80)}><T t={D_CARDS.h2} /></h2>
       <div className="d-cards__grid">
         {D_CARDS.items.map((card, i) => (
-          <article key={card.n} className="d-card" data-d-enter="" style={d(i * 80)}>
-            <span className="d-pill d-mono">{card.n} {card.title}</span>
+          <article key={card.n} className="d-card" data-d-enter="" style={d(i * 50)}>
+            <span className="d-card__x" aria-hidden="true" />
+            <p className="d-card__k d-mono">{card.n} {card.title}</p>
             <p className="d-card__b"><Os v={card.body} /></p>
             <div className="d-card__shot">
-              {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-              <img src={card.shot.src} width={622} height={800} alt={card.shot.alt} loading="lazy" decoding="async" />
+              {"shot" in card ? <Crop {...card.shot} /> : (
+                <div className="d-card__editors">
+                  <ul className="d-chips">
+                    {card.editors.map((e) => <li key={e.name} className={"macOnly" in e ? "d-chip lx-mac" : "d-chip"}>{e.name}</li>)}
+                  </ul>
+                  <p className="d-keys" aria-label="The shortcut">
+                    <span className="lx-mac"><kbd>Control</kbd><kbd>U</kbd></span>
+                    <span className="lx-win"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>U</kbd></span>
+                  </p>
+                </div>
+              )}
             </div>
           </article>
         ))}
       </div>
-      <p className="d-cap d-mono">{D_CARDS.caption}</p>
+      <p className="d-cap">{D_CARDS.caption}</p>
     </section>
   );
 }
@@ -153,7 +193,7 @@ function Privacy() {
   return (
     <section className="d-privacy" aria-labelledby="d-privacy-h" data-d-arch="">
       <p className="d-label d-mono" data-d-enter="">{D_PRIVACY.label}</p>
-      <h2 id="d-privacy-h" className="d-h2 d-serif" data-d-enter="" style={d(80)}><T t={D_PRIVACY.h2} /></h2>
+      <h2 id="d-privacy-h" className="d-h2 d-serif" data-d-enter="" data-d-words="" style={d(80)}><T t={D_PRIVACY.h2} /></h2>
       {D_PRIVACY.lines.map((line, i) => <p key={line} className="d-privacy__p" data-d-enter="" style={d(160 + i * 80)}>{line}</p>)}
       <Link className="d-pill-link d-btn" href={D_PRIVACY.more.href} data-d-enter="" style={d(320)}>{D_PRIVACY.more.label}<BtnDot /></Link>
     </section>
@@ -165,7 +205,7 @@ function Close() {
     <section className="d-close" aria-labelledby="d-close-h" data-d-arch="">
       {/* eslint-disable-next-line @next/next/no-img-element -- our own mark */}
       <img className="d-close__ghost" src="/brand/vibe.svg" width={72} height={72} alt="" data-d-enter="" />
-      <h2 id="d-close-h" className="d-h2 d-serif" data-d-enter="" style={d(80)}><T t={D_CLOSE.h2} /></h2>
+      <h2 id="d-close-h" className="d-h2 d-serif" data-d-enter="" data-d-words="" style={d(80)}><T t={D_CLOSE.h2} /></h2>
     </section>
   );
 }
@@ -178,7 +218,7 @@ export function DiaHome() {
         <div data-d-dock-scope="">
           <Hero />
           <section className="d-statsec" aria-label="Unvibe in numbers" data-d-arch="">
-            <Stats items={D_STATS.map((s, i) => ({ ...s, icon: STAT_ICONS[i] }))} />
+            <Stats items={D_STATS.map((s, i) => ({ value: s.value, label: <Os v={s.label} />, icon: STAT_ICONS[i] }))} />
           </section>
           <Statement labelledBy="d-stmt-h">
             <p className="d-label d-mono">{D_STATEMENT.label}</p>

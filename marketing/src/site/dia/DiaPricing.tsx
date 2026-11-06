@@ -19,9 +19,9 @@ export function DiaPricing() {
   const h1 = <>{COPY.heading.lead}<em>{COPY.heading.emphasis}</em>{COPY.heading.tail}</>;
   return (
     <DiaRoot className="dp-page">
-      <div className="dp__bg" data-d-bgswap="" aria-hidden="true">
-        <span className="dp__credit">{IRISES_CREDIT}</span>
-      </div>
+      <div className="dp__bg" data-d-bgswap="" aria-hidden="true" />
+      {/* The credit fades with the painting (its own [data-d-bgswap]) but sits above the cards, so nothing covers it */}
+      <span className="dp__credit" data-d-bgswap="" aria-hidden="true">{IRISES_CREDIT}</span>
       <DiaNav active="Pricing" />
       <main id="main" tabIndex={-1} className="dp">
         <header className="dp__head" data-d-enter="">

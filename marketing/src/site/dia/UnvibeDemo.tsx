@@ -29,6 +29,8 @@ const CODE = [
 ];
 const CONTEXT_BEFORE = ["// search.js: run the search once typing stops", ""];
 const CONTEXT_AFTER = ["", "const search = debounce(runSearch, 300);", "input.addEventListener(\"input\", (e) => search(e.target.value));"];
+/** The window's file sidebar (Design mock 01): sample project, sample names. */
+const FILES = ["search.js", "debounce.js", "totals.js", "README.md"];
 
 /** Beginner answer: Design round-06 app.html (Security-vetted). `code` words are inline code. */
 const BEGINNER: ReadonlyArray<ReadonlyArray<string>> = [
@@ -42,6 +44,8 @@ const ADVANCED: ReadonlyArray<ReadonlyArray<string>> = [
   ["That", "restart", "is", "what", "makes", "this", "a", "debounce:", "`fn`", "runs", "only", "after", "`wait`", "ms", "pass", "with", "no", "further", "calls."],
 ];
 const DEPTHS = ["New", "Beginner", "Intermediate", "Advanced"] as const;
+/** The 0.1.49 panel's icon rail, its own labels (Explain is the open view). */
+const RAIL = [{ label: "Explain", glyph: "‹›" }, { label: "Depth", glyph: "≡" }, { label: "Quiz", glyph: "?" }, { label: "Ask", glyph: "↗" }, { label: "Why", glyph: "!" }, { label: "Teach", glyph: "◇" }] as const;
 const QUIZ = {
   kicker: "Test me",
   q: ["Calls arrive 50 ms apart and ", "wait", " is 300 ms. When does ", "fn", " run?"],
@@ -154,10 +158,14 @@ export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
   const keyset = (keys: string[], os: string) => <span className={`ud-keys__set ${os}`}>{keys.map((k) => <span key={k} className="ud-key">{k}</span>)}</span>;
   const all = [...CONTEXT_BEFORE, ...CODE, ...CONTEXT_AFTER];
   return (
-    <div className="ud" ref={root} aria-hidden="true">
+    <div className="ud" ref={root} aria-hidden="true" data-ud-step={step ?? "loop"}>
       <div className="ud-stage">
         <div className="ud-editor">
-          <div className="ud-tabs"><span className="ud-tab">debounce.js</span></div>
+          <div className="ud-tabs"><span className="ud-dots"><i /><i /><i /></span><span className="ud-tab">debounce.js</span></div>
+          <div className="ud-side">
+            <span className="ud-side__p">sample-app</span>
+            {FILES.map((f) => <span key={f} className={f === "debounce.js" ? "ud-side__f ud-side__f--on" : "ud-side__f"}>{f}</span>)}
+          </div>
           <pre className="ud-code">
             {all.map((line, i) => {
               const ci = i - CONTEXT_BEFORE.length;
@@ -172,51 +180,60 @@ export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
           <div className="ud-keys">{keyset(["Control", "U"], "lx-mac")}{keyset(["Ctrl", "Alt", "U"], "lx-win")}</div>
         </div>
 
+        {/* The real 0.1.49 panel's layout (public/unvibe/real/0149/*): header, icon rail, Review tab, depth chips,
+            the selected-code card, the answer, the three buttons + "Saved on this Mac", the follow-up box. */}
         <div className="ud-panel">
           <div className="ud-head">
             {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our mark */}
-            <img className="ud-vibe" src="/brand/vibe.svg" width={30} height={30} alt="" />
+            <img className="ud-vibe" src="/brand/vibe.svg" width={28} height={28} alt="" />
             <div className="ud-meta"><div className="ud-t">Unvibe</div><div className="ud-s">7 lines · javascript · from Cursor</div></div>
             <span className="ud-statusdot" /><span className="ud-status">explaining</span>
+            <span className="ud-icon ud-icon--wide">Saved</span>
             <span className="ud-icon">✕</span>
           </div>
-          <div className="ud-bar">
-            <span className="ud-depth"><span className="ud-depth__lbl"><span className="ud-depth__b">Beginner</span><span className="ud-depth__a">Advanced</span></span> <small>▾</small></span>
-            <span className="ud-saved">Saved on this Mac</span>
-            <span className="ud-menu">
-              {DEPTHS.map((d) => <span key={d} className={d === "Advanced" ? "ud-menu__i ud-menu__i--adv" : d === "Beginner" ? "ud-menu__i ud-menu__i--cur" : "ud-menu__i"}>{d}</span>)}
-              <span className="ud-menu__i ud-menu__i--pro">Expert <b>Pro</b></span>
-            </span>
-          </div>
-          <div className="ud-body">
-            <div className="ud-codeblock">
-              {CODE.slice(0, 3).map((l) => <span key={l} className="ud-cl"><span className="ud-csel">{l}</span></span>)}
-              <span className="ud-more"><span>Show all 7 lines</span><span>javascript</span></span>
+          <div className="ud-main">
+            <div className="ud-rail">
+              {RAIL.map((r, i) => <span key={r.label} className={i === 0 ? "ud-rail__i ud-rail__i--on" : "ud-rail__i"}><span className="ud-rail__g">{r.glyph}</span>{r.label}</span>)}
             </div>
-            <div className="ud-answers">
-              <Words paras={BEGINNER} group="b" />
-              <Words paras={ADVANCED} group="a" />
-            </div>
-            <div className="ud-quiz">
-              <div className="ud-quiz__k">{QUIZ.kicker}</div>
-              <div className="ud-quiz__q">{QUIZ.q.map((part, i) => (i % 2 ? <code key={i}>{part}</code> : <span key={i}>{part}</span>))}</div>
-              {QUIZ.opts.map((o, i) => (
-                <div key={o} className={i === QUIZ.right ? "ud-opt ud-opt--right" : "ud-opt"}><span className="ud-opt__l"><span className="ud-opt__x">{"ABCD"[i]}</span><span className="ud-opt__tick">✓</span></span>{o}</div>
-              ))}
-              <div className="ud-verdict">
-                {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our mark */}
-                <img className="ud-vibe2" src="/brand/vibe.svg" width={40} height={40} alt="" />
-                <div className="ud-bubble"><b>Vibe</b>{QUIZ.verdict}</div>
+            <div className="ud-col">
+              <div className="ud-tabrow"><span className="ud-rtab">Review <small>✕</small></span><span className="ud-rtab ud-rtab--add">+</span></div>
+              <div className="ud-bar">
+                <span className="ud-bar__l">Depth</span>
+                {DEPTHS.map((d) => <span key={d} className={`ud-chip ud-chip--${d.toLowerCase()}`}>{d}</span>)}
+                <span className="ud-chip">Expert <b>Pro</b></span>
+              </div>
+              <div className="ud-body">
+                <div className="ud-codeblock">
+                  <span className="ud-more"><span>Selected code</span><span>javascript</span></span>
+                  {CODE.slice(0, 3).map((l) => <span key={l} className="ud-cl">{l}</span>)}
+                </div>
+                <div className="ud-answers">
+                  <Words paras={BEGINNER} group="b" />
+                  <Words paras={ADVANCED} group="a" />
+                </div>
+                <div className="ud-quiz">
+                  <div className="ud-quiz__k">{QUIZ.kicker}</div>
+                  <div className="ud-quiz__q">{QUIZ.q.map((part, i) => (i % 2 ? <code key={i}>{part}</code> : <span key={i}>{part}</span>))}</div>
+                  {QUIZ.opts.map((o, i) => (
+                    <div key={o} className={i === QUIZ.right ? "ud-opt ud-opt--right" : "ud-opt"}><span className="ud-opt__l"><span className="ud-opt__x">{"ABCD"[i]}</span><span className="ud-opt__tick">✓</span></span>{o}</div>
+                  ))}
+                  <div className="ud-verdict">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our mark */}
+                    <img className="ud-vibe2" src="/brand/vibe.svg" width={40} height={40} alt="" />
+                    <div className="ud-bubble"><b>Vibe</b>{QUIZ.verdict}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="ud-foot">
+                <div className="ud-actions">
+                  <span className="ud-btn ud-btn--primary ud-got">Understand ✓</span>
+                  <span className="ud-btn">Explain differently</span>
+                  <span className="ud-btn ud-btn--test ud-test">Test me</span>
+                  <span className="ud-saved">Saved on this Mac</span>
+                </div>
+                <div className="ud-ask">Why does this exist? What breaks if I remove it?<span className="ud-send">↑</span></div>
               </div>
             </div>
-          </div>
-          <div className="ud-foot">
-            <div className="ud-actions">
-              <span className="ud-btn ud-btn--primary ud-got">Understand ✓</span>
-              <span className="ud-btn">Explain differently</span>
-              <span className="ud-btn ud-test">Test me</span>
-            </div>
-            <div className="ud-ask">Why does this exist? What breaks if I remove it?<span className="ud-send">↑</span></div>
           </div>
         </div>
       </div>
