@@ -12,7 +12,8 @@ param([string]$Kind, [string]$Shell, [string]$Out)
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force $Out | Out-Null
 # Writes to the report and the job log only: a Note inside a function must not become part of its return value.
-function Note($s) { Add-Content -Path "$Out\report.txt" -Value $s -Encoding utf8; Write-Host $s }
+# AppendAllText, not Add-Content: Add-Content's -Encoding binds only once the path resolves, and once didn't (run 42195820120).
+function Note($s) { [IO.File]::AppendAllText("$Out\report.txt", "$s`r`n", (New-Object Text.UTF8Encoding $false)); Write-Host $s }
 function Verdict($ok, $what) { Note "$(if ($ok) { 'PASS' } else { 'FAIL' })  $what" }
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $shotN = 0
@@ -130,13 +131,15 @@ State 'clean runner'
 # with the same arguments. Padded past the script's 1 MB size check; every start is logged.
 $starts = "$serve\stub-starts.txt"
 function Stub($mode) {
+  # Only the tamper stand-in gets the line: a constant comparison is "unreachable code", which Add-Type treats as an error.
+  $tamperLine = if ($mode -eq 'tamper') { 'Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 3 127.0.0.1 >nul & echo tampered>>\"" + self + "\"") { CreateNoWindow = true, UseShellExecute = false });' } else { '' }
   $src = @"
 using System; using System.IO; using System.Diagnostics;
 class P { static int Main(string[] a) {
   string self = Process.GetCurrentProcess().MainModule.FileName;
   File.AppendAllText(@"$starts", "start " + DateTime.Now.ToString("HH:mm:ss.fff") + " args " + string.Join(" ", a) + " from " + self + "\r\n");
   if (File.ReadAllLines(@"$starts").Length == 1) {
-    if ("$mode" == "tamper") Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 3 127.0.0.1 >nul & echo tampered>>\"" + self + "\"") { CreateNoWindow = true, UseShellExecute = false });
+    $tamperLine
     return -1073741819;
   }
   Process p = Process.Start(new ProcessStartInfo(@"$rcSetup", string.Join(" ", a)) { UseShellExecute = false });
@@ -146,6 +149,7 @@ class P { static int Main(string[] a) {
 "@
   $exe = "$env:RUNNER_TEMP\stub-$mode.exe"
   Add-Type -TypeDefinition $src -OutputAssembly $exe -OutputType WindowsApplication
+  if (-not (Test-Path $exe)) { Note "FAIL  the $mode stand-in did not compile (see the job log)"; return $exe }
   $fs = [IO.File]::Open($exe, 'Append'); $fs.Write((New-Object byte[] 1200000), 0, 1200000); $fs.Close()
   $exe
 }
@@ -229,6 +233,8 @@ if ($Kind -eq 'retrystub') {
   Verdict ((Retries $r.Text) -eq 1 -and (StubStarts) -eq 2) "forced retry: one 'Trying once more', 2 starts ($((Get-Content $starts -ErrorAction SilentlyContinue) -join ' | '))"
 }
 Verdict (Test-Path $perUser) "installed at $perUser"
+$asar = Join-Path (Split-Path $perUser) 'resources\app.asar'
+Note "NOTE  PB-3 installed resources\app.asar sha256 $(if (Test-Path $asar) { (Get-FileHash $asar -Algorithm SHA256).Hash.ToLower() } else { 'MISSING' }) ($((Get-Item $asar -ErrorAction SilentlyContinue).Length) bytes)"
 $hkcu = Exact 'HKCU'
 Verdict ([bool]$hkcu) "P-4 HKCU\$UNINST\$GUID exists (keys present: $((@(Entries) | ForEach-Object { "$($_.Hive)\$($_.Key)" }) -join ', '))"
 $icon = if ($hkcu) { (($hkcu.DisplayIcon -split ',')[0]).Trim('"') } else { '' }
