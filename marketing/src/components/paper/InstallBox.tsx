@@ -146,7 +146,7 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
           {/* For anyone taking the file: the release's published checksums (the Terminal and PowerShell lines check
               them on their own). Restores what the old download card linked (QA, after #192). */}
           {" · "}
-          <a className="paper-text-link" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
+          <a className="paper-text-link ninst__nowrap" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
         </p>
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
