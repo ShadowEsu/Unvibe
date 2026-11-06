@@ -62,8 +62,8 @@ while (((Get-Date) - $t0).TotalSeconds -lt $Seconds) {
   if ($wins.Count -gt 0) {
     $h = $wins[0]; $shown = Get-Date; $ms = [int]($shown - $t0).TotalMilliseconds
     $front = [W]::GetForegroundWindow() -eq $h
-    $first = Capture $h 'first'; $capMs = [int]((Get-Date) - $shown).TotalMilliseconds
-    Line "first visible main window at $ms ms after the watch began (seen within 50 ms of showing): $first; in front: $front; main windows: $($wins.Count); that capture took $capMs ms"
+    # Grab the first frame into memory only: saving and measuring it come after the timeline, so sampling starts at once.
+    $firstBmp = Grab $h; $capMs = [int]((Get-Date) - $shown).TotalMilliseconds
     # How long the empty page lasts: samples every ~100 ms for up to 10 s, timed from the moment the window was seen.
     $content = $null; $blankAt = @(); $sampleMs = @()
     while (((Get-Date) - $shown).TotalSeconds -lt 10) {
@@ -71,7 +71,11 @@ while (((Get-Date) - $t0).TotalSeconds -lt $Seconds) {
       if (Blank $u) { $blankAt += $at } else { $content = $at; break }
       Start-Sleep -Milliseconds 50
     }
-    $firstBlank = -not ($first -match '([\d.]+)% of \d+ samples, (\d+) colours' -and [double]$Matches[1] -lt 97 -and [int]$Matches[2] -ge 20)
+    $firstBmp.Save((Join-Path $Out "first-paint-$Tag-first.png")); $u1 = Uniform $firstBmp
+    $wr = New-Object W+R; [void][W]::GetWindowRect($h, [ref]$wr)
+    $first = "$($wr.Rt - $wr.L) x $($wr.B - $wr.T) at $($wr.L),$($wr.T); client area below the caption: most common colour $($u1.Pct)% of $($u1.N) samples, $($u1.Colours) colours"
+    Line "first visible main window at $ms ms after the watch began (seen within 50 ms of showing): $first; in front: $front; main windows: $($wins.Count); grabbed by $capMs ms"
+    $firstBlank = Blank $u1
     Line "blank timeline (ms from the window being seen): first frame $(if ($firstBlank) { 'blank' } else { 'had content' }) (captured by $capMs ms); later blank samples at $(if ($blankAt) { $blankAt -join ', ' } else { 'none' }); content first seen at $(if ($null -ne $content) { "$content ms" } else { 'not within 10 s' }); sample cost $(if ($sampleMs) { "$(($sampleMs | Measure-Object -Average).Average.ToString('0')) ms avg" } else { '-' })"
     Start-Sleep 3
     $wins = [W]::MainWindows((Pids))
