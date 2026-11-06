@@ -20,7 +20,7 @@ export default function ListedOnPage() {
           <p className="fos-page__lead">Directories and launch sites with a page about Unvibe.</p>
         </div>
       </header>
-      <section aria-labelledby="listings-title">
+      <section className="verify" aria-labelledby="listings-title">
         <h2 id="listings-title">Listings</h2>
         <ul className="listed-on__list">
           {listingLinks.map((listing) => (
@@ -30,7 +30,7 @@ export default function ListedOnPage() {
           ))}
         </ul>
       </section>
-      <section aria-labelledby="directories-title">
+      <section className="verify" aria-labelledby="directories-title">
         <h2 id="directories-title">Other directories</h2>
         <p>Unvibe is being submitted to these directories. They ask for a link back while they review a listing.</p>
         <ul className="listed-on__list">
