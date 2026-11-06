@@ -131,9 +131,9 @@ jobs:
           open -a /Applications/Unvibe.app
           sleep 8
           open -a TextEdit "$RUNNER_TEMP/unvibe-sample.js"; sleep 3
-          osascript -e 'tell application "TextEdit" to activate' -e 'delay 1' -e 'tell application "System Events" to keystroke "a" using command down'
-          sleep 1
-          osascript -e 'tell application "System Events" to keystroke "u" using control down'
+          # macOS's System Events question blocks every Apple Event to System Events, the runner's
+          # keystrokes included (-1712). unvibe://review (no query) runs the same capture as the shortcut.
+          open 'unvibe://review'
           for t in 4 8 14; do sleep $([ $t = 4 ] && echo 4 || { [ $t = 8 ] && echo 4 || echo 6; }); screencapture -x "$RUNNER_TEMP/shots/d-macos-asking-${t}s-${{ matrix.build }}.png"; done
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true
           echo "D: store after launch: $(grep -o '"installId":"[^"]*"' "$ud/unvibe-store.json" || echo none)"
@@ -147,8 +147,10 @@ jobs:
             || sudo sqlite3 "$udb" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier_type,indirect_object_identifier,flags) VALUES('kTCCServiceAppleEvents','com.unvibe.app',0,0,2,1,0,'com.apple.systemevents',0);"
           sqlite3 "$udb" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';" || sudo sqlite3 "$udb" "SELECT service,client,auth_value,indirect_object_identifier FROM access WHERE client='com.unvibe.app';"
           killall -u "$USER" tccd 2>/dev/null || true
-          # Any question still up from leg D goes away with the app.
+          # Leg D's question may still be up and blocking System Events: clear it and wait until it answers.
           killall UserNotificationCenter 2>/dev/null || true
+          ok=no; for i in $(seq 1 20); do osascript -e 'tell application "System Events" to get name of first process' >/dev/null 2>&1 && { ok=yes; break; }; sleep 2; done
+          echo "B: System Events answers the runner: $ok"
           ud="$HOME/Library/Application Support/Unvibe"
           for theme in light dark; do
             id="$ID_B"; [ "$theme" = dark ] && id="$ID_E"
