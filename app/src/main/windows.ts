@@ -13,6 +13,8 @@ const DEFAULT_WIDGET_H = 640;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
+/** A notice's text is showing under the compact Island (renderer bar:setNotice). */
+let barHasNotice = false;
 let limitPauseActive = false;
 
 const secureWebPrefs = () => ({
@@ -72,6 +74,11 @@ const FLOATING_EXPANDED_W = 372;
 /** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
 const BAR_EXPANDED_BODY_H = 244;
 const FLOATING_ROW_H = 38;
+/**
+ * A notice (notify()) shows its text under the compact row (above it at the bottom) without
+ * expanding the Island: up to three lines, never wider than the expanded card (F-18).
+ */
+const BAR_NOTICE_H = 64;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
@@ -101,13 +108,18 @@ function compactBarHeight(position: BarPosition): number {
 }
 
 function barSize(position: BarPosition, expanded: boolean): { width: number; height: number } {
-  if (!expanded) return { width: compactBarWidth(position), height: compactBarHeight(position) };
-  if (attachedIsland(position)) return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
-  return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
+  const attached = attachedIsland(position);
+  if (expanded) {
+    if (attached) return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
+    return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
+  }
+  if (barHasNotice) return { width: attached ? compactBarWidth(position) : FLOATING_EXPANDED_W, height: compactBarHeight(position) + BAR_NOTICE_H };
+  return { width: compactBarWidth(position), height: compactBarHeight(position) };
 }
 
 export function createBar(): BrowserWindow {
   barIsExpanded = false;
+  barHasNotice = false;
   const position = settings().all().barPosition;
   const compactWidth = compactBarWidth(position);
   const compactHeight = compactBarHeight(position);
@@ -147,8 +159,22 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   if (!win || win.isDestroyed()) return;
   if (barIsExpanded === expanded && !force) return;
   barIsExpanded = expanded;
+  applyBarSize(win, force);
+}
+
+/**
+ * The Island grows to show a notice's text, and back when the notice is gone. A hidden Island only
+ * records it (showBar sizes it then): resizing calls moveTop, which on macOS brings a hidden window back.
+ */
+export function setBarNotice(win: BrowserWindow | null, on: boolean): void {
+  if (!win || win.isDestroyed() || barHasNotice === on) return;
+  barHasNotice = on;
+  if (!barIsExpanded && win.isVisible()) applyBarSize(win, false);
+}
+
+function applyBarSize(win: BrowserWindow, force: boolean): void {
   const position = settings().all().barPosition;
-  const { width, height } = barSize(position, expanded);
+  const { width, height } = barSize(position, barIsExpanded);
   const { x, y } = barBounds(position, width, height);
   // Hover previews must never activate the app or interrupt typing in the editor.
   win.setFocusable(false);
