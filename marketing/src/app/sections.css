@@ -119,12 +119,7 @@
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
 .paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
 
-/* ── Startup programs ── */
-.paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
-.paper-backing .program-list__items { max-width: 50rem; margin-inline: auto; }
-.paper-backing .claude-startups__title { font-size: 32px; }
 .claude-startups__tag { color: #141414; }
-.claude-startups__copy a { color: var(--u-text); font-weight: 700; }
 
 /* ── Invite ── */
 .invite__copy { display: grid; justify-items: center; gap: 0.7rem; text-align: center; }

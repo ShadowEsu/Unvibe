@@ -9,7 +9,7 @@ import { USE_CASES_INDEX, pathForUseCase, useCases, type UseCase } from "@/lib/u
 
 /**
  * The parts every /use-cases/<slug> page shares. Every product sentence here is the site's own:
- * the steps restate HowItWorks.tsx and the FAQ, What is sent is the FAQ answer, and Free and Pro
+ * the steps restate data/howItWorks.ts and the FAQ, What is sent is the FAQ answer, and Free and Pro
  * are /pricing's plan cards (pricingCopy), so a change there changes these pages too.
  */
 

@@ -37,29 +37,6 @@
   --u-glass-edge: rgb(255 255 255 / 0.70);
 }
 
-/* Text stays ink and #4a4a46 on every tint: at least 15.5:1 and 7.5:1 (lilac #eee8ff, the darkest). */
-.u-sheet {
-  /* Inner cards (pricing columns, the What leaves panels, the steps) are white panes on the tint, with no top
-     highlight of their own. */
-  --u-card: rgb(255 255 255 / 0.55);
-  --u-plate-host-fill: var(--u-card);
-  --glass-highlight: none;
-  border: 1px solid var(--u-glass-edge);
-  background: var(--u-sheet-solid, #e2f1fd);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), var(--u-lift-1);
-}
-
-/* A plate lifts 2 px under a fine pointer: transform on the plate itself, no shimmer, static with reduced motion. */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .u-sheet {
-    transition: transform var(--m-fast) var(--m-ease-sharp);
-  }
-
-  .u-sheet:hover {
-    transform: translateY(-2px);
-  }
-}
-
 /* The phone email note (unsubscribe and Privacy line) sits on the hero plate like the rest of the hero copy:
    the sky plate gives it at least 7:1 (Design, ledger 466). Its text keeps the full ink colour. */
 .vhero__phone .vhero__fine {
@@ -76,11 +53,7 @@
 /* The cards: solid cream with a hairline edge and a top highlight. Inside a home plate (.u-sheet) a card is the
    plate's 0.55 white pane instead. */
 :is(
-  .who-panel,
-  .vtour__window,
-  .paper-pricing .marketing-plan-card,
-  .beta-page .paper-beta,
-  .beta-page__trust-item
+  .who-panel
 ) {
   border: 1px solid var(--glass-edge) !important;
   background: var(--u-plate-host-fill, var(--surface-solid)) !important;
@@ -198,10 +171,6 @@
     background-image: none !important;
   }
 
-  .u-sheet {
-    --u-card: #ffffff;
-    border-color: var(--u-line-strong);
-  }
 }
 
 @media (forced-colors: active) {
@@ -215,16 +184,8 @@
     border: 1px solid CanvasText;
   }
 
-  .u-sheet {
-    border: 1px solid CanvasText;
-  }
-
   :is(
-    .who-panel,
-    .vtour__window,
-    .paper-pricing .marketing-plan-card,
-    .beta-page .paper-beta,
-    .beta-page__trust-item
+    .who-panel
   ) {
     border: 1px solid CanvasText !important;
   }

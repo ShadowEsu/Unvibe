@@ -41,7 +41,7 @@ export const HERO = {
 } as const;
 
 export const NAV = [
-  { label: "Product", href: "#product" },
+  { label: "Product", href: "/#product" },
   { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "/pricing" },
   { label: "Changelog", href: "/releases" },

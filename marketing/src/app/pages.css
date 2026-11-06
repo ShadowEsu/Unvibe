@@ -243,7 +243,7 @@
 /* ── Motion: no hover lifts for reduced motion or the lite experience ──── */
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.beta-page, .paper-resources-page, .releases-page) .paper-glass:hover,
+  :is(.paper-resources-page, .releases-page) .paper-glass:hover,
   .resources-card:hover,
   .about-page__btn:hover {
     transform: none;

@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { faqPageJsonLd, howToJsonLd, jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
@@ -25,9 +25,6 @@ const homeJsonLd = [
 ];
 
 export const revalidate = 300;
-
-/** The browser bar matches the page's canvas (Design package-1106 §2). */
-export const viewport: Viewport = { themeColor: "#fcfbf8" };
 
 /** paymentsOpen is the API's live status (cached with revalidate); the price card's closed line depends on it. */
 export default async function HomePage() {

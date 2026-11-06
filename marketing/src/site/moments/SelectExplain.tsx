@@ -172,7 +172,8 @@ export function SelectExplain({ device, take = PANEL_TAKE, title = "Select. Pres
             if (Math.abs(rec.currentTime - want) > 1 / 48) rec.currentTime = want;
           };
           tl.eventCallback("onUpdate", () => { want = clock.t; raf ||= requestAnimationFrame(seek); });
-          rec.addEventListener("seeked", () => { raf ||= requestAnimationFrame(seek); });
+          const onSeeked = () => { raf ||= requestAnimationFrame(seek); };
+          rec.addEventListener("seeked", onSeeked);
           const progress = () => {
             const r = el.getBoundingClientRect();
             return Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
@@ -193,7 +194,7 @@ export function SelectExplain({ device, take = PANEL_TAKE, title = "Select. Pres
             const top = r.top + scrollY + (r.height - innerHeight) * (AT[MARKS[mark]] + 0.04);
             window.scrollTo({ top, behavior: "smooth" });
           };
-          cleanup = () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(tick); cancelAnimationFrame(raf); };
+          cleanup = () => { window.removeEventListener("scroll", onScroll); rec.removeEventListener("seeked", onSeeked); cancelAnimationFrame(tick); cancelAnimationFrame(raf); };
         } else {
           // ≤ 900 px: the same choreography in real time, once, when the stage is half in view; marks replay from there.
           // Mark 3 lights when the recording reaches marks.read (sentences on screen), and it stops on marks.end.

@@ -60,21 +60,18 @@ describe("the Pro sentence", () => {
     assert.match(proSentence(false), /^Pro isn't on sale yet\. You can try it now: /);
   });
 
-  it("is the one Pro line in the FAQ and the kit, in full with AI on; /beta and /pricing make no Pro offer", () => {
-    for (const name of ["faq", "kit"] as const) {
+  it("is the one Pro line on /beta, the FAQ and the kit, in full with AI on; /pricing makes no Pro offer", () => {
+    for (const name of ["beta", "faq", "kit"] as const) {
       assert.ok(live[name].includes(proSentence(false)), `${name} lacks the Pro sentence`);
       assert.doesNotMatch(live[name], OLD, name);
       assert.doesNotMatch(live[name], /Try Pro today/, name);
     }
-    // Council R07 / Design round 06: next to "Not on sale yet" a try-it-today line reads as an offer.
-    for (const name of ["beta", "pricing"] as const) {
-      assert.doesNotMatch(live[name], OLD, name);
-      assert.doesNotMatch(live[name], /Try Pro today|You can try it now|gift code/, name);
-    }
+    // Council R07 / Design round 06: next to "Not on sale yet" a try-it line reads as an offer.
+    assert.doesNotMatch(live.pricing, /Try Pro today|You can try it now|gift code/);
   });
 
-  it("says only 'Pro isn't on sale yet.' in the FAQ and the kit while paused, and /pricing has no Try Pro line", () => {
-    for (const name of ["faq", "kit"] as const) {
+  it("says only 'Pro isn't on sale yet.' on /beta, the FAQ and the kit while paused, and /pricing has no Try Pro line", () => {
+    for (const name of ["beta", "faq", "kit"] as const) {
       assert.ok(paused[name].includes(proSentence(true)), name);
       assert.doesNotMatch(paused[name], /You can try it now/, name);
     }
@@ -82,13 +79,13 @@ describe("the Pro sentence", () => {
     assert.match(paused.pricing, /Not on sale yet/);
   });
 
-  it("while paused, /pricing (under the plans) and /beta (under Get Unvibe) say AI features are paused; not with AI on", () => {
+  it("while paused, /pricing (under the plans) and /beta (by the allowance) say AI features are paused; not with AI on", () => {
     for (const name of ["pricing", "beta"] as const) {
       assert.equal(paused[name].split(AI_MAINTENANCE_NOTE).length - 1, 1, `${name} paused`);
       assert.ok(!live[name].includes(AI_MAINTENANCE_NOTE), `${name} live`);
     }
     assert.ok(paused.pricing.indexOf(AI_MAINTENANCE_NOTE) > paused.pricing.indexOf("Email about Teams"), "under the plans");
-    assert.ok(paused.beta.indexOf(AI_MAINTENANCE_NOTE) > paused.beta.indexOf("Get Unvibe."), "under Get Unvibe");
+    assert.ok(paused.beta.indexOf(AI_MAINTENANCE_NOTE) > paused.beta.indexOf("on Free and syncs your history"), "after the allowance");
   });
 
   it("the home invite says Pro isn't on sale, the free month, and that a link alone adds nothing", () => {

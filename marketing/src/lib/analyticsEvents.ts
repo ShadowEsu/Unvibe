@@ -19,7 +19,6 @@ export const ANALYTICS_EVENTS = [
   "outbound_social_clicked",
   "privacy_opened",
   "pricing_viewed",
-  "billing_interval_selected",
   "plan_cta_clicked",
   "release_download_clicked",
   "beta_install_viewed",

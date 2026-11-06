@@ -117,32 +117,9 @@
 
 /* ---------- sub-pages (package: /pricing, /download) ---------- */
 .site .lx-sub-page { padding: 72px 0 var(--lx-gap-sec); }
-.site .ap .pricing-plans__intro { max-width: 760px; margin: 0; text-align: left; }
-.site .ap .pricing-plans__intro h1 { margin: 0; font-size: var(--lx-h1); line-height: var(--lx-h1-lh); letter-spacing: var(--lx-h1-ls); font-weight: 600; color: var(--lx-ink); text-wrap: balance; }
-.site .ap .pricing-plans__intro p { display: block; width: auto; margin: 16px 0 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 17px; line-height: 27px; color: var(--lx-ink-2); }
-.site .ap .marketing-plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 56px; }
-.site .ap .marketing-plan-card { padding: 32px; border: 1px solid var(--lx-line); border-radius: 20px; background: #fff; box-shadow: none; transform: none; }
-.site .ap .marketing-plan-card.featured { border-color: #141414; box-shadow: var(--a-whisper); }
-.site .ap .plan-badge { min-height: 22px; color: var(--lx-ink-2); font: 600 12px/22px var(--font-mono), ui-monospace, monospace; letter-spacing: 0.04em; }
-.site .ap .marketing-plan-card.featured .plan-badge { color: #5a3fe0; }
-.site .ap .marketing-plan-card h3 { margin: 8px 0 0; font-size: 22px; letter-spacing: -0.01em; font-weight: 600; }
-.site .ap .plan-kicker { margin: 4px 0 0; font-size: 15px; color: var(--lx-ink-2); }
-.site .ap .marketing-plan-price { display: block; min-height: 0; margin-top: 24px; font-size: 48px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; color: var(--lx-ink); }
-.site .ap .marketing-plan-per { margin-left: 4px; font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--lx-ink-2); }
-.site .ap .marketing-plan-card > small, .site .ap .plan-note, .site .ap .plan-after { margin-top: 12px; font-size: 14px; line-height: 22px; color: var(--lx-ink-2); }
-.site .ap .marketing-plan-card ul { display: grid; gap: 10px; margin: 24px 0 28px; padding: 24px 0 0; border-top: 1px solid var(--lx-line); list-style: none; font-size: 15px; line-height: 22px; }
-.site .ap .marketing-plan-card li { display: flex; gap: 10px; align-items: flex-start; }
-.site .ap .marketing-plan-card li svg { flex: 0 0 auto; margin-top: 4px; color: #5a3fe0; }
-.site .ap .pricing-button { margin-top: auto; min-height: 48px; border-radius: 12px; font-size: 15px; font-weight: 500; box-shadow: none; }
-.site .ap .pricing-button:not(.pricing-button--quiet) { margin-bottom: 3px; background: var(--lx-accent) !important; color: #fff !important; box-shadow: 0 3px 0 var(--a-lip); transition: none; }
-.site .ap .pricing-button:not(.pricing-button--quiet):active { transform: translateY(3px); box-shadow: none; }
-.site .ap .pricing-button--quiet { background: #fff; color: var(--lx-ink); border: 0; box-shadow: inset 0 0 0 1px var(--lx-line-strong); }
-.site .ap .pricing-disclosure { margin-top: 32px; font-size: 13px; line-height: 20px; color: var(--lx-ink-2); }
 
 @media (max-width: 600px) {
   .site .lx-sub-page { padding-top: 32px; }
-  .site .ap .marketing-plan-grid { margin-top: 32px; }
-  .site .ap .marketing-plan-card { padding: 24px; }
 }
 
 /* ---------- Works with + Pricing: two hairline cards (Design round 05) ---------- */
@@ -200,8 +177,8 @@
 .lx-get--page .lx-get__h { font-size: 64px; }
 .lx-get__line { max-width: 420px; margin-top: 14px; font-size: 18px; line-height: 1.55; color: var(--lx-ink-2); }
 .lx-get__cta { margin-top: 28px; }
-/* /beta on a Mac: no download button (the box beside it leads), so its empty row takes no space. */
-html:not(.os-win) .lx-get--page .lx-get__cta:has(> .lx-win:only-child) { display: none; }
+/* /beta on a Mac computer: no download button (the box beside it leads), so its empty row takes no space. */
+html:not(.os-win):not(.os-phone) .lx-get--page .lx-get__cta { display: none; }
 .site .lx-get__cta .lx-btn { min-height: 52px; padding: 0 24px; border-radius: 999px; font-size: 16px; }
 .site .lx-get .ninst { margin: 0; padding: 28px; border: 0; border-radius: 24px; background: var(--lx-ground); box-shadow: inset 0 0 0 1px var(--lx-line), var(--a-whisper); text-align: left; }
 .site .lx-get .ninst__title { margin: 0 0 12px; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--lx-ink); }

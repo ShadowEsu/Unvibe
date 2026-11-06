@@ -142,17 +142,11 @@ html:has(.site) body::before { background: var(--lx-ground) !important; }
 .lx-foot__fb { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
 
 /* ---------- phones: every capture at a readable scale (code ≥ 10 px, Design A round 1 #10) ----------
-   A 0.1.49 panel (704 px, code 15.2 px) is shown at 0.68 with its icon rail (75 px) cut off; the 0.1.48 panel
-   (568 px, code 13 px) at 0.8; the 0.1.48 scene (765 px, code 19 px) at 0.55. What runs past the frame's right edge
-   fades out, so the cut reads as a crop, not a fault. */
+   A 0.1.49 panel (704 px, code 15.2 px) is shown at 0.68 with its icon rail (75 px) cut off. What runs past the
+   frame's right edge fades out, so the cut reads as a crop, not a fault. */
 @media (max-width: 600px) {
   .lx-fig__frame { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent); mask-image: linear-gradient(90deg, #000 86%, transparent); }
   .site img[src*="/0149/panel-"] { width: 479px !important; max-width: none !important; margin-left: -51px; }
-  .site img[src*="/0148/how-panel"] { width: 455px !important; max-width: none !important; }
-  .site img[src*="/0148/how-scene"] { width: 421px !important; max-width: none !important; }
-  .site img[src*="/0148/how-select"] { width: 360px !important; max-width: none !important; }
-  .site img[src*="/0149/library"], .site img[src*="/0149/briefs-open"], .site img[src*="/0149/settings-privacy"] { width: 520px !important; max-width: none !important; }
-
 }
 
 /* ---------- Vibe, the guide (3 moments only) ---------- */
@@ -169,5 +163,7 @@ html:has(.site) body::before { background: var(--lx-ground) !important; }
 @keyframes lx-vibe-smile { 0%, 100% { transform: none; } 20%, 70% { transform: scaleY(.3); } }
 @keyframes lx-vibe-wave { 0%, 100% { transform: none; } 20% { transform: rotate(-12deg); } 45% { transform: rotate(10deg); } 70% { transform: rotate(-8deg); } 88% { transform: rotate(4deg); } }
 
-/* Both computers' words ship in the HTML; OS_BOOT picks one before the first paint (no hydration swap, CLS 0). */
+/* Every variant ships in the HTML; OS_BOOT (site/parts) picks one before the first paint, so nothing swaps after
+   hydration. Without JS the desktop Mac variant shows. */
 html:not(.os-win) .lx-win, html.os-win .lx-mac { display: none !important; }
+html:not(.os-phone) .lx-phone-only, html.os-phone .lx-desk-only { display: none !important; }

@@ -147,14 +147,6 @@
   color: #f7f4ee;
 }
 
-/* ── Behind Unvibe ── */
-
-.paper-backing {
-  border-bottom: 0;
-  background: transparent;
-}
-.paper-backing .sec-head { margin-bottom: 0; }
-
 /* ── Closing download card ── */
 
 .paper-invite__card {

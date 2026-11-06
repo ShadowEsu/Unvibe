@@ -89,12 +89,16 @@ describe("Get Unvibe: the same install boxes on home #install and /beta", () => 
     });
   }
 
-  it("/beta's Windows button is the .exe itself, not a link back to /beta", () => {
-    const html = renderToStaticMarkup(createElement(Download));
-    assert.match(html, new RegExp(`<a href="${BETA_WINDOWS_DIRECT_DOWNLOAD}" class="lx-btn lx-btn--solid sx-btn lx-win">Download for Windows</a>`));
-    const cta = html.slice(html.indexOf('class="lx-get__cta"'), html.indexOf("</div>", html.indexOf('class="lx-get__cta"')));
-    assert.doesNotMatch(cta, /href="\/beta"/);
-  });
+  // Council R06 / Security 0152: on Windows the primary is the .exe itself; on a Mac it opens /beta, where the
+  // Terminal line leads. /beta has no link back to itself.
+  for (const [name, render, toBeta] of [["home", pages[0][1], true], ["/beta", pages[1][1], false]] as const) {
+    it(`${name}: Download for Windows is the .exe${toBeta ? ", Download for Mac opens /beta" : " and nothing links back to /beta"}`, () => {
+      const html = render();
+      const get = html.slice(html.indexOf('id="install-title"'));
+      assert.match(get, new RegExp(`<a [^>]*href="${BETA_WINDOWS_DIRECT_DOWNLOAD}"[^>]*>Download for Windows</a>`));
+      assert.equal(/<a [^>]*href="\/beta"[^>]*>Download for Mac<\/a>/.test(get), toBeta);
+    });
+  }
 
   it("home: Get Unvibe is the last section", () => {
     const html = renderToStaticMarkup(createElement(Home, { paymentsOpen: false }));

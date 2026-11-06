@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { ShareStep } from "@/components/paper/ShareStep";
 import { track } from "@/lib/analytics";
 import { browserTrackingDisabled } from "@/lib/trackingOptOut";
@@ -9,8 +9,13 @@ import { markRefUsed, storedRef } from "@/lib/referral";
 /**
  * Phones can't run the desktop app, so the one action there is "email me the link".
  * It joins the existing list (waitlist_entries) and sends the welcome email with the download.
+ * `surface` names where the form sits for waitlist_completed and the referral step; a page can hold two forms, so
+ * the note and error ids are per form.
  */
-export function EmailMeLink() {
+export function EmailMeLink({ surface }: { surface: string }) {
+  const id = useId();
+  const noteId = `${id}-note`;
+  const errorId = `${id}-error`;
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState("");
@@ -42,7 +47,7 @@ export function EmailMeLink() {
       if (referredBy) markRefUsed();
       setCode(body.referralCode ?? "");
       setState("done");
-      track("waitlist_completed", { surface: "phone_hero" });
+      track("waitlist_completed", { surface });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "That didn't go through. Try again in a minute.");
       setState("idle");
@@ -51,15 +56,15 @@ export function EmailMeLink() {
 
   if (state === "done") {
     return (
-      <div className="vhero__phone" id="email-link" role="status">
+      <div className="vhero__phone" role="status">
         <p><strong>Sent.</strong> Open the email on your Mac or PC to download Unvibe.</p>
-        {code ? <ShareStep code={code} surface="phone_hero" /> : null}
+        {code ? <ShareStep code={code} surface={surface} /> : null}
       </div>
     );
   }
 
   return (
-    <div className="vhero__phone" id="email-link">
+    <div className="vhero__phone">
       <form className="vhero__email" onSubmit={submit}>
         <input
           type="email"
@@ -69,7 +74,7 @@ export function EmailMeLink() {
           inputMode="email"
           placeholder="you@example.com"
           aria-label="Your email"
-          aria-describedby={error ? "hero-email-note hero-email-error" : "hero-email-note"}
+          aria-describedby={error ? `${noteId} ${errorId}` : noteId}
           aria-invalid={Boolean(error)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -78,8 +83,8 @@ export function EmailMeLink() {
           <span className="paper-join__label">{state === "busy" ? "Sending…" : "Email me the link"}</span>
         </button>
       </form>
-      {error ? <p className="vhero__error" id="hero-email-error" role="alert">{error}</p> : null}
-      <p className="vhero__fine" id="hero-email-note">One email with the download link for your Mac or PC. Unsubscribe any time. <a href="/privacy">Privacy</a></p>
+      {error ? <p className="vhero__error" id={errorId} role="alert">{error}</p> : null}
+      <p className="vhero__fine" id={noteId}>One email with the download link for your Mac or PC. Unsubscribe any time. <a href="/privacy">Privacy</a></p>
     </div>
   );
 }

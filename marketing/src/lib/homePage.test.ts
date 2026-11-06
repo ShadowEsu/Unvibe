@@ -23,12 +23,13 @@ describe("home price card", () => {
 
   it("links to /pricing in both states", () => {
     for (const paymentsOpen of [false, true]) {
-      assert.match(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen, paused: false })), /<a class="lx-link sx-link" href="\/pricing">Pricing<\/a>/);
+      assert.match(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen, paused: false })), /<a [^>]*href="\/pricing"[^>]*>Pricing<\/a>/);
     }
   });
 
   it("carries the Try box's pause note while hosted AI is paused (Security SHOULD-H3), not otherwise", () => {
-    assert.match(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen: false, paused: true })), /role="status">AI features are paused for maintenance\. Back soon\.<\/p><\/div>$/);
+    assert.match(text(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen: false, paused: true }))), /AI features are paused for maintenance\. Back soon\.\s*$/);
+    assert.match(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen: false, paused: true })), /role="status"[^>]*>AI features are paused/);
     assert.doesNotMatch(renderToStaticMarkup(createElement(PricingBlock, { paymentsOpen: false, paused: false })), /paused/);
   });
 });
@@ -53,6 +54,6 @@ describe("home page", () => {
     assert.ok(text(html).includes(KEYS.h2) && text(html).includes(KEYS.lede));
     assert.ok(privacy.includes("scanned on your computer before they are sent"));
     assert.ok(privacy.includes("A known credential blocks the request"));
-    assert.match(html, /<a class="lx-link sx-link" href="\/privacy">What leaves your computer<\/a>/);
+    assert.match(html, /<a [^>]*href="\/privacy"[^>]*>What leaves your computer<\/a>/);
   });
 });

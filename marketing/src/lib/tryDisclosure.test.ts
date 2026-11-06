@@ -87,14 +87,14 @@ const hero = (home: string) => home.slice(home.indexOf('aria-labelledby="hero-ti
 
 describe("hero Try link", () => {
   it("with Try it on, the hero links to the Try box", () => {
-    assert.match(hero(live.home), /<a href="#try-it" class="ah__textlink">Try it in your browser <span aria-hidden="true">→<\/span><\/a>/);
+    assert.match(hero(live.home), /<a href="#try-it"[^>]*>Try it in your browser <span aria-hidden="true">→<\/span><\/a>/);
   });
 
   it("while Try it is paused, the home links nowhere to it and the price card carries the pause note", () => {
     assert.doesNotMatch(paused.home, /href="#try-it"/);
     assert.doesNotMatch(hero(paused.home), /try it/i);
     const price = paused.home.slice(paused.home.indexOf('id="pricing-title"'));
-    assert.match(price.slice(0, price.indexOf("</section>")), new RegExp(`<p class="lx-sub" role="status">${PAUSED_LINE.replace(/\./g, "\\.")}</p>`));
+    assert.match(price.slice(0, price.indexOf("</section>")), new RegExp(`<p [^>]*role="status"[^>]*>${PAUSED_LINE.replace(/\./g, "\\.")}</p>`));
     assert.doesNotMatch(live.home, new RegExp(PAUSED_LINE.replace(/\./g, "\\.")));
   });
 });

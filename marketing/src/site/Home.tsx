@@ -1,18 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type UIEvent } from "react";
 import { INSTALL_COPY } from "@/components/paper/InstallBox";
 import { track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
-import { trackDownloadPageClick, watchDownloadCtaView } from "@/lib/downloadTracking";
+import { watchDownloadCtaView } from "@/lib/downloadTracking";
 import { BRIEFS_CAPTION, BRIEFS_SHOT, CAPTION, GALLERY_H2, HERO, HERO_RECORDING, SHOTS } from "@/site/content";
+import type { VisitorDevice } from "@/lib/shortcuts";
 import { CountUp } from "@/site/moments/CountUp";
 import { HeroStage } from "@/site/moments/HeroStage";
 import { SelectExplain } from "@/site/moments/SelectExplain";
 import {
-  Cap, FaqBlock, FinePrint, GetUnvibe, HeroLede, HeroTitle, Img, InstallCmd, KeysBlock, SiteHeader, SiteMotion,
-  OS_BOOT, PhoneEmail, PricingBlock, TryBlock, WorksBlock, useDevice,
+  Cap, DownloadButtons, FaqBlock, FinePrint, GetUnvibe, HeroLede, HeroTitle, Img, InstallCmd, KeysBlock, OS_BOOT, OsClass,
+  PhoneEmail, PricingBlock, SiteHeader, SiteMotion, TryBlock, WorksBlock, useVisitor,
 } from "@/site/parts";
 
 const BOOT = `document.documentElement.classList.add("site-load");${OS_BOOT}`;
@@ -62,7 +62,7 @@ const TABS = [
  * on Motion's stage; Follow-up and Test me show their real 0.1.49 stills on the same lit ground. All three share one
  * grid cell, so the cell is always the tallest of them and a tab switch never moves the page.
  */
-function DemoTabs({ device }: { device: ReturnType<typeof useDevice> }) {
+function DemoTabs({ device }: { device: VisitorDevice }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("explain");
   // WAI-ARIA tabs: one tab stop; arrows, Home and End move between tabs and select them.
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -111,14 +111,19 @@ function DemoTabs({ device }: { device: ReturnType<typeof useDevice> }) {
  * (SelectExplain) and the count-up (CountUp).
  */
 export function Home({ paymentsOpen }: { paymentsOpen: boolean }) {
-  const device = useDevice();
+  const visitor = useVisitor();
+  const { device, known } = visitor;
   const ctas = useRef<HTMLDivElement>(null);
-  // download_cta_viewed once the hero's download button is half in view (the live hero's measure).
-  useEffect(() => (device !== "phone" && ctas.current ? watchDownloadCtaView(ctas.current, "hero", device) : undefined), [device]);
+  // download_cta_viewed once the hero's download button is half in view (the live hero's measure), and only once the
+  // visitor's computer is known, so the platform is the real one.
+  useEffect(() => (known && device !== "phone" && ctas.current ? watchDownloadCtaView(ctas.current, "hero", device) : undefined), [known, device]);
   return (
     <div className="site n-home" id="top">
       <script dangerouslySetInnerHTML={{ __html: BOOT }} />
-      <div className="lx-wrap"><SiteHeader device={device} /></div>
+      <OsClass />
+      <div className="lx-wrap"><SiteHeader /></div>
+      {/* the page's own <main>: the root layout leaves it to these pages (components/ClassicChrome) */}
+      <main id="main" tabIndex={-1}>
       {/* Hero: a split header (H1 on 2 lines, the lede bottom-aligned beside it), one action row with the Terminal
           line, the install truth, then Motion's stage. Phones: H1, lede, the stage, then the email form and trust. */}
       <section className="ah lx-wrap" aria-labelledby="hero-title">
@@ -126,29 +131,28 @@ export function Home({ paymentsOpen }: { paymentsOpen: boolean }) {
         {/* Design round 05: the right column carries the lede, one violet button + a text link, then the OS's own
             install line (Terminal or PowerShell) with its truth line and a link to read the script. */}
         <div className="ah__side">
-          <HeroLede device={device} />
+          <HeroLede />
+          {/* Every variant is in the HTML and html.os-phone / os-win (OS_BOOT) shows one before the first paint, so the
+              stage under this row never moves after hydration (it did on phones: CLS 0.066 at 4x CPU, slow 4G). */}
           <div className="ah__ctas" id="email-link" ref={ctas}>
-            {device === "phone" ? <PhoneEmail /> : (
-              <>
-                <Link href="/beta" className="lx-btn lx-btn--solid sx-btn" data-magnet onClick={() => trackDownloadPageClick("hero")}><span className="lx-mac">{HERO.download.mac}</span><span className="lx-win">{HERO.download.windows}</span></Link>
-                {AI_MAINTENANCE ? null : <a href="#try-it" className="ah__textlink" onClick={() => track("hero_try_clicked", { device })}>{HERO.tryIt} <span aria-hidden="true">→</span></a>}
-              </>
-            )}
+            <PhoneEmail surface="phone_hero" />
+            <DownloadButtons surface="hero" magnet />
+            {AI_MAINTENANCE ? null : <a href="#try-it" className="ah__textlink lx-desk-only" onClick={() => track("hero_try_clicked", { device })}>{HERO.tryIt} <span aria-hidden="true">→</span></a>}
           </div>
           {/* Council R06 / CODE-SPEC §1b.4: on Windows the .exe button is the primary, with its file line (Security 0152). */}
-          {device === "phone" ? null : <p className="ah__file lx-win">Free · .exe · Windows, 64-bit</p>}
-          {device === "phone" ? (AI_MAINTENANCE ? null : <a href="#try-it" className="ah__textlink ah__textlink--phone" onClick={() => track("hero_try_clicked", { device })}>{HERO.tryIt} <span aria-hidden="true">→</span></a>) : (
-            <div className="ah__install">
-              <div className="lx-mac">
-                <InstallCmd os="mac" surface="hero" />
-                <p className="ah__truth">{HERO.installLine} <a className="lx-link" href="/install.sh">Read install.sh</a> · <a className="lx-link" href="#install">On Windows?</a></p>
-              </div>
-              <div className="lx-win">
-                <InstallCmd os="windows" surface="hero" />
-                <p className="ah__truth">{INSTALL_COPY.windows.line} <a className="lx-link" href="/install.ps1">Read install.ps1</a> · <a className="lx-link" href="#install">On a Mac?</a></p>
-              </div>
+          <p className="ah__file lx-win lx-desk-only">Free · .exe · Windows, 64-bit</p>
+          {AI_MAINTENANCE ? null : <a href="#try-it" className="ah__textlink ah__textlink--phone lx-phone-only" onClick={() => track("hero_try_clicked", { device })}>{HERO.tryIt} <span aria-hidden="true">→</span></a>}
+          <div className="ah__install lx-desk-only">
+            {/* "On Windows?" / "On a Mac?" open /beta as that computer (a full load, so OS_BOOT runs with ?os=). */}
+            <div className="lx-mac">
+              <InstallCmd os="mac" surface="hero" />
+              <p className="ah__truth">{HERO.installLine} <a className="lx-link" href="/install.sh">Read install.sh</a> · <a className="lx-link" href="/beta?os=win">On Windows?</a></p>
             </div>
-          )}
+            <div className="lx-win">
+              <InstallCmd os="windows" surface="hero" />
+              <p className="ah__truth">{INSTALL_COPY.windows.line} <a className="lx-link" href="/install.ps1">Read install.ps1</a> · <a className="lx-link" href="/beta?os=mac">On a Mac?</a></p>
+            </div>
+          </div>
         </div>
         <div className="ah__stage-wrap"><DemoTabs device={device} /></div>
         {/* SPEC §6 count-up (Security file 0118: "4 depths" while Pro is closed; "5" only in the release Pro opens): the one
@@ -202,9 +206,10 @@ export function Home({ paymentsOpen }: { paymentsOpen: boolean }) {
           </div>
         </div>
         <section className="lx-sec a-band a-faq" id="faq" aria-labelledby="faq-title"><FaqBlock /></section>
-        <section className="lx-sec" id="install" aria-labelledby="install-title"><GetUnvibe device={device} /></section>
-        <FinePrint />
+        <section className="lx-sec" id="install" aria-labelledby="install-title"><GetUnvibe visitor={visitor} /></section>
       </div>
+      </main>
+      <div className="lx-wrap"><FinePrint /></div>
       <SiteMotion />
     </div>
   );

@@ -16,8 +16,8 @@ const panelShot = (name: string, alt: string) => ({ src: `/unvibe/real/${name}.w
 const shot0149 = (name: string, alt: string) => ({ src: `${CAPTURE_DIR}/${name}.webp`, width: 704, height: 905, alt });
 
 /**
- * The home page's four-step loop in the panel (components/paper/HowItWorks). Plain data, so the home
- * page's HowTo JSON-LD and /llms-full.txt state exactly these visible steps without importing UI.
+ * The product's four-step loop in the panel, with a real capture for each step. Plain data, so /llms-full.txt and
+ * the screenshot-size check (data/homeGallery.test) use it without importing UI.
  */
 export const STEPS: readonly HowStep[] = [
   {

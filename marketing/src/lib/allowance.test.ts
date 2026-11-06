@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import AboutPage from "@/app/about/page";
+import { Download } from "@/site/Download";
 import { PricingCards } from "@/site/PricingCards";
 import { pricingCopy } from "./pricingCopy";
 import { faqItems } from "@/data/faq";
@@ -30,6 +31,12 @@ describe("explanation allowances", () => {
       assert.doesNotMatch(page, /100 (AI )?explanations/);
       assert.doesNotMatch(page, VAGUE);
     }
+  });
+
+  it("/beta states the trial and the Free month", () => {
+    const page = text(createElement(Download));
+    assert.match(page, /you get 50 explanations \(follow-up questions count toward these\) and 50 Test me questions in your first 30 days\. Signing in gives you 50 explanations a month on Free/);
+    assert.doesNotMatch(page, VAGUE);
   });
 
   it("the FAQ and /about say the same", () => {

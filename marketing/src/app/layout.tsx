@@ -25,7 +25,7 @@ import { ScrollVibe } from "@/components/paper/ScrollVibe";
 import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
 import { ReminderToast } from "@/components/paper/ReminderToast";
 import { Nav } from "@/components/Nav";
-import { ClassicChrome } from "@/components/ClassicChrome";
+import { ClassicChrome, MainLandmark } from "@/components/ClassicChrome";
 import { PRODUCT_FEATURES, PRODUCT_HOW, PRODUCT_SENTENCE } from "@/lib/productFacts";
 import { Footer } from "@/components/Footer";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
@@ -184,7 +184,7 @@ export default function RootLayout({
               home page's LCP when it came after the page), and keyboard and screen-reader users meet it first. */}
           <AnalyticsConsentBar />
           <ClassicChrome><Nav /></ClassicChrome>
-          <main id="main" tabIndex={-1}>{children}</main>
+          <MainLandmark>{children}</MainLandmark>
           <ClassicChrome><Footer /></ClassicChrome>
           <SelectionExplain />
           <SitePalette />

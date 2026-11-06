@@ -19,6 +19,9 @@ export const ALLOWANCE = {
 /** Signed out, short form: "50 explanations in your first 30 days without signing in". */
 export const SIGNED_OUT_ALLOWANCE = `${ALLOWANCE.trialExplanations} explanations in your first ${ALLOWANCE.trialDays} days without signing in`;
 
+/** Signed out, full form with what counts, for answers that have the room. */
+export const TRIAL_ALLOWANCE = `${ALLOWANCE.trialExplanations} explanations (follow-up questions count toward these) and ${ALLOWANCE.trialTestMe} Test me questions in your first ${ALLOWANCE.trialDays} days`;
+
 /** Signed in, Free: "50 explanations a month". */
 export const FREE_MONTHLY_ALLOWANCE = `${ALLOWANCE.freeMonthly} explanations a month`;
 

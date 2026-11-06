@@ -7,12 +7,14 @@
  * motion moments live in site/moments.
  */
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ExpandRows } from "@/components/paper/ExpandRows";
 import { EmailMeLink } from "@/components/paper/EmailMeLink";
 import { INSTALL_COPY, InstallBox } from "@/components/paper/InstallBox";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from "@/lib/aiMaintenance";
+import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
+import { proSentence } from "@/lib/proOffer";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { trackDownloadClick, trackDownloadPageClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { TryIt } from "@/components/paper/TryIt";
@@ -27,23 +29,56 @@ import {
 export const d = (ms: number) => ({ "--d": ms }) as CSSProperties;
 
 /**
- * Runs inline before the first paint: html.os-win when the visitor is on Windows (or ?os=win), so the server's HTML,
- * which carries both computers' words, shows the right ones without a swap after hydration.
+ * html.os-win on Windows and html.os-phone on a phone or tablet (lib/shortcuts detectVisitorDevice's rules; ?os=win or
+ * ?os=mac previews that computer, as Design's renders do). The server's HTML carries every variant and CSS shows one
+ * (`lx-win`/`lx-mac`, `lx-phone-only`/`lx-desk-only`), so nothing swaps after hydration. Self-contained: OS_BOOT
+ * inlines its source.
  */
-export const OS_BOOT = `(function(){var q=new URLSearchParams(location.search).get("os");var w=q==="win"||(q!=="mac"&&/Windows/i.test(navigator.userAgent));document.documentElement.classList.toggle("os-win",w)})()`;
-
-export function useDevice(): VisitorDevice {
-  const [device, setDevice] = useState<VisitorDevice>("mac");
-  useEffect(() => {
-    // ?os=win / ?os=mac preview the other computer's page (Design's renders use the same switch).
-    const forced = new URLSearchParams(window.location.search).get("os");
-    setDevice(forced === "win" ? "windows" : forced === "mac" ? "mac" : detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints));
-  }, []);
-  return device;
+function applyOsClasses() {
+  const forced = new URLSearchParams(window.location.search).get("os");
+  const ua = navigator.userAgent;
+  const phone = forced !== "win" && forced !== "mac" && (/iPhone|iPad|iPod|Android|Mobile/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1));
+  const win = !phone && (forced === "win" || (forced !== "mac" && /Windows/i.test(ua)));
+  document.documentElement.classList.toggle("os-win", win);
+  document.documentElement.classList.toggle("os-phone", phone);
 }
 
-export function keysFor(device: VisitorDevice): readonly string[] {
-  return device === "windows" ? ["Ctrl", "Alt", "U"] : ["Control", "U"];
+/** Runs inline before the first paint of a page loaded from the server. */
+export const OS_BOOT = `(${applyOsClasses.toString()})()`;
+
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** Client navigation runs no inline script, so a page reached by a link sets the same classes before it paints. */
+export function OsClass() {
+  useBeforePaint(applyOsClasses, []);
+  return null;
+}
+
+export interface Visitor {
+  device: VisitorDevice;
+  /** False until the browser has been asked (the server and the first render assume a Mac). */
+  known: boolean;
+  /** An Intel Mac on Chromium (Safari can't tell), which gets the Intel .dmg as its file link. */
+  intelMac: boolean;
+}
+
+export function useVisitor(): Visitor {
+  const [visitor, setVisitor] = useState<Visitor>({ device: "mac", known: false, intelMac: false });
+  useEffect(() => {
+    const forced = new URLSearchParams(window.location.search).get("os");
+    const device = forced === "win" ? "windows" : forced === "mac" ? "mac" : detectVisitorDevice(navigator.userAgent, navigator.maxTouchPoints);
+    setVisitor({ device, known: true, intelMac: false });
+    if (device !== "mac" || forced) return;
+    let live = true;
+    const uaData = (navigator as Navigator & { userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; platform?: string }> } }).userAgentData;
+    void uaData?.getHighEntropyValues?.(["architecture", "platform"]).then((values) => {
+      if (live && values.platform === "macOS" && values.architecture === "x86") setVisitor((current) => ({ ...current, intelMac: true }));
+    }).catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  return visitor;
 }
 
 /** Starts Motion's section kit once, and flips each tone band's text colour at the middle of its change. */
@@ -109,22 +144,25 @@ export function Logo() {
   );
 }
 
-/** A redesigned sub-page (/pricing, /beta): the site header, its sections, the footer. */
+/**
+ * A redesigned sub-page (/pricing, /beta): the site header, its sections in the page's <main> (the root layout leaves
+ * <main> to these pages, components/ClassicChrome), the footer.
+ */
 export function SitePage({ children }: { children: ReactNode }) {
-  const device = useDevice();
   return (
     <div className="site n-home" id="top">
-      {/* the visitor's computer before the first paint, as on home (both computers' words are in the HTML) */}
+      {/* the visitor's computer before the first paint, as on home (every variant is in the HTML) */}
       <script dangerouslySetInnerHTML={{ __html: OS_BOOT }} />
-      <div className="lx-wrap"><SiteHeader device={device} /></div>
-      <div className="lx-wrap"><div className="lx-sub-page">{children}</div><FinePrint /></div>
+      <OsClass />
+      <div className="lx-wrap"><SiteHeader /></div>
+      <main id="main" tabIndex={-1} className="lx-wrap"><div className="lx-sub-page">{children}</div></main>
+      <div className="lx-wrap"><FinePrint /></div>
       <SiteMotion />
     </div>
   );
 }
 
-export function SiteHeader({ device }: { device: VisitorDevice }) {
-  const phone = device === "phone";
+export function SiteHeader() {
   return (
     <header className="lx-header">
       <Logo />
@@ -133,8 +171,26 @@ export function SiteHeader({ device }: { device: VisitorDevice }) {
           <Link key={item.href} href={item.href} className="lx-nav__a">{item.label}</Link>
         ))}
       </nav>
-      <Link href={phone ? "/#email-link" : "/beta"} className="lx-btn lx-btn--solid lx-btn--sm sx-btn" onClick={phone ? undefined : () => trackDownloadPageClick("nav")}>{phone ? "Email me the link" : "Download free"}</Link>
+      <Link href="/#email-link" className="lx-btn lx-btn--solid lx-btn--sm sx-btn lx-phone-only">Email me the link</Link>
+      <Link href="/beta" className="lx-btn lx-btn--solid lx-btn--sm sx-btn lx-desk-only" onClick={() => trackDownloadPageClick("nav")}>Download free</Link>
     </header>
+  );
+}
+
+/**
+ * The download button (Council R06 / CODE-SPEC §1b.4, Security 0152): on a Mac it opens /beta, where the Terminal line
+ * leads (the .dmg isn't notarized yet); on Windows it is the .exe itself. /beta (`page`) shows only the Windows one,
+ * since its Mac action is the box beside it.
+ */
+export function DownloadButtons({ surface, page = false, magnet = false }: { surface: Extract<DownloadSurface, "hero" | "home_install" | "beta">; page?: boolean; magnet?: boolean }) {
+  const pull = magnet ? { "data-magnet": "" } : {};
+  return (
+    <>
+      {page ? null : (
+        <Link href="/beta" className="lx-btn lx-btn--solid sx-btn lx-mac lx-desk-only" {...pull} onClick={() => trackDownloadPageClick(surface)}>{HERO.download.mac}</Link>
+      )}
+      <a href={INSTALL_COPY.windows.fileHref} className="lx-btn lx-btn--solid sx-btn lx-win lx-desk-only" {...pull} onClick={() => trackDownloadClick(surface, "windows")}>{HERO.download.windows}</a>
+    </>
   );
 }
 
@@ -149,10 +205,9 @@ export function HeroTitle({ id = "hero-title", lines = HERO.h1 }: { id?: string;
   );
 }
 
-export function HeroLede({ device }: { device: VisitorDevice }) {
+export function HeroLede() {
   // Both computers' shortcuts are in the HTML; OS_BOOT marks Windows before the first paint and CSS shows one, so
   // nothing swaps after hydration (a swap would shift the fold). Phones read the Mac one.
-  void device;
   return (
     <p className="lx-lede">
       {HERO.ledeBefore}{" "}
@@ -165,12 +220,16 @@ export function HeroLede({ device }: { device: VisitorDevice }) {
 
 /**
  * Phones (Design round 06): one violet "Email me the link" button; a tap opens the live email form in its place
- * (a tap-driven change, so it never counts as a layout shift).
+ * (a tap-driven change, so it never counts as a layout shift). Shown only on phones (html.os-phone).
  */
-export function PhoneEmail() {
+export function PhoneEmail({ surface }: { surface: "phone_hero" | "phone_install" }) {
   const [open, setOpen] = useState(false);
-  if (open) return <div className="lx-phone"><EmailMeLink /></div>;
-  return <button type="button" className="lx-btn lx-btn--solid sx-btn lx-phone-cta" onClick={() => setOpen(true)}>Email me the link</button>;
+  if (open) return <div className="lx-phone lx-phone-only"><EmailMeLink surface={surface} /></div>;
+  const tap = () => {
+    track("email_link_cta_clicked", { surface });
+    setOpen(true);
+  };
+  return <button type="button" className="lx-btn lx-btn--solid sx-btn lx-phone-cta lx-phone-only" onClick={tap}>Email me the link</button>;
 }
 
 
@@ -290,8 +349,13 @@ export function FaqBlock() {
  * (file 0152), beside the live InstallBox (Growth E2: its words unchanged), which opens on the visitor's computer.
  * On /beta the heading is the page's H1 and the box's first-open steps move to their own band.
  */
-export function GetUnvibe({ device, page }: { device: VisitorDevice; page?: boolean }) {
+export function GetUnvibe({ visitor, page }: { visitor: Visitor; page?: boolean }) {
   const Heading = page ? "h1" : "h2";
+  const { device, known, intelMac } = visitor;
+  // The install card's view, once the visitor's computer is known (BetaInstall's measure, for the viewed → copied funnel).
+  useEffect(() => {
+    if (known) track("beta_install_viewed", { surface: "page", os: device === "windows" ? "windows" : "mac" });
+  }, [known, device]);
   // Both computers' boxes and words ship in the HTML; OS_BOOT shows one before the first paint (no swap, CLS 0).
   return (
     <div className={`lx-get${page ? " lx-get--page" : ""}`} data-reveal>
@@ -299,21 +363,16 @@ export function GetUnvibe({ device, page }: { device: VisitorDevice; page?: bool
         <VibeGuide mood="wave" size={96} look={[1.2, 0.4]} />
         <Heading id="install-title" className="lx-get__h" data-rise="mask">Get Unvibe.</Heading>
         <p className="lx-get__line" data-rise="fade" style={d(140)}>Download, open the app, then press the shortcut in any app.</p>
-        {/* Home: the button opens /beta. On /beta itself the box beside it is the Mac action (the Terminal line first;
-            the .dmg isn't notarized yet, so no button downloads it), and Windows' button is the .exe (Security 0152). */}
         <div className="lx-get__cta" data-rise style={d(220)}>
-          {device === "phone" ? <PhoneEmail /> : page ? (
-            <a href={INSTALL_COPY.windows.fileHref} className="lx-btn lx-btn--solid sx-btn lx-win" onClick={() => trackDownloadClick("beta", "windows")}>{HERO.download.windows}</a>
-          ) : (
-            <Link href="/beta" className="lx-btn lx-btn--solid sx-btn" onClick={() => trackDownloadPageClick("home_install")}><span className="lx-mac">{HERO.download.mac}</span><span className="lx-win">{HERO.download.windows}</span></Link>
-          )}
+          <PhoneEmail surface="phone_install" />
+          <DownloadButtons surface={page ? "beta" : "home_install"} page={page} />
         </div>
         <p className="lx-get__file" data-rise style={d(180)}><span className="lx-mac">Free · .dmg · Apple silicon and Intel</span><span className="lx-win">Free · .exe · Windows, 64-bit</span></p>
       </div>
       <div className="lx-get__box" data-rise="image" style={d(200)}>
         {(["mac", "windows"] as const).map((os) => (
           <div key={os} className={os === "mac" ? "lx-mac" : "lx-win"}>
-            <InstallBox os={os} surface={page ? "beta" : "home_install"} />
+            <InstallBox os={os} surface={page ? "beta" : "home_install"} intelMac={os === "mac" && intelMac} />
             {/* Design round 06 (/download): the script link, and on a Mac what the Terminal line checks (the box's own note). */}
             {page ? (
               <p className="lx-get__read">
@@ -328,6 +387,113 @@ export function GetUnvibe({ device, page }: { device: VisitorDevice; page?: bool
   );
 }
 
+const mac = SHORTCUTS.mac;
+const win = SHORTCUTS.windows;
+
+/** The live /beta's quick fixes, word for word, as rows like the home's questions (built at render: JSX). */
+const helpRows = () => [
+  {
+    id: "google-wait",
+    question: "The app says “Waiting for Google sign-in…”",
+    answer: (
+      <p>
+        Unvibe opened a sign-in page in your browser. Sign in with Google there, then click <strong>Connect this device</strong>.
+        The app finishes a few seconds after that click, not after the Google step alone. If no browser opened, go to{" "}
+        <a className="lx-link" href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>, sign in, and type the code shown in
+        the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
+      </p>
+    ),
+  },
+  {
+    id: "mac-first-open",
+    question: "macOS won’t open Unvibe the first time",
+    answer: (
+      <>
+        <p>Unvibe is not verified by Apple yet, so macOS blocks the first open. Do this once:</p>
+        <ol>
+          <li>Press <strong>Done</strong> on the warning.</li>
+          <li>Open System Settings, click Privacy &amp; Security, and scroll down to Security.</li>
+          <li>Press <strong>Open Anyway</strong>, then confirm when macOS asks again.</li>
+          <li>Enter your Mac password, then press <strong>OK</strong>.</li>
+        </ol>
+        <p>
+          The Open Anyway button stays for about an hour after you try to open Unvibe. If it’s gone, open Unvibe again first.
+          On macOS 14 or older, you can instead Control-click (right-click) Unvibe in Applications, choose <strong>Open</strong>,
+          then press <strong>Open</strong> again.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "browser-warns",
+    question: "Your browser warns about the Windows download",
+    answer: (
+      <p>
+        In Edge, press <strong>…</strong> next to the download, then <strong>Keep</strong>, then <strong>Show more</strong>, then{" "}
+        <strong>Keep anyway</strong>. Chrome also lets you keep a file after it warns.
+      </p>
+    ),
+  },
+  {
+    id: "smartscreen",
+    question: "Windows shows “Windows protected your PC”",
+    answer: (
+      <>
+        <p>
+          The Windows build is not code-signed yet, so SmartScreen warns about it. Click <strong>More info</strong>, then{" "}
+          <strong>Run anyway</strong>. Only do this for the file downloaded from unvibe.site or our GitHub releases.
+        </p>
+        <p>
+          No Run anyway button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it blocks
+          unsigned apps like Unvibe and can’t make an exception for one app. Email{" "}
+          <a className="lx-link" href="mailto:support@unvibe.site?subject=Unvibe%20Windows%20install">support@unvibe.site</a> and we’ll help.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "shortcut",
+    question: "The shortcut does nothing",
+    answer: (
+      <p>
+        The shortcut that works in every app is {mac.anywhere} on Mac and {win.anywhere} on Windows. On Mac, turn on Unvibe in
+        System Settings → Privacy &amp; Security → Accessibility. {mac.editor} ({win.editor} on Windows) only works in Cursor and
+        VS Code after you install the editor bridge from Unvibe’s Settings, Integrations. If another app already uses the
+        shortcut, change it in Unvibe’s Settings.
+      </p>
+    ),
+  },
+  {
+    id: "no-sign-in",
+    question: "You can start without signing in",
+    answer: (
+      <>
+        <p>
+          Skip sign-in on the first screen and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free
+          and syncs your history across devices. {proSentence()}
+        </p>
+        {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
+      </>
+    ),
+  },
+] as const;
+
+/**
+ * /beta's quick fixes (#help), kept from the live page: the desktop app's Help item and /activate's Help link land
+ * here, and /install-help doesn't cover sign-in or the shortcut.
+ */
+export function HelpBlock() {
+  return (
+    <div className="lx-faq" data-reveal>
+      <SectionHead id="help-title" title="Stuck? Quick fixes." center />
+      <div className="lx-faq__rows" data-rise="fade" style={d(160)}>
+        <ExpandRows rows={helpRows()} />
+        <p className="lx-fine">Need help? <a className="lx-link sx-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
+      </div>
+    </div>
+  );
+}
+
 /** Design round 06's step titles over the live InstallBox steps (same order). */
 const FIRST_OPEN_TITLES = { mac: ["Drag to Applications", "Open it once", "Open Anyway"], windows: ["Run it", "More info", "Run anyway"] } as const;
 
@@ -335,8 +501,7 @@ const FIRST_OPEN_TITLES = { mac: ["Drag to Applications", "Open it once", "Open 
  * /beta below Get Unvibe (Design round 06): the first-open steps with titles and real screens, the help
  * link, then the shortcut and the update note (the live /beta words, BetaInstall).
  */
-export function FirstOpenBand({ device }: { device: VisitorDevice }) {
-  void device;
+export function FirstOpenBand() {
   // Both computers' steps ship in the HTML; OS_BOOT shows the visitor's before the first paint (Design r09: /download
   // on Windows leads with Windows).
   return (
@@ -382,8 +547,8 @@ export function FirstOpenBand({ device }: { device: VisitorDevice }) {
   );
 }
 
-/* The site-wide footer's links (components/Footer), less its /#product anchor, which this home doesn't have. */
-const FOOT_EXPLAIN = [["Explain code", "/explain"], ["Code explainer for Mac", "/code-explainer-mac"], ["Code explainer for Windows", "/code-explainer-windows"], ["Use cases", "/use-cases"], ["Download", "/beta"], ["Pricing", "/pricing"], ["Changelog", "/releases"], ["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"]] as const;
+/* The site-wide footer's links (components/Footer). */
+const FOOT_EXPLAIN = [["Product", "/#product"], ["Explain code", "/explain"], ["Code explainer for Mac", "/code-explainer-mac"], ["Code explainer for Windows", "/code-explainer-windows"], ["Use cases", "/use-cases"], ["Download", "/beta"], ["Pricing", "/pricing"], ["Changelog", "/releases"], ["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"]] as const;
 const FOOT_COMPANY = [["About", "/about"], ["Building Unvibe", "/build"], ["Investors", "/investors"], ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refund"], ["Open-source notices", "/licenses"], ["Listed on", "/listed-on"], ["Contact", "mailto:support@unvibe.site"]] as const;
 
 /** The footer (Design round 05): the mark and one line, two link lists, then the year and Feedback, which opens the

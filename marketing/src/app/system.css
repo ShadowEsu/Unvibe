@@ -78,18 +78,6 @@ main a:not([class]) {
 }
 main a:not([class]):hover { text-decoration-thickness: 2px; }
 
-/* ── Sheets: one paper surface per section; eyebrows and small copy read on it, never on the field ── */
-.u-sheet {
-  padding: clamp(24px, 4.5vw, 56px); border: 1px solid var(--u-line); border-radius: var(--u-radius-sheet);
-  background: var(--u-sheet); box-shadow: var(--u-lift-1); color: var(--u-text);
-}
-.u-sheet .sec-head > .paper-meta { padding: 0; border-radius: 0; background: none; }
-.u-sheet .sec-head > .paper-lead { padding: 0; border-radius: 0; background: none; }
-@media (max-width: 520px) {
-  .paper-wrap.u-sheet { width: calc(100% - 1.5rem); }
-  .u-sheet { padding: 22px 16px; border-radius: 22px; }
-}
-
 /* The investor and build pages read on sheets too: their ink sat straight on the photo field at 1.8 to
    4.4:1 in light. /investors is one long sheet; /build gets one per section (its photo band keeps white
    type on the photo). */
@@ -104,11 +92,6 @@ main a:not([class]):hover { text-decoration-thickness: 2px; }
 @media (max-width: 520px) {
   .inv, .build-page .paper-section > .paper-wrap { width: calc(100% - 1.5rem); padding: 22px 16px; border-radius: 22px; }
 }
-
-/* Inside a sheet, nested stickers flatten to hairline rows: one surface, one primary object per view.
-   (Install card, FAQ rows and the closing card carry vibe.css card rules marked !important.) */
-.u-sheet .claude-startups { margin: 0; padding: clamp(20px, 3vw, 32px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.u-sheet .paper-beta { width: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
 
 /* Two-column sheet: the heading stays in view on the left while the content scrolls on the right. */
 @media (min-width: 900px) {
