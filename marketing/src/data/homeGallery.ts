@@ -27,7 +27,8 @@ export const HERO_RECORDING = {
   /** Length of the cut, in seconds. */
   seconds: 18.125,
   alt: "Unvibe's panel explaining the debounce sample at Advanced depth",
-  caption: `Real app, sample code · Unvibe ${CAPTURE_VERSION}`,
+  // Only the panel is filmed; the editor beside it is the site's drawing (Design #197 MUST, words Security-confirmed).
+  caption: `The panel is a real recording · sample code · Unvibe ${CAPTURE_VERSION}`,
 } as const;
 
 export interface GalleryShot {

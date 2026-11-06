@@ -160,6 +160,8 @@ function useRecordingSync(key: RefObject<HTMLSpanElement>, video: RefObject<HTML
         return;
       }
       const want = Math.min(into / 1000, HERO_RECORDING.seconds);
+      // Shown only once it has a frame to show: a recording still loading leaves the poster in view.
+      if (node.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       if (Math.abs(node.currentTime - want) > 0.35) node.currentTime = want;
       if (want < HERO_RECORDING.seconds && node.paused) void node.play().catch(() => undefined);
       node.classList.add("is-on");
@@ -181,12 +183,29 @@ function DemoWindow({ shortcut }: { shortcut: "mac" | "windows" }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [moving, setMoving] = useState(false);
   useEffect(() => {
-    setMoving(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    // The recording is mounted only after the page has loaded and the main thread is idle, so its download never
+    // competes with the first paint (Design #197 SHOULD). It joins the loop wherever the drawn demo is by then.
+    let idle = 0;
+    let timer = 0;
+    const mount = () => {
+      if ("requestIdleCallback" in window) idle = window.requestIdleCallback(() => setMoving(true), { timeout: 2000 });
+      else timer = window.setTimeout(() => setMoving(true), 200);
+    };
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (document.readyState === "complete") mount();
+      else window.addEventListener("load", mount, { once: true });
+    }
     const node = ref.current;
-    if (!node || typeof IntersectionObserver === "undefined") return undefined;
-    const io = new IntersectionObserver(([entry]) => node.classList.toggle("is-paused", !entry.isIntersecting));
-    io.observe(node);
-    return () => io.disconnect();
+    const io = node && typeof IntersectionObserver !== "undefined"
+      ? new IntersectionObserver(([entry]) => node.classList.toggle("is-paused", !entry.isIntersecting))
+      : null;
+    if (node && io) io.observe(node);
+    return () => {
+      window.removeEventListener("load", mount);
+      if (idle) window.cancelIdleCallback(idle);
+      window.clearTimeout(timer);
+      io?.disconnect();
+    };
   }, []);
   useRecordingSync(keyRef, videoRef, moving);
   const poster = HERO_RECORDING.poster;

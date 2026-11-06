@@ -42,7 +42,7 @@ describe("home surfaces", () => {
     assert.match(panel, /src="\/unvibe\/real\/0149\/hero-panel-0149-poster\.webp"/);
     assert.match(panel, /width="622" height="800"/);
     assert.match(panel, /alt="Unvibe&#x27;s panel explaining the debounce sample at Advanced depth"/);
-    assert.match(html, /<p class="nhero__cap">Real app, sample code · Unvibe 0\.1\.49<\/p>/);
+    assert.match(html, /<p class="nhero__cap">The panel is a real recording · sample code · Unvibe 0\.1\.49<\/p>/);
     // The recording is added only in the browser with motion allowed, so no-JS and reduced motion fetch no video.
     const hero = html.slice(html.indexOf('<section class="nhero"'), html.indexOf("</section>", html.indexOf('<section class="nhero"')));
     assert.ok(hero.includes("ndemo__panel"), "the slice is the hero");
