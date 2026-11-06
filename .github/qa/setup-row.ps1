@@ -46,6 +46,17 @@ function RunWait($file, $argList) {
   if (-not $p.WaitForExit(600000)) { Note "FAIL  $file $argList still running after 10 min" }
   $p.ExitCode
 }
+# The earlier release's assisted setup sometimes exits 0xC0000005 on a fresh Server 2025 and installs nothing
+# (run 42195819986's 2025 upgrade row). Its install is only this row's starting point: up to 3 tries, each crash noted.
+function OldInstall($argList) {
+  for ($try = 1; $try -le 3; $try++) {
+    $code = RunWait (Old) $argList
+    Note "v$env:OLD setup $argList exit $code (try $try)"
+    if ($code -ne -1073741819) { return $code }
+    Note "NOTE  v$env:OLD setup crashed with 0xC0000005 (try $try)"; Start-Sleep 5
+  }
+  $code
+}
 function Old() { # the earlier release's assisted setup.exe
   $f = "$env:RUNNER_TEMP\Unvibe-$env:OLD-win-x64-setup.exe"
   if (-not (Test-Path $f)) { Invoke-WebRequest -Uri "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:OLD/Unvibe-$env:OLD-win-x64-setup.exe" -OutFile $f -UseBasicParsing }
@@ -114,7 +125,7 @@ switch ($Kind) {
     Note "$(if ($running -eq 0) { 'PASS' } else { 'FAIL' })  /S does not start the app ($running Unvibe processes 5 s after)"
   }
   'upgrade' {
-    $code = RunWait (Old) '/S'; Note "v$env:OLD setup /S exit $code"
+    [void](OldInstall '/S')
     State "after v$env:OLD /S"
     # I-2 (Security): the old app runs once for real (onboarding, then a follow-up so the send agreement is ticked),
     # so the store has an install id and a consent record to keep.
@@ -140,7 +151,7 @@ switch ($Kind) {
     Start-Process "$env:LOCALAPPDATA\Programs\Unvibe\Unvibe.exe"
   }
   'machine' {
-    $code = RunWait (Old) '/allusers /S'; Note "v$env:OLD setup /allusers /S (Anyone who uses this computer) exit $code"
+    [void](OldInstall '/allusers /S') # "Anyone who uses this computer"
     State "after v$env:OLD for all users"
     DoubleClick $new
     Start-Sleep 5

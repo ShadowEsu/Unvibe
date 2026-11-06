@@ -5,7 +5,7 @@
 param([string]$Out)
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force $Out | Out-Null
-function Note($s) { Add-Content -Path "$Out\report.txt" -Value $s -Encoding utf8; Write-Host $s }
+function Note($s) { [IO.File]::AppendAllText("$Out\report.txt", "$s`r`n", (New-Object Text.UTF8Encoding $false)); Write-Host $s }
 function Verdict($ok, $what) { Note "$(if ($ok) { 'PASS' } else { 'FAIL' })  $what" }
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 Add-Type @"
