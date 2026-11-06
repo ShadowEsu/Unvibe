@@ -330,9 +330,8 @@ jobs:
           echo "SCREEN_VSCODE_SETTINGS=$dir/vscode-settings.json" >> "$GITHUB_ENV"
 
           # The sample workspace. debounce.js is the site demo's 7 lines; retry.ts is Marketing's film 4 sample
-          # (agents/marketing/films-1105/film4-sample/src/auth/retry.ts, sha256 3fe5657662788cb4…) with its three
-          # production-note comment lines (ledger number, "the capture opens this file") swapped for neutral ones, so
-          # withRetry still sits at lines 11-26. marketing-media.mjs checks both selections' sha256 before each take.
+          # (boss-handoff agents/marketing/films-1105/film4-sample/src/auth/retry.ts), byte for byte: the whole file is
+          # checked against Marketing's sha256 below, and marketing-media.mjs checks each selection's sha256 before its take.
           ws="$dir/sample-app"; mkdir -p "$ws/src/auth"
           cat > "$ws/src/debounce.js" <<'EOF'
           function debounce(fn, wait) {
@@ -344,9 +343,9 @@ jobs:
           }
           EOF
           cat > "$ws/src/auth/retry.ts" <<'EOF'
-          // Auth helpers shared by the sign-in and session code.
-          // Sample code: not from a real project.
-          // refreshSession at the bottom uses withRetry.
+          // Sample code for an Unvibe demo. Not from a real project.
+          // withRetry retries a failing async task, waiting longer each time.
+          // refreshSession at the bottom uses it.
 
           function sleep(ms: number): Promise<void> {
             const { promise, resolve } = Promise.withResolvers<void>();
@@ -375,6 +374,10 @@ jobs:
             withRetry(fetchToken, 4, 250);
           EOF
           shasum -a 256 "$ws/src/debounce.js" "$ws/src/auth/retry.ts"
+          # Marketing's file as committed (6 Nov): a copy that differs isn't their sample, so the takes don't run on it.
+          want=509ce5c1028681efd6540486ba4455bc181e2e75930911cb1b2f892d6c9ffaf9
+          got=$(shasum -a 256 "$ws/src/auth/retry.ts" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then echo "retry.ts sha256 $got is not Marketing's $want"; exit 1; fi
           echo "SCREEN_WORKSPACE=$ws" >> "$GITHUB_ENV"
 
           # Display: the most pixels Design asked for that the runner offers (2560x1600, else 1920x1200, else 1080),
