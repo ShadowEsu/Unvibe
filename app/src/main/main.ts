@@ -37,6 +37,7 @@ import {
   positionBar,
   raiseLimitPause,
   resizeBar,
+  setBarNotice,
   showBar,
   type WidgetResizeEdge,
 } from './windows';
@@ -809,6 +810,7 @@ app.whenReady().then(() => {
     // The renderer decides whether a pointer entering the Island requests this.
     resizeBar(bar, Boolean(expanded));
   });
+  ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
