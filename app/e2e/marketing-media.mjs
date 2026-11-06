@@ -10,11 +10,17 @@
 // Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (qa-prefixed;
 //      CI gives every run a fresh id and flags it as QA; an id reused across runs runs out of free
 //      explanations), FFMPEG (optional ffmpeg path; default: ffmpeg on PATH, else Playwright's),
-//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog).
+//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog),
+//      MEDIA_TAKES (which takes: gitlesson by default, film4, all, or screen: the whole-screen editor takes below).
+// MEDIA_TAKES=screen also reads (set by real-device-test.yml's editor setup step): SCREEN_EDITOR (vscode, xcode or
+//      textedit), SCREEN_VSCODE_EXE, SCREEN_VSCODE_SETTINGS (settings.json for each take's fresh VS Code profile),
+//      SCREEN_WORKSPACE (the sample-app folder), SCREEN_DISPLAY (the display mode, as logged); it needs ffmpeg with
+//      avfoundation, cliclick, Accessibility and Screen Recording.
 import { launchApp } from './cdp-launch.mjs';
-import { execFile, execFileSync, spawn } from 'node:child_process';
+import { chromium } from 'playwright';
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -30,6 +36,8 @@ const t0 = Date.now();
 const marks = [];
 const failures = [];
 const mark = (label) => { marks.push({ label, s: (Date.now() - t0) / 1000 }); console.log(`${marks.at(-1).s.toFixed(1)}s ${label}`); };
+const TAKES = process.env.MEDIA_TAKES ?? 'gitlesson';
+const SCREEN = TAKES === 'screen';
 
 const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-media-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-media-local-${Date.now()}`;
@@ -38,10 +46,17 @@ console.log(`install id ${installId}`);
 // Briefs reads the project last chosen (settings lastProjectRoot). The folder dialog can't be answered reliably on
 // GitHub's runner, so the run starts as if this sample project had been chosen before: a brief of its real change.
 const briefRepo = uploadRepo().repo;
-writeFileSync(path.join(userData, 'unvibe-settings.json'), JSON.stringify({ lastProjectRoot: briefRepo }));
+const seed = { lastProjectRoot: briefRepo };
+// The whole-screen take: the panel opens where it was last left (windows.ts resolveWidgetBounds), so start it beside
+// where the editor will be, not over it. settingsRevision is the app's SETTINGS_REVISION (8 in settings.ts since
+// 0.1.11): a settings file below it counts as pre-onboarding, and the app drops its lastWidgetBounds on load.
+let layout = SCREEN ? screenLayout(desktopPoints()) : null;
+if (SCREEN) Object.assign(seed, { settingsRevision: 8, lastWidgetBounds: layout.panel });
+writeFileSync(path.join(userData, 'unvibe-settings.json'), JSON.stringify(seed));
 
-// Retina-sharp screenshots on runners whose display is 1x.
-const app = await launchApp({ exe, userData, args: ['--force-device-scale-factor=2'], timeout: 90000 });
+// Retina-sharp screenshots on runners whose display is 1x. Not for the whole-screen take: there the app has to draw
+// exactly as it would for a person on that display (the stills scale themselves to 2x in shot()).
+const app = await launchApp({ exe, userData, args: SCREEN ? [] : ['--force-device-scale-factor=2'], timeout: 90000 });
 
 // Window videos: Chromium's screencast of each app window, encoded to WebM at 25 fps and 1280x800
 // (the size Playwright's own recorder used), each frame held until the next one arrives.
@@ -96,7 +111,9 @@ async function record(page) {
     entry.stop();
   }
 }
-app.onWindow((page) => { void record(page); });
+// The whole-screen take records the screen itself; a VP8 encode per window would compete with it for the CPU and
+// cost it real-time frames.
+if (!SCREEN) app.onWindow((page) => { void record(page); });
 
 /**
  * Window size (and optionally centre) without the main process: Electron applies a page's
@@ -295,7 +312,6 @@ const explained = firstRun && await step('first explanation', async () => {
   await shot(done, 'panel-explained-top');
 });
 
-const TAKES = process.env.MEDIA_TAKES ?? 'gitlesson';
 /** What each take pasted: its label, sha256, and when it was sent (s from the start of the run). */
 const pasted = [];
 const FILM4_TAKES = {
@@ -339,10 +355,33 @@ const FILM4_TAKES = {
 };
 
 /**
- * One take: the text goes in through the panel's paste box at Beginner (widget:usePaste, the page's text, never the
- * OS clipboard). A fresh install asks for the send agreement before its first own code goes out: agree as a new user
- * would; the panel then explains the waiting code itself (sent again only if it doesn't). The full answer streams, and the finished panel is held 4 s as the app left
- * it (the film's tail); only after that is it scrolled to the top for a still.
+ * Sends `text` through the panel's paste box at `level` (widget:usePaste, the page's text, never the OS clipboard). A
+ * fresh install asks for the send agreement before its first own code goes out: agree as a new user would; the panel
+ * then explains the waiting code itself (sent again only if it doesn't).
+ */
+async function sendPaste(label, sha256, text, level) {
+  const send = async () => {
+    pasted.push({ label, sha256, sentAt: (Date.now() - t0) / 1000 });
+    mark(`${label}: sent`);
+    await (await windowWith('widget.html')).evaluate(([t, l]) => window.unvibe.usePaste({ text: t, level: l }), [text, level]);
+  };
+  await send();
+  // After Continue the panel explains the code that waited by itself (widget.tsx onAgreed → request). Sending
+  // again would abort that run after the server counted it (run 42155987974: one answer, two explanations spent),
+  // so only send again if the panel did not start on its own within 5 s.
+  if (await agreeIfAsked(await windowWith('widget.html'))) {
+    mark(`${label}: agreed`);
+    // The thinking card (widget.tsx ThinkingCard, role=status) counts: run 42161863065 resumed with it for 8 s before
+    // the first words, and a check for the stream cursor alone sent the code a second time.
+    const resumed = await (await windowWith('widget.html')).locator('.thinking, .body .cursor, .card--done').first().waitFor({ timeout: 8000 }).then(() => true, () => false);
+    if (!resumed) await send();
+  }
+}
+
+/**
+ * One take: the text goes in through the panel's paste box at Beginner (sendPaste, agreeing if asked). The full answer
+ * streams, and the finished panel is held 4 s as the app left it (the film's tail); only after that is it scrolled to
+ * the top for a still.
  */
 async function pasteTake(label, { sha256, text }, expect, { still = true } = {}) {
   const actual = createHash('sha256').update(text).digest('hex');
@@ -357,22 +396,7 @@ async function pasteTake(label, { sha256, text }, expect, { still = true } = {})
     // up 560x679) still records the take, so a size miss is a note, not a failed take.
     await resize(panel, 560, 720).catch((e) => console.log(`NOTE ${label}: ${e.message.split('\n')[0]}`));
     await sleep(1500);
-    const send = async () => {
-      pasted.push({ label, sha256, sentAt: (Date.now() - t0) / 1000 });
-      mark(`${label}: sent`);
-      await (await windowWith('widget.html')).evaluate(([t]) => window.unvibe.usePaste({ text: t, level: 'beginner' }), [text]);
-    };
-    await send();
-    // After Continue the panel explains the code that waited by itself (widget.tsx onAgreed → request). Sending
-    // again would abort that run after the server counted it (run 42155987974: one answer, two explanations spent),
-    // so only send again if the panel did not start on its own within 5 s.
-    if (await agreeIfAsked(await windowWith('widget.html'))) {
-      mark(`${label}: agreed`);
-      // The thinking card (widget.tsx ThinkingCard, role=status) counts: run 42161863065 resumed with it for 8 s before
-      // the first words, and a check for the stream cursor alone sent the code a second time.
-      const resumed = await (await windowWith('widget.html')).locator('.thinking, .body .cursor, .card--done').first().waitFor({ timeout: 8000 }).then(() => true, () => false);
-      if (!resumed) await send();
-    }
+    await sendPaste(label, sha256, text, 'beginner');
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: expect }).first().waitFor({ timeout: 30000 });
     await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).then(() => mark(`${label}: streaming`)).catch(() => {});
     const done = await settledPanel();
@@ -422,6 +446,581 @@ async function followUpTake(label, question) {
     await sleep(600);
     await shot(done, label.replace(/[^a-z0-9]+/gi, '-'));
   });
+}
+
+// --- The whole-screen take (MEDIA_TAKES=screen; Design's home motion spec 530-531 §15) ------------------------------
+// A real editor on the real screen, recorded whole by ffmpeg (avfoundation: cursor shown, 30 fps, real time). The lines
+// are selected with a real mouse drag (cliclick), a real Control+U opens the panel (osascript, as real-device.mjs's
+// global-shortcut check does on this runner), and the panel's buttons get real clicks. Nothing is drawn or composited.
+// Take 1 (the site): debounce.js, then Beginner → Advanced → Test me. Take 2 (film 4): retry.ts lines 11-26 at Beginner.
+
+// The 7 lines of the site's demo editor (marketing/src/components/paper/PhotoHero.tsx .ndemo__code, origin/main
+// 707e8fc9). They are also the app's FIRST_RUN_SAMPLE (core/consent.ts), so the app counts this explanation as its
+// sample (main.ts isSample: no launch-at-login question after it); the panel shows the same as for any selection.
+const SCREEN_DEBOUNCE = {
+  sha256: '635f502cc52431fd5e3d69f60fafef2612a12282e25b0a84d32a929f9af16818',
+  text: [
+    'function debounce(fn, wait) {',
+    '  let timer;',
+    '  return (...args) => {',
+    '    clearTimeout(timer);',
+    '    timer = setTimeout(() => fn(...args), wait);',
+    '  };',
+    '}',
+  ].join('\n'),
+};
+// The sample files are written by real-device-test.yml's editor setup step; `first` is the selection's first line.
+const SCREEN_TAKES = [
+  { name: 'site', video: 'screen-site.mp4', file: 'src/debounce.js', first: 1, sample: SCREEN_DEBOUNCE, depth: 'intermediate', expect: 'debounce' },
+  { name: 'film4', video: 'screen-film4.mp4', file: 'src/auth/retry.ts', first: 11, sample: FILM4_TAKES.retry, depth: 'beginner', expect: 'withRetry' },
+];
+// The warm-up: the same neutral formatPrice sample the full run pastes, so the agreement is given before any take.
+const SCREEN_WARM_UP = 'export function formatPrice(cents, currency = "USD") {\n  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);\n}';
+const EDITOR = process.env.SCREEN_EDITOR || 'vscode';
+const sha256Of = (data) => createHash('sha256').update(data).digest('hex');
+const run = (cmd, args, timeout = 30000) => new Promise((resolve, reject) => execFile(cmd, args, { encoding: 'utf8', timeout },
+  (error, stdout, stderr) => (error ? reject(new Error(`${path.basename(cmd)}: ${(stderr || '').trim() || error.message}`)) : resolve(stdout))));
+const osa = (script) => run('osascript', ['-e', script]);
+const cliclick = (...args) => run(process.env.CLICLICK || 'cliclick', args);
+
+/** The main display in points, before the app runs (Finder's desktop bounds; the menu bar's height is a guess). */
+function desktopPoints() {
+  try {
+    const [, , width, height] = execFileSync('osascript', ['-e', 'tell application "Finder" to get bounds of window of desktop'], { encoding: 'utf8', timeout: 10000 })
+      .split(',').map((n) => Number(n.trim()));
+    if (width > 0 && height > 0) return { left: 0, top: 25, width, height: height - 25 };
+  } catch { /* below */ }
+  console.log('NOTE screen: Finder did not report the desktop size; laid out for 1920x1080');
+  return { left: 0, top: 25, width: 1920, height: 1055 };
+}
+
+/**
+ * Editor and panel side by side, centred, about 16:10 together (Design §15's crop), the panel at its usual 560 wide
+ * (440 on a small screen). Points, as macOS and cliclick count them.
+ */
+function screenLayout({ left, top, width, height }) {
+  const margin = 24;
+  const gap = 16;
+  const w = Math.min(width - 2 * margin, 1800);
+  const h = Math.min(height - 2 * margin, Math.round(w / 1.6));
+  const panelWidth = w >= 1400 ? 560 : 440;
+  const x = left + Math.round((width - w) / 2);
+  const y = top + Math.round((height - h) / 2);
+  return {
+    editor: { x, y, width: w - panelWidth - gap, height: h },
+    panel: { x: x + w - panelWidth, y, width: panelWidth, height: Math.min(h, 760) },
+  };
+}
+
+/** Presses No (else Cancel or OK) on a sheet or dialog of the app, as real-device.mjs's watcher does; up to `wait` ms. */
+async function answerSheets(wait) {
+  const found = [];
+  const end = Date.now() + wait;
+  while (!found.length && Date.now() < end) {
+    const said = await osa(`tell application "System Events"
+  set p to first process whose unix id is ${app.process.pid}
+  set found to ""
+  repeat with w in windows of p
+    try
+      set boxes to (sheets of w)
+      if subrole of w is "AXDialog" then set end of boxes to w
+      repeat with s in boxes
+        set t to ""
+        repeat with x in (static texts of s)
+          set t to t & (value of x) & " "
+        end repeat
+        repeat with b in {"No", "Cancel", "OK"}
+          if exists button b of s then
+            click button b of s
+            set found to found & t & "|"
+            exit repeat
+          end if
+        end repeat
+      end repeat
+    end try
+  end repeat
+  return found
+end tell`).catch((e) => { console.log(`NOTE screen dialogs: ${e.message.split('\n')[0]}`); return ''; });
+    found.push(...said.split('|').map((m) => m.trim()).filter(Boolean));
+    if (!found.length) await sleep(1000);
+  }
+  for (const message of found) console.log(`NOTE screen: answered a native dialog: ${message}`);
+  return found;
+}
+
+/** The companion would sit behind the editor in every frame; minimised, as a person tidying their screen would. */
+async function minimizeCompanion() {
+  const title = await companion.title();
+  // Matched by title: the panel and the island are windows of the same process.
+  if (!title) throw new Error('the companion window has no title to find it by');
+  const count = await osa(`tell application "System Events"
+  set p to first process whose unix id is ${app.process.pid}
+  set n to 0
+  repeat with w in (windows of p)
+    try
+      if name of w is ${JSON.stringify(title)} and subrole of w is "AXStandardWindow" then
+        set value of attribute "AXMinimized" of w to true
+        set n to n + 1
+      end if
+    end try
+  end repeat
+  return n
+end tell`);
+  return Number(count.trim()) > 0;
+}
+
+async function waitNoPanel(timeout = 8000) {
+  const end = Date.now() + timeout;
+  while (app.windows().some((w) => w.url().includes('widget.html') && !w.isClosed())) {
+    if (Date.now() > end) throw new Error('the panel did not close');
+    await sleep(200);
+  }
+}
+
+/**
+ * Opens `file` in the take's editor, in front. VS Code gets a fresh profile per take (the setup step's settings, no
+ * extensions, nothing restored from the take before) and its own debug port, so the code's line positions can be read
+ * from its DOM. Xcode and TextEdit (Design's fallbacks) open through Launch Services and have no DOM to read.
+ */
+async function openEditor(index, workspace, file) {
+  if (EDITOR !== 'vscode') {
+    const name = { xcode: 'Xcode', textedit: 'TextEdit' }[EDITOR];
+    if (!name) throw new Error(`unknown SCREEN_EDITOR ${EDITOR}`);
+    await run('open', ['-a', name, file]);
+    return { name, proc: `first process whose name is "${name}"`, page: null, close: () => osa(`tell application "${name}" to quit saving no`).catch(() => {}) };
+  }
+  const exe = process.env.SCREEN_VSCODE_EXE || '/Applications/Visual Studio Code.app/Contents/MacOS/Electron';
+  const profile = mkdtempSync(path.join(tmpdir(), 'unvibe-vscode-'));
+  mkdirSync(path.join(profile, 'User'));
+  if (process.env.SCREEN_VSCODE_SETTINGS) copyFileSync(process.env.SCREEN_VSCODE_SETTINGS, path.join(profile, 'User', 'settings.json'));
+  else console.log('NOTE screen: no SCREEN_VSCODE_SETTINGS; VS Code runs with its default settings');
+  const port = 9340 + index;
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.NODE_OPTIONS;
+  const child = spawn(exe, [`--user-data-dir=${profile}`, `--extensions-dir=${path.join(profile, 'extensions')}`, '--disable-extensions',
+    '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--disable-telemetry', '--new-window',
+    `--remote-debugging-port=${port}`, workspace, file], { env, detached: true, stdio: 'ignore' });
+  let exited = null;
+  child.on('exit', (code, signal) => { exited = `exit ${code ?? signal}`; });
+  child.on('error', (e) => { exited = e.message; });
+  const stop = () => { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ } };
+  process.on('exit', stop);
+  const start = Date.now();
+  let browser = null;
+  let page = null;
+  while (!page && Date.now() - start < 60000) {
+    if (exited) throw new Error(`VS Code stopped before its debug port opened (${exited})`);
+    browser ??= await chromium.connectOverCDP(`http://127.0.0.1:${port}`).catch(() => null);
+    page = browser?.contexts().flatMap((c) => c.pages()).find((p) => p.url().includes('workbench')) ?? null;
+    if (!page) await sleep(500);
+  }
+  if (!page) {
+    stop();
+    throw new Error('VS Code showed no workbench on its debug port in 60 s');
+  }
+  return {
+    name: 'VS Code',
+    proc: `first process whose unix id is ${child.pid}`,
+    page,
+    async close() {
+      await browser.close().catch(() => {});
+      stop();
+      await sleep(1500);
+    },
+  };
+}
+
+/** Puts the editor's window where the layout wants it and brings it in front (System Events, Accessibility). */
+async function placeEditor(editor, { x, y, width, height }) {
+  await osa(`tell application "System Events"
+  repeat 60 times
+    if exists (${editor.proc}) then
+      if exists window 1 of (${editor.proc}) then exit repeat
+    end if
+    delay 0.5
+  end repeat
+  set p to ${editor.proc}
+  set frontmost of p to true
+  set position of window 1 of p to {${x}, ${y}}
+  set size of window 1 of p to {${width}, ${height}}
+end tell`);
+}
+
+/**
+ * Where each selected line sits in VS Code: the row whose line number is n (.margin-view-overlays .line-numbers) and
+ * the .view-line at the same height, checked against the sample's text. CSS pixels in the workbench page, plus what
+ * turns them into screen points (the window's origin, its title bar if native, and its devicePixelRatio).
+ */
+function editorRows(page, first, lines) {
+  return page.evaluate(([firstLine, expected]) => {
+    const norm = (s) => (s ?? '').replace(/\u00a0/g, ' ').replace(/\s+$/, '');
+    const editor = [...document.querySelectorAll('.editor-instance .monaco-editor')].find((e) => e.offsetParent && e.querySelector('.view-lines'));
+    if (!editor) return { error: 'no code editor on screen' };
+    const numbers = [...editor.querySelectorAll('.margin-view-overlays .line-numbers')];
+    const views = [...editor.querySelectorAll('.view-lines .view-line')];
+    const rows = [];
+    for (let i = 0; i < expected.length; i++) {
+      const n = firstLine + i;
+      const number = numbers.find((el) => el.textContent.trim() === String(n));
+      if (!number) return { error: `line ${n} is not on screen` };
+      const top = number.getBoundingClientRect().top;
+      const view = views.find((el) => Math.abs(el.getBoundingClientRect().top - top) < 2);
+      if (!view) return { error: `no text row beside line number ${n}` };
+      if (norm(view.textContent) !== norm(expected[i])) return { error: `line ${n} reads "${norm(view.textContent)}"` };
+      const r = view.getBoundingClientRect();
+      const text = view.firstElementChild?.getBoundingClientRect();
+      rows.push({ n, left: r.left, top: r.top, height: r.height, right: text ? text.right : r.left });
+    }
+    return { rows, screenX: window.screenX, screenY: window.screenY, chromeTop: window.outerHeight - window.innerHeight, dpr: window.devicePixelRatio };
+  }, [first, lines]);
+}
+
+/**
+ * Selects with the keyboard at a typing pace (the fallback when the drag can't be placed or didn't select): VS Code's
+ * Go to Line (Control+G), other editors from the top of the file; then Shift+Down per line and Shift+Command+Right.
+ */
+function keyboardSelect(first, count) {
+  const goTo = EDITOR === 'vscode'
+    ? `keystroke "g" using control down
+  delay 0.7
+  keystroke "${first}"
+  delay 0.4
+  key code 36
+  delay 0.5`
+    : `key code 126 using command down
+  delay 0.4
+  repeat ${first - 1} times
+    key code 125
+    delay 0.05
+  end repeat`;
+  return osa(`tell application "System Events"
+  ${goTo}
+  repeat ${count - 1} times
+    key code 125 using shift down
+    delay 0.08
+  end repeat
+  key code 124 using {shift down, command down}
+end tell`);
+}
+
+/** avfoundation's index for "Capture screen 0" (the main display), or null when this ffmpeg has none. */
+function screenDevice() {
+  if (!ffmpeg) return null;
+  const listed = spawnSync(ffmpeg, ['-hide_banner', '-f', 'avfoundation', '-list_devices', 'true', '-i', ''], { encoding: 'utf8' });
+  return /\[(\d+)\] Capture screen 0/.exec(listed.stderr ?? '')?.[1] ?? null;
+}
+
+/**
+ * Whole-screen recording: native resolution, cursor shown, 30 fps in real time, H.264 at CRF 10 (near lossless; the
+ * site cut is made from it). x264 ultrafast/zerolatency keeps up with 2560x1600 on the runner's cores and writes each
+ * frame at once, so ffmpeg's progress (out_time) against the wall clock dates the first frame: the marks are seconds
+ * from that frame. Stopped with q on stdin, so the file is finalised.
+ */
+function startRecording(file, device) {
+  const proc = spawn(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-nostats', '-progress', 'pipe:1',
+    '-f', 'avfoundation', '-capture_cursor', '1', '-capture_mouse_clicks', '0', '-framerate', '30', '-pixel_format', 'uyvy422',
+    '-thread_queue_size', '1024', '-i', `${device}:none`,
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-crf', '10', '-pix_fmt', 'yuv420p', '-r', '30',
+    '-movflags', '+faststart', '-y', file], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const spawnedAt = Date.now();
+  const starts = [];
+  const errors = [];
+  let buffered = '';
+  let exit = null;
+  proc.stdout.on('data', (d) => {
+    buffered += d;
+    for (let i = buffered.indexOf('\n'); i >= 0; i = buffered.indexOf('\n')) {
+      const m = /^out_time_us=(\d+)$/.exec(buffered.slice(0, i).trim());
+      buffered = buffered.slice(i + 1);
+      // The first few reports only: each is an estimate of the first frame's wall time; the median is used.
+      if (m && Number(m[1]) > 0 && starts.length < 7) starts.push(Date.now() - Number(m[1]) / 1000);
+    }
+  });
+  proc.stderr.on('data', (d) => errors.push(String(d)));
+  proc.stdin.on('error', () => {});
+  const closed = new Promise((resolve) => {
+    proc.on('close', (code, signal) => { exit = code ?? signal; resolve(); });
+    proc.on('error', (e) => { errors.push(e.message); exit = -1; resolve(); });
+  });
+  const startedAt = () => (starts.length ? [...starts].sort((a, b) => a - b)[Math.floor(starts.length / 2)] : null);
+  return {
+    startedAt,
+    async ready(timeout = 15000) {
+      const end = Date.now() + timeout;
+      while (!starts.length && exit === null && Date.now() < end) await sleep(100);
+      if (!starts.length) throw new Error(`the screen recording did not start (${errors.join('').trim().split('\n').pop() || `ffmpeg ${exit ?? 'silent'}`})`);
+    },
+    async stop() {
+      if (exit === null) proc.stdin.write('q');
+      await Promise.race([closed, sleep(20000)]);
+      if (exit === null) {
+        proc.kill('SIGINT');
+        await Promise.race([closed, sleep(10000)]);
+      }
+      return {
+        firstFrameAfterSpawnS: startedAt() === null ? null : (startedAt() - spawnedAt) / 1000,
+        startEstimates: starts.length,
+        ffmpegExit: exit,
+        ffmpegErrors: errors.join('').trim().slice(-800) || null,
+        bytes: existsSync(file) ? statSync(file).size : 0,
+      };
+    },
+  };
+}
+
+/**
+ * Presses a panel control with a real click: the pointer glides there (cliclick) and clicks at the control's centre
+ * (its rect in the panel page plus the window's screen position; the panel is frameless). A first click on a window
+ * that isn't key can only bring it forward, so a second click follows if nothing happened, as a person would. Only
+ * if the real clicks don't land is the control clicked through the DOM, and the take records that.
+ */
+async function pressInPanel(result, selector, label, pressed, tm) {
+  const target = (await windowWith('widget.html')).locator(selector).first();
+  await target.waitFor({ state: 'visible', timeout: 30000 });
+  await target.scrollIntoViewIfNeeded();
+  const [x, y] = await target.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return [Math.round(window.screenX + r.left + r.width / 2), Math.round(window.screenY + window.outerHeight - window.innerHeight + r.top + r.height / 2)];
+  });
+  const waitPressed = async (ms) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      if (await pressed(await windowWith('widget.html'))) return true;
+      await sleep(150);
+    }
+    return false;
+  };
+  let how = null;
+  try {
+    await cliclick('-e', '250', `m:${x},${y}`);
+    await sleep(350);
+    tm(`${label} click`);
+    await cliclick(`c:${x},${y}`);
+    if (await waitPressed(2500)) how = 'cliclick';
+    else {
+      await cliclick(`c:${x},${y}`);
+      if (await waitPressed(2500)) how = 'cliclick, second click';
+    }
+  } catch (e) {
+    console.log(`NOTE screen: ${label}: cliclick failed (${e.message.split('\n')[0]})`);
+  }
+  if (!how) {
+    console.log(`NOTE screen: ${label}: the real click did not land; clicked through the DOM instead`);
+    tm(`${label} click (DOM)`);
+    await (await windowWith('widget.html')).locator(selector).first().click();
+    if (!await waitPressed(5000)) throw new Error(`${label} did not respond to a click`);
+    how = 'DOM';
+  }
+  result.clicks.push({ label, how, x, y });
+}
+
+/** One whole-screen take; its result (marks, methods, recording) goes in `info.takes`, failures in `failures`. */
+async function screenTake(take, index, info, ctx) {
+  const lines = take.sample.text.split('\n');
+  const result = {
+    name: take.name, video: take.video, startDepth: take.depth,
+    text: { file: take.file, lines: `${take.first}-${take.first + lines.length - 1}`, sha256: take.sample.sha256, fileSha256: null },
+    selectMethod: null, clickMethod: null, clicks: [], captured: null, editorBounds: layout.editor, panelBounds: null,
+    editorPixelRatio: null, marks: [], recording: null, failures: [],
+  };
+  info.takes.push(result);
+  const fail = (message) => {
+    result.failures.push(message);
+    failures.push(`screen ${take.name}: ${message}`);
+    console.log(`FAIL screen ${take.name}: ${message}`);
+  };
+  // The words on screen are Marketing's and Design's, character for character: the file's lines must hash to the
+  // sample's sha256 (as pasteTake checks its texts), or the take is not recorded.
+  const fileText = readFileSync(path.join(ctx.workspace, take.file), 'utf8');
+  const selection = fileText.split('\n').slice(take.first - 1, take.first - 1 + lines.length).join('\n');
+  result.text.fileSha256 = sha256Of(fileText);
+  if (sha256Of(take.sample.text) !== take.sample.sha256 || sha256Of(selection) !== take.sample.sha256) {
+    fail(`lines ${result.text.lines} of ${take.file} hash to ${sha256Of(selection)}, not ${take.sample.sha256}; not recorded`);
+    return;
+  }
+  const wall = [];
+  const tm = (label) => { wall.push({ label, at: Date.now() }); mark(`screen ${take.name}: ${label}`); };
+  let editor = null;
+  let recorder = null;
+  try {
+    // A shortcut-started panel opens at the Settings default depth (main.ts makeSession): take 1 starts in the middle so
+    // Beginner and Advanced are both real switches; take 2 is at Beginner from the first word, as film 4's paste take is.
+    await companion.evaluate((level) => window.unvibe.setSettings({ defaultExplanationLevel: level }), take.depth);
+    editor = await openEditor(index, ctx.workspace, path.join(ctx.workspace, take.file));
+    await placeEditor(editor, layout.editor);
+    await sleep(2500); // the window settles and the editor draws the file
+    let geometry = null;
+    if (editor.page) {
+      geometry = await editorRows(editor.page, take.first, lines).catch((e) => ({ error: e.message.split('\n')[0] }));
+      if (geometry.error) {
+        console.log(`NOTE screen ${take.name}: no line positions from the editor (${geometry.error})`);
+        geometry = null;
+      } else result.editorPixelRatio = geometry.dpr;
+    }
+    // The pointer starts at rest over the lower code, away from the lines, so its way to line 1 is in the take.
+    await cliclick(`m:${Math.round(layout.editor.x + layout.editor.width * 0.7)},${Math.round(layout.editor.y + layout.editor.height * 0.8)}`);
+    recorder = startRecording(path.join(ctx.dir, take.video), ctx.device);
+    await recorder.ready();
+    await sleep(1500); // a still lead-in before anything moves
+
+    if (geometry) {
+      // CSS pixels to screen points: the page's devicePixelRatio over the display's own (the app's companion page) is
+      // VS Code's zoom; 1 with window.zoomLevel 0.
+      const zoom = geometry.dpr / ctx.displayRatio || 1;
+      const at = (x, y) => [Math.round(geometry.screenX + x * zoom), Math.round(geometry.screenY + geometry.chromeTop + y * zoom)];
+      const firstRow = geometry.rows[0];
+      const lastRow = geometry.rows.at(-1);
+      const [x0, y0] = at(firstRow.left + 1, firstRow.top + firstRow.height / 2);
+      const [x1, y1] = at(lastRow.right + 6, lastRow.top + lastRow.height / 2);
+      await cliclick('-e', '300', `m:${x0},${y0}`);
+      await sleep(450);
+      // Design §15 step 1: the selection is seen growing. 16 eased steps 75 ms apart: about 1.3 s from the start of
+      // line 1 to the end of the last line.
+      const steps = 16;
+      const moves = Array.from({ length: steps }, (_, i) => {
+        const t = (i + 1) / steps;
+        const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        return `dm:${Math.round(x0 + (x1 - x0) * e)},${Math.round(y0 + (y1 - y0) * e)}`;
+      });
+      tm('select start');
+      await cliclick('-w', '75', `dd:${x0},${y0}`, ...moves, `du:${x1},${y1}`);
+      tm('select end');
+      const selectedRows = await editor.page.evaluate(() => document.querySelectorAll('.editor-instance .monaco-editor .view-overlays .selected-text').length).catch(() => 0);
+      if (selectedRows >= lines.length) result.selectMethod = 'drag';
+      else console.log(`NOTE screen ${take.name}: the drag selected ${selectedRows} of ${lines.length} rows`);
+    }
+    if (!result.selectMethod) {
+      console.log(`NOTE screen ${take.name}: selecting with the keyboard instead of a drag`);
+      await sleep(400);
+      tm('select start (keyboard)');
+      await keyboardSelect(take.first, lines.length);
+      tm('select end (keyboard)');
+      result.selectMethod = 'keyboard';
+    }
+
+    await sleep(800);
+    // Marked when osascript returns: the key has been pressed and released by then (osascript's own start-up, about
+    // 0.1-0.2 s, comes before the key, so a mark before the call would sit early).
+    await osa('tell application "System Events" to keystroke "u" using control down');
+    tm('shortcut');
+    const panel = await windowWith('widget.html', 20000);
+    tm('panel visible');
+    result.panelBounds = await panel.evaluate(() => ({ x: window.screenX, y: window.screenY, width: window.outerWidth, height: window.outerHeight })).catch(() => null);
+    const b = result.panelBounds;
+    const ed = layout.editor;
+    if (b && b.x < ed.x + ed.width && b.x + b.width > ed.x && b.y < ed.y + ed.height && b.y + b.height > ed.y) {
+      console.log(`NOTE screen ${take.name}: the panel opened over the editor (${JSON.stringify(b)})`);
+    }
+    await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).then(() => tm('streaming')).catch(() => {});
+    let done = await settledPanel();
+    tm('answer done');
+    const captured = (await done.locator('.code-context code').first().innerText().catch(() => '')).trim();
+    result.captured = captured === take.sample.text.trim();
+    if (!result.captured) fail(`the panel explained other text than the selection: "${captured.slice(0, 80).replace(/\s+/g, ' ')}"`);
+    await saveAnswer(done, `screen ${take.name}`);
+
+    if (take.name === 'site') {
+      // §15 step 5 (as §13.1): Beginner, then Advanced, then Test me with one question showing.
+      for (const level of ['beginner', 'advanced']) {
+        await sleep(1500);
+        await pressInPanel(result, `.lvl[data-level="${level}"]`, level, async (p) => (await p.locator(`.lvl.on[data-level="${level}"], .body .cursor`).count()) > 0, tm);
+        await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 15000 }).then(() => tm(`${level} streaming`)).catch(() => {});
+        done = await settledPanel();
+        tm(`${level} done`);
+        await saveAnswer(done, `screen site ${level}`);
+      }
+      await sleep(1500);
+      await pressInPanel(result, '.tool--quiz', 'test me', async (p) => (await p.locator('.tool--quiz.on, .quiz__q').count()) > 0, tm);
+      await (await windowWith('widget.html')).locator('.quiz__q').first().waitFor({ timeout: 60000 });
+      tm('question visible');
+      await sleep(3000);
+    } else {
+      const depth = (await done.locator('.lvl.on').first().innerText().catch(() => '')).trim();
+      if (!/^beginner$/i.test(depth)) fail(`the answer is at ${depth || 'no depth'}, not Beginner`);
+      await sleep(4000); // the film's tail: the finished panel as the app left it
+    }
+    tm('end');
+    await sleep(600);
+  } catch (e) {
+    fail(e.message.split('\n')[0]);
+  } finally {
+    if (recorder) result.recording = await recorder.stop();
+    const zero = recorder?.startedAt();
+    result.marks = wall.map(({ label, at }) => ({ label, s: zero ? Math.round(at - zero) / 1000 : null }));
+    result.clickMethod = !result.clicks.length ? null : result.clicks.every((c) => c.how !== 'DOM') ? 'cliclick' : result.clicks.some((c) => c.how !== 'DOM') ? 'cliclick and DOM' : 'DOM';
+    // The next take opens a fresh panel with no trace of this one.
+    const open = await app.windowWith('widget.html', 1000);
+    if (open) await open.evaluate(() => window.unvibe.closeWidget()).catch(() => {});
+    await waitNoPanel().catch((e) => console.log(`NOTE screen ${take.name}: ${e.message}`));
+    if (editor) await editor.close();
+  }
+}
+
+/** Both whole-screen takes, after a warm-up off camera; writes screen/timeline.json and screen/SHA256SUMS. */
+async function screenTakes() {
+  const dir = path.join(out, 'screen');
+  mkdirSync(dir, { recursive: true });
+  const display = await companion.evaluate(() => ({
+    points: [screen.width, screen.height], ratio: window.devicePixelRatio || 1,
+    avail: { left: screen.availLeft, top: screen.availTop, width: screen.availWidth, height: screen.availHeight },
+  }));
+  // The app's own view of the screen (Dock and menu bar left out) replaces the guess made before launch.
+  layout = screenLayout(display.avail);
+  const info = {
+    version, mode: TAKES, editor: EDITOR,
+    display: { mode: process.env.SCREEN_DISPLAY || null, points: display.points.join('x'), pixelRatio: display.ratio, pixels: display.points.map((n) => n * display.ratio).join('x') },
+    layout, warmUp: null, takes: [], failures: [],
+  };
+  const ctx = { dir, workspace: process.env.SCREEN_WORKSPACE, device: screenDevice(), displayRatio: display.ratio };
+  console.log(`screen: ${info.display.pixels} px (${info.display.points} pt), editor ${EDITOR}, avfoundation screen ${ctx.device ?? 'none'}`);
+  const missing = [
+    !ctx.workspace && 'SCREEN_WORKSPACE is not set (real-device-test.yml\'s editor setup step writes the sample files)',
+    !ctx.device && `this ffmpeg (${ffmpeg ?? 'none'}) lists no avfoundation screen`,
+    !await cliclick('-V').then(() => true, () => false) && 'cliclick is not installed',
+  ].filter(Boolean);
+  for (const m of missing) failures.push(`screen: ${m}`);
+  info.failures.push(...missing);
+
+  if (!missing.length) {
+    // Warm-up, off camera: the send agreement is given once with a paste, and the launch-at-login question that follows
+    // a first own-code answer is answered No, so neither shows in a take. The panel is then put beside the editor
+    // (the app saves where it is: lastWidgetBounds) and closed, so the recorded Control+U opens a fresh one there.
+    info.warmUp = { agreed: false, dialogs: [], panel: null };
+    const warmed = await step('screen warm-up', async () => {
+      await sendPaste('screen warm-up', sha256Of(SCREEN_WARM_UP), SCREEN_WARM_UP, 'beginner');
+      await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'formatPrice' }).first().waitFor({ timeout: 30000 });
+      await settledPanel();
+      info.warmUp.agreed = existsSync(path.join(userData, 'unvibe-consent.json'));
+      // The question comes once the answer is saved (main.ts askLaunchAtLogin), a moment after the panel settles.
+      info.warmUp.dialogs = await answerSheets(12000);
+      const panel = await windowWith('widget.html');
+      await panel.evaluate((b) => { window.moveTo(b.x, b.y); window.resizeTo(b.width, b.height); }, layout.panel);
+      await sleep(1000);
+      info.warmUp.panel = await panel.evaluate(() => ({ x: window.screenX, y: window.screenY, width: window.outerWidth, height: window.outerHeight }));
+      await panel.evaluate(() => window.unvibe.closeWidget());
+      await waitNoPanel();
+      if (!info.warmUp.agreed) throw new Error('no send agreement saved (unvibe-consent.json)');
+    });
+    if (warmed) {
+      await step('screen: companion minimised', async () => {
+        if (!await minimizeCompanion()) throw new Error('no companion window to minimise');
+      });
+      for (const [index, take] of SCREEN_TAKES.entries()) await screenTake(take, index, info, ctx);
+    } else info.failures.push('warm-up failed: no take recorded');
+  }
+
+  for (const t of info.takes) info.failures.push(...t.failures.map((f) => `${t.name}: ${f}`));
+  writeFileSync(path.join(dir, 'timeline.json'), JSON.stringify(info, null, 2));
+  const sums = ['timeline.json', ...SCREEN_TAKES.map((t) => t.video)].filter((f) => existsSync(path.join(dir, f)))
+    .map((f) => `${sha256Of(readFileSync(path.join(dir, f)))}  ${f}`);
+  writeFileSync(path.join(dir, 'SHA256SUMS'), `${sums.join('\n')}\n`);
+  console.log(sums.join('\n'));
+}
+
+if (SCREEN) {
+  if (explained) await screenTakes();
+  await finish();
 }
 
 // --- Film 4 and the git lesson (Marketing): the person's own code pasted into the panel at Beginner ---------------

@@ -15,6 +15,10 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      media_takes:
+        description: "Optional: which website media takes to record on the Mac (empty = the script's default; screen = the whole-screen editor takes)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -31,7 +35,8 @@ jobs:
           - os: windows-latest
             label: windows
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The whole-screen take installs an editor and recording tools first, so it gets more time.
+    timeout-minutes: ${{ inputs.media_takes == 'screen' && 45 || 30 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -60,8 +65,10 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_BUILD_RUN: ${{ inputs.build_run }}
+          INPUT_MEDIA_TAKES: ${{ inputs.media_takes }}
         run: |
           if [ -n "$INPUT_BUILD_RUN" ] && ! [[ "$INPUT_BUILD_RUN" =~ ^[0-9]+$ ]]; then echo "build_run must be a run id (digits only)"; exit 1; fi
+          if [ -n "$INPUT_MEDIA_TAKES" ] && ! [[ "$INPUT_MEDIA_TAKES" =~ ^(gitlesson|film4|all|screen)$ ]]; then echo "media_takes must be empty, gitlesson, film4, all or screen"; exit 1; fi
           v="$INPUT_VERSION"
           if [ -z "$v" ]; then v=$(curl -fsSL https://unvibe.site/install.sh | sed -n 's/^TAG=".*:-v\([0-9.]*\)}"$/\1/p' | head -1); fi
           if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "version must look like 0.1.44"; exit 1; fi
@@ -244,6 +251,184 @@ jobs:
           path: ${{ runner.temp }}/shots
           retention-days: 14
 
+      # The whole-screen take (MEDIA_TAKES=screen; Design's home motion spec 530-531 §15): a real editor on the real
+      # screen, selected with a real mouse and explained with a real Control+U, recorded by ffmpeg. Everything here only
+      # prepares the Mac; the takes themselves run in the media step below. Each choice is logged, so the take's
+      # timeline.json and this log say which editor, resolution and grants the recording really had.
+      - name: Set up the editor and the screen for the whole-screen take (Mac)
+        if: always() && matrix.label == 'mac' && inputs.media_takes == 'screen' && env.UNVIBE_EXE != ''
+        continue-on-error: true
+        shell: bash
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_ENV_HINTS=1
+          dir="$RUNNER_TEMP/screen"; mkdir -p "$dir"
+          # ffmpeg with avfoundation (Playwright's own ffmpeg can only encode its screencasts), cliclick for real
+          # mouse input, displayplacer to set the display mode.
+          brew install ffmpeg cliclick || echo "::warning::brew could not install ffmpeg or cliclick"
+          brew install jakehilborn/jakehilborn/displayplacer || echo "displayplacer: not installed, the display stays as it is"
+
+          # Editor, in Design's order: VS Code, else Xcode's editor, else TextEdit.
+          editor=textedit
+          if brew install --cask visual-studio-code && [ -d "/Applications/Visual Studio Code.app" ]; then
+            app="/Applications/Visual Studio Code.app"
+            # A cask download is quarantined; Gatekeeper's "downloaded from the Internet" sheet would sit over the take.
+            xattr -dr com.apple.quarantine "$app" || true
+            echo "SCREEN_VSCODE_EXE=$app/Contents/MacOS/$(defaults read "$app/Contents/Info" CFBundleExecutable)" >> "$GITHUB_ENV"
+            editor=vscode
+          elif [ -d /Applications/Xcode.app ]; then
+            editor=xcode
+          fi
+          echo "Editor for the take: $editor"
+          echo "SCREEN_EDITOR=$editor" >> "$GITHUB_ENV"
+          if [ "$editor" = textedit ]; then
+            # TextEdit opens source files as plain text; give that text the same face and size VS Code would use.
+            defaults write com.apple.TextEdit NSFixedPitchFont Menlo
+            defaults write com.apple.TextEdit NSFixedPitchFontSize 16
+          fi
+
+          # VS Code user settings (copied into a fresh profile for each take): the default Dark Modern theme, Menlo
+          # 16 px, no minimap, no welcome page or walkthroughs, no workspace trust, no AI/chat side bar, nothing that
+          # pops over the code while the mouse rests on it (hovers, light bulbs, the screen reader question that VS
+          # Code asks when Accessibility clients are running). Diagnostics are off so the TypeScript checker's lib
+          # setting can't draw a red line under Promise.withResolvers in a sample that is correct as written.
+          cat > "$dir/vscode-settings.json" <<'EOF'
+          {
+            "workbench.colorTheme": "Default Dark Modern",
+            "editor.fontFamily": "Menlo",
+            "editor.fontSize": 16,
+            "editor.minimap.enabled": false,
+            "editor.accessibilitySupport": "off",
+            "editor.hover.enabled": false,
+            "editor.lightbulb.enabled": "off",
+            "editor.stickyScroll.enabled": false,
+            "editor.inlayHints.enabled": "off",
+            "editor.codeLens": false,
+            "editor.wordWrap": "off",
+            "files.eol": "\n",
+            "window.zoomLevel": 0,
+            "window.restoreWindows": "none",
+            "workbench.startupEditor": "none",
+            "workbench.welcomePage.walkthroughs.openOnInstall": false,
+            "workbench.tips.enabled": false,
+            "workbench.enableExperiments": false,
+            "workbench.editor.enablePreview": false,
+            "workbench.editor.empty.hint": "hidden",
+            "workbench.secondarySideBar.defaultVisibility": "hidden",
+            "security.workspace.trust.enabled": false,
+            "extensions.ignoreRecommendations": true,
+            "extensions.autoCheckUpdates": false,
+            "extensions.autoUpdate": false,
+            "update.mode": "none",
+            "telemetry.telemetryLevel": "off",
+            "chat.disableAIFeatures": true,
+            "chat.commandCenter.enabled": false,
+            "git.enabled": false,
+            "javascript.validate.enable": false,
+            "typescript.validate.enable": false
+          }
+          EOF
+          echo "SCREEN_VSCODE_SETTINGS=$dir/vscode-settings.json" >> "$GITHUB_ENV"
+
+          # The sample workspace. debounce.js is the site demo's 7 lines; retry.ts is Marketing's film 4 sample
+          # (agents/marketing/films-1105/film4-sample/src/auth/retry.ts, sha256 3fe5657662788cb4…) with its three
+          # production-note comment lines (ledger number, "the capture opens this file") swapped for neutral ones, so
+          # withRetry still sits at lines 11-26. marketing-media.mjs checks both selections' sha256 before each take.
+          ws="$dir/sample-app"; mkdir -p "$ws/src/auth"
+          cat > "$ws/src/debounce.js" <<'EOF'
+          function debounce(fn, wait) {
+            let timer;
+            return (...args) => {
+              clearTimeout(timer);
+              timer = setTimeout(() => fn(...args), wait);
+            };
+          }
+          EOF
+          cat > "$ws/src/auth/retry.ts" <<'EOF'
+          // Auth helpers shared by the sign-in and session code.
+          // Sample code: not from a real project.
+          // refreshSession at the bottom uses withRetry.
+
+          function sleep(ms: number): Promise<void> {
+            const { promise, resolve } = Promise.withResolvers<void>();
+            setTimeout(resolve, ms);
+            return promise;
+          }
+
+          export async function withRetry<T>(
+            task: () => Promise<T>,
+            attempts = 3,
+            baseDelayMs = 500,
+          ): Promise<T> {
+            let lastError: unknown;
+            for (let i = 0; i < attempts; i++) {
+              try {
+                return await task();
+              } catch (err) {
+                lastError = err;
+                if (i < attempts - 1) await sleep(baseDelayMs * 2 ** i + Math.random() * 100);
+              }
+            }
+            throw lastError;
+          }
+
+          export const refreshSession = (fetchToken: () => Promise<string>) =>
+            withRetry(fetchToken, 4, 250);
+          EOF
+          shasum -a 256 "$ws/src/debounce.js" "$ws/src/auth/retry.ts"
+          echo "SCREEN_WORKSPACE=$ws" >> "$GITHUB_ENV"
+
+          # Display: the most pixels Design asked for that the runner offers (2560x1600, else 1920x1200, else 1080),
+          # as a 1x mode first, else a Retina (scaling:on) mode with the same pixels.
+          if command -v displayplacer >/dev/null; then
+            modes=$(displayplacer list || true)
+            id=$(printf '%s\n' "$modes" | sed -n 's/^Persistent screen id: //p' | head -1)
+            printf '%s\n' "$modes" | grep -E '^ *mode [0-9]+:' | head -40 || true
+            picked=""
+            for target in 2560x1600 1920x1200 1920x1080; do
+              w=${target%x*}; h=${target#*x}
+              # Actions runs bash with -e and pipefail: a grep that finds no mode must not end the step.
+              n=$(printf '%s\n' "$modes" | grep -E "mode [0-9]+: res:${w}x${h} " | grep -v 'scaling:on' | head -1 | sed -E 's/.*mode ([0-9]+):.*/\1/' || true)
+              [ -n "$n" ] || n=$(printf '%s\n' "$modes" | grep -E "mode [0-9]+: res:$((w / 2))x$((h / 2)) .*scaling:on" | head -1 | sed -E 's/.*mode ([0-9]+):.*/\1/' || true)
+              if [ -n "$id" ] && [ -n "$n" ] && displayplacer "id:$id mode:$n origin:(0,0) degree:0"; then picked="$target (mode $n)"; break; fi
+            done
+            echo "Display mode set: ${picked:-none of 2560x1600, 1920x1200, 1920x1080 is offered; left as it was}"
+            sleep 3
+          fi
+          display=$(system_profiler SPDisplaysDataType | grep -E 'Resolution|UI Looks like' | sed 's/^ *//' | paste -sd ';' - || true)
+          echo "Display now: $display"
+          echo "SCREEN_DISPLAY=$display" >> "$GITHUB_ENV"
+          # More room for the editor and the panel side by side: the Dock hides until the pointer reaches it.
+          defaults write com.apple.dock autohide -bool true || true
+          killall Dock || true
+
+          # Screen Recording for whatever runs ffmpeg (node runs it in the media step; bash runs the test below), in
+          # the style of the Accessibility grants above. It isn't granted on the runner today. Sequoia also asks again
+          # each month unless replayd's approvals list has a later date for the client; harmless on older macOS.
+          db="/Library/Application Support/com.apple.TCC/TCC.db"
+          ff=$(command -v ffmpeg || true)
+          approvals="$HOME/Library/Group Containers/group.com.apple.replayd/ScreenCaptureApprovals.plist"
+          for p in /bin/bash /bin/sh "$(command -v node)" "$ff" "$( [ -n "$ff" ] && realpath "$ff")" /usr/sbin/screencapture /usr/local/opt/runner/provisioner/provisioner; do
+            [ -n "$p" ] || continue
+            sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceScreenCapture','$p',1,2,4,1,'UNUSED',0);" || true
+            defaults write "$approvals" "$p" -date "3024-01-01 00:00:00 +0000" 2>/dev/null || true
+          done
+
+          # A 1 s test capture: is the frame black? (Without the grant, macOS can also hand back only the wallpaper and
+          # the menu bar, which is not black: the take's own frames are the proof that windows were recorded.)
+          if [ -n "$ff" ]; then
+            "$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep -E 'AVFoundation|\[[0-9]+\]' || true
+            # -list_devices always exits 1, hence the || true.
+            idx=$("$ff" -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | sed -nE 's/.*\[([0-9]+)\] Capture screen 0.*/\1/p' | head -1 || true)
+            echo "avfoundation screen device: ${idx:-none}"
+            if [ -n "$idx" ]; then
+              "$ff" -hide_banner -loglevel error -f avfoundation -capture_cursor 1 -framerate 30 -pixel_format uyvy422 -i "$idx:none" -t 1 -y "$dir/test-capture.mov" || true
+              ymax=$("$ff" -v error -i "$dir/test-capture.mov" -vf "signalstats,metadata=print:key=lavfi.signalstats.YMAX:file=-" -f null - 2>/dev/null | sed -n 's/.*YMAX=//p' | sort -n | tail -1 || true)
+              if [ "${ymax%.*}" -gt 40 ] 2>/dev/null; then verdict="non-black"; else verdict="black or empty"; fi
+              echo "1 s test capture: brightest luma ${ymax:-none}, $verdict"
+              rm -f "$dir/test-capture.mov"
+            fi
+          fi
+
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
@@ -256,7 +441,10 @@ jobs:
           # A fresh install per run: one reused id spends its 50 free explanations and then every
           # capture shows the limit instead of an answer. The next step flags it as QA.
           MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
+          # Checked in "Pick the version"; empty keeps the script's default takes.
+          MEDIA_TAKES: ${{ inputs.media_takes }}
         run: |
+          [ -n "$MEDIA_TAKES" ] || unset MEDIA_TAKES
           cp app/e2e/marketing-media.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
