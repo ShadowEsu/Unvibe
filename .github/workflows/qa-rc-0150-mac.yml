@@ -12,6 +12,8 @@ name: QA 0.1.50 RC Mac stills
 #   r1 the compact Island before and after the first explanation, 4x crops, chip → count gap (#213/#219);
 #   r2 + r3 DMG install + first explanation on arm64 and Intel, audio devices and every privacy dialog watched;
 #   r3 also once on arm64 with a virtual microphone (BlackHole 2ch), to see whether an input device brings the question.
+# Notice rows (n-*, for RC-3): DMG install + first launch + first explanation, then qa/install-matrix's first-explain.mjs
+# (pinned below) as is with NOTICES=1 (N-0..N-4). "[rc:<app-release run id>]" in the commit message picks the build.
 on:
   push:
     branches: [qa/rc-0150-mac]
@@ -64,6 +66,9 @@ jobs:
           - { item: mic-049-h2-noruntime-2, runner: macos-15-intel, rc: "42199536258" }
           # Design package stills (Briefs with one real brief of a sample repo, Settings → Privacy & Data), RC-2 arm64.
           - { item: design-briefs, runner: macos-15, rc: "42199536258" }
+          # Notice rows (RC-3 notice fix + #220): before-run on RC-2; "[rc:<id>]" in the commit message picks RC-3.
+          - { item: n-arm64, runner: macos-15, rc: "42199536258" }
+          - { item: n-intel, runner: macos-15-intel, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
@@ -75,7 +80,9 @@ jobs:
         env:
           MSG: ${{ github.event.head_commit.message }}
           ITEM: ${{ matrix.item }}
-        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:"*"$ITEM"*"]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item skipped by [only:]"; fi
+        run: |
+          if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:"*"$ITEM"*"]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item skipped by [only:]"; fi
+          if [[ "$MSG" =~ \[rc:([0-9]+)\] ]]; then echo "RC_OVERRIDE=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"; echo "build: app-release run ${BASH_REMATCH[1]}"; fi
 
       - name: Flag the install id as QA before anything installs
         if: env.SKIP != '1'
@@ -97,23 +104,23 @@ jobs:
             .github
             app/e2e
 
-      - name: Get the RC build (${{ matrix.rc || env.RC_RUN }})
+      - name: Get the RC build (${{ env.RC_OVERRIDE || matrix.rc || env.RC_RUN }})
         if: env.SKIP != '1'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
-          run-id: ${{ matrix.rc || env.RC_RUN }}
+          run-id: ${{ env.RC_OVERRIDE || matrix.rc || env.RC_RUN }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/build
 
       - name: Check the RC DMGs
         if: env.SKIP != '1'
         env:
-          RC: ${{ matrix.rc }}
+          RC: ${{ env.RC_OVERRIDE || matrix.rc }}
         run: |
           cd "$RUNNER_TEMP/build"; ls -la
           if [ -n "$RC" ]; then
-            echo "RC-2 build $RC (no expected sums given; recorded here):" | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
+            echo "RC build: app-release run $RC (no expected sums given; recorded here):" | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
             shasum -a 256 Unvibe-$V-mac-*.dmg | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
           else
             echo "$SHA_ARM64  Unvibe-$V-mac-arm64.dmg" > sums; echo "$SHA_X64  Unvibe-$V-mac-x64.dmg" >> sums
@@ -122,11 +129,22 @@ jobs:
 
       - name: Playwright (debug-port reads and the first explanation)
         if: env.SKIP != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ITEM: ${{ matrix.item }}
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
           npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
           cp "$GITHUB_WORKSPACE/.github/qa/rc0150/cdp.mjs" rc0150-cdp.mjs
+          if [[ "$ITEM" == n-* ]]; then
+            # The notice checks as they are on qa/install-matrix (00e22ef, "N-2c control"), unchanged.
+            src=00e22efaaf14300bd4f75a857401455dd31b920d
+            gh api "repos/ShadowEsu/Unvibe/contents/.github/qa/first-explain.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > first-explain.mjs
+            gh api "repos/ShadowEsu/Unvibe/contents/app/e2e/cdp-launch.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > cdp-launch.mjs
+            echo "qa/install-matrix@$src .github/qa/first-explain.mjs + app/e2e/cdp-launch.mjs" > first-explain.source
+            grep -c "N-2c control" first-explain.mjs
+          fi
 
       - name: Set up (Gatekeeper on, screenshot permission, window helper)
         if: env.SKIP != '1'
@@ -186,6 +204,13 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/rc0150/design-capture.sh "$RUNNER_TEMP/m"
+
+      - name: "Notice rows: DMG install, first launch, first explanation, then N-0..N-4 (first-explain.mjs NOTICES=1)"
+        if: env.SKIP != '1' && startsWith(matrix.item, 'n-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          DMG_DIR: ${{ runner.temp }}/build
+        run: bash .github/qa/rc0150/notices-row.sh "$RUNNER_TEMP/m"
 
       - name: "Mic row: fresh install, 75 s untouched on onboarding 1/4, then onboarding + the sample, dialogs watched"
         if: env.SKIP != '1' && startsWith(matrix.item, 'mic-')

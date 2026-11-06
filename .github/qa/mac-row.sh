@@ -149,8 +149,9 @@ flag first-contact || r "FAIL  QA flag right after first contact"
 
 # First explanation, on the same profile, through the app's debug port.
 osascript -e 'tell application id "com.unvibe.app" to quit' > /dev/null 2>&1; sleep 3; pkill -x Unvibe 2>/dev/null; sleep 2
+# EXPLAIN_T: first-explain's hard limit (NOTICES=1 adds the notice rows, about 2 minutes more).
 UNVIBE_EXE=/Applications/Unvibe.app/Contents/MacOS/Unvibe USER_DATA="$store_dir" OUT="$out" UNVIBE_OS=mac \
-  NODE_PATH="$RUNNER_TEMP/pw/node_modules" t 420 node "$RUNNER_TEMP/pw/first-explain.mjs" > "$out/explain.log" 2>&1
+  NODE_PATH="$RUNNER_TEMP/pw/node_modules" t "${EXPLAIN_T:-420}" node "$RUNNER_TEMP/pw/first-explain.mjs" > "$out/explain.log" 2>&1
 r "first explanation (exit $?):"; sed 's/^/  /' "$out/explain-report.txt" 2>/dev/null | tee -a "$out/report.txt"
 pkill -x Unvibe 2>/dev/null
 grep -q '^FAIL\|^  FAIL' "$out/report.txt" && exit 1
