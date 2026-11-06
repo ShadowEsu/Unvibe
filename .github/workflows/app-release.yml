@@ -290,6 +290,8 @@ jobs:
               echo "starts, and ignores ELECTRON_RUN_AS_NODE"
               kept="$(grep -o '"installId":"[^"]*"' "$profile/unvibe-store.json" || true)"
               if [ "$kept" != "\"installId\":\"$SMOKE_ID\"" ]; then echo "The app replaced the flagged install id ($kept), so this start may count as real."; exit 1; fi
+              echo "started on the pre-flagged install id $SMOKE_ID"
+              rm -rf "$profile"
             fi
             hdiutil detach "$mnt" -force >/dev/null
           done
