@@ -283,23 +283,35 @@ if (Get-UnvibeUninstallEntry "HKLM:") {
 }
 
 Write-Host "Installing Unvibe for your Windows user (no administrator rights needed)..."
-# Plain /S: the setup is one-click per-user (no admin prompt, ever, even next to an all-users copy). The
-# per-user switch only means something to the older assisted setup, which crashed with it on Server 2025 (QA, 6 Nov).
+# Plain /S: the setup is one-click per-user, so it never asks for administrator rights, even next to an
+# all-users copy. The older assisted setup's per-user switch means nothing to it.
 # Wait for the installer process only: Start-Process -Wait would also wait for anything it starts.
-try {
-  \$setup = Start-Process -FilePath \$download -ArgumentList "/S" -PassThru
-} catch {
-  Stop-UnvibeInstall "Could not start the Unvibe installer. Details: \$_"
+function Invoke-UnvibeSetup {
+  try {
+    \$setup = Start-Process -FilePath \$download -ArgumentList "/S" -PassThru
+  } catch {
+    Stop-UnvibeInstall "Could not start the Unvibe installer. Details: \$_"
+  }
+  # Windows PowerShell 5.1 leaves ExitCode empty unless the process handle was read before it ended.
+  \$null = \$setup.Handle
+  if (-not \$setup.WaitForExit(300000)) {
+    Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
+    throw "The Unvibe installer did not finish within 5 minutes. Restart your PC, then run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
+  }
+  return \$setup.ExitCode
 }
-# Windows PowerShell 5.1 leaves ExitCode empty unless the process handle was read before it ended.
-\$null = \$setup.Handle
-if (-not \$setup.WaitForExit(300000)) {
-  Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
-  throw "The Unvibe installer did not finish within 5 minutes. Restart your PC, then run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
+\$setupExit = Invoke-UnvibeSetup
+# -1073741819 (0xC0000005): on a fresh Windows Server 2025 the setup sometimes crashed right after the
+# download (QA, 6 Nov; cause not pinned). Once only: wait, check the same file again, run it again.
+if (\$setupExit -eq -1073741819) {
+  Write-Host "The installer stopped unexpectedly (code \$setupExit). Trying once more in 5 seconds..."
+  Start-Sleep -Seconds 5
+  if ((Get-FileHash -Path \$download -Algorithm SHA256).Hash.ToLower() -ne \$expected) { Stop-UnvibeInstall "The download does not match the published checksum." }
+  \$setupExit = Invoke-UnvibeSetup
 }
-if (\$setup.ExitCode -ne 0) {
+if (\$setupExit -ne 0) {
   Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
-  throw "The Unvibe installer stopped with code \$(\$setup.ExitCode). Run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
+  throw "The Unvibe installer stopped with code \$setupExit. Run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
 }
 
 # Where this user's Unvibe is: its Apps & features entry names the exe (an earlier install may sit in a
