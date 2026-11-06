@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="5 November 2026"
+      updated="6 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
