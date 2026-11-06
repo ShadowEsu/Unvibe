@@ -555,8 +555,7 @@
   & .ob2__level { display: grid; gap: 8px; justify-items: center; margin: 0; padding: 12px 14px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
   & .ob2__level p { margin: 0; font-size: 14.5px; color: var(--v-ink); text-align: center; }
   & .ob2__choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  & .ob2__task { margin: 0; font-size: 16px; font-weight: 650; color: var(--v-ink); text-align: center; }
-  /* The paste step (setup's Mac step 3, the next open's OwnCodeWelcome) and the Mac shortcut step: a
+  /* The paste step (setup's step 3, the next open's OwnCodeWelcome) and the Mac shortcut step: a
      fixed width keeps the card 720 px in every state (the onboarding grid sizes its card to the
      content), Not now alone on the right. */
   & .ob2__paste { width: 652px; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
@@ -581,7 +580,6 @@
   & .ob2 .shortcut-guide__fix p, & .ob2 .shortcut-art figcaption { color: var(--v-muted); }
   & .ob2 .ob2__actions--end { justify-content: flex-end; }
   & .ob2__shortcut { justify-self: center; text-align: center; }
-  & .ob2__alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
 
   & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
   & .ob__confetti i { position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border: 1.5px solid var(--v-ink); border-radius: 3px; background: var(--lime); animation: obConfetti 1.6s cubic-bezier(.2,.7,.4,1) forwards; animation-delay: calc(var(--i) * 18ms); }

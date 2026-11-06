@@ -374,8 +374,8 @@ await step('today', async () => {
     await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).waitFor();
     await sleep(1000);
     await shot(companion, 'onboarding-anywhere');
-    // On a Mac step 3 is the paste target; nothing is pasted here, so Skip for now finishes setup.
-    await button(companion, steps === 3 ? 'Start using Unvibe' : 'Skip for now').click();
+    // Step 3 is the paste target on both systems; nothing is pasted here, so Skip for now finishes setup.
+    await button(companion, 'Skip for now').click();
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
   await sleep(1800);
