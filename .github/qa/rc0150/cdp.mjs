@@ -72,6 +72,20 @@ const helpers = `
       if (/(hidden|auto|scroll|clip)/.test(s.overflow + s.overflowX + s.overflowY)) { const p = n.getBoundingClientRect();
         if (r.top < p.top - 0.5 || r.bottom > p.bottom + 0.5 || r.left < p.left - 0.5 || r.right > p.right + 0.5) cuts.push(n.className || n.tagName); } }
     return cuts; };
+  // The part of the window an element can show through: the viewport cut by every clipping ancestor.
+  const box = (el) => { let b = { top: 0, left: 0, bottom: innerHeight, right: innerWidth };
+    for (let n = el.parentElement; n; n = n.parentElement) { const s = getComputedStyle(n);
+      if (/(hidden|auto|scroll|clip)/.test(s.overflow + s.overflowX + s.overflowY)) { const p = n.getBoundingClientRect();
+        b = { top: Math.max(b.top, p.top), left: Math.max(b.left, p.left), bottom: Math.min(b.bottom, p.bottom), right: Math.min(b.right, p.right) }; } }
+    return b; };
+  const within = (r, b) => r.top >= b.top - 0.5 && r.left >= b.left - 0.5 && r.bottom <= b.bottom + 0.5 && r.right <= b.right + 0.5;
+  // Every line of text and every button of the element shows (its own border may still be cut).
+  const contentVisible = (el) => { const b = box(el); const rects = [];
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t;
+    while ((t = w.nextNode())) { if (!t.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(t); rects.push(...g.getClientRects()); }
+    el.querySelectorAll('button').forEach((x) => rects.push(x.getBoundingClientRect()));
+    const r = el.getBoundingClientRect();
+    return { all: rects.every((x) => within(x, b)), lines: rects.length, hiddenBottomPx: Math.max(0, Math.round(r.bottom - b.bottom)), hiddenTopPx: Math.max(0, Math.round(b.top - r.top)) }; };
 `;
 const inPage = (p, fn) => p.evaluate(`(() => { ${helpers}\n return (${fn.toString()})(); })()`);
 
@@ -85,6 +99,13 @@ try {
     const note = panel.locator('.access-note').filter({ hasText: 'macOS is blocking Unvibe' });
     await note.waitFor({ timeout: Number(process.env.NOTE_WAIT || 15000) });
     await sleep(800); // let the entrance settle before measuring
+    // The ink (dark) panel is the panel's own ☾ button (localStorage unvibe.panelTheme2), not settings.theme.
+    if (process.env.PANEL === 'dark') {
+      const toDark = panel.getByRole('button', { name: 'Switch panel to dark mode', exact: true });
+      if (await toDark.count()) { await toDark.click(); say('PANEL_SWITCHED', 'pressed ☾ (Switch panel to dark mode)'); await sleep(900); }
+    }
+    // SCROLL=1: scroll the panel the way a person would until the whole note shows.
+    if (process.env.SCROLL === '1') { await note.evaluate((el) => el.scrollIntoView({ block: 'end' })); await sleep(700); say('SCROLLED', 'note scrolled into view (block end)'); }
     // Page-side code goes in as one source string (Runtime.evaluate is not held to the page's CSP; an eval() would be).
     Object.assign(result, await inPage(panel, () => {
       const el = [...document.querySelectorAll('.access-note')].find((n) => n.textContent.includes('macOS is blocking Unvibe'));
@@ -98,8 +119,8 @@ try {
       const btn = [...el.querySelectorAll('button')].map((b) => b.textContent.trim());
       const r = el.getBoundingClientRect();
       return {
-        text: el.innerText.replace(/\s+/g, ' ').trim(), buttons: btn, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, clippedBy: clipped(el),
-        theme: document.documentElement.dataset.panel || document.documentElement.dataset.theme || '',
+        text: el.innerText.replace(/\s+/g, ' ').trim(), buttons: btn, rect: { x: r.x, y: r.y, w: r.width, h: r.height }, clippedBy: clipped(el), content: contentVisible(el),
+        theme: `panel=${document.documentElement.dataset.panel ?? ''} theme=${document.documentElement.dataset.theme ?? ''}`,
         css: { color: s.color, backgroundColor: s.backgroundColor, border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`, font: `${s.fontSize}/${s.lineHeight} ${s.fontWeight}` },
         panelBackground: hex(panelBg), panelBackgroundFromOpaqueAncestor: back.opaqueAncestorFound, backgroundImagesBehind: back.backgroundImages,
         noteBackground: hex(noteBg), textColor: hex(text), borderColor: hex(border), borderAlpha: borderRaw[3],
@@ -110,6 +131,7 @@ try {
     say('NOTE_TEXT', result.text);
     say('NOTE_BUTTONS', result.buttons.join(' | '));
     say('NOTE_CLIPPED_BY', result.clippedBy.join(',') || 'nothing');
+    say('NOTE_CONTENT_VISIBLE', `${result.content.all ? 'yes' : 'no'} (${result.content.lines} text/button boxes); note box hidden: bottom ${result.content.hiddenBottomPx} px, top ${result.content.hiddenTopPx} px`);
     say('THEME', result.theme);
     say('CONTRAST_TEXT', `${result.textColor} on ${result.noteBackground} = ${result.textContrast}:1`);
     say('CONTRAST_BORDER', `${result.borderColor} (alpha ${result.borderAlpha}) vs panel ${result.panelBackground} = ${result.borderContrast}:1`);

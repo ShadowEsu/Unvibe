@@ -66,7 +66,7 @@ awk -F, -v vx="$vx" -v vy="$vy" -v vw="$vw" -v vh="$vh" -v h0="$h0" '
     printf "PILL_MOVES %d (frames whose window origin differs from the first; the top-attached pill sits at the window top)\n", moved
     printf "FRAMES grown %d, back to %d px %d; last grown frame and first compact frame bracket the exit\n", grown, h0, shrunk }' "$out/timeline.csv" | tee -a "$out/report.txt"
 grep -q '^PILL_MOVES 0' "$out/report.txt" || fail "the Island window origin moved between frames"
-grep -q '^1,' "$out/timeline.csv" || fail "no timeline frames (no notice growth seen)"
+grep -q '^1\.0,' "$out/timeline.csv" || fail "no timeline frames (no notice growth seen)"
 
 # #218: a click on the Island while a notice shows opens the card; its .island__note is neutral.
 sleep 8 # the 15 s notify rate limit since the first notice

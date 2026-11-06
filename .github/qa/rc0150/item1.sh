@@ -77,11 +77,11 @@ sleep 1
 t 15 osascript -e 'tell application "System Events" to keystroke "u" using control down'
 r "pressed Control+U in TextEdit with the sample selected"
 sleep 3
-NOTE_WAIT=15000 t 90 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" note206 "$out" "$P" > "$out/cdp-note.txt" 2>&1
+NOTE_WAIT=15000 PANEL="$theme" t 90 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" note206 "$out" "$P" > "$out/cdp-note.txt" 2>&1
 if grep -q '^ERROR' "$out/cdp-note.txt"; then
   r "no denied note after Control+U ($(grep '^ERROR' "$out/cdp-note.txt")); the same capture through unvibe://review"
   open 'unvibe://review'; sleep 3
-  NOTE_WAIT=15000 t 90 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" note206 "$out" "$P" > "$out/cdp-note.txt" 2>&1
+  NOTE_WAIT=15000 PANEL="$theme" t 90 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" note206 "$out" "$P" > "$out/cdp-note.txt" 2>&1
   r "TRIGGER unvibe://review (Control+U showed no note)"
 else
   r "TRIGGER Control+U"
@@ -94,14 +94,23 @@ over=$("$W" find UserNotificationCenter || true)
 screencapture -x "$out/$P-c-denied-note-full.png"
 read -r px py pw ph _ <<< "$(v PANEL_WINDOW)"
 [ -n "${pw:-}" ] && screencapture -x -R "$px,$py,$pw,$ph" "$out/$P-c-denied-note-panel.png"
-r "panel window: $(v PANEL_WINDOW); note rect in panel: $(v NOTE_RECT); clipped by: $(v NOTE_CLIPPED_BY)"
+r "panel window: $(v PANEL_WINDOW); note rect in panel: $(v NOTE_RECT); clipped by: $(v NOTE_CLIPPED_BY); text + button all visible: $(v NOTE_CONTENT_VISIBLE)"
 r "System Events dialog on screen at the still: $([ -n "$over" ] && echo "YES ($over)" || echo no)"
 text=$(v NOTE_TEXT)
 [[ $text == *"macOS is blocking Unvibe from copying your selection"*"turn on System Events under Unvibe"* ]] || fail "denied note text: ${text:-none}"
 [[ $(v NOTE_BUTTONS) == *"Open Automation settings"* ]] || fail "no Open Automation settings button"
-[ "$(v NOTE_CLIPPED_BY)" = nothing ] || fail "note cut off by: $(v NOTE_CLIPPED_BY)"
+[[ $(v THEME) == "panel=$theme "* ]] || fail "panel look is $(v THEME), not $theme"
+[[ $(v NOTE_CONTENT_VISIBLE) == yes* ]] || fail "the note's text or button is cut off as the panel opens: $(v NOTE_CONTENT_VISIBLE)"
+[ "$(v NOTE_CLIPPED_BY)" = nothing ] || r "FINDING  at 420x460 the note's box runs past the panel's scroll area ($(v NOTE_CLIPPED_BY)): $(v NOTE_CONTENT_VISIBLE)"
 [ -z "$over" ] || fail "the System Events dialog covers the still"
 [ "${pw:-0}" = 420 ] && [ "${ph:-0}" = 460 ] || r "NOTE  panel is ${pw:-?}x${ph:-?}, not 420x460"
+# The same note scrolled fully into view (as a person scrolls the panel), for the full box including its border.
+SCROLL=1 t 60 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" note206 "$out" "$P-scrolled" > "$out/cdp-note-scrolled.txt" 2>&1
+sed 's/^/  cdp scrolled: /' "$out/cdp-note-scrolled.txt" | tee -a "$out/report.txt"
+sleep 0.5
+[ -n "${pw:-}" ] && screencapture -x -R "$px,$py,$pw,$ph" "$out/$P-d-denied-note-scrolled-panel.png"
+screencapture -x "$out/$P-d-denied-note-scrolled-full.png"
+r "scrolled: clipped by $(grep '^NOTE_CLIPPED_BY ' "$out/cdp-note-scrolled.txt" | cut -d' ' -f2-); dialog on screen: $("$W" find UserNotificationCenter > /dev/null && echo YES || echo no)"
 tc=$(v CONTRAST_TEXT | sed -E 's/.*= ([0-9.]+):1/\1/'); bc=$(v CONTRAST_BORDER | sed -E 's/.*= ([0-9.]+):1/\1/')
 r "CONTRAST note text: $(v CONTRAST_TEXT) (needs >= 4.5): $(awk -v x="${tc:-0}" 'BEGIN{print (x>=4.5)?"PASS":"FAIL"}')"
 r "CONTRAST note border vs panel: $(v CONTRAST_BORDER) (needs >= 3): $(awk -v x="${bc:-0}" 'BEGIN{print (x>=3)?"PASS":"FAIL"}')"
