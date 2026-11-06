@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -50,8 +50,13 @@ test('renderer html and css load nothing from a remote origin, and every CSP all
         problems.push(`${name}:${at} CSP meta without content`);
         continue;
       }
-      for (const directive of (content[1] ?? content[2]).split(';')) {
-        const [directiveName, ...sources] = directive.trim().split(/\s+/);
+      const directives = (content[1] ?? content[2]).split(';').map((d) => d.trim().split(/\s+/));
+      // Without default-src 'none', anything the policy doesn't name (a font or style added from code)
+      // would load from anywhere.
+      if (!directives.some(([directiveName, ...sources]) => directiveName === 'default-src' && sources.join(' ') === "'none'")) {
+        problems.push(`${name}:${at} CSP has no default-src 'none'`);
+      }
+      for (const [directiveName, ...sources] of directives) {
         for (const source of sources.filter((s) => CSP_ALLOWED[s] !== true)) {
           problems.push(`${name}:${at} CSP ${directiveName} allows ${source}`);
         }
@@ -59,4 +64,14 @@ test('renderer html and css load nothing from a remote origin, and every CSP all
     }
   }
   assert.deepEqual(problems, []);
+});
+
+test('every bundled font fonts.css points at ships in shared/fonts', () => {
+  // build.mjs copies shared/fonts/ to dist/renderer/fonts/, and fonts.css is read from
+  // dist/renderer/<window>/, so "../fonts/x" is shared/fonts/x. A missing file falls back to a system font.
+  const css = readFileSync(path.join(RENDERER, 'shared/fonts.css'), 'utf8');
+  const urls = [...css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
+  assert.ok(urls.length >= 7, `expected the bundled font urls, found ${urls.length}`);
+  const missing = urls.filter((url) => !url.startsWith('../fonts/') || !existsSync(path.join(RENDERER, 'shared/fonts', url.slice('../fonts/'.length))));
+  assert.deepEqual(missing, []);
 });

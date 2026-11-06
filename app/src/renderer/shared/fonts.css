@@ -55,11 +55,13 @@
   font-display: swap;
 }
 /*
- * The full upstream Inter and Bricolage Grotesque files carry an optical-size axis that the bundled
- * files they replace did not: those were the opsz 14 cuts (Bricolage's advance widths match its
- * opsz 14 exactly; Inter's default is 14). Bricolage's own default is 96, about 10% narrower, which
- * re-wrapped headings. Pinning opsz 14 keeps every heading and line as it was. Fonts without the
- * axis ignore it. !important for the same reason as below: the `font:` shorthand resets it.
+ * The full upstream Inter, Bricolage Grotesque and Newsreader files carry an optical-size axis. The
+ * bundled Inter and Bricolage files they replace were the opsz 14 cuts (Bricolage's advance widths
+ * match its opsz 14 exactly; Inter's default is 14). Bricolage's own default is 96, about 10%
+ * narrower, which re-wrapped headings. Pinning opsz 14 keeps every heading and line as it was.
+ * Newsreader (opsz 0-72, which Google's file sized to the text) is pinned too; v7 shows it nowhere.
+ * Fonts without the axis ignore it. !important for the same reason as below: the `font:` shorthand
+ * resets it.
  */
 *, *::before, *::after {
   font-variation-settings: "opsz" 14 !important;

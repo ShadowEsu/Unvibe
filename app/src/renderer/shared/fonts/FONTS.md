@@ -21,6 +21,6 @@ Every font the renderer windows use ships inside the app, so no window asks Goog
 
 Zip checksums: `Inter-4.1.zip` sha256 `9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e`; `JetBrainsMono-2.304.zip` sha256 `6f6376c6ed2960ea8a963cd7387ec9d76e3f629125bc33d1fdcd7eb7012f7bbf`.
 
-The Inter and Bricolage Grotesque files have an optical-size axis. `fonts.css` pins it at 14, the cut the earlier bundled files used (Bricolage's own default, 96, sets headings about 10% narrower).
+The Inter, Bricolage Grotesque and Newsreader files have an optical-size axis. `fonts.css` pins it at 14, the cut the earlier bundled Inter and Bricolage files used (Bricolage's own default, 96, sets headings about 10% narrower). Newsreader is pinned too; the current (v7) interface doesn't show it.
 
-`test/rendererNoRemoteOrigins.test.ts` fails if any renderer HTML or CSS points at a remote origin or if any CSP allows a host.
+`test/rendererNoRemoteOrigins.test.ts` fails if any renderer HTML or CSS points at a remote origin, if any CSP allows a host or lacks `default-src 'none'`, or if `fonts.css` points at a font file that isn't here.
