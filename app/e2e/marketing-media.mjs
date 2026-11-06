@@ -295,7 +295,7 @@ const explained = firstRun && await step('first explanation', async () => {
   await shot(done, 'panel-explained-top');
 });
 
-const TAKES = process.env.MEDIA_TAKES ?? 'film4';
+const TAKES = process.env.MEDIA_TAKES ?? 'gitlesson';
 /** What each take pasted: its label, sha256, and when it was sent (s from the start of the run). */
 const pasted = [];
 const FILM4_TAKES = {
@@ -344,7 +344,7 @@ const FILM4_TAKES = {
  * would; the panel then explains the waiting code itself (sent again only if it doesn't). The full answer streams, and the finished panel is held 4 s as the app left
  * it (the film's tail); only after that is it scrolled to the top for a still.
  */
-async function pasteTake(label, { sha256, text }, expect) {
+async function pasteTake(label, { sha256, text }, expect, { still = true } = {}) {
   const actual = createHash('sha256').update(text).digest('hex');
   if (actual !== sha256) {
     failures.push(`${label}: text sha256 ${actual} is not Marketing's ${sha256}; nothing sent`);
@@ -380,18 +380,62 @@ async function pasteTake(label, { sha256, text }, expect) {
     await saveAnswer(done, label);
     await sleep(4000);
     mark(`${label}: end`);
-    await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+    if (still) {
+      await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+      await sleep(600);
+      await shot(done, label.replace(/[^a-z0-9]+/gi, '-'));
+    }
+  });
+}
+/**
+ * A follow-up typed into the panel's ask box (as a person would, enterText), the full answer streamed under the
+ * explanation, and a 4 s hold on the panel as the app left it; then scrolled to the answer's start for a still.
+ */
+async function followUpTake(label, question) {
+  return step(label, async () => {
+    const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
+    await enterText((await askRow()).getByLabel('Follow-up question'), question);
+    await sleep(600);
+    mark(`${label}: sent`);
+    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+    if (await agreeIfAsked(await windowWith('widget.html'))) {
+      const again = (await askRow()).getByLabel('Follow-up question');
+      if ((await again.inputValue()).trim() !== question) await enterText(again, question);
+      mark(`${label}: sent again after the agreement`);
+      await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+    }
+    await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).then(() => mark(`${label}: streaming`)).catch(() => {});
+    const done = await settledPanel();
+    mark(`${label}: answer done`);
+    const text = await done.locator('.body').innerText();
+    if (!text.includes(question) && !/short answer/i.test(text)) throw new Error('the follow-up answer is not in the panel');
+    await saveAnswer(done, label);
+    await sleep(4000);
+    mark(`${label}: end`);
+    await done.locator('.body').evaluate((body) => {
+      const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
+      const start = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim()));
+      if (start) body.scrollTo({ top: Math.max(0, start.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
+    });
     await sleep(600);
     await shot(done, label.replace(/[^a-z0-9]+/gi, '-'));
   });
 }
-// --- Film 4 (ledger 537, Marketing): the person's own code pasted into the panel at Beginner ----------------------
+
+// --- Film 4 and the git lesson (Marketing): the person's own code pasted into the panel at Beginner ---------------
 // This capture branch (media/film4-paste) runs only these takes unless MEDIA_TAKES=all. Each text is Marketing's
 // sample, word for word: checked against its sha256 before it is sent, and recorded in timeline.json.
-if (TAKES === 'film4') {
-  if (explained) {
+// film4: retry.ts L11-26, then the login-callback hunk. gitlesson (take 3): the hunk, then a typed follow-up, with no
+// still between them, so the take runs straight on.
+if (TAKES === 'film4' || TAKES === 'gitlesson') {
+  if (explained && TAKES === 'film4') {
     await pasteTake('film4 retry.ts 11-26', FILM4_TAKES.retry, 'withRetry');
     await pasteTake('film4 login-callback hunk', FILM4_TAKES.diff, 'GET(req');
+  }
+  if (explained && TAKES === 'gitlesson') {
+    if (await pasteTake('git lesson hunk', FILM4_TAKES.diff, 'GET(req', { still: false })) {
+      await followUpTake('git lesson follow-up', 'Could this change break login?');
+    }
   }
   await finish();
 }
