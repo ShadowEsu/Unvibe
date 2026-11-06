@@ -418,7 +418,7 @@ export default function ActivatePage() {
               {!accessToken && (
                 <p className="activate-note">
                   {configured
-                    ? 'Sign in with Google (or email) above, then approve.'
+                    ? 'Sign in with email (or Google) above, then approve.'
                     : message ||
                       'Sign-in is not configured for this environment yet.'}
                 </p>
