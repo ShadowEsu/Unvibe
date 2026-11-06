@@ -19,8 +19,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// The emailed link is the same pinned build the site's buttons and install scripts serve: no env
-// override, so a stale variable can't send an older build logged as this release.
+// The on-page link is the same pinned build the site's buttons and install scripts serve: no env
+// override, so a stale variable can't send an older build logged as this release. The email links
+// /beta instead, which picks the build for the reader's OS (a Mac .dmg can't run on Windows).
 const release = BETA_INSTALL_TAG.replace(/^v/, "");
 const schema = z.object({
   firstName: z.string().trim().max(80).optional().default(""),
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
   const setupTip = parsed.data.reminder;
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, release, setupTipFollows: setupTip });
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: "https://unvibe.site/beta", release, setupTipFollows: setupTip });
   if (setupTip && !existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {

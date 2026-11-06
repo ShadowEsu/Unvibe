@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { allowanceUsedPct } from '../../core/allowance';
 import { Buddy, buddyMoodForPhase } from '../shared/buddy';
 import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -15,7 +16,6 @@ type Snapshot = {
   linesUnderstood: number;
   conceptsSeen: number;
   conceptsStrong: number;
-  usage: { label: string; pct: number } | null;
   quota?: { used: number; limit: number; remaining: number };
   selections?: { used: number; limit: number; remaining: number };
   heat: number[];
@@ -52,6 +52,7 @@ function notchSafeTop(): number {
 
 function Bar() {
   const [note, setNote] = useState('');
+  const [noteProblem, setNoteProblem] = useState(false);
   const [phase, setPhase] = useState<PulsePhase>('idle');
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -134,11 +135,14 @@ function Bar() {
       soundRef.current = { enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' };
       playLaunchOnce();
     });
-    const offNotify = window.unvibe.onBarNotify((message) => {
-      setNote(message);
+    const offNotify = window.unvibe.onBarNotify((notice) => {
+      setNote(notice.text);
+      setNoteProblem(notice.problem);
       refresh();
       if (noteTimer.current) clearTimeout(noteTimer.current);
-      noteTimer.current = setTimeout(() => setNote(''), 4000);
+      // Long enough to read a three-line notice (F-18: they used to vanish after 4 s, unseen). Keep it
+      // under notify.ts's 15 s gap: that gap is what stops an information notice replacing a problem.
+      noteTimer.current = setTimeout(() => setNote(''), 9000);
     });
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
@@ -169,8 +173,12 @@ function Bar() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // A notice's text shows under the compact Island without expanding it; main sizes the window to fit.
+  useEffect(() => { window.unvibe.setBarNotice(Boolean(note)); }, [note]);
+
   const openFromHover = () => {
-    if (!hoverEnabled || expandedRef.current) return;
+    // A notice is showing: hovering to read it must not swap it for the overview's one-line note.
+    if (!hoverEnabled || expandedRef.current || note) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
       if (document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
@@ -201,12 +209,12 @@ function Bar() {
   const heat = (snapshot?.heat ?? []).slice(-14);
   const aiLeft = snapshot?.quota?.remaining;
   const selectLeft = snapshot?.selections?.remaining;
-  const usagePct = snapshot?.usage?.pct ?? (snapshot?.quota?.limit ? Math.round((snapshot.quota.used / snapshot.quota.limit) * 100) : undefined);
+  const usagePct = allowanceUsedPct(snapshot?.quota);
   const value = (number: number | undefined) => number === undefined ? '–' : String(number);
 
   return (
     <div
-      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''} island--phase-${phase}`}
+      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
       style={{ '--safe-top': `${attached ? notchSafeTop() : 38}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
@@ -226,6 +234,10 @@ function Bar() {
         </div>
       </div>
 
+      {/* Screen readers hear the notice from this always-mounted live region; the visible copies are hidden from them. */}
+      <p className="island__sr" role="status">{note}</p>
+      {note && !expanded ? <p key={note} className={`island__notice${noteProblem ? ' island__notice--problem' : ''}`} aria-hidden="true">{note}</p> : null}
+
       {expanded ? (
         <div className="island__overview">
           <header className="island__header">
@@ -238,12 +250,12 @@ function Bar() {
             <span data-tone="sky"><b>{value(snapshot?.explanations)}</b> reviews</span>
             <span data-tone="lime"><b>{value(snapshot?.understood)}</b> understood</span>
             <span data-tone="sun"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
-            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> used</span>
+            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> AI used</span>
           </div>
           <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
           <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
           <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
-          {note ? <p className="island__note" role="status">{note}</p> : null}
+          {note ? <p className="island__note" aria-hidden="true">{note}</p> : null}
           <div className="island__actions">
             <button type="button" onClick={() => act('review')}>Understand change</button>
             <button type="button" onClick={() => act('home')}>Open Unvibe</button>

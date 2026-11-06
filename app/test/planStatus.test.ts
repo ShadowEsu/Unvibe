@@ -60,7 +60,12 @@ test('while Pro is closed the card has no price or terms, only the Free plan\'s 
   }
   const trial = proCard(false, 'monthly', { plan: 'trial', limit: 50, remaining: 49, resetsAt: END }, NOW);
   assert.equal(trial.open, false);
-  if (!trial.open) assert.match(trial.line, /49 of 50/);
+  if (!trial.open) {
+    assert.match(trial.line, /49 of 50/);
+    // The signed-out trial never refills, so it must not read as the monthly Free plan (Security INFO 30 Oct).
+    assert.doesNotMatch(trial.line, /Your Free plan keeps working|refilling on/);
+    assert.match(trial.line, /don't refill/);
+  }
   const unknown = proCard(false, 'monthly', null, NOW);
   assert.equal(unknown.open, false);
   if (!unknown.open) assert.doesNotMatch(unknown.line, /\$|undefined|NaN/);

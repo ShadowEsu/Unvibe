@@ -41,8 +41,10 @@ button { font: inherit; }
   padding: 0 var(--edge-pad);
 }
 .island__wing { min-width: 0; display: flex; align-items: center; gap: 5px; }
-.island__wing--left { justify-content: flex-start; }
-.island__wing--right { justify-content: flex-end; }
+/* Each wing keeps its own column: the floating pill hides the notch (display: none takes it out of the
+   grid), which otherwise moved the count into the notch's 0 px column, under the </> chip. */
+.island__wing--left { grid-column: 1; justify-content: flex-start; }
+.island__wing--right { grid-column: 3; justify-content: flex-end; }
 .island__notch { width: 100%; height: 100%; pointer-events: none; }
 .island__mark { width: 18px; height: 18px; display: grid; place-items: center; filter: drop-shadow(0 0 5px rgba(139,92,246,.28)); flex: 0 0 auto; }
 .island__tool {
@@ -116,9 +118,31 @@ button { font: inherit; }
 .island:not(.island--attached) .island__notch { display: none; }
 .island:not(.island--attached).island--expanded { display: flex; flex-direction: column; }
 .island:not(.island--attached) .island__overview { flex: 1 1 auto; height: auto; min-height: 0; }
-/* At the bottom the card opens upward, so the pill stays where your eyes left it. */
-.island.island--bottom.island--expanded:not(.island--attached) { flex-direction: column-reverse; }
+/* At the bottom the card (and a notice) opens upward, so the pill stays where your eyes left it, also
+   while the window shrinks back after a notice. */
+.island.island--bottom:not(.island--attached) { display: flex; flex-direction: column-reverse; }
 .island--bottom .island__overview { transform: translateY(5px); padding-top: 11px; }
+/* A notice (F-18): its text under the compact row (above it at the bottom), at most three lines in
+   the 64 px windows.ts adds (BAR_NOTICE_H), so it never grows over the editor. */
+.island--notice:not(.island--attached):not(.island--bottom) { display: flex; flex-direction: column; }
+/* Neutral text (lime means selected/done in Unvibe), with a dot: amber for a problem, grey for
+   information. Balanced lines, so no lone last word. */
+.island__notice {
+  margin: 0; padding: 6px 16px 10px; max-height: 64px; overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  color: #ededed; font-size: 12px; line-height: 16px; font-weight: 550; text-align: center; text-wrap: balance;
+  animation: island-notice-in 180ms cubic-bezier(.22,.8,.24,1) both;
+}
+/* The dot hangs left of the first line (net width 0), so both lines stay centred on their text.
+   Neutral for information; amber only when something went wrong. */
+.island__notice::before { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 6px 1px -12px; border-radius: 50%; background: #b4b4b4; vertical-align: middle; }
+.island__notice--problem::before { background: #f5a524; }
+@keyframes island-notice-in { from { opacity: 0; transform: translateY(-4px); } }
+.island--bottom .island__notice { padding: 10px 16px 6px; animation-name: island-notice-in-up; }
+@keyframes island-notice-in-up { from { opacity: 0; transform: translateY(4px); } }
+/* Screen readers hear a notice from this always-present live region (one filled on insert isn't read). */
+.island__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .island__notice { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .island__dots i, .island__overview { animation: none; }
@@ -149,7 +173,7 @@ button { font: inherit; }
 .island__activity i[data-level="2"] { background: rgb(214 244 90 / 0.65); }
 .island__activity i[data-level="3"] { background: #d6f45a; }
 .island__allowance b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; }
-.island__note { color: #d6f45a; }
+.island__note { color: #ededed; }
 .island__actions button { border-radius: 9px; background: #1e1e1c; border-color: rgba(255,255,255,.12); font-weight: 650; box-shadow: 0 2px 0 #000; }
 .island__actions button:first-child { background: #d6f45a; border-color: #d6f45a; color: #141414; box-shadow: 0 2px 0 #6f8a12; }
 .island__actions button:hover { border-color: rgba(214,244,90,.6); }

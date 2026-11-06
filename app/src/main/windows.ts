@@ -13,6 +13,8 @@ const DEFAULT_WIDGET_H = 640;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
+/** A notice's text is showing under the compact Island (renderer bar:setNotice). */
+let barHasNotice = false;
 let limitPauseActive = false;
 
 const secureWebPrefs = () => ({
@@ -72,6 +74,11 @@ const FLOATING_EXPANDED_W = 372;
 /** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
 const BAR_EXPANDED_BODY_H = 244;
 const FLOATING_ROW_H = 38;
+/**
+ * A notice (notify()) shows its text under the compact row (above it at the bottom) without
+ * expanding the Island: up to three lines, never wider than the expanded card (F-18).
+ */
+const BAR_NOTICE_H = 64;
 
 function islandMetrics(): { w: number; h: number } {
   const size: BarSize = settings().all().barSize ?? 'medium';
@@ -101,13 +108,18 @@ function compactBarHeight(position: BarPosition): number {
 }
 
 function barSize(position: BarPosition, expanded: boolean): { width: number; height: number } {
-  if (!expanded) return { width: compactBarWidth(position), height: compactBarHeight(position) };
-  if (attachedIsland(position)) return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
-  return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
+  const attached = attachedIsland(position);
+  if (expanded) {
+    if (attached) return { width: compactBarWidth(position), height: BAR_EXPANDED_BODY_H + islandSafeTop(position) };
+    return { width: FLOATING_EXPANDED_W, height: BAR_EXPANDED_BODY_H + FLOATING_ROW_H };
+  }
+  if (barHasNotice) return { width: attached ? compactBarWidth(position) : FLOATING_EXPANDED_W, height: compactBarHeight(position) + BAR_NOTICE_H };
+  return { width: compactBarWidth(position), height: compactBarHeight(position) };
 }
 
 export function createBar(): BrowserWindow {
   barIsExpanded = false;
+  barHasNotice = false;
   const position = settings().all().barPosition;
   const compactWidth = compactBarWidth(position);
   const compactHeight = compactBarHeight(position);
@@ -147,8 +159,22 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   if (!win || win.isDestroyed()) return;
   if (barIsExpanded === expanded && !force) return;
   barIsExpanded = expanded;
+  applyBarSize(win, force);
+}
+
+/**
+ * The Island grows to show a notice's text, and back when the notice is gone. A hidden Island only
+ * records it (showBar sizes it then): resizing calls moveTop, which on macOS brings a hidden window back.
+ */
+export function setBarNotice(win: BrowserWindow | null, on: boolean): void {
+  if (!win || win.isDestroyed() || barHasNotice === on) return;
+  barHasNotice = on;
+  if (!barIsExpanded && win.isVisible()) applyBarSize(win, false);
+}
+
+function applyBarSize(win: BrowserWindow, force: boolean): void {
   const position = settings().all().barPosition;
-  const { width, height } = barSize(position, expanded);
+  const { width, height } = barSize(position, barIsExpanded);
   const { x, y } = barBounds(position, width, height);
   // Hover previews must never activate the app or interrupt typing in the editor.
   win.setFocusable(false);
@@ -428,7 +454,57 @@ export function clearLimitPause(): void {
   limitPauseActive = false;
 }
 
-export function createCompanion(): BrowserWindow {
+/** The part of a BrowserWindow the reveal uses (a fake in tests). */
+export type RevealTarget = Pick<BrowserWindow, 'isDestroyed' | 'maximize' | 'show' | 'setAlwaysOnTop' | 'moveTop' | 'focus'>;
+
+/** `reveal` shows the companion once (later calls do nothing); `revealed` says whether it has. */
+export interface CompanionRevealer {
+  reveal: () => void;
+  revealed: () => boolean;
+}
+
+/**
+ * The companion's one reveal, once its page has painted: maximized first on a first run, then shown,
+ * and with `front` (a first-run launch the user started) brought above other apps. Later calls do
+ * nothing, so the paint and the 5 s fallback can both call it.
+ */
+export function companionRevealer(win: RevealTarget, { maximize, front, platform }: { maximize: boolean; front: boolean; platform: NodeJS.Platform }): CompanionRevealer {
+  let shown = false;
+  const reveal = () => {
+    if (shown || win.isDestroyed()) return;
+    shown = true;
+    if (maximize) win.maximize();
+    win.show();
+    if (!front) return;
+    // Windows won't hand focus to a window whose process didn't get the foreground (it flashes the
+    // taskbar button instead); topmost and straight back puts it above the other windows anyway.
+    if (platform === 'win32') {
+      win.setAlwaysOnTop(true);
+      win.setAlwaysOnTop(false);
+    }
+    win.moveTop();
+    win.focus();
+  };
+  return { reveal, revealed: () => shown };
+}
+
+/** Companions whose reveal hasn't run yet: their page is still loading. */
+const companionReveals = new WeakMap<BrowserWindow, CompanionRevealer>();
+
+/**
+ * Whether this companion is still loading, hidden until its page paints. Reopening it then must not
+ * show it early (blank) or out of turn: its reveal shows it once painted.
+ */
+export function companionLoading(win: BrowserWindow): boolean {
+  return companionReveals.get(win)?.revealed() === false;
+}
+
+/**
+ * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
+ * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
+ * first-run launch the user started) then brings it above other apps.
+ */
+export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
@@ -441,12 +517,20 @@ export function createCompanion(): BrowserWindow {
       : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
     backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
     skipTaskbar: false,
+    show: false,
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
   // Setup is intentionally a full-window moment. Once it is complete, future
   // launches retain the normal companion size so the app stays out of the way.
-  if (!settings().all().onboarded) win.maximize();
+  const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
+  companionReveals.set(win, revealer);
+  const fallback = setTimeout(revealer.reveal, 5000);
+  win.once('ready-to-show', () => {
+    clearTimeout(fallback);
+    revealer.reveal();
+  });
+  win.once('closed', () => clearTimeout(fallback));
   void win.loadFile(page('companion'));
   return win;
 }

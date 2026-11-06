@@ -278,6 +278,14 @@ class Store {
     return { ok: true, remaining: BETA_SELECTED_CODE_PROMPT_LIMIT - usage.selectedCodePrompts };
   }
 
+  /** Gives one selection credit back (REG-83): the explanation it was taken for never came. */
+  refundBetaSelectedCodePrompt(): void {
+    const usage = this.betaPromptUsage();
+    if (usage.selectedCodePrompts <= 0) return;
+    usage.selectedCodePrompts -= 1;
+    this.save();
+  }
+
   private queue(id: string): void {
     if (!this.data.outbox.includes(id)) this.data.outbox.push(id);
   }

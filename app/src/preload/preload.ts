@@ -13,8 +13,9 @@ const api = {
   openSettings: () => ipcRenderer.send('bar:openSettings'),
   companionReview: () => ipcRenderer.send('companion:review'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean }> => ipcRenderer.invoke('app:info'),
-  onBarNotify: (cb: (msg: string) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, message: string) => cb(message);
+  onBarNotify: (cb: (notice: { text: string; problem: boolean }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, notice: { text: string; problem: boolean }) =>
+      cb({ text: String(notice.text), problem: notice.problem === true });
     ipcRenderer.on('bar:notify', listener);
     return () => ipcRenderer.removeListener('bar:notify', listener);
   },
@@ -34,6 +35,8 @@ const api = {
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
+  /** A notice's text is showing (or gone) under the compact Island: the window grows to fit it. */
+  setBarNotice: (on: boolean) => ipcRenderer.send('bar:setNotice', on),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
 
@@ -141,6 +144,14 @@ const api = {
   restartApp: () => ipcRenderer.invoke('app:restart'),
   /** After the Accessibility grant: explain the selection the shortcut could not read. */
   explainAfterGrant: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('perms:explainAfterGrant'),
+  /** macOS: why the last shortcut press read nothing, when System Events (Automation) was the cause. */
+  captureBlock: (): Promise<'automation_denied' | 'automation_timeout' | null> => ipcRenderer.invoke('perms:captureBlock'),
+  onCaptureBlock: (cb: (block: 'automation_denied' | 'automation_timeout' | null) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, block: 'automation_denied' | 'automation_timeout' | null) => cb(block);
+    ipcRenderer.on('perms:captureBlock', listener);
+    return () => ipcRenderer.removeListener('perms:captureBlock', listener);
+  },
+  openAutomation: () => ipcRenderer.invoke('perms:openAutomation'),
 
   // privacy
   openPrivacy: () => ipcRenderer.invoke('app:openPrivacy'),

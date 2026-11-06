@@ -308,6 +308,24 @@ body:has(.paper-pricing) .fb-tab {
   text-underline-offset: 3px;
 }
 
+/* ── Listed on: link lists inside the install-help reading cards (.verify) ── */
+
+.fos-page .verify .listed-on__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fos-page .verify .listed-on__list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  text-underline-offset: 3px;
+}
+
 /* ── About ──────────────────────────────────────────────────────────────── */
 
 .about-page__btn {
