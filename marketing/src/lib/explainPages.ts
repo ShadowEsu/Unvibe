@@ -2700,6 +2700,170 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
     watchOut:
       "A `.` in the pattern matches any character, not just a dot. `grep \"10.0.0.5\"` also matched a line with `10a0b0c5`. Use `grep -F` to search for the text exactly as written, or write `\\.` for a dot.",
   },
+  {
+    id: "git-diff",
+    fileName: "changes.diff",
+    lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
+    description:
+      "Paste git diff output and get a plain English explanation, free online. The sample is a staged change: a cart total gets tax, and a file moves into lib/.",
+    sampleSummary: "The output of `git diff --staged` for a small change of the kind an AI assistant makes: a tax rate added to a cart total, items with no quantity skipped, and utils.js moved to lib/money.js.",
+    sample: `$ git diff --staged
+diff --git a/cart.js b/cart.js
+index 9853b5d..97c2803 100644
+--- a/cart.js
++++ b/cart.js
+@@ -1,11 +1,13 @@
+-const { formatPrice } = require("./utils");
++const { formatPrice } = require("./lib/money");
++const TAX = 0.08;
+ 
+ function total(items) {
+   let sum = 0;
+   for (const item of items) {
++    if (item.qty <= 0) continue;
+     sum += item.price * item.qty;
+   }
+-  return sum;
++  return Math.round(sum * (1 + TAX));
+ }
+ 
+ function receipt(items) {
+diff --git a/utils.js b/lib/money.js
+similarity index 100%
+rename from utils.js
+rename to lib/money.js`,
+    shows: [
+      {
+        concept: "file headers",
+        text: "Each file starts with `diff --git a/... b/...`, where `a/` is the old version and `b/` the new one. The `index 9853b5d..97c2803 100644` line gives short hashes of the file's contents before and after, and its mode: `100644` is an ordinary file. Then `--- a/cart.js` and `+++ b/cart.js` say which side the `-` and `+` lines come from.",
+      },
+      {
+        concept: "hunks",
+        text: "`@@ -1,11 +1,13 @@` reads: this part starts at line 1 and covers 11 lines in the old file, and starts at line 1 and covers 13 lines in the new one. Counting the sample agrees: 11 lines are context or `-`, and 13 are context or `+`. With `-U1`, git kept 1 line of context instead of 3 and split the change into two hunks; the second header, `@@ -5,5 +6,6 @@ function total(items) {`, ends with the function the change sits in.",
+      },
+      {
+        concept: "added and removed lines",
+        text: "A `-` line was removed, a `+` line was added, and a line that starts with a space is unchanged context. An edited line shows up as both: `-  return sum;` and then `+  return Math.round(sum * (1 + TAX));`. Before the change, `run.sh` printed `Total: $25.00`; after it, `Total: $27.00`.",
+      },
+      {
+        concept: "renames",
+        text: "`similarity index 100%` with `rename from` and `rename to` means utils.js moved to lib/money.js with nothing inside it changed. `git diff --staged --name-status` printed `R100 utils.js lib/money.js`. With `--no-renames`, the same move showed as `D utils.js` and `A lib/money.js`: one file deleted and another added.",
+      },
+    ],
+    notes: [
+      "Made with git 2.55.0 in a test repo with a fixed name and date. In git's output, an unchanged blank line is a single space, and it's kept that way here.",
+      "`git diff --staged --stat` summed it up as `cart.js | 6 ++++--`, `utils.js => lib/money.js | 0` and `2 files changed, 4 insertions(+), 2 deletions(-)`.",
+      "`--word-diff` marks the change inside a line instead of whole lines: `return [-sum;-]{+Math.round(sum * (1 + TAX));+}`.",
+      "One added line can change more than it looks. Before `if (item.qty <= 0) continue;`, an item priced 999 with `qty: -1` took 999 off the total: `total()` returned `1501` for it and 2 items at 1250. After the change, the same cart returned `2700`: the item is skipped and tax is added.",
+    ],
+    watchOut:
+      "Plain `git diff` only shows changes you haven't staged yet. Once everything was added with `git add -A`, `git diff` printed nothing at all, and only `git diff --staged` showed the change. Before staging, plain `git diff` listed utils.js as deleted and left lib/money.js out completely, because git doesn't track a new file until it's added.",
+  },
+  {
+    id: "react-useeffect",
+    fileName: "Profile.jsx",
+    lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
+    description:
+      "Paste React code with useEffect and get it explained in plain English, free online. The sample loads a user when userId changes and cancels the old request.",
+    sampleSummary: "A React component that fetches a user whenever its `userId` prop changes, shows Loading... or an error, and aborts the previous request in the effect's cleanup.",
+    sample: `import { useEffect, useState } from "react";
+
+export function Profile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setUser(null);
+    setError(null);
+    fetch(\`/api/users/\${userId}\`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
+        return res.json();
+      })
+      .then(setUser)
+      .catch((err) => {
+        if (err.name !== "AbortError") setError(err.message);
+      });
+    return () => controller.abort();
+  }, [userId]);
+
+  if (error) return <p>Couldn't load: {error}</p>;
+  return <h2>{user ? user.name : "Loading..."}</h2>;
+}`,
+    shows: [
+      {
+        concept: "when it runs",
+        text: "React runs the effect after the component is on screen, not while it renders. The first render showed `Loading...` and sent 1 request, to `/api/users/1`; when the reply came, the heading changed to `Ana`.",
+      },
+      {
+        concept: "the dependency array",
+        text: "`[userId]` tells React to run the effect again only when `userId` changes: changing it from 1 to 2 sent a second request. With `[]`, the effect ran once, so after the prop became 2 the page still showed `Ana`. With no array at all, it ran after every render, and each reply causes a render: 5 replies led to 11 requests, and the page never got past `Loading...`.",
+      },
+      {
+        concept: "cleanup",
+        text: "The function the effect returns runs before the effect runs again, and when the component is removed. Here it calls `controller.abort()`: switching from user 1 to 2 aborted the request for 1, and so did removing the component before the reply. An aborted `fetch` rejects with an `AbortError`, which the `catch` ignores on purpose.",
+      },
+      {
+        concept: "StrictMode",
+        text: "Inside `<StrictMode>`, React's development build ran the effect, its cleanup and then the effect again on the first render: 2 requests for user 1, the first one aborted, and the page still ended on `Ana`. React does this only in development, to show up effects that don't clean up after themselves.",
+      },
+    ],
+    notes: [
+      "Run with React 19.3.1 and react-dom 19.3.1 in jsdom 29.1.1 on Node 25.7.0, with a stand-in `fetch` whose replies were sent by hand, so the order they arrived in could be chosen.",
+      "A 404 reply resolves the `fetch` like any other, so the `res.ok` check is what turns it into an error: the page showed `Couldn't load: HTTP 404`.",
+      "`setUser(null)` and `setError(null)` at the start of the effect clear the last user's name or error, so switching users shows `Loading...` instead of the previous person.",
+    ],
+    watchOut:
+      "Without the cleanup, a slow reply can overwrite a newer one. With the `return () => controller.abort();` line taken out, the page switched from user 1 to 2, showed `Sam` when 2 replied, then went back to `Ana` when the late reply for 1 arrived. With the line in, request 1 was aborted and the page stayed on `Sam`.",
+  },
+  {
+    id: "python-traceback",
+    fileName: "traceback.txt",
+    lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
+    description:
+      "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
+    sampleSummary: "What Python 3.14 printed when a short script that totals orders met an item with `quantity` where the code expected `qty`: one good line of output, then a traceback ending in `KeyError: 'qty'`.",
+    sample: `$ python3 report.py
+A1 25.0
+Traceback (most recent call last):
+  File "/home/sam/shop/report.py", line 19, in <module>
+    main()
+    ~~~~^^
+  File "/home/sam/shop/report.py", line 16, in main
+    print(order["id"], order_total(order))
+                       ~~~~~~~~~~~^^^^^^^
+  File "/home/sam/shop/report.py", line 10, in order_total
+    return sum(item["price"] * item["qty"] for item in order["items"])
+  File "/home/sam/shop/report.py", line 10, in <genexpr>
+    return sum(item["price"] * item["qty"] for item in order["items"])
+                               ~~~~^^^^^^^
+KeyError: 'qty'`,
+    shows: [
+      {
+        concept: "reading order",
+        text: "`most recent call last` means the list runs from the first call at the top to the line that failed at the bottom: `main()` on line 19 called `order_total(order)` on line 16, and line 10 failed. The error itself is always the last line, so that's the place to start reading.",
+      },
+      {
+        concept: "frames",
+        text: "Each `File \"...\", line N, in name` entry is one call that was still running, with the line it had reached. `in <module>` is the script's top level. `in <genexpr>` is the generator expression inside `sum(...)`, which Python runs as its own small function, so line 10 appears twice.",
+      },
+      {
+        concept: "the error line",
+        text: "`KeyError: 'qty'` means the code asked a dictionary for a key it doesn't have, and names the key. The `~` and `^` marks under the code point at the part that failed, `item[\"qty\"]`. In orders.json, the second order's item has `\"quantity\": 3`, not `\"qty\"`.",
+      },
+      {
+        concept: "chained errors",
+        text: "When code catches one error and raises another, Python prints both tracebacks. A plain `raise ValueError(...)` inside `except KeyError` put `During handling of the above exception, another exception occurred:` between them. With `raise ... from e`, the line read `The above exception was the direct cause of the following exception:`.",
+      },
+    ],
+    notes: [
+      "Run with Python 3.14.7 in a test folder, which is why the paths start with /home/sam/shop. On your computer they show where your own script is.",
+      "`A1 25.0` was printed before the traceback: the first order was fine, and output from before a crash stays on screen. The traceback goes to a different place, stderr: with `2>/dev/null` only `A1 25.0` was left. The script ended with exit code 1.",
+    ],
+    watchOut:
+      "A quick fix can hide the problem instead of solving it. `item.get(\"qty\")` only moved the crash, to `TypeError: unsupported operand type(s) for *: 'int' and 'NoneType'`. `item.get(\"qty\", 1)` stopped the error but printed `A2 4`, counting 3 items as 1 without a word. Reading `quantity` when `qty` is missing printed the right `A2 12`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
