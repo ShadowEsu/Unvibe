@@ -34,6 +34,8 @@ const api = {
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
   setBarExpanded: (expanded: boolean) => ipcRenderer.send('bar:setExpanded', expanded),
+  /** A notice's text is showing (or gone) under the compact Island: the window grows to fit it. */
+  setBarNotice: (on: boolean) => ipcRenderer.send('bar:setNotice', on),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
 

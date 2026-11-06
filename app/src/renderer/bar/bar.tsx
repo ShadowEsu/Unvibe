@@ -138,7 +138,8 @@ function Bar() {
       setNote(message);
       refresh();
       if (noteTimer.current) clearTimeout(noteTimer.current);
-      noteTimer.current = setTimeout(() => setNote(''), 4000);
+      // Long enough to read a three-line notice (F-18: they used to vanish after 4 s, unseen).
+      noteTimer.current = setTimeout(() => setNote(''), 9000);
     });
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
@@ -168,6 +169,9 @@ function Bar() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // A notice's text shows under the compact Island without expanding it; main sizes the window to fit.
+  useEffect(() => { window.unvibe.setBarNotice(Boolean(note)); }, [note]);
 
   const openFromHover = () => {
     if (!hoverEnabled || expandedRef.current) return;
@@ -206,7 +210,7 @@ function Bar() {
 
   return (
     <div
-      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''} island--phase-${phase}`}
+      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
       style={{ '--safe-top': `${attached ? notchSafeTop() : 38}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
@@ -225,6 +229,8 @@ function Bar() {
           {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded || aiLeft === undefined ? null : <span className="island__left" title="AI explanations left"><b>{aiLeft}</b> left</span>}
         </div>
       </div>
+
+      {note && !expanded ? <p className="island__notice" role="status">{note}</p> : null}
 
       {expanded ? (
         <div className="island__overview">

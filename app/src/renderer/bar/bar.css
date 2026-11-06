@@ -119,6 +119,18 @@ button { font: inherit; }
 /* At the bottom the card opens upward, so the pill stays where your eyes left it. */
 .island.island--bottom.island--expanded:not(.island--attached) { flex-direction: column-reverse; }
 .island--bottom .island__overview { transform: translateY(5px); padding-top: 11px; }
+/* A notice (F-18): its text under the compact row (above it at the bottom), at most three lines in
+   the 64 px windows.ts adds (BAR_NOTICE_H), so it never grows over the editor. */
+.island--notice:not(.island--attached) { display: flex; flex-direction: column; }
+.island--notice.island--bottom:not(.island--attached) { flex-direction: column-reverse; }
+.island__notice {
+  margin: 0; padding: 6px 16px 10px; max-height: 64px; overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  color: #d6f45a; font-size: 12px; line-height: 16px; font-weight: 550; text-align: center;
+  animation: island-reveal 180ms cubic-bezier(.22,.8,.24,1) both;
+}
+.island--bottom .island__notice { padding: 10px 16px 6px; }
+@media (prefers-reduced-motion: reduce) { .island__notice { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .island__dots i, .island__overview { animation: none; }
