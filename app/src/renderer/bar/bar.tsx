@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { allowanceUsedPct } from '../../core/allowance';
 import { Buddy, buddyMoodForPhase } from '../shared/buddy';
 import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
@@ -208,8 +209,7 @@ function Bar() {
   const heat = (snapshot?.heat ?? []).slice(-14);
   const aiLeft = snapshot?.quota?.remaining;
   const selectLeft = snapshot?.selections?.remaining;
-  // Share of this period's AI explanations already used: the same allowance as "N left" and "N AI".
-  const usagePct = snapshot?.quota?.limit ? Math.round((snapshot.quota.used / snapshot.quota.limit) * 100) : undefined;
+  const usagePct = allowanceUsedPct(snapshot?.quota);
   const value = (number: number | undefined) => number === undefined ? '–' : String(number);
 
   return (
