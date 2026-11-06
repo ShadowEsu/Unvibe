@@ -1,4 +1,5 @@
 import { GALLERY, SHOT_CAPTION } from "@/data/homeGallery";
+import { PixelIcon } from "./PixelIcon";
 
 /**
  * "See what Vibe gives you." (Design's ledger 530 spec §5, static for now; the 530 motion lands on top): real
@@ -33,6 +34,9 @@ export function HomeGallery() {
             </figcaption>
           </figure>
         ))}
+        {/* Margin art beside the middle row's two cards, in the grid's empty first and last columns (spec §13.7). */}
+        <PixelIcon name="09-notebook" className="ngal__px ngal__px--l" />
+        <PixelIcon name="18-lightbulb" className="ngal__px ngal__px--r" />
       </div>
     </section>
   );

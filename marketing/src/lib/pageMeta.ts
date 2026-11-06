@@ -75,6 +75,9 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   perl: "/og/og-explain-perl-6a375c1e.png",
   sed: "/og/og-explain-sed-052acff4.png",
   grep: "/og/og-explain-grep-dae0ebb6.png",
+  "git-diff": "/og/og-explain-git-diff-cbe86ac3.png",
+  "react-useeffect": "/og/og-explain-react-useeffect-7ff74901.png",
+  "python-traceback": "/og/og-explain-python-traceback-6de7a848.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */

@@ -13,6 +13,24 @@ export const SHOT_CAPTION = `Real screen, sample code · Unvibe ${CAPTURE_VERSIO
 
 export const CAPTURE_DIR = "/unvibe/real/0149";
 
+/**
+ * The hero's recording of the panel at work (Design 530 §13.1, PR-D): the same CI run's own recording of the panel
+ * window (raw/03-widget.html.webm, sha256 8e9e9ec9…), cropped to the panel (622x800 at x 328) and cut, never sped up,
+ * between actions: the first answer (0.3-3.5 s), Beginner (13.8-19.0), Advanced (22.8-29.0), then Test me's question
+ * (80.0-83.5). The editor beside it is the site's drawing of the selection and the shortcut, not a recording; CI
+ * cannot select in an editor or press the shortcut. The poster is the recording's frame at 29.0 s, Advanced finished.
+ */
+export const HERO_RECORDING = {
+  mp4: `${CAPTURE_DIR}/hero-panel-0149.mp4`,
+  webm: `${CAPTURE_DIR}/hero-panel-0149.webm`,
+  poster: { src: `${CAPTURE_DIR}/hero-panel-0149-poster.webp`, width: 622, height: 800 },
+  /** Length of the cut, in seconds. */
+  seconds: 18.125,
+  alt: "Unvibe's panel explaining the debounce sample at Advanced depth",
+  // Only the panel is filmed; the editor beside it is the site's drawing (Design #197 MUST, words Security-confirmed).
+  caption: `The panel is a real recording · sample code · Unvibe ${CAPTURE_VERSION}`,
+} as const;
+
 export interface GalleryShot {
   src: string;
   width: number;

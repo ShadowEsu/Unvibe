@@ -137,10 +137,14 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
           <a className="paper-text-link" href={fileHref} onClick={() => trackDownloadClick(surface, os)}>{copy.fileLink}</a>
           {os === "mac" ? (
             <>
-              {" · "}
-              <a className="paper-text-link" href={intelMac ? BETA_MAC_DIRECT_DOWNLOAD : BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick(surface, "mac")}>
-                {intelMac ? "Apple silicon build" : "Intel Mac build"}
-              </a>
+              {/* Like the checksum link below, its separator wraps with it (QA #198: it ended line 1 at 320/360). */}
+              {" "}
+              <span className="ninst__nowrap">
+                {"· "}
+                <a className="paper-text-link" href={intelMac ? BETA_MAC_DIRECT_DOWNLOAD : BETA_MAC_INTEL_DIRECT_DOWNLOAD} onClick={() => trackDownloadClick(surface, "mac")}>
+                  {intelMac ? "Apple silicon build" : "Intel Mac build"}
+                </a>
+              </span>
             </>
           ) : null}
           {/* For anyone taking the file: the release's published checksums (the Terminal and PowerShell lines check
