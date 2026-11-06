@@ -10,7 +10,8 @@
 param([string]$Kind, [string]$Shell, [string]$Out)
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force $Out | Out-Null
-function Note($s) { $s | Tee-Object -FilePath "$Out\report.txt" -Append }
+# Writes to the report and the job log only: a Note inside a function must not become part of its return value.
+function Note($s) { Add-Content -Path "$Out\report.txt" -Value $s -Encoding utf8; Write-Host $s }
 function Verdict($ok, $what) { Note "$(if ($ok) { 'PASS' } else { 'FAIL' })  $what" }
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $shotN = 0
@@ -71,18 +72,21 @@ function OldSetup() {
 }
 function RunWait($file, $argList) { $p = Start-Process -FilePath $file -ArgumentList $argList -PassThru; $null = $p.Handle; [void]$p.WaitForExit(600000); $p.ExitCode }
 function RunCopy($src, $name, $extra) {
-  $text = Get-Content -Raw $src
+  # The Windows checkout has CRLF line ends; the site serves LF. Back to LF, so the hash matches the served script.
+  $text = (Get-Content -Raw -Encoding utf8 $src) -replace "`r`n", "`n"
+  $sha = -join ([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($text)) | ForEach-Object { $_.ToString('x2') })
   $run = $text -replace '(?m)^\$track = .*$', '$track = "http://127.0.0.1:9/qa-no-count"'
   if ($extra) { $run = & $extra $run }
   $dst = "$Out\$name"; Set-Content $dst $run -Encoding utf8
-  Note "$name from $(Split-Path $src -Leaf) (sha256 $((Get-FileHash $src -Algorithm SHA256).Hash.ToLower().Substring(0, 16))…); run copy changes: $((Compare-Object ($text -split "`n") ($run -split "`n") | Where-Object SideIndicator -eq '=>' | ForEach-Object { $_.InputObject.Trim() }) -join ' ; ')"
+  Note "$name from $(Split-Path $src -Leaf) (LF sha256 $sha); run copy changes: $((Compare-Object ($text -split "`n") ($run -split "`n") | Where-Object SideIndicator -eq '=>' | ForEach-Object { $_.InputObject.Trim() }) -join ' ; ')"
   $dst
 }
 # As a person pastes `irm … | iex`: the script text is run by Invoke-Expression in the chosen shell. Pictures of the
 # whole screen every 3 s show any prompt (admin, SmartScreen) that comes up while it runs.
 function Install($file, $label) {
   $exe = if ($Shell -eq 'pwsh') { 'pwsh.exe' } else { 'powershell.exe' }
-  $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "Write-Output (`"QA shell: PowerShell `" + `$PSVersionTable.PSVersion + `" `" + `$PSVersionTable.PSEdition); Get-Content -Raw '$file' | Invoke-Expression")
+  # Single quotes only: Start-Process passes the arguments on one command line, and double quotes inside get stripped.
+  $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "Write-Output ('QA shell: PowerShell ' + `$PSVersionTable.PSVersion + ' ' + `$PSVersionTable.PSEdition); Get-Content -Raw '$file' | Invoke-Expression")
   $t0 = Get-Date
   $p = Start-Process $exe -ArgumentList $argList -RedirectStandardOutput "$Out\$label.out" -RedirectStandardError "$Out\$label.err" -PassThru
   $null = $p.Handle
