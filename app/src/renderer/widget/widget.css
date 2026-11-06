@@ -1158,6 +1158,9 @@ code.inline {
 .card .code-context, .card .cb { margin: 0 0 12px; border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-code); box-shadow: none; backdrop-filter: none; overflow: hidden; }
 .card .code-context__head, .card .cb-head { padding: 6px 10px; border-bottom: 1px solid var(--p-line); color: var(--p-faint); font-size: 11px; font-weight: 550; text-transform: none; letter-spacing: 0; background: transparent; }
 .card .code-context pre, .card .cb pre { padding: 10px 12px; color: #e6e6ee; font-size: calc(var(--p-fs) * 0.78); line-height: 1.55; }
+.card .body .rich-table { border-color: var(--p-line); }
+.card .body .rich-table th { background: var(--p-raised); color: var(--p-ink); }
+.card .body .rich-table td { border-top-color: var(--p-line); }
 .card .tk-k { color: #c3a6ff; } .card .tk-s { color: #8fe0b2; } .card .tk-c { color: #6e6e79; } .card .tk-n { color: #ffc58a; }
 
 /* Thinking */

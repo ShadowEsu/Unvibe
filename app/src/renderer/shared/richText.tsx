@@ -142,18 +142,21 @@ function tableCells(line: string): string[] {
   return aware.open ? split(false).cells : aware.cells;
 }
 
-/** The column alignments when `line` is a table's `|---|:--:|` separator for `columns` header cells. */
+/**
+ * The column alignments when `line` is a table's `|---|:--:|` separator for `columns` header cells. The
+ * separator needs a pipe too, so prose above a bare `---` (or a list's lone `-` mid-stream) isn't a table.
+ */
 function tableAligns(line: string | undefined, columns: number): Align[] | null {
-  if (!line || !line.includes('-')) return null;
+  if (!line || !line.includes('-') || !line.includes('|')) return null;
   const cells = tableCells(line);
   if (cells.length !== columns || !cells.every((cell) => /^:?-+:?$/.test(cell))) return null;
   return cells.map((cell) => (cell.startsWith(':') && cell.endsWith(':') ? 'center' : cell.endsWith(':') ? 'right' : cell.startsWith(':') ? 'left' : null));
 }
 
-/** A table starts at `i`: a line with a pipe, then a separator with the same number of cells. */
+/** A table starts at `i`: a line with a pipe (not a heading or list item), then a separator with the same number of cells. */
 function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[] } | null {
   const line = lines[i]!;
-  if (!line.includes('|') || HEADING_RE.test(line)) return null;
+  if (!line.includes('|') || HEADING_RE.test(line) || LIST_RE.test(line)) return null;
   const header = tableCells(line);
   const aligns = tableAligns(lines[i + 1], header.length);
   return aligns ? { header, aligns } : null;
@@ -163,7 +166,7 @@ function renderTable(header: string[], aligns: Align[], rows: string[][], key: s
   const cls = (c: number) => (aligns[c] ? `is-${aligns[c]}` : undefined);
   return (
     // Wide tables scroll sideways inside a narrow panel; the region is focusable so the keyboard can scroll it.
-    <div key={key} className="rich-table" role="region" aria-label="Table" tabIndex={0}>
+    <div key={key} className="rich-table" role="region" aria-label={`Table: ${header.join(', ').replace(/[`*]/g, '')}`} tabIndex={0}>
       <table>
         <thead>
           <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell)}</th>)}</tr>

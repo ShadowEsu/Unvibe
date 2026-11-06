@@ -102,9 +102,17 @@ test('table columns keep their alignment and short rows are padded to the header
 });
 
 test('a line with pipes but no matching separator row is not a table', () => {
-  for (const text of ['Use `a | b` here.\nNext line.', '| a | b |\n|---|', '| a | b |\n|---|---|---|', 'Intro\n| a | b |']) {
+  const prose = [
+    'Use `a | b` here.\nNext line.', '| a | b |\n|---|', '| a | b |\n|---|---|---|', 'Intro\n| a | b |',
+    // A pipe in a code span or at a line's end, then a rule or a list's first "-" (mid-stream), isn't a table.
+    'Run `cat f | grep x` to filter.\n---\nNext.', 'Choose A |\n---', 'Pipe it with `a | b`:\n-', '- `a || b` is OR\n-',
+    // A list item with a pipe stays a list item.
+    '- a | b\n|---|---|',
+  ];
+  for (const text of prose) {
     assert.doesNotMatch(markup(text), /<table/, text);
   }
+  for (const text of prose.slice(4, 8)) assert.doesNotMatch(markup(text, true), /<table/, `${text} (streaming)`);
   // A paragraph line directly above a table stays a paragraph; the table still renders.
   assert.match(markup('Here it is:\n| a | b |\n|---|---|\n| 1 | 2 |'), /<p>Here it is:<\/p><div class="rich-table"[^>]*><table>/);
 });
