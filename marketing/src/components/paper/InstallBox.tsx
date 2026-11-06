@@ -144,9 +144,13 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
             </>
           ) : null}
           {/* For anyone taking the file: the release's published checksums (the Terminal and PowerShell lines check
-              them on their own). Restores what the old download card linked (QA, after #192). */}
-          {" · "}
-          <a className="paper-text-link ninst__nowrap" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
+              them on their own). Restores what the old download card linked (QA, after #192). The separator wraps with
+              the link, so a narrow row never ends on a hanging "·" (QA #196). */}
+          {" "}
+          <span className="ninst__nowrap">
+            {"· "}
+            <a className="paper-text-link" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
+          </span>
         </p>
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
