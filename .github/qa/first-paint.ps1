@@ -60,17 +60,19 @@ $t0 = Get-Date
 while (((Get-Date) - $t0).TotalSeconds -lt $Seconds) {
   $wins = [W]::MainWindows((Pids))
   if ($wins.Count -gt 0) {
-    $h = $wins[0]; $ms = [int]((Get-Date) - $t0).TotalMilliseconds
+    $h = $wins[0]; $shown = Get-Date; $ms = [int]($shown - $t0).TotalMilliseconds
     $front = [W]::GetForegroundWindow() -eq $h
-    Line "first visible main window at $ms ms after the watch began: $(Capture $h 'first'); in front: $front; main windows: $($wins.Count)"
-    # How long the empty page lasts: ~100 ms samples for up to 10 s after it shows.
-    $shown = Get-Date; $content = $null; $blankAt = @()
+    $first = Capture $h 'first'; $capMs = [int]((Get-Date) - $shown).TotalMilliseconds
+    Line "first visible main window at $ms ms after the watch began (seen within 50 ms of showing): $first; in front: $front; main windows: $($wins.Count); that capture took $capMs ms"
+    # How long the empty page lasts: samples every ~100 ms for up to 10 s, timed from the moment the window was seen.
+    $content = $null; $blankAt = @(); $sampleMs = @()
     while (((Get-Date) - $shown).TotalSeconds -lt 10) {
-      $u = Uniform (Grab $h); $at = [int]((Get-Date) - $shown).TotalMilliseconds
+      $s0 = Get-Date; $u = Uniform (Grab $h); $at = [int]((Get-Date) - $shown).TotalMilliseconds; $sampleMs += [int]((Get-Date) - $s0).TotalMilliseconds
       if (Blank $u) { $blankAt += $at } else { $content = $at; break }
       Start-Sleep -Milliseconds 50
     }
-    Line "content first seen: $(if ($null -ne $content) { "$content ms after the window showed" } else { 'not within 10 s' }); blank samples: $($blankAt.Count) (last at $(if ($blankAt) { $blankAt[-1] } else { '-' }) ms)"
+    $firstBlank = -not ($first -match '([\d.]+)% of \d+ samples, (\d+) colours' -and [double]$Matches[1] -lt 97 -and [int]$Matches[2] -ge 20)
+    Line "blank timeline (ms from the window being seen): first frame $(if ($firstBlank) { 'blank' } else { 'had content' }) (captured by $capMs ms); later blank samples at $(if ($blankAt) { $blankAt -join ', ' } else { 'none' }); content first seen at $(if ($null -ne $content) { "$content ms" } else { 'not within 10 s' }); sample cost $(if ($sampleMs) { "$(($sampleMs | Measure-Object -Average).Average.ToString('0')) ms avg" } else { '-' })"
     Start-Sleep 3
     $wins = [W]::MainWindows((Pids))
     Line "3 s later: $(if ($wins.Count) { Capture $wins[0] 'later' } else { 'no main window' }); in front: $([W]::GetForegroundWindow() -eq $wins[0]); main windows: $($wins.Count); Unvibe processes: $(@(Get-Process Unvibe -ErrorAction SilentlyContinue).Count)"
