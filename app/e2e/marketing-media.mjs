@@ -368,7 +368,9 @@ async function pasteTake(label, { sha256, text }, expect, { still = true } = {})
     // so only send again if the panel did not start on its own within 5 s.
     if (await agreeIfAsked(await windowWith('widget.html'))) {
       mark(`${label}: agreed`);
-      const resumed = await (await windowWith('widget.html')).locator('.body .cursor, .card--done').first().waitFor({ timeout: 5000 }).then(() => true, () => false);
+      // The thinking card (widget.tsx ThinkingCard, role=status) counts: run 42161863065 resumed with it for 8 s before
+      // the first words, and a check for the stream cursor alone sent the code a second time.
+      const resumed = await (await windowWith('widget.html')).locator('.thinking, .body .cursor, .card--done').first().waitFor({ timeout: 8000 }).then(() => true, () => false);
       if (!resumed) await send();
     }
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: expect }).first().waitFor({ timeout: 30000 });
