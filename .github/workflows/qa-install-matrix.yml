@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # Never cancel a run between an install and its QA flag (run 42120662869 left a fake 'real' install).
 concurrency:
@@ -129,6 +130,32 @@ jobs:
           MSG: ${{ github.event.head_commit.message }}
           ROW: ${{ matrix.path }}
         run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+
+      # "[rc:<build-only run id>]" in the message: the exe rows use that build's files (not released yet).
+      - name: RC build id
+        if: env.SKIP != '1'
+        id: rc
+        shell: bash
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: echo "rc=$(printf '%s' "$MSG" | sed -n 's/.*\[rc:\([0-9]*\)\].*/\1/p' | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Get the RC build
+        if: env.SKIP != '1' && steps.rc.outputs.rc != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: ${{ steps.rc.outputs.rc }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/rc
+
+      - name: Use the RC's version
+        if: env.SKIP != '1' && steps.rc.outputs.rc != ''
+        shell: bash
+        run: |
+          d="$(cygpath "$RUNNER_TEMP")/rc"; f=$(ls "$d" | grep -o 'Unvibe-[0-9.]*-win-x64-portable.exe' | head -1)
+          v=${f#Unvibe-}; v=${v%-win-x64-portable.exe}; [ -n "$v" ] || { echo "::error::no portable exe in the RC artifact"; exit 1; }
+          echo "V=$v" >> "$GITHUB_ENV"; echo "RC_DIR=$RUNNER_TEMP\\rc" >> "$GITHUB_ENV"; echo "RC build ${{ steps.rc.outputs.rc }}: $f"
 
       - name: Require the QA flag token
         if: env.SKIP != '1'

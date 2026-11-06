@@ -112,7 +112,9 @@ if ($Kind -eq 'ps1') {
   $asset = if ($Kind -eq 'setupexe') { "Unvibe-$env:V-win-x64-setup.exe" } else { "Unvibe-$env:V-win-x64-portable.exe" }
   $exe = "$env:USERPROFILE\Downloads\$asset"
   $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/$asset"
-  Invoke-WebRequest -Uri $u -OutFile $exe -UseBasicParsing
+  # An RC that isn't released yet: the same file from the build-only run's artifact (RC_DIR), then saved as above.
+  if ($env:RC_DIR) { Copy-Item (Get-ChildItem $env:RC_DIR -Recurse -Filter $asset | Select-Object -First 1).FullName $exe }
+  else { Invoke-WebRequest -Uri $u -OutFile $exe -UseBasicParsing }
   Set-Content -Path $exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
   $sig = Get-AuthenticodeSignature $exe
   Note "downloaded $asset ($((Get-Item $exe).Length) bytes), Mark of the Web ZoneId=3; Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"

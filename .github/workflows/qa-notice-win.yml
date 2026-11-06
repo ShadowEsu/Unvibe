@@ -1,0 +1,90 @@
+name: QA Island notice on Windows
+
+# QA only (Design's #213/#218 conditions for the 0.1.50 RC): an Island notice on Windows Server 2022 + 2025, inside the
+# work area, no jump on its 9 s exit, and the expanded card's note. Harness: .github/qa/notice-row.ps1.
+# Runs on a push to qa/install-matrix whose commit message holds "[notice-win]" and "[rc:<build-only run id>]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: qa-notice-win
+  cancel-in-progress: false
+
+jobs:
+  row:
+    if: contains(github.event.head_commit.message, '[notice-win]') && contains(github.event.head_commit.message, '[rc:')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      INSTALL_ID: qa-notice-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
+      MSG: ${{ github.event.head_commit.message }}
+    steps:
+      - name: RC build id, flag this id as QA before anything installs
+        id: rc
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          rc=$(printf '%s' "$MSG" | sed -n 's/.*\[rc:\([0-9]*\)\].*/\1/p' | head -1)
+          [[ "$rc" =~ ^[0-9]+$ ]] || { echo "::error::no [rc:<run id>] in the commit message"; exit 1; }
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"; echo "RC_DIR=$RUNNER_TEMP\\rc" >> "$GITHUB_ENV"
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Get the RC build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: ${{ steps.rc.outputs.rc }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/rc
+
+      - name: Parse the row script
+        shell: powershell
+        run: |
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$env:GITHUB_WORKSPACE\.github\qa\notice-row.ps1", [ref]$null, [ref]$errs)
+          if ($errs) { $errs | ForEach-Object { "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
+          'notice-row.ps1 parses'
+
+      - name: Island notice, bounds, expanded card
+        shell: powershell
+        run: .github\qa\notice-row.ps1 -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag again (whatever happened)
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          taskkill //IM Unvibe.exe //F > /dev/null 2>&1 || true
+          ids="$INSTALL_ID"
+          s="$APPDATA/Unvibe/unvibe-store.json"
+          [ -f "$s" ] && ids="$ids $(grep -o '"installId":"[^"]*"' "$s" | cut -d'"' -f4)"
+          for x in $(echo $ids | tr ' ' '\n' | sort -u); do
+            printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w " %{http_code} $x\n" \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$x\"}"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: notice-${{ matrix.runner }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
