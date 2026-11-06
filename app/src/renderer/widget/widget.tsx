@@ -226,6 +226,16 @@ function EmptyPicker({
   const [needsAccess, setNeedsAccess] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [grantNote, setGrantNote] = useState('');
+  // macOS refused (or is still asking about) System Events, so the shortcut's copy read nothing.
+  const [automation, setAutomation] = useState<'automation_denied' | 'automation_timeout' | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const read = () => void window.unvibe.captureBlock().then((block) => { if (alive) setAutomation(block); });
+    read();
+    // Another press with the panel already open lands here without a remount.
+    window.addEventListener('focus', read);
+    return () => { alive = false; window.removeEventListener('focus', read); };
+  }, []);
   useEffect(() => {
     let alive = true;
     let missing = false;
@@ -311,6 +321,14 @@ function EmptyPicker({
         Let’s make that code click. Select a snippet and press {shortcut}, or paste it below.
       </div>
       {grantNote ? <div className="access-note" role="status">{grantNote}</div> : null}
+      {automation === 'automation_denied' ? (
+        <div className="access-note" role="status">
+          macOS is blocking Unvibe from copying your selection. In System Settings, open Privacy &amp; Security, then Automation, and turn on System Events under Unvibe. Then press {shortcut} again.
+          <div className="empty-actions"><button className="btn ghost" onClick={() => void window.unvibe.openAutomation()}>Open Automation settings</button></div>
+        </div>
+      ) : automation === 'automation_timeout' ? (
+        <div className="access-note" role="status">If macOS asked to let Unvibe control System Events, choose Allow, then press {shortcut} again.</div>
+      ) : null}
       <div className="empty-actions">
         <button className="btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
           Explain my clipboard

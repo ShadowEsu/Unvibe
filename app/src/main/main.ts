@@ -537,6 +537,12 @@ function asset(...parts: string[]): string {
  */
 let pendingGrant: PendingGrant | null = null;
 /**
+ * Why the last shortcut capture got nothing on macOS, when System Events was the cause: refused
+ * (Automation switched off after Don't Allow; macOS never asks again) or timed out while macOS was
+ * still asking. The panel's empty state reads it and says which switch to turn on.
+ */
+let captureBlock: 'automation_denied' | 'automation_timeout' | null = null;
+/**
  * A clipboard explain asked for before the person agreed to sending code (QA F1): nothing was read
  * then. After Agree, the panel asks main to read it and show the confirm sheet; `heldReviewToRun`
  * drops requests older than five minutes. Any other review started meanwhile replaces or clears it.
@@ -594,11 +600,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
   const captureFailed = !code && agreed;
-  const failure = 'error' in capture ? capture.error : undefined;
-  if (captureFailed) pulseBar({ phase: 'error', label: failure === 'automation_denied' ? 'Turn on System Events' : 'Select code first' });
-  // macOS refused the copy (Automation off) or is still asking: say what to press, since macOS won't ask again after Don't Allow.
-  if (captureFailed && failure === 'automation_denied') notify('macOS blocked Unvibe from copying your selection. Open System Settings > Privacy & Security > Automation, turn on System Events under Unvibe, then press the shortcut again.');
-  if (captureFailed && failure === 'automation_timeout') notify('If macOS asked to let Unvibe control System Events, choose Allow, then press the shortcut again.');
+  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  if (!options.sample && !options.captured && !options.preferClipboard) {
+    const failure = 'error' in capture ? capture.error : undefined;
+    captureBlock = captureFailed && (failure === 'automation_denied' || failure === 'automation_timeout') ? failure : null;
+  }
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
   if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
@@ -1520,6 +1526,12 @@ app.whenReady().then(() => {
   ipcMain.handle('perms:openAccessibility', () => {
     if (isMac)
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    return { ok: true };
+  });
+  ipcMain.handle('perms:captureBlock', () => captureBlock);
+  ipcMain.handle('perms:openAutomation', () => {
+    if (isMac)
+      void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation');
     return { ok: true };
   });
   /**
