@@ -196,7 +196,7 @@ jobs:
             [ "$got" = "$want" ] || exit 1
             bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$d/Unvibe-0.1.49-mac-x64.dmg" "$ITEM"
           else
-            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" soundoff
+            bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" "$([[ "$ITEM" == *soundoff* ]] && echo soundoff || echo default)"
           fi
 
       - name: Flag the install as QA (again, whatever happened)
