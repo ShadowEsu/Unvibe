@@ -142,10 +142,15 @@ if ($Kind -eq 'ps1') {
     $page = 0; $seen = $false
     for ($k = 0; $k -lt 60 -and $page -lt 12; $k++) {
       Start-Sleep 2
-      $sw = $root.FindAll($TA::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -like 'Unvibe Setup*' } | Select-Object -First 1
-      if (-not $sw) { if ($seen) { break } else { continue } }
+      # The setup process's own window, by handle (a name search from the UIA root missed it in run 42186807194).
+      $sp = Get-Process | Where-Object { $_.ProcessName -like '*-setup' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+      if (-not $sp) { if ($seen) { break } else { continue } }
+      $sw = $AE::FromHandle($sp.MainWindowHandle)
+      if (-not $seen) { Note "  installer window: '$($sp.MainWindowTitle)' handle $($sp.MainWindowHandle), UIA name '$($sw.Current.Name)'" }
       $seen = $true
-      $btns = @($sw.FindAll($TA::Descendants, $isButton) | Where-Object { $_.Current.IsEnabled })
+      $all = @($sw.FindAll($TA::Descendants, $isButton))
+      $btns = @($all | Where-Object { $_.Current.IsEnabled })
+      if ($k -lt 3) { Note "  installer buttons seen: $(($all | ForEach-Object { "$($_.Current.Name)$(if (-not $_.Current.IsEnabled) { ' (off)' })" }) -join ', ')" }
       $fwd = $null
       foreach ($n in 'Finish', 'Install', 'Next >') { $fwd = $btns | Where-Object { $_.Current.Name -eq $n } | Select-Object -First 1; if ($fwd) { break } }
       if (-not $fwd) { continue } # the Installing… page: no forward button until it's done
