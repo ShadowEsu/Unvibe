@@ -594,7 +594,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Windows capture already looked up the foreground app in the same PowerShell call.
   const sourceApp = capture.sourceApp !== undefined ? capture.sourceApp : await frontmostApp();
   const captureFailed = !code && agreed;
-  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  const failure = 'error' in capture ? capture.error : undefined;
+  if (captureFailed) pulseBar({ phase: 'error', label: failure === 'automation_denied' ? 'Turn on System Events' : 'Select code first' });
+  // macOS refused the copy (Automation off) or is still asking: say what to press, since macOS won't ask again after Don't Allow.
+  if (captureFailed && failure === 'automation_denied') notify('macOS blocked Unvibe from copying your selection. Open System Settings > Privacy & Security > Automation, turn on System Events under Unvibe, then press the shortcut again.');
+  if (captureFailed && failure === 'automation_timeout') notify('If macOS asked to let Unvibe control System Events, choose Allow, then press the shortcut again.');
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
   if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
@@ -730,7 +734,8 @@ app.whenReady().then(() => {
   const s = settings().all();
   applyLoginItem(s.launchAtLogin);
   void flush();
-  startFrontmostWatch();
+  // The watch asks macOS for System Events; a fresh install gets that question at its first shortcut press instead.
+  if (s.onboarded) startFrontmostWatch();
   startLiveWatch();
 
   const dockIcon = nativeImage.createFromPath(asset('icon.png'));
@@ -1560,6 +1565,7 @@ app.whenReady().then(() => {
   ipcMain.handle('onboarding:complete', () => {
     const next = settings().set({ onboarded: true });
     reportProgress('onboarded');
+    startFrontmostWatch();
     if (next.barVisibility === 'always') showBar(bar);
     return next;
   });
