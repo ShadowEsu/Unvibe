@@ -720,7 +720,7 @@
 :root[data-ui="v3"][data-v7] .update-card__bar { display: block; height: 6px; border-radius: 99px; background: #eee8db; overflow: hidden; }
 :root[data-ui="v3"][data-v7] .update-card__bar b { display: block; height: 100%; background: #d6f45a; transition: width .3s; }
 :root[data-ui="v3"][data-v7] .update-card__actions { display: grid; gap: 4px; justify-items: center; }
-:root[data-ui="v3"][data-v7] .update-card__later { border: 0; background: none; color: #777; font-size: 12px; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .update-card__later { border: 0; background: none; color: #555; font-size: 12px; cursor: pointer; }
 
 /* Sign in: readable note and a big code to compare with the browser */
 :root[data-ui="v3"][data-v7] .login .field-note,

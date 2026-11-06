@@ -1,5 +1,6 @@
 import type { BriefFile, ChangeBrief } from './changeBrief';
 import type { KnowledgeObject } from './knowledge';
+import { linesLabel } from './linesLabel';
 
 /**
  * After-Agent Review: when Cursor, Claude Code or another agent leaves a pile of edits,
@@ -44,12 +45,12 @@ function reasonFor(file: BriefFile): string {
   if (file.kind === 'sensitive') return 'Touches auth, billing, schema or infrastructure.';
   if (file.kind === 'service') return 'API, worker or data path. Requests flow through here.';
   if (file.kind === 'config') return 'Dependencies or configuration changed.';
-  if (file.insertions > 0 && file.deletions === 0) return `New code, ${file.insertions} lines added.`;
-  if (file.deletions > 0 && file.insertions === 0) return `Code removed, ${file.deletions} lines.`;
+  if (file.insertions > 0 && file.deletions === 0) return `New code, ${linesLabel(file.insertions)} added.`;
+  if (file.deletions > 0 && file.insertions === 0) return `Code removed, ${linesLabel(file.deletions)}.`;
   if (lines >= 80) return `Large edit, ${lines} lines changed.`;
   if (file.kind === 'test') return 'Tests changed.';
   if (file.kind === 'docs') return 'Docs changed.';
-  return `${lines} lines changed.`;
+  return `${linesLabel(lines)} changed.`;
 }
 
 export function rankFiles(files: BriefFile[]): ReviewFile[] {
@@ -116,10 +117,12 @@ export function buildAgentReview(brief: ChangeBrief, knowledge: KnowledgeObject[
   const reviewFirst: string[] = [];
   for (const file of sensitive.slice(0, 3)) reviewFirst.push(`Read ${file.path} line by line. It touches a sensitive system.`);
   const biggest = ranked.find((f) => f.kind !== 'sensitive' && f.insertions + f.deletions >= 80);
-  if (biggest) reviewFirst.push(`Skim ${biggest.path}, the largest edit (${biggest.insertions + biggest.deletions} lines).`);
+  if (biggest) reviewFirst.push(`Skim ${biggest.path}, the largest edit (${linesLabel(biggest.insertions + biggest.deletions)}).`);
   if (configFiles.length) reviewFirst.push(`Check ${configFiles.map((f) => f.path).slice(0, 2).join(' and ')}. New dependencies or settings change what runs.`);
   if (codeFiles.length >= 2 && testFiles.length === 0) reviewFirst.push(`${codeFiles.length} code files changed with no test changes. Decide whether tests should move too.`);
-  if (stale.length) reviewFirst.push(`${stale.length} saved explanation${stale.length === 1 ? '' : 's'} cover files that changed. Refresh them so they stay true.`);
+  if (stale.length) reviewFirst.push(stale.length === 1
+    ? '1 saved explanation covers files that changed. Refresh it so it stays true.'
+    : `${stale.length} saved explanations cover files that changed. Refresh them so they stay true.`);
   if (areas.length >= 3) {
     // Name every area when there are exactly 3; otherwise the 3 names are a sample, so say "including".
     const names = areas.slice(0, 3).map((a) => a.name);
