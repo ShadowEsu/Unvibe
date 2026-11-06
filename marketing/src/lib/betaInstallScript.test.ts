@@ -9,6 +9,7 @@ import {
   BETA_INSTALL_ASSET,
   BETA_INSTALL_TAG,
   BETA_MAC_SIGNING_REQUIREMENT,
+  BETA_WINDOWS_APP_GUID,
   BETA_WINDOWS_SETUP_ASSET,
   betaInstallScript,
   betaWindowsInstallScript,
@@ -532,11 +533,25 @@ describe("Windows install script text", () => {
 
   it("opens this user's installed app: its Apps entry first, then the per-user default, never an all-users copy", () => {
     const lookup = script.slice(script.indexOf("$installed = $null"), script.indexOf("Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue\nif (-not $installed)"));
-    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntries "HKCU:"`) > 0, lookup);
-    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntries "HKCU:"`) < lookup.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`));
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntry "HKCU:"`) > 0, lookup);
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntry "HKCU:"`) < lookup.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`));
     assert.doesNotMatch(lookup, /ProgramFiles|HKLM/);
     assert.doesNotMatch(script, /Start-Process \$download(?! -ArgumentList "\/S")/);
     assert.match(script, /if \(-not \$installed\) \{\n  throw "The installer finished, but Unvibe\.exe is not/);
+  });
+
+  it("finds Unvibe's Apps entry by the installer's GUID for app/package.json's appId, not by a display name", () => {
+    // electron-builder (NsisTarget): UUID v5 of the appId in namespace 50e065bc-3134-11e6-9bab-38c9862bdaf3.
+    const appId = JSON.parse(readFileSync(path.join(__dirname, "../../../app/package.json"), "utf8")).build.appId as string;
+    const ns = Buffer.from("50e065bc313411e69bab38c9862bdaf3", "hex");
+    const h = createHash("sha1").update(Buffer.concat([ns, Buffer.from(appId)])).digest().subarray(0, 16);
+    h[6] = (h[6] & 0x0f) | 0x50;
+    h[8] = (h[8] & 0x3f) | 0x80;
+    const hex = h.toString("hex");
+    const guid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    assert.equal(BETA_WINDOWS_APP_GUID, guid);
+    assert.ok(script.includes(`\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${guid}"`));
+    assert.doesNotMatch(script, /DisplayName -like/);
   });
 
   it("removes only the portable copy earlier versions of the script left in LOCALAPPDATA\\Unvibe", () => {

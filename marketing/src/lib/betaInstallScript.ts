@@ -4,6 +4,12 @@ export const BETA_INSTALL_ASSET = "Unvibe-0.1.49-mac-arm64.dmg";
 export const BETA_WINDOWS_ASSET = "Unvibe-0.1.49-win-x64-portable.exe";
 /** What install.ps1 installs: the per-user NSIS setup, run silently (Start menu, Apps entry, uninstaller). */
 export const BETA_WINDOWS_SETUP_ASSET = "Unvibe-0.1.49-win-x64-setup.exe";
+/**
+ * The Windows installer's app GUID, which names its Apps & features (Uninstall) registry key:
+ * electron-builder's UUID v5 of app/package.json's appId "com.unvibe.app" in its namespace
+ * 50e065bc-3134-11e6-9bab-38c9862bdaf3 (a test recomputes it from the appId).
+ */
+export const BETA_WINDOWS_APP_GUID = "f5687918-a052-548a-a713-e4a84dbef267";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
@@ -267,13 +273,12 @@ Write-Host "Closing any running Unvibe..."
 Get-Process -Name Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
-# Apps installed for this user (HKCU) or for everyone (HKLM), by their Apps & features entry.
-function Get-UnvibeUninstallEntries(\$root) {
-  Get-ChildItem "\$root\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" -ErrorAction SilentlyContinue |
-    Get-ItemProperty -ErrorAction SilentlyContinue |
-    Where-Object { \$_.DisplayName -like "Unvibe*" }
+# Unvibe's Apps & features entry for this user (HKCU) or for everyone (HKLM). The key is the installer's
+# app GUID (electron-builder: UUID v5 of the appId), so no other app's entry can match.
+function Get-UnvibeUninstallEntry(\$root) {
+  Get-ItemProperty -Path "\$root\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${BETA_WINDOWS_APP_GUID}" -ErrorAction SilentlyContinue
 }
-if (Get-UnvibeUninstallEntries "HKLM:") {
+if (Get-UnvibeUninstallEntry "HKLM:") {
   Write-Warning "An Unvibe installed for all users is also on this PC. This installs a separate copy for your user; you can remove the other one in Settings > Apps > Installed apps."
 }
 
@@ -288,6 +293,7 @@ try {
 # Windows PowerShell 5.1 leaves ExitCode empty unless the process handle was read before it ended.
 \$null = \$setup.Handle
 if (-not \$setup.WaitForExit(300000)) {
+  Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
   throw "The Unvibe installer did not finish within 5 minutes. Restart your PC, then run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
 }
 if (\$setup.ExitCode -ne 0) {
@@ -299,7 +305,7 @@ if (\$setup.ExitCode -ne 0) {
 # folder its owner chose); otherwise the installer's per-user default.
 \$installed = \$null
 for (\$i = 0; \$i -lt 30 -and -not \$installed; \$i++) {
-  \$fromEntry = Get-UnvibeUninstallEntries "HKCU:" | Where-Object { \$_.DisplayIcon } |
+  \$fromEntry = Get-UnvibeUninstallEntry "HKCU:" | Where-Object { \$_.DisplayIcon } |
     ForEach-Object { ((\$_.DisplayIcon -split ',')[0]).Trim('"') }
   \$installed = @(\$fromEntry) + @(
     (Join-Path \$env:LOCALAPPDATA "Programs\\Unvibe\\Unvibe.exe"),
