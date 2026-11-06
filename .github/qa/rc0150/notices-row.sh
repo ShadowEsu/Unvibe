@@ -6,8 +6,10 @@
 # N-5 grey info notice → N-6 a problem right after it, amber → N-7 nothing replaces the problem).
 # Mac-only: a macOS privacy question can come up over the flow (Automation for System Events when a clipboard explain
 # asks for the front app; the microphone question on Intel). first-explain's own watcher answers only the app's own
-# dialogs, so a watcher here records every UserNotificationCenter question (time, words, picture) and answers Allow,
-# as mac-row.sh's first launch does, so none of them stalls the app between the checks.
+# dialogs, so a watcher here records every UserNotificationCenter question (time, words, picture) first, then answers
+# it with its own button: the microphone question "Don't Allow" (Security RC3-5: the unhardened RC still asks), the
+# System Events question "Allow" (as most people do). mac-row.sh's own position click at first launch is off
+# (DIALOG_WATCHER=1), so only this watcher answers, after recording.
 # Usage: notices-row.sh <out dir>     Env: DMG_DIR (the RC's DMGs), INSTALL_ID, UNVIBE_QA_FLAG_TOKEN
 set +e -uo pipefail
 out="$1"; mkdir -p "$out"
@@ -30,8 +32,10 @@ build_rcmac || r "NOTE  helper did not build (dialogs pictured, not answered)"
         screencapture -x "$out/notices-dialog-$n-full.png"; screencapture -x -o -l "$id" "$out/notices-dialog-$n.png"
         words=$(t 10 "$R" ax UserNotificationCenter 2>/dev/null | grep -E 'AXStaticText|AXButton' | sed 's/^ *//; s/ @ .*//' | tr '\n' ';')
         echo "$(date +%H:%M:%S) dialog #$n window $d; Unvibe pid ${pid:-none} running for $up; words: $words" >> "$out/dialog-watch.txt"
-        if [[ $words == *"System Events"* || $words == *"microphone"* ]]; then
-          echo "$(date +%H:%M:%S) answered dialog #$n Allow: $(t 10 "$R" axpress UserNotificationCenter Allow 2>&1 | tr '\n' ' ')" >> "$out/dialog-watch.txt"
+        if [[ $words == *"microphone"* ]]; then
+          echo "$(date +%H:%M:%S) answered dialog #$n (microphone) Don't Allow: $(t 10 "$R" axpress UserNotificationCenter "Don't Allow" 2>&1 | tr '\n' ' ')" >> "$out/dialog-watch.txt"
+        elif [[ $words == *"System Events"* ]]; then
+          echo "$(date +%H:%M:%S) answered dialog #$n (System Events) Allow: $(t 10 "$R" axpress UserNotificationCenter Allow 2>&1 | tr '\n' ' ')" >> "$out/dialog-watch.txt"
         fi
         last=$d
       fi
@@ -42,10 +46,10 @@ build_rcmac || r "NOTE  helper did not build (dialogs pictured, not answered)"
 ) & watcher=$!
 r "watcher started $(date +%H:%M:%S)"
 
-NOTICES=1 EXPLAIN_T=900 bash "$(dirname "$0")/../mac-row.sh" dmg "$out"; rc=$?
+NOTICES=1 EXPLAIN_T=900 DIALOG_WATCHER=1 bash "$(dirname "$0")/../mac-row.sh" dmg "$out"; rc=$?
 kill "$watcher" 2>/dev/null
 r "app bundle version: $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString)"
-r "PRIVACY QUESTIONS seen by the watcher (answered Allow where noted):"
+r "PRIVACY QUESTIONS seen by the watcher (recorded first, then answered with the button noted):"
 if [ -s "$out/dialog-watch.txt" ]; then sed 's/^/  /' "$out/dialog-watch.txt" | tee -a "$out/report.txt"; else r "  none"; fi
 r "TCC rows for com.unvibe.app at the end: $(utcc "SELECT service||' auth_value='||auth_value||' auth_reason='||auth_reason FROM access WHERE client='com.unvibe.app';" | tr '\n' ';')"
 r "NOTICE LINES:"; grep -E '^(PASS|FAIL|NOTE)  (N-|N notice|info notice|card text|send agreement)' "$out/explain-report.txt" 2>/dev/null | sed 's/^/  /' | tee -a "$out/report.txt"

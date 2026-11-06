@@ -136,7 +136,8 @@ uw=$(awk -F'\t' '$2=="Unvibe"' "$out/windows-first-launch.txt" | wc -l | tr -d '
 r "first launch: Unvibe pid ${pid:-NONE}, Unvibe windows on screen: $uw"
 # The Automation consent ("“Unvibe” wants access to control “System Events”", Don't Allow / Allow; pictured above),
 # answered Allow, the way most people do. Its buttons are pressed by position: Allow is the right one, 30 points up.
-d=$("$W" find UserNotificationCenter || true)
+# DIALOG_WATCHER=1: the caller's watcher reads each question and answers it by its own button; no position click here.
+d=$([ "${DIALOG_WATCHER:-}" = 1 ] || "$W" find UserNotificationCenter || true)
 if [ -n "$d" ]; then
   read -r _ px py pw ph <<< "$d"
   "$W" click $(( px + pw * 3 / 4 )) $(( py + ph - 30 )); sleep 2

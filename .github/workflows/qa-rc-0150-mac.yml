@@ -69,6 +69,11 @@ jobs:
           # Notice rows (RC-3 notice fix + #220): before-run on RC-2; "[rc:<id>]" in the commit message picks RC-3.
           - { item: n-arm64, runner: macos-15, rc: "42199536258" }
           - { item: n-intel, runner: macos-15-intel, rc: "42199536258" }
+          # RC-3 (app-release run 42218741651 on main c71cff9c = RC-2 + #220 + #223 + #224): notice rows on both
+          # architectures, and RC-2 row 1's compact Island (4x crops at its real count after the explanation).
+          - { item: n3-arm64, runner: macos-15, rc: "42218741651" }
+          - { item: n3-intel, runner: macos-15-intel, rc: "42218741651" }
+          - { item: r3-island, runner: macos-15, rc: "42218741651" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -137,7 +142,7 @@ jobs:
           npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
           cp "$GITHUB_WORKSPACE/.github/qa/rc0150/cdp.mjs" rc0150-cdp.mjs
-          if [[ "$ITEM" == n-* ]]; then
+          if [[ "$ITEM" == n-* || "$ITEM" == n3-* ]]; then
             # The notice checks as they are on qa/install-matrix (571cd6c, "N-5..N-7 with a live-watch info notice"), unchanged.
             src=571cd6c1ac87073f8cfbde12d0d03d8d2fbb1d9a
             gh api "repos/ShadowEsu/Unvibe/contents/.github/qa/first-explain.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > first-explain.mjs
@@ -151,7 +156,7 @@ jobs:
         run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
 
       - name: Install the RC from its DMG and allow Accessibility (items 1 and 2, RC-2 row 1, design stills)
-        if: env.SKIP != '1' && (startsWith(matrix.item, 'i1-') || matrix.item == 'i2-island' || matrix.item == 'rc2-r1-island' || matrix.item == 'design-briefs')
+        if: env.SKIP != '1' && (startsWith(matrix.item, 'i1-') || matrix.item == 'i2-island' || matrix.item == 'rc2-r1-island' || matrix.item == 'r3-island' || matrix.item == 'design-briefs')
         run: |
           arch=$([ "$(uname -m)" = arm64 ] && echo arm64 || echo x64)
           mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
@@ -187,7 +192,7 @@ jobs:
           exit $rc
 
       - name: "RC-2 row 1: compact Island before/after the first explanation (#213/#219)"
-        if: env.SKIP != '1' && matrix.item == 'rc2-r1-island'
+        if: env.SKIP != '1' && (matrix.item == 'rc2-r1-island' || matrix.item == 'r3-island')
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/rc0150/rc2-row1.sh "$RUNNER_TEMP/m"
@@ -206,7 +211,7 @@ jobs:
         run: bash .github/qa/rc0150/design-capture.sh "$RUNNER_TEMP/m"
 
       - name: "Notice rows: DMG install, first launch, first explanation, then N-0..N-7 (first-explain.mjs NOTICES=1)"
-        if: env.SKIP != '1' && startsWith(matrix.item, 'n-')
+        if: env.SKIP != '1' && (startsWith(matrix.item, 'n-') || startsWith(matrix.item, 'n3-'))
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
           DMG_DIR: ${{ runner.temp }}/build
