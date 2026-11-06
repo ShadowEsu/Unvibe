@@ -88,7 +88,7 @@
           }
         ],
         "NSAccessibilityUsageDescription": "Unvibe reads the code you have selected in another app when you press the shortcut, so it can explain it.",
-        "NSMicrophoneUsageDescription": "Unvibe uses the microphone only when you hold the voice button to ask a question. Recording never starts in the background.",
+        "NSMicrophoneUsageDescription": "Unvibe never records or listens. On some Macs, macOS asks this when Unvibe plays one of its interface sounds.",
         "LSUIElement": false
       },
       "entitlements": "build/entitlements.mac.plist",
