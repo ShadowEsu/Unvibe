@@ -428,7 +428,57 @@ export function clearLimitPause(): void {
   limitPauseActive = false;
 }
 
-export function createCompanion(): BrowserWindow {
+/** The part of a BrowserWindow the reveal uses (a fake in tests). */
+export type RevealTarget = Pick<BrowserWindow, 'isDestroyed' | 'maximize' | 'show' | 'setAlwaysOnTop' | 'moveTop' | 'focus'>;
+
+/** `reveal` shows the companion once (later calls do nothing); `revealed` says whether it has. */
+export interface CompanionRevealer {
+  reveal: () => void;
+  revealed: () => boolean;
+}
+
+/**
+ * The companion's one reveal, once its page has painted: maximized first on a first run, then shown,
+ * and with `front` (a first-run launch the user started) brought above other apps. Later calls do
+ * nothing, so the paint and the 5 s fallback can both call it.
+ */
+export function companionRevealer(win: RevealTarget, { maximize, front, platform }: { maximize: boolean; front: boolean; platform: NodeJS.Platform }): CompanionRevealer {
+  let shown = false;
+  const reveal = () => {
+    if (shown || win.isDestroyed()) return;
+    shown = true;
+    if (maximize) win.maximize();
+    win.show();
+    if (!front) return;
+    // Windows won't hand focus to a window whose process didn't get the foreground (it flashes the
+    // taskbar button instead); topmost and straight back puts it above the other windows anyway.
+    if (platform === 'win32') {
+      win.setAlwaysOnTop(true);
+      win.setAlwaysOnTop(false);
+    }
+    win.moveTop();
+    win.focus();
+  };
+  return { reveal, revealed: () => shown };
+}
+
+/** Companions whose reveal hasn't run yet: their page is still loading. */
+const companionReveals = new WeakMap<BrowserWindow, CompanionRevealer>();
+
+/**
+ * Whether this companion is still loading, hidden until its page paints. Reopening it then must not
+ * show it early (blank) or out of turn: its reveal shows it once painted.
+ */
+export function companionLoading(win: BrowserWindow): boolean {
+  return companionReveals.get(win)?.revealed() === false;
+}
+
+/**
+ * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
+ * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
+ * first-run launch the user started) then brings it above other apps.
+ */
+export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
@@ -441,12 +491,20 @@ export function createCompanion(): BrowserWindow {
       : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
     backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
     skipTaskbar: false,
+    show: false,
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
   // Setup is intentionally a full-window moment. Once it is complete, future
   // launches retain the normal companion size so the app stays out of the way.
-  if (!settings().all().onboarded) win.maximize();
+  const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
+  companionReveals.set(win, revealer);
+  const fallback = setTimeout(revealer.reveal, 5000);
+  win.once('ready-to-show', () => {
+    clearTimeout(fallback);
+    revealer.reveal();
+  });
+  win.once('closed', () => clearTimeout(fallback));
   void win.loadFile(page('companion'));
   return win;
 }
