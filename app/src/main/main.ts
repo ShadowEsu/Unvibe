@@ -211,15 +211,14 @@ function makeSession(
     recorded: false,
     level,
     isSample: () => session.code === FIRST_RUN_SAMPLE,
+    // No Island notice for success: the Island's own pulse already says Ready, then Understood.
     onRecorded: () => {
-      notify('Added to your learning history');
       // First run: step 2 asks its one level question once the sample answer has finished, and
       // the Mac setup offers the shortcut once the user's own code has been explained.
       const event = firstRunEvent(session.isSample?.() === true);
       if (event && companion && !companion.isDestroyed()) companion.webContents.send(event);
       void askLaunchAtLogin(!session.isSample?.());
     },
-    onUnderstood: () => notify('Nice — concept understood'),
   };
   return session;
 }
@@ -328,7 +327,7 @@ type SelectionCredit = 'held' | 'free';
 function takeSelectionCredit(): SelectionCredit | null {
   if (!trialBuildEnabled() || fullProductBuildEnabled()) return 'free';
   if (store().consumeBetaSelectedCodePrompt().ok) return 'held';
-  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`);
+  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`, { problem: true });
   return null;
 }
 
@@ -452,7 +451,7 @@ function repairAccessibilityAfterUpdate(): void {
   try { writeFileSync(file, current); } catch { /* still repair this launch */ }
   if (!last || last === current || accessibilityGranted(false)) return;
   execFile('tccutil', ['reset', 'Accessibility', 'com.unvibe.app'], () => {
-    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.');
+    notify('Unvibe updated. To use the shortcut again, open Settings, General, and press Allow Accessibility.', { problem: true });
   });
 }
 
@@ -641,11 +640,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
-  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.');
+  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
   if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
-    notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`);
+    notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`, { problem: true });
   }
   const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   if (needsGrant) {
@@ -831,7 +830,7 @@ app.whenReady().then(() => {
   screen.on('display-removed', restoreFloatingWindows);
   screen.on('display-metrics-changed', restoreFloatingWindows);
   if (!registerShortcut(s.shortcut)) {
-    notify('That shortcut is in use by another app. Pick a different one in Settings.');
+    notify('That shortcut is in use by another app. Pick a different one in Settings.', { problem: true });
   }
   // Companion home keeps the app visible in Dock / Cmd-Tab on launch. A login launch after setup
   // starts quietly in the tray instead, so the shortcut is ready with no window.

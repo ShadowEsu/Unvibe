@@ -52,6 +52,7 @@ function notchSafeTop(): number {
 
 function Bar() {
   const [note, setNote] = useState('');
+  const [noteProblem, setNoteProblem] = useState(false);
   const [phase, setPhase] = useState<PulsePhase>('idle');
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -134,11 +135,13 @@ function Bar() {
       soundRef.current = { enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' };
       playLaunchOnce();
     });
-    const offNotify = window.unvibe.onBarNotify((message) => {
-      setNote(message);
+    const offNotify = window.unvibe.onBarNotify((notice) => {
+      setNote(notice.text);
+      setNoteProblem(notice.problem);
       refresh();
       if (noteTimer.current) clearTimeout(noteTimer.current);
-      // Long enough to read a three-line notice (F-18: they used to vanish after 4 s, unseen).
+      // Long enough to read a three-line notice (F-18: they used to vanish after 4 s, unseen). Keep it
+      // under notify.ts's 15 s gap: that gap is what stops an information notice replacing a problem.
       noteTimer.current = setTimeout(() => setNote(''), 9000);
     });
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
@@ -233,7 +236,7 @@ function Bar() {
 
       {/* Screen readers hear the notice from this always-mounted live region; the visible copies are hidden from them. */}
       <p className="island__sr" role="status">{note}</p>
-      {note && !expanded ? <p className="island__notice" aria-hidden="true">{note}</p> : null}
+      {note && !expanded ? <p key={note} className={`island__notice${noteProblem ? ' island__notice--problem' : ''}`} aria-hidden="true">{note}</p> : null}
 
       {expanded ? (
         <div className="island__overview">

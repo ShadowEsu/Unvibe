@@ -60,7 +60,7 @@ export async function tickLiveWatch(): Promise<void> {
   const message = impact === 'HIGH'
     ? `${stats.files.length} files changed in ${name}. Architecture may be affected.`
     : `${stats.files.length} files changed in ${name}.`;
-  notify(message);
+  notify(message, { problem: false });
   lastSignature = signature;
   pendingSignature = '';
   lastNotifyAt = now;
