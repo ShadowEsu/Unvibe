@@ -235,7 +235,16 @@ jobs:
           done
           r "blocked-app message: $res"
           oa=$(S find)
-          r "Open Anyway control: $oa"
+          r "Open Anyway control (accessibility): $oa"
+          # System Settings doesn't expose the button by its label here (runs 42148712066, 42149346752); in run
+          # 42149346752's picture it sits on the blocked message's line, its centre 79 points in from the window's
+          # right edge. Click there when accessibility can't find it.
+          if [[ $oa != found* && $res == found* ]]; then
+            read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
+            read -r _ ax ay aw ah <<< "$res"
+            oa="found $(( wx + ww - 79 - 50 )) $(( ay - 4 )) 100 24 from-picture"
+            r "Open Anyway position from the picture: $oa"
+          fi
           sleep 1
           read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
           [ "$wid" != 0 ] && screencapture -x -o -l "$wid" "$out/dmg-2-privacy-security-open-anyway.png"
