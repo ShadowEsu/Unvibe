@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 /** Lines the code block shows before "Show all" (SPEC §4). */
 export const CODE_PEEK_LINES = 3;
@@ -42,10 +42,12 @@ export function CodeBlock({ id, code, language, open, onToggle }: {
  * "Explain differently" and "Test me" as quiet text. After Got it the button stays pressed and a second press does
  * nothing new (Design Q1).
  */
-export function PanelActions({ streaming, busy, understood, onStop, onGotIt, onDifferent, onTestMe, children }: {
+export function PanelActions({ streaming, busy, understood, testMeRef, onStop, onGotIt, onDifferent, onTestMe, children }: {
   streaming: boolean;
   busy: boolean;
   understood: boolean;
+  /** Test me takes focus back when Test me closes. */
+  testMeRef?: Ref<HTMLButtonElement>;
   onStop: () => void;
   onGotIt: () => void;
   onDifferent: () => void;
@@ -72,7 +74,7 @@ export function PanelActions({ streaming, busy, understood, onStop, onGotIt, onD
         Got it
       </button>
       <button type="button" className="btn-quiet" disabled={busy} onClick={onDifferent}>Explain differently</button>
-      <button type="button" className="btn-quiet" disabled={busy} onClick={onTestMe}>Test me</button>
+      <button ref={testMeRef} type="button" className="btn-quiet" disabled={busy} onClick={onTestMe}>Test me</button>
       {children}
     </div>
   );

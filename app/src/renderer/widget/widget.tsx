@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
-import type { ExplanationLevel, QuizMode } from '../../core/protocol';
+import type { ExplanationLevel } from '../../core/protocol';
 import type { SecretFinding } from '../../core/secretFilter';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
@@ -16,6 +16,7 @@ import { languageName, selectionSource, selectionTitle } from '../shared/languag
 import { MenuButton, TabStrip, panelMenuItems } from './panelMenu';
 import { LEVELS, LevelChip } from './levelChip';
 import { CodeBlock, PanelActions, PanelToast, TOAST_MS } from './panelBody';
+import { QuizActions, QuizCard, type Quiz } from './panelQuiz';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -29,23 +30,6 @@ import '../shared/tokens.css';
  * `confirm`: a link started this review, Explain sends it; `consent`: a secret was found.
  */
 type Phase = 'boot' | 'ready' | 'aiConsent' | 'confirm' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
-
-interface Quiz {
-  phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
-  /** Why a question could not be written (phase 'failed'). */
-  error?: string;
-  question?: string;
-  options?: string[];
-  conceptLabel?: string;
-  choice?: number;
-  correct?: boolean;
-  answerIndex?: number;
-  rationale?: string;
-  index?: number;
-  total?: number;
-  mode?: QuizMode;
-  hasMissed?: boolean;
-}
 
 interface EntryMeta {
   sourceApp?: string | null;
@@ -549,6 +533,7 @@ function Widget() {
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
       }
+      if (ev.type === 'graded' && tabId === activeRef.current) setBuddyMood(ev.correct ? 'celebrate' : 'confused');
       if (ev.type === 'understood' && tabId === activeRef.current) {
         window.clearTimeout(toastTimer.current);
         setToast({ tabId, text: 'Understood. Saved to your Library.' });
@@ -608,9 +593,9 @@ function Widget() {
             return patchTab(prev, tabId, { understood: true });
           case 'status':
             playTone('think');
-            // A follow-up answers within the same saved lesson (resetQuiz false), so Got it stays pressed; a new
-            // explanation (Explain differently, another depth) can be understood again.
-            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, understood: ev.resetQuiz === false ? tab.understood : false, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+            // A follow-up answers within the same saved lesson (resetQuiz false), so Got it stays pressed and Test me
+            // stays closed over the new answer; a new explanation (Explain differently, another depth) starts afresh.
+            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, understood: ev.resetQuiz === false ? tab.understood : false, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: ev.resetQuiz === false });
           case 'consentNeeded':
             return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
@@ -642,14 +627,14 @@ function Widget() {
                 phase: 'answering',
                 question: ev.question,
                 options: ev.options,
-                conceptLabel: ev.conceptLabel,
                 index: ev.index,
                 total: ev.total,
                 mode: ev.mode,
               },
             });
           case 'graded':
-            playTone(ev.correct ? 'correct' : 'wrong');
+            // A right answer sounds once: header Vibe's celebrate reaction plays its tone (setBuddyMood above).
+            if (!ev.correct) playTone('wrong');
             return patchTab(prev, tabId, {
               quiz: tab.quiz
                 ? {
@@ -716,7 +701,12 @@ function Widget() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'w') window.unvibe.closeWidget();
-      else if (e.key === 'Escape') toggleCollapse();
+      else if (e.key === 'Escape') {
+        // An open Test me closes first (focus goes back to Test me); only then does Esc collapse the panel.
+        const tab = tabsRef.current.find((t) => t.id === activeRef.current);
+        if (!collapsed && tab?.quiz && !tab.quizHidden && (tab.phase === 'streaming' || tab.phase === 'done')) closeQuiz();
+        else toggleCollapse();
+      }
       else if (mod && e.key >= '1' && e.key <= '5') pick(LEVELS[Number(e.key) - 1]!.id);
     };
     window.addEventListener('keydown', onKey);
@@ -752,6 +742,16 @@ function Widget() {
     // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
     // allowance must not replace the answer on screen; a refusal shows under the short answer.
     window.unvibe.request({ level: active.level, moreDetail: true });
+  };
+
+  // Test me focus (as on cf41d37e): a question that opens takes focus; closing hands it back to Test me.
+  const questionRef = useRef<HTMLHeadingElement>(null);
+  const quizRef = useRef<HTMLElement>(null);
+  const testMeRef = useRef<HTMLButtonElement>(null);
+  const focusTestMe = useRef(false);
+  const closeQuiz = (returnFocus = true) => {
+    focusTestMe.current = returnFocus;
+    setTabs((prev) => patchTab(prev, activeRef.current, { quizHidden: true }));
   };
 
   const openQuiz = (another = false) => {
@@ -808,8 +808,28 @@ function Widget() {
   const phaseLabel = phase === 'boot' ? 'capturing' : phase === 'ready' ? 'reading' : phase === 'aiConsent' || phase === 'confirm' ? 'waiting for you' : phase === 'streaming' ? 'explaining' : phase === 'done' ? 'ready to learn' : phase === 'empty' ? 'waiting' : phase;
   // The header names the selection ("7 lines of JavaScript", "from Cursor · debounce.js"); the status line
   // lives in `⋯` and, for screen readers, in a hidden status region.
-  const headTitle = active.meta.lines ? selectionTitle(active.meta.lines, active.meta.language) : 'Ready';
-  const headSource = active.meta.lines ? selectionSource(active.meta.sourceApp, active.meta.file) : undefined;
+  // Test me takes the body's place, and the header says so: "Test me" / "<file> · <Depth>" (SPEC §4).
+  const quizOpen = Boolean(active.quiz && !active.quizHidden && (phase === 'streaming' || phase === 'done'));
+  const selection = active.meta.lines ? selectionTitle(active.meta.lines, active.meta.language) : undefined;
+  const headTitle = quizOpen ? 'Test me' : selection ?? 'Ready';
+  const headSource = quizOpen
+    ? [active.meta.file?.split(/[\\/]/).pop() || selection, LEVELS.find((l) => l.id === active.level)?.label].filter(Boolean).join(' · ')
+    : active.meta.lines ? selectionSource(active.meta.sourceApp, active.meta.file) : undefined;
+  // Focus moves into Test me whenever what it shows opens: a question (Test me, Another question, reopening) or, while
+  // one is being written or failed, the section itself. Grading, choosing an option and tab switches leave it alone.
+  const quizKey = !quizOpen || !active.quiz ? null : active.quiz.question ? `q:${active.quiz.index ?? 1}:${active.quiz.question}` : active.quiz.phase;
+  const lastQuiz = useRef<{ tab: string; key: string | null }>({ tab: '', key: null });
+  useEffect(() => {
+    if (quizKey && quizKey !== lastQuiz.current.key && lastQuiz.current.tab === active.id) {
+      (questionRef.current ?? quizRef.current)?.focus();
+    }
+    lastQuiz.current = { tab: active.id, key: quizKey };
+  }, [quizKey, active.id]);
+  useEffect(() => {
+    if (!focusTestMe.current || quizOpen) return;
+    focusTestMe.current = false;
+    testMeRef.current?.focus();
+  }, [quizOpen]);
 
   const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
   const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
@@ -896,12 +916,13 @@ function Widget() {
     dark: panelTheme === 'dark',
     usage: usage ? { remaining: usage.remaining, resetsOn: new Date(usage.resetsAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) } : undefined,
   }, {
-    explain: () => document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    // These act on the explanation, so an open Test me makes way first (focus goes where the item sends it).
+    explain: () => { closeQuiz(false); requestAnimationFrame(() => document.querySelector('.body')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); },
     depth: () => (document.querySelector('.depth-chip') as HTMLButtonElement | null)?.click(),
     testMe: () => openQuiz(),
-    ask: () => requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus()),
-    why: askWhy,
-    teach: () => setTeachOpen((open) => !open),
+    ask: () => { closeQuiz(false); requestAnimationFrame(() => (document.querySelector('.askrow input') as HTMLInputElement | null)?.focus()); },
+    why: () => { closeQuiz(false); askWhy(); },
+    teach: () => { closeQuiz(false); setTeachOpen((open) => !open); },
     newTab: addTab,
     saved: () => window.unvibe.openStudy(),
     theme: () => setPanelTheme((t) => (t === 'dark' ? 'light' : 'dark')),
@@ -909,7 +930,7 @@ function Widget() {
   });
 
   return (
-    <div className={`card card--${phase}${active.quiz && !active.quizHidden ? ' card--quiz' : ''}${away ? ' card--away' : ''}${collapsed ? ' card--collapsed' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${away ? ' card--away' : ''}${collapsed ? ' card--collapsed' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -936,7 +957,7 @@ function Widget() {
           </button>
         </div>
       </div>
-      {!collapsed && (showDepth || showSaveNote) ? (
+      {!collapsed && !quizOpen && (showDepth || showSaveNote) ? (
         <div className="head-bar">
           {showDepth ? (
             <LevelChip level={active.level} plan={usage?.plan} disabled={outOfExplanations} onPick={(id) => { setProGate(false); pick(id); }} />
@@ -1119,7 +1140,7 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && (
             <div className="stage">
-            <div className="body" ref={bodyRef} tabIndex={0} role="region" aria-label="Explanation" aria-live="polite" aria-atomic="false">
+            <div className="body" ref={bodyRef} tabIndex={0} role="region" aria-label="Explanation" aria-live="polite" aria-atomic="false" hidden={quizOpen}>
               {active.meta.preview ? (
                 <CodeBlock
                   id={`code-${active.id}`}
@@ -1166,136 +1187,18 @@ function Widget() {
                 />
               ) : null}
             </div>
-            {active.quiz && !active.quizHidden && (
-              <aside className="quiz-rail" aria-label="Test me">
-                {active.quiz.phase === 'loading' && (
-                  <div className="quiz-rail__wait" role="status">
-                    <span>Writing a question…</span>
-                    <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
-                  </div>
-                )}
-                {active.quiz.phase === 'failed' && (
-                  <div className="quiz" role="alert">
-                    <div className="quiz__kicker">Test me</div>
-                    <div className="quiz__why">{active.quiz.error}</div>
-                    <div className="quiz__actions">
-                      <button
-                        className="btn"
-                        onClick={() => openQuiz()}
-                      >
-                        Try again
-                      </button>
-                      <button
-                        className="btn ghost"
-                        onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
-                      >
-                        Hide
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {active.quiz.phase !== 'loading' && active.quiz.phase !== 'failed' && (
-                  <div className="quiz">
-                    <div className="quiz__kicker">
-                      Test me{(active.quiz.index ?? 1) > 1 ? ` · ${active.quiz.index} of ${active.quiz.total}` : ''}
-                    </div>
-                    {active.quiz.mode !== 'quick-check' && active.quiz.mode && (
-                      <div className="quiz__concept">{active.quiz.mode === 'scenario' ? 'Prove it' : 'Recall'}</div>
-                    )}
-                    {active.quiz.conceptLabel && (
-                      <div className="quiz__concept">{active.quiz.conceptLabel}</div>
-                    )}
-                    <div className="quiz__q">{active.quiz.question}</div>
-                    <div className="quiz__opts">
-                      {active.quiz.options?.map((o, i) => {
-                        const graded = active.quiz!.phase === 'graded';
-                        const cls = graded
-                          ? i === active.quiz!.answerIndex
-                            ? 'opt right'
-                            : i === active.quiz!.choice
-                              ? 'opt wrong'
-                              : 'opt'
-                          : i === active.quiz!.choice
-                            ? 'opt sel'
-                            : 'opt';
-                        return (
-                          <button
-                            key={i}
-                            className={cls}
-                            disabled={active.quiz!.phase !== 'answering'}
-                            onClick={() =>
-                              setTabs((prev) =>
-                                patchTab(prev, activeTabId, {
-                                  quiz: { ...active.quiz!, choice: i },
-                                }),
-                              )
-                            }
-                          >
-                            <em>{String.fromCharCode(65 + i)}</em>
-                            <span>{o}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {active.quiz.phase === 'graded' ? (
-                      <>
-                        <div className={`verdict ${active.quiz.correct ? 'ok' : 'no'}`} role="status">
-                          {active.quiz.correct
-                            ? active.quiz.hasMissed ? 'Correct. Earlier misses are saved to revisit.' : 'Correct. That one is understood.'
-                            : 'Not quite. Saved to revisit.'}
-                        </div>
-                        {active.quiz.rationale && (
-                          <div className="quiz__why">{active.quiz.rationale}</div>
-                        )}
-                        {(active.quiz.index ?? 1) >= (active.quiz.total ?? 3) && (
-                          <div className="quiz__why">
-                            {active.quiz.hasMissed
-                              ? "That's all three for this code. Missed ones come back in your review queue."
-                              : 'All three right.'}
-                          </div>
-                        )}
-                        <div className="quiz__actions">
-                          {(active.quiz.index ?? 1) < (active.quiz.total ?? 3) && (
-                            <button className="btn" onClick={() => openQuiz(true)}>
-                              Another question
-                            </button>
-                          )}
-                          <button
-                            className="btn ghost"
-                            onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
-                          >
-                            Hide question
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="quiz__actions">
-                        <button
-                          className="btn"
-                          disabled={active.quiz.choice === undefined || active.quiz.phase === 'grading'}
-                          onClick={() => {
-                            window.unvibe.answer(active.quiz!.choice!);
-                            setTabs((prev) =>
-                              patchTab(prev, activeTabId, {
-                                quiz: { ...active.quiz!, phase: 'grading' },
-                              }),
-                            );
-                          }}
-                        >
-                          {active.quiz.phase === 'grading' ? 'Checking…' : 'Check'}
-                        </button>
-                        <button
-                          className="btn ghost"
-                          onClick={() => setTabs((prev) => patchTab(prev, activeTabId, { quizHidden: true }))}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </aside>
-            )}
+            {quizOpen && active.quiz ? (
+              <section className="body body--quiz" aria-label="Test me" ref={quizRef} tabIndex={-1}>
+                <QuizCard
+                  quiz={active.quiz}
+                  questionRef={questionRef}
+                  onChoose={(i) => setTabs((prev) => {
+                    const quiz = prev.find((t) => t.id === activeTabId)?.quiz;
+                    return quiz ? patchTab(prev, activeTabId, { quiz: { ...quiz, choice: i } }) : prev;
+                  })}
+                />
+              </section>
+            ) : null}
             </div>
           )}
 
@@ -1314,25 +1217,44 @@ function Widget() {
           {(phase === 'streaming' || phase === 'done') && (
             <div className="foot">
               <div className="panel-toast-region" role="status">{toast?.tabId === active.id ? <PanelToast text={toast.text} /> : null}</div>
-              <PanelActions
-                streaming={phase === 'streaming'}
-                busy={stillTyping}
-                understood={active.understood}
-                onStop={() => window.unvibe.cancel()}
-                onGotIt={() => {
-                  // Vibe is happy once and the panel stays open; the toast comes when main has saved it (Design Q1).
-                  setBuddyMood('happy');
-                  setTabs((prev) => patchTab(prev, activeTabId, { understood: true }));
-                  window.unvibe.gotIt();
-                }}
-                onDifferent={() => request({ variant: 'different' })}
-                onTestMe={() => openQuiz()}
-              >
-                {active.mock && (
-                  <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
-                )}
-              </PanelActions>
-              {active.originOpen ? (
+              {quizOpen && active.quiz ? (
+                <QuizActions
+                  quiz={active.quiz}
+                  onCheck={() => {
+                    const choice = active.quiz?.choice;
+                    if (choice === undefined) return;
+                    window.unvibe.answer(choice);
+                    setTabs((prev) => {
+                      const quiz = prev.find((t) => t.id === activeTabId)?.quiz;
+                      return quiz ? patchTab(prev, activeTabId, { quiz: { ...quiz, phase: 'grading' } }) : prev;
+                    });
+                  }}
+                  onAnother={() => openQuiz(true)}
+                  onRetry={() => openQuiz()}
+                  onClose={() => closeQuiz()}
+                />
+              ) : (
+                <PanelActions
+                  streaming={phase === 'streaming'}
+                  busy={stillTyping}
+                  understood={active.understood}
+                  testMeRef={testMeRef}
+                  onStop={() => window.unvibe.cancel()}
+                  onGotIt={() => {
+                    // Vibe is happy once and the panel stays open; the toast comes when main has saved it (Design Q1).
+                    setBuddyMood('happy');
+                    setTabs((prev) => patchTab(prev, activeTabId, { understood: true }));
+                    window.unvibe.gotIt();
+                  }}
+                  onDifferent={() => request({ variant: 'different' })}
+                  onTestMe={() => openQuiz()}
+                >
+                  {active.mock && (
+                    <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
+                  )}
+                </PanelActions>
+              )}
+              {active.originOpen && !quizOpen ? (
                 <div className="origin-panel" role="region" aria-label="Why this exists">
                   <div className="ask-sandbox__label">Source facts</div>
                   {active.originError ? <p className="sub">{active.originError}</p> : null}
@@ -1342,7 +1264,7 @@ function Widget() {
                   <p className="origin-inference">{active.originInference || 'No documented rationale found.'}</p>
                 </div>
               ) : null}
-              {features.teachBack && phase === 'done' && teachOpen ? (
+              {features.teachBack && phase === 'done' && teachOpen && !quizOpen ? (
                 <div className="teach-panel" role="region" aria-label="Teach it back">
                   <div className="ask-sandbox__label">Teach it back</div>
                   <textarea
@@ -1384,7 +1306,7 @@ function Widget() {
                   ) : null}
                 </div>
               ) : null}
-              <div className="ask-sandbox">
+              <div className="ask-sandbox" hidden={quizOpen}>
                 <div className="askrow">
                   <input
                     placeholder="Why does this exist? What breaks if I remove it?"

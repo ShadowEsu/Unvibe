@@ -333,9 +333,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   line-height: 1.6;
   letter-spacing: -0.01em;
 }
-.card--quiz .body {
-  border-right: 1px solid rgb(255 255 255 / 0.12);
-}
 .code-context { margin: 0 0 13px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: rgb(33 23 47 / 0.55); backdrop-filter: blur(10px); color: #f2eef9; }
 .code-context pre { max-height: 164px; margin: 0; padding: 10px 12px; overflow: auto; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; white-space: pre; }
 .body p { margin: 0 0 10px; }
@@ -554,29 +551,6 @@ code.inline {
 .mock-note { font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); }
 .local-save-note { margin-left:auto; align-self:center; color:var(--muted); font:9px var(--font-mono); white-space:nowrap; }
 .local-save-note::before { content:"■"; margin-right:5px; color:var(--fill); font-size:6px; }
-
-.quiz-rail {
-  flex: 0 0 42%;
-  min-width: 220px;
-  max-width: 320px;
-  overflow-y: auto;
-  padding: 16px 14px 18px;
-  background: rgb(255 255 255 / 0.06);
-}
-.quiz-rail__wait {
-  display: grid;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.quiz-rail__wait i {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  margin-right: 3px;
-  background: var(--fill);
-  animation: blink 0.9s steps(1) infinite;
-}
 .quiz { padding: 0; }
 .quiz__kicker {
   margin-bottom: 8px;
@@ -585,11 +559,6 @@ code.inline {
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-.quiz__concept {
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--test); margin-bottom: 8px;
-  font-family: var(--font-mono); font-weight: 700;
 }
 .quiz__q { font-size: 15px; font-weight: 650; line-height: 1.4; margin-bottom: 14px; letter-spacing: 0; }
 .quiz__opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
@@ -718,7 +687,6 @@ code.inline {
 .askrow input { color:#fff;font-size:14px; }
 .askrow .btn-ask { width:38px;height:38px;border-radius:50%;padding:0;background:#7862cf;border-color:#7862cf;font-size:0; }
 .askrow .btn-ask::after { content:'↑';font-size:20px;color:#fff; }
-.quiz-rail { background:#1d1d1d;border-left:1px solid rgba(255,255,255,.1); }
 .opt { background:#282828;border-color:rgba(255,255,255,.13); }
 
 @container widget (max-width:520px) {
@@ -807,7 +775,7 @@ code.inline {
 .card, .card * { font-family: var(--font-sans); letter-spacing: normal; }
 .card pre, .card code, .card pre *, .card code * { font-family: var(--font-mono); }
 
-.widget-main, .tabs, .foot, .quiz-rail { background: var(--bg); box-shadow: none; }
+.widget-main, .tabs, .foot { background: var(--bg); box-shadow: none; }
 
 .head { min-height: 48px; padding: 10px 14px; gap: 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
 .head__mark { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: var(--chip-bg); color: var(--fg); }
@@ -842,9 +810,7 @@ code.inline {
 .ask-sandbox__label { color: var(--muted); font: 500 12px var(--font-sans); text-transform: none; letter-spacing: 0; }
 .askrow input { color: var(--fg); }
 .askrow .btn-ask { width: auto; height: 30px; border-radius: 7px; padding: 0 12px; font-size: 12.5px; background: var(--fill); border-color: var(--fill); color: var(--on-fill); }
-
-.quiz-rail { border-left: 1px solid var(--line); }
-.quiz__kicker, .quiz__concept { color: var(--muted); font: 500 12px var(--font-sans); text-transform: none; letter-spacing: 0; }
+.quiz__kicker { color: var(--muted); font: 500 12px var(--font-sans); text-transform: none; letter-spacing: 0; }
 .opt { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); box-shadow: none; }
 .opt:hover:not(:disabled) { background: var(--chip-bg); }
 .skeleton > * { background: var(--chip-bg); }
@@ -937,10 +903,8 @@ code.inline {
 .card .thinking__lines i { height: 9px; border-radius: 6px; background: linear-gradient(90deg, var(--p-raised), #2f2f39, var(--p-raised)); background-size: 200% 100%; animation: pShimmer 1.4s linear infinite; }
 .card .thinking__lines i:nth-child(2) { width: 86%; } .card .thinking__lines i:nth-child(3) { width: 62%; }
 
-/* Quiz rail */
-.card .quiz-rail { background: var(--p-bg); border-left: 1px solid var(--p-line); }
+/* Test me */
 .card .quiz__kicker { color: var(--p-pink); font-size: 11px; font-weight: 650; text-transform: none; letter-spacing: 0.02em; }
-.card .quiz__concept { color: var(--p-faint); font-size: 11.5px; }
 .card .quiz__q { color: var(--p-ink); font-size: calc(var(--p-fs) * 0.95); font-weight: 650; line-height: 1.4; }
 .card .opt { border: 1px solid var(--p-line); border-radius: 12px; background: var(--p-surface); color: #dcdce3; font-size: calc(var(--p-fs) * 0.82); }
 .card .opt:hover:not(:disabled) { border-color: var(--p-pink); background: var(--p-raised); }
@@ -991,15 +955,10 @@ code.inline {
 .card.card .ask-sandbox .askrow { flex: 1 1 auto; width: 100%; display: flex; justify-content: space-between; }
 .card.card .ask-sandbox .askrow input { flex: 1 1 auto; width: auto; text-align: left; padding: 6px 2px; }
 .card.card .ask-sandbox .askrow .btn-ask { flex: 0 0 auto; margin-left: auto; }
-@container widget (max-width: 520px) {
-  .card.card--quiz .stage { flex-direction: column; }
-  .card.card--quiz .body { border-right: 0; flex: 1 1 55%; }
-  .card.card--quiz .quiz-rail { border-left: 0; border-top: 1px solid var(--p-line); flex: 1 1 45%; width: auto; max-width: none; }
-}
 
 /* Panel v5 color: an aurora glow, gradient accents, livelier motion. */
 .card.card { background: radial-gradient(520px 260px at 0% 0%, rgb(124 92 255 / 0.16), transparent 60%), radial-gradient(420px 240px at 100% 0%, rgb(59 139 255 / 0.12), transparent 60%), var(--p-bg); }
-.card .head, .card.card .tabs, .card .widget-main, .card .foot, .card .quiz-rail { background: transparent; }
+.card .head, .card.card .tabs, .card .widget-main, .card .foot { background: transparent; }
 .card .head { position: relative; }
 .card .head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgb(164 139 255 / 0.6), rgb(124 180 255 / 0.5), transparent); }
 .card .body > * { animation: pRise 380ms cubic-bezier(.2,.8,.2,1) both; }
@@ -1429,6 +1388,37 @@ code.inline {
 :root .card.card .foot .ask-sandbox .askrow .btn-ask { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: #fff; color: var(--u-ink-2); font-size: 15px; box-shadow: var(--u-shadow-whisper); transform: none; }
 :root .card.card .foot .ask-sandbox .askrow .btn-ask:disabled { opacity: 1; color: var(--u-ink-3); }
 
+/* Test me in the body (SPEC §4): a band card, options on canvas, the right one a lime ✓; Vibe's verdict in its bubble. */
+:root .card.card [hidden] { display: none !important; }
+:root .card.card .body--quiz .quiz { margin: 0; padding: 16px; border: 0; border-radius: 20px; background: var(--u-band); box-shadow: none; }
+/* Older `!important` rules set the kicker in Instrument Serif and the question (an h2 in .body) in Bricolage; the mockup is Inter. */
+:root .card.card .body--quiz .quiz__kicker { margin: 0; font: 500 12px/1 var(--u-sans); font-family: var(--u-sans) !important; letter-spacing: 0; text-transform: none; color: var(--u-ink-3); }
+:root .card.card .body--quiz .quiz__q { margin: 8px 0 12px; font: 600 16px/1.4 var(--u-sans); font-family: var(--u-sans) !important; letter-spacing: -0.005em; color: var(--u-ink); }
+:root .card.card .body--quiz .quiz__q:focus { outline: none; }
+:root .card.card .body--quiz .quiz__q:focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; border-radius: 6px; }
+:root .card.card .body--quiz .quiz__opts { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+:root .card.card .body--quiz .opt { display: flex; gap: 10px; align-items: flex-start; width: 100%; margin: 0; padding: 11px 12px; border: 0; border-radius: 12px; background: var(--u-canvas); color: var(--u-ink); font: 400 14px/1.45 var(--u-sans); letter-spacing: 0; text-align: left; box-shadow: inset 0 0 0 1px var(--u-plate); transform: none; cursor: pointer; }
+:root .card.card .body--quiz .opt:hover:not(:disabled):not(.sel) { box-shadow: inset 0 0 0 1px var(--u-ink-3); }
+:root .card.card .body--quiz .opt:disabled { opacity: 1; cursor: default; }
+:root .card.card .body--quiz .opt em { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--u-band); color: var(--u-ink-2); font: 600 12px/1 var(--u-mono); font-style: normal; }
+:root .card.card .body--quiz .opt.sel { box-shadow: inset 0 0 0 2px var(--u-violet); }
+:root .card.card .body--quiz .opt.sel em { background: var(--u-violet); color: #fff; }
+:root .card.card .body--quiz .opt.right { background: #f7fbe6; box-shadow: inset 0 0 0 2px #8fb31e; }
+:root .card.card .body--quiz .opt.right em { background: var(--u-lime); color: var(--u-ink); }
+:root .card.card .body--quiz .opt.wrong { box-shadow: inset 0 0 0 2px var(--u-ink-3); }
+:root .card.card .body--quiz .verdict { display: flex; gap: 12px; align-items: center; margin: 14px 0 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; }
+:root .card.card .body--quiz .verdict::before { content: none; }
+:root .card.card .body--quiz .verdict > span { flex: none; display: flex; }
+/* The bubble is a <p> inside .body: keep the explanation's paragraph margin and colour off it. */
+:root .card.card .body--quiz .verdict .vibe-bubble { margin: 0; color: var(--u-ink); }
+:root .card.card .body--quiz .quiz__why,
+:root .card.card .body--quiz .quiz__end { margin: 12px 0 0; font: 400 14.5px/1.62 var(--u-sans); letter-spacing: 0.005em; color: var(--u-ink-2); }
+:root .card.card .body--quiz .quiz__end { color: var(--u-ink); }
+:root .card.card .body--quiz .quiz--wait { display: flex; align-items: center; gap: 6px; font: 500 14px/1 var(--u-sans); color: var(--u-ink-2); }
+:root .card.card .body--quiz .quiz--wait i { width: 6px; height: 6px; border-radius: 50%; background: var(--u-ink-3); animation: blink 1.2s infinite; }
+:root .card.card .body--quiz .quiz--wait i:nth-child(3) { animation-delay: 0.2s; }
+:root .card.card .body--quiz .quiz--wait i:nth-child(4) { animation-delay: 0.4s; }
+
 /* Got it toast (Design Q1): info, the lime understood tick, over the footer for 2.4 s; reduced motion: no movement. */
 :root .card.card .foot .panel-toast-region { position: absolute; left: 18px; right: 18px; bottom: calc(100% + 18px); pointer-events: none; }
 .panel-toast { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--u-ink); color: #fff; font: 500 14px/1.3 var(--u-sans); letter-spacing: 0; box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.4); animation: panelToastIn 200ms var(--u-ease) both; }
@@ -1475,5 +1465,20 @@ code.inline {
 :root[data-panel="dark"] .card.card .foot .ask-sandbox .askrow input::placeholder { color: #8d8a95; }
 :root[data-panel="dark"] .card.card .foot .ask-sandbox .askrow .btn-ask { background: #26252a; color: var(--u-dark-ink-2); box-shadow: none; }
 :root[data-panel="dark"] .panel-toast { background: var(--u-dark-raised); color: var(--u-dark-ink); box-shadow: inset 0 0 0 1px var(--u-dark-line), 0 12px 30px -10px rgb(0 0 0 / 0.6); }
+:root[data-panel="dark"] .card.card .body--quiz .quiz { background: var(--u-dark-raised); }
+:root[data-panel="dark"] .card.card .body--quiz .quiz__kicker { color: var(--u-dark-ink-3); }
+:root[data-panel="dark"] .card.card .body--quiz .quiz__q,
+:root[data-panel="dark"] .card.card .body--quiz .quiz__end { color: var(--u-dark-ink); }
+:root[data-panel="dark"] .card.card .body--quiz .quiz__why,
+:root[data-panel="dark"] .card.card .body--quiz .quiz--wait { color: var(--u-dark-ink-2); }
+:root[data-panel="dark"] .card.card .body--quiz .opt { background: var(--u-dark-canvas); color: var(--u-dark-ink); box-shadow: inset 0 0 0 1px var(--u-dark-line); }
+:root[data-panel="dark"] .card.card .body--quiz .opt:hover:not(:disabled):not(.sel) { box-shadow: inset 0 0 0 1px var(--u-dark-ink-3); }
+:root[data-panel="dark"] .card.card .body--quiz .opt em { background: var(--u-dark-raised); color: var(--u-dark-ink-2); }
+:root[data-panel="dark"] .card.card .body--quiz .opt.sel em { background: #a48bff; color: #fff; }
+:root[data-panel="dark"] .card.card .body--quiz .verdict .vibe-bubble { color: var(--u-dark-ink); }
+:root[data-panel="dark"] .card.card .body--quiz .opt.sel { box-shadow: inset 0 0 0 2px #a48bff; }
+:root[data-panel="dark"] .card.card .body--quiz .opt.right { background: rgb(214 244 90 / 0.08); box-shadow: inset 0 0 0 2px #8fb31e; }
+:root[data-panel="dark"] .card.card .body--quiz .opt.right em { background: var(--u-lime); color: var(--u-ink); }
+:root[data-panel="dark"] .card.card .body--quiz .opt.wrong { box-shadow: inset 0 0 0 2px var(--u-dark-ink-3); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
