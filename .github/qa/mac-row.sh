@@ -71,7 +71,9 @@ curl)
 dmg)
   asset="Unvibe-$V-mac-$([ "$arch" = arm64 ] && echo arm64 || echo x64).dmg"
   dmg="$HOME/Downloads/$asset"
-  curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$asset"
+  # DMG_DIR: a build-only RC's DMGs (an app-release artifact), not on the releases page; else the release download.
+  if [ -n "${DMG_DIR:-}" ]; then cp "$DMG_DIR/$asset" "$dmg"; r "RC DMG $asset sha256 $(shasum -a 256 "$dmg" | cut -d' ' -f1)"
+  else curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$asset"; fi
   # What Safari writes on a download; curl doesn't, so it is added as a browser would.
   xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$dmg"
   r "downloaded $asset ($(stat -f %z "$dmg") bytes) with a browser's quarantine mark"

@@ -1,0 +1,161 @@
+name: QA 0.1.50 RC Mac stills
+
+# QA only, never merged (branch qa/rc-0150-mac). The 0.1.50 release candidate, build-only app-release run 42194700935
+# on main 3a6d0d97 (artifact unvibe-macos-latest), on clean GitHub macOS runners, one item per job (a fresh runner each):
+#   1 Design #206: Don't Allow pressed on macOS's System Events question, then the panel's denied note at 420x460,
+#     light and dark, with its contrast.
+#   2 Design #213 + #218: an Island notice through its 9 s exit, window bounds vs the work area; the expanded card's note.
+#   3 The first real explanation from the DMG (Gatekeeper dialog, then quarantine removed), arm64 x2 and Intel.
+# Every install id is qa- prefixed in the profile before the first launch and flagged as QA before launch, after
+# first contact and again at the end (if: always()).
+on:
+  push:
+    branches: [qa/rc-0150-mac]
+
+permissions:
+  contents: read
+  actions: read
+
+# Never cancel a run between an install and its QA flag.
+concurrency:
+  group: qa-rc-0150-mac
+  cancel-in-progress: false
+
+env:
+  V: "0.1.50"
+  RC_RUN: "42194700935"
+  SHA_ARM64: c5500dfeb9da76c07a93aad7a23dc59c14f21fa9b1ad16d47897a6750635e7bf
+  SHA_X64: 7f55c421504b48eea3271514a67f00be00112efd5f6e37d1e2d7888aeb9de22e
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { item: i1-light, runner: macos-15 }
+          - { item: i1-dark, runner: macos-15 }
+          - { item: i2-island, runner: macos-15 }
+          - { item: i3-explain, runner: macos-15 }
+          - { item: i3-explain, runner: macos-26 }
+          - { item: i3-explain, runner: macos-15-intel }
+    name: ${{ matrix.item }} (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      INSTALL_ID: qa-rc0150-${{ matrix.item }}-${{ matrix.runner }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      # A commit message holding "[only:<item>,…]" runs just those items; the others skip every step.
+      - name: Pick this item
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+          ITEM: ${{ matrix.item }}
+        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:"*"$ITEM"*"]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item skipped by [only:]"; fi
+
+      - name: Flag the install id as QA before anything installs
+        if: env.SKIP != '1'
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+            --data "{\"installId\":\"$INSTALL_ID\"}") || { echo "::error::pre-flag: curl failed"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/m"
+          echo "QA pre-flag $INSTALL_ID: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1)" | tee "$RUNNER_TEMP/m/flags.txt"
+          [ "$(printf '%s' "$answer" | tail -n 1)" = 200 ] || exit 1
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SKIP != '1'
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Get the RC build (run 42194700935) and check its DMGs
+        if: env.SKIP != '1'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-macos-latest
+          run-id: ${{ env.RC_RUN }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build
+
+      - name: Check the RC DMGs
+        if: env.SKIP != '1'
+        run: |
+          cd "$RUNNER_TEMP/build"; ls -la
+          echo "$SHA_ARM64  Unvibe-$V-mac-arm64.dmg" > sums; echo "$SHA_X64  Unvibe-$V-mac-x64.dmg" >> sums
+          shasum -a 256 -c sums | tee "$RUNNER_TEMP/m/dmg-sha256.txt"
+
+      - name: Playwright (debug-port reads and the first explanation)
+        if: env.SKIP != '1'
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+          cp "$GITHUB_WORKSPACE/.github/qa/rc0150/cdp.mjs" rc0150-cdp.mjs
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        if: env.SKIP != '1'
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: Install the RC from its DMG and allow Accessibility (items 1 and 2)
+        if: env.SKIP != '1' && matrix.item != 'i3-explain'
+        run: |
+          arch=$([ "$(uname -m)" = arm64 ] && echo arm64 || echo x64)
+          mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/build/Unvibe-$V-mac-$arch.dmg"
+          ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
+          hdiutil detach "$mnt" -force || true
+          # Unsigned RC: the quarantine mark comes off (item 3 shows the Gatekeeper dialog a user meets first).
+          xattr -cr /Applications/Unvibe.app
+          echo "installed $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString) ($arch)"
+          db="/Library/Application Support/com.apple.TCC/TCC.db"
+          sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','com.unvibe.app',0,2,4,1,'UNUSED',0);"
+
+      - name: "Item 1: #206 Don't Allow, denied note (${{ matrix.item }})"
+        if: env.SKIP != '1' && startsWith(matrix.item, 'i1-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/rc0150/item1.sh "${{ matrix.item == 'i1-dark' && 'dark' || 'light' }}" "$RUNNER_TEMP/m"
+
+      - name: "Item 2: #213 Island notice through its exit, #218 card note"
+        if: env.SKIP != '1' && matrix.item == 'i2-island'
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/rc0150/item2.sh "$RUNNER_TEMP/m"
+
+      - name: "Item 3: DMG install (Gatekeeper), first launch, first explanation"
+        if: env.SKIP != '1' && matrix.item == 'i3-explain'
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          DMG_DIR: ${{ runner.temp }}/build
+        run: |
+          bash .github/qa/mac-row.sh dmg "$RUNNER_TEMP/m"; rc=$?
+          echo "app bundle version: $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString)" | tee -a "$RUNNER_TEMP/m/report.txt"
+          exit $rc
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always() && env.SKIP != '1'
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          echo "store install id: ${id:-none} (seeded $INSTALL_ID)" | tee -a "$RUNNER_TEMP/m/flags.txt"
+          for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | grep . | sort -u); do
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$x\"}") || answer=$'\ncurl failed'
+            echo "QA final flag $x: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1)" | tee -a "$RUNNER_TEMP/m/flags.txt"
+          done
+
+      - name: Upload
+        if: always() && env.SKIP != '1'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rc0150-${{ matrix.item }}-${{ matrix.runner }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
