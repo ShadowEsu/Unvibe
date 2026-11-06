@@ -328,7 +328,7 @@ function PermRow() {
     await window.unvibe.openAccessibility();
   };
   return (
-    <div className="setrow setrow--perm">
+    <div className="setrow">
       <div>
         <div className="sl">Accessibility</div>
         <div className="sd">{isWindows
@@ -348,7 +348,8 @@ function PermRow() {
         )}
       </div>
       <div className="setrow__end">
-        {row.label ? <span className={`perm-chip perm-chip--${row.tone}`}>{row.label}</span> : null}
+        {/* A status, so a screen reader hears "Allowed" when the grant lands and "Allow Accessibility" goes away. */}
+        {row.label ? <span className={`perm-chip perm-chip--${row.tone}`} role="status">{row.label}</span> : null}
         {row.canAllow ? <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button> : null}
       </div>
     </div>
