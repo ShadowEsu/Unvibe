@@ -23,7 +23,17 @@ interface BuddyProps {
   follow?: boolean;
   className?: string;
   label?: string;
+  /**
+   * Plays the reaction (a 240 ms squash, SPEC §3) each time this value changes after the first
+   * render: pass a counter or an event id when something real happens (Got it, a quiz verdict).
+   */
+  react?: string | number;
+  /** Follow the window's shared mood (setBuddyMood); a reaction mood arriving that way also reacts. */
+  listen?: boolean;
 }
+
+/** Moods that mark something the user did or got (SPEC §3); arriving through setBuddyMood, they react. */
+const REACTION_MOODS: ReadonlySet<BuddyMood> = new Set(['happy', 'celebrate', 'confused', 'wave']);
 
 const EVENT = 'unvibe:buddy';
 
@@ -72,8 +82,30 @@ export function buddyMoodForPhase(phase: string): BuddyMood {
   }
 }
 
-export function Buddy({ mood = 'idle', size = 40, follow = false, className = '', label }: BuddyProps) {
+export function Buddy({ mood: moodProp = 'idle', size = 40, follow = false, className = '', label, react, listen = false }: BuddyProps) {
   const rootRef = useRef<HTMLSpanElement>(null);
+  // The mood last heard through setBuddyMood (listen); a new `mood` prop wins over it.
+  const [heard, setHeard] = useState<BuddyMood | null>(null);
+  // Reactions played so far; the class alternates between two identical animations so each restarts.
+  const [reactions, setReactions] = useState(0);
+  const lastReact = useRef(react);
+  useEffect(() => setHeard(null), [moodProp]);
+  useEffect(() => {
+    if (lastReact.current === react) return;
+    lastReact.current = react;
+    setReactions((n) => n + 1);
+  }, [react]);
+  useEffect(() => {
+    if (!listen) return undefined;
+    const onMood = (event: Event) => {
+      const next = (event as CustomEvent<BuddyMood>).detail;
+      setHeard(next);
+      if (REACTION_MOODS.has(next)) setReactions((n) => n + 1);
+    };
+    window.addEventListener(EVENT, onMood);
+    return () => window.removeEventListener(EVENT, onMood);
+  }, [listen]);
+  const mood = listen && heard ? heard : moodProp;
 
   // Pupils follow the pointer gently while idle.
   useEffect(() => {
@@ -109,7 +141,7 @@ export function Buddy({ mood = 'idle', size = 40, follow = false, className = ''
   return (
     <span
       ref={rootRef}
-      className={`buddy buddy--${mood} ${className}`.trim()}
+      className={`buddy buddy--${mood}${reactions ? ` buddy--react buddy--react-${reactions % 2}` : ''} ${className}`.trim()}
       style={{ width: size, height: size }}
       role="img"
       aria-label={label ?? `Vibe is ${mood === 'idle' ? 'here' : mood}`}

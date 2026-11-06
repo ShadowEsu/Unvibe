@@ -1,0 +1,35 @@
+/* Vibe's signed speech bubble (0.1.51 design, the frozen rounds/06/app.html `.bubble`). */
+.vibe-bubble {
+  position: relative;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--u-ink);
+  font: 500 14px/1.35 var(--u-sans);
+  letter-spacing: 0;
+  box-shadow: var(--u-shadow-whisper);
+}
+.vibe-bubble__name {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--u-violet);
+  font: 600 11px/1 var(--u-sans);
+  letter-spacing: 0.02em;
+}
+.vibe-bubble--large {
+  padding: 14px 18px;
+  border-radius: 18px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.vibe-bubble--large .vibe-bubble__name { font-size: 12px; }
+
+/* The panel's night look (widget.tsx sets data-theme): a raised dark surface; the name in Vibe's lilac,
+   since violet is too dark there. */
+:root[data-theme="dark"]:not([data-panel="light"]) .vibe-bubble {
+  background: var(--u-dark-raised);
+  color: var(--u-dark-ink);
+  box-shadow: 0 0 0 1px var(--u-dark-line);
+}
+:root[data-theme="dark"]:not([data-panel="light"]) .vibe-bubble__name { color: var(--u-lilac); }
