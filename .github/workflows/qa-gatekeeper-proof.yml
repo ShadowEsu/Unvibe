@@ -24,6 +24,8 @@ env:
 
 jobs:
   mac-curl:
+    # A commit message holding "[only:<job>]" runs just that job (a push runs every job otherwise).
+    if: ${{ !contains(github.event.head_commit.message, '[only:') || contains(github.event.head_commit.message, '[only:mac-curl]') }}
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -120,6 +122,7 @@ jobs:
           retention-days: 14
 
   mac-dmg:
+    if: ${{ !contains(github.event.head_commit.message, '[only:') || contains(github.event.head_commit.message, '[only:mac-dmg]') }}
     runs-on: macos-15
     timeout-minutes: 25
     steps:
@@ -268,6 +271,7 @@ jobs:
           retention-days: 14
 
   windows:
+    if: ${{ !contains(github.event.head_commit.message, '[only:') || contains(github.event.head_commit.message, '[only:windows]') }}
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -298,8 +302,9 @@ jobs:
             $p = Get-ItemProperty $k -ErrorAction SilentlyContinue
             Note "$k SmartScreenEnabled=$($p.SmartScreenEnabled) EnableSmartScreen=$($p.EnableSmartScreen)"
           }
-          $f = "$env:USERPROFILE\Downloads\Unvibe-$env:V-win-x64-setup.exe"
-          $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/Unvibe-$env:V-win-x64-setup.exe"
+          # The file the site's Windows link downloads (BETA_WINDOWS_ASSET), so the prompt names it.
+          $f = "$env:USERPROFILE\Downloads\Unvibe-$env:V-win-x64-portable.exe"
+          $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/Unvibe-$env:V-win-x64-portable.exe"
           Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing
           # What a browser writes on a download: the Internet zone.
           Set-Content -Path $f -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
