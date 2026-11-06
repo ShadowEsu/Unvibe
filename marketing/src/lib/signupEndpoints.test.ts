@@ -198,7 +198,7 @@ describe("beta-download hands out the pinned release", () => {
     });
   });
 
-  it("emails this release's Mac build under a send key that names the release", async () => {
+  it("emails the OS-aware download page, not one platform's build, under a send key that names the release", async () => {
     // Capture what would go to Resend. Only the fake Supabase is reachable; any other host fails the test.
     const emails: { key: string | null; html: string; text: string }[] = [];
     const realFetch = globalThis.fetch;
@@ -219,8 +219,10 @@ describe("beta-download hands out the pinned release", () => {
         assert.equal(response.status, 200);
         const welcome = emails.find((sent) => sent.key?.startsWith("unvibe-welcome-"));
         assert.ok(welcome, "the welcome email was sent");
-        assert.ok(welcome.html.includes(BETA_MAC_DOWNLOAD_URL), "the HTML email links the pinned build");
-        assert.ok(welcome.text.includes(BETA_MAC_DOWNLOAD_URL), "the text email links the pinned build");
+        // Windows and Intel-Mac readers get the same email, so it links the page that picks their build.
+        assert.ok(welcome.html.includes('href="https://unvibe.site/beta"'), "the HTML email links the download page");
+        assert.ok(welcome.text.includes("https://unvibe.site/beta"), "the text email links the download page");
+        assert.ok(!`${welcome.html}${welcome.text}`.includes(BETA_MAC_DOWNLOAD_URL), "no Mac-only build link in the email");
         assert.ok(!`${welcome.html}${welcome.text}`.includes("example.com/old-"), "no override URL in the email");
         assert.ok(welcome.key?.startsWith(`unvibe-welcome-${BETA_INSTALL_TAG.replace(/^v/, "")}-`), `send key names the release: ${welcome.key}`);
       });

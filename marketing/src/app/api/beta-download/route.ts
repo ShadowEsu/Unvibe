@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   const setupTip = parsed.data.reminder;
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }
-    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: BETA_MAC_DOWNLOAD_URL, release, setupTipFollows: setupTip });
+    : await sendWelcomeEmail({ email, referralCode: code.toLowerCase(), downloadUrl: "https://unvibe.site/beta", release, setupTipFollows: setupTip });
   if (setupTip && !existing?.emailSentAt && delivery.sent) await scheduleSetupReminder(email, code).catch(() => undefined);
 
   const entry: BetaDownloadEntry = {
