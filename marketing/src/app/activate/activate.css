@@ -167,7 +167,7 @@
   width: 100%;
   margin-top: 0.25rem;
   padding: 0.8rem 1rem;
-  border: 0;
+  border: 1px solid transparent; /* the same height as the outlined Google button under it */
   border-radius: var(--radius-field);
   color: var(--paper);
   background: var(--ink);
@@ -222,8 +222,7 @@
   text-underline-offset: 2px;
 }
 
-.activate-btn--google,
-.activate-btn--ghost {
+.activate-btn--google {
   color: var(--ink);
   background: var(--paper);
   border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);

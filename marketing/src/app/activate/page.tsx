@@ -274,25 +274,8 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
       </fieldset>
       {!accessToken && (
         <div>
-          <button
-            className="activate-btn activate-btn--google"
-            type="button"
-            onClick={() => void signInWithGoogle()}
-            disabled={!configured || authBusy || bootstrapping}
-            aria-disabled={!agreed}
-          >
-            {authBusy ? "Opening Google…" : "Continue with Google"}
-          </button>
-          {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
-          {signInFailed && (
-            <p className="activate-note activate-note--error" role="alert">
-              {SIGN_IN_DID_NOT_FINISH}{" "}
-              <button className="activate-retry" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
-                Try again with Google
-              </button>
-            </p>
-          )}
-          <div className="activate-divider">or email a link</div>
+          {/* Email first (BOSS, 6 Nov): Google sign-ins have not come back since mid-October while the email link
+              works end to end. Google stays as the second way in. */}
           <form noValidate onSubmit={submitMagicLink}>
             <label className="activate-label" htmlFor="activate-email">Email</label>
             <input
@@ -317,7 +300,7 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
               </p>
             )}
             <button
-              className="activate-btn activate-btn--ghost"
+              className="activate-btn"
               type="submit"
               disabled={!configured || authBusy}
               aria-disabled={!agreed}
@@ -325,6 +308,25 @@ export default function ActivatePage({ searchParams }: { searchParams: Record<st
               {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
             </button>
           </form>
+          {authMessage && <p className="activate-note activate-note--error" role="alert">{authMessage}</p>}
+          <div className="activate-divider">or</div>
+          <button
+            className="activate-btn activate-btn--google"
+            type="button"
+            onClick={() => void signInWithGoogle()}
+            disabled={!configured || authBusy || bootstrapping}
+            aria-disabled={!agreed}
+          >
+            {authBusy ? "Opening Google…" : "Continue with Google"}
+          </button>
+          {signInFailed && (
+            <p className="activate-note activate-note--error" role="alert">
+              {SIGN_IN_DID_NOT_FINISH}{" "}
+              <button className="activate-retry" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
+                Try again with Google
+              </button>
+            </p>
+          )}
           <div className="activate-divider">then</div>
         </div>
       )}
