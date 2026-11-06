@@ -210,6 +210,14 @@ if (process.env.NOTICES === '1' && panel) {
     log(!!problem, 'N-2 a problem right after an explanation still shows (not swallowed)', problem ? `'${problem.text || problem.sr}' ${Math.round((problem.at - tP) / 100) / 10} s after the press, ${Math.round((tP - tDone) / 100) / 10} s after the explanation finished` : `none within 15 s of the press; notices since the explanation: ${all.filter((n) => n.at >= t1).map((n) => `'${n.text || n.sr}'`).join(', ') || 'none'}`);
     if (problem) log(problem.dot === AMBER, 'N-3 the problem notice has the amber dot', `${problem.dot}; class '${problem.cls}'`);
     for (const n of all.filter((x) => x.text && !isProblem(x))) note(`info notice '${n.text}': dot ${n.dot} (amber is ${AMBER}); class '${n.cls}'`);
+    // N-2c control: the same press with no notice in the last 15 s must show, so an N-2 miss means "swallowed".
+    setClipboard('');
+    const tC = Date.now();
+    await companion.evaluate(() => window.unvibe.explainClipboard());
+    let control = null;
+    for (let i = 0; i < 60 && !control; i++) { await sleep(250); control = (await islandNotes()).find((n) => n.at >= tC && isProblem(n)) ?? null; }
+    log(!!control, 'N-2c control: the same problem with no recent notice shows', control ? `${Math.round((control.at - tC) / 100) / 10} s after the press, ${Math.round((tC - tP) / 1000)} s after the N-2 press; dot ${control.dot}` : 'none within 15 s');
+    await sleep(10000); // its 9 s, so the card below opens on a compact Island
     // N-4 (#220): the expanded card's '% AI used' is the AI allowance, consistent with its 'N AI' left.
     if (islandBar) {
       await islandBar.locator('.island').first().click();
