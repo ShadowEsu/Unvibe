@@ -119,6 +119,17 @@ else {
     writeFileSync(path.join(out, 'explanation.txt'), `${text}\n`);
     await shot(panel, '3-explanation');
     desktop('3-explanation');
+    // Design #213/#219: the Island's count after the first real explanation, as the app itself draws it.
+    const bar = await app.windowWith('bar.html', 5000);
+    if (!bar) note('Island: no bar.html window');
+    else {
+      await sleep(3000); // let the usage snapshot after the explanation reach the Island
+      const count = (await bar.locator('.island__left').innerText({ timeout: 5000 }).catch(() => '')).replace(/\s+/g, ' ').trim();
+      note(`Island count after the first explanation: '${count || 'none shown'}'`);
+      try { await bar.locator('.island').first().screenshot({ path: path.join(out, 'explain-island-after.png') }); }
+      catch (e) { note(`Island shot: ${e.message.split('\n')[0]}`); }
+      desktop('4-island-after');
+    }
     if (process.env.AGREE === '1') {
       // One question of the person's own: the send agreement comes first; its three boxes are ticked, so the profile
       // holds a consent record (unvibe-consent.json) for an upgrade check to compare.

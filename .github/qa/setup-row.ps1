@@ -82,7 +82,8 @@ function WatchResult($p, $tag) {
   $first = $lines | Where-Object { $_ -like 'first visible*' } | Select-Object -First 1
   $later = $lines | Where-Object { $_ -like '3 s later*' } | Select-Object -First 1
   $pct = if ($first -match 'most common colour ([\d.]+)%') { [double]$Matches[1] } else { 100 }
-  Note "$(if ($first -and $pct -lt 97) { 'PASS' } else { 'FAIL' })  #208 $tag`: the window is painted when it first shows (most common colour $pct%; a blank window is ~100%)"
+  $cols = if ($first -match '([\d]+) colours') { [int]$Matches[1] } else { 0 }
+  Note "$(if ($first -and $pct -lt 97 -and $cols -ge 20) { 'PASS' } else { 'FAIL' })  #208 $tag`: the window has content when it first shows (client area: most common colour $pct%, $cols colours; an empty page is ~100% / under 20)"
   Note "$(if ($first -match 'in front: True') { 'PASS' } else { 'FAIL' })  #208 $tag`: in front when it first shows"
   Note "$(if ($later -match 'main windows: 1;') { 'PASS' } else { 'FAIL' })  #208 $tag`: one main window 3 s later"
 }

@@ -29,19 +29,31 @@ public static class W {
   }
 }
 "@
-# The window is larger than the pill it draws (transparent margin): the visible pill is the box of its near-black fill.
+# The window is larger than the pill it draws (transparent margin, and on 2022 it reaches into the dark taskbar):
+# the visible pill is the box of pixels that differ from the same screen captured before Unvibe started.
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
 using System; using System.Drawing;
-public static class Dark {
-  public static int[] Box(Bitmap b, int x, int y, int w, int h) {
+public static class Diff {
+  public static int[] Box(Bitmap f, Bitmap r, int ox, int oy, int x, int y, int w, int h) {
     int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
-    for (int j = Math.Max(0, y); j < Math.Min(b.Height, y + h); j++)
-      for (int i = Math.Max(0, x); i < Math.Min(b.Width, x + w); i++) {
-        Color c = b.GetPixel(i, j);
-        if (c.R < 40 && c.G < 40 && c.B < 40) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
+    for (int j = Math.Max(0, y); j < Math.Min(f.Height, y + h); j++)
+      for (int i = Math.Max(0, x); i < Math.Min(f.Width, x + w); i++) {
+        int sx = ox + i, sy = oy + j;
+        if (sx < 0 || sy < 0 || sx >= r.Width || sy >= r.Height) continue;
+        Color a = f.GetPixel(i, j), b = r.GetPixel(sx, sy);
+        if (Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
       }
     return x1 < 0 ? null : new int[] { x0, y0, x1, y1 };
   }
+}
+"@
+# Another app holds Ctrl+Alt+U first (MOD_ALT 1 | MOD_CONTROL 2, 'U' 0x55). Registered by this script's own thread,
+# so it stays held while the row runs (a child PowerShell holder never reported back on the runners).
+Add-Type -TypeDefinition @"
+using System; using System.Runtime.InteropServices;
+public static class HK {
+  [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr h, int id, uint m, uint k);
+  [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr h, int id);
 }
 "@
 function Pids() { $s = New-Object 'System.Collections.Generic.HashSet[uint32]'; Get-Process Unvibe -ErrorAction SilentlyContinue | ForEach-Object { [void]$s.Add([uint32]$_.Id) }; , $s }
@@ -53,9 +65,22 @@ function Crop($r, $name, $pad) {
   $bmp = New-Object System.Drawing.Bitmap $w, $ht
   [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($x, $y, 0, 0, $bmp.Size)
   $bmp.Save("$Out\$name.png")
-  # The visible pill inside the window rect, in screen coordinates (nothing when no near-black fill is found).
-  $bx = [Dark]::Box($bmp, $r.L - $x, $r.T - $y, $r.Rt - $r.L, $r.B - $r.T)
+  # The visible pill inside the window rect, in screen coordinates (nothing when no pixel differs from the reference).
+  $bx = [Diff]::Box($bmp, $script:ref, $x - $b.Left, $y - $b.Top, $r.L - $x, $r.T - $y, $r.Rt - $r.L, $r.B - $r.T)
   if ($bx) { [pscustomobject]@{ L = $x + $bx[0]; T = $y + $bx[1]; R = $x + $bx[2] + 1; B = $y + $bx[3] + 1 } }
+}
+function Reference() { # the screen as it is now, before Unvibe starts
+  $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+  $script:ref = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+  [System.Drawing.Graphics]::FromImage($script:ref).CopyFromScreen($b.Left, $b.Top, 0, 0, $script:ref.Size)
+}
+function X4($src, $dst) { # 4x nearest-neighbour enlargement, so each screen pixel stays a sharp 4x4 block
+  $s = [System.Drawing.Image]::FromFile($src)
+  $d = New-Object System.Drawing.Bitmap ($s.Width * 4), ($s.Height * 4)
+  $g = [System.Drawing.Graphics]::FromImage($d)
+  $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+  $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+  $g.DrawImage($s, 0, 0, $d.Width, $d.Height); $d.Save($dst); $g.Dispose(); $d.Dispose(); $s.Dispose()
 }
 function Full($name) {
   $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -78,28 +103,15 @@ $utf8 = New-Object Text.UTF8Encoding $false
 [IO.File]::WriteAllText((Join-Path $ud 'unvibe-store.json'), "{`"installId`":`"$env:INSTALL_ID`"}", $utf8)
 [IO.File]::WriteAllText((Join-Path $ud 'unvibe-settings.json'), '{"settingsRevision":8,"appearanceRevision":2,"islandBehaviorRevision":4,"ideBridgeShortcutRevision":2,"sidebarDensityRevision":2,"windowsShortcutRevision":1,"setupProgressRevision":1,"onboarded":true,"theme":"light"}', $utf8)
 
-# Another app holds Ctrl+Alt+U first (MOD_ALT 1 | MOD_CONTROL 2, 'U' 0x55).
-$holder = @'
-Add-Type @"
-using System; using System.Runtime.InteropServices;
-public static class H { [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr h, int id, uint m, uint k); }
-"@
-$ok = [H]::RegisterHotKey([IntPtr]::Zero, 1, 3, 0x55)
-Set-Content -Path $env:HOLD_LOG -Value "RegisterHotKey Ctrl+Alt+U: $ok"
-Start-Sleep 600
-'@
-$env:HOLD_LOG = "$Out\hotkey-holder.txt"
-$hp = Start-Process powershell.exe -ArgumentList '-NoProfile', '-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($holder)) -PassThru -WindowStyle Hidden
-# Cold Windows PowerShell plus Add-Type can take well over 10 s on a runner: wait for the holder before starting Unvibe.
-for ($i = 0; $i -lt 240 -and -not (Test-Path $env:HOLD_LOG); $i++) { Start-Sleep -Milliseconds 250 }
-$held = Get-Content $env:HOLD_LOG -ErrorAction SilentlyContinue
-Verdict ($held -match 'True') "another process holds Ctrl+Alt+U before Unvibe starts ($held)"
+$held = [HK]::RegisterHotKey([IntPtr]::Zero, 1, 3, 0x55)
+Verdict $held "another process (this script) holds Ctrl+Alt+U before Unvibe starts"
 
 $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Note "work area: $($wa.Left),$($wa.Top) to $($wa.Right),$($wa.Bottom); screen $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width)x$([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)"
 
 # First start: the Island's bounds every 250 ms for 14 s, a crop of each frame, the full screen at 1 s and 5 s.
 $t0 = Get-Date
+Reference
 Start-Process $exe
 $frames = @(); $h = [IntPtr]::Zero
 while (((Get-Date) - $t0).TotalSeconds -lt 14) {
@@ -108,7 +120,7 @@ while (((Get-Date) - $t0).TotalSeconds -lt 14) {
   if ($h -ne [IntPtr]::Zero) {
     $r = Rect $h
     $pill = Crop $r ("frame-{0:00.00}s" -f $s) 30
-    $frames += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T; PL = $pill.L; PT = $pill.T; PR = $pill.R; PB = $pill.B }
+    $frames += [pscustomobject]@{ S = $s; L = $r.L; T = $r.T; R = $r.Rt; B = $r.B; W = $r.Rt - $r.L; H = $r.B - $r.T; PL = $pill.L; PT = $pill.T; PR = $pill.R; PB = $pill.B; File = "$Out\$("frame-{0:00.00}s" -f $s).png" }
   }
   if ($s -ge 1 -and -not (Test-Path "$Out\full-1s.png")) { Full 'full-1s' }
   if ($s -ge 5 -and -not (Test-Path "$Out\full-5s.png")) { Full 'full-5s' }
@@ -123,11 +135,17 @@ if ($big) { Note "NOTE  notice shown for about $([Math]::Round($big[-1].S - $big
 $seen = @($frames | Where-Object { $null -ne $_.PB })
 $outside = @($seen | Where-Object { $_.PL -lt $wa.Left -or $_.PT -lt $wa.Top -or $_.PR -gt $wa.Right -or $_.PB -gt $wa.Bottom })
 Verdict ($seen.Count -gt 0 -and $outside.Count -eq 0) "the visible pill stays inside the work area in every frame ($($seen.Count) frames with a pill, $($outside.Count) outside; pill bottoms $(($seen | ForEach-Object { $_.PB } | Select-Object -Unique) -join ', '), work area bottom $($wa.Bottom))"
-$bottoms = @($seen | ForEach-Object { $_.PB } | Measure-Object -Minimum -Maximum)
-Verdict ($seen.Count -gt 0 -and ($bottoms.Maximum - $bottoms.Minimum) -le 1) "no jump: the bottom-centre pill keeps its bottom edge through the notice and its end (bottom edge $($bottoms.Minimum)-$($bottoms.Maximum))"
+# Judged after the 1.5 s fade-in, when the pill is fully drawn.
+$settled = @($seen | Where-Object { $_.S -ge 1.5 })
+$bottoms = @($settled | ForEach-Object { $_.PB } | Measure-Object -Minimum -Maximum)
+Verdict ($settled.Count -gt 0 -and ($bottoms.Maximum - $bottoms.Minimum) -le 1) "no jump: the bottom-centre pill keeps its bottom edge through the notice and its end (bottom edge $($bottoms.Minimum)-$($bottoms.Maximum) over $($settled.Count) frames from 1.5 s)"
+# Design #213/#219: the compact Island at '0 left' after the notice ends, enlarged 4x.
+$last = $frames | Where-Object { $_.S -ge 1.5 } | Select-Object -Last 1
+if ($last) { X4 $last.File "$Out\island-compact-x4.png"; Note "compact Island 4x crop: island-compact-x4.png (from $([IO.Path]::GetFileName($last.File)), $($last.W)x$($last.H))" }
 
 # Second start (#218): click the Island while the notice shows, then picture the expanded card and its note.
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
+Reference
 Start-Process $exe
 $h = [IntPtr]::Zero
 for ($i = 0; $i -lt 80 -and $h -eq [IntPtr]::Zero; $i++) { Start-Sleep -Milliseconds 250; $h = [W]::Island((Pids)) }
