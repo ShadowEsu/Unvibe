@@ -5,7 +5,7 @@ name: QA Gatekeeper proof
 #  mac-curl  The site's one-line Terminal install (curl -fsSL https://unvibe.site/install.sh | bash) on macOS 15,
 #            then open -a Unvibe: the installed app has no quarantine attribute and opens with no Gatekeeper dialog.
 #  mac-dmg   The release DMG marked the way a browser download is (com.apple.quarantine), opened like a
-#            double-click, the app copied to Applications by the Finder, then opened: macOS 15 blocks it.
+#            double-click, the app copied to Applications keeping that attribute, then opened: macOS 15 blocks it.
 #            Screenshots of the "Not Opened" dialog and of Privacy & Security at Open Anyway, at native size.
 #  windows   Best effort: the setup exe with a Mark of the Web, opened through the shell like a double-click,
 #            to see whether SmartScreen's "Windows protected your PC" shows on a Windows Server runner.
@@ -137,11 +137,16 @@ jobs:
       - name: Set up (Gatekeeper on, screenshot permission, window helper)
         run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/gk"
 
-      - name: Browser-style DMG download, Finder copy, open
+      - name: Browser-style DMG download, copy to Applications, open
         run: |
           set +e -uo pipefail
           out="$RUNNER_TEMP/gk"; W="$RUNNER_TEMP/gkwin"
           r() { echo "$*" | tee -a "$out/report.txt"; }
+          # A hard time limit for anything that can wait on a dialog nobody answers (run 42144225676 hung here).
+          t() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
+          # What was on screen every 20 s, so a hang shows its cause.
+          mkdir -p "$out/progress"
+          ( while true; do screencapture -x "$out/progress/$(date +%H%M%S).png"; sleep 20; done ) & shots=$!
           r "macOS $(sw_vers -productVersion) ($(sw_vers -buildVersion)), $(uname -m), $(spctl --status)"
           dmg="$HOME/Downloads/Unvibe-$V-mac-arm64.dmg"
           curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/Unvibe-$V-mac-arm64.dmg"
@@ -158,14 +163,10 @@ jobs:
           vol=$(dirname "$vol")
           mount | grep -F "$vol" | tee "$out/mount.txt"
           r "mounted at $vol; quarantine on the app in the DMG: $(xattr -p com.apple.quarantine "$vol/Unvibe.app" 2>/dev/null || echo none)"
-          # Drag to Applications = a Finder copy.
-          if osascript -e "set src to (POSIX file \"$vol/Unvibe.app\") as alias" -e 'set dst to (POSIX file "/Applications") as alias' \
-            -e 'with timeout of 300 seconds' -e 'tell application "Finder" to duplicate src to dst with replacing' -e 'end timeout' > "$out/finder-copy.txt" 2>&1; then
-            r "copied to /Applications by the Finder"
-          else
-            r "Finder copy failed ($(tr '\n' ' ' < "$out/finder-copy.txt")); copied with ditto, which keeps extended attributes as the Finder does"
-            ditto "$vol/Unvibe.app" /Applications/Unvibe.app
-          fi
+          # Drag to Applications: ditto keeps extended attributes (com.apple.quarantine included) as a Finder copy
+          # does, without scripting the Finder (that asks the runner for Automation consent and waits forever).
+          ditto "$vol/Unvibe.app" /Applications/Unvibe.app
+          r "copied to /Applications with ditto"
           qa=$(xattr -p com.apple.quarantine /Applications/Unvibe.app 2>/dev/null || true)
           r "quarantine on /Applications/Unvibe.app: ${qa:-NONE}"
           if [ -z "$qa" ]; then
@@ -189,24 +190,24 @@ jobs:
           else
             r "no CoreServicesUIAgent window on screen"
           fi
-          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get value of every static text of window 1' > "$out/dialog-text.txt" 2>&1 || true
-          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get name of every button of window 1' > "$out/dialog-buttons.txt" 2>&1 || true
+          t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get value of every static text of window 1' > "$out/dialog-text.txt" 2>&1 || true
+          t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get name of every button of window 1' > "$out/dialog-buttons.txt" 2>&1 || true
           r "dialog text: $(tr '\n' ' ' < "$out/dialog-text.txt")"
           r "dialog buttons: $(tr '\n' ' ' < "$out/dialog-buttons.txt")"
           r "Unvibe running after open: ${p:-NO}"
           # Done, the way the person closes it.
-          osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1 || true
+          t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1 || true
           sleep 2
 
           # Privacy & Security, scrolled to Open Anyway.
           open "x-apple.systempreferences:com.apple.preference.security"
           sleep 8
-          S() { osascript .github/qa/settings.applescript "$@" 2>&1 | tail -1; }
+          S() { t 60 osascript .github/qa/settings.applescript "$@" 2>&1 | tail -1; }
           r "System Settings window: $(S grow)"
           sleep 1
           res=$(S scroll); echo "first look: $res"
           dir=-3
-          for i in $(seq 1 14); do
+          for i in $(seq 1 8); do
             read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
             want=down; by=0
             if [[ $res == found* ]]; then
@@ -233,6 +234,7 @@ jobs:
           log show --last 6m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' > "$out/gk-log.txt" 2>&1 || true
           grep -i -E 'unvibe' "$out/gk-log.txt" | tail -60 > "$out/gk-log-unvibe.txt" || true
           r "syspolicyd/CoreServicesUIAgent log lines naming Unvibe: $(wc -l < "$out/gk-log-unvibe.txt" | tr -d ' ')"
+          kill "$shots" 2>/dev/null
           if [ -z "$p" ] && [ -n "$dlg" ] && grep -q rejected "$out/spctl-app.txt" && [[ $res == found* ]]; then
             r "PASS  DMG from a browser: blocked with the 'Not Opened' dialog, app not running, Open Anyway shown in Privacy & Security"
           else
@@ -281,7 +283,8 @@ jobs:
         shell: powershell
         run: |
           $out = "$env:RUNNER_TEMP\gk"; New-Item -ItemType Directory -Force $out | Out-Null
-          function R($s) { $s | Tee-Object -FilePath "$out\report.txt" -Append }
+          # Not "R": in Windows PowerShell that name is the built-in alias of Invoke-History, which wins over a function.
+          function Note($s) { $s | Tee-Object -FilePath "$out\report.txt" -Append }
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing, UIAutomationClient, UIAutomationTypes
           function Shot($name) {
             $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -290,40 +293,40 @@ jobs:
             $bmp.Save("$out\$name.png")
           }
           $os = Get-CimInstance Win32_OperatingSystem
-          R "Windows: $($os.Caption) $($os.Version) build $($os.BuildNumber)"
+          Note "Windows: $($os.Caption) $($os.Version) build $($os.BuildNumber)"
           foreach ($k in 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer', 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System') {
             $p = Get-ItemProperty $k -ErrorAction SilentlyContinue
-            R "$k SmartScreenEnabled=$($p.SmartScreenEnabled) EnableSmartScreen=$($p.EnableSmartScreen)"
+            Note "$k SmartScreenEnabled=$($p.SmartScreenEnabled) EnableSmartScreen=$($p.EnableSmartScreen)"
           }
           $f = "$env:USERPROFILE\Downloads\Unvibe-$env:V-win-x64-setup.exe"
           $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/Unvibe-$env:V-win-x64-setup.exe"
           Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing
           # What a browser writes on a download: the Internet zone.
           Set-Content -Path $f -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
-          R "Zone.Identifier: $((Get-Content $f -Stream Zone.Identifier) -join ' ')"
+          Note "Zone.Identifier: $((Get-Content $f -Stream Zone.Identifier) -join ' ')"
           $sig = Get-AuthenticodeSignature $f
-          R "Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
+          Note "Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
           Start-Process explorer.exe -ArgumentList "`"$f`""
           Start-Sleep 15
           Shot 'win-1-after-double-click'
           $wins = Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { "$($_.ProcessName): $($_.MainWindowTitle)" }
-          R "windows with titles: $($wins -join ' | ')"
+          Note "windows with titles: $($wins -join ' | ')"
           $root = [System.Windows.Automation.AutomationElement]::RootElement
           $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'More info')
           $more = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
           if ($more) {
-            R 'SmartScreen: "More info" found'
-            try { $more.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch { R "More info click: $($_.Exception.Message)" }
+            Note 'SmartScreen: "More info" found'
+            try { $more.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch { Note "More info click: $($_.Exception.Message)" }
             Start-Sleep 3
             Shot 'win-2-smartscreen-more-info'
             $run = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'Run anyway')))
-            R "SmartScreen: 'Run anyway' shown: $([bool]$run)"
+            Note "SmartScreen: 'Run anyway' shown: $([bool]$run)"
             $dont = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, "Don't run")))
             if ($dont) { try { $dont.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() } catch {} }
           } else {
-            R 'SmartScreen: no "More info" on screen (no SmartScreen prompt on this runner)'
+            Note 'SmartScreen: no "More info" on screen (no SmartScreen prompt on this runner)'
           }
-          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | ForEach-Object { R "stopping $($_.ProcessName)"; Stop-Process -Id $_.Id -Force }
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | ForEach-Object { Note "stopping $($_.ProcessName)"; Stop-Process -Id $_.Id -Force }
 
       - name: Flag any install as QA
         if: always()
