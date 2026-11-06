@@ -451,10 +451,11 @@ const SAMPLE_LINES = [
 /**
  * First run, built so the first real explanation lands within a minute: 1 hello (name and where you
  * heard about Unvibe, both optional), 2 explain a sample for real (no permission needed), then one
- * skippable level question, 3 try it on your own code. On a Mac, step 3 is one paste target (no
- * permission), and step 4 offers the shortcut only once that own code has been explained
+ * skippable level question, 3 try it on your own code: one paste target (no permission), with Choose a
+ * file under it. On a Mac, step 4 offers the shortcut only once that own code has been explained
  * (onboarding:ownCodeDone): value first, permission second. Windows needs no permission, so it keeps
- * its three steps. Google sign-in and editor bridges are optional and stay reachable later.
+ * three steps and names its shortcut on step 3. Google sign-in and editor bridges are optional and
+ * stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -473,8 +474,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
   const shortcutHeading = useRef<HTMLHeadingElement>(null);
   const paste = useOwnCodePaste();
-  const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
-  const macPaste = !isWindows && step === 2;
+  const steps = isWindows ? ['Hello', 'Try it', 'Your code'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
+  const pasteStep = step === 2;
   const macShortcut = !isWindows && step === 3;
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
   const keys = prettyAccel(shortcut);
@@ -483,14 +484,12 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
-  // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer.
-  useEffect(() => {
-    if (isWindows) return undefined;
-    return window.unvibe.onOwnCodeDone(() => {
-      setOwnCodeDone(true);
-      setStep((current) => (current === 2 ? 3 : current));
-    });
-  }, []);
+  // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer; Windows
+  // stays and finishes from there.
+  useEffect(() => window.unvibe.onOwnCodeDone(() => {
+    setOwnCodeDone(true);
+    if (!isWindows) setStep((current) => (current === 2 ? 3 : current));
+  }), []);
   // Announce the card, without making Enter trigger the permission prompt.
   useEffect(() => {
     if (macShortcut) shortcutHeading.current?.focus();
@@ -518,8 +517,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     explained
       ? "That's me, explaining it in the panel. Read it, then press Test me."
       : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    isWindows
-      ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
+    isWindows && ownCodeDone
+      ? `That was your own code. Next time, select some in any app and press ${spoken}.`
       : paste.started
         ? 'Got it. Your explanation is opening in the panel.'
         : 'Now try your own code. Copy a few lines from any file, then paste them here.',
@@ -542,7 +541,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
     // Navigation remounts the paste target without a preview; its speech must reset with it.
-    if (!isWindows) paste.setStarted(false);
+    paste.setStarted(false);
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
@@ -578,13 +577,13 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     setOffer('waiting');
     await turnOnShortcut(window.unvibe);
   };
-  // The footer's right button. On a Mac the paste and shortcut steps have no competing primary:
-  // Skip for now, Not now and Do it later are ghosts that finish setup.
+  // The footer's right button. The paste and shortcut steps have no competing primary until the own
+  // code is in: Skip for now, Not now and Do it later are ghosts that finish setup.
   const forward: { label: string; ghost?: boolean; finishes?: boolean } =
     step === 0 ? { label: "Let's go" }
       : step === 1 ? { label: explained ? 'Next' : 'Skip for now' }
-        : macPaste && ownCodeDone ? { label: 'Next', ghost: true }
-          : macPaste ? { label: 'Skip for now', ghost: true, finishes: true }
+        : pasteStep && ownCodeDone && !isWindows ? { label: 'Next', ghost: true }
+          : pasteStep && !ownCodeDone ? { label: 'Skip for now', ghost: true, finishes: true }
             : macShortcut && offer === 'offer' ? { label: 'Not now', ghost: true, finishes: true }
               : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
                 : { label: 'Start using Unvibe', finishes: true };
@@ -604,8 +603,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
-      // On a Mac's paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
-      if ((event.key === 'ArrowRight' || event.key === 'Enter') && (isWindows || step < 2)) { event.preventDefault(); advance(); }
+      // On the paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
+      if ((event.key === 'ArrowRight' || event.key === 'Enter') && step < 2) { event.preventDefault(); advance(); }
       if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
     window.addEventListener('keydown', onKey);
@@ -613,7 +612,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   });
 
   const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy')
-    : macPaste && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
+    : pasteStep && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
   const continueLabel = forward.finishes && celebrating ? 'Welcome!' : forward.finishes && saving ? 'Saving…' : forward.label;
 
   return (
@@ -633,7 +632,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
           <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
         </div>
 
-        <FadeIn animKey={step} className={`ob__step ob2__body${macPaste || macShortcut ? ' ob2__paste' : ''}`}>
+        <FadeIn animKey={step} className={`ob__step ob2__body${pasteStep || macShortcut ? ' ob2__paste' : ''}`}>
           {step === 0 && (
             <>
               <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
@@ -690,31 +689,15 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             </div>
           )}
 
-          {step === 2 && isWindows && (
-            <>
-              <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
-                {keys.split('+').map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
-              </div>
-              <p className="ob2__task">Open a file you didn't write, select a few lines, press {keys}.</p>
-              <div className="ob2__alt">
-                <span className="ob__sub">Or copy some code first:</span>
-                <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
-              </div>
-              <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add Ctrl+U there too</summary>
-                <div className="ob__integrations"><IntegrationsPanel /></div>
-              </details>
-            </>
-          )}
-
-          {/* A Mac's own-code step needs no permission: one paste target. The shortcut, which needs
-              Accessibility, is offered in step 4 once this has worked. */}
-          {macPaste && (
+          {/* The own-code step needs no permission: one paste target. On a Mac the shortcut, which needs
+              Accessibility, is offered in step 4 once this has worked; Windows names it here. */}
+          {pasteStep && (
             <>
               <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
               {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
+              {isWindows ? <p className="ob__sub ob2__note">Or select code in any app and press {keys}.</p> : null}
               <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add ⌘U there too</summary>
+                <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
                 <div className="ob__integrations"><IntegrationsPanel /></div>
               </details>
             </>

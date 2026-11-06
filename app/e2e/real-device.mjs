@@ -183,7 +183,8 @@ desktopShot('first-launch');
 // --- First run, timed: hello → explain the sample for real → your own code ------------------------
 // The walkthrough acts at a brisk human pace (no sleeps beyond what the UI needs), so the time is
 // close to what a new user who reads and clicks straight through would see. A Mac's setup has 4
-// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3.
+// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3
+// (step 3 pastes your own code and names Ctrl+U).
 const setupSteps = os === 'windows' ? 3 : 4;
 try {
   await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
@@ -207,10 +208,10 @@ const askedAfterSample = readStore(userData).loginPromptAsked === true;
 try {
   await clickText(companion, 'Next');
   await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
-  await companion.locator(os === 'windows' ? '.ob2__task' : '.paste-target__box').waitFor({ timeout: 8000 });
+  await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  // Nothing is pasted here, so a Mac's step 3 finishes with Skip for now (no step 4).
-  await clickText(companion, os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
+  // Nothing is pasted here, so step 3 finishes with Skip for now (a Mac gets no step 4).
+  await clickText(companion, 'Skip for now');
   await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
   log(true, 'Onboarding: every step');
