@@ -625,6 +625,8 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .ninst__file { display: grid; gap: 6px; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--ninst-line); }
 .ninst__file-links { margin: 0; font: 500 14px/1.5 var(--font-sans); color: var(--ninst-ink-2); }
+/* "SHA-256 checksums" never breaks at its hyphen when the row wraps (Design #196). */
+.ninst__nowrap { white-space: nowrap; }
 .ninst__steps summary { cursor: pointer; font: 600 14px/1.5 var(--font-sans); color: var(--ninst-ink); }
 .ninst__steps ol { margin: 6px 0 0; padding-left: 1.3em; display: grid; gap: 4px; font: 400 14px/1.5 var(--font-sans); color: var(--ninst-ink-2); }
 /* Real screenshots under their step, at native size and never upscaled (Design): the Windows dialogs at most 360 wide. */

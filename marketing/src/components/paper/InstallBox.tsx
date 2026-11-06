@@ -10,6 +10,7 @@ import {
   BETA_WINDOWS_DIRECT_DOWNLOAD,
   BETA_WINDOWS_INSTALL_COMMAND,
 } from "@/lib/betaOffer";
+import { MAC_SHA256_URL, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 
 export type InstallOs = "mac" | "windows";
 
@@ -142,6 +143,10 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
               </a>
             </>
           ) : null}
+          {/* For anyone taking the file: the release's published checksums (the Terminal and PowerShell lines check
+              them on their own). Restores what the old download card linked (QA, after #192). */}
+          {" · "}
+          <a className="paper-text-link ninst__nowrap" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
         </p>
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
