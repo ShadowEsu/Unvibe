@@ -73,11 +73,11 @@ jobs:
           rm -rf "$ud"; mkdir -p "$ud"
           printf '{"installId":"%s"}' "$ID_A" > "$ud/unvibe-store.json"
           open -a /Applications/Unvibe.app
-          pid=""; for i in $(seq 1 40); do pid=$(pgrep -x Unvibe | head -1); [ -n "$pid" ] && break; sleep 0.5; done
+          pid=""; for i in $(seq 1 40); do pid=$(pgrep -x Unvibe | head -1 || true); [ -n "$pid" ] && break; sleep 0.5; done
           echo "Unvibe pid ${pid:-none}"
           seen=0; spawned=0
           for i in $(seq 1 40); do
-            n=$(pgrep -P "$pid" -x osascript | wc -l | tr -d ' ')
+            n=$( (pgrep -P "${pid:-0}" -x osascript || true) | wc -l | tr -d ' ')
             [ "$n" -gt 0 ] && spawned=$((spawned + 1))
             sleep 0.5
           done
