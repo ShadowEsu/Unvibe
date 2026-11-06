@@ -174,7 +174,8 @@ function Bar() {
   useEffect(() => { window.unvibe.setBarNotice(Boolean(note)); }, [note]);
 
   const openFromHover = () => {
-    if (!hoverEnabled || expandedRef.current) return;
+    // A notice is showing: hovering to read it must not swap it for the overview's one-line note.
+    if (!hoverEnabled || expandedRef.current || note) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
       if (document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
@@ -230,7 +231,9 @@ function Bar() {
         </div>
       </div>
 
-      {note && !expanded ? <p className="island__notice" role="status">{note}</p> : null}
+      {/* Screen readers hear the notice from this always-mounted live region; the visible copies are hidden from them. */}
+      <p className="island__sr" role="status">{note}</p>
+      {note && !expanded ? <p className="island__notice" aria-hidden="true">{note}</p> : null}
 
       {expanded ? (
         <div className="island__overview">
@@ -249,7 +252,7 @@ function Bar() {
           <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
           <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
           <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
-          {note ? <p className="island__note" role="status">{note}</p> : null}
+          {note ? <p className="island__note" aria-hidden="true">{note}</p> : null}
           <div className="island__actions">
             <button type="button" onClick={() => act('review')}>Understand change</button>
             <button type="button" onClick={() => act('home')}>Open Unvibe</button>

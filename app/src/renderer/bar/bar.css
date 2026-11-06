@@ -116,20 +116,24 @@ button { font: inherit; }
 .island:not(.island--attached) .island__notch { display: none; }
 .island:not(.island--attached).island--expanded { display: flex; flex-direction: column; }
 .island:not(.island--attached) .island__overview { flex: 1 1 auto; height: auto; min-height: 0; }
-/* At the bottom the card opens upward, so the pill stays where your eyes left it. */
-.island.island--bottom.island--expanded:not(.island--attached) { flex-direction: column-reverse; }
+/* At the bottom the card (and a notice) opens upward, so the pill stays where your eyes left it, also
+   while the window shrinks back after a notice. */
+.island.island--bottom:not(.island--attached) { display: flex; flex-direction: column-reverse; }
 .island--bottom .island__overview { transform: translateY(5px); padding-top: 11px; }
 /* A notice (F-18): its text under the compact row (above it at the bottom), at most three lines in
    the 64 px windows.ts adds (BAR_NOTICE_H), so it never grows over the editor. */
-.island--notice:not(.island--attached) { display: flex; flex-direction: column; }
-.island--notice.island--bottom:not(.island--attached) { flex-direction: column-reverse; }
+.island--notice:not(.island--attached):not(.island--bottom) { display: flex; flex-direction: column; }
 .island__notice {
   margin: 0; padding: 6px 16px 10px; max-height: 64px; overflow: hidden;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   color: #d6f45a; font-size: 12px; line-height: 16px; font-weight: 550; text-align: center;
-  animation: island-reveal 180ms cubic-bezier(.22,.8,.24,1) both;
+  animation: island-notice-in 180ms cubic-bezier(.22,.8,.24,1) both;
 }
-.island--bottom .island__notice { padding: 10px 16px 6px; }
+@keyframes island-notice-in { from { opacity: 0; transform: translateY(-4px); } }
+.island--bottom .island__notice { padding: 10px 16px 6px; animation-name: island-notice-in-up; }
+@keyframes island-notice-in-up { from { opacity: 0; transform: translateY(4px); } }
+/* Screen readers hear a notice from this always-present live region (one filled on insert isn't read). */
+.island__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .island__notice { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {

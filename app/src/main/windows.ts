@@ -162,11 +162,14 @@ export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = 
   applyBarSize(win, force);
 }
 
-/** The Island grows to show a notice's text, and back when the notice is gone. */
+/**
+ * The Island grows to show a notice's text, and back when the notice is gone. A hidden Island only
+ * records it (showBar sizes it then): resizing calls moveTop, which on macOS brings a hidden window back.
+ */
 export function setBarNotice(win: BrowserWindow | null, on: boolean): void {
   if (!win || win.isDestroyed() || barHasNotice === on) return;
   barHasNotice = on;
-  if (!barIsExpanded) applyBarSize(win, false);
+  if (!barIsExpanded && win.isVisible()) applyBarSize(win, false);
 }
 
 function applyBarSize(win: BrowserWindow, force: boolean): void {
