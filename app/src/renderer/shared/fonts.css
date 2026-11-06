@@ -55,13 +55,14 @@
   font-display: swap;
 }
 /*
- * The full upstream Inter and Bricolage Grotesque files carry an optical-size axis that the
- * Google-served files they replace did not (those were cut at the font's default: Inter 14,
- * Bricolage 96). Optical sizing off keeps every font at its default, so headings keep their shapes.
- * !important for the same reason as below: the `font:` shorthand resets font-optical-sizing.
+ * The full upstream Inter and Bricolage Grotesque files carry an optical-size axis that the bundled
+ * files they replace did not: those were the opsz 14 cuts (Bricolage's advance widths match its
+ * opsz 14 exactly; Inter's default is 14). Bricolage's own default is 96, about 10% narrower, which
+ * re-wrapped headings. Pinning opsz 14 keeps every heading and line as it was. Fonts without the
+ * axis ignore it. !important for the same reason as below: the `font:` shorthand resets it.
  */
 *, *::before, *::after {
-  font-optical-sizing: none !important;
+  font-variation-settings: "opsz" 14 !important;
 }
 /*
  * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one
