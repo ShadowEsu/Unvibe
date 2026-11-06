@@ -133,9 +133,31 @@ if ($Kind -eq 'ps1') {
     Note 'no SmartScreen prompt on this runner (no "More info" on screen)'
   }
   if ($Kind -eq 'setupexe') {
-    # The installer's own screens, every 3 s for 30 s, then whether it opened the app itself.
-    for ($i = 1; $i -le 10; $i++) { Start-Sleep 3; Shot ("installer-{0:d2}" -f $i); Note "  installer +$($i * 3) s: $(Titled)" }
-    $exe = $null
+    # The installer is assisted, not one-click (app/package.json nsis: oneClick false, directory choice allowed), so
+    # a person clicks through its pages. Each page is pictured with its words, then its forward button is pressed.
+    $TA = [System.Windows.Automation.TreeScope]; $AE = [System.Windows.Automation.AutomationElement]
+    $isButton = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)
+    $isText = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text)
+    $isCheck = New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::CheckBox)
+    $page = 0; $seen = $false
+    for ($k = 0; $k -lt 60 -and $page -lt 12; $k++) {
+      Start-Sleep 2
+      $sw = $root.FindAll($TA::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -like 'Unvibe Setup*' } | Select-Object -First 1
+      if (-not $sw) { if ($seen) { break } else { continue } }
+      $seen = $true
+      $btns = @($sw.FindAll($TA::Descendants, $isButton) | Where-Object { $_.Current.IsEnabled })
+      $fwd = $null
+      foreach ($n in 'Finish', 'Install', 'Next >') { $fwd = $btns | Where-Object { $_.Current.Name -eq $n } | Select-Object -First 1; if ($fwd) { break } }
+      if (-not $fwd) { continue } # the Installing… page: no forward button until it's done
+      $page++
+      $words = (@($sw.FindAll($TA::Descendants, $isText)) | ForEach-Object { $_.Current.Name } | Where-Object { $_ }) -join ' / '
+      $checks = (@($sw.FindAll($TA::Descendants, $isCheck)) | ForEach-Object { "[$(if ($_.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Current.ToggleState -eq 'On') { 'x' } else { ' ' })] $($_.Current.Name)" }) -join ', '
+      Shot ("installer-page-{0:d2}" -f $page)
+      Note "PROMPT installer page ${page}: $words$(if ($checks) { " | $checks" }) | buttons: $(($btns | ForEach-Object { $_.Current.Name }) -join ', ') | pressing '$($fwd.Current.Name)'"
+      [void](Press $fwd)
+      Start-Sleep 2
+    }
+    Note "installer pages clicked through: $page"
   }
 }
 if ($isSetup) {
@@ -149,8 +171,9 @@ if ($isSetup) {
   if ($links) { Note "PASS  Start menu entry: $(($links | ForEach-Object { "$($_.FullName) -> $((New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName).TargetPath)" }) -join ' | ')" } else { Note 'FAIL  Start menu entry: none' }
   $un = UninstallEntry
   if ($un) { Note "PASS  uninstall entry: '$($un.DisplayName)' $($un.DisplayVersion), publisher '$($un.Publisher)', UninstallString $($un.UninstallString)" } else { Note 'FAIL  uninstall entry: none in Apps & features' }
-  $running = Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' }
-  if ($running) { Note 'the installer opened Unvibe itself' }
+  Note "desktop shortcut: $(Test-Path (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Unvibe.lnk'))"
+  $running = Get-Process | Where-Object { $_.ProcessName -eq 'Unvibe' }
+  if ($running) { Note 'the installer opened Unvibe itself (its last page)' }
   elseif ($exe) { Note 'opening the installed Unvibe (as install.ps1 will, or the Start menu entry)'; Start-Process -FilePath $exe }
 }
 
@@ -158,12 +181,12 @@ if ($isSetup) {
 $win = $null
 for ($i = 0; $i -lt 45 -and -not $win; $i++) {
   Start-Sleep 2
-  $win = Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  $win = Get-Process | Where-Object { $_.ProcessName -eq 'Unvibe' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
 }
 $front = Front
 Shot 'first-launch'
 if ($win) {
-  $inFront = $front -like 'Unvibe*'
+  $inFront = $front -like 'Unvibe: *'
   if ($isSetup) { Note "$(if ($inFront) { 'PASS' } else { 'FAIL' })  first window in front: the foreground window is '$front'" }
   else { Note "NOTE  first window in front: '$front'" }
 }
