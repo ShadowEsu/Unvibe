@@ -235,9 +235,7 @@
   margin: 1.2rem 0;
   color: var(--ink-faint);
   font-size: max(13px, 0.65rem);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .activate-divider::before,

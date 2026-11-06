@@ -116,8 +116,8 @@ export default function PrivacyPage() {
           code in, the file and project name, and the concept it covered.
           Row-level security is designed to restrict direct reads of those records to your account. Your auth
           token is encrypted at rest using the operating system keychain, and data is
-          encrypted in transit. Backend at-rest and backup settings must be verified for
-          the selected staging/production infrastructure. You can access and delete your
+          encrypted in transit. Our database host, Supabase, encrypts stored data at rest
+          (AES-256). You can access and delete your
           data. See <a href="/data-controls">data controls</a> and{" "}
           <a href="/account-deletion">account deletion</a>. We use no advertising
           trackers.
