@@ -15,7 +15,6 @@ type Snapshot = {
   linesUnderstood: number;
   conceptsSeen: number;
   conceptsStrong: number;
-  usage: { label: string; pct: number } | null;
   quota?: { used: number; limit: number; remaining: number };
   selections?: { used: number; limit: number; remaining: number };
   heat: number[];
@@ -206,7 +205,8 @@ function Bar() {
   const heat = (snapshot?.heat ?? []).slice(-14);
   const aiLeft = snapshot?.quota?.remaining;
   const selectLeft = snapshot?.selections?.remaining;
-  const usagePct = snapshot?.usage?.pct ?? (snapshot?.quota?.limit ? Math.round((snapshot.quota.used / snapshot.quota.limit) * 100) : undefined);
+  // Share of this period's AI explanations already used: the same allowance as "N left" and "N AI".
+  const usagePct = snapshot?.quota?.limit ? Math.round((snapshot.quota.used / snapshot.quota.limit) * 100) : undefined;
   const value = (number: number | undefined) => number === undefined ? '–' : String(number);
 
   return (
@@ -247,7 +247,7 @@ function Bar() {
             <span data-tone="sky"><b>{value(snapshot?.explanations)}</b> reviews</span>
             <span data-tone="lime"><b>{value(snapshot?.understood)}</b> understood</span>
             <span data-tone="sun"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
-            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> used</span>
+            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> AI used</span>
           </div>
           <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
           <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>

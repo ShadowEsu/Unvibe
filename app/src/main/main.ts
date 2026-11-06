@@ -886,7 +886,6 @@ app.whenReady().then(() => {
       linesUnderstood: profile.linesUnderstood,
       conceptsSeen: profile.conceptsSeen,
       conceptsStrong: profile.conceptsStrong,
-      usage: profile.usage[0] ?? null,
       quota,
       selections,
       heat: profile.heat.slice(-14),
