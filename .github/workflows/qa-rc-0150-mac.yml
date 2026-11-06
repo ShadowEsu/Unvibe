@@ -13,7 +13,7 @@ name: QA 0.1.50 RC Mac stills
 #   r2 + r3 DMG install + first explanation on arm64 and Intel, audio devices and every privacy dialog watched;
 #   r3 also once on arm64 with a virtual microphone (BlackHole 2ch), to see whether an input device brings the question.
 # Notice rows (n-*, for RC-3): DMG install + first launch + first explanation, then qa/install-matrix's first-explain.mjs
-# (pinned below) as is with NOTICES=1 (N-0..N-4). "[rc:<app-release run id>]" in the commit message picks the build.
+# (pinned below) as is with NOTICES=1 (N-0..N-7). "[rc:<app-release run id>]" in the commit message picks the build.
 on:
   push:
     branches: [qa/rc-0150-mac]
@@ -71,7 +71,7 @@ jobs:
           - { item: n-intel, runner: macos-15-intel, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       INSTALL_ID: qa-rc0150-${{ matrix.item }}-${{ matrix.runner }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
@@ -138,8 +138,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
           cp "$GITHUB_WORKSPACE/.github/qa/rc0150/cdp.mjs" rc0150-cdp.mjs
           if [[ "$ITEM" == n-* ]]; then
-            # The notice checks as they are on qa/install-matrix (00e22ef, "N-2c control"), unchanged.
-            src=00e22efaaf14300bd4f75a857401455dd31b920d
+            # The notice checks as they are on qa/install-matrix (571cd6c, "N-5..N-7 with a live-watch info notice"), unchanged.
+            src=571cd6c1ac87073f8cfbde12d0d03d8d2fbb1d9a
             gh api "repos/ShadowEsu/Unvibe/contents/.github/qa/first-explain.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > first-explain.mjs
             gh api "repos/ShadowEsu/Unvibe/contents/app/e2e/cdp-launch.mjs?ref=$src" -H "Accept: application/vnd.github.raw" > cdp-launch.mjs
             echo "qa/install-matrix@$src .github/qa/first-explain.mjs + app/e2e/cdp-launch.mjs" > first-explain.source
@@ -205,7 +205,7 @@ jobs:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/rc0150/design-capture.sh "$RUNNER_TEMP/m"
 
-      - name: "Notice rows: DMG install, first launch, first explanation, then N-0..N-4 (first-explain.mjs NOTICES=1)"
+      - name: "Notice rows: DMG install, first launch, first explanation, then N-0..N-7 (first-explain.mjs NOTICES=1)"
         if: env.SKIP != '1' && startsWith(matrix.item, 'n-')
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}

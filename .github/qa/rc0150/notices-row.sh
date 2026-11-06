@@ -2,7 +2,8 @@
 # RC-3 notice rows on a Mac: the DMG install and first launch (mac-row.sh dmg, as RC-1 item 3 / RC-2 row 2), then
 # first-explain.mjs from qa/install-matrix as is, with NOTICES=1 (onboarding → the sample → the send agreement →
 # N-0 a second real explanation via window.unvibe.explainClipboard() → N-1 silent → N-2 empty clipboard at once →
-# N-3 amber → N-2c control 26 s later → N-4 #220 card '% AI used').
+# N-3 amber → N-2c control 26 s later → N-4 #220 card '% AI used' → relaunch with live watch on a throwaway repo →
+# N-5 grey info notice → N-6 a problem right after it, amber → N-7 nothing replaces the problem).
 # Mac-only: a macOS privacy question can come up over the flow (Automation for System Events when a clipboard explain
 # asks for the front app; the microphone question on Intel). first-explain's own watcher answers only the app's own
 # dialogs, so a watcher here records every UserNotificationCenter question (time, words, picture) and answers Allow,
@@ -40,8 +41,8 @@ build_rcmac || r "NOTE  helper did not build (dialogs pictured, not answered)"
   done
 ) & watcher=$!
 r "watcher started $(date +%H:%M:%S)"
-NOTICES=1 EXPLAIN_T=720 bash "$(dirname "$0")/../mac-row.sh" dmg "$out"; rc=$?
-NOTICES=1 EXPLAIN_T=720 V=0.1.50 bash "$(dirname "$0")/../mac-row.sh" dmg "$out"; rc=$?
+
+NOTICES=1 EXPLAIN_T=900 bash "$(dirname "$0")/../mac-row.sh" dmg "$out"; rc=$?
 kill "$watcher" 2>/dev/null
 r "app bundle version: $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString)"
 r "PRIVACY QUESTIONS seen by the watcher (answered Allow where noted):"
