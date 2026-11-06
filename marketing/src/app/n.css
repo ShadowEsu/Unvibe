@@ -87,6 +87,11 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .ndemo__rec.is-on { opacity: 1; }
 /* Inter, not mono (Design #197): the site's mono face attaches 4 s after load, and a mono caption's text moved when it did. */
 .nhero__base .nhero__cap { margin: 0 0 16px; color: #4a4a46; font: 500 12px/1.4 var(--font-sans); }
+/* Phones: the hill overlaps the window's last 64 px and its curve dips at the sides, so the caption goes under the
+   window's edge, on the ivory, never over the curve or the panel (Design #197 MUST, 390). */
+@media (max-width: 600px) {
+  .nhero__base .nhero__cap { max-width: calc(100% - 48px); margin: 52px auto 16px; text-wrap: balance; }
+}
 
 /* The hill: a light ellipse rising over the field, carrying the download, the browser try and the trust line. */
 .nhero__base { position: relative; z-index: 4; margin-top: -64px; padding: 28px 24px 56px; text-align: center; }
