@@ -348,6 +348,8 @@ function loadCodeIntoSession(
   session.recorded = false;
   session.reviewId = randomUUID();
   session.awaitingConfirm = false;
+  // Clipboard, paste and file explains never use a selected-code credit; one left from an earlier capture must not carry over.
+  session.selectionCredit = undefined;
   session.payload = undefined;
   session.mode = 'selection';
   session.file = meta?.file;
