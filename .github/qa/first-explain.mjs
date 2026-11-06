@@ -210,6 +210,23 @@ if (process.env.NOTICES === '1' && panel) {
     log(!!problem, 'N-2 a problem right after an explanation still shows (not swallowed)', problem ? `'${problem.text || problem.sr}' ${Math.round((problem.at - tP) / 100) / 10} s after the press, ${Math.round((tP - tDone) / 100) / 10} s after the explanation finished` : `none within 15 s of the press; notices since the explanation: ${all.filter((n) => n.at >= t1).map((n) => `'${n.text || n.sr}'`).join(', ') || 'none'}`);
     if (problem) log(problem.dot === AMBER, 'N-3 the problem notice has the amber dot', `${problem.dot}; class '${problem.cls}'`);
     for (const n of all.filter((x) => x.text && !isProblem(x))) note(`info notice '${n.text}': dot ${n.dot} (amber is ${AMBER}); class '${n.cls}'`);
+    // N-4 (#220): the expanded card's '% AI used' is the AI allowance, consistent with its 'N AI' left.
+    if (islandBar) {
+      await islandBar.locator('.island').first().click();
+      await sleep(1500);
+      const card = (await islandBar.locator('.island').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+      await islandBar.locator('.island').first().screenshot({ path: path.join(out, 'explain-card-220.png') }).catch(() => {});
+      desktop('6-card-220');
+      const pct = card.match(/(\d+)%\s*(AI used|used)/);
+      const left = card.match(/(\d+)\s*AI\b/);
+      note(`card text: ${card.slice(0, 300)}`);
+      if (pct && left) {
+        const used = 50 - Number(left[1]); // the trial's AI allowance: a fresh install shows '50 left' (server quota)
+        const ok = pct[2] === 'AI used' && [Math.floor, Math.round, Math.ceil].some((f) => f((used / 50) * 100) === Number(pct[1]));
+        log(ok, "N-4 (#220) the card's '% AI used' matches the allowance used", `'${pct[0]}' with '${left[0]}' left (${used} of 50 used = ${((used / 50) * 100).toFixed(1)}%)`);
+      } else log(false, "N-4 (#220) the card shows '% AI used' and 'N AI'", `pct ${pct?.[0] ?? 'missing'}, left ${left?.[0] ?? 'missing'}`);
+      await islandBar.keyboard.press('Escape').catch(() => {});
+    }
   } catch (e) {
     log(false, 'N notice rows', e.message.split('\n')[0]);
     await shot(panel, 'notices-stuck'); desktop('notices-stuck');
