@@ -23,7 +23,7 @@ jobs:
       matrix:
         runner: [windows-2022, windows-2025]
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       INSTALL_ID: qa-notice-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
       MSG: ${{ github.event.head_commit.message }}
@@ -44,7 +44,9 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          sparse-checkout: .github
+          sparse-checkout: |
+            .github
+            app/e2e
 
       - name: Get the RC build
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -53,6 +55,13 @@ jobs:
           run-id: ${{ steps.rc.outputs.rc }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/rc
+
+      - name: Playwright for the set-up profile (onboarding, sample explanation, send agreement)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
 
       - name: Parse the row script
         shell: powershell

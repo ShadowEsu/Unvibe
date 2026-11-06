@@ -33,8 +33,9 @@ public static class W {
   }
 }
 "@
-# The window is larger than the pill it draws (transparent margin; on 2022 it reaches into the dark taskbar): the
-# visible pill is the box of dark pixels (the Island's fill) that also differ from the screen before Unvibe started.
+# The window is larger than the pill it draws (transparent margin; on 2022 it reaches into the taskbar): the visible
+# pill is the box of neutral dark pixels (the Island's fill is about #121211; 2022's taskbar is a blue #001521) that
+# also differ from the screen before Unvibe started.
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
 using System; using System.Drawing;
 public static class Diff {
@@ -45,7 +46,8 @@ public static class Diff {
         int sx = ox + i, sy = oy + j;
         if (sx < 0 || sy < 0 || sx >= r.Width || sy >= r.Height) continue;
         Color a = f.GetPixel(i, j), b = r.GetPixel(sx, sy);
-        if (a.R < 48 && a.G < 48 && a.B < 48 && Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
+        bool fill = a.R < 48 && Math.Abs(a.R - a.G) <= 4 && Math.Abs(a.G - a.B) <= 4;
+        if (fill && Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) > 60) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; }
       }
     return x1 < 0 ? null : new int[] { x0, y0, x1, y1 };
   }
@@ -101,11 +103,19 @@ $p = Start-Process $setup -ArgumentList '/S' -PassThru; $null = $p.Handle; [void
 $exe = Join-Path $env:LOCALAPPDATA 'Programs\Unvibe\Unvibe.exe'
 Note "setup /S exit $($p.ExitCode); $exe $(if (Test-Path $exe) { (Get-Item $exe).VersionInfo.ProductVersion } else { 'MISSING' })"
 
-# A set-up profile (onboarded, the Island always shown, its default bottom-centre place), with this row's qa- id.
+# A set-up profile the real way, with this row's qa- id: onboarding, the sample explanation and the send agreement
+# (first-explain.mjs, AGREE=1, through the debug port). A press that can't copy only says so once the agreement is
+# given; without it the panel opens on the agreement instead (run 42201159873).
 $ud = Join-Path $env:APPDATA 'Unvibe'; New-Item -ItemType Directory -Force $ud | Out-Null
-$utf8 = New-Object Text.UTF8Encoding $false
-[IO.File]::WriteAllText((Join-Path $ud 'unvibe-store.json'), "{`"installId`":`"$env:INSTALL_ID`"}", $utf8)
-[IO.File]::WriteAllText((Join-Path $ud 'unvibe-settings.json'), '{"settingsRevision":8,"appearanceRevision":2,"islandBehaviorRevision":4,"ideBridgeShortcutRevision":2,"sidebarDensityRevision":2,"windowsShortcutRevision":1,"setupProgressRevision":1,"onboarded":true,"theme":"light"}', $utf8)
+[IO.File]::WriteAllText((Join-Path $ud 'unvibe-store.json'), "{`"installId`":`"$env:INSTALL_ID`"}", (New-Object Text.UTF8Encoding $false))
+$env:UNVIBE_EXE = $exe; $env:USER_DATA = $ud; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:AGREE = '1'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+$j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru
+$null = $j.Handle
+if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force }
+Note "set-up profile (first-explain.mjs AGREE=1, exit $($j.ExitCode)):"
+if (Test-Path "$Out\explain-report.txt") { Get-Content "$Out\explain-report.txt" | ForEach-Object { Note "  $_" } }
+Verdict (Test-Path (Join-Path $ud 'unvibe-consent.json')) "the profile holds the send agreement (unvibe-consent.json)"
+Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
 
 $wa = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 Note "work area: $($wa.Left),$($wa.Top) to $($wa.Right),$($wa.Bottom); screen $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width)x$([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)"
