@@ -267,14 +267,26 @@ Write-Host "Closing any running Unvibe..."
 Get-Process -Name Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
+# Apps installed for this user (HKCU) or for everyone (HKLM), by their Apps & features entry.
+function Get-UnvibeUninstallEntries(\$root) {
+  Get-ChildItem "\$root\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" -ErrorAction SilentlyContinue |
+    Get-ItemProperty -ErrorAction SilentlyContinue |
+    Where-Object { \$_.DisplayName -like "Unvibe*" }
+}
+if (Get-UnvibeUninstallEntries "HKLM:") {
+  Write-Warning "An Unvibe installed for all users is also on this PC. This installs a separate copy for your user; you can remove the other one in Settings > Apps > Installed apps."
+}
+
 Write-Host "Installing Unvibe for your Windows user (no administrator rights needed)..."
+# /currentuser keeps the install per-user even next to an all-users copy (which would need an admin prompt).
 # Wait for the installer process only: Start-Process -Wait would also wait for anything it starts.
 try {
-  \$setup = Start-Process -FilePath \$download -ArgumentList "/S" -PassThru
+  \$setup = Start-Process -FilePath \$download -ArgumentList "/S", "/currentuser" -PassThru
 } catch {
   Stop-UnvibeInstall "Could not start the Unvibe installer. Details: \$_"
 }
-\$null = \$setup.Handle # keeps the exit code readable after the process ends
+# Windows PowerShell 5.1 leaves ExitCode empty unless the process handle was read before it ended.
+\$null = \$setup.Handle
 if (-not \$setup.WaitForExit(300000)) {
   throw "The Unvibe installer did not finish within 5 minutes. Restart your PC, then run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
 }
@@ -283,24 +295,26 @@ if (\$setup.ExitCode -ne 0) {
   throw "The Unvibe installer stopped with code \$(\$setup.ExitCode). Run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
 }
 
-# The installer puts Unvibe in Programs\\Unvibe for this user; an earlier install may be elsewhere.
+# Where this user's Unvibe is: its Apps & features entry names the exe (an earlier install may sit in a
+# folder its owner chose); otherwise the installer's per-user default.
 \$installed = \$null
 for (\$i = 0; \$i -lt 30 -and -not \$installed; \$i++) {
-  \$installed = @(
+  \$fromEntry = Get-UnvibeUninstallEntries "HKCU:" | Where-Object { \$_.DisplayIcon } |
+    ForEach-Object { ((\$_.DisplayIcon -split ',')[0]).Trim('"') }
+  \$installed = @(\$fromEntry) + @(
     (Join-Path \$env:LOCALAPPDATA "Programs\\Unvibe\\Unvibe.exe"),
-    (Join-Path \$env:LOCALAPPDATA "Programs\\unvibe-app\\Unvibe.exe"),
-    (Join-Path \$env:ProgramFiles "Unvibe\\Unvibe.exe")
-  ) | Where-Object { Test-Path \$_ } | Select-Object -First 1
+    (Join-Path \$env:LOCALAPPDATA "Programs\\unvibe-app\\Unvibe.exe")
+  ) | Where-Object { \$_ -and (Test-Path \$_) } | Select-Object -First 1
   if (-not \$installed) { Start-Sleep -Seconds 1 }
 }
 Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
 if (-not \$installed) {
-  throw "The installer finished, but Unvibe.exe is not under \$env:LOCALAPPDATA\\Programs. For help, see ${BETA_INSTALL_HELP_URL}"
+  throw "The installer finished, but Unvibe.exe is not in its Apps & features entry or under \$env:LOCALAPPDATA\\Programs. For help, see ${BETA_INSTALL_HELP_URL}"
 }
 
 # Earlier versions of this script kept a portable copy in LOCALAPPDATA\\Unvibe. The installed app takes
 # its place, and on its first start points an existing login item at itself.
-foreach (\$old in @("Unvibe.exe", "Unvibe.exe.download")) {
+foreach (\$old in @("Unvibe.exe", "Unvibe.exe.download", "Unvibe.exe.old")) {
   Remove-Item -Force -Path (Join-Path (Join-Path \$env:LOCALAPPDATA "Unvibe") \$old) -ErrorAction SilentlyContinue
 }
 
@@ -310,7 +324,7 @@ try {
   Invoke-RestMethod -Method Post -Uri \$track -ContentType "application/json" -Body '{"event":"installed"}' -TimeoutSec 4 | Out-Null
 } catch {}
 Write-Host "Windows may warn that Unvibe is unsigned. That is expected during beta. If SmartScreen appears, choose More info, then Run anyway."
-Write-Host "Done. Unvibe is installed for your Windows user, in your Start menu and tray. To remove it, use Settings > Apps > Installed apps."
+Write-Host "Done. Unvibe is installed for your Windows user: in your Start menu, on your desktop and in your tray. To remove it, use Settings > Apps > Installed apps."
 `;
 }
 

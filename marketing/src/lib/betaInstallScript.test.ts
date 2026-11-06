@@ -474,7 +474,7 @@ describe("Mac install script text", () => {
 
 describe("Windows install script text", () => {
   const script = betaWindowsInstallScript();
-  const startAt = script.indexOf("Start-Process");
+  const startAt = script.indexOf("Start-Process -FilePath $download");
 
   it("discloses the installed count near the top and still sends it", () => {
     const head = script.split("\n").slice(0, 8).join("\n");
@@ -517,31 +517,36 @@ describe("Windows install script text", () => {
     const verifiedAt = script.indexOf(`Write-Host "Checksum verified."`);
     const stopAt = script.indexOf("Stop-Process");
     assert.ok(verifiedAt > 0 && stopAt > verifiedAt && stopAt < startAt, "running Unvibe is closed after verification, before the installer");
-    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S" -PassThru`));
+    // /currentuser: never an all-users upgrade behind an admin prompt.
+    assert.ok(script.includes(`Start-Process -FilePath $download -ArgumentList "/S", "/currentuser" -PassThru`));
     // Start-Process -Wait also waits for processes the installer starts (QA's install-matrix hang).
     assert.doesNotMatch(script, /^(?!\s*#)[^\n]*Start-Process[^\n]*-Wait\b/m);
-    assert.match(script, /\$setup\.WaitForExit\(300000\)/);
+    // Windows PowerShell 5.1 only keeps ExitCode if the handle was read while the process ran.
+    const handleAt = script.indexOf("$null = $setup.Handle");
+    const waitAt = script.indexOf("$setup.WaitForExit(300000)");
+    assert.ok(handleAt > startAt && waitAt > handleAt, "the handle is read right after the start, before the wait");
     const exitAt = script.indexOf("if ($setup.ExitCode -ne 0) {");
     const openAt = script.lastIndexOf("Start-Process $installed");
-    assert.ok(exitAt > startAt && openAt > exitAt, "Unvibe opens only after the installer exited 0");
+    assert.ok(exitAt > waitAt && openAt > exitAt, "Unvibe opens only after the installer exited 0");
   });
 
-  it("opens the installed app, not the download, and looks where the per-user installer puts it first", () => {
-    const candidates = script.slice(script.indexOf("$installed = @("), script.indexOf(") | Where-Object { Test-Path $_ }"));
-    assert.ok(candidates.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`) > 0, candidates);
-    assert.ok(candidates.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`) < candidates.indexOf("ProgramFiles"));
+  it("opens this user's installed app: its Apps entry first, then the per-user default, never an all-users copy", () => {
+    const lookup = script.slice(script.indexOf("$installed = $null"), script.indexOf("Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue\nif (-not $installed)"));
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntries "HKCU:"`) > 0, lookup);
+    assert.ok(lookup.indexOf(`Get-UnvibeUninstallEntries "HKCU:"`) < lookup.indexOf(`"Programs\\Unvibe\\Unvibe.exe"`));
+    assert.doesNotMatch(lookup, /ProgramFiles|HKLM/);
     assert.doesNotMatch(script, /Start-Process \$download(?! -ArgumentList "\/S")/);
-    assert.match(script, /if \(-not \$installed\) \{\n  throw "The installer finished, but Unvibe\.exe is not under/);
+    assert.match(script, /if \(-not \$installed\) \{\n  throw "The installer finished, but Unvibe\.exe is not/);
   });
 
   it("removes only the portable copy earlier versions of the script left in LOCALAPPDATA\\Unvibe", () => {
     const removals = script.split("\n").filter((line) => /Remove-Item/.test(line) && /LOCALAPPDATA/.test(line));
     assert.equal(removals.length, 1, removals.join("\n"));
-    assert.ok(script.includes(`foreach ($old in @("Unvibe.exe", "Unvibe.exe.download")) {`));
+    assert.ok(script.includes(`foreach ($old in @("Unvibe.exe", "Unvibe.exe.download", "Unvibe.exe.old")) {`));
     assert.doesNotMatch(removals[0], /-Recurse/);
   });
 
   it("ends by saying where Unvibe lives and how to remove it", () => {
-    assert.match(script, /Unvibe is installed for your Windows user, in your Start menu and tray\. To remove it, use Settings > Apps > Installed apps\./);
+    assert.match(script, /Unvibe is installed for your Windows user: in your Start menu, on your desktop and in your tray\. To remove it, use Settings > Apps > Installed apps\./);
   });
 });
