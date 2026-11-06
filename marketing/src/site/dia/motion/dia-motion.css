@@ -1,0 +1,162 @@
+/* Direction D motion (Motion). Timings and curves are measured on diabrowser.com (Fri 6 Nov); nothing of Dia's is
+   reused. Transform and opacity only. Reduced motion: every end state, no animation (the block at the bottom).
+   DiaMotion.tsx drives the two scroll-linked parts (the dock and the active step); the rest is CSS.
+
+   Markup contract (data attributes):
+   - Hero:     data-d-hero-rise="h1" | "wordmark" | "window" | "dock"   (the dock = the CTA block's first entrance)
+   - Arches:   data-d-arch on a section; its top edge rises as a soft off-white arch over the section above.
+   - Dock:     data-d-dock-scope wraps hero → close; its LAST child is
+               <div data-d-cta-dock><div data-d-dock-arc aria-hidden="true"></div>
+                 <div data-d-dock-pill> CTA link + "Available for macOS and Windows" </div></div>
+   - Steps:    data-d-steps on the section; data-d-step="0..2" on each step (button or link), data-d-shot="0..2" on each
+               shot (the right column's frames, stacked down the page). DiaMotion sets data-on on the active pair.
+   - Swap:     data-d-bgswap-root on the page; data-d-bgswap on the painting layer (absolute, inset 0, behind the
+               content); data-d-bgswap-trigger on the Pro card and the primary CTA; data-d-swap-ink on text that turns
+               white over the painting: it holds the dark text plus an aria-hidden white copy with data-d-swap-ink-on. */
+
+.d-page { --d-ease-out: cubic-bezier(0.19, 1, 0.22, 1); --d-ease-swap: cubic-bezier(0.23, 1, 0.32, 1); --d-ground: #faf8f5; overflow-x: clip; }
+
+/* ── Hero rise (Dia: h1 1000 ms, wordmark 1200 ms from its base, window and CTA block 1400 ms). The H1, wordmark and
+   window are LCP candidates, so they are painted from the first frame and only rise; the CTA block also fades. */
+@keyframes dRise { from { transform: translate3d(0, var(--d-rise), 0) scale(var(--d-rise-s, 1)); } }
+@keyframes dRiseFade { from { opacity: 0; transform: translate3d(0, var(--d-rise), 0); } }
+[data-d-hero-rise="h1"] { --d-rise: 14px; animation: dRise 1000ms var(--d-ease-out) both; }
+[data-d-hero-rise="wordmark"] { --d-rise: 36px; --d-rise-s: 0.96; transform-origin: 50% 100%; animation: dRise 1200ms var(--d-ease-out) 80ms both; }
+[data-d-hero-rise="window"] { --d-rise: 80px; animation: dRise 1400ms var(--d-ease-out) 160ms both; }
+[data-d-hero-rise="dock"] { --d-rise: 24px; animation: dRiseFade 900ms var(--d-ease-out) 380ms both; }
+/* The hero's background photo layer: data-d-hero-bg on an absolute layer inset -6 % (inside the hero's overflow:hidden),
+   carrying the bubbles image. It fades in over 600 ms as it loads in (Dia's background fade; the image can't be the
+   LCP: it's under Chrome's low-entropy line), then drifts slowly, transform only: 40 s each way. */
+@keyframes dBgDrift { from { transform: translate3d(-1.2%, 0.8%, 0) scale(1.04); } to { transform: translate3d(1.2%, -0.8%, 0) scale(1.08); } }
+[data-d-hero-bg] { animation: dFadeIn 600ms cubic-bezier(0.77, 0, 0.175, 1) both, dBgDrift 40s ease-in-out infinite alternate; }
+
+/* ── Arches between sections: an off-white ellipse peeking over the section above; it rises as the section enters
+   (scroll-driven where supported; elsewhere it simply sits risen). */
+[data-d-arch] { position: relative; isolation: isolate; }
+[data-d-arch]::before {
+  content: ""; position: absolute; z-index: -1; left: 50%; top: calc(-1 * var(--d-arch-h, 120px));
+  width: max(141vw, 1600px); aspect-ratio: 2034 / 978; border-radius: 50%; background: var(--d-arch-bg, var(--d-ground));
+  transform: translateX(-50%); transform-origin: 50% 100%; pointer-events: none;
+}
+@supports (animation-timeline: view()) {
+  [data-d-arch]::before { animation: dArch linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
+  @keyframes dArch { from { transform: translateX(-50%) translateY(calc(var(--d-arch-h, 120px) * 0.6)); } to { transform: translateX(-50%); } }
+}
+
+/* ── The dock: the sticky bottom CTA arch (≥ 800 px, as Dia). DiaMotion sets --d-flat (0 → 1 over the first 240 px of
+   scroll, back to 0 over the 240 px before the dock comes to rest) and --d-glow (1 → 0 over the first 240 px). */
+[data-d-cta-dock] { --d-dock-h: 152px; --d-flat: 0; --d-glow: 1; position: relative; z-index: 3; height: var(--d-dock-h); pointer-events: none; }
+@media (min-width: 800px) { [data-d-cta-dock] { position: sticky; bottom: 0; } }
+[data-d-dock-arc] { position: absolute; inset: -200px 0 0; transform-origin: 50% 100%; transform: scaleY(calc(1 - 0.2 * var(--d-flat))); }
+[data-d-dock-arc]::before { /* the arch */
+  content: ""; position: absolute; left: 50%; top: 200px; width: max(141vw, 1100px); aspect-ratio: 2034 / 978;
+  border-radius: 50%; background: var(--d-ground); transform: translateX(-50%);
+}
+[data-d-dock-arc]::after { /* the glow along its crest (Dia: a 1424 × 285 ellipse at .7) */
+  content: ""; position: absolute; left: 50%; top: 150px; width: min(99vw, 1424px); aspect-ratio: 5 / 1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(214, 196, 255, 0.95), rgba(184, 166, 255, 0)); filter: blur(24px);
+  opacity: calc(0.7 * var(--d-glow)); transform: translateX(-50%);
+}
+[data-d-dock-pill] {
+  position: absolute; inset: auto 0 22px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+  transform: translate3d(0, calc(42px * var(--d-flat)), 0) scale(calc(1 - 0.15 * var(--d-flat))); transform-origin: 50% 100%;
+}
+[data-d-dock-pill] > * { pointer-events: auto; }
+
+/* ── Steps (Dia: bar, number and title 300 ms; body cross-fade 300 ms; shots fade in 700 ms once). Bodies keep their
+   space, so switching never moves the list (CLS 0); the inactive ones are transparent. */
+[data-d-step] { position: relative; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.5; }
+[data-d-step][data-on] { opacity: 1; }
+[data-d-step]::before { /* the active bar */
+  content: ""; position: absolute; left: 0; top: 16%; bottom: 16%; width: 2px; border-radius: 2px; background: currentColor;
+  opacity: 0; transform: scaleY(0.6); transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-d-step][data-on]::before { opacity: 0.85; transform: none; }
+[data-d-step] [data-d-step-body] { opacity: 0; transform: translateY(-4px); transition: opacity 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+[data-d-step][data-on] [data-d-step-body] { opacity: 1; transform: none; }
+[data-d-shot] { transition: opacity 700ms cubic-bezier(0.87, 0, 0.13, 1); }
+.js [data-d-shot]:not([data-seen]) { opacity: 0; }
+
+/* ── Background swap (Dia pricing: the painting fades in, 420 ms measured; Design set 400 ms; the title turns white over
+   300 ms). */
+[data-d-bgswap] { opacity: 0; transition: opacity 400ms var(--d-ease-swap); pointer-events: none; }
+[data-d-swap-ink] { position: relative; display: block; }
+[data-d-swap-ink-on] { position: absolute; inset: 0; color: #fff; opacity: 0; transition: opacity 300ms var(--d-ease-swap); }
+[data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) [data-d-bgswap],
+[data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) [data-d-swap-ink-on] { opacity: 1; }
+[data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) [data-d-swap-ink] > :not([data-d-swap-ink-on]) { opacity: 0; transition: opacity 300ms var(--d-ease-swap); }
+
+/* ── Button hover (Halden's dot → arrow, on Dia's pill): <a class="d-btn"> label <BtnDot/> </a>. The dot is a 32 px circle
+   shown at 10 px (scale .3125) around the same centre, 21 px in from the right; hover grows it to full size, drops its
+   glow and slides the chevron in. Large variant .d-btn--lg: 48 px circle shown at 14 px, centre 31 px in. The pill
+   itself takes Dia's hover: scale 1.02 + a deeper shadow. Leave padding-right ≥ 46 px (62 px large) for the dot. */
+.d-btn { position: relative; transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.d-btn::before { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 10px 28px -10px rgba(36, 18, 84, 0.55); opacity: 0; transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1); pointer-events: none; }
+.d-btn:is(:hover, :focus-visible) { transform: scale(1.02); }
+.d-btn:is(:hover, :focus-visible)::before { opacity: 1; }
+.d-btn__dot {
+  --dot: 32px; --dot-at: 5px; --dot-s: 0.3125;
+  position: absolute; top: 50%; right: var(--dot-at); width: var(--dot); height: var(--dot); margin-top: calc(var(--dot) / -2);
+  display: grid; place-items: center; border-radius: 50%; background: #b8a6ff; color: #0f0e12;
+  transform: scale(var(--dot-s)); transition: transform 450ms cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+.d-btn__dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 calc(10px / var(--dot-s)) rgba(184, 166, 255, 0.7); transition: opacity 450ms cubic-bezier(0.22, 0.7, 0.2, 1); }
+.d-btn__dot svg { opacity: 0; transform: translateX(-3px); transition: opacity 300ms cubic-bezier(0.22, 0.7, 0.2, 1), transform 300ms cubic-bezier(0.22, 0.7, 0.2, 1); }
+.d-btn--lg .d-btn__dot { --dot: 48px; --dot-at: 7px; --dot-s: 0.2917; }
+.d-btn:is(:hover, :focus-visible) .d-btn__dot { transform: none; }
+.d-btn:is(:hover, :focus-visible) .d-btn__dot::after { opacity: 0; }
+.d-btn:is(:hover, :focus-visible) .d-btn__dot svg { opacity: 1; transform: none; transition-delay: 50ms; }
+
+/* ── Nav CTA pop (Halden: dot → circle → pill → label, once the statement is 40 % revealed; effects.tsx sets
+   data-on). <a data-d-navcta class="d-btn"> label <BtnDot/> </a>, 142 × 42, placed absolutely at the nav pill's end
+   so it never moves the links. Clip-path does the stretch (no width/margin animation); it's out of the tab order
+   while hidden. */
+[data-d-navcta] {
+  clip-path: inset(0 0 0 calc(100% - 42px) round 21px); transform: scale(0); transform-origin: 100% 50%; visibility: hidden;
+  transition: transform 350ms cubic-bezier(0.22, 0.7, 0.2, 1), clip-path 350ms cubic-bezier(0.22, 0.7, 0.2, 1), visibility 0s 650ms;
+}
+[data-d-navcta] > :not(.d-btn__dot) { opacity: 0; transition: opacity 200ms ease; }
+[data-d-navcta][data-on] {
+  clip-path: inset(0 round 21px); transform: none; visibility: visible;
+  transition: transform 350ms cubic-bezier(0.22, 0.7, 0.2, 1), clip-path 650ms cubic-bezier(0.22, 0.7, 0.2, 1) 220ms, visibility 0s;
+}
+[data-d-navcta][data-on] > :not(.d-btn__dot) { opacity: 1; transition: opacity 300ms ease 450ms; }
+
+/* ── Three-dot active nav (video-hero prompt): three 3 × 3 dots, 5 px apart, 5 px above the link's bottom. */
+[data-d-nav-active] { position: relative; }
+[data-d-nav-active]::after {
+  content: ""; position: absolute; left: 50%; bottom: 5px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 1px;
+  background: currentColor; box-shadow: -5px 0 0 currentColor, 5px 0 0 currentColor; animation: dFadeIn 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dFadeIn { from { opacity: 0; } }
+
+/* ── Section enter (video-hero prompt's .anim: .85 s from opacity 0, translateY(22px) scale(.98), blur(6px), each with
+   its --d delay). DiaMotion sets data-in once an element is 15 % in view. Hidden only when JS runs (.js), and shown
+   anyway after 4 s if the page never hydrates. Never put it on the hero's H1, wordmark or window (the LCP). */
+@keyframes dEnter { from { opacity: 0; transform: translateY(22px) scale(0.98); filter: blur(6px); } }
+@keyframes dShow { to { opacity: 1; transform: none; filter: none; } }
+.js [data-d-enter]:not([data-in]) { opacity: 0; transform: translateY(22px) scale(0.98); filter: blur(6px); animation: dShow 1ms 4s forwards; }
+[data-d-enter][data-in] { animation: dEnter 850ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) backwards; }
+
+/* ── Aurora step pills (/download): the kit's rise, 20 px over 600 ms, at 200 / 350 / 500 ms. */
+[data-d-pills] > * { --d-rise: 20px; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; }
+[data-d-pills] > :nth-child(1) { animation-delay: 200ms; }
+[data-d-pills] > :nth-child(2) { animation-delay: 350ms; }
+[data-d-pills] > :nth-child(3) { animation-delay: 500ms; }
+
+/* ── Slow zoom (the Brief's Wisteria, Design: 1.00 → 1.06): data-d-zoom-slow on the painting inside a clipping frame;
+   DiaMotion scales it as its frame travels from the viewport's bottom to its top (the dark split's zoom stays in
+   effects.tsx). */
+[data-d-zoom-slow] { transform-origin: 50% 60%; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-d-hero-rise], [data-d-arch]::before, [data-d-pills] > *, [data-d-nav-active]::after, [data-d-hero-bg] { animation: none; }
+  [data-d-hero-bg] { transform: scale(1.04); }
+  [data-d-cta-dock] { --d-flat: 0 !important; --d-glow: 1 !important; }
+  [data-d-step], [data-d-step]::before, [data-d-step] [data-d-step-body], [data-d-shot], [data-d-bgswap], [data-d-swap-ink-on], [data-d-swap-ink] > *,
+  .d-btn, .d-btn::before, .d-btn__dot, .d-btn__dot::after, .d-btn__dot svg, [data-d-navcta], [data-d-navcta] > * { transition: none !important; }
+  .d-btn:is(:hover, :focus-visible) { transform: none; }
+  .js [data-d-shot]:not([data-seen]), .js [data-d-enter]:not([data-in]) { opacity: 1; transform: none; filter: none; animation: none; }
+  [data-d-enter][data-in] { animation: none; }
+  [data-d-zoom-slow] { transform: none !important; }
+}

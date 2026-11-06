@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
  * have no floating Vibe or phone download bar (SPEC §3, §5). Every other page keeps the site-wide chrome these wrap.
  * usePathname is known on the server too, so the right chrome is in the first HTML (no swap after hydration).
  */
-const REDESIGNED_PATHS: readonly string[] = ["/", "/pricing", "/beta"];
+const REDESIGNED_PATHS: readonly string[] = ["/", "/pricing", "/beta", "/lab/d", "/lab/d/pricing"];
 
 function useRedesigned(): boolean {
   return REDESIGNED_PATHS.includes(usePathname());
