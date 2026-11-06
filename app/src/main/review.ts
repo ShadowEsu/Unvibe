@@ -242,8 +242,9 @@ export function initWidget(
     file: session.file,
     lines: code ? code.split('\n').length : 0,
     language: code ? guessLanguage(code) : undefined,
-    // Renderer-local only. The preview never leaves this process and is not persisted here.
-    preview: code ? code.slice(0, 600) : undefined,
+    // Renderer-local only. The preview never leaves this process and is not persisted here. It is the whole selection
+    // up to the same 40,000-character cap the lesson keeps, so the panel's "Show all N lines" shows all of it.
+    preview: code ? code.slice(0, 40_000) : undefined,
     autoStart: Boolean(opts?.autoStart && code && !session.awaitingConfirm) && !consentProvider,
     ...(consentProvider ? { consentProvider } : {}),
     providerName: CONSENT_PROVIDERS[providerInUse()],

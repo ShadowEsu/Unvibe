@@ -12,9 +12,10 @@ import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
-import { selectionSource, selectionTitle } from '../shared/languageName';
+import { languageName, selectionSource, selectionTitle } from '../shared/languageName';
 import { MenuButton, TabStrip, panelMenuItems } from './panelMenu';
 import { LEVELS, LevelChip } from './levelChip';
+import { CodeBlock, PanelActions, PanelToast, TOAST_MS } from './panelBody';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -100,6 +101,10 @@ interface TabState {
   short: boolean;
   /** "More detail": the full-depth text streamed under the short answer, and whether it is shown. */
   detail: DetailState;
+  /** Got it was pressed for this explanation: the button stays pressed and a second press does nothing (Design Q1). */
+  understood: boolean;
+  /** "Show all N lines" is open on the code block. */
+  codeOpen: boolean;
 }
 
 interface DetailState {
@@ -167,6 +172,8 @@ function newTab(id: string, label: string): TabState {
     providerName: CONSENT_PROVIDERS.unvibe,
     short: false,
     detail: NO_DETAIL,
+    understood: false,
+    codeOpen: false,
   };
 }
 
@@ -444,6 +451,9 @@ function Widget() {
   const [usage, setUsage] = useState<UsageState | null>(null);
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
+  // "Understood. Saved to your Library." once main has saved it (Design Q1), for TOAST_MS, on the tab it belongs to.
+  const [toast, setToast] = useState<{ tabId: string; text: string } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
   // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
   const [proOpen, setProOpen] = useState(false);
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
@@ -539,6 +549,11 @@ function Widget() {
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') {
         setProGate(true);
       }
+      if (ev.type === 'understood' && tabId === activeRef.current) {
+        window.clearTimeout(toastTimer.current);
+        setToast({ tabId, text: 'Understood. Saved to your Library.' });
+        toastTimer.current = window.setTimeout(() => setToast(null), TOAST_MS);
+      }
       setTabs((prev) => {
         const tab = prev.find((t) => t.id === tabId);
         if (!tab) return prev;
@@ -574,6 +589,8 @@ function Widget() {
               text: '',
               short: false,
               detail: NO_DETAIL,
+              understood: false,
+              codeOpen: false,
               quiz: null,
               error: '',
               mock: false,
@@ -588,10 +605,12 @@ function Widget() {
             });
           }
           case 'understood':
-            return prev;
+            return patchTab(prev, tabId, { understood: true });
           case 'status':
             playTone('think');
-            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
+            // A follow-up answers within the same saved lesson (resetQuiz false), so Got it stays pressed; a new
+            // explanation (Explain differently, another depth) can be understood again.
+            return patchTab(prev, tabId, { text: '', short: ev.short === true, detail: NO_DETAIL, understood: ev.resetQuiz === false ? tab.understood : false, phase: 'streaming', quiz: ev.resetQuiz === false ? tab.quiz : null, quizHidden: false });
           case 'consentNeeded':
             return patchTab(prev, tabId, { phase: 'aiConsent', consentProvider: ev.provider });
           case 'consent':
@@ -615,7 +634,6 @@ function Widget() {
             });
           case 'quizError':
             return patchTab(prev, tabId, { quiz: { phase: 'failed', error: ev.message } });
-          // understood: no UI reset — Got it collapses separately
           case 'cancelled':
             return patchTab(prev, tabId, { text: '', short: false, detail: NO_DETAIL, quiz: null, phase: 'ready' });
           case 'question':
@@ -1103,13 +1121,13 @@ function Widget() {
             <div className="stage">
             <div className="body" ref={bodyRef} tabIndex={0} role="region" aria-label="Explanation" aria-live="polite" aria-atomic="false">
               {active.meta.preview ? (
-                <section className="code-context" aria-label="Selected code context">
-                  <div className="code-context__head">
-                    <span>Selected code</span>
-                    <span>{active.meta.file || active.meta.language || 'Local selection'}</span>
-                  </div>
-                  <pre tabIndex={0}><code>{active.meta.preview}</code></pre>
-                </section>
+                <CodeBlock
+                  id={`code-${active.id}`}
+                  code={active.meta.preview}
+                  language={languageName(active.meta.language)}
+                  open={active.codeOpen}
+                  onToggle={() => setTabs((prev) => patchTab(prev, activeTabId, { codeOpen: !prev.find((t) => t.id === activeTabId)?.codeOpen }))}
+                />
               ) : null}
               {showText
                 ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
@@ -1295,42 +1313,25 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && (
             <div className="foot">
-              <div className="chips">
-                {phase === 'streaming' && (
-                  <button className="chip" onClick={() => window.unvibe.cancel()}>
-                    Stop generating
-                  </button>
-                )}
-                <button
-                  className="chip chip--ok"
-                  disabled={stillTyping}
-                  onClick={() => {
-                    setBuddyMood('celebrate');
-                    window.unvibe.gotIt();
-                    toggleCollapse();
-                  }}
-                >
-                  Understand ✓
-                </button>
-                <button
-                  className="chip chip--diff"
-                  disabled={stillTyping}
-                  onClick={() => request({ variant: 'different' })}
-                >
-                  Explain differently
-                </button>
-                <button
-                  className="chip chip--test"
-                  disabled={stillTyping}
-                  onClick={() => openQuiz()}
-                >
-                  Test me
-                </button>
-
+              <div className="panel-toast-region" role="status">{toast?.tabId === active.id ? <PanelToast text={toast.text} /> : null}</div>
+              <PanelActions
+                streaming={phase === 'streaming'}
+                busy={stillTyping}
+                understood={active.understood}
+                onStop={() => window.unvibe.cancel()}
+                onGotIt={() => {
+                  // Vibe is happy once and the panel stays open; the toast comes when main has saved it (Design Q1).
+                  setBuddyMood('happy');
+                  setTabs((prev) => patchTab(prev, activeTabId, { understood: true }));
+                  window.unvibe.gotIt();
+                }}
+                onDifferent={() => request({ variant: 'different' })}
+                onTestMe={() => openQuiz()}
+              >
                 {active.mock && (
                   <span className="mock-note">mock AI. Set ANTHROPIC_API_KEY for real explanations</span>
                 )}
-              </div>
+              </PanelActions>
               {active.originOpen ? (
                 <div className="origin-panel" role="region" aria-label="Why this exists">
                   <div className="ask-sandbox__label">Source facts</div>
@@ -1384,7 +1385,6 @@ function Widget() {
                 </div>
               ) : null}
               <div className="ask-sandbox">
-                <div className="ask-sandbox__label">Ask a follow-up</div>
                 <div className="askrow">
                   <input
                     placeholder="Why does this exist? What breaks if I remove it?"
