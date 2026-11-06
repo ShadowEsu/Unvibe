@@ -207,9 +207,10 @@ html:has(.n-home) body::before { background: var(--n-page, #fbfaf7); }
 .ngal__grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; margin-top: 48px; }
 .ngal__card { grid-column: span 2; display: flex; flex-direction: column; margin: 0; padding: 12px 12px 18px; border-radius: 22px; background: #fff; box-shadow: 0 0 0 1px var(--n-line); }
 .ngal__card--wide { grid-column: span 4; }
-/* 7 cards over 3 rows: the wide card and one card, three cards, then the last two centred. */
-.ngal__card:nth-child(6) { grid-column: 2 / span 2; }
-.ngal__card:nth-child(7) { grid-column: 4 / span 2; }
+/* 7 cards over 3 rows, grouped by picture shape so no card stretches around empty space: the wide Depths card and
+   Follow-up (panels), Test me and Key check centred (panels), then Library, Briefs and Privacy (windows). */
+.ngal__card:nth-child(3) { grid-column: 2 / span 2; }
+.ngal__card:nth-child(4) { grid-column: 4 / span 2; }
 .ngal__window { overflow: hidden; border-radius: 14px; background: var(--n-ground); box-shadow: 0 0 0 1px var(--n-line); }
 .ngal__bar { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-bottom: 1px solid var(--n-line); }
 .ngal__bar i { width: 9px; height: 9px; border-radius: 50%; background: rgb(20 20 20 / 0.14); }
@@ -364,6 +365,6 @@ html:not(.js) .ndemo__plain { opacity: 0; }
   .nprice__price { font-size: 38px; }
   .nband { margin-top: 96px; padding: 80px 0 88px; }
   .ngal__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 32px; }
-  .ngal__card, .ngal__card--wide, .ngal__card:nth-child(6), .ngal__card:nth-child(7) { grid-column: auto; }
+  .ngal__card, .ngal__card--wide, .ngal__card:nth-child(3), .ngal__card:nth-child(4) { grid-column: auto; }
   .ngal__shots { grid-auto-flow: row; }
 }

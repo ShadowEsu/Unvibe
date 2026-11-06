@@ -62,6 +62,12 @@ export const GALLERY: readonly GalleryCard[] = [
     shots: [{ src: `${CAPTURE_DIR}/panel-test-me.webp`, ...PANEL, alt: "Unvibe's Test me question about the debounce sample, with its answer choices, beside the explanation." }],
   },
   {
+    id: "key-check",
+    title: "Key check",
+    line: "Code with a known key in it is stopped on your computer. Nothing is sent.",
+    shots: [KEY_CHECK_SHOT],
+  },
+  {
     id: "library",
     title: "Library",
     line: "Every explanation is saved on your computer, to read again later.",
@@ -72,12 +78,6 @@ export const GALLERY: readonly GalleryCard[] = [
     title: "Briefs",
     line: "A recap of what changed in a project, read from local git.",
     shots: [{ src: `${CAPTURE_DIR}/briefs-open.webp`, ...WINDOW, alt: "Unvibe's Change Brief for a sample project's change to upload.js: 1 file changed, 4 lines added." }],
-  },
-  {
-    id: "key-check",
-    title: "Key check",
-    line: "Code with a known key in it is stopped on your computer. Nothing is sent.",
-    shots: [KEY_CHECK_SHOT],
   },
   {
     id: "privacy",
