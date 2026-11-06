@@ -6,7 +6,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/listed-on",
   title: "Where Unvibe Is Listed",
   absolute: true,
-  description: "The directories and launch sites that list Unvibe, and the ones reviewing it.",
+  description: "The directories and launch sites that list Unvibe, and the ones it is being submitted to.",
 });
 
 /** Plain server-rendered links: the directories' checkers read this page's HTML, not a script. */
@@ -16,7 +16,7 @@ export default function ListedOnPage() {
       <header className="fos-page__head">
         <div>
           <p className="pstats__eyebrow">Listed on</p>
-          <h1>Where to find Unvibe.</h1>
+          <h1>Unvibe on directories and launch sites.</h1>
           <p className="fos-page__lead">Directories and launch sites with a page about Unvibe.</p>
         </div>
       </header>
@@ -25,7 +25,7 @@ export default function ListedOnPage() {
         <ul className="listed-on__list">
           {listingLinks.map((listing) => (
             <li key={listing.href}>
-              <a href={listing.href} target="_blank" rel="noopener">{listing.name}</a>
+              <a href={listing.href} target="_blank" rel="noopener noreferrer">{listing.name}</a>
             </li>
           ))}
         </ul>
