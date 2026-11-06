@@ -396,10 +396,10 @@
 
   /* ── Sign in and onboarding ────────────────────────────────────────────── */
   /* SF dusk, matching the website hero palette, instead of sticker blobs. */
-  & .login, & .ob {
+  & .login {
     background: linear-gradient(160deg, #fde7da 0%, #f8dbe8 34%, #e6defa 68%, #dbe7fa 100%);
   }
-  & .login__card, & .login__local, & .ob__card {
+  & .login__card, & .login__local {
     border: 1.5px solid var(--v-ink); border-radius: 22px; background: var(--v-surface); backdrop-filter: none;
     box-shadow: 6px 6px 0 var(--v-ink); animation: v7Rise 460ms var(--press) both;
   }
@@ -409,33 +409,9 @@
   & .login__local-icon { background: var(--sky); border: 1.5px solid var(--v-ink); color: var(--v-ink); }
   & .login__local-icon svg { stroke: var(--v-ink); }
   & .login__brand { color: var(--v-muted); font: italic 400 20px/1 var(--font-hand); letter-spacing: 0; }
-  & .login h1, & .login h2, & .ob__title { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.045em; color: var(--v-ink); }
+  & .login h1, & .login h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.045em; color: var(--v-ink); }
   & .login__card-copy { color: var(--v-muted); }
   & .field-btn--google { height: 44px; border-radius: 12px; font-weight: 700; }
-  & .ob__title { font-size: 36px; }
-  & .ob__sub { color: var(--v-muted); }
-  & .ob__eyebrow { color: var(--v-muted); font: italic 400 20px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
-  & .ob__step { color: var(--v-faint); }
-  & .ob__dot { height: 6px; background: var(--v-line-2); }
-  & .ob__dot.on { background: var(--lime); box-shadow: inset 0 -1.5px 0 var(--v-ink); }
-  & .ob .field-btn.inline { height: 38px; background: var(--v-ink); border: 1.5px solid var(--v-ink); color: #fff; box-shadow: 0 3px 0 #000; }
-  & .ob .field-btn.inline:hover:not(:disabled) { background: #262626; transform: translateY(-1px); }
-  & .ob .field-btn.inline:active:not(:disabled) { transform: translateY(3px); box-shadow: none; }
-  & .ob__hello-bubble { border: 1.5px solid var(--v-ink); border-radius: 16px 16px 16px 4px; background: var(--v-surface); color: var(--v-ink); font: italic 400 21px/1.15 var(--font-hand); box-shadow: var(--hard-sm); }
-  & .ob__trust, & .ob__signal { border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-sunken); color: var(--v-muted); box-shadow: none; }
-  & .ob__sample { border: 1.5px solid var(--v-ink); border-radius: 14px; background: var(--v-surface); box-shadow: var(--hard-sm); }
-  & .ob__sample-code { background: var(--v-ink); color: #f3f1ea; font-family: var(--font-mono); }
-  & .ob__sample-code span { color: var(--lime); font: italic 400 18px/1 var(--font-hand); }
-  & .ob__scene::after, & .ob__scene-grid, & .ob__scene-code { display: none; }
-  & .ob__scene-strip { display: none; }
-  & .ob__sample-answer b { color: var(--v-ink); font: 750 16px var(--font-display); }
-  & .ob__sample-answer p { color: var(--v-muted); }
-  & .ob__sample-actions span, & .ob__sample-actions button { border: 1.5px solid var(--v-line); background: var(--v-surface); color: var(--v-muted); }
-  & .ob__sample-actions > :first-child { border-color: var(--v-ink); color: var(--v-ink); background: var(--mint); }
-  & .ob__choice { border: 1.5px solid var(--v-line); background: var(--v-surface); border-radius: 14px; }
-  & .ob__choice:hover { border-color: var(--v-ink); }
-  & .ob__choice.on { border-color: var(--v-ink); background: color-mix(in srgb, var(--lime) 35%, #fff); box-shadow: var(--hard-sm); }
-  & .kbd-lg { border: 1.5px solid var(--v-ink); border-bottom-width: 4px; background: var(--v-surface); color: var(--v-ink); }
 
   /* ── Motion: springy, quick, everywhere ────────────────────────────────── */
   & .fade-in { animation: v7Page 420ms var(--press) both; }
@@ -443,7 +419,7 @@
   & .lib-group:nth-child(2) .lib-line, & .lib-group:nth-child(2) .survey-line { animation-delay: 60ms; }
   & .lib-group:nth-child(n+3) .lib-line, & .lib-group:nth-child(n+3) .survey-line { animation-delay: 120ms; }
   & .modal, & .search-palette, & .acct-menu { animation: v7Pop 280ms var(--press) both; }
-  & .serif-em, & .page h1 em, & .ob__title em, & .login h2 em, & .chat-hello h2 em { font: italic 400 1.1em/1 var(--font-hand); letter-spacing: -0.01em; }
+  & .serif-em, & .page h1 em, & .login h2 em, & .chat-hello h2 em { font: italic 400 1.1em/1 var(--font-hand); letter-spacing: -0.01em; }
 }
 
 @keyframes v7Page { from { opacity: 0; transform: translateY(12px) rotate(-0.4deg); } to { opacity: 1; transform: none; } }
@@ -502,101 +478,9 @@
   & .agent-review__note { margin: 0; color: var(--v-faint); font-size: 12px; }
 }
 
-/* ── Onboarding v2: Vibe talks, five quick steps, a live demo ─────────────── */
+/* ── Accessibility permission: the steps under Settings' permission row ─── */
 :root[data-ui="v3"][data-v7] {
-  & .ob2 { display: grid; place-items: center; padding: 28px; overflow: auto; }
-  & .ob2__card { width: min(720px, 100%); padding: 26px 34px 24px; display: grid; gap: 18px; }
-  & .ob2__top { display: flex; align-items: center; gap: 14px; }
-  & .ob2__top .ob__dots { display: flex; flex: 1; gap: 6px; }
-  & .ob2__top .ob__dot { flex: 1; height: 8px; border-radius: 99px; border: 1.5px solid var(--v-ink); background: var(--v-surface); transition: background 300ms ease; }
-  & .ob2__top .ob__dot.on { background: var(--lime); box-shadow: none; }
-  & .ob2__count { font: 700 12px var(--font-mono); color: var(--v-muted); }
-  & .ob2__vibe { display: flex; align-items: center; gap: 16px; }
-  & .ob--scene-0 .ob2__vibe { flex-direction: column; text-align: center; }
-  & .ob2__blob { animation: v7Pop 600ms var(--press) both; }
-  & .ob2__speech {
-    position: relative; flex: 1; margin: 0; padding: 14px 18px; min-height: 58px; border: 1.5px solid var(--v-ink); border-radius: 18px 18px 18px 6px;
-    background: var(--v-surface); box-shadow: var(--hard-sm); color: var(--v-ink); font: italic 400 22px/1.25 var(--font-hand);
-  }
-  & .ob--scene-0 .ob2__speech { border-radius: 18px; max-width: 520px; font-size: 25px; }
-  & .ob2__caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: var(--v-ink); animation: v7Blink 900ms steps(1) infinite; }
-  & .ob2__caret.is-off { display: none; }
-  & .ob2__body { display: grid; gap: 14px; }
-  & .ob--scene-0 .ob2__body { text-align: center; justify-items: center; }
-  & .ob2 .ob__title { margin: 0; font-size: 34px; }
-  & .ob2 .ob__sub { margin: 0; font-size: 15.5px; }
-  & .ob2__form { display: grid; gap: 14px; }
-  & .ob2__form label { display: grid; gap: 6px; font: 650 13.5px var(--font-sans); color: var(--v-ink); }
-  & .ob2__form .field { height: 46px; padding: 0 14px; font-size: 16px; }
-  & .ob2__opt { color: var(--v-faint); font-weight: 500; }
-  & .ob2__note { color: var(--v-muted); font: 500 12.5px/1.4 var(--font-sans); }
-  & .ob2__google { padding: 14px 16px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
-  & .ob2__ok { margin: 0; color: var(--v-good); font-weight: 700; }
-  & .ob2__more { width: min(440px, 100%); justify-self: center; text-align: left; }
-  & .ob2__more summary { cursor: pointer; color: var(--v-muted); font: 600 13px var(--font-sans); }
-  & .ob2__more[open] summary { margin-bottom: 10px; }
-  & .ob2 .ob__integrations { max-height: 300px; overflow: auto; padding-right: 4px; }
-  & .ob2 .ob__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-
-  /* First run: a real sample to explain, one level question, then your own code */
-  & .ob2__try { display: grid; gap: 12px; justify-items: stretch; }
-  & .obd__editor { position: relative; border: 1.5px solid var(--v-ink); border-radius: 14px; background: #151514; overflow: hidden; box-shadow: var(--hard-sm); text-align: left; }
-  & .obd__bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #2c2c29; }
-  & .obd__bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
-  & .obd__bar i:nth-child(2) { background: var(--sun); }
-  & .obd__bar i:nth-child(3) { background: var(--lime); }
-  & .obd__bar span { margin-left: 4px; color: #9e9a92; font: 500 11.5px var(--font-mono); }
-  & .obd__editor pre { margin: 0; padding: 12px 14px; color: #f4f2ea; font: 13px/1.7 var(--font-mono); white-space: pre; overflow: auto; }
-  & .ob2__explain { justify-self: center; min-width: 220px; height: 46px; font-size: 16px; background: var(--lime); }
-  & .ob2__explain:disabled { opacity: 1; background: var(--v-sunken); color: var(--v-muted); }
-  & .ob2__keys { display: flex; justify-content: center; gap: 8px; }
-  & .ob2__keys .kbd-lg { display: grid; place-items: center; min-width: 52px; height: 52px; padding: 0 12px; border-radius: 12px; font: 700 22px var(--font-sans); }
   & .perm-steps { margin: 8px 0 0; font-size: 13.5px; color: var(--v-ink); }
-  & .ob2__level { display: grid; gap: 8px; justify-items: center; margin: 0; padding: 12px 14px; border: 1.5px dashed var(--v-line); border-radius: 14px; background: var(--v-sunken); }
-  & .ob2__level p { margin: 0; font-size: 14.5px; color: var(--v-ink); text-align: center; }
-  & .ob2__choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  /* The paste step (setup's step 3, the next open's OwnCodeWelcome) and the Mac shortcut step: a
-     fixed width keeps the card 720 px in every state (the onboarding grid sizes its card to the
-     content), Not now alone on the right. */
-  & .ob2__paste { width: 652px; max-width: 100%; grid-template-columns: minmax(0, 1fr); }
-  & .ob2__offer {
-    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px 22px; align-items: center; padding: 22px 24px;
-    border: 2px solid var(--v-ink); border-radius: 18px; background: var(--v-surface); box-shadow: 4px 4px 0 var(--v-ink); text-align: left;
-  }
-  & .ob2__offer h3 { margin: 0; font: 700 21px/1.2 var(--font-sans); letter-spacing: -0.015em; color: var(--v-ink); }
-  & .ob2__offer .shortcut-pill + h3 { margin-top: 10px; }
-  & .ob2__offer p { margin: 4px 0 0; font: 500 14.5px/1.45 var(--font-sans); color: var(--v-muted); }
-  & .ob2__offer .ob2__keys { justify-content: flex-start; }
-  & .ob2__offer .ob2__why {
-    grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 12px;
-    background: var(--v-sunken); color: var(--v-ink); font-size: 13.5px;
-  }
-  & .ob2__why svg { flex: none; margin-top: 1px; }
-  & .ob2__offer-acts { grid-column: 1 / -1; display: flex; }
-  & .ob2 .ob2__lime { height: 42px; padding: 0 18px; background: var(--lime); border: 2px solid var(--v-ink); color: var(--v-ink); font-size: 14.5px; box-shadow: 3px 3px 0 var(--v-ink); }
-  & .ob2 .ob2__lime:hover:not(:disabled) { background: var(--lime); box-shadow: 4px 4px 0 var(--v-ink); }
-  & .ob2 .ob2__note { justify-self: center; text-align: center; font-size: 13.5px; }
-  & .ob2 .shortcut-guide { color: var(--v-ink); }
-  & .ob2 .shortcut-guide__fix p, & .ob2 .shortcut-art figcaption { color: var(--v-muted); }
-  & .ob2 .ob2__actions--end { justify-content: flex-end; }
-  & .ob2__shortcut { justify-self: center; text-align: center; }
-
-  & .ob__confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
-  & .ob__confetti i { position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border: 1.5px solid var(--v-ink); border-radius: 3px; background: var(--lime); animation: obConfetti 1.6s cubic-bezier(.2,.7,.4,1) forwards; animation-delay: calc(var(--i) * 18ms); }
-  & .ob__confetti i:nth-child(4n+2) { background: var(--sky); }
-  & .ob__confetti i:nth-child(4n+3) { background: var(--sun); }
-  & .ob__confetti i:nth-child(4n+4) { background: var(--lilac); border-radius: 50%; width: 12px; height: 12px; }
-}
-@keyframes v7Blink { 50% { opacity: 0; } }
-@keyframes obConfetti { to { transform: translateY(105vh) rotate(540deg); } }
-:root[data-ui="v3"][data-v7] {
-  & .ob2__opt { font-style: normal; }
-  & .ob2__form { width: min(440px, 100%); justify-self: center; }
-  & .ob2__speech { min-height: 0; }
-  & .ob__confetti i:nth-child(3n) { animation-duration: 2s; margin-left: -30px; }
-  & .ob__confetti i:nth-child(3n+1) { animation-duration: 1.3s; margin-left: 20px; }
-  & .ob__confetti i:nth-child(5n) { top: -60px; }
-  & .ob__confetti i:nth-child(7n) { top: -120px; }
 }
 
 /* ── In-app feedback card ─────────────────────────────────────────────────── */
@@ -732,8 +616,6 @@
 
   /* Sign in and onboarding scroll on short windows instead of clipping the card. */
   & .login { overflow-y: auto; align-items: safe center; padding: 32px 0; }
-  & .ob { overflow-y: auto; }
-  & .ob2 { align-items: safe center; justify-items: center; }
 
   /* Device sign-in fallback buttons (login and Share). */
   & .inline-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

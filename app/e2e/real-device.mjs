@@ -189,11 +189,11 @@ const setupSteps = os === 'windows' ? 3 : 4;
 // Windows pastes its own code at step 3 (F-16: the step that made Windows setup explain own code).
 const SETUP_PASTE = 'function clamp(n, lo, hi) {\n  return Math.min(hi, Math.max(lo, n));\n}';
 try {
-  await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
+  await companion.locator('.onboard__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
   await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
-  await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
   await clickText(companion, 'Explain this code');
   log(true, 'Onboarding: hello and sample');
@@ -209,7 +209,7 @@ const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
   await clickText(companion, 'Next');
-  await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator('.onboard__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
   if (os === 'windows') {
@@ -227,7 +227,7 @@ try {
     // Nothing is pasted on a Mac here, so step 3 finishes with Skip for now (no step 4).
     await clickText(companion, 'Skip for now');
   }
-  await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
+  await companion.locator('.onboard').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
   log(true, 'Onboarding: every step');
 } catch (e) { log(false, 'Onboarding: every step', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }

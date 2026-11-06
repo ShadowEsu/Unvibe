@@ -262,23 +262,21 @@
 :root[data-ui="v3"] .lib-group__label { margin: 0 0 10px; }
 :root[data-ui="v3"] .lib-group__rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; border-top: 0; }
 :root[data-ui="v3"] .lib-row { margin: 0; }
-:root[data-ui="v3"] .login, :root[data-ui="v3"] .ob {
+:root[data-ui="v3"] .login {
   background:
     radial-gradient(900px 520px at 10% -10%, rgb(167 139 250 / 0.40), transparent 60%),
     radial-gradient(700px 480px at 100% 10%, rgb(96 165 250 / 0.30), transparent 60%),
     radial-gradient(760px 520px at 60% 115%, rgb(244 114 182 / 0.26), transparent 60%),
     var(--v-bg);
 }
-:root[data-ui="v3"] .login__card, :root[data-ui="v3"] .login__local, :root[data-ui="v3"] .ob__card {
+:root[data-ui="v3"] .login__card, :root[data-ui="v3"] .login__local {
   background: rgb(255 255 255 / 0.82); backdrop-filter: blur(20px); border-color: rgb(255 255 255 / 0.9);
   animation: v5RiseIn 560ms var(--ease-emphatic) both;
 }
 :root[data-ui="v3"] .login__local { animation-delay: 90ms; }
-:root[data-ui="v3"] .login h1, :root[data-ui="v3"] .login h2, :root[data-ui="v3"] .ob__title { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.035em; }
+:root[data-ui="v3"] .login h1, :root[data-ui="v3"] .login h2 { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.035em; }
 :root[data-ui="v3"] .login__local-icon { background: var(--grad); border: 0; color: #fff; }
 :root[data-ui="v3"] .login__local-icon svg { stroke: #fff; }
-:root[data-ui="v3"] .ob__dot.on { background: var(--grad); }
-:root[data-ui="v3"] .ob .field-btn.inline { background: var(--grad); border: 0; color: #fff; }
 :root[data-ui="v3"] .survey-pick {
   border: 1px solid var(--v-line); border-radius: 16px; background: var(--v-surface); box-shadow: var(--v-shadow);
   position: relative; overflow: hidden; transition: transform 200ms var(--ease-emphatic), box-shadow 200ms ease, border-color 200ms ease;

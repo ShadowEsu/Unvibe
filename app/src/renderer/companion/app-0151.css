@@ -1,7 +1,8 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Unvibe 0.1.51 companion: sidebar, shell and Home (frozen rounds/06/app.html §5, SPEC §2-§4,
-   Design answers Q5, Q8, Q9, Q11). Loads after v7.css; every rule starts at `.layout` so it beats
-   v7's own shape by one class. Inter only, ink on warm paper; violet is the one action, lime the
+   Unvibe 0.1.51 companion: sidebar, shell, Home and first run (frozen rounds/06/app.html §5-§7, SPEC
+   §2-§4, Design answers Q4, Q5, Q8, Q9, Q10, Q11). Loads after v7.css; every rule starts at `.layout`
+   (first run: `.onboard`, which shows before the layout) so it beats v7's own shape by one class.
+   Inter only, ink on warm paper; violet is the one action, lime the
    understood mark. Parts outside the mockup (search, Beta, Settings, account row, the top bar)
    follow Q11: restyled with the same tokens, no lime or violet.
    ───────────────────────────────────────────────────────────────────────────── */
@@ -164,3 +165,152 @@
 :root[data-ui="v3"][data-v7] .layout .home-row__pill { flex: none; margin-left: auto; padding: 6px 9px; border-radius: 999px; font: 500 12px/1 var(--u-sans); letter-spacing: 0; background: #f1ecff; color: var(--u-violet-lip); }
 :root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="understood"] { background: #eef6cf; color: #3c5200; }
 :root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 13px 0; border-top: 1px solid var(--u-plate); font: 400 14px/1.4 var(--u-sans); color: var(--u-ink-3); }
+
+/* ── First run (rounds/06 screens 6-7): steps, Vibe and a big bubble, one heading, one forward button ── */
+/* Vibe and the footer both take the free height (margin-top: auto), so a short step sits in the middle of the window
+   and a tall one (the shortcut guide) scrolls. Steps change without a transition: SPEC §6 names no step motion. */
+:root[data-ui="v3"][data-v7] .onboard {
+  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; overflow-y: auto;
+  padding: 56px clamp(24px, 8vw, 80px) 0; background: var(--u-canvas); color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
+}
+:root[data-ui="v3"][data-v7] .onboard__top { display: grid; justify-items: center; gap: 14px; }
+:root[data-ui="v3"][data-v7] .onboard__steps { display: flex; gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard__steps i { width: 56px; height: 4px; border-radius: 4px; background: var(--u-plate); }
+:root[data-ui="v3"][data-v7] .onboard__steps i.on { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .onboard__count { font: 500 13px/1 var(--u-mono); color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .onboard__vibe { display: flex; align-items: flex-end; gap: 16px; margin-top: auto; padding-top: 24px; }
+:root[data-ui="v3"][data-v7] .onboard__vibe .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .onboard__vibe .vibe-bubble { max-width: 330px; margin-bottom: 28px; text-wrap: balance; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__vibe .vibe-bubble { margin-bottom: 48px; }
+:root[data-ui="v3"][data-v7] .onboard .fade-in { animation: none; }
+:root[data-ui="v3"][data-v7] .onboard__body { display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 24px; }
+:root[data-ui="v3"][data-v7] .onboard h1 {
+  max-width: 600px; margin: 0; font: 600 40px/1.12 var(--u-sans); letter-spacing: -0.035em; color: var(--u-ink); text-align: center; outline: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__lead { max-width: 520px; margin: 12px 0 0; font: 400 15px/1.5 var(--u-sans); color: var(--u-ink-2); text-align: center; }
+
+/* Hello: the name, then where they heard of Unvibe with Security 0046's line under it (Q4). */
+:root[data-ui="v3"][data-v7] .onboard__form { display: grid; gap: 22px; width: min(420px, 100%); margin-top: 30px; }
+:root[data-ui="v3"][data-v7] .onboard__form label { display: grid; gap: 10px; }
+:root[data-ui="v3"][data-v7] .onboard__form label > span:first-child { font: 500 14px/1 var(--u-sans); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__form small { font: inherit; font-weight: 400; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .onboard__form input {
+  width: 100%; height: 50px; box-sizing: border-box; margin: 0; padding: 0 16px; border: 0; border-radius: var(--u-radius-control);
+  background: #fff; color: var(--u-ink); font: 400 16px/1 var(--u-sans); box-shadow: inset 0 0 0 1.5px var(--u-plate); outline: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__form input::placeholder { color: var(--u-ink-3); }
+/* The violet edge (6.5:1 on white) is the focus mark, so v7's global ink outline would draw a second ring. */
+:root[data-ui="v3"][data-v7] .onboard__form input:is(:focus, :focus-visible) { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-violet), 0 0 0 4px rgb(90 63 224 / 0.12); }
+:root[data-ui="v3"][data-v7] .onboard__note { font: 400 13px/1.45 var(--u-sans); color: var(--u-ink-3); }
+
+/* Buttons: the mock's .btn-primary (one per step), .btn-quiet (Back and the ways out) and .btn-outline (the level
+   choices and the shortcut guide's fixes). Pressing drops the primary onto its lip, like Home's. */
+:root[data-ui="v3"][data-v7] .onboard__primary,
+:root[data-ui="v3"][data-v7] .onboard__quiet,
+:root[data-ui="v3"][data-v7] .onboard__back,
+:root[data-ui="v3"][data-v7] .onboard__outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; border: 0; border-radius: var(--u-radius-control);
+  font: 500 15px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap; cursor: pointer; transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__primary { height: 44px; padding: 0 18px; background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .onboard__primary:hover:not(:disabled) { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .onboard__primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .onboard__quiet,
+:root[data-ui="v3"][data-v7] .onboard__back { height: 36px; padding: 0 10px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard__quiet:hover:not(:disabled, [aria-disabled="true"]),
+:root[data-ui="v3"][data-v7] .onboard__back:hover:not(:disabled) { background: var(--u-band); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__outline {
+  height: 40px; padding: 0 14px; background: var(--u-canvas); color: var(--u-ink); font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate);
+}
+:root[data-ui="v3"][data-v7] .onboard__outline:hover:not(:disabled) { background: #fff; }
+:root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline):disabled { cursor: default; opacity: 0.55; }
+/* "Explaining in the panel →" keeps focus and stays readable: a status, so ink-3 rather than a faded control. */
+:root[data-ui="v3"][data-v7] .onboard__quiet[aria-disabled="true"] { cursor: default; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline, summary):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
+
+/* Sticks to the window's bottom edge when a step is taller than the window (the level question at 760 px, anything
+   at the 620 px minimum), so the forward button never scrolls away; in a short step it sits in place. */
+:root[data-ui="v3"][data-v7] .onboard__foot {
+  position: sticky; bottom: 0; z-index: 1; display: flex; align-self: stretch; justify-content: space-between; align-items: flex-start; gap: 16px;
+  margin-top: auto; padding: 28px 0 36px; background: var(--u-canvas);
+}
+:root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
+:root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
+/* Q11: the Google disclosure sits right under Let's go, quiet ink-2 13 px; open, its form lines up on the right. */
+:root[data-ui="v3"][data-v7] .onboard__google { display: grid; justify-items: end; gap: 10px; text-align: right; }
+:root[data-ui="v3"][data-v7] .onboard__signed { margin: 0; font: 500 13px/1.4 var(--u-sans); color: var(--u-ink-2); }
+
+/* Try it: the sample in a dark code card, one primary to explain it, then the one level question. */
+:root[data-ui="v3"][data-v7] .onboard__try { display: grid; justify-items: center; gap: 18px; width: min(560px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard__try .onboard__lead { margin: 0; }
+:root[data-ui="v3"][data-v7] .onboard__editor { width: 100%; overflow: hidden; border-radius: 16px; background: var(--u-code); color: var(--u-dark-ink); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-bottom: 1px solid var(--u-dark-line); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar i { width: 10px; height: 10px; border-radius: 50%; background: rgb(255 255 255 / 0.18); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar span { margin-left: 8px; font: 500 12.5px/1 var(--u-mono); color: var(--u-dark-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__editor pre { margin: 0; padding: 16px 18px; overflow-x: auto; font: 400 13px/1.6 var(--u-mono); color: var(--u-dark-ink); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__level { display: grid; gap: 12px; width: 100%; box-sizing: border-box; padding: 18px 20px; border-radius: var(--u-radius-card); background: var(--u-band); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__level p { margin: 0; font: 500 15px/1.4 var(--u-sans); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__choices { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Your code: one paste target in the band look; the keys are the same caps as Home's. */
+:root[data-ui="v3"][data-v7] .onboard__paste { display: grid; gap: 14px; width: min(560px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard__paste .onboard__lead { justify-self: center; margin: 0; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box {
+  border: 2px dashed rgb(110 107 100 / 0.45); border-radius: var(--u-radius-card); background: var(--u-band); color: var(--u-ink); font-family: var(--u-sans);
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box:is(:focus, :focus-visible) { outline: none; border-style: solid; border-color: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.12); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box b { font: 600 19px/1.3 var(--u-sans); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__key {
+  min-width: 44px; height: 44px; border: 0; border-radius: var(--u-radius-control); background: #fff; color: var(--u-ink);
+  font: 600 17px/1 var(--u-sans); box-shadow: inset 0 0 0 1.5px var(--u-ink), 0 4px 0 var(--u-ink);
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__hint { color: var(--u-ink-2); font: 400 14px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill { border: 0; background: #fff; color: var(--u-ink); font: 500 13px/1 var(--u-sans); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill i { background: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.16); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__or { color: var(--u-ink-2); font: 400 14px/1.4 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__link { color: var(--u-ink); font: 500 14px/1.4 var(--u-sans); text-decoration-color: var(--u-plate); text-decoration-thickness: 1.5px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box pre { border: 0; border-radius: 12px; background: #fff; color: var(--u-ink); font-family: var(--u-mono); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__error { color: #b42318; font: 500 13.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard__paste > .onboard__more { justify-self: center; }
+:root[data-ui="v3"][data-v7] .onboard__integrations { margin-top: 12px; text-align: left; }
+
+/* Shortcut (Mac): the permission card of screen 7 (keycaps, what it does, "Allowed" once on), the why, one primary. */
+:root[data-ui="v3"][data-v7] .onboard__perm {
+  display: flex; align-items: center; gap: 16px; width: min(560px, 100%); box-sizing: border-box; margin-top: 32px; padding: 22px 24px;
+  border-radius: var(--u-radius-card); background: var(--u-band); text-align: left;
+}
+:root[data-ui="v3"][data-v7] .onboard__caps { display: flex; flex: none; gap: 8px; padding-bottom: 4px; }
+:root[data-ui="v3"][data-v7] .onboard__caps kbd {
+  display: grid; place-items: center; min-width: 52px; height: 52px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px;
+  background: #fff; color: var(--u-ink); font: 600 18px/1 var(--u-sans); letter-spacing: 0; box-shadow: inset 0 0 0 1.5px var(--u-ink), 0 4px 0 var(--u-ink);
+}
+:root[data-ui="v3"][data-v7] .onboard__perm-text { display: grid; gap: 2px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .onboard__perm-text b { font: 600 15px/1.3 var(--u-sans); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__perm-text small { font: 400 13px/1.4 var(--u-sans); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__ok { flex: none; margin-left: auto; padding: 7px 10px; border-radius: var(--u-radius-chip); background: #eef6cf; color: #3c5200; font: 500 13px/1 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard__why { display: flex; gap: 10px; width: min(560px, 100%); box-sizing: border-box; margin: 16px 0 0; padding: 0 4px; font: 400 13px/1.5 var(--u-sans); color: var(--u-ink-2); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__why svg { flex: none; margin-top: 2px; }
+:root[data-ui="v3"][data-v7] .onboard__why + .onboard__primary { margin-top: 24px; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide { width: min(860px, 100%); color: var(--u-ink); font-family: var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__steps li { font: 400 14.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__fix,
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art figcaption { color: var(--u-ink-2); font-family: var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill { border: 0; background: #fff; color: var(--u-ink); font: 500 13px/1 var(--u-sans); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill--busy i { background: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.16); }
+
+/* Finish: 48 pieces fall once (SPEC §4); setup skips them under reduced motion and companion.css stops every animation. */
+:root[data-ui="v3"][data-v7] .onboard__confetti { position: fixed; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i {
+  position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border-radius: 3px; background: var(--u-lime);
+  animation: onboardConfetti 1.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; animation-delay: calc(var(--i) * 18ms);
+}
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+2) { background: var(--u-lilac); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+3) { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+4) { width: 12px; height: 12px; border-radius: 50%; background: var(--u-amber); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n) { animation-duration: 2s; margin-left: -30px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n+1) { animation-duration: 1.3s; margin-left: 20px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(5n) { top: -60px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(7n) { top: -120px; }
+@keyframes onboardConfetti { to { transform: translateY(105vh) rotate(540deg); } }

@@ -238,13 +238,13 @@ mark(`app open ${version}`);
 // A Mac's setup has 4 steps (paste your own code, then the shortcut offer); Windows has 3.
 const steps = process.platform === 'win32' ? 3 : 4;
 const firstRun = await step('onboarding', async () => {
-  await companion.locator('.ob2__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
+  await companion.locator('.onboard__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
   await sleep(800);
   await shot(companion, 'onboarding-hello');
   // A neutral name: the greeting and sidebar show it in every published frame and screenshot.
   await enterText(companion.getByPlaceholder('Your name'), 'Sam');
   await button(companion, "Let's go").click();
-  await companion.locator('.ob2__count').filter({ hasText: `2 / ${steps}` }).waitFor();
+  await companion.locator('.onboard__count').filter({ hasText: `2 / ${steps}` }).waitFor();
   await sleep(1200);
   await shot(companion, 'onboarding-try-it');
   await button(companion, 'Explain this code').click();
@@ -369,9 +369,9 @@ if (explained) {
 // --- Finish onboarding and tour the companion ------------------------------------------------
 await step('today', async () => {
   await companion.bringToFront();
-  if (await companion.locator('.ob2__count').count()) {
+  if (await companion.locator('.onboard__count').count()) {
     await button(companion, 'Next').click();
-    await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).waitFor();
+    await companion.locator('.onboard__count').filter({ hasText: `3 / ${steps}` }).waitFor();
     await sleep(1000);
     await shot(companion, 'onboarding-anywhere');
     // Step 3 is the paste target on both systems; nothing is pasted here, so Skip for now finishes setup.
