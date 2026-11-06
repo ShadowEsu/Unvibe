@@ -1,8 +1,23 @@
 -- QA helper for qa-gatekeeper-proof.yml, run with osascript.
---   find     prints "found x y w h" (screen points) for System Settings' "Open Anyway" button, or "notfound"
---   scroll   the same, after asking macOS to scroll the button into view (AXScrollToVisible)
---   texts    every static text in System Settings' window that mentions Unvibe, one per line
---   grow     moves the window to the top left and makes it as tall as the screen allows
+--   grow     moves System Settings' window to the top left and makes it as tall as the screen allows
+--   anchor   scrolls the blocked-app message (static text naming Unvibe) into view; prints "found x y w h" or "notfound"
+--   find     prints "found x y w h" for the "Open Anyway" control (name, title or description), or "notfound"
+--   press    clicks that control; prints "pressed" or "notfound"
+--   texts    every static text in the window that mentions Unvibe, one per line
+on matchesOpenAnyway(e)
+	tell application "System Events"
+		repeat with k in {"name", "title", "description"}
+			try
+				if (k as text) is "name" then set v to name of e as text
+				if (k as text) is "title" then set v to value of attribute "AXTitle" of e as text
+				if (k as text) is "description" then set v to description of e as text
+				if v contains "Open Anyway" then return true
+			end try
+		end repeat
+	end tell
+	return false
+end matchesOpenAnyway
+
 on run argv
 	set mode to "find"
 	if (count of argv) > 0 then set mode to item 1 of argv
@@ -12,11 +27,12 @@ on run argv
 		tell process "System Settings"
 			if mode is "grow" then
 				try
-					set position of window 1 to {120, 40}
-					set {w, h} to size of window 1
-					set size of window 1 to {w, 1000}
+					set position of window 1 to {120, 30}
+					set s to size of window 1
+					set size of window 1 to {item 1 of s, 720}
 				end try
-				return "size " & ((item 1 of (size of window 1)) as integer) & " " & ((item 2 of (size of window 1)) as integer)
+				set s to size of window 1
+				return "size " & ((item 1 of s) as integer) & " " & ((item 2 of s) as integer)
 			end if
 			set els to entire contents of window 1
 			set found to {}
@@ -28,26 +44,31 @@ on run argv
 							set v to value of e as text
 							if v contains "Unvibe" then set end of found to v
 						end if
-					else if r is "AXButton" then
-						set n to ""
-						try
-							set n to name of e as text
-						end try
-						set d to ""
-						try
-							set d to description of e as text
-						end try
-						if n is "Open Anyway" or d is "Open Anyway" then
-							if mode is "scroll" then
+					else if mode is "anchor" then
+						if r is "AXStaticText" then
+							set v to value of e as text
+							if v contains "Unvibe" then
 								try
 									perform action "AXScrollToVisible" of e
 								end try
 								delay 0.8
+								set p to position of e
+								set s to size of e
+								return "found " & ((item 1 of p) as integer) & " " & ((item 2 of p) as integer) & " " & ((item 1 of s) as integer) & " " & ((item 2 of s) as integer)
 							end if
-							set p to position of e
-							set s to size of e
-							return "found " & ((item 1 of p) as integer) & " " & ((item 2 of p) as integer) & " " & ((item 1 of s) as integer) & " " & ((item 2 of s) as integer)
 						end if
+					else if r is not "AXStaticText" and my matchesOpenAnyway(e) then
+						if mode is "press" then
+							try
+								perform action "AXPress" of e
+							on error
+								click e
+							end try
+							return "pressed " & r
+						end if
+						set p to position of e
+						set s to size of e
+						return "found " & ((item 1 of p) as integer) & " " & ((item 2 of p) as integer) & " " & ((item 1 of s) as integer) & " " & ((item 2 of s) as integer) & " " & r
 					end if
 				end try
 			end repeat

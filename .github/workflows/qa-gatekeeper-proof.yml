@@ -184,7 +184,9 @@ jobs:
           # (runs 42144225676 and 42145546221 sat here until their time limit).
           ( open /Applications/Unvibe.app 2> "$out/open.txt"; echo "open exit $?" >> "$out/open.txt" ) &
           sleep 8
+          # macOS starts the app suspended (state T) while Gatekeeper's dialog decides (log: "starting stopped process").
           p=$(pgrep -x Unvibe | head -1 || true)
+          st=none; [ -n "$p" ] && st=$(ps -o stat= -p "$p" | tr -d ' ')
           "$W" list > "$out/windows-blocked.txt"
           screencapture -x "$out/dmg-0-full-screen-blocked.png"
           dlg=$("$W" find CoreServicesUIAgent || true)
@@ -199,51 +201,85 @@ jobs:
           t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get name of every button of window 1' > "$out/dialog-buttons.txt" 2>&1 || true
           r "dialog text: $(tr '\n' ' ' < "$out/dialog-text.txt")"
           r "dialog buttons: $(tr '\n' ' ' < "$out/dialog-buttons.txt")"
-          r "Unvibe running after open: ${p:-NO}"
+          r "Unvibe process while the dialog shows: ${p:-none}, state $st (T = started stopped, waiting on Gatekeeper)"
           # Done, the way the person closes it.
           t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1 || true
-          sleep 2
+          sleep 3
+          p2=$(pgrep -x Unvibe | head -1 || true)
+          r "after Done: Unvibe process ${p2:-none}; $(tr '\n' ' ' < "$out/open.txt")"
 
-          # Privacy & Security, scrolled to Open Anyway.
+          # Step 3 of the site's steps: System Settings > Privacy & Security > Open Anyway.
           open "x-apple.systempreferences:com.apple.preference.security"
           sleep 8
           S() { t 60 osascript .github/qa/settings.applescript "$@" 2>&1 | tail -1; }
           r "System Settings window: $(S grow)"
           sleep 1
-          res=$(S scroll); echo "first look: $res"
+          # Bring the blocked-app message (it sits just above Open Anyway) into the window's upper middle.
+          res=$(S anchor); echo "anchor: $res"
           dir=-3
-          for i in $(seq 1 8); do
+          for i in $(seq 1 10); do
             read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
-            want=down; by=0
-            if [[ $res == found* ]]; then
-              read -r _ bx by bw bh <<< "$res"
-              if (( by >= wy + 260 && by + bh <= wy + wh - 40 )); then break; fi
-              (( by + bh > wy + wh - 40 )) || want=up
-            fi
-            lines=$dir; [ "$want" = up ] && lines=$(( -dir ))
+            [[ $res == found* ]] || break
+            read -r _ ax ay aw ah <<< "$res"
+            if (( ay >= wy + 140 && ay <= wy + wh - 220 )); then break; fi
+            lines=$dir; (( ay < wy + 140 )) && lines=$(( -dir ))
             "$W" scroll $(( wx + ww * 2 / 3 )) $(( wy + wh / 2 )) "$lines" 2
             sleep 1
-            res=$(S find)
-            if [[ $res == found* && $want == down && $by -gt 0 ]]; then
-              read -r _ _ by2 _ _ <<< "$res"
-              (( by2 > by )) && dir=$(( -dir ))
-            fi
+            prev=$ay; res=$(S anchor)
+            if [[ $res == found* ]] && (( lines == dir )); then read -r _ _ ay2 _ _ <<< "$res"; (( ay2 > prev )) && dir=$(( -dir )); fi
           done
-          echo "Open Anyway: $res" | tee -a "$out/report.txt"
+          r "blocked-app message: $res"
+          oa=$(S find)
+          r "Open Anyway control: $oa"
           sleep 1
           read -r wid wx wy ww wh <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
           [ "$wid" != 0 ] && screencapture -x -o -l "$wid" "$out/dmg-2-privacy-security-open-anyway.png"
           screencapture -x "$out/dmg-3-full-screen-settings.png"
           S texts > "$out/settings-texts.txt" 2>&1 || true
           r "Privacy & Security text naming Unvibe: $(tr '\n' ' ' < "$out/settings-texts.txt")"
-          log show --last 6m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' > "$out/gk-log.txt" 2>&1 || true
+
+          # What macOS asks after Open Anyway (the site says: confirm, then the Mac password). Nothing is typed;
+          # every prompt is cancelled after its picture, so Unvibe never opens.
+          dialogs() { # <label>: picture and text of each prompt window on screen
+            "$W" list > "$out/windows-$1.txt"
+            screencapture -x "$out/dmg-$1-full.png"
+            for o in CoreServicesUIAgent SecurityAgent coreautha UserNotificationCenter; do
+              d=$("$W" find "$o" || true); [ -n "$d" ] || continue
+              read -r i x y w h <<< "$d"
+              screencapture -x -o -l "$i" "$out/dmg-$1-$o.png"
+              txt=$(t 20 osascript -e "tell application \"System Events\" to tell process \"$o\" to get value of every static text of window 1" 2>&1 | tr '\n' ' ')
+              btn=$(t 20 osascript -e "tell application \"System Events\" to tell process \"$o\" to get name of every button of window 1" 2>&1 | tr '\n' ' ')
+              r "  $1: $o window ${w}x${h}: text: $txt | buttons: $btn"
+            done
+          }
+          if [[ $oa == found* ]]; then
+            r "pressing Open Anyway: $(S press)"
+            sleep 4
+            dialogs 4-after-open-anyway
+            # A confirm prompt with its own Open Anyway: press it once to see what comes next.
+            if t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to get name of every button of window 1' 2>/dev/null | grep -q 'Open Anyway'; then
+              t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Open Anyway" of window 1' > /dev/null 2>&1
+              sleep 4
+              dialogs 5-after-confirm
+            fi
+            for o in SecurityAgent CoreServicesUIAgent; do
+              t 20 osascript -e "tell application \"System Events\" to tell process \"$o\" to click button \"Cancel\" of window 1" > /dev/null 2>&1 || true
+            done
+            t 20 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1 || true
+            sleep 2
+            p3=$(pgrep -x Unvibe | head -1 || true); st3=none; [ -n "$p3" ] && st3=$(ps -o stat= -p "$p3" | tr -d ' ')
+            r "after cancelling: Unvibe process ${p3:-none} (state $st3)"
+          fi
+          log show --last 8m --style compact --predicate 'process == "syspolicyd" OR process == "CoreServicesUIAgent"' > "$out/gk-log.txt" 2>&1 || true
           grep -i -E 'unvibe' "$out/gk-log.txt" | tail -60 > "$out/gk-log-unvibe.txt" || true
           r "syspolicyd/CoreServicesUIAgent log lines naming Unvibe: $(wc -l < "$out/gk-log-unvibe.txt" | tr -d ' ')"
           kill "$shots" 2>/dev/null
-          if [ -z "$p" ] && [ -n "$dlg" ] && grep -q rejected "$out/spctl-app.txt" && [[ $res == found* ]]; then
-            r "PASS  DMG from a browser: blocked with the 'Not Opened' dialog, app not running, Open Anyway shown in Privacy & Security"
+          running_after_done=no; [ -n "$p2" ] && [[ $(ps -o stat= -p "$p2" 2>/dev/null) != *T* ]] && running_after_done=yes
+          if [ -n "$dlg" ] && grep -q 'Done' "$out/dialog-buttons.txt" && grep -q 'could not verify' "$out/dialog-text.txt" \
+            && [ "$running_after_done" = no ] && grep -q rejected "$out/spctl-app.txt" && [[ $oa == found* ]]; then
+            r "PASS  DMG from a browser: 'Not Opened / could not verify' with Done, Unvibe not running after Done, Open Anyway in Privacy & Security"
           else
-            r "CHECK DMG path: running=${p:-no} dialog=${dlg:-none} open_anyway=$res"; exit 1
+            r "CHECK DMG path: dialog=${dlg:-none} running_after_done=$running_after_done open_anyway=$oa"; exit 1
           fi
 
       - name: Flag any install as QA
