@@ -1,0 +1,65 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+import type { KnowledgeObject } from '../src/core/knowledge';
+import { Home, homeRows, homeVibeMood, lessonSource, type HomeLesson, type HomeProps } from '../src/renderer/companion/home';
+
+const noop = () => undefined;
+const props: HomeProps = {
+  shortcutKeys: ['Ctrl', 'Alt', 'U'], shortcut: 'Ctrl+Alt+U', userName: 'Sam Lee', reviews: 3,
+  today: { explained: true, answered: false }, history: [],
+  usage: { used: 8, limit: 50, remaining: 42, resetsAt: '2026-12-01T00:00:00Z', plan: 'trial' },
+  onPlan: noop, onLibrary: noop, onBriefs: noop,
+};
+const home = (over: Partial<HomeProps> = {}) => renderToStaticMarkup(createElement(Home, { ...props, ...over }));
+const lesson = (id: string, over: Partial<HomeLesson> = {}): HomeLesson => ({ id, ts: '2026-11-01T10:00:00Z', title: `Lesson ${id}`, meta: 'Unvibe · Understood', outcome: 'understood', ...over });
+const known = (id: string, freshnessStatus: KnowledgeObject['freshnessStatus']) =>
+  ({ id, title: `Known ${id}`, sourceType: 'explanation', updatedAt: '2026-11-01T10:00:00Z', freshnessStatus, file: `src/${id}.js` }) as KnowledgeObject;
+
+test('Home has one action: the explain card with the shortcut as separate keys', () => {
+  const html = home();
+  assert.equal(html.match(/class="home-card home-cta"/g)?.length, 1);
+  assert.ok(!html.includes('primary-btn'));
+  assert.deepEqual([...html.matchAll(/<kbd>(.*?)<\/kbd>/g)].map((m) => m[1]), ['Ctrl', 'Alt', 'U']);
+});
+
+test('at the limit, the banner takes the card\'s place and its action is the one primary', () => {
+  const html = home({ usage: { ...props.usage!, used: 50, remaining: 0 } });
+  assert.ok(!html.includes('home-cta'));
+  assert.match(html, /class="limit-banner home-card"/);
+  assert.equal(html.match(/class="primary-btn"/g)?.length, 1);
+  assert.match(html, /buddy--sleepy/);
+});
+
+test('Home leaves out Up next, the voice card and the stickers', () => {
+  const html = home({ history: [lesson('a')] });
+  for (const gone of ['Up next', 'Try voice', 'voice-cta', 'sticker', 'today-cols']) assert.ok(!html.includes(gone), gone);
+});
+
+test('the goal line shows each step done or not', () => {
+  const html = home();
+  assert.match(html, /<span class="home-goal__check is-done" role="img" aria-label="Done">✓<\/span> explain 1 piece of code/);
+  assert.match(html, /<span class="home-goal__check" role="img" aria-label="Not done yet"><\/span> answer 1 question/);
+});
+
+test('Vibe waves the first time Home opens on a day, is still after that, and sleeps at the limit', () => {
+  assert.equal(homeVibeMood(null, '2026-11-06', false), 'wave');
+  assert.equal(homeVibeMood('2026-11-05', '2026-11-06', false), 'wave');
+  assert.equal(homeVibeMood('2026-11-06', '2026-11-06', false), 'idle');
+  assert.equal(homeVibeMood('2026-11-05', '2026-11-06', true), 'sleepy');
+});
+
+test('rows: three at most, one of them may need a look again, none before anything is understood', () => {
+  const history = ['a', 'b', 'c', 'd'].map((id) => lesson(id));
+  assert.deepEqual(homeRows([], history).map((row) => row.id), ['a', 'b', 'c']);
+  assert.deepEqual(homeRows([known('k1', 'CURRENT'), known('k2', 'CURRENT'), known('k3', 'CURRENT'), known('s1', 'MAY_BE_STALE'), known('s2', 'STALE')], history)
+    .map((row) => `${row.id}:${row.tone}:${row.pill}`).slice(2), ['s1:review:Review']);
+  assert.deepEqual(homeRows([known('s1', 'MAY_BE_STALE')], [lesson('n', { outcome: 'needs_review' })]), []);
+});
+
+test('a row says where the lesson came from: project and file name', () => {
+  assert.equal(lessonSource({ project: 'sample-app', file: 'src/lib/debounce.js', meta: 'x' }), 'sample-app · debounce.js');
+  assert.equal(lessonSource({ file: 'C:\\work\\totals.js', meta: 'x' }), 'totals.js');
+  assert.equal(lessonSource({ meta: 'Unvibe · Understood' }), 'Unvibe · Understood');
+});

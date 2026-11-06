@@ -68,8 +68,8 @@ for (const name of ['bar', 'widget', 'companion']) {
   const shortcutGuide = readFileSync('src/renderer/shared/shortcutGuide.css', 'utf8');
   const consentForm = readFileSync('src/renderer/shared/consentForm.css', 'utf8');
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
-  // The companion's v3 design layer loads last so it wins over the older layers.
-  const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}\n${readFileSync('src/renderer/companion/v5.css', 'utf8')}\n${readFileSync('src/renderer/companion/v7.css', 'utf8')}` : '';
+  // The companion's v3 design layer loads last so it wins over the older layers; the 0.1.51 redesign (app-0151.css) after v7.
+  const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}\n${readFileSync('src/renderer/companion/v5.css', 'utf8')}\n${readFileSync('src/renderer/companion/v7.css', 'utf8')}\n${readFileSync('src/renderer/companion/app-0151.css', 'utf8')}` : '';
   writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${vibeBubble}\n${pasteTarget}\n${shortcutGuide}\n${consentForm}\n${css}${v3}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|webp|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);

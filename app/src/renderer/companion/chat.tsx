@@ -138,9 +138,7 @@ export function Chat({
   usage,
   onRefresh,
   onOpenAiSettings,
-  voiceTip = false,
 }: {
-  voiceTip?: boolean;
   initialDraft?: string;
   providerLabel: string;
   usingOwnAi: boolean;
@@ -160,7 +158,7 @@ export function Chat({
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [repoLabel, setRepoLabel] = useState('');
   const [saved, setSaved] = useState<SavedThread[]>([]);
-  const [showVoice, setShowVoice] = useState(voiceTip);
+  const [showVoice, setShowVoice] = useState(false);
   const threadRef = useRef(newThreadId());
   const startedRef = useRef(new Date().toISOString());
   // The store's wipe generation when this conversation started; main drops saves from an older one.

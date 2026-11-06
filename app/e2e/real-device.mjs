@@ -276,7 +276,10 @@ try {
 
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
-    await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
+    // Momentum, Plan and Share sit under "More" in the 0.1.51 sidebar.
+    const nav = companion.locator('.side').getByRole('button', { name: page, exact: true });
+    if (!(await nav.isVisible())) await companion.locator('.side').getByRole('button', { name: 'More', exact: true }).click();
+    await nav.click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     assert.equal((await companion.locator('.topbar__title').innerText()).trim(), page);
     log(true, `Page ${page}`);

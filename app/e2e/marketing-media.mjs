@@ -384,7 +384,10 @@ await step('today', async () => {
 
 for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
   await step(page, async () => {
-    await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
+    // Momentum sits under "More" in the 0.1.51 sidebar.
+    const nav = companion.locator('.side').getByRole('button', { name: page, exact: true });
+    if (!(await nav.isVisible())) await companion.locator('.side').getByRole('button', { name: 'More', exact: true }).click();
+    await nav.click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     await sleep(1800);
     await shot(companion, page.toLowerCase().replace(/\s+/g, '-'));

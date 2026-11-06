@@ -91,7 +91,6 @@ const api = {
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
-  feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
   setLearningNote: (input: { id: string; note: string }) => ipcRenderer.invoke('learning:setNote', input),

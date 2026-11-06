@@ -7,14 +7,12 @@ import { linesLabel } from '../../core/linesLabel';
 import { Chat } from './chat';
 import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
-import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
-import { prettyShortcut } from '../shared/prettyShortcut';
+import { prettyShortcut, shortcutCaps } from '../shared/prettyShortcut';
 import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../shared/planStatus';
-import { deviceName, isMac, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
+import { deviceName, isMac, isWindows, modKey, platformAttr, reviewKeyHint } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
-import type { ChangeBrief } from '../../core/changeBrief';
 import type { KnowledgeObject } from '../../core/knowledge';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
@@ -22,6 +20,7 @@ import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { Home, type TodayGoal } from './home';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { SUPPORT_EMAIL } from '../../core/support';
@@ -42,8 +41,6 @@ interface Profile {
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
-/** The daily goal from `learning:today`, derived from saved lessons on this computer. */
-interface TodayGoal { explained: boolean; answered: boolean }
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
@@ -272,18 +269,22 @@ const NAV_SPACES: Array<{ id: PageId; icon: string }> = [
   { id: 'Learn', icon: IC.study },
   { id: 'Quiz', icon: IC.quiz },
   { id: 'Briefings', icon: IC.briefings },
+];
+
+/** Under "More" in the sidebar (frozen `app.html`): open whenever one of these pages is showing. */
+const NAV_MORE: Array<{ id: PageId; icon: string }> = [
   { id: 'Progress', icon: IC.progress },
   { id: 'Plan', icon: IC.plan },
   { id: 'Gift', icon: IC.gift },
 ];
 
-const NAV = [...NAV_PINNED, ...NAV_SPACES];
+const NAV = [...NAV_PINNED, ...NAV_SPACES, ...NAV_MORE];
+const MORE_ICON = 'M5 10h.01 M10 10h.01 M15 10h.01';
 
 
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
-const MIC_ICON = 'M10 3a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 10 3z M5.5 9.5a4.5 4.5 0 0 0 9 0 M10 14v3 M7.5 17h5';
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
 function FadeIn({
@@ -887,12 +888,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
   );
 }
 
-function greetFirst(name?: string): string {
-  const clean = (name ?? '').trim();
-  if (!clean || clean.toLowerCase() === 'there') return '';
-  return clean.split(/\s+/)[0] ?? '';
-}
-
 function pageLabel(id: string): string {
   if (id === 'Home') return 'Today';
   if (id === 'Chat') return 'Ask Vibe';
@@ -902,205 +897,6 @@ function pageLabel(id: string): string {
   if (id === 'Progress') return 'Momentum';
   if (id === 'Gift') return 'Share';
   return id;
-}
-
-/** Today or Yesterday when it is recent, otherwise a short calendar date. */
-function shortDate(iso: string): string {
-  const when = new Date(iso);
-  if (Number.isNaN(when.getTime())) return '';
-  const today = new Date();
-  if (when.toDateString() === today.toDateString()) return 'Today';
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  if (when.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  const sameYear = when.getFullYear() === today.getFullYear();
-  return when.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function dayGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: string; tone: 'current' | 'review' | 'stale' } {
-  if (status === 'CURRENT') return { text: 'Current', tone: 'current' };
-  if (status === 'MAY_BE_STALE') return { text: 'Review', tone: 'review' };
-  return { text: 'Stale', tone: 'stale' };
-}
-
-function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
-  onTryVoice: () => void;
-  today: TodayGoal | null;
-  shortcut: string;
-  userName?: string;
-  profile: Profile | null;
-  feed: FeedItem[];
-  history: LearningItem[];
-  usage: AppUsageLine | null;
-  onPlan: () => void;
-  onNavigate: (page: PageId) => void;
-}) {
-  const [brief, setBrief] = useState<ChangeBrief | null>(null);
-  const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
-  const [proOpen, setProOpen] = useState(false);
-  useEffect(() => {
-    void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
-      const next = result as { ok?: boolean; brief?: ChangeBrief };
-      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
-    });
-    void window.unvibe.listKnowledge().then((result) => {
-      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
-      if (next?.ok) setKnowledge(next.items ?? []);
-    });
-    void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
-  }, []);
-  const first = greetFirst(userName);
-  const explainDisabled = !!usage && usage.remaining <= 0;
-  const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
-  const startReview = () => window.unvibe.companionReview();
-  const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
-  // Until the knowledge index has entries, show the latest saved lessons instead.
-  const saved = savedKnowledge.length
-    ? savedKnowledge.map((item) => ({ id: item.id, title: item.title, meta: item.file || item.repositoryId || item.sourceType, ts: item.updatedAt }))
-    : history.filter((item) => item.outcome !== 'needs_review').slice(0, 5).map((item) => ({ id: item.id, title: item.title, meta: item.file || item.project || item.meta, ts: item.ts }));
-  const stale = knowledge.filter((item) => item.freshnessStatus !== 'CURRENT').slice(0, 4);
-  const briefings = feed.slice(0, 4);
-  const learningSteps: Array<{ id: string; title: string; copy: string; icon: string; done: boolean; run: () => void }> = [
-    { id: '01', title: 'Review a change', copy: `Select code and press ${shortcut}.`, icon: IC.spark, done: (profile?.reviews ?? 0) > 0, run: startReview },
-    { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: (profile?.understood ?? 0) > 0, run: () => onNavigate('Learn') },
-    { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
-    { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
-    { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
-  ];
-  const completedSteps = learningSteps.filter((step) => step.done).length;
-  const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
-  const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
-  // Design audit 2026-10-22 item 5: count what was done, hide zero counters, no streak chip.
-  const chips = [
-    { tone: 'sky', n: profile?.reviews ?? 0, one: 'explanation', many: 'explanations' },
-    { tone: 'lime', n: profile?.linesReviewed ?? 0, one: 'line explained', many: 'lines explained' },
-    { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
-    { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
-  ].filter((chip) => chip.n > 0);
-  const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
-  const note = explainDisabled ? 'out of explains this month, catch you soon'
-    : brief ? 'you changed some code, want the story?'
-      : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : 'ready when you are';
-  return (
-    <div className="today">
-      <header className="today-hero">
-        <Buddy mood={explainDisabled ? 'sleepy' : 'wave'} size={68} follow label="Vibe" />
-        <div className="today-hero__copy">
-          <h1>{dayGreeting()}{first ? <>, <em>{first}.</em></> : <em>.</em>}</h1>
-          <p className="hand-note">{note}</p>
-        </div>
-      </header>
-      {chips.length ? (
-        <div className="stickers" aria-label="Learning overview">
-          {chips.map((chip) => <span key={chip.many} className={`sticker sticker--${chip.tone}`}><b>{chip.n}</b> {chip.n === 1 ? chip.one : chip.many}</span>)}
-        </div>
-      ) : null}
-      {limitOffer && (
-        <div className="limit-banner" role="status">
-          <div>
-            <strong>{limitOffer.title}</strong>
-            <p>{limitOffer.body}</p>
-          </div>
-          <div className="limit-banner__actions">
-            {limitOffer.primaryKind === 'survey' ? (
-              <button type="button" className="primary-btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
-                {limitOffer.primary}
-              </button>
-            ) : (
-              <button type="button" className="primary-btn" onClick={onPlan}>{limitOffer.primary}</button>
-            )}
-            {limitOffer.showPlan && limitOffer.primaryKind === 'survey' ? (
-              <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Pro opens soon'}</button>
-            ) : null}
-          </div>
-        </div>
-      )}
-      <button type="button" className="today-cta" onClick={brief ? () => onNavigate('Briefings') : startReview} disabled={!brief && explainDisabled}>
-        <span className="today-cta__text">
-          <b>{brief ? `Review what changed: ${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'}` : 'Explain any code, right where it is'}</b>
-          <small>{brief
-            ? `${brief.filesChanged} files changed${brief.repo ? ` in ${brief.repo.split(/[\\/]/).filter(Boolean).pop()}` : ''} · ${brief.understandBeforeCommit.length} worth reviewing`
-            : 'Select code in any app. Vibe pops up beside it.'}</small>
-        </span>
-        <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
-      </button>
-      <button type="button" className="voice-cta" onClick={onTryVoice}>
-        <span className="voice-cta__mic" aria-hidden="true"><Icon d={MIC_ICON} /></span>
-        <span className="voice-cta__text">
-          <b>Try voice: ask Vibe out loud</b>
-          <small>{voiceHowTo} No typing.</small>
-        </span>
-        <span className="voice-cta__go" aria-hidden="true">→</span>
-      </button>
-      {today ? <TodayGoalCard goal={today} /> : null}
-      <div className="today-cols">
-        {upNext.length ? (
-          <section className="today-sec">
-            <header><h2>Up next</h2><span>{completedSteps} of {learningSteps.length} done</span></header>
-            <ol className="rows">
-              {upNext.map((step) => (
-                <li key={step.id}>
-                  <button type="button" className={`row${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
-                    <span className="row__mark" aria-hidden="true">{step.id === nextStep.id ? '→' : '○'}</span>
-                    <span className="row__title">{step.title}</span>
-                    <span className="row__meta">{step.copy}</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </section>
-        ) : null}
-        <section className="today-sec">
-          <header><h2>Recently understood</h2><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>See all</button></header>
-          {saved.length ? (
-            <ul className="rows">
-              {saved.map((item) => (
-                <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                  <span className="row__mark" aria-hidden="true">✓</span>
-                  <span className="row__title">{item.title}</span>
-                  <span className="row__meta">{item.meta}</span>
-                  <time dateTime={item.ts}>{shortDate(item.ts)}</time>
-                </button></li>
-              ))}
-              {stale.slice(0, 2).map((item) => {
-                const mark = freshnessLabel(item.freshnessStatus);
-                return (
-                  <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                    <span className="row__mark" aria-hidden="true">!</span>
-                    <span className="row__title">{item.title}</span>
-                    <span className="status-pill" data-tone={mark.tone}>{mark.text}</span>
-                    <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
-                  </button></li>
-                );
-              })}
-            </ul>
-          ) : <p className="rows-empty hand-note">nothing yet. your first explanation lands here!</p>}
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function GoalCheck({ done }: { done: boolean }) {
-  return <span className={`today-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
-}
-
-/** One quiet card: today's two steps. No count of days and no celebration. */
-function TodayGoalCard({ goal }: { goal: TodayGoal }) {
-  return (
-    <section className="today-goal" aria-label="Today's goal">
-      <p className="today-goal__line">
-        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
-      </p>
-    </section>
-  );
 }
 
 function Progress({ profile }: { profile: Profile | null }) {
@@ -1910,6 +1706,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [navOpen, setNavOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const toggleSideRef = useRef<() => void>(() => {});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
@@ -1917,7 +1714,6 @@ function App() {
   const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: reviewKeyHint, sendsSetupProgress: false });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
   const [today, setToday] = useState<TodayGoal | null>(null);
@@ -1925,7 +1721,6 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
   const [askSeed, setAskSeed] = useState('');
-  const [voiceTip, setVoiceTip] = useState(false);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
   /** The service's note after a confirmed account deletion, shown on the sign-in screen until it is left. */
   const [deletionNotice, setDeletionNotice] = useState('');
@@ -1941,10 +1736,9 @@ function App() {
 
   const refresh = async () => {
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
+      const [acct, prof, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
-        window.unvibe.feed(8) as Promise<FeedItem[]>,
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
@@ -1954,7 +1748,7 @@ function App() {
         window.unvibe.appInfo(),
         window.unvibe.ownCodeStep(),
       ]);
-      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
       setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
@@ -2071,12 +1865,23 @@ function App() {
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
   const shortcutLabel = prettyAccel(info.shortcut);
+  const shortcutKeys = shortcutCaps(info.shortcut);
   const isLearnPage = page === 'Learn' || page === 'Study' || page === 'History' || page === 'Quiz';
   const fillPage = isLearnPage || page === 'Chat' || page === 'Briefings';
+  const navButton = (p: { id: PageId; icon: string }, on: boolean) => {
+    const label = pageLabel(p.id);
+    return (
+      <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
+        <Icon d={p.icon} /><span className="nav-label">{label}</span>
+      </button>
+    );
+  };
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
   const sideCompact = sideWidth < 178;
+  // More opens whenever one of its pages is showing (from a link, search or main), so the current page is in view.
+  useEffect(() => { if (NAV_MORE.some((p) => p.id === page)) setMoreOpen(true); }, [page]);
   const sideHidden = settings?.sidebarHidden ?? false;
   toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
   const searchGroups = (() => {
@@ -2164,32 +1969,29 @@ function App() {
       <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
-          <div className="brand"><Buddy size={22} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          <div className="brand"><Buddy size={26} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
           <button type="button" className="side-search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
             <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
             <span className="nav-label">Search</span>
             <kbd>{modKey}K</kbd>
           </button>
-          <nav className="nav nav--top">{NAV_PINNED.map((p) => {
-            const on = p.id === page;
-            const label = pageLabel(p.id);
-            return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
-                <Icon d={p.icon} /><span className="nav-label">{label}</span>
-              </button>
-            );
-          })}</nav>
+          <nav className="nav nav--top">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
           <p className="side-spaces">Learn</p>
-          <nav className="nav nav--spaces">{NAV_SPACES.map((p) => {
-            const on = p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'));
-            const label = pageLabel(p.id);
-            return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
-                <Icon d={p.icon} /><span className="nav-label">{label}</span>
-              </button>
-            );
-          })}</nav>
+          <nav className="nav nav--spaces">
+            {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
+            <button type="button" className="side-more" aria-expanded={moreOpen} aria-controls="companion-more" aria-label="More" title={sideCompact ? 'More' : undefined} onClick={() => setMoreOpen((open) => !open)}>
+              <Icon d={MORE_ICON} /><span className="nav-label">More</span>
+            </button>
+            <div id="companion-more" className="nav__more" hidden={!moreOpen}>{NAV_MORE.map((p) => navButton(p, p.id === page))}</div>
+          </nav>
           <div className="spacer" />
+          {usageLine ? (
+            <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
+              {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
+              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
+              <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+            </button>
+          ) : null}
           <button
             className={`sync-state sync-state--${sync.phase}`}
             aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
@@ -2200,13 +2002,6 @@ function App() {
             <span className="sync-state__copy">{sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
             {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
           </button>
-          {usageLine ? (
-            <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
-              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
-              <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
-            </button>
-          ) : null}
           <button type="button" className="side-settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
             <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
             <span className="nav-label">Settings</span>
@@ -2251,7 +2046,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -2275,7 +2070,6 @@ function App() {
                   usage={usageLine}
                   onRefresh={() => void refresh()}
                   onOpenAiSettings={() => { setSettingsTab('AI'); setSettingsOpen(true); }}
-                  voiceTip={voiceTip}
                 />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
@@ -2291,7 +2085,6 @@ function App() {
               setAskDraft('');
               setPage('Chat');
             }}>
-              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
               <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
               <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
             </form>
@@ -2308,7 +2101,7 @@ function App() {
         <Settings info={info} account={account} settings={settings}
           initialTab={settingsTab}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
-          onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
+          onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
       <UpdateCard />

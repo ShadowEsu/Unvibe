@@ -147,45 +147,6 @@
 :root[data-ui="v3"] .ask-dock:focus-within { border-color: var(--c-violet); box-shadow: 0 16px 40px -20px rgb(60 40 140 / 0.45), 0 0 0 4px rgb(124 92 255 / 0.14); }
 :root[data-ui="v3"] .ask-dock button { border-radius: 12px; }
 
-/* ── Home ─────────────────────────────────────────────────────────────────── */
-:root[data-ui="v3"] .home-hero {
-  position: relative; padding: 22px 24px; border-radius: 20px; overflow: hidden;
-  background: linear-gradient(120deg, rgb(139 92 246 / 0.14), rgb(59 130 246 / 0.10) 55%, rgb(244 114 182 / 0.12));
-  border: 1px solid rgb(124 92 255 / 0.16);
-}
-:root[data-ui="v3"] .home-hero::after {
-  content: ""; position: absolute; right: -60px; top: -80px; width: 260px; height: 260px; border-radius: 50%;
-  background: radial-gradient(circle, rgb(167 139 250 / 0.35), transparent 70%); pointer-events: none;
-}
-:root[data-ui="v3"] .home-hero__copy h1 { font-size: 30px; }
-:root[data-ui="v3"] .home-hero .buddy { filter: drop-shadow(0 10px 16px rgb(91 60 220 / 0.35)); }
-:root[data-ui="v3"] .home-metric-strip { border: 0; background: transparent; gap: 12px; overflow: visible; }
-:root[data-ui="v3"] .home-metric-strip > div {
-  border: 1px solid var(--v-line); border-radius: 16px; background: var(--v-surface); box-shadow: var(--v-shadow);
-  position: relative; overflow: hidden; transition: transform 200ms var(--ease-emphatic), box-shadow 200ms ease;
-}
-:root[data-ui="v3"] .home-metric-strip > div:first-child { border-left: 1px solid var(--v-line); }
-:root[data-ui="v3"] .home-metric-strip > div::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(1)::before { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(2)::before { background: linear-gradient(90deg, #10b981, #34d399); }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(3)::before { background: linear-gradient(90deg, #f59e0b, #f97316); }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(4)::before { background: linear-gradient(90deg, #ec4899, #a78bfa); }
-:root[data-ui="v3"] .home-metric-strip > div:hover { transform: translateY(-2px); }
-:root[data-ui="v3"] .home-metric-strip strong { font-family: var(--font-sans); font-weight: 800; font-size: 30px; letter-spacing: -0.04em; }
-:root[data-ui="v3"] .home-card { border-radius: 16px; box-shadow: var(--v-shadow); transition: transform 200ms var(--ease-emphatic), box-shadow 200ms ease; }
-:root[data-ui="v3"] .home-card:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -22px rgb(60 40 140 / 0.4); }
-:root[data-ui="v3"] .home-card--change { background: linear-gradient(140deg, rgb(59 130 246 / 0.10), rgb(139 92 246 / 0.06)), var(--v-surface); }
-:root[data-ui="v3"] .home-card--change h2 { font-family: var(--font-sans); font-weight: 750; font-size: 20px; letter-spacing: -0.02em; }
-:root[data-ui="v3"] .home-card__label { color: var(--c-violet); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; font-weight: 750; }
-:root[data-ui="v3"] .home-progress i { background: var(--grad); }
-:root[data-ui="v3"] .home-step.is-done .home-step__check { background: var(--c-mint); border-color: var(--c-mint); }
-:root[data-ui="v3"] .home-step.is-next .home-step__check { border-color: var(--c-violet); box-shadow: 0 0 0 4px rgb(124 92 255 / 0.12); }
-:root[data-ui="v3"] .home-step:hover { background: rgb(124 92 255 / 0.05); }
-:root[data-ui="v3"] .home-step__go { color: var(--c-violet); }
-:root[data-ui="v3"] .home-cal { border-radius: 16px; box-shadow: var(--v-shadow); }
-:root[data-ui="v3"] .home-cal__day.is-today,
-:root[data-ui="v3"] .home-cal__day[data-today="true"] { background: var(--grad); color: #fff; }
-
 /* ── Library and Quiz lists become colorful cards ────────────────────────── */
 :root[data-ui="v3"] .lib-group__label { color: var(--c-violet); font: 750 11px/1 var(--font-sans); letter-spacing: 0.08em; }
 :root[data-ui="v3"] .lib-row {
@@ -270,15 +231,10 @@
 :root[data-ui="v3"] .fade-stagger > *:nth-child(3) { animation-delay: 100ms; }
 :root[data-ui="v3"] .fade-stagger > *:nth-child(4) { animation-delay: 150ms; }
 :root[data-ui="v3"] .fade-stagger > *:nth-child(n+5) { animation-delay: 200ms; }
-:root[data-ui="v3"] .home-metric-strip > div,
-:root[data-ui="v3"] .home-grid .home-card,
 :root[data-ui="v3"] .lib-row { animation: v5RiseIn 520ms var(--ease-emphatic) both; }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(2), :root[data-ui="v3"] .lib-group:nth-child(2) .lib-row { animation-delay: 60ms; }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(3), :root[data-ui="v3"] .lib-group:nth-child(3) .lib-row { animation-delay: 120ms; }
-:root[data-ui="v3"] .home-metric-strip > div:nth-child(4), :root[data-ui="v3"] .lib-group:nth-child(n+4) .lib-row { animation-delay: 180ms; }
-:root[data-ui="v3"] .home-grid__side .home-card:nth-child(2) { animation-delay: 80ms; }
-:root[data-ui="v3"] .home-grid__side .home-card:nth-child(3) { animation-delay: 140ms; }
-:root[data-ui="v3"] .home-grid__side .home-card:nth-child(4) { animation-delay: 200ms; }
+:root[data-ui="v3"] .lib-group:nth-child(2) .lib-row { animation-delay: 60ms; }
+:root[data-ui="v3"] .lib-group:nth-child(3) .lib-row { animation-delay: 120ms; }
+:root[data-ui="v3"] .lib-group:nth-child(n+4) .lib-row { animation-delay: 180ms; }
 :root[data-ui="v3"] .modal { animation: v5Pop 320ms var(--ease-emphatic) both; }
 :root[data-ui="v3"] .search-palette { animation: v5Pop 260ms var(--ease-emphatic) both; }
 :root[data-ui="v3"] .acct-menu { animation: v5Pop 220ms var(--ease-emphatic) both; transform-origin: bottom left; }
@@ -290,16 +246,13 @@
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  :root[data-ui="v3"] .fade-in, :root[data-ui="v3"] .fade-stagger > *, :root[data-ui="v3"] .home-metric-strip > div,
-  :root[data-ui="v3"] .home-grid .home-card, :root[data-ui="v3"] .lib-row, :root[data-ui="v3"] .modal,
-  :root[data-ui="v3"] .search-palette, :root[data-ui="v3"] .acct-menu, :root[data-ui="v3"] .vibe-float__btn,
-  :root[data-ui="v3"] .vibe-float__bubble { animation: none; }
+  :root[data-ui="v3"] .fade-in, :root[data-ui="v3"] .fade-stagger > *, :root[data-ui="v3"] .lib-row, :root[data-ui="v3"] .modal, :root[data-ui="v3"] .search-palette, :root[data-ui="v3"] .acct-menu, :root[data-ui="v3"] .vibe-float__btn, :root[data-ui="v3"] .vibe-float__bubble { animation: none; }
 }
 
 /* ── Layout fixes: no white strip, roomy scrolling lists, card grid ──────── */
 :root[data-ui="v3"] .content-tools,
 :root[data-ui="v3"] .content:has(.page--learn) .content-tools { background: transparent; box-shadow: none; border: 0; backdrop-filter: none; }
-:root[data-ui="v3"] .page h1, :root[data-ui="v3"] .home-hero__copy h1 { font-style: normal; }
+:root[data-ui="v3"] .page h1 { font-style: normal; }
 :root[data-ui="v3"] .content:has(.page--learn) { overflow: hidden; }
 :root[data-ui="v3"] .page--learn:has(.learn-page:not(.learn-page--lesson)) { overflow-y: auto; }
 :root[data-ui="v3"] .page--learn:has(.learn-page:not(.learn-page--lesson)) > .fade-in,
