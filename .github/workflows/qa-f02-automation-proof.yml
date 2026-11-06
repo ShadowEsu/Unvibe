@@ -23,7 +23,6 @@ jobs:
       FIX_BUILD_RUN: "42182546070"
       ID_A: qa-f02a-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.build }}
       ID_B: qa-f02b-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.build }}
-      SHOTS: ${{ runner.temp }}/shots
     steps:
       - name: Flag this run's install ids as QA before any launch
         shell: bash
@@ -56,7 +55,7 @@ jobs:
           arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
           if [ "${{ matrix.build }}" = fix ]; then cp "$(ls "$RUNNER_TEMP"/build/*-mac-$arch.dmg | head -1)" "$RUNNER_TEMP/Unvibe.dmg"
           else curl -fL -o "$RUNNER_TEMP/Unvibe.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/Unvibe-0.1.49-mac-$arch.dmg"; fi
-          mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt" "$SHOTS"
+          mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt" "$RUNNER_TEMP/shots"
           hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/Unvibe.dmg"
           ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
           hdiutil detach "$mnt" -force || true
@@ -86,7 +85,7 @@ jobs:
           # tccd shows the Automation question through UserNotificationCenter.
           prompt=$(osascript -e 'tell application "System Events" to if exists process "UserNotificationCenter" then get name of every window of process "UserNotificationCenter"' 2>&1 || true)
           echo "A: UserNotificationCenter windows: [${prompt}]"
-          screencapture -x "$SHOTS/a-first-launch-${{ matrix.build }}.png"
+          screencapture -x "$RUNNER_TEMP/shots/a-first-launch-${{ matrix.build }}.png"
           osascript -e 'tell application "Unvibe" to quit' || true; sleep 2; pkill -x Unvibe || true; sleep 1
 
       - name: "B: set up, then Don't Allow System Events, then Control+U in TextEdit"
@@ -112,7 +111,7 @@ jobs:
           osascript -e 'tell application "TextEdit" to activate' -e 'delay 1' -e 'tell application "System Events" to keystroke "a" using command down'
           sleep 1
           osascript -e 'tell application "System Events" to keystroke "u" using control down'
-          for t in 3 7 12; do sleep $([ $t = 3 ] && echo 3 || echo 4); screencapture -x "$SHOTS/b-after-dont-allow-${t}s-${{ matrix.build }}.png"; done
+          for t in 3 7 12; do sleep $([ $t = 3 ] && echo 3 || echo 4); screencapture -x "$RUNNER_TEMP/shots/b-after-dont-allow-${t}s-${{ matrix.build }}.png"; done
           prompt=$(osascript -e 'tell application "System Events" to if exists process "UserNotificationCenter" then get name of every window of process "UserNotificationCenter"' 2>&1 || true)
           echo "B: UserNotificationCenter windows: [${prompt}]"
           # The bar's words, as macOS Accessibility reads them (best effort; the screenshots are the record).
