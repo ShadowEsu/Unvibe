@@ -318,37 +318,8 @@ export default function ActivatePage() {
 
             {!accessToken && (
               <div className="activate-section">
-                <button
-                  className="activate-btn activate-btn--google"
-                  type="button"
-                  onClick={signInWithGoogle}
-                  disabled={!configured || authBusy || bootstrapping}
-                  aria-disabled={!agreed}
-                >
-                  <GoogleMark />
-                  {authBusy ? 'Opening Google…' : 'Continue with Google'}
-                </button>
-                {authMessage && (
-                  <p
-                    className={`activate-note ${
-                      authMessage.startsWith('Check')
-                        ? 'activate-note--ok'
-                        : 'activate-note--error'
-                    }`}
-                    role={authMessage.startsWith('Check') ? 'status' : 'alert'}
-                  >
-                    {authMessage}
-                  </p>
-                )}
-                {signInFailed && (
-                  <p className="activate-note activate-note--error" role="alert">
-                    {SIGN_IN_DID_NOT_FINISH}{' '}
-                    <button className="activate-retry" type="button" onClick={signInWithGoogle} disabled={!configured || authBusy}>
-                      Try again with Google
-                    </button>
-                  </p>
-                )}
-                <div className="activate-divider">or email a link</div>
+                {/* Email first (BOSS, 6 Nov): Google sign-ins have not come back since mid-October while the
+                    email link works end to end. Google stays as the second way in. */}
                 <label className="activate-label" htmlFor="activate-email">
                   Email
                 </label>
@@ -363,7 +334,7 @@ export default function ActivatePage() {
                   aria-label="Email address"
                 />
                 <button
-                  className="activate-btn activate-btn--ghost"
+                  className="activate-btn"
                   type="button"
                   onClick={sendMagicLink}
                   disabled={!configured || !email || authBusy}
@@ -371,6 +342,37 @@ export default function ActivatePage() {
                 >
                   {authBusy ? 'Sending link…' : 'Email me a secure sign-in link'}
                 </button>
+                {authMessage && (
+                  <p
+                    className={`activate-note ${
+                      authMessage.startsWith('Check')
+                        ? 'activate-note--ok'
+                        : 'activate-note--error'
+                    }`}
+                    role={authMessage.startsWith('Check') ? 'status' : 'alert'}
+                  >
+                    {authMessage}
+                  </p>
+                )}
+                <div className="activate-divider">or</div>
+                <button
+                  className="activate-btn activate-btn--google"
+                  type="button"
+                  onClick={signInWithGoogle}
+                  disabled={!configured || authBusy || bootstrapping}
+                  aria-disabled={!agreed}
+                >
+                  <GoogleMark />
+                  {authBusy ? 'Opening Google…' : 'Continue with Google'}
+                </button>
+                {signInFailed && (
+                  <p className="activate-note activate-note--error" role="alert">
+                    {SIGN_IN_DID_NOT_FINISH}{' '}
+                    <button className="activate-retry" type="button" onClick={signInWithGoogle} disabled={!configured || authBusy}>
+                      Try again with Google
+                    </button>
+                  </p>
+                )}
                 <div className="activate-divider">then</div>
               </div>
             )}

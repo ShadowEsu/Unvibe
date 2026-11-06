@@ -89,7 +89,7 @@
   min-height: 2.75rem;
   margin-top: 0.25rem;
   padding: 0.8rem 1rem;
-  border: 0;
+  border: 1px solid transparent; /* the same height as the outlined quiet button */
   border-radius: var(--radius-field);
   color: var(--paper);
   background: var(--ink);

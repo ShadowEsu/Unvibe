@@ -279,25 +279,8 @@ export default function RedeemPage() {
 
         {!accessToken && (
           <div>
-            <button
-              className="redeem-btn redeem-btn--quiet"
-              type="button"
-              onClick={() => void signInWithGoogle()}
-              disabled={!configured || authBusy || bootstrapping}
-              aria-disabled={!agreed}
-            >
-              {authBusy ? "Opening Google…" : "Continue with Google"}
-            </button>
-            {authMessage && <p className="redeem-note redeem-note--error" role="alert">{authMessage}</p>}
-            {signInFailed && (
-              <p className="redeem-note redeem-note--error" role="alert">
-                {SIGN_IN_DID_NOT_FINISH}{" "}
-                <button className="redeem-link redeem-link--inline" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
-                  Try again with Google
-                </button>
-              </p>
-            )}
-            <div className="redeem-divider">or email a link</div>
+            {/* Email first (BOSS, 6 Nov): Google sign-ins have not come back since mid-October while the email
+                link works end to end. Google stays as the second way in. */}
             <form noValidate onSubmit={submitMagicLink}>
               <label className="redeem-label" htmlFor="redeem-email">Email</label>
               <input
@@ -321,10 +304,29 @@ export default function RedeemPage() {
                   {emailError}
                 </p>
               )}
-              <button className="redeem-btn redeem-btn--quiet" type="submit" disabled={!configured || authBusy} aria-disabled={!agreed}>
+              <button className="redeem-btn" type="submit" disabled={!configured || authBusy} aria-disabled={!agreed}>
                 {authBusy ? "Sending link…" : "Email me a secure sign-in link"}
               </button>
             </form>
+            {authMessage && <p className="redeem-note redeem-note--error" role="alert">{authMessage}</p>}
+            <div className="redeem-divider">or</div>
+            <button
+              className="redeem-btn redeem-btn--quiet"
+              type="button"
+              onClick={() => void signInWithGoogle()}
+              disabled={!configured || authBusy || bootstrapping}
+              aria-disabled={!agreed}
+            >
+              {authBusy ? "Opening Google…" : "Continue with Google"}
+            </button>
+            {signInFailed && (
+              <p className="redeem-note redeem-note--error" role="alert">
+                {SIGN_IN_DID_NOT_FINISH}{" "}
+                <button className="redeem-link redeem-link--inline" type="button" onClick={() => void signInWithGoogle()} disabled={!configured || authBusy}>
+                  Try again with Google
+                </button>
+              </p>
+            )}
             <div className="redeem-divider">then</div>
           </div>
         )}
