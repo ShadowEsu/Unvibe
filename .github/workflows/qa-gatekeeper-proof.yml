@@ -50,7 +50,7 @@ jobs:
           r() { echo "$*" | tee -a "$out/report.txt"; }
           r "macOS $(sw_vers -productVersion) ($(sw_vers -buildVersion)), $(uname -m), $(spctl --status)"
           curl -fsSL https://unvibe.site/install.sh -o "$out/install.sh.live"
-          r "install.sh (live) sha256 $(shasum -a 256 "$out/install.sh.live" | cut -d' ' -f1)"
+          r "install.sh (live) sha256 $(shasum -a 256 "$out/install.sh.live" | cut -d' ' -f1); main() wrap lines: $(grep -c -E '^main\(\) \{|^main$' "$out/install.sh.live")"
           # The one-liner as the site gives it, with only the anonymous 'installed' count sent nowhere.
           curl -fsSL https://unvibe.site/install.sh | sed 's#^TRACK=.*#TRACK="http://127.0.0.1:9/qa-no-count"#' | bash 2>&1 | tee "$out/install.log"
           curl -fsSL https://unvibe.site/install.sh | sed 's#^TRACK=.*#TRACK="http://127.0.0.1:9/qa-no-count"#' > "$out/install.sh.run"
@@ -180,7 +180,9 @@ jobs:
           r "spctl --assess on the app: $(tr '\n' ' ' < "$out/spctl-app.txt")"
 
           # Double-click the app.
-          open /Applications/Unvibe.app 2> "$out/open.txt" || true
+          # In the background: for a quarantined app, `open` waits until the Gatekeeper dialog is answered
+          # (runs 42144225676 and 42145546221 sat here until their time limit).
+          ( open /Applications/Unvibe.app 2> "$out/open.txt"; echo "open exit $?" >> "$out/open.txt" ) &
           sleep 8
           p=$(pgrep -x Unvibe | head -1 || true)
           "$W" list > "$out/windows-blocked.txt"
