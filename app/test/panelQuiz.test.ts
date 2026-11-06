@@ -12,7 +12,7 @@ const card = (quiz: Quiz) => renderToStaticMarkup(createElement(QuizCard, { quiz
 const graded = (over: Partial<Quiz>): Quiz => ({ ...base, phase: 'graded', choice: 2, answerIndex: 2, correct: true, rationale: 'Every call clears the old timer.', ...over });
 const bubble = (html: string) => /<p class="vibe-bubble"[^>]*>(.*?)<\/p>/.exec(html)?.[1] ?? '';
 const actions = (quiz: Quiz) => [...renderToStaticMarkup(createElement(QuizActions, { quiz, onCheck: noop, onAnother: noop, onRetry: noop, onClose: noop }))
-  .matchAll(/<button[^>]*class="([^"]+)"[^>]*>(.*?)<\/button>/g)].map((m) => `${m[1]}:${m[2]}`);
+  .matchAll(/<button[^>]*class="([^"]+)"[^>]*>(.*?)<\/button>/g)].map((m) => `${m[1]}:${m[2].replace(/<[^>]+>/g, '')}`);
 
 test('the kicker says where you are and what kind of question it is', () => {
   assert.equal(quizKicker(base), 'Test me · 1 of 3 · Prove it');

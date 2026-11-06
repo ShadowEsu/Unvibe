@@ -55,8 +55,16 @@ function citeLabel(file: string, lines: string): string {
   return `${base}:${lines}`;
 }
 
-/** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. */
-export function renderInline(text: string): ReactNode[] {
+/** Counts words across one render, so a word keeps its key (and plays its fade once) as the answer grows. */
+type WordCounter = { n: number };
+
+/** Each word as a `span.rich-w` keyed by its place in the answer; whitespace stays plain text (SPEC §6 word fade). */
+function wrapWords(text: string, words: WordCounter): ReactNode[] {
+  return text.split(/(\s+)/).filter(Boolean).map((part) => (/^\s+$/.test(part) ? part : <span key={`w${words.n++}`} className="rich-w">{part}</span>));
+}
+
+/** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. With `words`, plain words fade in one by one. */
+export function renderInline(text: string, words?: WordCounter): ReactNode[] {
   const cleaned = text
     .replace(/\{\{[^}]+\}\}/g, '')
     .replace(/\[\[(?:cite:)?([^\]]+?)\]\]/gi, (_full, inner: string) => {
@@ -74,27 +82,27 @@ export function renderInline(text: string): ReactNode[] {
   let m: RegExpExecArray | null;
   let k = 0;
   while ((m = re.exec(cleaned)) !== null) {
-    if (m.index > last) out.push(cleaned.slice(last, m.index));
+    if (m.index > last) out.push(...(words ? wrapWords(cleaned.slice(last, m.index), words) : [cleaned.slice(last, m.index)]));
     if (m[1]) {
       const label = citeLabel(m[1], m[2]!);
       out.push(
-        <span key={k++} className="cite" title={label}>
+        <span key={k++} className={words ? 'cite rich-w' : 'cite'} title={label}>
           {label}
         </span>,
       );
     } else if (m[3]) {
       out.push(
-        <code key={k++} className="inline">
+        <code key={k++} className={words ? 'inline rich-w' : 'inline'}>
           {m[3]}
         </code>,
       );
     } else {
-      // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too.
-      out.push(<strong key={k++}>{renderInline(m[4]!)}</strong>);
+      // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too, word by word.
+      out.push(<strong key={k++}>{renderInline(m[4]!, words)}</strong>);
     }
     last = m.index + m[0].length;
   }
-  if (last < cleaned.length) out.push(cleaned.slice(last));
+  if (last < cleaned.length) out.push(...(words ? wrapWords(cleaned.slice(last), words) : [cleaned.slice(last)]));
   return out;
 }
 
@@ -109,19 +117,19 @@ export function renderSummary(text: string): ReactNode[] {
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
 const HEADING_RE = /^\s*(#{1,6})\s+(.+?)\s*$/;
 
-function renderList(lines: string[], key: string): ReactNode {
+function renderList(lines: string[], key: string, words?: WordCounter): ReactNode {
   const ordered = /^\s*\d+[.)]\s+/.test(lines[0] ?? '');
   const Tag = ordered ? 'ol' : 'ul';
   return (
     <Tag key={key} className="rich-list">
       {lines.map((line, i) => (
-        <li key={`${key}-${i}`}>{renderInline(line.replace(LIST_RE, ''))}</li>
+        <li key={`${key}-${i}`}>{renderInline(line.replace(LIST_RE, ''), words)}</li>
       ))}
     </Tag>
   );
 }
 
-function renderTextBlock(block: string, key: string): ReactNode[] {
+function renderTextBlock(block: string, key: string, words?: WordCounter): ReactNode[] {
   const lines = block.split('\n').map((l) => l.replace(/\s+$/, ''));
   const nodes: ReactNode[] = [];
   let i = 0;
@@ -133,7 +141,7 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
     if (heading) {
       const depth = Math.min(4, Math.max(2, heading[1]!.length)) as 2 | 3 | 4;
       const Heading = `h${depth}` as 'h2' | 'h3' | 'h4';
-      nodes.push(<Heading key={`${key}-h${p++}`} className={`rich-heading rich-heading--${depth}`}>{renderInline(heading[2]!)}</Heading>);
+      nodes.push(<Heading key={`${key}-h${p++}`} className={`rich-heading rich-heading--${depth}`}>{renderInline(heading[2]!, words)}</Heading>);
       i += 1;
       continue;
     }
@@ -144,7 +152,7 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
         else group[group.length - 1] = `${group[group.length - 1]} ${lines[i]!.trim()}`;
         i += 1;
       }
-      nodes.push(renderList(group, `${key}-l${p++}`));
+      nodes.push(renderList(group, `${key}-l${p++}`, words));
       continue;
     }
     const para: string[] = [];
@@ -153,7 +161,7 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
       i += 1;
     }
     const joined = para.join(' ').replace(/\s+/g, ' ').trim();
-    if (joined) nodes.push(<p key={`${key}-p${p++}`}>{renderInline(joined)}</p>);
+    if (joined) nodes.push(<p key={`${key}-p${p++}`}>{renderInline(joined, words)}</p>);
   }
   return nodes;
 }
@@ -184,8 +192,11 @@ function closeStreamingMarkers(text: string): string {
   return head + line + close;
 }
 
-/** Markdown-ish body: lists, bold, inline code, fenced blocks, calm citation chips. */
-export function renderRich(raw: string, streaming = false): ReactNode[] {
+/**
+ * Markdown-ish body: lists, bold, inline code, fenced blocks, calm citation chips. With `words`, each word of the last
+ * text part (after the last fence; earlier parts are finished) is a keyed span that fades in as it arrives (SPEC §6).
+ */
+export function renderRich(raw: string, streaming = false, opts?: { words?: boolean }): ReactNode[] {
   let text = raw.replace(/\r\n/g, '\n');
   if (streaming) {
     text = text
@@ -196,6 +207,7 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
   }
 
   const nodes: ReactNode[] = [];
+  const words = opts?.words ? { n: 0 } : undefined;
   const parts = text.split(/```/);
   parts.forEach((part, i) => {
     if (i % 2 === 1) {
@@ -204,7 +216,7 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
       const code = nl === -1 ? part : part.slice(nl + 1);
       nodes.push(<CodeBlock key={`cb${i}`} lang={lang} code={code.replace(/\n$/, '')} />);
     } else {
-      nodes.push(...renderTextBlock(part, `t${i}`));
+      nodes.push(...renderTextBlock(part, `t${i}`, i === parts.length - 1 ? words : undefined));
     }
   });
   if (streaming) nodes.push(<span key="cur" className="cursor" />);

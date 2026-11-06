@@ -8,7 +8,9 @@ const noop = () => undefined;
 const actions = (over: Partial<Parameters<typeof PanelActions>[0]> = {}) => ({
   streaming: false, busy: false, understood: false, onStop: noop, onGotIt: noop, onDifferent: noop, onTestMe: noop, ...over,
 });
-const buttons = (html: string) => [...html.matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((m) => m[1]);
+// A button's visible label (the primary key wraps it in a face span).
+const label = (inner: string) => inner.replace(/<[^>]+>/g, '');
+const buttons = (html: string) => [...html.matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((m) => label(m[1]));
 
 test('while the answer streams the footer offers only Stop generating', () => {
   const html = renderToStaticMarkup(createElement(PanelActions, actions({ streaming: true })));
@@ -16,12 +18,12 @@ test('while the answer streams the footer offers only Stop generating', () => {
   assert.ok(!html.includes('btn-primary'));
 });
 
-const buttonTag = (html: string, label: string) => [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].find((m) => m[2] === label)?.[1] ?? '';
+const buttonTag = (html: string, text: string) => [...html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].find((m) => label(m[2]) === text)?.[1] ?? '';
 
 test('a finished answer has exactly one primary action, Got it, and the rest are quiet', () => {
   const html = renderToStaticMarkup(createElement(PanelActions, actions()));
   assert.deepEqual(buttons(html), ['Got it', 'Explain differently', 'Test me']);
-  assert.equal((html.match(/class="btn-primary/g) ?? []).length, 1);
+  assert.equal((html.match(/class="btn-primary[" ]/g) ?? []).length, 1);
   assert.match(buttonTag(html, 'Got it'), /class="btn-primary"/);
   assert.equal((html.match(/class="btn-quiet"/g) ?? []).length, 2);
 });

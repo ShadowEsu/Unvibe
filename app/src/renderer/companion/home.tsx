@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ChangeBrief } from '../../core/changeBrief';
 import { localDayKey } from '../../core/learning';
 import type { KnowledgeObject } from '../../core/knowledge';
-import { Buddy, type BuddyMood } from '../shared/buddy';
+import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
@@ -83,8 +83,21 @@ export function homeRows(knowledge: KnowledgeObject[], history: HomeLesson[]): H
   return [...saved.slice(0, HOME_ROWS - review.length), ...review];
 }
 
+/** A check that turns done while Home is showing pops (app-0151.css goalCheckIn); one already done when Home opens
+ *  doesn't move. A layout effect, so the pop's first frame is the first one painted. `is-new` stays on afterwards:
+ *  its animations have ended, and Home opening again starts without it (Motion, app-0151 moment 5). */
 function GoalCheck({ done }: { done: boolean }) {
-  return <span className={`home-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
+  const was = useRef(done);
+  const [fresh, setFresh] = useState(false);
+  useLayoutEffect(() => {
+    if (done && !was.current) setFresh(true);
+    was.current = done;
+  }, [done]);
+  return (
+    <span className={`home-goal__check${done ? ' is-done' : ''}${done && fresh ? ' is-new' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>
+      {done ? <span className="home-goal__tick" aria-hidden="true">✓</span> : null}
+    </span>
+  );
 }
 
 /** Today's two steps on one quiet line. No count of days and no celebration. */
@@ -130,7 +143,33 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, today, history
     }
     return { last, day: localDayKey(new Date()) };
   });
-  const mood = homeVibeMood(wave.last, wave.day, explainDisabled);
+  const homeMood = homeVibeMood(wave.last, wave.day, explainDisabled);
+  // The daily hello is a reaction (Design's 0.1.51 motion rulings; Motion, app-0151 moment 5): the eyes cross-fade to
+  // the wave face for REACTION_HOLD_MS with a still body, then back to idle. `react` changing after mount is what makes
+  // Buddy treat it as a reaction (`.buddy--react` stills the wave's hops); it then stays 1. Once per Home open, as the
+  // wave day is read once. Steps, a frame apart: idle is painted (opened by a click, React runs this effect before the
+  // first paint, and the cross-fade would have nothing to fade from); `react` turns on while Vibe is still idle, so
+  // `.buddy--react` is in place before the wave and its hop never starts; then the wave.
+  const [hello, setHello] = useState<'not-yet' | 'primed' | 'waving' | 'done'>('not-yet');
+  useEffect(() => {
+    if (homeMood !== 'wave') return undefined;
+    let t = 0;
+    let frame = requestAnimationFrame(() => {
+      setHello('primed');
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+          setHello('waving');
+          t = window.setTimeout(() => setHello('done'), REACTION_HOLD_MS);
+        });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const mood = homeMood === 'wave' ? (hello === 'waving' ? 'wave' : 'idle') : homeMood;
   useEffect(() => {
     if (wave.last === wave.day) return undefined;
     const timer = window.setTimeout(() => {
@@ -152,14 +191,16 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, today, history
   const first = greetFirst(userName);
   const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const rows = homeRows(knowledge, history);
-  const note = explainDisabled ? 'out of explains this month, catch you soon'
-    : brief ? 'you changed some code, want the story?'
-      : reviews === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : 'ready when you are';
+  // Vibe's notes in sentence case (Design's copy, S7): no "this month" at the limit, since the paused card under it
+  // says when they refill.
+  const note = explainDisabled ? 'You\'re out of free explanations for now.'
+    : brief ? 'You changed some code, want the story?'
+      : reviews === 0 ? `Select any code and press ${shortcut}. I'll explain it.`
+        : 'Ready when you are.';
   return (
     <div className="home">
       <header className="home-hero">
-        <Buddy mood={mood} size={64} label="Vibe" />
+        <Buddy mood={mood} react={hello === 'not-yet' ? 0 : 1} size={64} label="Vibe" />
         <div className="home-hero__copy">
           <h1>{dayGreeting()}{first ? `, ${first}.` : '.'}</h1>
           <p className="home-hero__note">{note}</p>
@@ -216,7 +257,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, today, history
               </button></li>
             ))}
           </ul>
-        ) : <p className="home-list__empty">nothing yet. your first explanation lands here!</p>}
+        ) : <p className="home-list__empty">Nothing yet. Your first explanation lands here!</p>}
       </section>
     </div>
   );

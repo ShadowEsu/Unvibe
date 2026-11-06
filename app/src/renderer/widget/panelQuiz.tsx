@@ -2,6 +2,7 @@ import type { Ref } from 'react';
 import type { QuizMode } from '../../core/protocol';
 import { Buddy } from '../shared/buddy';
 import { VibeBubble } from '../shared/vibeBubble';
+import { PrimaryButton } from './panelBody';
 
 export interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -125,15 +126,15 @@ export function QuizActions({ quiz, onCheck, onAnother, onRetry, onClose }: {
     const next = quizHasNext(quiz);
     return (
       <div className="p-actions">
-        {next ? <button type="button" className="btn-primary" onClick={onAnother}>Another question</button> : null}
-        <button type="button" className={next ? 'btn-quiet' : 'btn-primary'} onClick={onClose}>Hide question</button>
+        {next ? <PrimaryButton onClick={onAnother}>Another question</PrimaryButton> : null}
+        {next ? <button type="button" className="btn-quiet" onClick={onClose}>Hide question</button> : <PrimaryButton onClick={onClose}>Hide question</PrimaryButton>}
       </div>
     );
   }
   if (quiz.phase === 'failed') {
     return (
       <div className="p-actions">
-        <button type="button" className="btn-primary" onClick={onRetry}>Try again</button>
+        <PrimaryButton onClick={onRetry}>Try again</PrimaryButton>
         <button type="button" className="btn-quiet" onClick={onClose}>Hide</button>
       </div>
     );
@@ -141,9 +142,9 @@ export function QuizActions({ quiz, onCheck, onAnother, onRetry, onClose }: {
   return (
     <div className="p-actions">
       {quiz.phase === 'loading' ? null : (
-        <button type="button" className="btn-primary" disabled={quiz.choice === undefined || quiz.phase === 'grading'} onClick={onCheck}>
+        <PrimaryButton disabled={quiz.choice === undefined || quiz.phase === 'grading'} onClick={onCheck}>
           {quiz.phase === 'grading' ? 'Checking…' : 'Check'}
-        </button>
+        </PrimaryButton>
       )}
       <button type="button" className="btn-quiet" onClick={onClose}>Cancel</button>
     </div>

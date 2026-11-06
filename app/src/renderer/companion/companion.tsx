@@ -23,6 +23,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { Home, type TodayGoal } from './home';
 import { IC } from './icons';
 import { MORE_ICON, NAV, NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
+import { trackWindowAway } from '../shared/windowAway';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { SUPPORT_EMAIL } from '../../core/support';
@@ -2047,4 +2048,5 @@ function App() {
   );
 }
 
+trackWindowAway();
 createRoot(document.getElementById('root')!).render(<App />);

@@ -52,17 +52,19 @@ export function openFocus(items: MenuItem[], from: 'first' | 'last' = 'first'): 
 }
 
 /** An open menu below its button, aligned to the button's right edge (or left, `start`). */
-export function MenuList({ id, label, items, align = 'end', itemRefs, onKeyDown, onPick }: {
+export function MenuList({ id, label, items, align = 'end', leaving = false, itemRefs, onKeyDown, onPick }: {
   id: string;
   label: string;
   items: MenuItem[];
   align?: 'start' | 'end';
+  /** Closing: plays pmMenuOut, then MenuButton unmounts it. Inert meanwhile, so focus, keys and clicks can't land on it. */
+  leaving?: boolean;
   itemRefs?: { current: Array<HTMLButtonElement | null> };
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onPick: (item: MenuItem) => void;
 }) {
   return (
-    <div className={`pm-menu${align === 'start' ? ' pm-menu--start' : ''}`} id={id} role="menu" aria-label={label} onKeyDown={onKeyDown}>
+    <div className={`pm-menu${align === 'start' ? ' pm-menu--start' : ''}${leaving ? ' pm-menu--leaving' : ''}`} id={id} role="menu" aria-label={label} inert={leaving} onKeyDown={onKeyDown}>
       {items.map((item, index) => (
         <button
           key={item.id}
@@ -87,6 +89,9 @@ export function MenuList({ id, label, items, align = 'end', itemRefs, onKeyDown,
   );
 }
 
+/** pmMenuOut's length (widget.css). */
+const MENU_EXIT_MS = 100;
+
 /**
  * A button that opens a menu. Opening focuses the chosen (or first) item; arrows move, Esc closes and puts focus
  * back on the button, a click outside or Tab just closes.
@@ -101,7 +106,19 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, alig
   disabled?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenNow] = useState(false);
+  // Closing keeps the menu mounted for its 100 ms exit. `leaving` is set in the same update as `open` turning false,
+  // so the menu never unmounts for a frame and remounts; reopening cancels the exit. Reduced motion: no exit.
+  const [leaving, setLeaving] = useState(false);
+  const leaveTimer = useRef<number | undefined>(undefined);
+  const setOpen = (next: boolean) => {
+    window.clearTimeout(leaveTimer.current);
+    const exit = !next && open && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setLeaving(exit);
+    if (exit) leaveTimer.current = window.setTimeout(() => setLeaving(false), MENU_EXIT_MS);
+    setOpenNow(next);
+  };
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
   const id = useId();
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -155,7 +172,7 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, alig
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpen(!open)}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
           event.preventDefault();
@@ -165,12 +182,13 @@ export function MenuButton({ className, items, menuLabel, ariaLabel, title, alig
       >
         {children}
       </button>
-      {open ? (
+      {open || leaving ? (
         <MenuList
           id={id}
           label={menuLabel}
           items={items}
           align={align}
+          leaving={!open}
           itemRefs={itemRefs}
           onKeyDown={onMenuKey}
           onPick={(item) => {

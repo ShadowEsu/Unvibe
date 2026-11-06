@@ -37,8 +37,8 @@ interface BuddyProps {
 
 /** Moods that mark something the user did or got (SPEC §3); arriving through setBuddyMood, they react. */
 const REACTION_MOODS: ReadonlySet<BuddyMood> = new Set(['happy', 'celebrate', 'confused', 'wave']);
-/** As long as the Island holds Vibe's happy face after Understood (bar.tsx). */
-const REACTION_HOLD_MS = 1800;
+/** As long as the Island holds Vibe's happy face after Understood (bar.tsx), and Home holds the daily hello. */
+export const REACTION_HOLD_MS = 1800;
 
 const EVENT = 'unvibe:buddy';
 
@@ -146,8 +146,6 @@ export function Buddy({ mood: moodProp = 'idle', size = 40, follow = false, clas
     };
   }, [follow, mood]);
 
-  const happy = mood === 'happy' || mood === 'celebrate' || mood === 'wave';
-
   return (
     <span
       ref={rootRef}
@@ -160,25 +158,23 @@ export function Buddy({ mood: moodProp = 'idle', size = 40, follow = false, clas
         <ellipse className="buddy__shadow" cx="24" cy="45" rx="12" ry="1.8" />
         <g className="buddy__float">
           <path className="buddy__body" d="M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z" />
-          {happy ? (
-            <g className="buddy__eyes buddy__eyes--happy">
-              <path d="M15.6 25.2c1.2-2.6 4.8-2.6 6 0" />
-              <path d="M26.4 25.2c1.2-2.6 4.8-2.6 6 0" />
+          {/* Both eye sets, always: a mood change cross-fades them (buddy.css, 120 ms) instead of swapping the art. */}
+          <g className="buddy__eyes buddy__eyes--happy">
+            <path d="M15.6 25.2c1.2-2.6 4.8-2.6 6 0" />
+            <path d="M26.4 25.2c1.2-2.6 4.8-2.6 6 0" />
+          </g>
+          <g className="buddy__eyes buddy__eyes--open">
+            <g className="buddy__eye">
+              <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
+              <circle className="buddy__pupil" cx="17.6" cy="22.6" r="1.15" fill="#fff" />
             </g>
-          ) : (
-            <g className="buddy__eyes">
-              <g className="buddy__eye">
-                <ellipse cx="18.6" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
-                <circle className="buddy__pupil" cx="17.6" cy="22.6" r="1.15" fill="#fff" />
-              </g>
-              <g className="buddy__eye">
-                <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
-                <circle className="buddy__pupil" cx="28.4" cy="22.6" r="1.15" fill="#fff" />
-              </g>
-              <rect className="buddy__lid buddy__lid--l" x="15" y="19.2" width="7.2" height="9.6" rx="3.6" />
-              <rect className="buddy__lid buddy__lid--r" x="25.8" y="19.2" width="7.2" height="9.6" rx="3.6" />
+            <g className="buddy__eye">
+              <ellipse cx="29.4" cy="24.2" rx="3.3" ry="4.6" className="buddy__iris" />
+              <circle className="buddy__pupil" cx="28.4" cy="22.6" r="1.15" fill="#fff" />
             </g>
-          )}
+            <rect className="buddy__lid buddy__lid--l" x="15" y="19.2" width="7.2" height="9.6" rx="3.6" />
+            <rect className="buddy__lid buddy__lid--r" x="25.8" y="19.2" width="7.2" height="9.6" rx="3.6" />
+          </g>
         </g>
         <g className="buddy__extras">
           <circle className="buddy__dot buddy__dot--1" cx="38" cy="10" r="1.6" />

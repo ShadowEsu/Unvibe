@@ -15,8 +15,10 @@ import { deviceName, isWindows, reviewKeyHint, voiceHowTo } from '../shared/plat
 import { languageName, selectionSource, selectionTitle } from '../shared/languageName';
 import { MenuButton, TabStrip, panelMenuItems } from './panelMenu';
 import { LEVELS, LevelChip } from './levelChip';
-import { CodeBlock, PanelActions, PanelToast, TOAST_MS } from './panelBody';
+import { CodeBlock, PanelActions, PanelToast, SQUASH_MS, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
 import { QuizActions, QuizCard, type Quiz } from './panelQuiz';
+import { useRevealedText } from './reveal';
+import { trackWindowAway } from '../shared/windowAway';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -404,6 +406,8 @@ function applyTheme(preference: 'system' | 'light' | 'dark') {
 
 // v2 key: paper became the default look, matching the companion window.
 const PANEL_THEME_KEY = 'unvibe.panelTheme2';
+/** widgetOut's length (widget.css). */
+const PANEL_EXIT_MS = 160;
 
 function Widget() {
   const [tabs, setTabs] = useState<TabState[]>([newTab('1', 'Review')]);
@@ -436,8 +440,10 @@ function Widget() {
   const [teachOpen, setTeachOpen] = useState(false);
   const [proGate, setProGate] = useState(false);
   // "Understood. Saved to your Library." once main has saved it (Design Q1), for TOAST_MS, on the tab it belongs to.
-  const [toast, setToast] = useState<{ tabId: string; text: string } | null>(null);
+  const [toast, setToast] = useState<{ tabId: string; text: string; leaving?: boolean } | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  /** performance.now() of the last Got it press, so the toast never lands inside Vibe's squash. */
+  const gotItAt = useRef(0);
   // While checkout is closed the panel says "Pro opens soon" instead of offering a purchase.
   const [proOpen, setProOpen] = useState(false);
   useEffect(() => { void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen)); }, []);
@@ -467,7 +473,21 @@ function Widget() {
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
   const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const sessionPaused = Boolean(outOfExplanations && offer?.primaryKind === 'survey');
-  const [revealedText, setRevealedText] = useState('');
+  // The panel leaves the way it came (SPEC §6; Motion, app-0151 moment 4): widgetOut, then main closes the window.
+  // Stable, so the key handler's effect needn't re-register; a second close while leaving does nothing. A close
+  // from main stays instant, and with reduced motion this one is too.
+  const [leaving, setLeaving] = useState(false);
+  const leavingRef = useRef(false);
+  const closePanel = useCallback(() => {
+    if (leavingRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      window.unvibe.closeWidget();
+      return;
+    }
+    leavingRef.current = true;
+    setLeaving(true);
+    window.setTimeout(() => window.unvibe.closeWidget(), PANEL_EXIT_MS);
+  }, []);
   const [features, setFeatures] = useState({ whyExists: true, teachBack: true, voice: false, changeBrief: true });
   const [listening, setListening] = useState(false);
   /** The PMF survey card (FE-09) while it is open in this panel; null when hidden or closed. */
@@ -536,8 +556,18 @@ function Widget() {
       if (ev.type === 'graded' && tabId === activeRef.current) setBuddyMood(ev.correct ? 'celebrate' : 'confused');
       if (ev.type === 'understood' && tabId === activeRef.current) {
         window.clearTimeout(toastTimer.current);
-        setToast({ tabId, text: 'Understood. Saved to your Library.' });
-        toastTimer.current = window.setTimeout(() => setToast(null), TOAST_MS);
+        // Three steps (Motion, app-0151 moment 2): wait out Vibe's squash, hold TOAST_MS, then leave over TOAST_EXIT_MS.
+        const show = () => {
+          setToast({ tabId, text: 'Understood. Saved to your Library.' });
+          toastTimer.current = window.setTimeout(() => {
+            setToast((t) => (t ? { ...t, leaving: true } : t));
+            toastTimer.current = window.setTimeout(() => setToast(null), TOAST_EXIT_MS);
+          }, TOAST_MS);
+        };
+        // Main usually saves within the squash; then the toast waits for it to finish. A slower save shows at once.
+        const wait = gotItAt.current + SQUASH_MS - performance.now();
+        if (wait > 0) toastTimer.current = window.setTimeout(show, wait);
+        else show();
       }
       setTabs((prev) => {
         const tab = prev.find((t) => t.id === tabId);
@@ -660,47 +690,24 @@ function Widget() {
     window.unvibe.appInfo().then((i) => setShortcut(prettyAccel(i.shortcut)));
   }, []);
 
-  // ChatGPT-style progressive reveal: catch displayed text up to the streamed buffer.
-  useEffect(() => {
-    if (active.phase !== 'streaming' && active.phase !== 'done') {
-      setRevealedText('');
-      return;
-    }
-    if (active.text.length === 0) {
-      setRevealedText('');
-      return;
-    }
-    let cancelled = false;
-    let frame = 0;
-    const tick = () => {
-      if (cancelled) return;
-      setRevealedText((prev) => {
-        if (prev.length >= active.text.length) return active.text;
-        const remaining = active.text.length - prev.length;
-        const step = Math.min(remaining, Math.max(2, Math.ceil(remaining / 10)));
-        const next = active.text.slice(0, prev.length + step);
-        if (next.length < active.text.length) frame = requestAnimationFrame(tick);
-        return next;
-      });
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-    };
-  }, [active.text, active.phase, activeTabId]);
+  // The answer and More detail reveal whole words as they stream, and the arriving words fade in (reveal.ts).
+  const answer = useRevealedText(active.text, active.phase === 'streaming', active.phase === 'streaming' || active.phase === 'done', activeTabId);
+  const showText = answer.text;
+  const stillTyping = answer.typing;
+  const wordFade = answer.words;
+  const detail = useRevealedText(active.detail.text, active.detail.phase === 'streaming', active.detail.phase === 'streaming' || active.detail.phase === 'done', activeTabId);
 
   // Autoscroll while streaming on the active tab.
   useEffect(() => {
     if (active.phase === 'streaming' && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [revealedText, active.phase]);
+  }, [showText, active.phase]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === 'w') window.unvibe.closeWidget();
+      if (mod && e.key === 'w') closePanel();
       else if (e.key === 'Escape') {
         // An open Test me closes first (focus goes back to Test me); only then does Esc collapse the panel.
         const tab = tabsRef.current.find((t) => t.id === activeRef.current);
@@ -793,7 +800,7 @@ function Widget() {
   const closeTab = (tabId: string, e: MouseEvent) => {
     e.stopPropagation();
     if (tabs.length === 1) {
-      window.unvibe.closeWidget();
+      closePanel();
       return;
     }
     const next = tabs.filter((t) => t.id !== tabId);
@@ -831,8 +838,6 @@ function Widget() {
     testMeRef.current?.focus();
   }, [quizOpen]);
 
-  const showText = phase === 'streaming' || phase === 'done' ? revealedText : active.text;
-  const stillTyping = phase === 'streaming' || (phase === 'done' && revealedText.length < active.text.length);
   // The survey card waits until an explanation has fully finished, typing included, and is asked
   // for again after each one until it is sent or closed. Main decides eligibility.
   const pmfReady = phase === 'done' && !stillTyping && active.text.length > 0;
@@ -930,7 +935,7 @@ function Widget() {
   });
 
   return (
-    <div className={`card card--${phase}${away ? ' card--away' : ''}${collapsed ? ' card--collapsed' : ''}`} aria-label="Unvibe">
+    <div className={`card card--${phase}${away ? ' card--away' : ''}${collapsed ? ' card--collapsed' : ''}${leaving ? ' card--leaving' : ''}`} aria-label="Unvibe">
       {!collapsed ? <ResizeGrips /> : null}
       <div className="head">
         <span className="head__mark head__mark--vibe" aria-hidden="true">
@@ -952,7 +957,7 @@ function Widget() {
               <span aria-hidden="true">⋯</span>
             </MenuButton>
           )}
-          <button className="head__glyph" aria-label="Close panel" title="Close" onClick={() => window.unvibe.closeWidget()}>
+          <button className="head__glyph" aria-label="Close panel" title="Close" onClick={closePanel}>
             <span aria-hidden="true">✕</span>
           </button>
         </div>
@@ -1021,7 +1026,7 @@ function Widget() {
                   } else if (next) setTabs((prev) => patchTab(prev, activeRef.current, { phase: next, consentProvider: null }));
                   else request({});
                 }}
-                onCancel={() => window.unvibe.closeWidget()}
+                onCancel={closePanel}
               />
             </div>
           )}
@@ -1063,7 +1068,7 @@ function Widget() {
               <button className="btn" onClick={() => request({})}>
                 Explain
               </button>
-              <button className="btn ghost" onClick={() => window.unvibe.closeWidget()}>
+              <button className="btn ghost" onClick={closePanel}>
                 Cancel
               </button>
             </div>
@@ -1085,7 +1090,7 @@ function Widget() {
               <button className="btn" onClick={() => request({ consented: true })}>
                 Send anyway
               </button>
-              <button className="btn ghost" onClick={() => window.unvibe.closeWidget()}>
+              <button className="btn ghost" onClick={closePanel}>
                 Cancel
               </button>
             </div>
@@ -1151,7 +1156,7 @@ function Widget() {
                 />
               ) : null}
               {showText
-                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} /> : renderRich(showText, stillTyping))
+                ? (active.short ? <ShortAnswer text={showText} streaming={stillTyping} words={wordFade} /> : renderRich(showText, stillTyping, { words: wordFade }))
                 : (
                   <ThinkingCard hasCode={Boolean(active.meta.preview)} />
                 )}
@@ -1169,8 +1174,8 @@ function Widget() {
                   </button>
                   {active.detail.open ? (
                     <div className="more-detail__body" id={`more-detail-${active.id}`}>
-                      {active.detail.text
-                        ? renderRich(active.detail.text, active.detail.phase === 'streaming')
+                      {detail.text
+                        ? renderRich(detail.text, detail.typing, { words: detail.words })
                         : active.detail.phase === 'streaming' ? <p className="more-detail__wait" role="status">Writing more detail…</p> : null}
                       {active.detail.phase === 'error' ? <p className="more-detail__error" role="alert">{active.detail.error}</p> : null}
                     </div>
@@ -1216,7 +1221,7 @@ function Widget() {
 
           {(phase === 'streaming' || phase === 'done') && (
             <div className="foot">
-              <div className="panel-toast-region" role="status">{toast?.tabId === active.id ? <PanelToast text={toast.text} /> : null}</div>
+              <div className="panel-toast-region" role="status">{toast?.tabId === active.id ? <PanelToast text={toast.text} leaving={toast.leaving} /> : null}</div>
               {quizOpen && active.quiz ? (
                 <QuizActions
                   quiz={active.quiz}
@@ -1242,6 +1247,7 @@ function Widget() {
                   onStop={() => window.unvibe.cancel()}
                   onGotIt={() => {
                     // Vibe is happy once and the panel stays open; the toast comes when main has saved it (Design Q1).
+                    gotItAt.current = performance.now();
                     setBuddyMood('happy');
                     setTabs((prev) => patchTab(prev, activeTabId, { understood: true }));
                     window.unvibe.gotIt();
@@ -1367,4 +1373,5 @@ function Widget() {
   );
 }
 
+trackWindowAway();
 createRoot(document.getElementById('root')!).render(<Widget />);

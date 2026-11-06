@@ -7,13 +7,12 @@ import { VibeBubble } from '../src/renderer/shared/vibeBubble';
 
 const MOODS: BuddyMood[] = ['idle', 'thinking', 'reading', 'happy', 'celebrate', 'confused', 'sleepy', 'wave'];
 
-test('every mood keeps its existing art: arc eyes when glad, eyes with pupils otherwise', () => {
+test('every mood draws both eye sets, so a mood change can cross-fade them (buddy.css picks which shows)', () => {
   for (const mood of MOODS) {
     const html = renderToStaticMarkup(createElement(Buddy, { mood }));
     assert.match(html, new RegExp(`class="buddy buddy--${mood}"`), mood);
-    const glad = mood === 'happy' || mood === 'celebrate' || mood === 'wave';
-    assert.equal(html.includes('buddy__eyes--happy'), glad, `${mood}: arc eyes`);
-    assert.equal(html.includes('buddy__pupil'), !glad, `${mood}: pupils`);
+    assert.ok(html.includes('buddy__eyes--happy') && html.includes('buddy__eyes--open'), `${mood}: both eye sets`);
+    assert.equal(html.match(/buddy__pupil/g)?.length, 2, `${mood}: pupils`);
   }
 });
 

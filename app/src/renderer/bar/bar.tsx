@@ -5,6 +5,7 @@ import { Buddy, buddyMoodForPhase } from '../shared/buddy';
 import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
+import { trackWindowAway } from '../shared/windowAway';
 import '../shared/tokens.css';
 
 type Snapshot = {
@@ -266,4 +267,5 @@ function Bar() {
   );
 }
 
+trackWindowAway();
 createRoot(document.getElementById('root')!).render(<Bar />);

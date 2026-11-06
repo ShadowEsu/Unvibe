@@ -43,7 +43,8 @@ export function LevelChip({ level, plan, disabled, onPick }: {
   const label = LEVELS.find((l) => l.id === level)?.label ?? level;
   return (
     <MenuButton className="depth-chip" items={levelItems(level, plan, onPick)} menuLabel="Explanation depth" ariaLabel={`Depth: ${label}`} align="start" disabled={disabled}>
-      {label}
+      {/* Keyed by depth, so a new depth mounts a new label and plays depthLabelIn. */}
+      <span key={level} className="depth-chip__label">{label}</span>
       <small aria-hidden="true">▾</small>
     </MenuButton>
   );

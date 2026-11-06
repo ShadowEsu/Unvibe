@@ -36,7 +36,7 @@ test('Expert shows a hidden lock and "Pro" and opens nothing unless the plan inc
 test('the chip names the depth it shows, and choosing a depth hands it to the panel', () => {
   const chip = renderToStaticMarkup(createElement(LevelChip, { level: 'advanced', plan: 'free', disabled: false, onPick: noop }));
   assert.match(chip, /<button[^>]*class="depth-chip"[^>]*aria-label="Depth: Advanced"[^>]*aria-haspopup="menu"/);
-  assert.match(chip, />Advanced<small aria-hidden="true">▾<\/small><\/button>/);
+  assert.equal(/<button[^>]*>(.*?)<\/button>/.exec(chip)?.[1].replace(/<[^>]+>/g, ''), 'Advanced▾');
   const picked: ExplanationLevel[] = [];
   levelItems('new', 'free', (id) => picked.push(id)).find((i) => i.id === 'advanced')!.onSelect();
   assert.deepEqual(picked, ['advanced']);

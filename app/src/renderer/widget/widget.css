@@ -113,7 +113,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   isolation: isolate;
   container-type: inline-size;
   container-name: widget;
-  animation: widgetIn .42s var(--ease-emphatic) both;
+  /* SPEC §6: the panel slides in 12 px from the right and fades over 250 ms. Each open is a new window, so this plays
+     on every open (Motion, app-0151 moment 4). */
+  animation: widgetIn 250ms var(--u-ease) both;
   transition: opacity 0.3s ease, border-color 0.25s ease, background 0.3s ease, transform 220ms var(--ease-emphatic);
 }
 .card::before { content:""; position:absolute; left:32%; right:32%; top:0; height:2px; border-radius:0 0 2px 2px; background:var(--fg); opacity:.7; pointer-events:none; z-index:2; }
@@ -163,10 +165,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   from { transform: scale(1.18) translate3d(0, 0, 0); }
   to { transform: scale(1.3) translate3d(-1.6%, 1.2%, 0); }
 }
-@keyframes widgetIn {
-  from { opacity: 0; transform: translateY(16px) scale(.96); }
-  to { opacity: 1; transform: none; }
-}
+@keyframes widgetIn { from { opacity: 0; transform: translateX(12px); } }
+/* …and leaves the way it came: 160 ms back toward the edge as it fades, then main closes the window. Only closes the
+   panel starts (✕, Esc, ⌘W, Cancel, the last tab) play it; a close from main is still instant. */
+.card.card--leaving { animation: widgetOut 160ms var(--u-ease) both; pointer-events: none; }
+@keyframes widgetOut { to { opacity: 0; transform: translateX(8px); } }
 .card:hover { border-color: var(--fg); }
 
 /* Resize grips — exactly on the card border lines (not an invisible outer rim) */
@@ -361,6 +364,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fill); outl
   animation: blink 0.9s steps(1) infinite;
 }
 @keyframes blink { 50% { opacity: 0; } }
+/* Words fade in over 120 ms each as they arrive (SPEC §6). No fill mode: a word's animation ends with its fade, so only
+   arriving words animate. Linear, as in Design's reference clip (rounds/06/app.html .m .w). */
+.rich-w { animation: richWordIn 120ms linear; }
+@keyframes richWordIn { from { opacity: 0; } }
 
 .cite {
   display: inline-block;
@@ -623,6 +630,17 @@ code.inline {
 @media (prefers-reduced-motion: reduce) {
   .cursor, .skeleton i, .card, .card::after, .btn, .opt, .sanFranWash::before { animation: none; transition: none; transform: none; }
 }
+/* While the window is away (shared/windowAway.ts: hidden, or another app in front after this one had focus), the
+   panel's loops hold still, as Vibe's do (Design, 0.1.51 motion rulings): the stream caret, the quiz's "Writing a
+   question…" dots, and the thinking card's shimmer, spinner and Vibe bob. Each selector outranks the loop it pauses. */
+:root[data-away] .cursor,
+:root[data-away] .sanFranWash::before,
+:root[data-away] .card .think-status__verb,
+:root[data-away] .card .thinking__lines i,
+:root[data-away] .card .thinking__steps li.is-now i,
+:root[data-away] .card .thinking__vibe,
+:root[data-away] .card .state__vibe,
+:root[data-away] .card.card .body--quiz .quiz--wait i { animation-play-state: paused; }
 
 /* Quiet explanation surface; use monospace only for actual code. */
 .card { background: var(--bg); box-shadow: 0 8px 28px rgb(0 0 0 / .18); }
@@ -755,7 +773,7 @@ code.inline {
   background: var(--bg); color: var(--fg);
   border: 1px solid var(--line); border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.14);
-  backdrop-filter: none; animation-duration: .18s;
+  backdrop-filter: none;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-panel="light"]) .card {
@@ -961,10 +979,13 @@ code.inline {
 .card .head, .card.card .tabs, .card .widget-main, .card .foot { background: transparent; }
 .card .head { position: relative; }
 .card .head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgb(164 139 255 / 0.6), rgb(124 180 255 / 0.5), transparent); }
-.card .body > * { animation: pRise 380ms cubic-bezier(.2,.8,.2,1) both; }
+/* The answer itself doesn't rise: its words fade in as they arrive (.rich-w) and the panel's entrance covers first
+   paint (Motion, app-0151 moment 4). Test me swapping into the body gets an opacity-only cue. */
+.card .body--quiz > * { animation: quizIn 160ms var(--u-ease); }
+@keyframes quizIn { from { opacity: 0; } }
 .card .thinking { animation: pRise 420ms cubic-bezier(.2,.8,.2,1) both; border-color: rgb(164 139 255 / 0.25); box-shadow: 0 0 0 1px rgb(164 139 255 / 0.08), 0 16px 40px -24px rgb(124 92 255 / 0.6); }
 @keyframes pRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .card .body > *, .card .thinking { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .card .body--quiz > *, .card .thinking { animation: none; } }
 
 /* ═════════════════════════════════════════════════════════════════════════════
    Panel v6 "Dark pro": same palette as the companion. Near black, hairlines,
@@ -1095,8 +1116,6 @@ code.inline {
 .card .quiz__q { font-family: "Bricolage Grotesque", "Inter", sans-serif !important; letter-spacing: -0.02em; }
 .card .opt { border: 1.5px solid var(--p-line); border-radius: 12px; box-shadow: 0 2px 0 #000; transition: transform 160ms var(--p-press), border-color 120ms ease; }
 .card .opt:hover:not(:disabled) { border-color: var(--p-sky); background: var(--p-raised); transform: translateY(-1px); }
-.card .body > * { animation: pRise 360ms var(--p-press) both; }
-
 @keyframes pBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
 @keyframes pWrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @media (prefers-reduced-motion: reduce) { .card .thinking__vibe, .card .thinking__note { animation: none; } }
@@ -1327,7 +1346,13 @@ code.inline {
   display: flex; flex-direction: column;
   background: var(--u-canvas); border-radius: var(--u-radius-control);
   box-shadow: var(--u-shadow-whisper), 0 12px 32px -12px rgb(20 20 20 / 0.22);
+  /* Opens from the corner it hangs from: 140 ms, 4 px and 2% of scale (Design Q12 motion; Motion, app-0151 moment 3). */
+  transform-origin: top right; animation: pmMenuIn 140ms var(--u-ease) both;
 }
+@keyframes pmMenuIn { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+/* …and leaves in 100 ms (a pick, Esc, Tab, a click outside or the window losing focus); it is inert meanwhile. */
+.pm-menu--leaving { animation: pmMenuOut 100ms var(--u-ease) both; pointer-events: none; }
+@keyframes pmMenuOut { to { opacity: 0; transform: translateY(-2px) scale(0.99); } }
 /* `.pm-menu` in each selector: the menu sits in .head__actions, whose light-panel button rule is 0,4,1. */
 :root .card.card .pm-menu .pm-menu__item {
   display: flex; align-items: center; gap: 8px;
@@ -1342,7 +1367,7 @@ code.inline {
 .pm-menu__tag { margin-left: auto; font: 600 11px/1 var(--u-sans); color: var(--u-ink-3); }
 :root[data-panel="dark"] .pm-menu__tag { color: var(--u-dark-ink-3); }
 .pm-menu__on { width: 12px; height: 12px; margin-left: auto; padding: 1px; box-sizing: content-box; border-radius: 4px; background: var(--u-lime); fill: none; stroke: var(--u-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.pm-menu--start { left: 0; right: auto; }
+.pm-menu--start { left: 0; right: auto; transform-origin: top left; }
 .pm-menu__lock { width: 12px; height: 12px; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
 .pm-menu__lock + .pm-menu__tag { margin-left: 4px; }
 
@@ -1353,6 +1378,9 @@ code.inline {
   font: 500 13px/1 var(--u-sans); box-shadow: none; cursor: pointer;
 }
 :root .card.card .head-bar .depth-chip small { font-size: 11px; font-weight: 400; color: var(--u-ink-3); }
+/* A new depth: the label rises 3 px and fades in over 160 ms; the chip's width changes at once (Design Q12 motion). */
+:root .card.card .head-bar .depth-chip__label { display: inline-block; animation: depthLabelIn 160ms var(--u-ease) both; }
+@keyframes depthLabelIn { from { opacity: 0; transform: translateY(3px); } }
 :root .card.card .head-bar .depth-chip:hover:not(:disabled),
 :root .card.card .head-bar .depth-chip[aria-expanded="true"] { background: var(--u-plate); }
 :root .card.card .head-bar .depth-chip:disabled { opacity: 0.55; cursor: default; }
@@ -1371,9 +1399,18 @@ code.inline {
 /* Footer (SPEC §4): one violet "Got it" with a 3 px lip that presses instantly, quiet text for the rest, then the follow-up. */
 :root .card.card .foot { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px 18px 16px; border-top: 1px solid var(--u-plate); background: var(--u-canvas); box-shadow: none; }
 :root .card.card .foot .p-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-:root .card.card .foot .btn-primary { height: 44px; margin-right: 6px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--u-violet); color: #fff; font: 500 15px/1 var(--u-sans); letter-spacing: 0; box-shadow: 0 3px 0 var(--u-violet-lip); transform: none; transition: none; cursor: pointer; }
-:root .card.card .foot .btn-primary:active:not(:disabled),
-:root .card.card .foot .btn-primary--pressed { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+/* The violet key (SPEC §6: 3 px, instant down, 180 ms up; Motion, app-0151 moment 2). The face moves and the lip stays:
+   the lip is a ::before 3 px lower than the face, so pressing hides it behind the face and the release reveals it as
+   the face rises (moving a box-shadow would carry the lip along, and animating one is outside the motion bar). The
+   height comes from the face + 3 px padding; margin-bottom: -3px keeps the 44 px layout box. While pressed the lip
+   is hidden, so no anti-aliased rim shows where the two rounded rects meet. */
+:root .card.card .foot .btn-primary { position: relative; display: block; height: auto; margin: 0 6px -3px 0; padding: 0 0 3px; border: 0; border-radius: 12px; background: none; box-shadow: none; transform: none; transition: none; cursor: pointer; }
+:root .card.card .foot .btn-primary::before { content: ""; position: absolute; inset: 3px 0 0; border-radius: 12px; background: var(--u-violet-lip); }
+:root .card.card .foot .btn-primary__face { position: relative; display: flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 12px; background: var(--u-violet); color: #fff; font: 500 15px/1 var(--u-sans); letter-spacing: 0; transition: transform 180ms var(--u-ease); }
+:root .card.card .foot .btn-primary:active:not(:disabled) .btn-primary__face,
+:root .card.card .foot .btn-primary--pressed .btn-primary__face { transform: translateY(3px); transition-duration: 0s; }
+:root .card.card .foot .btn-primary:active:not(:disabled)::before,
+:root .card.card .foot .btn-primary--pressed::before { opacity: 0; }
 :root .card.card .foot .btn-primary--pressed { cursor: default; }
 :root .card.card .foot .btn-quiet { height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2); font: 500 15px/1 var(--u-sans); letter-spacing: 0; box-shadow: none; transform: none; cursor: pointer; }
 :root .card.card .foot .btn-quiet:hover:not(:disabled) { background: var(--u-band); color: var(--u-ink); }
@@ -1424,6 +1461,9 @@ code.inline {
 .panel-toast { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--u-ink); color: #fff; font: 500 14px/1.3 var(--u-sans); letter-spacing: 0; box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.4); animation: panelToastIn 200ms var(--u-ease) both; }
 .panel-toast__tick { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--u-lime); color: var(--u-ink); font: 700 13px/1 var(--u-sans); }
 @keyframes panelToastIn { from { opacity: 0; transform: translateY(8px); } }
+/* The toast leaves: 160 ms, fading as it settles 4 px, after its 2.4 s hold (Motion, app-0151 moment 2). */
+.panel-toast--leaving { animation: panelToastOut 160ms var(--u-ease) both; }
+@keyframes panelToastOut { to { opacity: 0; transform: translateY(4px); } }
 
 /* Night look. */
 :root[data-panel="dark"] .card.card .head,

@@ -1,4 +1,4 @@
-/* Vibe, the Unvibe AI blob. Pure CSS moods (the body morphs via the CSS d property); every loop stops for reduced motion. */
+/* Vibe, the Unvibe AI blob. Pure CSS moods; every loop stops for reduced motion. */
 
 .buddy {
   --vibe-fill: #b8a6ff;
@@ -25,25 +25,33 @@
 }
 
 .buddy__float { transform-origin: 50% 100%; }
-.buddy__body { fill: var(--vibe-fill); stroke: var(--vibe-ink); stroke-width: 2.2; stroke-linejoin: round; animation: buddyGoo 6s ease-in-out infinite; }
+.buddy__body { fill: var(--vibe-fill); stroke: var(--vibe-ink); stroke-width: 2.2; stroke-linejoin: round; }
 .buddy__iris { fill: var(--vibe-ink); }
-.buddy__shadow { fill: var(--vibe-ink); opacity: 0.14; transform-box: fill-box; transform-origin: center; animation: buddyShadow 4.2s ease-in-out infinite; }
+.buddy__shadow { fill: var(--vibe-ink); opacity: 0.14; }
 .buddy__pupil { fill: #fff; transform: translate(var(--look-x), var(--look-y)); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
 .buddy__lid { fill: var(--vibe-fill); transform: scaleY(0); transform-origin: top; }
 .buddy__eyes--happy path { fill: none; stroke: var(--vibe-ink); stroke-width: 2.8; stroke-linecap: round; }
+/* A mood change swaps the art with a 120 ms opacity cross-fade (Design, 0.1.51 motion rulings): both eye sets are
+   always drawn (buddy.tsx) and the mood decides which shows; the lids ease into each mood's shape in the same time. */
+.buddy__eyes { transition: opacity 120ms linear; }
+.buddy__lid { transition: transform 120ms linear; }
+.buddy__eyes--happy,
+.buddy--happy .buddy__eyes--open,
+.buddy--celebrate .buddy__eyes--open,
+.buddy--wave .buddy__eyes--open { opacity: 0; }
+.buddy--happy .buddy__eyes--happy,
+.buddy--celebrate .buddy__eyes--happy,
+.buddy--wave .buddy__eyes--happy { opacity: 1; }
 .buddy__extras > * { opacity: 0; }
 .buddy__dot { fill: var(--vibe-fill); stroke: var(--vibe-ink); stroke-width: 1; }
 .buddy__spark { fill: #ffd84d; stroke: var(--vibe-ink); stroke-width: 0.8; }
 .buddy__z { fill: var(--vibe-ink); font: 700 7px/1 ui-sans-serif, system-ui; }
 
-/* idle: float, blink, glance */
-.buddy--idle .buddy__float { animation: buddySquish 4.2s ease-in-out infinite; }
+/* idle: a still body, and the blink: Vibe's one "alive" cue (Design, 0.1.51 motion rulings: no breath, shadow
+   pulse or glance; Vibe moves only when something real happens) */
 .buddy--idle .buddy__lid { animation: buddyBlink 5.2s infinite; }
-.buddy--idle .buddy__eyes { animation: buddyGlance 9s ease-in-out infinite; }
 
-/* thinking: eyes up, faster wobble, rising dots */
-.buddy--thinking .buddy__float { animation: buddySquish 1.8s ease-in-out infinite; }
-.buddy--thinking .buddy__body { animation-duration: 2.2s; }
+/* thinking: eyes up, rising dots (the working signal), quicker blink; the body stays still */
 .buddy--thinking .buddy__pupil { transform: translate(1.1px, -1.6px); }
 .buddy--thinking .buddy__dot { animation: buddyThought 1.5s ease-in-out infinite; }
 .buddy--thinking .buddy__dot--2 { animation-delay: 0.2s; }
@@ -73,24 +81,22 @@
 .buddy--sleepy .buddy__lid { transform: scaleY(0.72); }
 .buddy--sleepy .buddy__z { animation: buddyZ 2.6s ease-in-out infinite; }
 
-/* A reaction (SPEC §3, the frozen app.html): one 240 ms squash and stretch from the base, while the eyes
-   change with the mood. Two identical animations, so a reaction during a reaction starts again. */
+/* A reaction (SPEC §3, the frozen app.html): Vibe's happy face is one 240 ms squash and stretch from the base; the
+   other reaction moods only change the eyes (Design, 0.1.51 motion rulings). A quick compress, then an even
+   release; the eases sit on the keyframes, so each half gets its own curve (Motion, app-0151 moment 1). Two
+   identical animations, so a reaction during a reaction starts again. */
 .buddy--react { transform-origin: 50% 100%; }
-.buddy--react-0 { animation: buddySquashA 240ms var(--u-ease, cubic-bezier(.2,.6,.25,1)); }
-.buddy--react-1 { animation: buddySquashB 240ms var(--u-ease, cubic-bezier(.2,.6,.25,1)); }
+.buddy--react.buddy--happy.buddy--react-0 { animation: buddySquashA 240ms linear; }
+.buddy--react.buddy--happy.buddy--react-1 { animation: buddySquashB 240ms linear; }
+/* During a reaction the mood shows in the eyes ("never loud or sudden"): no hop, tilt or looping sparks. Scoped to
+   .buddy--react, so standing moods elsewhere (feedback, Library, About) keep their look. */
+.buddy--react.buddy--happy .buddy__float,
+.buddy--react.buddy--wave .buddy__float,
+.buddy--react.buddy--celebrate .buddy__float,
+.buddy--react.buddy--confused .buddy__float { animation: none; }
+.buddy--react.buddy--celebrate .buddy__spark { animation-iteration-count: 1; }
 
-@keyframes buddyGoo {
-  0%, 100% { d: path("M24 8C33 8 38.5 14 40 22.5C41.5 31 43 38 37.5 41C32 43.6 16 43.6 10.5 41C5 38 6.5 31 8 22.5C9.5 14 15 8 24 8Z"); }
-  33% { d: path("M25 8.5C34 8.5 39 15 40.5 23C42 31 43.5 38 38 41C32.5 43.6 15.5 43.4 10 40.6C4.6 37.6 6 30.5 7.6 22C9 13.6 16 8.5 25 8.5Z"); }
-  66% { d: path("M23 8C32 7.6 38 13.6 39.6 22C41.2 30.6 43.4 38.2 38 41.2C32.4 43.8 16.4 43.8 10.6 40.8C5.4 38 6.8 31.4 8.4 23C10 14.4 14.6 8.4 23 8Z"); }
-}
-}
-@keyframes buddySquish { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.4px) scale(0.97, 1.03); } }
-@keyframes buddyShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.86); } }
-@keyframes buddyFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.6px); } }
 @keyframes buddyBlink { 0%, 92%, 100% { transform: scaleY(0); } 95% { transform: scaleY(1); } }
-@keyframes buddyGlance { 0%, 40%, 100% { transform: translateX(0); } 48%, 58% { transform: translateX(1.2px); } 66%, 74% { transform: translateX(-1.2px); } }
-@keyframes buddyBulb { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; filter: drop-shadow(0 0 3px #c4b5fd); } }
 @keyframes buddyThought { 0% { opacity: 0; transform: translateY(2px) scale(0.6); } 40%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-2px); } }
 @keyframes buddyRead { 0% { transform: translate(-1.6px, 0.4px); } 45% { transform: translate(1.6px, 0.4px); } 50% { transform: translate(1.6px, 1.2px); } 55% { transform: translate(-1.6px, 1.2px); } 100% { transform: translate(-1.6px, 0.4px); } }
 @keyframes buddyLean { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg) translateY(-0.6px); } }
@@ -99,13 +105,25 @@
 @keyframes buddyTilt { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 @keyframes buddyBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03, 0.98) translateY(0.6px); } }
 @keyframes buddyZ { 0% { opacity: 0; transform: translate(0, 2px); } 30%, 60% { opacity: 1; } 100% { opacity: 0; transform: translate(3px, -5px); } }
-@keyframes buddySquashA { 50% { transform: scale(1.08, 0.94); } }
-@keyframes buddySquashB { 50% { transform: scale(1.08, 0.94); } }
+@keyframes buddySquashA {
+  0% { transform: scale(1, 1); animation-timing-function: cubic-bezier(.2, .6, .25, 1); }
+  35% { transform: scale(1.08, 0.94); animation-timing-function: cubic-bezier(.45, 0, .25, 1); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes buddySquashB {
+  0% { transform: scale(1, 1); animation-timing-function: cubic-bezier(.2, .6, .25, 1); }
+  35% { transform: scale(1.08, 0.94); animation-timing-function: cubic-bezier(.45, 0, .25, 1); }
+  100% { transform: scale(1, 1); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .buddy, .buddy *, .buddy *::before, .buddy *::after { animation: none !important; }
-  .buddy__pupil { transition: none; }
+  .buddy__pupil, .buddy__eyes, .buddy__lid { transition: none; }
 }
+
+/* While the window is away (hidden, or another app in front after this one had focus: shared/windowAway.ts), Vibe's
+   loops hold still (Design, 0.1.51 motion rulings). The root's one-shot squash isn't paused. */
+:root[data-away] .buddy * { animation-play-state: paused; }
 
 /* Vibe is a flat 2D sticker: no glows or soft shadows from any surface. */
 .buddy, .buddy svg { filter: none !important; }

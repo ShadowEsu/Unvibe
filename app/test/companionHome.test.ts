@@ -39,7 +39,7 @@ test('Home leaves out Up next, the voice card and the stickers', () => {
 
 test('the goal line shows each step done or not', () => {
   const html = home();
-  assert.match(html, /aria-label="Done"[^>]*>✓<\/span> explain 1 piece of code/);
+  assert.match(html, /aria-label="Done"[^>]*>(?:<[^>]+>)?✓(?:<\/span>)?<\/span> explain 1 piece of code/);
   assert.match(html, /aria-label="Not done yet"[^>]*><\/span> answer 1 question/);
 });
 
