@@ -2864,6 +2864,162 @@ KeyError: 'qty'`,
     watchOut:
       "A quick fix can hide the problem instead of solving it. `item.get(\"qty\")` only moved the crash, to `TypeError: unsupported operand type(s) for *: 'int' and 'NoneType'`. `item.get(\"qty\", 1)` stopped the error but printed `A2 4`, counting 3 items as 1 without a word. Reading `quantity` when `qty` is missing printed the right `A2 12`.",
   },
+  {
+    id: "package-lock",
+    fileName: "package-lock.json",
+    lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
+    description:
+      "Paste a package-lock.json and get it explained in plain English, free online. The sample is 3 packages from a small project's lock file, one of them nested inside another.",
+    sampleSummary: "Lines 15 to 35 of the package-lock.json npm 11.10.1 wrote for a project whose package.json asks for `debug` `^2.6.9` and `ms` `^2.1.1`, after `npm install ms@2.1.1`.",
+    sample: `$ sed -n '15,35p' package-lock.json
+    "node_modules/debug": {
+      "version": "2.6.9",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz",
+      "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "2.0.0"
+      }
+    },
+    "node_modules/debug/node_modules/ms": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==",
+      "license": "MIT"
+    },
+    "node_modules/ms": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.1.tgz",
+      "integrity": "sha512-tgp+dl5cGk28utYktBsrFqA7HKgrhgPsg6Z/EfhWI4gl1Hwq8B/GmY/0oXZ6nF8hDVesS/FpnYaD/kOWhYQvyg==",
+      "license": "MIT"
+    }`,
+    shows: [
+      {
+        concept: "version and resolved",
+        text: "Each key is a folder npm creates, and `version` is the exact version that goes in it. package.json asks for a range, `^2.1.1`, meaning 2.1.1 or any newer 2.x. The lock pins one answer, `2.1.1`, so every `npm ci` installs that same version. `resolved` is the address the file was downloaded from.",
+      },
+      {
+        concept: "integrity",
+        text: "`integrity` is a fingerprint of the downloaded file: its SHA-512 hash, written in base64. Downloading each of the 3 `resolved` files and hashing it gave exactly these values. With one character of the `ms` hash changed and an empty npm cache, `npm ci` stopped with `EINTEGRITY` and `integrity checksum failed`.",
+      },
+      {
+        concept: "nested packages",
+        text: "`debug` 2.6.9 needs `ms` `2.0.0` exactly, but the project asked for `^2.1.1`. Both can't sit in `node_modules/ms`, so npm gave debug its own copy at `node_modules/debug/node_modules/ms`. After `npm ci`, the project's own `require(\"ms\")` loaded 2.1.1 and debug's loaded 2.0.0.",
+      },
+      {
+        concept: "npm ci and npm install",
+        text: "`npm ci` installs exactly what the lock says, or nothing. After `is-odd` was added to package.json but not to the lock, it stopped with `EUSAGE`, `Missing: is-odd@3.0.1 from lock file` and exit code 1. `npm install` with the same change worked out the new versions and added `node_modules/is-odd` and `node_modules/is-number` to the lock.",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 on Node 25.7.0, against the public npm registry. `lockfileVersion` 3, at the top of the full file, is the format npm 9 and later write.",
+      "The sample leaves out the first 14 lines, which hold the project's own name, version and the ranges copied from package.json, and the 2 closing lines.",
+    ],
+    watchOut:
+      "Deleting the lock to make an error go away quietly changes your versions. With the lock gone, `npm install` picked `ms` 2.1.3, the newest version in the `^2.1.1` range, not the 2.1.1 the project had been running. Commit package-lock.json, and use `npm ci` on servers and in CI so they install what you tested.",
+  },
+  {
+    id: "prisma-schema",
+    fileName: "prisma/schema.prisma",
+    lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
+    description:
+      "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts, with a relation between them.",
+    sampleSummary: "A schema.prisma for a small blog, of the kind an AI assistant writes when asked for users and posts: a generator, a SQLite datasource and 2 models joined by a relation.",
+    sample: `generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  published Boolean @default(false)
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  Int
+}`,
+    shows: [
+      {
+        concept: "models and fields",
+        text: "Each `model` becomes a table and each field a column, written as name, type, then attributes. `prisma migrate diff` turned `model User` into `CREATE TABLE \"User\"`. `name String?` became `\"name\" TEXT` and a new user with no name stored `NULL`; without the `?` it became `\"name\" TEXT NOT NULL`.",
+      },
+      {
+        concept: "attributes",
+        text: "`@id` marks the primary key and `@default(autoincrement())` gives each new row the next number: the first user got id 1. `@unique` on `email` became a unique index: adding a second `ana@example.com` failed with `UNIQUE constraint failed: User.email`. `@default(now())` filled `createdAt` and `@default(false)` left a new post unpublished.",
+      },
+      {
+        concept: "relations",
+        text: "`author User @relation(fields: [authorId], references: [id])` says `authorId` holds a `User`'s `id`, and became a foreign key: a post for user 99, who doesn't exist, failed with `FOREIGN KEY constraint failed`. `posts Post[]` is the other side, a list with no column of its own. Without it, `prisma validate` stopped: the relation field `author` `is missing an opposite relation field on the model User`.",
+      },
+      {
+        concept: "the generator and datasource",
+        text: "`generator client` tells `prisma generate` to write the code your app uses to query the database: it wrote client.ts and the files next to it into src/generated/prisma, the `output` folder. `datasource db` names the database type, here SQLite. In Prisma 7 the connection address lives in prisma.config.ts: with `url = env(\"DATABASE_URL\")` added here, `prisma validate` stopped, saying the datasource property `url` is no longer supported in schema files.",
+      },
+    ],
+    notes: [
+      "Run with Prisma 7.10.1 and SQLite 3.53.4: `prisma validate` passed, `prisma migrate diff --from-empty` printed the SQL, and that SQL was run against an empty SQLite file with foreign keys switched on.",
+      "`onDelete: Cascade` made the foreign key `ON DELETE CASCADE`: deleting a user with 2 posts left 0 posts. With it taken out, Prisma wrote `ON DELETE RESTRICT` instead, and deleting a user who still had a post failed and left the user in place.",
+    ],
+    watchOut:
+      "Changing this file doesn't change your database. The tables only change when a migration runs, for example `prisma migrate dev`, and your app's query code only changes when `prisma generate` runs. Before applying a migration, read the SQL it will run: making `name` required became `\"name\" TEXT NOT NULL`, which a table that already has users without a name can't hold.",
+  },
+  {
+    id: "tailwind",
+    fileName: "PlanCard.jsx",
+    lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, colour, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
+    description:
+      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with a dozen utility classes per line, the way AI assistants write them.",
+    sampleSummary: "A React component of the kind an AI assistant writes with Tailwind CSS: a pricing card whose layout, colours and button states all come from class names.",
+    sample: `export function PlanCard({ plan }) {
+  return (
+    <div className="mx-auto max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:flex md:max-w-2xl md:gap-6 dark:bg-gray-900">
+      <img className="size-24 rounded-full object-cover md:size-32" src={plan.image} alt="" />
+      <div className="mt-4 md:mt-0">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h2>
+        <p className="mt-1 line-clamp-2 text-sm text-gray-500">{plan.blurb}</p>
+        <button className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500 disabled:opacity-50 sm:w-auto">
+          Choose {plan.name}
+        </button>
+      </div>
+    </div>
+  );
+}`,
+    shows: [
+      {
+        concept: "utility classes",
+        text: "Each class sets one or two CSS properties. Sizes count in steps of `--spacing`, 0.25rem: `p-6` became `padding: calc(var(--spacing) * 6)`, 1.5rem, and `size-24` set both width and height to 6rem. `max-w-sm` is 24rem, `rounded-2xl` 1rem, and `line-clamp-2` cuts the blurb off after 2 lines.",
+      },
+      {
+        concept: "breakpoints",
+        text: "A prefix like `md:` applies the class only from a screen width up: `md:flex` became `display: flex` inside `@media (width >= 48rem)`, 768px, and `sm:` used `40rem`. Without a prefix a class applies at every width, so the card is a column on a phone and a row on a wider screen.",
+      },
+      {
+        concept: "states and dark mode",
+        text: "`hover:bg-indigo-500` only applies under `@media (hover: hover)`, so on a touch screen that can't hover the button keeps its normal colour. `disabled:opacity-50` matches `:disabled`. `dark:` followed the system setting, `prefers-color-scheme: dark`. With `@custom-variant dark (&:where(.dark, .dark *))` in the CSS, it followed a `dark` class instead.",
+      },
+      {
+        concept: "how classes are found",
+        text: "Tailwind reads your files as plain text and writes CSS only for the class names it finds. This file has 35 different classes and the build had 35 rules, one for each. A class built from a variable, `bg-${color}-500`, got no rule, because the full name `bg-red-500` never appears in the file. A typo, `md:flx`, got no rule and no warning either.",
+      },
+    ],
+    notes: [
+      "Run with Tailwind CSS 4.3.4 and its command line tool, building CSS from this one file, with `source(none)` so no other file in the folder was read.",
+      "With `p-2 p-4` and with `p-4 p-2` in the same `className`, the CSS had `.p-2` first and `.p-4` after it, so `p-4` wins either way: the order classes are written in doesn't decide which one applies.",
+    ],
+    watchOut:
+      "Classes put together from pieces silently do nothing. `bg-${color}-500` looks fine in the code and produced no CSS at all, so the element just had no background. Write the full class name for every option, for example a map from `red` to `bg-red-500`, so Tailwind can find each one.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
