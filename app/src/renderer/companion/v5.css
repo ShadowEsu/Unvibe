@@ -1,12 +1,12 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Unvibe companion, v5: color and motion. An aurora gradient behind glass
-   panels, a color for every section, Plus Jakarta Sans for the interface,
-   and gentle animation when pages and cards appear. Loads after v3.css.
+   panels, a color for every section, and gentle animation when pages and
+   cards appear. Loads after v3.css; v7.css sets the interface fonts.
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root[data-ui="v3"] {
-  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --c-violet: #7c5cff;
   --c-indigo: #5b6cff;
   --c-blue: #3b8bff;

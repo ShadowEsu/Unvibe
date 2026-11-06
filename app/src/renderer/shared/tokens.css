@@ -31,7 +31,7 @@
   --uv-normal: 200ms;
   --uv-slow: 280ms;
   --uv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  /* Newsreader when the companion has loaded it, otherwise the macOS system serif. */
+  /* Newsreader and JetBrains Mono are bundled (shared/fonts.css); the rest are fallbacks. */
   --uv-display: "Newsreader", ui-serif, "New York", Georgia, serif;
   --uv-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
 }
