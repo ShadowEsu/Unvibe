@@ -1,0 +1,104 @@
+name: QA setup.exe /currentuser crash check
+
+# QA only (#212 rows, run 42193399330): on clean Windows Server 2025, v0.1.49's setup.exe run with "/S /currentuser"
+# exited -1073741819 (0xC0000005) in 3 of 4 rows with no earlier install, and installed nothing. This runs each
+# installer on a fresh profile with and without /currentuser, twice, on 2022 and 2025, and records the exit code,
+# what landed, and the Application log's crash entries. Nothing is launched; the seeded qa- id is flagged anyway.
+# Runs on a push to qa/install-matrix whose commit message holds "[setup-crash]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: qa-setup-crash
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: contains(github.event.head_commit.message, '[setup-crash]')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+        installer: [v0149, build209]
+        args: [S, S-currentuser]
+        attempt: [1, 2]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      INSTALL_ID: qa-crash-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.installer }}-${{ matrix.args }}-${{ matrix.attempt }}
+    steps:
+      - name: Flag the seeded id as QA
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+          mkdir -p "$APPDATA/Unvibe" && printf '{"installId":"%s"}' "$INSTALL_ID" > "$APPDATA/Unvibe/unvibe-store.json"
+
+      - name: Get the #209 build's setup.exe
+        if: matrix.installer == 'build209'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: 42187758971
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build
+
+      - name: Run the installer, record what happened
+        shell: powershell
+        env:
+          INSTALLER: ${{ matrix.installer }}
+          ARGS: ${{ matrix.args }}
+        run: |
+          $out = "$env:RUNNER_TEMP\m"; New-Item -ItemType Directory -Force $out | Out-Null
+          function Note($s) { Add-Content -Path "$out\report.txt" -Value $s -Encoding utf8; Write-Host $s }
+          $f = if ($env:INSTALLER -eq 'v0149') {
+            $p = "$env:RUNNER_TEMP\Unvibe-0.1.49-win-x64-setup.exe"
+            Invoke-WebRequest -Uri 'https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.49/Unvibe-0.1.49-win-x64-setup.exe' -OutFile $p -UseBasicParsing; $p
+          } else { (Get-ChildItem "$env:RUNNER_TEMP\build" -Recurse -Filter '*-win-x64-setup.exe' | Select-Object -First 1).FullName }
+          $argList = if ($env:ARGS -eq 'S-currentuser') { @('/S', '/currentuser') } else { @('/S') }
+          $os = Get-CimInstance Win32_OperatingSystem
+          Note "ROW $env:INSTALLER $($argList -join ' ') on $($os.Caption) build $($os.BuildNumber); $(Split-Path $f -Leaf) sha256 $((Get-FileHash $f).Hash.ToLower().Substring(0, 16))..."
+          $t0 = Get-Date
+          $p = Start-Process -FilePath $f -ArgumentList $argList -PassThru; $null = $p.Handle
+          if (-not $p.WaitForExit(300000)) { Note 'still running after 5 min'; $p | Stop-Process -Force }
+          Note ("exit {0} (0x{1:X8}) after {2:N1} s" -f $p.ExitCode, $p.ExitCode, ((Get-Date) - $t0).TotalSeconds)
+          Start-Sleep 3
+          $dir = "$env:LOCALAPPDATA\Programs\Unvibe"
+          Note "per-user folder: $(if (Test-Path $dir) { "$(@(Get-ChildItem $dir -Recurse -File).Count) files, Unvibe.exe $(Test-Path "$dir\Unvibe.exe")" } else { 'none' }); Program Files\Unvibe: $(Test-Path "$env:ProgramFiles\Unvibe")"
+          foreach ($h in 'HKCU', 'HKLM') { $e = Get-ItemProperty "${h}:\Software\Microsoft\Windows\CurrentVersion\Uninstall\f5687918-a052-548a-a713-e4a84dbef267" -ErrorAction SilentlyContinue; Note "$h Apps entry: $(if ($e) { "'$($e.DisplayName)' $($e.DisplayVersion)" } else { 'none' })" }
+          Note "Unvibe running: $(@(Get-Process Unvibe -ErrorAction SilentlyContinue).Count)"
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $t0.AddSeconds(-5) } -ErrorAction SilentlyContinue |
+            Where-Object { $_.Id -in 1000, 1001, 1002, 1026 -or $_.ProviderName -like '*Error Reporting*' } |
+            ForEach-Object { Note "event $($_.Id) $($_.ProviderName): $(($_.Message -replace '\s+', ' ').Substring(0, [Math]::Min(700, ($_.Message -replace '\s+', ' ').Length)))" }
+          Get-ChildItem "$env:LOCALAPPDATA\CrashDumps", "$env:ProgramData\Microsoft\Windows\WER\ReportArchive" -ErrorAction SilentlyContinue | Select-Object -First 5 | ForEach-Object { Note "crash file: $($_.FullName)" }
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          foreach ($h in 'HKCU', 'HKLM') {
+            $e = Get-ItemProperty "${h}:\Software\Microsoft\Windows\CurrentVersion\Uninstall\f5687918-a052-548a-a713-e4a84dbef267" -ErrorAction SilentlyContinue
+            if ($e) { $u = if ($e.QuietUninstallString) { $e.QuietUninstallString } else { "$($e.UninstallString) /S" }; Start-Process cmd.exe -ArgumentList '/c', $u -Wait -WindowStyle Hidden; Note "uninstalled $h" }
+          }
+
+      - name: Flag again
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w " %{http_code} $INSTALL_ID\n" \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}"
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-${{ matrix.runner }}-${{ matrix.installer }}-${{ matrix.args }}-${{ matrix.attempt }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14

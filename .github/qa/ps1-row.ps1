@@ -144,8 +144,12 @@ switch ($Kind) {
     $sf = Join-Path $storeDir 'unvibe-settings.json'
     $s = try { Get-Content $sf -Raw | ConvertFrom-Json } catch { New-Object psobject }
     $s | Add-Member -NotePropertyName launchAtLogin -NotePropertyValue $true -Force
-    Set-Content $sf ($s | ConvertTo-Json -Depth 20) -Encoding utf8
-    Start-Process $portable; Start-Sleep 20; Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
+    # No BOM: Windows PowerShell's -Encoding utf8 adds one, and the app's JSON.parse then reads the file as a first run.
+    [IO.File]::WriteAllText($sf, ($s | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
+    Start-Process $portable
+    for ($i = 0; $i -lt 45 -and -not (RunItems); $i++) { Start-Sleep 2 }
+    Note "  login item after one start of the portable copy ($($i * 2) s): $((@(RunItems)) -join ' | '); settings launchAtLogin: $((Get-Content $sf -Raw | ConvertFrom-Json).launchAtLogin)"
+    Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
   }
   'setup' { Note "v0.1.49 setup /S exit $(RunWait (OldSetup) '/S')" }
   'allusers' { Note "v0.1.49 setup /allusers /S exit $(RunWait (OldSetup) '/allusers /S')" }
