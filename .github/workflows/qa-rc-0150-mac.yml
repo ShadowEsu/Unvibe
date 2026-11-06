@@ -53,6 +53,9 @@ jobs:
           - { item: mic-049-2, runner: macos-15-intel, rc: "42199536258" }
           - { item: mic-rc2-soundoff-1, runner: macos-15-intel, rc: "42199536258" }
           - { item: mic-rc2-soundoff-2, runner: macos-15-intel, rc: "42199536258" }
+          # Control for the two above: the same script and RC-2 build with interface sounds left on (the default).
+          - { item: mic-rc2-soundon-1, runner: macos-15-intel, rc: "42199536258" }
+          - { item: mic-rc2-soundon-2, runner: macos-15-intel, rc: "42199536258" }
           # Design package stills (Briefs with one real brief of a sample repo, Settings → Privacy & Data), RC-2 arm64.
           - { item: design-briefs, runner: macos-15, rc: "42199536258" }
     name: ${{ matrix.item }} (${{ matrix.runner }})
