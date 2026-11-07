@@ -6,6 +6,7 @@ import { listingBadges, listingLinks, submittedTo } from "@/data/listings";
 import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { SocialFollowLinks } from "@/components/paper/SocialFollow";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
+import { OFFICIAL_PROFILES } from "@/lib/contact";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
 import { D_ART_CREDITS, D_FOOT } from "./content";
 
@@ -15,7 +16,8 @@ import { D_ART_CREDITS, D_FOOT } from "./content";
  * live listings, each directory's own badge as a self-hosted copy (never hotlinked, never recoloured) and every live
  * listing as a plain text link; "Submitted to" holds, as plain text only, the pending directories that need a link back
  * before they approve. Server-rendered <a>s without nofollow, so the directories' checkers find them. Then the photo
- * and painting credits.
+ * and painting credits. The Follow column (Design, ledger 563) links the profiles Unvibe controls with rel="me", the
+ * same list as the Organization JSON-LD sameAs.
  */
 export function SiteFooter() {
   const pathname = usePathname();
@@ -31,6 +33,14 @@ export function SiteFooter() {
             {col.h === "Company" ? <li><button type="button" onClick={openAnalyticsSettings}>Analytics settings</button></li> : null}
           </FooterLinks>
         ))}
+        <nav aria-label="Follow" className="d-foot__follow">
+          <h2>Follow</h2>
+          <ul>
+            {OFFICIAL_PROFILES.map(([name, href]) => (
+              <li key={href}><a href={href} target="_blank" rel="me noopener">{name}</a></li>
+            ))}
+          </ul>
+        </nav>
         <div className="d-foot__news">
           {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our own mark */}
           <img className="d-foot__ghost" src="/brand/vibe.svg" width={48} height={48} alt="" />

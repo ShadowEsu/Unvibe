@@ -23,6 +23,7 @@ import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";
 import { AmbientEffects } from "@/components/paper/AmbientEffects";
 import { OG_CARD_SIZE, OG_CARDS } from "@/lib/pageMeta";
+import { OFFICIAL_PROFILES } from "@/lib/contact";
 import { SelectionExplain } from "@/components/paper/SelectionExplain";
 import { SitePalette } from "@/components/paper/SitePalette";
 import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
@@ -151,14 +152,12 @@ const organizationJsonLd = {
   "@id": `${siteUrl}/#org`,
   name: "Unvibe",
   url: siteUrl,
-  logo: `${siteUrl}/icon.png`,
+  // public/icon.png is 1024 × 1024 (Google's logo guidance: at least 112 × 112, square works).
+  logo: { "@type": "ImageObject", url: `${siteUrl}/icon.png`, width: 1024, height: 1024 },
   description: "Unvibe makes a free desktop app for Mac and Windows that explains AI-written code in plain English.",
   email: "support@unvibe.site",
-  // Only profiles that exist: TikTok and X are left out until their accounts do.
-  sameAs: [
-    "https://www.linkedin.com/company/unvibeapp/",
-    "https://www.instagram.com/unvibe_app/",
-  ],
+  // Only profiles Unvibe controls (contact.ts, the same list as the footer's Follow column).
+  sameAs: OFFICIAL_PROFILES.map(([, url]) => url),
 };
 
 export const viewport: Viewport = {
