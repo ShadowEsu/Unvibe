@@ -1031,38 +1031,6 @@ h2 {
   .paper-footer__legal { padding-bottom: 5rem !important; }
 }
 
-.paper-footer__social {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-top: 1.25rem;
-}
-
-.paper-footer__social a {
-  display: grid;
-  place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  color: var(--ink);
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-pill);
-  background: var(--glass);
-  box-shadow: var(--shadow-glass);
-  transition: transform 200ms var(--ease-calm), color 200ms var(--ease-calm);
-}
-
-.paper-footer__social a:hover {
-  color: var(--brand);
-  transform: translateY(-2px);
-}
-
-.paper-footer__social svg {
-  display: block;
-  width: 1.05rem;
-  height: 1.05rem;
-  overflow: visible;
-}
-
 .paper-text-link {
   color: var(--brand);
   font-size: 0.9rem;
