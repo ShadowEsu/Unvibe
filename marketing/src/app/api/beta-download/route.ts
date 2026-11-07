@@ -101,6 +101,6 @@ export async function POST(request: Request) {
     downloadUrl: BETA_MAC_DOWNLOAD_URL,
     emailSent: delivery.sent,
     referralCode: code,
-    emailNotice: delivery.sent ? "Download and feedback links sent to your inbox." : "Your download is ready. Email delivery is temporarily unavailable.",
+    emailNotice: delivery.sent ? "Install steps sent to your inbox." : "Your download is ready. Email delivery is temporarily unavailable.",
   }, { headers: { "Cache-Control": "no-store" } });
 }
