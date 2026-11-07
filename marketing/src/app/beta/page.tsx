@@ -96,7 +96,7 @@ export default function BetaDownloadsPage() {
                 <li>Tick both boxes.</li>
                 <li>Type your email and press <strong>Email me a secure <span style={{ whiteSpace: "nowrap" }}>sign-in</span> link</strong>.</li>
                 {/* The sender lives in Supabase's SMTP settings, not this repo: re-check it here whenever SMTP changes. */}
-                <li>Open the email from Unvibe (no-reply@unvibe.site) and its link in that same browser on this computer.</li>
+                <li>Open the email from Unvibe (no-reply@unvibe.site) and its link in that same browser on this computer. Check your Spam folder if the sign-in email doesn’t arrive.</li>
                 <li>Back on the page, check the code matches the one in the app (type it in if the box is empty).</li>
                 <li>Press <strong style={{ whiteSpace: "nowrap" }}>Approve sign-in</strong>. The app finishes a few seconds later.</li>
               </ol>
