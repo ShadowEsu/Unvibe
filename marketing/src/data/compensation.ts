@@ -52,6 +52,8 @@ export const startupPrograms: readonly StartupProgram[] = [
   // Preston attests: confirmed by phone with the company, 6 Nov 2026. Terms: startups@mixpanel.com, 18 Aug 2026,
   // "your first year free on the Startup Plan".
   { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", amountUsd: 144_000, detail: "1 year of Mixpanel's Startup Plan" },
+  // PostHog: "Welcome to PostHog's startup program" email, 17 Aug 2026 (acceptance); amount from the same sender's
+  // 27 Aug 2026 email: "we gave you $50,000 of free credit".
   { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
   // Preston attests: confirmed by phone with the company, 6 Nov 2026. Terms: Salesforce benefits email, 26 Aug 2026,
   // "we're funding your Starter for the next 12 months (and will be 50% off for your second year)".
