@@ -787,6 +787,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
   {
     id: "curl",
     fileName: "check-orders.sh",
+    related: ["http-headers", "cors-error", "bash"],
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -994,7 +995,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
-    related: ["cpp", "make", "assembly"],
+    related: ["cpp", "make", "assembly", "segmentation-fault"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -3160,7 +3161,7 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
-    related: ["javascript", "curl", "json"],
+    related: ["javascript", "curl", "json", "http-headers"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
