@@ -6,7 +6,8 @@ import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { NextRequest, type NextFetchEvent } from "next/server";
 import { GET, HEAD } from "@/app/download/[file]/route";
-import { middleware } from "@/middleware";
+import { createRequire } from "node:module";
+import { config as middlewareConfig, middleware } from "@/middleware";
 import {
   BETA_INSTALL_TAG,
   BETA_MAC_DOWNLOAD_URL,
@@ -157,6 +158,31 @@ describe("recordDownload", () => {
     assert.equal(await recordDownload("mac", "none", async () => { throw new Error("down"); }), false);
     assert.equal(await recordDownload("mac", "none", async () => false), false);
     assert.equal(await recordDownload("mac", "none", null), false);
+  });
+});
+
+describe("middleware matchers", () => {
+  // Vercel runs the middleware once for every matcher entry a request matches (6 Nov: a browser click on
+  // /download/mac matched the page entry and the download entry and was counted twice). Next compiles each
+  // `source` with this same path-to-regexp (untyped, so it is loaded with an explicit type).
+  const sources = middlewareConfig.matcher.map((m) => (typeof m === "string" ? m : m.source));
+  const { pathToRegexp } = createRequire(path.join(process.cwd(), "package.json"))("next/dist/compiled/path-to-regexp") as {
+    pathToRegexp: (source: string) => RegExp;
+  };
+  const matching = (p: string) => sources.filter((s) => pathToRegexp(s).test(p));
+
+  it("a download link matches exactly one entry, so a click runs the middleware once", () => {
+    for (const file of DOWNLOAD_FILE_NAMES) {
+      assert.equal(matching(`/download/${file}`).length, 1, file);
+      assert.equal(matching(`/download/${file}/`).length, 1, `${file}/`);
+    }
+  });
+
+  it("pages, including other /download/... pages, still match the page entry only", () => {
+    for (const p of ["/", "/beta", "/explain", "/download/thanks", "/download/macos-guide", "/download/mac/extra"]) {
+      assert.deepEqual(matching(p), [sources[0]], p);
+    }
+    assert.deepEqual(matching("/install.sh"), []);
   });
 });
 
