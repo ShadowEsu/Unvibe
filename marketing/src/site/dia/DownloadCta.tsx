@@ -71,8 +71,15 @@ export function takeQueuedDownload(): DownloadKey | null {
   }
 }
 
-/** The thank-you state: /beta with the first-open steps for the file that just started. */
-export const thanksHref = (key: DownloadKey) => `/beta?dl=${key}#thanks`;
+/**
+ * The thank-you state: /beta with the first-open steps for the file that just started. It keeps the page's
+ * utm_source (only that), so the file's counted link (/download/<file>, downloadCounter.ts) still knows which
+ * link brought the visitor: the browser sends this address as the Referer when the download starts.
+ */
+export const thanksHref = (key: DownloadKey, search = "") => {
+  const source = new URLSearchParams(search).get("utm_source");
+  return `/beta?dl=${key}${source ? `&utm_source=${encodeURIComponent(source)}` : ""}#thanks`;
+};
 
 /** This visitor's file, or null on a phone; `platform` pins Mac or Windows on a computer. */
 function fileFor(platform: "mac" | "windows" | undefined): DownloadKey | null {
@@ -127,7 +134,7 @@ export function DownloadCta({ surface, platform, children, className = "d-cta d-
           return;
         }
         queueDownload(key);
-        go(thanksHref(key));
+        go(thanksHref(key, window.location.search));
       }}
       {...rest}
     >

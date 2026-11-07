@@ -16,6 +16,7 @@ import {
   type DownloadRequest,
 } from "@/lib/downloadCounter";
 import { DOWNLOAD_FILE_NAMES } from "@/lib/downloadFiles";
+import { thanksHref } from "@/site/dia/DownloadCta";
 
 const CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36";
 const SITE = "https://unvibe.site";
@@ -96,6 +97,13 @@ describe("download source (utm_source only, closed list)", () => {
     assert.equal(downloadSource(req({ headers: { referer: "https://unvibe.site.evil.example/?utm_source=x" } })), "none");
     assert.equal(downloadSource(req({ headers: { referer: "not a url" } })), "none");
     assert.equal(downloadSource(req()), "none");
+  });
+
+  it("survives the one-click button's move to the thank-you state, which keeps utm_source and nothing else", () => {
+    assert.equal(thanksHref("mac-arm", "?utm_source=devhunt&utm_medium=directory&ref=abc"), "/beta?dl=mac-arm&utm_source=devhunt#thanks");
+    assert.equal(thanksHref("windows", ""), "/beta?dl=windows#thanks");
+    const thanks = new URL(thanksHref("mac-intel", "?utm_source=DevHunt"), SITE).toString();
+    assert.equal(downloadSource(req({ headers: { referer: thanks } })), "devhunt");
   });
 });
 
