@@ -24,7 +24,7 @@ export const milestones: Milestone[] = [
     date: "6 NOV 2026",
     category: "PRODUCT",
     title: "A new look for unvibe.site",
-    summary: "The site has a new home page, one header on every page and a new footer that shows where Unvibe is listed and where it has been submitted. The download button picks the build for your computer in one click: Apple silicon or Intel on a Mac, the .exe on Windows, and on a phone a page where you can email yourself the link. Pricing and the beta page moved to the new look, and the Try it box moved from the home page to Explain code.",
+    summary: "The site has a new home page, one header on every page and a new footer that shows where Unvibe is listed and where it has been submitted. The download button starts the file for your computer in one click: the .exe on Windows, and on a Mac the Apple silicon build, or the Intel one when your browser reports an Intel Mac, with the other Mac file one click away. On a phone it opens a page where you can email yourself the link. Pricing and the beta page moved to the new look, and the Try it box moved from the home page to Explain code.",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/228", label: "PR #228" },
