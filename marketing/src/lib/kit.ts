@@ -48,7 +48,7 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Vibe icon 1024 (PNG)", path: "/brand/vibe-icon-1024.png", use: "Avatars, socials, directory listings", kind: "image" },
   { name: "App icon 1024", path: "/brand/icon-1024.png", use: "The Mac and Windows app icon, app store style", kind: "image" },
   { name: "Outreach email banner", path: "/email/outreach-banner.png", use: "Top of cold outreach emails", kind: "image" },
-  { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
+  { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Older welcome emails (file kept for sent mail)", kind: "image" },
   { name: "Social preview", path: OG_CARDS.home.file, use: "Link previews, social posts", kind: "image" },
   { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },

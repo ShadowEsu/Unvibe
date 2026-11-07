@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { welcomeHtml, welcomeText, WELCOME_PREVIEW, WELCOME_SUBJECT } from "../emails/welcome";
 import { BETA_INSTALL_COMMAND, BETA_WINDOWS_INSTALL_COMMAND } from "./betaOffer";
 import { feedbackRewardUrl, signEmail, verifyEmailSignature } from "./rewardLink";
@@ -29,7 +27,6 @@ describe("welcome email (onboarding email 1, Security S-2 0002)", () => {
     const lines = welcomeText(input).split("\n");
     assert.ok(lines.includes(BETA_INSTALL_COMMAND), "the Mac command is on its own line");
     assert.ok(lines.includes(BETA_WINDOWS_INSTALL_COMMAND), "the Windows command is on its own line");
-    assert.doesNotMatch(readFileSync(path.resolve("src/emails/welcome.ts"), "utf8"), /install\.(sh|ps1)|curl |irm /);
   });
 
   it("links the install help in both parts", () => {

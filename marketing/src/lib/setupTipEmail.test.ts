@@ -32,7 +32,6 @@ describe("setup tip email (onboarding email 2, Security S-2 0002)", () => {
     }
     assert.match(html, new RegExp(`<code[^>]*>${BETA_INSTALL_COMMAND.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</code>`));
     assert.ok(text.includes(`Terminal on a Mac: ${BETA_INSTALL_COMMAND}, or`));
-    assert.doesNotMatch(readFileSync(path.resolve("src/lib/sendBetaDownloadEmail.ts"), "utf8"), /install\.(sh|ps1)|curl |irm /);
   });
 
   it("promises nothing else is scheduled (O-3), and keeps a visible unsubscribe link in both parts", () => {

@@ -48,7 +48,7 @@ export function welcomeHtml(input: WelcomeInput): string {
   const pre = `<pre style="margin:0 0 18px;padding:12px 14px;border:2px solid ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.5;color:${INK};white-space:pre-wrap;word-break:break-all">`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Welcome to Unvibe</title><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head>
 <body style="margin:0;padding:0;background:${PAPER};font-family:Helvetica,Arial,sans-serif;color:${INK}">
-<div style="display:none;max-height:0;overflow:hidden">${WELCOME_PREVIEW}</div>
+<div style="display:none;max-height:0;overflow:hidden">${escape(WELCOME_PREVIEW)}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${PAPER}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:${PAPER}">
 <tr><td style="padding:0 28px 12px">
@@ -59,7 +59,7 @@ ${pre}<code>${escape(BETA_INSTALL_COMMAND)}</code></pre>
 <p style="${p}"><b style="color:${INK}">On Windows:</b> open PowerShell (Start, type PowerShell), paste this, press Enter:</p>
 ${pre}<code>${escape(BETA_WINDOWS_INSTALL_COMMAND)}</code></pre>
 <p style="${p}">Each line checks the download against its published checksum before installing, then opens Unvibe. You can read both scripts first at <a href="${escape(l.installHelp)}" style="${link}">unvibe.site/install-help</a>.</p>
-<table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 20px"><tr><td style="border:2px solid ${INK};border-radius:14px;background:${LIME}"><a href="${escape(l.get)}" style="display:inline-block;padding:14px 28px;font-size:17px;font-weight:800;line-height:1.2;color:${INK};text-decoration:none">Get Unvibe</a></td></tr></table>
+<table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 20px"><tr><td bgcolor="${LIME}" style="border:2px solid ${INK};border-radius:14px;background:${LIME}"><a href="${escape(l.get)}" style="display:inline-block;padding:14px 28px;font-size:17px;font-weight:800;line-height:1.2;color:${INK};text-decoration:none">Get Unvibe</a></td></tr></table>
 <p style="${p}">Would rather download the file? The button above has it too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here is exactly what to press: <a href="${escape(l.installHelp)}" style="${link}">${escape(l.installHelp)}</a></p>
 <p style="${p}">When it opens, Unvibe explains a short sample for you, then one of your own snippets. No account needed.</p>
 <p style="${p}">Reply to this email if anything gets in the way and we'll help.</p>
