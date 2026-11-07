@@ -36,7 +36,7 @@ export const config = {
       // a test covers them, so pages that merely start with the same letters (/statsig-…) still count.
       // The download links are left out here: Vercel runs the middleware once per matching entry, so a
       // browser's download click (Accept: text/html) that matched both entries was counted twice.
-      source: "/((?!_next/|api/|og/|download/mac$|download/mac-intel$|download/windows$|.*\\.[a-zA-Z0-9]+$).*)",
+      source: "/((?!_next/|api/|og/|download/(?:mac|mac-intel|windows)/?$|.*\\.[a-zA-Z0-9]+$).*)",
       has: [{ type: "header", key: "accept", value: ".*text/html.*" }],
       missing: [
         { type: "header", key: "rsc" },

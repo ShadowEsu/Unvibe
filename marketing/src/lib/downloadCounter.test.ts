@@ -172,7 +172,10 @@ describe("middleware matchers", () => {
   const matching = (p: string) => sources.filter((s) => pathToRegexp(s).test(p));
 
   it("a download link matches exactly one entry, so a click runs the middleware once", () => {
-    for (const file of DOWNLOAD_FILE_NAMES) assert.equal(matching(`/download/${file}`).length, 1, file);
+    for (const file of DOWNLOAD_FILE_NAMES) {
+      assert.equal(matching(`/download/${file}`).length, 1, file);
+      assert.equal(matching(`/download/${file}/`).length, 1, `${file}/`);
+    }
   });
 
   it("pages, including other /download/... pages, still match the page entry only", () => {
