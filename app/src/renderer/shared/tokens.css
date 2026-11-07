@@ -37,28 +37,6 @@
 }
 
 /*
- * What is left of the 0.1.51 rounds/06 set: only the names companion/app-0151.css still reads. Spectral below
- * replaces the rest; delete these once that file moves to Spectral names.
- */
-:root {
-  --u-canvas: #fcfbf8;
-  --u-band: #f4f2ee;
-  --u-plate: #eae7e1;
-  --u-violet: #5a3fe0;
-  --u-violet-lip: #3f2bb8;
-  --u-dark-ink: #ededed;
-  --u-dark-ink-2: #b4b4b4;
-  --u-dark-line: rgb(255 255 255 / 0.08);
-  --u-code: #18171b;
-  --u-radius-control: 12px;
-  --u-radius-card: 20px;
-  --u-shadow-whisper: 0 0 1px rgb(0 0 0 / 0.4), 0 1px 1px rgb(0 0 0 / 0.04), 0 2px 4px rgb(0 0 0 / 0.04);
-  --u-shadow-float: 0 24px 60px -20px rgb(20 20 20 / 0.28), 0 0 1px rgb(0 0 0 / 0.35);
-  --u-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --u-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-
-/*
  * 0.1.51 Spectral (Design agents/design/spectral README §1, Preston's pick 03; colours, contrast
  * measured there). Every window: the panel (overlay B) and the companion. Light is the default.
  * - The accent is every action: selected depth, send, links, active tab, focus ring.
