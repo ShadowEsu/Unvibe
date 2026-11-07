@@ -71,7 +71,8 @@ test('every bundled font fonts.css points at ships in shared/fonts', () => {
   // dist/renderer/<window>/, so "../fonts/x" is shared/fonts/x. A missing file falls back to a system font.
   const css = readFileSync(path.join(RENDERER, 'shared/fonts.css'), 'utf8');
   const urls = [...css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
-  assert.ok(urls.length >= 7, `expected the bundled font urls, found ${urls.length}`);
+  // Spectral bundles one typeface (JetBrains Mono); an empty list would make the check below pass vacuously.
+  assert.ok(urls.length >= 1, `expected the bundled font urls, found ${urls.length}`);
   const missing = urls.filter((url) => !url.startsWith('../fonts/') || !existsSync(path.join(RENDERER, 'shared/fonts', url.slice('../fonts/'.length))));
   assert.deepEqual(missing, []);
 });

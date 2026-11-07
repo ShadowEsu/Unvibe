@@ -254,7 +254,7 @@ function Bar() {
             <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> AI used</span>
           </div>
           <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
-          <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
+          <div className="island__allowance"><span><b>{value(aiLeft)}</b> explanations left</span><i /><span><b>{value(selectLeft)}</b> selections left</span></div>
           <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
           {note ? <p className="island__note" aria-hidden="true">{note}</p> : null}
           <div className="island__actions">

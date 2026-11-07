@@ -34,6 +34,7 @@ import { SUPPORT_EMAIL } from '../../core/support';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
+import { SettingsIcon } from './settingsIcons';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -1256,7 +1257,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
     <>
       <section className="ai-container" aria-label="AI settings">
       <div className="ai-container__intro">
-        <span>AI on your terms</span>
+        <span><SettingsIcon tab="AI" className="ai-container__icon" />AI on your terms</span>
         <p>Use included Unvibe AI, or securely connect a provider key kept on this {deviceName}.</p>
       </div>
       <div className="setrow setrow--stack">
@@ -1502,11 +1503,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
             <div className="mh">Preferences</div>
-            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}>{t}</button>)}
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><SettingsIcon tab={t} />{t}</button>)}
           </div>
           <div className="mside-group">
             <div className="mh">Unvibe</div>
-            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}>{t}</button>)}
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><SettingsIcon tab={t} />{t}</button>)}
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
@@ -1528,7 +1529,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Island' && (
             <>
               <div className="settings-section-label">OVERLAY PREVIEW</div>
-              <OverlayPreview position={settings.barPosition} dimmed={FADE_OPACITY} />
+              <OverlayPreview position={settings.barPosition} dimmed={settings.inactiveBehavior === 'hide' ? 0 : FADE_OPACITY} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}

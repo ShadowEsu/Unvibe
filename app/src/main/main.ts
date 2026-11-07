@@ -15,6 +15,7 @@ import {
   globalShortcut,
   ipcMain,
   nativeImage,
+  nativeTheme,
   powerMonitor,
   screen,
   shell,
@@ -27,6 +28,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { homedir, userInfo } from 'node:os';
 import {
+  applyCompanionChrome,
   createBar,
   companionLoading,
   createCompanion,
@@ -241,9 +243,10 @@ async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
     detail: 'You can turn this off in Settings.',
   };
   const panel = currentWidget();
-  const { response } = panel && !panel.isDestroyed()
-    ? await dialog.showMessageBox(panel, question)
-    : await dialog.showMessageBox(question);
+  // Like the file dialogs: the panel neither fades nor hides behind its own question (review SHOULD).
+  const { response } = await whilePanelDialog(() => (panel && !panel.isDestroyed()
+    ? dialog.showMessageBox(panel, question)
+    : dialog.showMessageBox(question)));
   if (response !== 0) return;
   settings().set({ launchAtLogin: true });
   reportProgress('login_prompt_accepted');
@@ -626,17 +629,20 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     ? capture.sourceApp
     : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
-  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
+  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e). Decided before the
+  // failure signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
+  const restoring = !code && !needsGrant && Boolean(currentWidget()) && Boolean(panelSession?.code);
+  if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
   if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
-  if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
+  if (captureFailed && !restoring && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`, { problem: true });
   }
-  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   if (needsGrant) {
     // The panel leads with its paste box; Turn on the shortcut asks for the grant.
     reportProgress('accessibility_asked');
@@ -653,9 +659,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
-  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e); a fresh panel's
-  // session is started by widget:ready.
-  if (!fresh && !code && !needsGrant && panelSession?.code) return;
+  // A fresh panel's session is started by widget:ready.
+  if (restoring) return;
   beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 
@@ -735,6 +740,10 @@ if (process.defaultApp) {
 
 app.whenReady().then(() => {
   cleanupPortableUpdate();
+  // Theme "system": the companion's window chrome follows the OS appearance as it changes.
+  nativeTheme.on('updated', () => {
+    if (companion && settings().all().theme === 'system') applyCompanionChrome(companion);
+  });
   // Open the backend connection and fetch usage early so the first explanation starts faster.
   setTimeout(() => {
     warmBackend();
@@ -771,11 +780,10 @@ app.whenReady().then(() => {
     if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
   }
 
-  // The black template image only suits the macOS menu bar; the Windows tray gets the colour icon.
-  let trayImage = process.platform === 'win32' && !dockIcon.isEmpty()
-    ? dockIcon.resize({ width: 16, height: 16 })
-    : nativeImage.createFromPath(asset('trayTemplate.png'));
-  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
+  // Design's tray art (build.mjs copies it to assets/): the black template for the macOS menu bar, the colour 16 px
+  // icon for the Windows tray. Electron picks the @2x file beside each on a 2x display.
+  let trayImage = nativeImage.createFromPath(asset(process.platform === 'win32' ? 'tray.png' : 'trayTemplate.png'));
+  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 16, height: 16 });
   else if (isMac) trayImage.setTemplateImage(true);
   tray = new Tray(trayImage);
   tray.setIgnoreDoubleClickEvents(true);
@@ -927,14 +935,28 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
-  // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a).
-  ipcMain.handle('widget:savedLessons', () => savedLessons(store().events(), store().pinnedIds()));
-  ipcMain.handle('widget:savedLesson', (_e, id: unknown) => openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id));
+  // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a). Only the panel
+  // reads them (review NIT: any window could list or open saved lessons).
+  const fromPanel = (e: Electron.IpcMainInvokeEvent) => { const win = widgetOf(e); return Boolean(win) && win === currentWidget(); };
+  ipcMain.handle('widget:savedLessons', (e) => (fromPanel(e) ? savedLessons(store().events(), store().pinnedIds()) : { pinned: [], recent: [] }));
+  ipcMain.handle('widget:savedLesson', (e, id: unknown) => (fromPanel(e)
+    ? openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id)
+    : { ok: false as const, error: 'That lesson is no longer on this Mac.' }));
   ipcMain.handle('widget:saveLesson', (e, pinned: unknown) => {
     const win = widgetOf(e);
     const session = panelSession;
     if (!win || !session || typeof pinned !== 'boolean') return { ok: false as const };
     return pinLesson(win, session, pinned) ? { ok: true as const, pinned } : { ok: false as const };
+  });
+  // Save/unsave a lesson opened from the Saved tab, by id: the panel's current selection may be another one (review
+  // SHOULD). Only the panel may ask; the store refuses ids it doesn't have.
+  ipcMain.handle('widget:pinSaved', (e, id: unknown, pinned: unknown) => {
+    const win = widgetOf(e);
+    if (!win || win !== currentWidget() || typeof id !== 'string' || typeof pinned !== 'boolean') return { ok: false as const };
+    if (!store().setPinned(id, pinned)) return { ok: false as const };
+    // The same lesson as the panel's current selection: Explain's Save chip follows.
+    if (panelSession?.reviewId === id) win.webContents.send('review:event', { type: 'pinned', pinned });
+    return { ok: true as const, pinned };
   });
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
@@ -1043,14 +1065,6 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = panelSession;
     if (win && session) markUnderstood(win, session);
-  });
-  ipcMain.on('widget:pin', (e, pinned: boolean) => {
-    const win = widgetOf(e);
-    if (!win) return;
-    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-    if (isMac) win.setHiddenInMissionControl(true);
-    win.moveTop();
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
@@ -1384,11 +1398,12 @@ app.whenReady().then(() => {
       resizeBar(bar, false);
       if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
     }
-    // The panel follows Settings › Theme and "When I click away" live.
+    // The panel follows Settings › Theme and "When I click away" live; the companion's window chrome follows the theme.
     const panel = currentWidget();
     if ((patch.theme !== undefined || patch.inactiveBehavior !== undefined) && panel) {
       panel.webContents.send('panel:settings', { theme: next.theme, inactiveBehavior: next.inactiveBehavior });
     }
+    if (patch.theme !== undefined && companion) applyCompanionChrome(companion);
     return { settings: settings().all() };
   });
 

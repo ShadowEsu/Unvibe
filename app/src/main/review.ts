@@ -58,6 +58,8 @@ export type WidgetEvent =
   | { type: 'graded'; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
   | { type: 'usage'; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
   | { type: 'understood' }
+  /** The current lesson was saved or unsaved from the Saved tab: Explain's Save chip follows. */
+  | { type: 'pinned'; pinned: boolean }
   /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
   | { type: 'quizError'; message: string };
 

@@ -1,6 +1,6 @@
-import { app, BrowserWindow, screen, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import path from 'node:path';
-import { settings, type BarPosition, type BarSize, type InactiveBehavior } from './settings';
+import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
@@ -369,7 +369,8 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   lockNavigation(win);
   win.once('ready-to-show', () => win.showInactive());
-  void win.loadFile(page('widget'));
+  // The theme rides in the URL so the panel's first paint matches Settings › Theme.
+  void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light' } });
   return win;
 }
 
@@ -476,6 +477,28 @@ export function companionLoading(win: BrowserWindow): boolean {
 }
 
 /**
+ * The companion's own chrome in the Spectral ground colours (Design S-1, 6 Nov 23:3x): the window background behind
+ * the first paint and, on Windows and Linux, the min/max/close overlay. "system" follows the OS appearance.
+ */
+export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors): {
+  background: string;
+  overlay: { color: string; symbolColor: string; height: number };
+} {
+  const dark = theme === 'dark' || (theme === 'system' && osDark);
+  return dark
+    ? { background: '#17151f', overlay: { color: '#17151f', symbolColor: '#f3f1fa', height: 40 } }
+    : { background: '#f7f6fb', overlay: { color: '#f7f6fb', symbolColor: '#15141a', height: 40 } };
+}
+
+/** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
+export function applyCompanionChrome(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const chrome = companionChrome(settings().all().theme);
+  win.setBackgroundColor(chrome.background);
+  if (process.platform !== 'darwin') win.setTitleBarOverlay(chrome.overlay);
+}
+
+/**
  * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
  * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
  * first-run launch the user started) then brings it above other apps.
@@ -487,11 +510,11 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
     minWidth: 980,
     minHeight: 620,
     // 'hiddenInset' is macOS-only; elsewhere it would drop the min/max/close buttons, so draw
-    // them as an overlay in the companion's paper colour (v7 --v-bg).
+    // them as an overlay in the theme's ground colour (the companion reserves 150 px for it).
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
-      : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
-    backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme).overlay }),
+    backgroundColor: companionChrome(settings().all().theme).background,
     skipTaskbar: false,
     show: false,
     webPreferences: secureWebPrefs(),

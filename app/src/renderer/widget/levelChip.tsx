@@ -18,8 +18,9 @@ export function expertLocked(plan?: string): boolean {
 
 /**
  * Overlay B's one depth control (SPEC Depth): a 26 pt segmented row of all five, the current one an accent pill.
- * Expert always carries its "Pro" marker (Security N3); locked, it adds a lock and picks nothing. A radio group:
- * the arrows move between depths that can be picked, and moving picks.
+ * Expert always carries its "Pro" marker (Security N3); locked, it adds a lock and picks nothing. A radio group whose
+ * arrows only move focus between depths that can be picked; Enter or Space (the button's click) picks. Picking starts
+ * a new explanation, so stepping across depths must not start one per step (review SHOULD).
  */
 export function DepthControl({ level, plan, disabled, onPick }: {
   level: ExplanationLevel;
@@ -33,9 +34,9 @@ export function DepthControl({ level, plan, disabled, onPick }: {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
     if (!step || disabled) return;
     event.preventDefault();
-    const at = open.findIndex((l) => l.id === level);
+    const focused = (event.target as HTMLElement).closest<HTMLElement>('[data-level]')?.dataset.level ?? level;
+    const at = Math.max(0, open.findIndex((l) => l.id === focused));
     const next = open[(at + step + open.length) % open.length]!;
-    onPick(next.id);
     refs.current[LEVELS.findIndex((l) => l.id === next.id)]?.focus();
   };
   return (

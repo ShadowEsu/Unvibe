@@ -209,6 +209,8 @@ function reduceEvent(s: PanelState, ev: WidgetEvent): PanelState {
       };
     case 'understood':
       return { ...s, understood: true };
+    case 'pinned':
+      return { ...s, pinned: ev.pinned };
     case 'status':
       // A new explanation (Explain differently, another depth) starts afresh; one about the same lesson keeps Test me.
       return {
@@ -470,6 +472,10 @@ function applyTheme(preference: ThemePreference) {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
+/** Main passes Settings › Theme in the page URL, so the first paint already has it (no light flash in dark mode). */
+const START_THEME: ThemePreference = ((t) => (t === 'dark' || t === 'system' ? t : 'light'))(new URLSearchParams(window.location.search).get('theme'));
+applyTheme(START_THEME);
+
 /** panelOut's length (widget.css). */
 const PANEL_EXIT_MS = 160;
 
@@ -537,7 +543,7 @@ function Widget() {
 
   // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon.
   useEffect(() => {
-    let theme: ThemePreference = 'light';
+    let theme: ThemePreference = START_THEME;
     void window.unvibe.getSettings().then(async (st) => {
       const settings = st as { theme?: ThemePreference; themeChosen?: boolean; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
       theme = settings.theme ?? 'light';
@@ -560,6 +566,8 @@ function Widget() {
         theme = next.theme;
         applyTheme(theme);
       }
+      // Fade ↔ Hide changed: start from the solid panel instead of keeping an old fade (review NIT).
+      if (next.inactiveBehavior) setFade((prev) => nextFade(prev, 'back'));
     });
     window.unvibe.onPanelAway((away) => {
       window.clearTimeout(hoverTimer.current);
@@ -582,7 +590,9 @@ function Widget() {
         setUsage((current) => ({ used: ev.used, limit: ev.limit, remaining: ev.remaining, resetsAt: ev.resetsAt, plan: ev.plan, selections: current?.selections }));
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') setProGate(true);
-      if (ev.type === 'init') {
+      // A new selection, the AI agreement, or a secret/credential sheet shows on Explain: a follow-up refused for one of
+      // these arrives while Ask is open, and Ask doesn't draw them (review MUST).
+      if (ev.type === 'init' || ev.type === 'consentNeeded' || ev.type === 'consent' || ev.type === 'blocked') {
         setView('explain');
         setTeachOpen(false);
       }
@@ -648,7 +658,11 @@ function Widget() {
     if ((phase === 'streaming' || asking) && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [answer.text, phase, asking, s.followUps]);
 
+  // One run at a time: while a follow-up streams, a new explanation would cancel it silently and its events would land
+  // in the Ask thread while main saved them as the lesson (review MUST). Explain's controls are disabled meanwhile too.
+  const followUpBusy = () => followUpLive(stateRef.current.followUps);
   const request = (opts: Record<string, unknown>) => {
+    if (followUpBusy()) return;
     if (outOfExplanations) {
       patch({ phase: 'error', error: offer ? offer.body : 'You have reached your monthly explanation limit. Open Plan to upgrade.' });
       return;
@@ -662,6 +676,7 @@ function Widget() {
    * can be asked for again. Focus stays on the button.
    */
   const toggleDetail = () => {
+    if (followUpBusy()) return;
     const current = s.detail;
     if (current.phase === 'done' || current.phase === 'streaming') {
       patch({ detail: { ...current, open: !current.open } });
@@ -674,7 +689,7 @@ function Widget() {
   };
 
   const pick = (l: ExplanationLevel) => {
-    if (outOfExplanations) return;
+    if (outOfExplanations || followUpBusy()) return;
     patch({ level: l });
     if (stateRef.current.phase === 'done') window.unvibe.request({ level: l });
   };
@@ -693,12 +708,16 @@ function Widget() {
   const askInputRef = useRef<HTMLInputElement>(null);
   const sendAsk = () => {
     const question = s.ask.trim();
-    if (!question) return;
-    if (!outOfExplanations) {
-      setS((prev) => ({ ...prev, ask: '', followUps: [...prev.followUps, { id: Date.now(), question, answer: '', phase: 'waiting' }] }));
-      setView('ask');
+    if (!question || followUpBusy()) return;
+    if (outOfExplanations) {
+      // The limit sheet lives on Explain; the question stays in the field.
+      request({ question });
+      setView('explain');
+      return;
     }
-    request({ question });
+    setS((prev) => ({ ...prev, ask: '', followUps: [...prev.followUps, { id: Date.now(), question, answer: '', phase: 'waiting' }] }));
+    setView('ask');
+    window.unvibe.request({ level: s.level, question });
   };
 
   const toggleSave = async () => {
@@ -709,7 +728,9 @@ function Widget() {
     }
   };
 
-  const tabEnabled = (id: View) => id === 'test' ? Boolean(s.quiz) || answerReady : id === 'ask' ? phase === 'done' || s.followUps.length > 0 : true;
+  // While the AI agreement is open only Explain (where it shows) is reachable: nothing behind it before it's answered (Design S-1).
+  const tabEnabled = (id: View) => phase === 'aiConsent' ? id === 'explain'
+    : id === 'test' ? Boolean(s.quiz) || answerReady : id === 'ask' ? phase === 'done' || s.followUps.length > 0 : true;
   const choose = (id: View) => {
     if (!tabEnabled(id)) return;
     if (id === 'test') openQuiz();
@@ -833,7 +854,7 @@ function Widget() {
     }
     const top = showDepth ? (
       <>
-        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations} onPick={(id) => { setProGate(false); pick(id); }} />
+        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations || asking} onPick={(id) => { setProGate(false); pick(id); }} />
         {s.meta.preview ? <CodeRow id="ob-code" code={s.meta.preview} open={s.codeOpen} onToggle={() => patch({ codeOpen: !stateRef.current.codeOpen })} /> : null}
       </>
     ) : null;
@@ -1072,7 +1093,7 @@ function Widget() {
       if (phase !== 'done') return null;
       return (
         <>
-          <ExplainChips busy={stillTyping} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
+          <ExplainChips busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
             {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
           </ExplainChips>
           {askField}
@@ -1115,7 +1136,7 @@ function Widget() {
         </button>
       </header>
       <div className="ob-scroll" ref={scrollRef} tabIndex={-1}>
-        <div className="ob-body" ref={innerRef} key={view}>
+        <div className="ob-body" ref={innerRef} key={view} id="ob-tabpanel" role="tabpanel" aria-labelledby={`ob-tab-${view}`}>
           {view === 'explain' ? explainBody() : null}
           {view === 'test' ? (
             <section aria-label="Test me">
@@ -1134,16 +1155,33 @@ function Widget() {
         <div className="ob-toast-region" role="status">{toast ? <PanelToast text={toast.text} leaving={toast.leaving} /> : null}</div>
         {footer()}
       </div>
-      <nav className="ob-tabs" ref={tabsRef} role="tablist" aria-label="Panel">
+      {/* Arrows move focus only; Enter or Space opens a tab (Test me asks for a question, so moving must not). */}
+      <nav
+        className="ob-tabs"
+        ref={tabsRef}
+        role="tablist"
+        aria-label="Panel"
+        onKeyDown={(event) => {
+          const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+          if (!step) return;
+          event.preventDefault();
+          const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+          const at = tabs.indexOf(document.activeElement as HTMLButtonElement);
+          tabs[(Math.max(0, at) + step + tabs.length) % tabs.length]?.focus();
+        }}
+      >
         {TABS.map((tab) => {
           const on = view === tab.id;
           const enabled = tabEnabled(tab.id);
           return (
             <button
               key={tab.id}
+              id={`ob-tab-${tab.id}`}
               type="button"
               role="tab"
               aria-selected={on}
+              aria-controls={on ? 'ob-tabpanel' : undefined}
+              tabIndex={on ? 0 : -1}
               aria-disabled={!enabled || undefined}
               className={`ob-tab${on ? ' is-on' : ''}`}
               onClick={() => choose(tab.id)}

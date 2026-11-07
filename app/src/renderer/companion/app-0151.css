@@ -121,6 +121,8 @@
 :root[data-ui="v3"][data-v7] .layout.layout--side-hidden .content { margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 /* The top bar keeps only the Explain pill, top right. The page title stays the page region's accessible name. */
 :root[data-ui="v3"][data-v7] .layout .topbar { height: 60px; padding: 0 24px 0 16px; border-bottom: 0; background: transparent; }
+/* Windows draws min/max/close (titleBarOverlay, 138 px) over the top-right corner: keep the Explain pill clear of it. */
+:root[data-ui="v3"][data-v7][data-platform="win"] .layout .topbar { padding-right: 150px; }
 :root[data-ui="v3"][data-v7] .layout .topbar__title { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .topbar__search { display: none; }
 :root[data-ui="v3"][data-v7] .layout .topbar__side {
@@ -437,6 +439,8 @@
   box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 24px 60px -20px rgb(40 24 110 / 0.35);
 }
 :root[data-ui="v3"][data-v7][data-theme="dark"] :is(.acct-menu, .search-palette) { box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 24px 60px -20px rgb(0 0 0 / 0.6); }
+/* "Saved on this computer" (or the email) wraps to a second line instead of hiding behind the plan pill (S-1 23:25). */
+:root[data-ui="v3"][data-v7] .acct-menu__who span { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
 
 /* ── Cards on every other page: glass with the white rim, no lift ── */
 :root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card) {
@@ -510,7 +514,7 @@
 /* The shortcut step shows its steps beside the System Settings illustration: wider than the column. */
 :root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__body { width: min(760px, 100%); }
 :root[data-ui="v3"][data-v7] .onboard h1 {
-  max-width: 600px; margin: 0; font: 600 40px/1.12 var(--u-sans); letter-spacing: -0.035em; color: var(--u-ink); text-align: center; outline: none;
+  max-width: 600px; margin: 0; font: 600 40px/1.12 var(--u-sans); letter-spacing: -0.035em; color: var(--u-ink); text-align: center; text-wrap: balance; outline: none;
 }
 :root[data-ui="v3"][data-v7] .onboard__lead { max-width: 520px; margin: 12px 0 0; font: 400 15px/1.5 var(--u-sans); color: var(--u-ink-2); text-align: center; }
 
@@ -556,12 +560,21 @@
 :root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline, summary):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
 
 /* Sticks to the window's bottom edge when a step is taller than the window (the level question at 760 px, anything
-   at the 620 px minimum), so the forward button never scrolls away; in a short step it sits in place. */
+   at the 620 px minimum), so the forward button never scrolls away; in a short step it sits in place. Transparent so
+   the ground and its glows run under it, and the column's width, so Back and the forward action line up with the
+   step's content (Design S-1 23:25). */
 :root[data-ui="v3"][data-v7] .onboard__foot {
-  position: sticky; bottom: 0; z-index: 1; display: flex; align-self: stretch; justify-content: space-between; align-items: flex-start; gap: 16px;
-  margin-top: auto; padding: 28px 0 36px; background: linear-gradient(to top, var(--u-paper) 65%, transparent);
+  position: sticky; bottom: 0; z-index: 1; display: flex; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
+  width: min(560px, 100%); margin-top: auto; padding: 28px 0 36px; background: transparent;
 }
+:root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__foot { width: min(760px, 100%); }
 :root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
+/* Hello: one primary at the form's full width (420 px, centred), the Google disclosure under it on the column's left. */
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot { justify-content: center; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot > span:empty { display: none; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward { width: min(420px, 100%); justify-items: stretch; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward > .onboard__primary { width: 100%; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward .onboard__google { justify-items: start; text-align: left; }
 :root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
 :root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
 /* Q11: the Google disclosure sits right under Let's go, quiet ink-2 13 px; open, its form lines up on the right. */
@@ -719,9 +732,12 @@
 :root[data-ui="v3"][data-v7] .modal .mside-group { gap: 0; margin: 10px 0 0; }
 :root[data-ui="v3"][data-v7] .modal .mside .mh { padding: 14px 10px 8px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
 :root[data-ui="v3"][data-v7] .modal .mside button {
+  display: flex; align-items: center; gap: 10px;
   height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2);
   font: var(--u-w-label) 13.5px/1 var(--u-font); letter-spacing: 0; box-shadow: none; transform: none; transition: none;
 }
+/* Lucide icons (s-*), 16 px, in the label's colour; the current tab's in the accent with its label. */
+:root[data-ui="v3"][data-v7] .modal .mside .settings-icon { flex: none; width: 16px; height: 16px; }
 :root[data-ui="v3"][data-v7] .modal .mside button:hover { background: var(--u-fill); color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-mist); color: var(--u-accent); font-weight: var(--u-w-title); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .modal .mside .ver { margin-top: auto; padding: 10px; color: var(--u-ink-3); font: var(--u-w-body) 12px/1.4 var(--u-font); }
@@ -809,9 +825,14 @@
 
 /* AI: the intro, the cost table on hairlines. */
 :root[data-ui="v3"][data-v7] .modal .ai-container { display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro { display: grid; gap: 4px; margin: 14px 0 0; padding: 0 2px; border: 0; background: none; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { color: var(--u-ink); font: var(--u-w-title) 14.5px/1.3 var(--u-font); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+/* "AI on your terms": a mist card with the cpu icon (s-ai). */
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro {
+  display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 4px; margin: 14px 0 0; padding: 14px 16px;
+  border: 0; border-radius: 12px; background: var(--u-mist);
+}
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { display: contents; color: var(--u-ink); font: var(--u-w-title) 14.5px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__icon { grid-row: 1; width: 18px; height: 18px; color: var(--u-accent); align-self: center; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { grid-column: 2; margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .cost-table { border: 1px solid var(--u-line); border-radius: 12px; background: transparent; }
 :root[data-ui="v3"][data-v7] .modal .cost-row { border-top-color: var(--u-line); font: var(--u-w-body) 12.5px/1.3 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .cost-row > span { color: var(--u-ink-2); }
@@ -864,3 +885,165 @@
 :root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
 :root[data-ui="v3"][data-v7] .modal .primary-btn:active:not(:disabled) { transform: none; }
 :root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn, .primary-btn):focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+
+/* ── Lesson, Read and Restudy (c-lesson): back link, title, meta line with the mode segment; then a 2 × 2 grid of glass
+   cards: Selected code (a numbered sheet) | Explanation, My note | Ask about this lesson. Check keeps its quiz bar. ── */
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson:not(.learn-page--survey) { align-self: stretch; width: 100%; }
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-doc:not(.lesson-doc--survey) {
+  box-sizing: border-box; width: 100%; padding: 22px clamp(20px, 3vw, 36px) 40px; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__head { display: grid; gap: 10px; max-width: none; margin: 0 0 18px; }
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__head .lesson-back {
+  display: inline-flex; align-items: center; gap: 8px; justify-self: start; padding: 4px 0; color: var(--u-accent); font: var(--u-w-label) 14px/1 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__head .lesson-back::before {
+  content: ""; width: 7px; height: 7px; border-left: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__head h1 { margin: 2px 0 0; font: 600 30px/1.15 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); text-wrap: balance; }
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; flex: 1; min-width: 0; margin: 0;
+  color: var(--u-ink-3); font: var(--u-w-body) 14px/1.5 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__meta time { color: inherit; font: inherit; }
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__meta .pill { margin-left: 10px; }
+:root[data-ui="v3"][data-v7] .layout .lesson-doc__left { margin-left: 10px; }
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-modes {
+  flex: 0 0 auto; gap: 2px; padding: 4px; border: 0; border-radius: 999px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-modes button {
+  height: 32px; padding: 0 18px; border-radius: 999px; background: transparent; color: var(--u-ink-2); font: var(--u-w-label) 14px/1 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-modes button.on { background: var(--u-accent); color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-modes button:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+
+:root[data-ui="v3"][data-v7] .layout .lesson-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+/* One column once the window leaves less than ~760 px beside the sidebar. */
+@media (max-width: 1040px) {
+  :root[data-ui="v3"][data-v7] .layout .lesson-grid { grid-template-columns: minmax(0, 1fr); }
+  :root[data-ui="v3"][data-v7] .layout .lesson-doc__row { flex-wrap: wrap; }
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card {
+  display: grid; gap: 12px; align-content: start; min-width: 0; max-width: none; margin: 0; padding: 18px 20px 20px; border: 0; border-radius: 18px;
+  background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card :is(.lesson-explain, .study-assistant) { max-width: none; margin: 0; padding: 0; border: 0; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .learning-kicker,
+:root[data-ui="v3"][data-v7] .layout .lesson-card--explain h2 {
+  margin: 0; color: var(--u-ink); font: var(--u-w-title) 16px/1.3 var(--u-font); letter-spacing: 0; text-transform: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card--code .lesson-card__head .learning-kicker {
+  color: var(--u-ink-3); font: var(--u-w-label) 12px/1.2 var(--u-font); letter-spacing: 0.04em; text-transform: uppercase;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card__file { color: var(--u-ink-3); font: var(--u-w-body) 13px/1.2 var(--u-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .muted { margin: 0; color: var(--u-ink-3); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+
+/* The code sheet: light paper in light, a darker well in dark; numbers are CSS counters, so a copy takes only the code. */
+:root[data-ui="v3"][data-v7] .layout .lesson-code--sheet {
+  max-width: none; margin: 0; border: 0; border-radius: 12px; background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-code--sheet pre {
+  max-height: min(60vh, 560px); margin: 0; padding: 14px 16px 14px 10px; overflow: auto; background: transparent;
+  color: var(--u-ink); font: var(--u-w-body) 13px/1.75 var(--u-font); tab-size: 2;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-code--sheet code { counter-reset: lesson-line; font: inherit; color: inherit; background: none; }
+:root[data-ui="v3"][data-v7] .layout .lesson-code__line::before {
+  counter-increment: lesson-line; content: counter(lesson-line); display: inline-block; width: 3ch; margin-right: 1.5ch;
+  color: var(--u-ink-3); text-align: right; user-select: none; -webkit-user-select: none;
+}
+
+:root[data-ui="v3"][data-v7] .layout .lesson-card--explain .lesson-explain__body { color: var(--u-ink); font: var(--u-w-body) 14px/1.75 var(--u-font); }
+
+/* My note and Ask: a title row, the field on the sheet, the action under it. */
+:root[data-ui="v3"][data-v7] .layout .lesson-card.lesson-note .lesson-note__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card.lesson-note .lesson-note__head p { margin: 4px 0 0; color: var(--u-ink-3); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .lesson-card :is(.lesson-note textarea, textarea) {
+  width: 100%; min-height: 92px; margin: 0; padding: 12px 14px; border: 0; border-radius: 12px; resize: vertical;
+  background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line); color: var(--u-ink); font: var(--u-w-body) 14px/1.5 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card textarea::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .lesson-card textarea:focus { outline: none; box-shadow: inset 0 0 0 1px var(--u-line), 0 0 0 2px var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .lesson-note__actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .study-assistant { display: grid; gap: 12px; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .study-assistant > .soft-btn { justify-self: end; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .soft-btn {
+  height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-label) 13.5px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line); transform: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-card .soft-btn:hover:not(:disabled) { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .soft-btn:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .layout .lesson-card .study-assistant > .soft-btn:not(:disabled) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+/* Restudy's code and the quiz's "Show the code": the same sheet, with the language / lines bar (no more black block). */
+:root[data-ui="v3"][data-v7] .layout .lesson-code:not(.lesson-code--sheet) {
+  border: 0; border-radius: 12px; background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line); color: var(--u-ink);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-code:not(.lesson-code--sheet) .lesson-code__bar {
+  border-bottom: 1px solid var(--u-line); background: transparent; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.04em; text-transform: uppercase;
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-code:not(.lesson-code--sheet) pre { background: transparent; color: var(--u-ink); font: var(--u-w-body) 13px/1.7 var(--u-font); }
+/* Restudy: levels and Ask in glass cards like Read's. */
+:root[data-ui="v3"][data-v7] .layout .lesson-doc:not(.lesson-doc--survey) > :is(.study-levels, .study-assistant) {
+  display: grid; gap: 12px; max-width: none; margin: 18px 0 0; padding: 18px 20px 20px; border: 0; border-radius: 18px;
+  background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .lesson-doc:not(.lesson-doc--survey) > .lesson-code { max-width: none; margin: 0; }
+
+/* ── Rich text in the companion (lesson, Ask Vibe, Briefs): code words are mist chips in accent ink; code blocks are
+   the light sheet, keywords in the accent (no green/yellow: lime and amber have their own jobs). ── */
+:root[data-ui="v3"][data-v7] .layout .rich-text code.inline {
+  padding: 1px 6px; border-radius: 6px; background: var(--u-mist); color: var(--u-accent); font: var(--u-w-body) 0.92em/1.4 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock {
+  margin: 6px 0 12px; border: 0; border-radius: 12px; background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head { padding: 8px 14px 0; color: var(--u-ink-3); font: var(--u-w-label) 11px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head button { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head button:hover { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock pre { padding: 8px 14px 12px; color: var(--u-ink); font: var(--u-w-body) 13px/1.65 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .tk-k { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .rich-text :is(.tk-s, .tk-n) { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .tk-c { color: var(--u-ink-3); }
+
+/* ── Ask Vibe thread (c-ask-thread): the page title and New question on top; your question a pill on the right;
+   Vibe's reply a sheet card beside the ghost; the composer one glass card. ── */
+:root[data-ui="v3"][data-v7] .layout .chat-top { padding: 18px clamp(20px, 3vw, 36px) 8px; }
+:root[data-ui="v3"][data-v7] .layout .chat-title { margin: 0; color: var(--u-ink); font: var(--u-w-title) 20px/1.2 var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout .chat-top .ghost-link {
+  height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-label) 13px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line); text-decoration: none;
+}
+:root[data-ui="v3"][data-v7] .layout .chat-top .ghost-link:hover { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout .chat-page:not(.chat-page--empty) .chat-stage { width: min(820px, calc(100% - 48px)); }
+:root[data-ui="v3"][data-v7] .layout .chat-log { gap: 22px; padding: 12px 2px 24px; }
+/* Your question: a pill on the right; 20 px corners rather than 999 so a question that wraps stays a soft card. */
+:root[data-ui="v3"][data-v7] .layout .chat-user {
+  max-width: min(34rem, 72%); padding: 10px 18px; border: 0; border-radius: 20px; background: var(--u-chip);
+  box-shadow: inset 0 0 0 1px var(--u-line), 0 4px 12px -8px rgb(40 24 110 / 0.18); color: var(--u-ink); font: var(--u-w-label) 14px/1.5 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-assistant { display: flex; align-items: flex-start; gap: 12px; width: 100%; max-width: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__vibe { flex: 0 0 auto; margin-top: 2px; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__card {
+  display: grid; gap: 8px; flex: 1; min-width: 0; padding: 16px 20px 12px; border-radius: 16px; background: var(--u-sheet);
+  box-shadow: inset 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__who { color: var(--u-accent); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
+:root[data-ui="v3"][data-v7] .layout :is(.chat-assistant__body, .chat-assistant .rich-text) { color: var(--u-ink); font: var(--u-w-body) 14px/1.75 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-copy { justify-self: start; margin: 0; color: var(--u-ink-3); font: var(--u-w-label) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-copy:hover { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer {
+  padding: 14px 16px 10px; border: 0; border-radius: 18px; background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-composer:focus-within { border: 0; box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 2px color-mix(in srgb, var(--u-accent) 45%, transparent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer textarea { color: var(--u-ink); font: var(--u-w-body) 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer textarea::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer__hint { color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-mic {
+  height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 12.5px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-send { width: 34px; height: 34px; border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: 600 16px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-send:disabled { background: var(--u-fill); color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .chat-dock .chat-meter { color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }

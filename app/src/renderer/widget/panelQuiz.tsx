@@ -98,8 +98,8 @@ export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
             >
               <em aria-hidden="true">{String.fromCharCode(65 + i)}</em>
               <span>{option}</span>
-              {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={14} /></span> : null}
-              {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={14} /></span> : null}
+              {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={14} /><span className="sr-only">Correct answer</span></span> : null}
+              {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={14} /><span className="sr-only">Your answer, not correct</span></span> : null}
             </button>
           );
         })}

@@ -51,6 +51,8 @@ const api = {
   savedLesson: (id: string): Promise<{ ok: true; lesson: SavedLesson } | { ok: false; error: string }> => ipcRenderer.invoke('widget:savedLesson', id),
   /** Save: pins (or unpins) the current explanation's lesson. */
   saveLesson: (pinned: boolean): Promise<{ ok: boolean; pinned?: boolean }> => ipcRenderer.invoke('widget:saveLesson', pinned),
+  /** Save/unsave a lesson opened from the Saved tab, by its id. */
+  pinSaved: (id: string, pinned: boolean): Promise<{ ok: boolean; pinned?: boolean }> => ipcRenderer.invoke('widget:pinSaved', id, pinned),
   request: (opts: unknown) => ipcRenderer.send('widget:request', opts),
   cancel: () => ipcRenderer.send('widget:cancel'),
   useClipboard: (opts: unknown) => ipcRenderer.send('widget:useClipboard', opts),
@@ -73,7 +75,6 @@ const api = {
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
   gotIt: () => ipcRenderer.send('widget:gotIt'),
-  pin: (pinned: boolean) => ipcRenderer.send('widget:pin', pinned),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
   openPlan: () => ipcRenderer.send('companion:openPlan'),

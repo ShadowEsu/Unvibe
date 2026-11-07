@@ -323,7 +323,7 @@ export function Chat({
     <div className={`chat-page${empty ? ' chat-page--empty' : ''}`}>
       {!empty ? (
         <header className="chat-top">
-          <span />
+          <h1 className="chat-title">Ask Vibe</h1>
           <button type="button" className="ghost-link" onClick={startNew}>
             New question
           </button>
@@ -367,18 +367,22 @@ export function Chat({
                   <p className="chat-user">{item.content}</p>
                 ) : (
                   <div className="chat-assistant">
-                    <RichText className="chat-assistant__body" text={item.content} />
-                    <button
-                      type="button"
-                      className="chat-copy"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(item.content);
-                        setCopied(index);
-                        window.setTimeout(() => setCopied((current) => (current === index ? null : current)), 1200);
-                      }}
-                    >
-                      {copied === index ? 'Copied' : 'Copy'}
-                    </button>
+                    <span className="chat-assistant__vibe" aria-hidden="true"><Buddy mood="idle" size={30} label="Vibe" /></span>
+                    <div className="chat-assistant__card">
+                      <span className="chat-assistant__who" aria-hidden="true">Vibe</span>
+                      <RichText className="chat-assistant__body" text={item.content} />
+                      <button
+                        type="button"
+                        className="chat-copy"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(item.content);
+                          setCopied(index);
+                          window.setTimeout(() => setCopied((current) => (current === index ? null : current)), 1200);
+                        }}
+                      >
+                        {copied === index ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </article>

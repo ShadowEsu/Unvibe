@@ -323,7 +323,7 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
 });
 
 test('review streams forward only the token, done and error events the service sends', async () => {
-  const appOnly = ['init', 'understood', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
+  const appOnly = ['init', 'understood', 'pinned', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
   const { win, events } = panel();
   // Forwarded events are rebuilt without extra fields, so the stream's own values mark them.
   reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({

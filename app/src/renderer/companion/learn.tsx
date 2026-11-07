@@ -55,7 +55,18 @@ function clockTime(iso: string): string {
   return when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-function LessonCode({ code, language, tall = false }: { code: string; language?: string; tall?: boolean }) {
+/**
+ * `numbered`: the lesson's "Selected code" sheet (c-lesson): line numbers from CSS counters (not copied with the
+ * code), no language bar (the lesson's meta line names it).
+ */
+function LessonCode({ code, language, tall = false, numbered = false }: { code: string; language?: string; tall?: boolean; numbered?: boolean }) {
+  if (numbered) {
+    return (
+      <div className="lesson-code lesson-code--sheet">
+        <pre><code>{code.split('\n').map((line, i) => <span className="lesson-code__line" key={i}>{line}{'\n'}</span>)}</code></pre>
+      </div>
+    );
+  }
   return (
     <div className={`lesson-code${tall ? ' lesson-code--tall' : ''}`}>
       <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{linesLabel(code.split('\n').length)}</span></div>
@@ -391,65 +402,99 @@ export function Learn({
   if (open) {
     const survey = mode === 'check';
     const ticks = Math.min(5, cleared);
+    const modes = (
+      <div className="lesson-modes" role="group" aria-label="Lesson mode">
+        {([
+          ['read', 'Read'],
+          ['restudy', 'Restudy'],
+          ['check', 'Check'],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={mode === id}
+            className={mode === id ? 'on' : ''}
+            onClick={() => setMode(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+    const levelLabel = STUDY_LEVELS.find((l) => l.id === open.level)?.label ?? open.level;
+    const fileName = open.file?.split(/[\\/]/).pop();
+    const askCard = (
+      <div className="study-assistant">
+        <div className="study-assistant__head">
+          <span className="learning-kicker">Ask about this lesson</span>
+        </div>
+        <p className="muted">Short clarifying questions work best.</p>
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          rows={3}
+          placeholder="e.g. Why does this return early here?"
+          disabled={askBusy || !open.code}
+        />
+        <button className="soft-btn" type="button" disabled={askBusy || !question.trim() || !open.code} onClick={() => void ask()}>
+          {askBusy ? 'Working' : 'Ask'}
+        </button>
+        {askBusy ? <ThinkingStatus label="Unvibe" /> : null}
+        {askError ? <p className="form-error" role="alert">{askError}</p> : null}
+        {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><RichText className="lesson-explain__body" text={answer} /></div> : null}
+      </div>
+    );
     return (
       <div className={`learn-page learn-page--lesson${survey ? ' learn-page--survey' : ''}`}>
-        <header className="lesson-bar">
-          <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
-          <div className="lesson-bar__meta">
-            <span>{open.file || open.project || open.meta || 'Saved lesson'}</span>
-            {quizLeft !== null && survey ? <span>{quizLeft} left today</span> : null}
-            {askLeft !== null && mode === 'restudy' ? <span>{askLeft} questions left today</span> : null}
-          </div>
-          {intent === 'quiz' ? (
-            <span className="survey-cleared">{cleared} cleared this sitting</span>
-          ) : (
-            <div className="lesson-modes" role="group" aria-label="Lesson mode">
-              {([
-                ['read', 'Read'],
-                ['restudy', 'Restudy'],
-                ['check', 'Check'],
-              ] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={mode === id}
-                  className={mode === id ? 'on' : ''}
-                  onClick={() => setMode(id)}
-                >
-                  {label}
-                </button>
-              ))}
+        {survey ? (
+          <header className="lesson-bar">
+            <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
+            <div className="lesson-bar__meta">
+              <span>{open.file || open.project || open.meta || 'Saved lesson'}</span>
+              {quizLeft !== null ? <span>{quizLeft} left today</span> : null}
             </div>
-          )}
-          <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
-        </header>
+            {intent === 'quiz' ? <span className="survey-cleared">{cleared} cleared this sitting</span> : modes}
+            <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
+          </header>
+        ) : null}
 
         <article className={`lesson-doc${survey ? ' lesson-doc--survey' : ''}`} key={open.id}>
           {!survey ? (
             <div className="lesson-doc__head">
-              <div className="learn-reader__chips">
-                <span className="pill">{open.level}</span>
-                <span className={`pill pill--${open.outcome}`}>{outcomeName(open.outcome)}</span>
-                <time dateTime={open.ts}>{new Date(open.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
-              </div>
+              <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
               <h1>{open.title}</h1>
+              <div className="lesson-doc__row">
+                <p className="lesson-doc__meta">
+                  <span>{[open.file || open.project || open.meta, open.language, levelLabel].filter(Boolean).join(' · ')}</span>
+                  <span aria-hidden="true"> · </span>
+                  <time dateTime={open.ts}>{new Date(open.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
+                  <span className={`pill pill--${open.outcome}`}>{outcomeName(open.outcome)}</span>
+                  {askLeft !== null && mode === 'restudy' ? <span className="lesson-doc__left">{askLeft} questions left today</span> : null}
+                </p>
+                {intent === 'quiz' ? null : modes}
+                <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
+              </div>
             </div>
           ) : null}
 
           {mode === 'read' ? (
-            <>
-              {open.code ? <LessonCode code={open.code} language={open.language} tall /> : (
-                <p className="muted">Code was not saved for this older entry. New reviews keep the snippet here.</p>
-              )}
-              {open.explanation ? (
-                <div className="lesson-explain">
-                  <span className="learning-kicker">Explanation</span>
-                  <RichText className="lesson-explain__body" text={open.explanation} />
+            <div className="lesson-grid">
+              <section className="lesson-card lesson-card--code" aria-labelledby="lesson-code-title">
+                <div className="lesson-card__head">
+                  <span className="learning-kicker" id="lesson-code-title">Selected code</span>
+                  {fileName ? <span className="lesson-card__file">{fileName}</span> : null}
                 </div>
-              ) : (
-                <p className="muted">No explanation text on file yet for this one.</p>
-              )}
-              <section className="lesson-note" aria-labelledby="lesson-note-title">
+                {open.code ? <LessonCode code={open.code} language={open.language} numbered /> : (
+                  <p className="muted">Code was not saved for this older entry. New reviews keep the snippet here.</p>
+                )}
+              </section>
+              <section className="lesson-card lesson-card--explain" aria-labelledby="lesson-explain-title">
+                <h2 id="lesson-explain-title">Explanation</h2>
+                {open.explanation ? <RichText className="lesson-explain__body" text={open.explanation} /> : (
+                  <p className="muted">No explanation text on file yet for this one.</p>
+                )}
+              </section>
+              <section className="lesson-card lesson-note" aria-labelledby="lesson-note-title">
                 <div className="lesson-note__head">
                   <div>
                     <span className="learning-kicker" id="lesson-note-title">My note</span>
@@ -474,7 +519,8 @@ export function Learn({
                 </div>
                 {noteError ? <p className="form-error" role="alert">{noteError}</p> : null}
               </section>
-            </>
+              <div className="lesson-card lesson-card--ask">{askCard}</div>
+            </div>
           ) : null}
 
           {mode === 'restudy' ? (
@@ -491,25 +537,7 @@ export function Learn({
                 </div>
                 <button className="primary-btn" type="button" onClick={() => void onRestudy(open, level)}>Explain again at this level</button>
               </div>
-              <div className="study-assistant">
-                <div className="study-assistant__head">
-                  <span className="learning-kicker">Ask about this lesson</span>
-                </div>
-                <p className="muted">Short clarifying questions work best.</p>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={3}
-                  placeholder="e.g. Why does this return early here?"
-                  disabled={askBusy || !open.code}
-                />
-                <button className="soft-btn" type="button" disabled={askBusy || !question.trim() || !open.code} onClick={() => void ask()}>
-                  {askBusy ? 'Working' : 'Ask'}
-                </button>
-                {askBusy ? <ThinkingStatus label="Unvibe" /> : null}
-                {askError ? <p className="form-error" role="alert">{askError}</p> : null}
-                {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><RichText className="lesson-explain__body" text={answer} /></div> : null}
-              </div>
+              {askCard}
             </>
           ) : null}
 
