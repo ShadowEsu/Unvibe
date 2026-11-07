@@ -193,20 +193,20 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
   Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.', features: [
     { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
     { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
-    { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
+    { icon: IC.code, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
     { icon: IC.check, t: 'A quick check', d: 'One question adds evidence without pretending Unvibe knows exactly what you understand.' },
   ] },
   Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
     { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
     { icon: IC.layers, t: 'Diagrams', d: 'Execution flows and structure sketches, kept next to the code they describe.' },
-    { icon: IC.spark, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
+    { icon: IC.code, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
     { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry — what you kept is still here tomorrow.' },
   ] },
   Briefings: { id: 'Briefings', icon: IC.briefings, lead: 'Short recaps of what changed and what you picked up — a two-minute read each morning, a longer one each week.', features: [
     { icon: IC.clock, t: 'Morning recap', d: 'What the agents changed overnight, told as a story rather than a diff.' },
     { icon: IC.check, t: 'Weekly review', d: 'The concepts you locked in and the ones worth revisiting.' },
     { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath — read as deep as you have time for.' },
-    { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
+    { icon: IC.code, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
   ] },
   Library: { id: 'Library', icon: IC.library, lead: 'Hand-picked reading matched to whatever you are learning right now — guides and roadmaps, minus the rabbit holes.', features: [
     { icon: IC.map, t: 'Roadmaps', d: 'The shape of a topic end to end, so you know what is left to learn.' },
@@ -215,7 +215,7 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
   Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
-    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
+    { icon: IC.code, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
     { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
@@ -556,7 +556,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
         <span className="onboard__count">{step + 1} / {steps.length}</span>
       </div>
       <div className="onboard__vibe">
-        <Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} />
+        <Buddy mood={mood} size={56} follow label="Vibe" key={`${step}-${mood}`} />
         {/* The bubble types its line out, so it isn't live: screen readers hear each whole line once, from the status. */}
         <VibeBubble large live={false}>{said}</VibeBubble>
         <p className="sr-only" role="status">{line}</p>
@@ -730,7 +730,7 @@ function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: bo
   return (
     <div className="onboard onboard--welcome">
       <div className="onboard__vibe">
-        <Buddy mood={started ? 'reading' : 'wave'} size={72} follow label="Vibe" />
+        <Buddy mood={started ? 'reading' : 'wave'} size={56} follow label="Vibe" />
         <VibeBubble large live={false}>{said}</VibeBubble>
         <p className="sr-only" role="status">{line}</p>
       </div>

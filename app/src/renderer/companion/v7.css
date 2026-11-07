@@ -192,13 +192,13 @@
   & .primary-btn, & .btn, & .ask-dock button {
     height: 36px; padding: 0 16px; border: 1.5px solid var(--v-edge); border-radius: var(--v-radius-sm);
     background: var(--v-sel); color: var(--v-sel-ink); font: 700 13.5px var(--font-sans); filter: none;
-    box-shadow: 0 3px 0 #000; transform: none;
+    box-shadow: 0 3px 0 var(--v-edge); transform: none;
     transition: transform 160ms var(--press), box-shadow 160ms var(--press), background 140ms ease;
   }
   & .primary-btn:hover:not(:disabled), & .btn:hover:not(:disabled), & .ask-dock button:hover {
-    background: #262626; filter: none; transform: translateY(-1px); box-shadow: 0 4px 0 #000;
+    background: #262626; filter: none; transform: translateY(-1px); box-shadow: 0 4px 0 var(--v-edge);
   }
-  & .primary-btn:active:not(:disabled), & .btn:active:not(:disabled), & .ask-dock button:active { transform: translateY(3px); box-shadow: 0 0 0 #000; }
+  & .primary-btn:active:not(:disabled), & .btn:active:not(:disabled), & .ask-dock button:active { transform: translateY(3px); box-shadow: 0 0 0 var(--v-edge); }
   & .soft-btn, & .act, & .field-btn {
     height: 34px; padding: 0 14px; border: 1.5px solid var(--v-edge); border-radius: var(--v-radius-sm);
     background: var(--v-surface); color: var(--v-ink); font: 650 13px var(--font-sans); box-shadow: 0 2px 0 var(--v-edge);
@@ -320,7 +320,7 @@
   & .briefings__head .primary-btn + .primary-btn { background: var(--v-surface); color: var(--v-ink); border-color: var(--v-edge-hi); box-shadow: 0 2px 0 var(--v-edge); }
   & .heat i, & .heat-legend i { background: var(--v-line-2); border-radius: 3px; }
   & .heat .a1, & .heat-legend .a1 { background: #e9f9a8; }
-  & .heat .a2, & .heat-legend .a2 { background: #d6f45a; }
+  & .heat .a2, & .heat-legend .a2 { background: var(--v-sel); }
   & .heat .a3, & .heat-legend .a3 { background: #a8cf2a; }
   & .heat .a4, & .heat-legend .a4 { background: #5f7d0f; }
   & .heat .a5, & .heat-legend .a5 { background: var(--v-sel); }
@@ -339,7 +339,7 @@
   & .chat-composer { border: 1.5px solid var(--v-edge); border-radius: 18px; background: var(--v-surface); box-shadow: var(--hard); }
   & .chat-composer:focus-within { border-color: var(--v-edge-hi); box-shadow: var(--hard), 0 0 0 4px color-mix(in srgb, var(--v-glow) 55%, transparent); }
   & .chat-composer textarea, & .chat-composer textarea:focus { border: 0; background: transparent; box-shadow: none; outline: none; padding: 4px 0; color: var(--v-ink); font-size: 15px; }
-  & .chat-send { width: 34px; height: 34px; border-radius: 10px; background: var(--v-sel); color: var(--v-sel-ink); box-shadow: 0 2px 0 #000; }
+  & .chat-send { width: 34px; height: 34px; border-radius: 10px; background: var(--v-sel); color: var(--v-sel-ink); box-shadow: 0 2px 0 var(--v-edge); }
   & .chat-send:disabled { background: var(--v-line); color: var(--v-faint); box-shadow: none; }
   & .chat-user { background: var(--lilac); color: var(--v-ink); border: 1.5px solid var(--v-edge); border-radius: 16px 16px 4px 16px; }
   & .chat-starters button, & .chat-suggestions button, & .chat-top .ai-picker, & .chat-top button {
@@ -384,7 +384,7 @@
   & .setrow .sd { color: var(--v-muted); font-size: 12.5px; }
   & .toggle { background: var(--v-line); box-shadow: inset 0 0 0 1.5px var(--v-edge); }
   & .toggle.on { background: var(--lime); }
-  & .toggle::after, & .toggle i { background: #fff; box-shadow: 0 0 0 1.5px var(--v-edge); }
+  & .toggle::after, & .toggle i { background: var(--v-surface); box-shadow: 0 0 0 1.5px var(--v-edge); }
   & .toast { border: 1.5px solid var(--v-edge); border-radius: 12px; background: var(--v-sel); color: var(--v-sel-ink); box-shadow: 4px 4px 0 var(--lime); }
 
   /* Integrations (onboarding and settings) */
@@ -461,7 +461,7 @@
     font-size: 13.5px; line-height: 1.45; cursor: pointer; transition: border-color 120ms ease, background 120ms ease, transform 200ms var(--press);
   }
   & .agent-review__checks label:hover { border-color: var(--v-edge-hi); transform: translateX(2px); }
-  & .agent-review__checks input { appearance: none; width: 18px; height: 18px; flex: 0 0 auto; margin-top: 1px; border: 1.5px solid var(--v-edge); border-radius: 6px; background: #fff; display: grid; place-items: center; cursor: pointer; }
+  & .agent-review__checks input { appearance: none; width: 18px; height: 18px; flex: 0 0 auto; margin-top: 1px; border: 1.5px solid var(--v-edge); border-radius: 6px; background: var(--v-surface); display: grid; place-items: center; cursor: pointer; }
   & .agent-review__checks input:checked { background: var(--lime); }
   & .agent-review__checks input:checked::after { content: "✓"; font: 800 12px/1 var(--font-sans); color: var(--v-ink); }
   & .agent-review__checks label.is-done { background: var(--v-sunken); color: var(--v-faint); }
@@ -514,25 +514,25 @@
 :root[data-ui="v3"][data-v7] .mix-start span { font-weight: 600; opacity: .7; font-size: .9em; }
 
 /* Update card */
-:root[data-ui="v3"][data-v7] .update-card { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: flex; align-items: center; gap: 14px; width: min(440px, calc(100vw - 44px)); padding: 14px 16px; border: 1.5px solid var(--v-ink, #141414); border-radius: 18px; background: #fff; box-shadow: 5px 5px 0 var(--v-ink, #141414); }
+:root[data-ui="v3"][data-v7] .update-card { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: flex; align-items: center; gap: 14px; width: min(440px, calc(100vw - 44px)); padding: 14px 16px; border: 1.5px solid var(--v-edge); border-radius: 18px; background: var(--v-surface); box-shadow: 5px 5px 0 var(--v-edge); }
 :root[data-ui="v3"][data-v7] .update-card__body { flex: 1; display: grid; gap: 3px; min-width: 0; }
-:root[data-ui="v3"][data-v7] .update-card__body strong { font-family: "Bricolage Grotesque", Inter, sans-serif; font-size: 16px; }
-:root[data-ui="v3"][data-v7] .update-card__body span { font-size: 13px; color: #555; }
-:root[data-ui="v3"][data-v7] .update-card__bar { display: block; height: 6px; border-radius: 99px; background: #eee8db; overflow: hidden; }
-:root[data-ui="v3"][data-v7] .update-card__bar b { display: block; height: 100%; background: #d6f45a; transition: width .3s; }
+:root[data-ui="v3"][data-v7] .update-card__body strong { font-family: var(--font-display); font-size: 16px; }
+:root[data-ui="v3"][data-v7] .update-card__body span { font-size: 13px; color: var(--v-muted); }
+:root[data-ui="v3"][data-v7] .update-card__bar { display: block; height: 6px; border-radius: 99px; background: var(--v-sunken); overflow: hidden; }
+:root[data-ui="v3"][data-v7] .update-card__bar b { display: block; height: 100%; background: var(--v-sel); transition: width .3s; }
 :root[data-ui="v3"][data-v7] .update-card__actions { display: grid; gap: 4px; justify-items: center; }
-:root[data-ui="v3"][data-v7] .update-card__later { border: 0; background: none; color: #555; font-size: 12px; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .update-card__later { border: 0; background: none; color: var(--v-muted); font-size: 12px; cursor: pointer; }
 
 /* Sign in: readable note and a big code to compare with the browser */
 :root[data-ui="v3"][data-v7] .login .field-note,
-:root[data-ui="v3"][data-v7] .signin .field-note { color: #5a5a5a; }
+:root[data-ui="v3"][data-v7] .signin .field-note { color: var(--v-muted); }
 :root[data-ui="v3"][data-v7] .login .field-err { color: #b42318; }
-:root[data-ui="v3"][data-v7] .signin__code { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 14px; background: #f6f1e7; text-align: center; }
-:root[data-ui="v3"][data-v7] .signin__code span { font-size: 13px; color: #3b3b3b; line-height: 1.45; }
-:root[data-ui="v3"][data-v7] .signin__code b { font: 700 22px/1.2 ui-monospace, Menlo, monospace; letter-spacing: .12em; color: #141414; user-select: all; }
-:root[data-ui="v3"][data-v7] .perm-fix { margin-top: 12px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 14px; background: #fff7d6; }
-:root[data-ui="v3"][data-v7] .perm-fix p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: #3b3b3b; }
-:root[data-ui="v3"][data-v7] .act--primary { background: #d6f45a; border-color: #141414; color: #141414; font-weight: 800; }
+:root[data-ui="v3"][data-v7] .signin__code { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border: 1.5px dashed var(--v-edge); border-radius: 14px; background: var(--v-sunken); text-align: center; }
+:root[data-ui="v3"][data-v7] .signin__code span { font-size: 13px; color: var(--v-muted); line-height: 1.45; }
+:root[data-ui="v3"][data-v7] .signin__code b { font: 700 22px/1.2 ui-monospace, Menlo, monospace; letter-spacing: .12em; color: var(--v-ink); user-select: all; }
+:root[data-ui="v3"][data-v7] .perm-fix { margin-top: 12px; padding: 12px 14px; border: 1.5px dashed var(--v-edge); border-radius: 14px; background: var(--v-sunken); }
+:root[data-ui="v3"][data-v7] .perm-fix p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--v-muted); }
+:root[data-ui="v3"][data-v7] .act--primary { background: var(--v-sel); border-color: var(--v-sel); color: var(--v-sel-ink); font-weight: 800; }
 
 /* Ask Vibe: the model picker sits in its own row so it never covers the greeting. */
 :root[data-ui="v3"] .chat-page--empty .chat-top { position: static; align-self: stretch; padding: 14px 24px 0; }
@@ -541,23 +541,23 @@
 .chat-ai__btn { max-width: min(320px, 60vw); }
 
 /* Share: one big link, share buttons under it. */
-.share-link { margin-top: 22px; padding: 18px 20px; border: 2px solid #141414; border-radius: 16px; background: #ffffff; box-shadow: 3px 3px 0 #141414; }
-.share-link__label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: #3b3b3b; }
+.share-link { margin-top: 22px; padding: 18px 20px; border: 2px solid var(--v-edge); border-radius: 16px; background: var(--v-surface); box-shadow: 3px 3px 0 var(--v-edge); }
+.share-link__label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: var(--v-muted); }
 .share-link__row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.share-link__row code { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border: 1.5px dashed #141414; border-radius: 10px; background: #fff; color: #141414; font: 600 14px/1.3 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
+.share-link__row code { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border: 1.5px dashed var(--v-edge); border-radius: 10px; background: var(--v-surface); color: var(--v-ink); font: 600 14px/1.3 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
 .share-link__targets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.share-link__fine { margin: 12px 0 0; font-size: 12px; color: #5a5a5a; }
-.share-link__fine b { font-family: ui-monospace, Menlo, monospace; color: #141414; }
+.share-link__fine { margin: 12px 0 0; font-size: 12px; color: var(--v-muted); }
+.share-link__fine b { font-family: ui-monospace, Menlo, monospace; color: var(--v-ink); }
 .share-meter { margin-top: 12px; }
 
 /* Voice: plain steps in Ask Vibe. */
-.voice-tip { margin: 0 0 8px; padding: 12px 14px; border: 1.5px dashed #141414; border-radius: 12px; background: #fbfaf6; color: #141414; font-size: 13px; line-height: 1.5; }
+.voice-tip { margin: 0 0 8px; padding: 12px 14px; border: 1.5px dashed var(--v-edge); border-radius: 12px; background: var(--v-sunken); color: var(--v-ink); font-size: 13px; line-height: 1.5; }
 .voice-tip b { display: block; margin-bottom: 4px; font-size: 14px; }
 .voice-tip ol { margin: 0 0 6px; padding-left: 18px; }
-.voice-tip p { margin: 0; color: #4a4a4a; }
-.voice-tip kbd { padding: 1px 6px; border: 1px solid #141414; border-radius: 5px; background: #fff; font: 600 12px ui-monospace, Menlo, monospace; }
-.chat-mic { margin-left: auto; margin-right: 8px; padding: 5px 10px; border: 1.5px solid #141414; border-radius: 999px; background: #fff; color: #141414; font: 700 12px/1 inherit; cursor: pointer; }
-.chat-mic[aria-pressed="true"] { background: #d6f45a; }
+.voice-tip p { margin: 0; color: var(--v-muted); }
+.voice-tip kbd { padding: 1px 6px; border: 1px solid var(--v-edge); border-radius: 5px; background: var(--v-surface); font: 600 12px ui-monospace, Menlo, monospace; }
+.chat-mic { margin-left: auto; margin-right: 8px; padding: 5px 10px; border: 1.5px solid var(--v-edge); border-radius: 999px; background: var(--v-surface); color: var(--v-ink); font: 700 12px/1 inherit; cursor: pointer; }
+.chat-mic[aria-pressed="true"] { background: var(--v-sel); }
 
 /* No extra box around the text you are typing in: the dock or composer border already shows focus. */
 :root[data-ui="v3"][data-v7] .ask-dock input:focus, :root[data-ui="v3"][data-v7] .ask-dock input:focus-visible,
@@ -576,10 +576,10 @@
 
 /* Plan: Teams card */
 .plan-pick__card--teams .teams-form { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
-.plan-pick__card--teams .teams-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #3b3b3b; }
-.plan-pick__card--teams .teams-form input { width: 180px; padding: 7px 10px; border: 1.5px solid #141414; border-radius: 9px; background: #fff; color: #141414; font: inherit; font-weight: 500; }
+.plan-pick__card--teams .teams-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--v-muted); }
+.plan-pick__card--teams .teams-form input { width: 180px; padding: 7px 10px; border: 1.5px solid var(--v-edge); border-radius: 9px; background: var(--v-surface); color: var(--v-ink); font: inherit; font-weight: 500; }
 .plan-pick__card--teams .seat-step { display: inline-flex; align-items: center; gap: 10px; }
-.plan-pick__card--teams .seat-step button { width: 30px; height: 30px; border: 1.5px solid #141414; border-radius: 8px; background: #fff; color: #141414; font-weight: 800; cursor: pointer; }
+.plan-pick__card--teams .seat-step button { width: 30px; height: 30px; border: 1.5px solid var(--v-edge); border-radius: 8px; background: var(--v-surface); color: var(--v-ink); font-weight: 800; cursor: pointer; }
 .plan-pick__card--teams .seat-step button:disabled { opacity: .4; cursor: default; }
 .plan-pick__card--teams .seat-step b { min-width: 22px; text-align: center; font-size: 16px; }
 /* The model picker lives in the composer bar; its menu opens upward there. */

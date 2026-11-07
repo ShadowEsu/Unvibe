@@ -1,70 +1,16 @@
 /*
- * Bundled fonts, unmodified upstream OFL files (sources and sha256 in fonts/FONTS.md). Concatenated
+ * Bundled font, the unmodified upstream OFL file (source and sha256 in fonts/FONTS.md). Concatenated
  * into each renderer stylesheet by scripts/build.mjs, which copies fonts/ to dist/renderer/fonts/, so
- * the paths below are relative to the built dist/renderer/<window>/<window>.css. No font comes
- * from a CDN: the windows make no request to Google or anyone else for type.
+ * the path below is relative to the built dist/renderer/<window>/<window>.css. No font comes from a
+ * CDN: the windows make no request to Google or anyone else for type. Spectral sets every string in
+ * JetBrains Mono (Design agents/design/spectral README §1).
  */
-@font-face {
-  font-family: "Inter";
-  src: url("../fonts/inter/InterVariable.woff2") format("woff2-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Bricolage Grotesque";
-  src: url("../fonts/bricolage-grotesque/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2-variations");
-  font-weight: 200 800;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Serif";
-  src: url("../fonts/instrument-serif/InstrumentSerif-Italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Serif";
-  src: url("../fonts/instrument-serif/InstrumentSerif-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-/* Newsreader and JetBrains Mono: the weights the widget and companion asked Google Fonts for. */
-@font-face {
-  font-family: "Newsreader";
-  src: url("../fonts/newsreader/Newsreader[opsz,wght].woff2") format("woff2-variations");
-  font-weight: 400 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Newsreader";
-  src: url("../fonts/newsreader/Newsreader-Italic[opsz,wght].woff2") format("woff2-variations");
-  font-weight: 400 600;
-  font-style: italic;
-  font-display: swap;
-}
 @font-face {
   font-family: "JetBrains Mono";
   src: url("../fonts/jetbrains-mono/JetBrainsMono[wght].ttf") format("truetype");
   font-weight: 100 800;
   font-style: normal;
   font-display: swap;
-}
-/*
- * The full upstream Inter, Bricolage Grotesque and Newsreader files carry an optical-size axis. The
- * bundled Inter and Bricolage files they replace were the opsz 14 cuts (Bricolage's advance widths
- * match its opsz 14 exactly; Inter's default is 14). Bricolage's own default is 96, about 10%
- * narrower, which re-wrapped headings. Pinning opsz 14 keeps every heading and line as it was.
- * Newsreader (opsz 0-72, which Google's file sized to the text) is pinned too; v7 shows it nowhere.
- * Fonts without the axis ignore it. !important for the same reason as below: the `font:` shorthand
- * resets it.
- */
-*, *::before, *::after {
-  font-variation-settings: "opsz" 14 !important;
 }
 /*
  * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one

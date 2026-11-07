@@ -30,10 +30,10 @@
   --uv-fast: 140ms;
   --uv-normal: 200ms;
   --uv-slow: 280ms;
-  --uv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  /* Newsreader and JetBrains Mono are bundled (shared/fonts.css); the rest are fallbacks. */
-  --uv-display: "Newsreader", ui-serif, "New York", Georgia, serif;
-  --uv-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  /* Spectral: every string in the bundled JetBrains Mono (shared/fonts.css). */
+  --uv-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --uv-display: var(--uv-font);
+  --uv-mono: var(--uv-font);
 }
 
 /*

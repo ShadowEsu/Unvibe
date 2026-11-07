@@ -123,7 +123,7 @@ export interface LearningStep { id: LearningStepId; title: string; copy: string;
  *  the saved lessons). */
 export function learningSteps(input: { shortcut: string; reviews: number; understood: number; saved: number }): LearningStep[] {
   return [
-    { id: '01', title: 'Review a change', copy: `Select code and press ${input.shortcut}.`, icon: IC.spark, done: input.reviews > 0 },
+    { id: '01', title: 'Review a change', copy: `Select code and press ${input.shortcut}.`, icon: IC.code, done: input.reviews > 0 },
     { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: input.understood > 0 },
     { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false },
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false },

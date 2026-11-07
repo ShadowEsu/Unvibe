@@ -12,7 +12,8 @@ export const IC = {
   briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
   library: 'M4 3h3v14H4z M9 3h3v14H9z M14 4l3 .8-3.4 12.6-2.9-.8z',
   profile: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5',
-  spark: 'M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8',
+  /** Lucide `code` (</>) on the 20 grid. Was a four-point spark; Security bans the spark motif (pre-rules 20261106-2102). */
+  code: 'M13.3 15l5-5-5-5 M6.7 5l-5 5 5 5',
   eye: 'M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z M10 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
   layers: 'M10 3l7 4-7 4-7-4z M3 11l7 4 7-4',
   check: 'M4 10l4 4 8-9',
