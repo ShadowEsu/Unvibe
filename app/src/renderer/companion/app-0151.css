@@ -12,6 +12,22 @@
    vocabulary used below in this file. ── */
 :root[data-ui="v3"][data-v7] {
   color-scheme: light;
+  /* companion.css's base theme names */
+  --shell: var(--u-sheet);
+  --panel: var(--u-sheet);
+  --paper: var(--u-paper);
+  --ink: var(--u-ink);
+  --muted: var(--u-ink-2);
+  --faint: var(--u-ink-3);
+  --line: var(--u-line);
+  --line-soft: var(--u-line);
+  --hover: var(--u-fill);
+  --accent: var(--u-accent);
+  --accent-strong: var(--u-accent);
+  --accent-soft: var(--u-mist);
+  --on-accent: var(--u-accent-on);
+  --card-shadow: var(--u-shadow);
+  /* v7's names */
   --font-sans: var(--u-font);
   --font-display: var(--u-font);
   --font-hand: var(--u-font);
@@ -67,15 +83,15 @@
   --u-radius-window: 14px;
   --u-radius-card: 18px;
   --u-radius-control: var(--u-radius-field);
-  /* Still read by the first-run and Settings rules below (rounds/06 values) until SP4 moves them. */
+  /* Read by the first-run rules below. The try-it editor is a sheet in the theme (o-try), not a dark panel. */
   --u-mono: var(--u-font);
   --u-violet-lip: color-mix(in srgb, var(--u-accent) 78%, #000);
-  --u-code: #18171b;
-  --u-dark-ink: #ededed;
-  --u-dark-ink-2: #b4b4b4;
-  --u-dark-line: rgb(255 255 255 / 0.08);
-  --u-shadow-whisper: 0 0 1px rgb(0 0 0 / 0.4), 0 1px 1px rgb(0 0 0 / 0.04), 0 2px 4px rgb(0 0 0 / 0.04);
-  --u-shadow-float: 0 24px 60px -20px rgb(20 20 20 / 0.28), 0 0 1px rgb(0 0 0 / 0.35);
+  --u-code: var(--u-sheet);
+  --u-dark-ink: var(--u-ink);
+  --u-dark-ink-2: var(--u-ink-3);
+  --u-dark-line: var(--u-line);
+  --u-shadow-whisper: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+  --u-shadow-float: 0 30px 80px -24px rgb(40 24 110 / 0.35);
 }
 :root[data-ui="v3"][data-v7][data-theme="dark"] {
   color-scheme: dark;
@@ -410,6 +426,44 @@
 :root[data-ui="v3"][data-v7] .layout .row-trash { flex: none; width: 28px; height: 28px; margin: 0 0 0 4px; border-radius: 8px; background: transparent; color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .layout .row-trash:hover { background: var(--u-fill); color: var(--u-ink); }
 
+/* ── Cards on every other page: glass with the white rim, no lift ── */
+:root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card) {
+  border: 0; border-radius: 18px; background: var(--u-glass); transform: none;
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card):hover { transform: none; }
+
+/* ── Page heads with an eyebrow (Plan, Share): on the ground, no card; the eyebrow a small caps label ── */
+:root[data-ui="v3"][data-v7] .layout .page-head {
+  max-width: none; margin: 0 0 6px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-ui="v3"][data-v7] .layout .eyebrow { margin: 0 0 10px; font: var(--u-w-label) 11.5px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .page-head h1 { max-width: none; margin: 0; font: 620 30px/1.15 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .page-head p { max-width: 80ch; margin: 14px 0 0; font: var(--u-w-body) 14.5px/1.55 var(--u-font); letter-spacing: 0; color: var(--u-ink-2); }
+
+/* ── Momentum (c-momentum): four metric cards in one row, the heat map in the accent ramp ── */
+:root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 24px 0 22px; }
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+:root[data-ui="v3"][data-v7] .layout .metric-card { padding: 20px 22px; }
+:root[data-ui="v3"][data-v7] .layout .heat .a1, :root[data-ui="v3"][data-v7] .layout .heat-legend .a1 { background: color-mix(in srgb, var(--u-accent) 16%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .heat .a2, :root[data-ui="v3"][data-v7] .layout .heat-legend .a2 { background: color-mix(in srgb, var(--u-accent) 34%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .heat .a3, :root[data-ui="v3"][data-v7] .layout .heat-legend .a3 { background: color-mix(in srgb, var(--u-accent) 55%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .heat .a4, :root[data-ui="v3"][data-v7] .layout .heat-legend .a4 { background: color-mix(in srgb, var(--u-accent) 78%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .heat .a5, :root[data-ui="v3"][data-v7] .layout .heat-legend .a5 { background: var(--u-accent); }
+
+/* ── Plan (c-plan): the three plans side by side; the current one tinted mist with an accent label ── */
+:root[data-ui="v3"][data-v7] .layout .plan-board:not(.plan-board--compact) { max-width: none; }
+:root[data-ui="v3"][data-v7] .layout .plan-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .plan-pick { grid-template-columns: minmax(0, 1fr); } }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current {
+  background: linear-gradient(160deg, var(--u-mist) 0%, var(--u-glass) 85%);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px color-mix(in srgb, var(--u-accent) 30%, transparent), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card > span:first-child { font: var(--u-w-label) 11.5px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current > span:first-child { color: var(--u-accent); }
+
 /* ── First run (rounds/06 screens 6-7): steps, Vibe and a big bubble, one heading, one forward button ── */
 /* Vibe and the footer both take the free height (margin-top: auto), so a short step sits in the middle of the window
    and a tall one (the shortcut guide) scrolls. Steps change without a transition: SPEC §6 names no step motion. */
@@ -447,27 +501,28 @@
 :root[data-ui="v3"][data-v7] .onboard__form input:is(:focus, :focus-visible) { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-violet), 0 0 0 4px rgb(90 63 224 / 0.12); }
 :root[data-ui="v3"][data-v7] .onboard__note { font: 400 13px/1.45 var(--u-sans); color: var(--u-ink-3); }
 
-/* Buttons: the mock's .btn-primary (one per step), .btn-quiet (Back and the ways out) and .btn-outline (the level
-   choices and the shortcut guide's fixes). Pressing drops the primary onto its lip, like Home's. */
+/* Buttons: the primary (one per step), the quiet ones (Back and the ways out) and outline pills (the level choices and the
+   shortcut guide's fixes). */
 :root[data-ui="v3"][data-v7] .onboard__primary,
 :root[data-ui="v3"][data-v7] .onboard__quiet,
 :root[data-ui="v3"][data-v7] .onboard__back,
 :root[data-ui="v3"][data-v7] .onboard__outline {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; border: 0; border-radius: var(--u-radius-control);
-  font: 500 15px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap; cursor: pointer; transform: none; transition: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; border: 0; border-radius: 999px;
+  font: var(--u-w-label) 14.5px/1 var(--u-font); letter-spacing: 0; white-space: nowrap; cursor: pointer; transform: none; transition: none;
 }
-:root[data-ui="v3"][data-v7] .onboard__primary { height: 44px; padding: 0 18px; background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); }
-:root[data-ui="v3"][data-v7] .onboard__primary:hover:not(:disabled) { background: var(--u-violet); }
-:root[data-ui="v3"][data-v7] .onboard__primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+/* Spectral: the one forward action is a filled accent pill; no lip, no press drop. */
+:root[data-ui="v3"][data-v7] .onboard__primary { height: 44px; padding: 0 20px; background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); }
+:root[data-ui="v3"][data-v7] .onboard__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .onboard__primary:active:not(:disabled) { transform: none; }
 :root[data-ui="v3"][data-v7] .onboard__quiet,
-:root[data-ui="v3"][data-v7] .onboard__back { height: 36px; padding: 0 10px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard__back { height: 36px; padding: 0 12px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .onboard__quiet:hover:not(:disabled, [aria-disabled="true"]),
-:root[data-ui="v3"][data-v7] .onboard__back:hover:not(:disabled) { background: var(--u-band); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__back:hover:not(:disabled) { background: var(--u-fill); color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .onboard__outline {
-  height: 40px; padding: 0 14px; background: var(--u-canvas); color: var(--u-ink); font-size: 14px;
-  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate);
+  height: 40px; padding: 0 16px; background: var(--u-chip); color: var(--u-ink); font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
 }
-:root[data-ui="v3"][data-v7] .onboard__outline:hover:not(:disabled) { background: #fff; }
+:root[data-ui="v3"][data-v7] .onboard__outline:hover:not(:disabled) { background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline):disabled { cursor: default; opacity: 0.55; }
 /* "Explaining in the panel →" keeps focus and stays readable: a status, so ink-3 rather than a faded control. */
 :root[data-ui="v3"][data-v7] .onboard__quiet[aria-disabled="true"] { cursor: default; color: var(--u-ink-3); }
@@ -563,155 +618,163 @@
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(7n) { top: -120px; }
 @keyframes onboardConfetti { to { transform: translateY(105vh) rotate(540deg); } }
 
-/* ── Settings (rounds/06 screen 8): a band nav beside paper, calm groups of 60 px rows, helper text in ink-3 ──────── */
-/* Opens and switches tabs without motion (SPEC §6 names none). Every run of sibling rows is one group card, drawn here
-   with :has(), so the sub-panels (AI, Account & Plan) group without wrappers. */
-:root[data-ui="v3"][data-v7] .overlay { background: rgb(20 20 20 / 0.32); backdrop-filter: none; animation: none; }
+/* ── Settings (Spectral s-*): a glass frame on a lilac, blurred scrim; the nav on the glass, the page an inset sheet ── */
+/* Opens and switches tabs without motion. Every run of sibling rows is one group on hairlines, drawn with :has(), so the
+   sub-panels (AI, Account & Plan) group without wrappers. */
+:root[data-ui="v3"][data-v7] .overlay { background: rgb(60 44 140 / 0.16); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .overlay { background: rgb(0 0 0 / 0.42); }
 :root[data-ui="v3"][data-v7] .modal {
-  border: 0; border-radius: 16px; background: var(--u-canvas); color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
-  box-shadow: var(--u-shadow-float); animation: none;
+  border: 0; border-radius: 20px; background: var(--u-glass); color: var(--u-ink); font-family: var(--u-font); letter-spacing: 0;
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 30px 80px -24px rgb(40 24 110 / 0.35); animation: none;
 }
-:root[data-ui="v3"][data-v7] .modal .mside { width: 220px; padding: 28px 14px 16px; border-right: 0; background: var(--u-band); }
-:root[data-ui="v3"][data-v7] .modal .settings-brand { padding: 0 10px; color: var(--u-ink); font: 600 15px/1.2 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .mside { width: 220px; padding: 26px 12px 16px; border-right: 0; background: transparent; }
+:root[data-ui="v3"][data-v7] .modal .settings-brand { padding: 0 10px; color: var(--u-ink); font: var(--u-w-title) 16px/1.2 var(--u-font); letter-spacing: 0; }
 :root[data-ui="v3"][data-v7] .modal .mside-group { gap: 0; margin: 10px 0 0; }
-:root[data-ui="v3"][data-v7] .modal .mside .mh { padding: 14px 10px 8px; color: var(--u-ink-3); font: 600 12px/1 var(--u-sans); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .modal .mside .mh { padding: 14px 10px 8px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
 :root[data-ui="v3"][data-v7] .modal .mside button {
-  height: 38px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2);
-  font: 500 14px/1 var(--u-sans); letter-spacing: 0; box-shadow: none; transform: none; transition: none;
+  height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2);
+  font: var(--u-w-label) 13.5px/1 var(--u-font); letter-spacing: 0; box-shadow: none; transform: none; transition: none;
 }
-:root[data-ui="v3"][data-v7] .modal .mside button:hover { background: rgb(255 255 255 / 0.55); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-canvas); color: var(--u-ink); font-weight: 500; box-shadow: var(--u-shadow-whisper); }
-:root[data-ui="v3"][data-v7] .modal .mside .ver { margin-top: auto; padding: 10px; color: var(--u-ink-3); font: 400 12.5px/1.4 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .mside button:hover { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-mist); color: var(--u-accent); font-weight: var(--u-w-title); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .mside .ver { margin-top: auto; padding: 10px; color: var(--u-ink-3); font: var(--u-w-body) 12px/1.4 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .settings-close {
-  top: 16px; right: 16px; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2); transition: none;
+  top: 18px; right: 18px; width: 34px; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); transition: none;
 }
-:root[data-ui="v3"][data-v7] .modal .settings-close:hover { background: var(--u-band); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .modal .mbody { padding: 48px 56px 40px; background: var(--u-canvas); }
-:root[data-ui="v3"][data-v7] .modal .mbody h2 { margin: 0; padding-right: 48px; color: var(--u-ink); font: 600 26px/1.2 var(--u-sans); letter-spacing: -0.025em; }
-:root[data-ui="v3"][data-v7] .modal .settings-section-label { margin: 28px 0 0 4px; color: var(--u-ink-3); font: 600 11.5px/1 var(--u-sans); letter-spacing: 0.04em; }
+:root[data-ui="v3"][data-v7] .modal .settings-close:hover { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mbody { margin: 8px 8px 8px 0; padding: 40px 44px 36px; border-radius: 14px; background: var(--u-sheet); }
+:root[data-ui="v3"][data-v7] .modal .mbody h2 { margin: 0; padding-right: 48px; color: var(--u-ink); font: var(--u-w-title) 24px/1.2 var(--u-font); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label { margin: 28px 0 0 2px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
 
-/* Rows: hairline between, a 1 px plate edge and 16 px corners around each run. */
+/* Rows: label and helper on the left, the control on the right, hairlines between, none at a group's ends. */
 :root[data-ui="v3"][data-v7] .modal .setrow {
-  grid-template-columns: minmax(0, 1fr) auto; gap: 16px; min-height: 60px; box-sizing: border-box; margin: 0; padding: 12px 18px;
-  border: 1px solid var(--u-plate); border-bottom: 0; background: var(--u-canvas);
+  grid-template-columns: minmax(0, 1fr) auto; gap: 16px; min-height: 60px; box-sizing: border-box; margin: 0; padding: 14px 2px;
+  border: 0; border-bottom: 1px solid var(--u-line); border-radius: 0; background: transparent;
 }
 :root[data-ui="v3"][data-v7] .modal :not(.setrow) + .setrow,
-:root[data-ui="v3"][data-v7] .modal .setrow:first-child { margin-top: 22px; border-top-left-radius: 16px; border-top-right-radius: 16px; }
-:root[data-ui="v3"][data-v7] .modal .settings-section-label + .setrow { margin-top: 10px; }
-:root[data-ui="v3"][data-v7] .modal .setrow:not(:has(+ .setrow)) { border-bottom: 1px solid var(--u-plate); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; }
-:root[data-ui="v3"][data-v7] .modal .setrow .sl { color: var(--u-ink); font: 500 14.5px/1.3 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow:first-child { margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label + .setrow { margin-top: 6px; }
+:root[data-ui="v3"][data-v7] .modal .setrow:not(:has(+ .setrow)) { border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sl { color: var(--u-ink); font: var(--u-w-label) 14px/1.3 var(--u-font); letter-spacing: 0; }
 :root[data-ui="v3"][data-v7] .modal .setrow .sl--danger { color: #b42318; }
-:root[data-ui="v3"][data-v7] .modal .setrow .sd { max-width: 40rem; margin-top: 2px; color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .modal .setrow .sl--danger { color: #ff8a80; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sd { max-width: 40rem; margin-top: 4px; color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); letter-spacing: 0; }
 :root[data-ui="v3"][data-v7] .modal .setrow--stack { padding-top: 14px; padding-bottom: 16px; }
 :root[data-ui="v3"][data-v7] .modal .setrow__end { display: flex; align-items: center; gap: 10px; }
 
-/* Controls: band fields, the mock's toggle, keycap-style shortcut, outline buttons (Q11: no lime or violet unless the
-   control is the screen's one action, as "Allow Accessibility" is while it shows). */
+/* Controls: fields on the sheet with a hairline, the accent toggle, keycap shortcut, outline pills; the accent fill
+   only on the screen's one action (as "Allow Accessibility" is while it shows). */
 :root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input) {
-  height: 36px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 9px; background: var(--u-band); color: var(--u-ink);
-  font: 500 13.5px/1 var(--u-sans); letter-spacing: 0; box-shadow: none;
+  height: 36px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: var(--u-radius-field); background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-body) 13.5px/1 var(--u-font); letter-spacing: 0; box-shadow: inset 0 0 0 1px var(--u-line);
 }
 :root[data-ui="v3"][data-v7] .modal .setrow-field { width: 240px; }
-:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input):focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-violet), 0 0 0 4px rgb(90 63 224 / 0.12); }
+:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input):focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-accent), 0 0 0 4px color-mix(in srgb, var(--u-accent) 14%, transparent); }
 :root[data-ui="v3"][data-v7] .modal .field::placeholder { color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .modal .range { accent-color: var(--u-violet); }
-:root[data-ui="v3"][data-v7] .modal .toggle { width: 40px; height: 24px; border: 0; border-radius: 999px; background: var(--u-plate); box-shadow: none; transition: none; }
-:root[data-ui="v3"][data-v7] .modal .toggle.on { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .modal .range { accent-color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .modal .toggle { width: 40px; height: 24px; border: 0; border-radius: 999px; background: var(--u-line); box-shadow: inset 0 0 0 1px var(--u-line); transition: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle.on { background: var(--u-accent); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .modal .toggle .knob { top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: none; }
 :root[data-ui="v3"][data-v7] .modal .toggle.on .knob { left: 19px; }
 :root[data-ui="v3"][data-v7] .modal .act {
-  display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border: 0; border-radius: 10px;
-  background: var(--u-canvas); color: var(--u-ink); font: 500 13.5px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap;
-  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate); transform: none; transition: none;
+  display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 13px/1 var(--u-font); letter-spacing: 0; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none;
 }
-/* Hover deepens the edge (SPEC §2: never pure white); press keeps the lip: only the violet primary drops onto it. */
-:root[data-ui="v3"][data-v7] .modal .act:is(:hover, :active):not(:disabled, .act--primary, .kbd-cap) { background: var(--u-canvas); border: 0; transform: none; box-shadow: inset 0 0 0 1px rgb(110 107 100 / 0.45), 0 2px 0 var(--u-plate); }
-:root[data-ui="v3"][data-v7] .modal .act:disabled { background: var(--u-band); color: var(--u-ink-3); box-shadow: none; opacity: 1; }
+:root[data-ui="v3"][data-v7] .modal .act:is(:hover, :active):not(:disabled, .act--primary, .kbd-cap) { background: var(--u-fill); border: 0; transform: none; box-shadow: inset 0 0 0 1px var(--u-line); }
+:root[data-ui="v3"][data-v7] .modal .act:disabled { background: var(--u-fill); color: var(--u-ink-3); box-shadow: none; opacity: 1; }
 :root[data-ui="v3"][data-v7] .modal .act.danger { color: #b42318; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .modal .act.danger { color: #ff8a80; }
 :root[data-ui="v3"][data-v7] .modal .act--primary,
-:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); }
-:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { filter: brightness(1.06); }
-:root[data-ui="v3"][data-v7] .modal .act--primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:active:not(:disabled) { transform: none; }
+/* The shortcut is one keycap with a lip, like Today's. */
 :root[data-ui="v3"][data-v7] .modal .kbd-cap,
-:root[data-ui="v3"][data-v7] .modal .kbd-cap:is(:hover, :active):not(:disabled) { min-width: 0; padding: 0 12px; background: var(--u-band); color: var(--u-ink); transform: none; box-shadow: none; font: 600 13px/1 var(--u-mono); }
-/* Recording: violet with white "Press keys…", under the pointer too (the click that starts it leaves the pointer there). */
-:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec,
-:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec:is(:hover, :active):not(:disabled) { background: var(--u-violet); color: #fff; }
-:root[data-ui="v3"][data-v7] .modal :is(.act, .toggle, .mside button, .settings-close, .location-grid button):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 2px; }
-:root[data-ui="v3"][data-v7] .modal .link-btn { padding: 0; border: 0; background: none; color: var(--u-violet); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-
-/* Status chips: only Accessibility's "Allowed" takes the mock's lime tint (screen 8); the rest are neutral (Q11). */
-:root[data-ui="v3"][data-v7] .modal :is(.perm-chip, .setting-status) {
-  display: inline-block; padding: 7px 10px; border: 0; border-radius: var(--u-radius-chip); background: var(--u-band); color: var(--u-ink-2);
-  font: 500 13px/1 var(--u-sans); letter-spacing: 0; white-space: nowrap;
+:root[data-ui="v3"][data-v7] .modal .kbd-cap:is(:hover, :active):not(:disabled) {
+  min-width: 0; height: 34px; padding: 0 12px; border-radius: 8px; background: var(--u-chip); color: var(--u-ink); transform: none;
+  box-shadow: inset 0 0 0 1px var(--u-ink-3), 0 3px 0 var(--u-ink-3); font: 600 13px/1 var(--u-font);
 }
-:root[data-ui="v3"][data-v7] .modal .perm-chip--ok { background: #eef6cf; color: #3c5200; }
-:root[data-ui="v3"][data-v7] .modal .perm-steps { margin: 8px 0 0; color: var(--u-ink); font: 400 13px/1.45 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .perm-fix { margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--u-band); }
-:root[data-ui="v3"][data-v7] .modal .perm-fix p { margin: 0 0 10px; color: var(--u-ink-2); font: 400 13px/1.5 var(--u-sans); }
+/* Recording: the accent with "Press keys…", under the pointer too (the click that starts it leaves the pointer there). */
+:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec,
+:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec:is(:hover, :active):not(:disabled) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal :is(.act, .toggle, .mside button, .settings-close, .location-grid button):focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .modal .link-btn { padding: 0; border: 0; background: none; color: var(--u-accent); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Status chips: neutral; Accessibility's "Allowed" takes the accent on mist (lime is only the code selection). */
+:root[data-ui="v3"][data-v7] .modal :is(.perm-chip, .setting-status) {
+  display: inline-block; padding: 7px 11px; border: 0; border-radius: 999px; background: var(--u-fill); color: var(--u-ink-2);
+  font: var(--u-w-label) 12.5px/1 var(--u-font); letter-spacing: 0; white-space: nowrap;
+}
+:root[data-ui="v3"][data-v7] .modal .perm-chip--ok { background: var(--u-mist); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .modal .perm-steps { margin: 8px 0 0; color: var(--u-ink); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix { margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix p { margin: 0 0 10px; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .perm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Island: the preview on the band, the choices as a segmented control. */
-:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 0; border-radius: 16px; background: var(--u-band); box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .settings-preview__window span { background: var(--u-plate); }
-:root[data-ui="v3"][data-v7] .modal .location-grid { display: inline-flex; width: auto; gap: 4px; padding: 4px; border-radius: 12px; background: var(--u-band); }
-:root[data-ui="v3"][data-v7] .modal .location-grid button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--u-ink-2); font: 500 12.5px/1 var(--u-sans); box-shadow: none; }
+/* Island: the preview on a fill, the choices as a segmented control with the accent on the chosen one. */
+:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 0; border-radius: 16px; background: var(--u-fill); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .settings-preview__window span { background: var(--u-line); }
+:root[data-ui="v3"][data-v7] .modal .location-grid { display: inline-flex; width: auto; gap: 2px; padding: 3px; border-radius: 999px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); font: var(--u-w-label) 12.5px/1 var(--u-font); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .modal .location-grid button:hover { color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .modal .location-grid button.on { background: var(--u-canvas); color: var(--u-ink); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button.on { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
 
 /* AI: the intro, the cost table on hairlines. */
 :root[data-ui="v3"][data-v7] .modal .ai-container { display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro { display: grid; gap: 4px; margin: 14px 0 0; padding: 0 4px; border: 0; background: none; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { color: var(--u-ink); font: 600 15px/1.3 var(--u-sans); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { margin: 0; color: var(--u-ink-2); font: 400 13px/1.5 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .cost-table { border: 1px solid var(--u-plate); border-radius: 12px; background: var(--u-canvas); }
-:root[data-ui="v3"][data-v7] .modal .cost-row { border-top-color: var(--u-plate); font: 400 12.5px/1.3 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro { display: grid; gap: 4px; margin: 14px 0 0; padding: 0 2px; border: 0; background: none; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { color: var(--u-ink); font: var(--u-w-title) 14.5px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .cost-table { border: 1px solid var(--u-line); border-radius: 12px; background: transparent; }
+:root[data-ui="v3"][data-v7] .modal .cost-row { border-top-color: var(--u-line); font: var(--u-w-body) 12.5px/1.3 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .cost-row > span { color: var(--u-ink-2); }
-:root[data-ui="v3"][data-v7] .modal .cost-row.head { background: var(--u-band); }
-:root[data-ui="v3"][data-v7] .modal .cost-row.head > span { color: var(--u-ink-3); font-weight: 600; }
-:root[data-ui="v3"][data-v7] .modal .cost-row > span:first-child { color: var(--u-ink); font-weight: 500; }
-:root[data-ui="v3"][data-v7] .modal .cost-note { color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head > span { color: var(--u-ink-3); font-weight: var(--u-w-label); }
+:root[data-ui="v3"][data-v7] .modal .cost-row > span:first-child { color: var(--u-ink); font-weight: var(--u-w-label); }
+:root[data-ui="v3"][data-v7] .modal .cost-note { color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); }
 
-/* Integrations: one hairline card per tool; the state as a chip (lime tint only for what is set up). */
+/* Integrations: one hairline card per tool; the state as a chip (the accent on mist for what is set up). */
 :root[data-ui="v3"][data-v7] .modal .integ { gap: 24px; margin-top: 14px; }
-:root[data-ui="v3"][data-v7] .modal .integ__lead { margin: 0; color: var(--u-ink-2); font: 400 14px/1.5 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .integ__message { border: 0; border-radius: 10px; background: var(--u-band); color: var(--u-ink-2); font: 400 13px/1.45 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .integ__group h3 { margin: 0 0 10px 4px; color: var(--u-ink-3); font: 600 11.5px/1 var(--u-sans); letter-spacing: 0.04em; }
+:root[data-ui="v3"][data-v7] .modal .integ__lead { margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13.5px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ__message { border: 0; border-radius: 10px; background: var(--u-fill); color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ__group h3 { margin: 0 0 10px 2px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
 :root[data-ui="v3"][data-v7] .modal .integ-card,
-:root[data-ui="v3"][data-v7] .modal .integ-card:hover { padding: 14px 16px; border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; transform: none; transition: none; }
-:root[data-ui="v3"][data-v7] .modal .integ-card__mark { border: 0; border-radius: 10px; background: var(--u-band); color: var(--u-ink); font: 600 14px/1 var(--u-sans); box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .integ-card__body b { color: var(--u-ink); font: 500 14.5px/1.3 var(--u-sans); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .modal .integ-card__body small { color: var(--u-ink-2); font: 500 12px/1.3 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .integ-card__body p { color: var(--u-ink-3); font: 400 12.5px/1.45 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .integration-state { padding: 6px 9px; border: 0; border-radius: var(--u-radius-chip); background: var(--u-band); color: var(--u-ink-2); font: 500 12px/1 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .modal .integ-card:hover { padding: 14px 16px; border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__mark { border: 0; border-radius: 10px; background: var(--u-fill); color: var(--u-ink); font: var(--u-w-title) 14px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body b { color: var(--u-ink); font: var(--u-w-label) 14px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body small { color: var(--u-ink-2); font: var(--u-w-label) 12px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body p { color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integration-state { padding: 6px 10px; border: 0; border-radius: 999px; background: var(--u-fill); color: var(--u-ink-2); font: var(--u-w-label) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integration-state:is(.detected, .available) { background: var(--u-mist); color: var(--u-accent); }
 
 /* Account & Plan: the plan cards and usage on the same hairline cards. */
 :root[data-ui="v3"][data-v7] .modal .plan-board--compact > .settings-section-label:first-child { margin-top: 28px; }
-:root[data-ui="v3"][data-v7] .modal .plan-toggle { padding: 3px; border: 0; border-radius: 12px; background: var(--u-band); }
-:root[data-ui="v3"][data-v7] .modal .plan-toggle button { border: 0; border-radius: 9px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .plan-toggle button span { color: var(--u-ink-3); font: 500 11px/1.2 var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on { background: var(--u-canvas); color: var(--u-ink); box-shadow: var(--u-shadow-whisper); }
-:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on span { color: var(--u-ink-2); }
-:root[data-ui="v3"][data-v7] .modal .signin__code { border: 0; border-radius: 12px; background: var(--u-band); }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle { padding: 3px; border: 0; border-radius: 999px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button { border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button span { color: var(--u-ink-3); font: var(--u-w-label) 11px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on span { color: inherit; opacity: 0.8; }
+:root[data-ui="v3"][data-v7] .modal .signin__code { border: 0; border-radius: 12px; background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .modal .signin__code span { color: var(--u-ink-2); }
-:root[data-ui="v3"][data-v7] .modal .signin__code b { color: var(--u-ink); font: 600 22px/1.2 var(--u-mono); }
-:root[data-ui="v3"][data-v7] .modal .plan-pick__card { border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; transform: none; }
-:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current { border-color: var(--u-ink-3); box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-upgrade { background: var(--u-band); border-color: transparent; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .plan-pick__card h2 { color: var(--u-ink); font: 600 22px/1.15 var(--u-sans); letter-spacing: -0.02em; }
-:root[data-ui="v3"][data-v7] .modal .plan-pick__card :is(p, .plan-pick__terms) { color: var(--u-ink-2); font-family: var(--u-sans); }
-:root[data-ui="v3"][data-v7] .modal :is(.plan-board__signin, .plan-usage-card) { border: 1px solid var(--u-plate); border-radius: 16px; background: var(--u-canvas); box-shadow: none; }
-/* The sign-in and plan buttons inside Settings follow the same rule as .act: outline unless it is the one action. */
+:root[data-ui="v3"][data-v7] .modal .signin__code b { color: var(--u-ink); font: 600 22px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card { border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); transform: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current { background: linear-gradient(160deg, var(--u-mist) 0%, var(--u-chip) 85%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--u-accent) 30%, transparent); }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-upgrade { background: var(--u-fill); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card h2 { color: var(--u-ink); font: var(--u-w-title) 20px/1.15 var(--u-font); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card :is(p, .plan-pick__terms) { color: var(--u-ink-2); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal :is(.plan-board__signin, .plan-usage-card) { border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); }
+/* The sign-in and plan buttons inside Settings follow the same rule as .act: an outline pill unless it is the one action. */
 :root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn),
 :root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):is(:hover, :active):not(:disabled) {
-  height: 40px; border: 0; border-radius: 10px; background: var(--u-canvas); color: var(--u-ink); font: 500 14px/1 var(--u-sans); letter-spacing: 0;
-  box-shadow: inset 0 0 0 1px var(--u-plate), 0 2px 0 var(--u-plate); transform: none; transition: none;
+  height: 38px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 13.5px/1 var(--u-font); letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none;
 }
-:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):is(:hover, :active):not(:disabled) { box-shadow: inset 0 0 0 1px rgb(110 107 100 / 0.45), 0 2px 0 var(--u-plate); }
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):is(:hover, :active):not(:disabled) { background: var(--u-fill); }
 /* The current plan's status ("Included" and the like) is a disabled button: readable ink-2, not v7's 40 % fade. */
-:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):disabled { background: var(--u-band); color: var(--u-ink-2); box-shadow: none; opacity: 1; }
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):disabled { background: var(--u-fill); color: var(--u-ink-2); box-shadow: none; opacity: 1; }
 :root[data-ui="v3"][data-v7] .modal .primary-btn,
-:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { border: 0; border-radius: 10px; background: var(--u-violet); color: #fff; box-shadow: 0 3px 0 var(--u-violet-lip); transform: none; transition: none; }
-:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { filter: brightness(1.06); }
-:root[data-ui="v3"][data-v7] .modal .primary-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--u-violet-lip); }
-:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn, .primary-btn):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); transform: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:active:not(:disabled) { transform: none; }
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn, .primary-btn):focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }

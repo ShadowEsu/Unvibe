@@ -67,6 +67,7 @@
   --u-code-bg: rgb(21 20 26 / 0.04);
   --u-shadow: 0 12px 32px -12px rgb(40 24 110 / 0.22);
   --u-card-rim: rgb(255 255 255 / 0.86); /* companion cards: a white inner rim (the iridescent one is overlay-only) */
+  --u-sheet: rgb(255 255 255 / 0.9); /* an inset page inside a glass frame (Settings) */
   --u-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --u-w-body: 430;
   --u-w-label: 520;
@@ -95,6 +96,7 @@
   --u-code-bg: rgb(0 0 0 / 0.25);
   --u-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.5);
   --u-card-rim: rgb(255 255 255 / 0.12);
+  --u-sheet: rgb(30 28 40 / 0.92);
   color-scheme: dark;
 }
 
