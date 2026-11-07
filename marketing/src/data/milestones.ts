@@ -34,9 +34,20 @@ export const milestones: Milestone[] = [
   },
   {
     date: "6 NOV 2026",
-    category: "COMPANY",
+    category: "PRODUCT",
+    title: "Help for when the shortcut does nothing",
+    summary: "2 new help pages. One goes through what to check when Control+U, or Ctrl+Alt+U on Windows, does nothing: the right keys, a selection, Unvibe running, then what can block it on a Mac, on Windows or on both. The other explains why Unvibe asks for Accessibility on a Mac, how to switch it on, what to do when it still says Not allowed yet, and how to turn it off. Each step matches what Unvibe 0.1.49 shows, with real macOS 15 screenshots.",
+    links: [
+      { href: "/help/shortcut", label: "The shortcut does nothing" },
+      { href: "/help/accessibility", label: "Allow Accessibility" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/242", label: "PR #242" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "DISTRIBUTION",
     title: "Unvibe's GitHub, Instagram and LinkedIn in the footer",
-    summary: "The footer has a new Follow column with links to Unvibe on GitHub, Instagram and LinkedIn, and the icon row under the newsletter now keeps only the support email. The home page now says in one line what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
+    summary: "The footer has a new Follow column with links to Unvibe on GitHub, Instagram and LinkedIn, and the icon row under the newsletter now keeps only the support email link. The home page now says in one sentence what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
     links: [
       { href: "https://github.com/ShadowEsu/Unvibe/pull/239", label: "PR #239" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/243", label: "PR #243" },
