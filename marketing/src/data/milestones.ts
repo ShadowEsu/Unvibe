@@ -57,7 +57,7 @@ export const milestones: Milestone[] = [
     title: "Clearer sign-in help on the beta page",
     summary: "The beta page's quick fixes now say what to do when Google sign-in doesn't finish: on the same sign-in page, ask for an email link, open it in the same browser on the same computer, check the code and press Approve sign-in. The tip about starting without an account now says how to sign in later, from your name at the bottom of the app's sidebar.",
     links: [
-      { href: "/beta#help", label: "Quick fixes" },
+      { href: "/beta", label: "Beta page" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/248", label: "PR #248" },
     ],
   },
