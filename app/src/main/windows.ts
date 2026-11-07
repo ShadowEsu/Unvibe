@@ -87,8 +87,11 @@ const FLOATING_BAR_W = 184;
 const BOTTOM_BAR_COMPACT_W = 184;
 /** Floating (not attached) bars open into a card this wide, above or below the pill. */
 const FLOATING_EXPANDED_W = 372;
-/** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
-const BAR_EXPANDED_BODY_H = 244;
+/**
+ * Height of the expanded overview under (or above) the compact row: header, tiles, ramp, allowance, hint, an
+ * optional note and the actions with no dead band above the buttons (Design Spectral island S-1, 07 Nov: ~220).
+ */
+const BAR_EXPANDED_BODY_H = 224;
 const FLOATING_ROW_H = 38;
 /**
  * A notice (notify()) shows its text under the compact row (above it at the bottom) without
