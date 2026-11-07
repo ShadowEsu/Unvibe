@@ -90,8 +90,9 @@ const FLOATING_EXPANDED_W = 372;
 /**
  * Height of the expanded overview under (or above) the compact row: header, tiles, ramp, allowance, hint, an
  * optional note and the actions with no dead band above the buttons (Design Spectral island S-1, 07 Nov: ~220).
+ * 230 leaves room for the note when the card opens upward from a bottom bar (11 px top padding there).
  */
-const BAR_EXPANDED_BODY_H = 224;
+const BAR_EXPANDED_BODY_H = 230;
 const FLOATING_ROW_H = 38;
 /**
  * A notice (notify()) shows its text under the compact row (above it at the bottom) without

@@ -1,23 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { WidgetEvent } from '../src/main/review';
+import type { SecretFinding } from '../src/core/secretFilter';
 import { FOLLOW_UP_BLOCKED, freshState, heldFollowUp, reduceEvent, type PanelState } from '../src/renderer/widget/panelState';
 
-const finding = { rule: 'high-entropy-string', severity: 'suspect' as const, file: 'question', line: 1, masked: 'Xq7f••••Qe' };
-const ev = (e: unknown) => e as WidgetEvent;
+const finding = { rule: 'high-entropy-string', severity: 'suspect', file: 'question', line: 1, masked: 'Xq7f••••Qe' } satisfies SecretFinding;
+const consent = { type: 'consent', findings: [finding] } satisfies WidgetEvent;
 
-/** An explanation on screen with one follow-up on its way. */
-function asking(question: string): PanelState {
+/** An explanation on screen with one follow-up in the thread (on its way unless said otherwise). */
+function withFollowUp(question: string, phase: 'waiting' | 'done' = 'waiting'): PanelState {
   return {
     ...freshState(),
     phase: 'done',
     text: 'The answer.',
-    followUps: [{ id: 1, question, answer: '', phase: 'waiting' }],
+    followUps: [{ id: 1, question, answer: phase === 'done' ? 'Because.' : '', phase }],
   };
 }
 
 test('a follow-up held for a possible secret keeps its exact question; editing the Ask field never changes what Send anyway sends', () => {
-  const held = reduceEvent(asking('Is Xq7fP2vL9mZr4Tb8Kw1Nc6Hy3Ds5Gj0Qe right?'), ev({ type: 'consent', findings: [finding] }));
+  const held = reduceEvent(withFollowUp('Is Xq7fP2vL9mZr4Tb8Kw1Nc6Hy3Ds5Gj0Qe right?'), consent);
   assert.equal(held.phase, 'consent');
   assert.deepEqual(held.followUps, []);
   assert.equal(held.refusedQuestion, 'Is Xq7fP2vL9mZr4Tb8Kw1Nc6Hy3Ds5Gj0Qe right?');
@@ -27,20 +28,27 @@ test('a follow-up held for a possible secret keeps its exact question; editing t
 });
 
 test('a follow-up held for the AI agreement keeps its question too', () => {
-  const held = reduceEvent(asking('Why a closure?'), ev({ type: 'consentNeeded', provider: 'unvibe' }));
+  const held = reduceEvent(withFollowUp('Why a closure?'), { type: 'consentNeeded', provider: 'unvibe' } satisfies WidgetEvent);
   assert.equal(held.phase, 'aiConsent');
   assert.equal(heldFollowUp(held), 'Why a closure?');
 });
 
 test('a sheet about the explanation itself holds no question, so Send anyway re-sends the explanation', () => {
-  const s = reduceEvent({ ...freshState(), phase: 'ready', ask: 'typed but never sent' }, ev({ type: 'consent', findings: [finding] }));
+  const s = reduceEvent({ ...freshState(), phase: 'ready', ask: 'typed but never sent' }, consent);
   assert.equal(s.phase, 'consent');
   assert.equal(heldFollowUp(s), null);
 });
 
+test('an answered follow-up is never held: a later sheet about the explanation sends no old question with consent', () => {
+  const s = reduceEvent(withFollowUp('Why a closure?', 'done'), consent);
+  assert.equal(s.phase, 'consent');
+  assert.equal(heldFollowUp(s), null);
+  assert.deepEqual(s.followUps.map((f) => f.question), ['Why a closure?']);
+});
+
 test('a credential in a follow-up stays in the Ask thread and the answer stays on Explain', () => {
   // Main found a credential in the question (its scan isn't part of this reducer, so the words don't matter here).
-  const s = reduceEvent(asking('Why does my access key fail?'), ev({ type: 'blocked', findings: [{ ...finding, severity: 'block' }] }));
+  const s = reduceEvent(withFollowUp('Why does my access key fail?'), { type: 'blocked', findings: [{ ...finding, severity: 'block' }] } satisfies WidgetEvent);
   assert.equal(s.phase, 'done');
   assert.equal(s.text, 'The answer.');
   assert.equal(s.refusedQuestion, '');
@@ -48,7 +56,7 @@ test('a credential in a follow-up stays in the Ask thread and the answer stays o
 });
 
 test('a new selection drops a held question', () => {
-  const held = reduceEvent(asking('Why a closure?'), ev({ type: 'consent', findings: [finding] }));
-  const next = reduceEvent(held, ev({ type: 'init', hasCode: true, providerName: 'Unvibe', level: 'beginner' }));
+  const held = reduceEvent(withFollowUp('Why a closure?'), consent);
+  const next = reduceEvent(held, { type: 'init', hasCode: true, providerName: 'Unvibe', level: 'beginner' } satisfies WidgetEvent);
   assert.equal(heldFollowUp(next), null);
 });

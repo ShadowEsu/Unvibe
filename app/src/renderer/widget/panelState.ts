@@ -93,7 +93,7 @@ export interface PanelState {
   codeOpen: boolean;
 }
 
-export const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
 /** A follow-up with a credential in it: the blocked sheet's own words, shown in the Ask thread. */
 export const FOLLOW_UP_BLOCKED = 'Blocked: credential detected. Nothing was sent. Remove the secret from the selection or your question and try again.';
 

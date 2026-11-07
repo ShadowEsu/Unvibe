@@ -577,6 +577,8 @@
   -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
+/* Back and the forward button paint above the veil, so their focus rings stay whole. */
+:root[data-ui="v3"][data-v7] .onboard__foot > * { position: relative; }
 :root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__foot { width: min(760px, 100%); }
 :root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
 /* Hello: one primary at the form's full width (420 px, centred), the Google disclosure under it on the column's left. */
@@ -906,19 +908,22 @@
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson:not(.learn-page--survey) { align-self: stretch; width: 100%; }
 /* The lesson scrolls under the floating Ask bar (Design S-1 r2 SHOULD 1): the page drops its bottom band, the bar
    overlaps the page's last 76 px (58 px bar + 18 px margin), the reading keeps bar + 24 px of padding so its end
-   clears the bar, and a 16 px fade marks the edge where it passes under: an overlay on the column (clicks pass
-   through, the scrollbar stays clear), not a mask, so the cards keep their backdrop blur (Design 07 Nov answer 2).
+   clears the bar, and a 16 px fade marks the edge where it passes under: an overlay on the column that fades in over
+   16 px and then holds the ground down to the window's edge, so no text shows beside the bar or in its margin. Clicks
+   pass through and it stops short of the lesson's scrollbar (the page's right padding + 12 px). An overlay, not a
+   mask, so the cards keep their backdrop blur (Design 07 Nov answer 2).
    The quiz (Check) gets the same band back: its card ends 16 px above the bar instead of 100 px. */
-/* scroll-padding: a control reached with Tab scrolls clear of the bar instead of resting under it (WCAG 2.4.11). */
-:root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding-bottom: 0; scroll-padding-bottom: 92px; }
+:root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding-bottom: 0; }
 :root[data-ui="v3"][data-v7] .layout .content:has(.learn-page--lesson) > .ask-dock { position: relative; z-index: 2; margin-top: -76px; }
 :root[data-ui="v3"][data-v7] .layout .content:has(.learn-page--lesson:not(.learn-page--survey))::after {
-  content: ""; position: absolute; left: 0; right: 14px; bottom: 76px; height: 16px; z-index: 1; pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--u-paper));
+  content: ""; position: absolute; left: 0; right: calc(clamp(20px, 4vw, 48px) + 12px); bottom: 0; height: 92px; z-index: 1;
+  pointer-events: none; background: linear-gradient(to bottom, transparent, var(--u-paper) 16px);
 }
 :root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 92px; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-doc:not(.lesson-doc--survey) {
   box-sizing: border-box; width: 100%; padding: 22px clamp(20px, 3vw, 36px) 100px; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  /* The lesson itself scrolls (companion.css .lesson-doc): a control reached with Tab stops clear of the bar (WCAG 2.4.11). */
+  scroll-padding-bottom: 92px;
 }
 :root[data-ui="v3"][data-v7] .layout .lesson-doc__head { display: grid; gap: 10px; max-width: none; margin: 0 0 18px; }
 :root[data-ui="v3"][data-v7] .layout .lesson-doc__head .lesson-back {
