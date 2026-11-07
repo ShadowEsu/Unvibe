@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { delight } from "@/lib/delight";
 import { track } from "@/lib/analytics";
@@ -10,6 +10,10 @@ import { GIFT_CODE, markRefUsed, refUsed, rememberRef, storedRef } from "@/lib/r
 const QUIET = ["/console", "/stats", "/s/", "/kit", "/waitlist-admin", "/activate"];
 /** Present while a page shows the ask in its own flow (the thank-you page); the floating toast then stays closed. */
 const INLINE_ATTR = "data-remind-inline";
+/** Fired when that in-flow ask mounts: a toast still open from the page before (client navigation) closes. */
+const INLINE_EVENT = "unvibe:remind-inline";
+/** Set once the ask was shown or turned down; the floating toast never asks again. */
+const ASKED_KEY = "unvibe.reminderAsked";
 
 /**
  * The ask itself: the setup guide (or the invite's download link) by email, with an unticked box for a setup tip the
@@ -100,17 +104,24 @@ export function ReminderToast() {
   }, [pathname]);
 
   useEffect(() => {
-    let asked = false;
-    try { asked = window.localStorage.getItem("unvibe.reminderAsked") === "1"; } catch { /* storage blocked */ }
+    const askedBefore = () => {
+      try { return window.localStorage.getItem(ASKED_KEY) === "1"; } catch { return false; }
+    };
     const onDownload = () => {
-      if (asked) return;
-      asked = true;
-      try { window.localStorage.setItem("unvibe.reminderAsked", "1"); } catch { /* storage blocked */ }
+      // read at the click, not at mount: "No thanks" on the thank-you page also marks the ask as made
+      if (askedBefore()) return;
+      try { window.localStorage.setItem(ASKED_KEY, "1"); } catch { /* storage blocked */ }
       // Checked when it would open: a download click on home lands on the thank-you page, which asks in its own flow.
       window.setTimeout(() => setMode((current) => (current === "closed" && !document.querySelector(`[${INLINE_ATTR}]`) ? "download" : current)), 900);
     };
+    // a toast already open when the thank-you page's own ask appears closes, so the page never shows both
+    const onInline = () => setMode("closed");
     window.addEventListener(DOWNLOADED_EVENT, onDownload);
-    return () => window.removeEventListener(DOWNLOADED_EVENT, onDownload);
+    window.addEventListener(INLINE_EVENT, onInline);
+    return () => {
+      window.removeEventListener(DOWNLOADED_EVENT, onDownload);
+      window.removeEventListener(INLINE_EVENT, onInline);
+    };
   }, []);
 
   if (mode === "closed") return null;
@@ -139,14 +150,25 @@ export function ReminderToast() {
  */
 export function ReminderInline() {
   const [open, setOpen] = useState(true);
+  const box = useRef<HTMLDivElement>(null);
   // the invite code, if a friend's link brought this visitor: read after mount (storage), sent with the email
   const [code, setCode] = useState("");
-  useEffect(() => setCode(storedRef()), []);
+  useEffect(() => {
+    setCode(storedRef());
+    window.dispatchEvent(new Event(INLINE_EVENT));
+  }, []);
   if (!open) return null;
+  const dismiss = () => {
+    try { window.localStorage.setItem(ASKED_KEY, "1"); } catch { /* storage blocked */ }
+    // keep keyboard focus in place: the last link of the row just above ("Install help →") takes it
+    const links = box.current?.previousElementSibling?.querySelectorAll<HTMLElement>("a");
+    links?.[links.length - 1]?.focus();
+    setOpen(false);
+  };
   return (
-    <div className="remind remind--inline" {...{ [INLINE_ATTR]: "" }} role="group" aria-label="Get the setup guide">
+    <div ref={box} className="remind remind--inline" {...{ [INLINE_ATTR]: "" }} role="group" aria-label="Get the setup guide">
       <ReminderForm code={code} inline surface="download_thanks" />
-      <button type="button" className="remind__no" onClick={() => setOpen(false)}>No thanks</button>
+      <button type="button" className="remind__no" onClick={dismiss}>No thanks</button>
     </div>
   );
 }

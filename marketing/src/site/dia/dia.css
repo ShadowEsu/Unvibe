@@ -347,7 +347,8 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dt .remind__no { position: absolute; right: 0; bottom: 0; min-height: 24px; padding: 0; border: 0; background: none; font: 500 14px/1 var(--d-sans); color: var(--d-ink-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .dt .remind__no:hover { color: var(--d-ink); }
 @media (min-width: 880px) {
-  .dt .remind--inline .remind__form { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "text check" "text row" "fine err"; }
+  /* the error spans its own row above Privacy, so "No thanks" (bottom right, on Privacy's row) never covers it */
+  .dt .remind--inline .remind__form { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "text check" "text row" "err err" "fine fine"; }
 }
 
 /* ---------- phones (Dia home-390: 28 px H1, window full-bleed minus 16, steps stacked with the window under each) ---------- */
