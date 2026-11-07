@@ -114,7 +114,8 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-brief__card img { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 40px 100px -40px rgb(0 0 0 / 0.7); }
 .d-brief__card figcaption { margin-top: 12px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.85); }
 .d-brief__note { margin-top: 26px; font-size: 22px; color: rgb(255 255 255 / 0.92); }
-.d-brief > .d-credit { position: absolute; left: 24px; bottom: 20px; color: rgb(255 255 255 / 0.85); }
+/* top-left: the next section's arch rises over the Brief's bottom edge, so a bottom credit would be covered */
+.d-brief > .d-credit { position: absolute; left: 24px; top: 24px; color: rgb(255 255 255 / 0.85); }
 
 /* ---------- 4 · panel cards on the blueprint grid (mock 06) ---------- */
 .d-cards { padding: 150px 30px 140px; background: linear-gradient(#ece8e2 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, #ece8e2 1px, transparent 1px) 0 0 / 24px 24px, var(--d-paper); }
@@ -226,6 +227,10 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 /* ---------- 7 · close (mock 09): the arch rises over the bubbles, then the dock comes to rest under the question ---------- */
 .d-closebg { height: 300px; background: #5a3cc6 image-set(url("/d/bg/hero-bubbles-1440.avif") type("image/avif"), url("/d/bg/hero-bubbles-1440.webp") type("image/webp")) center / cover no-repeat; }
 .d-close { --d-arch-h: 160px; display: grid; justify-items: center; gap: 24px; padding: 10px 30px 40px; text-align: center; }
+/* While the dock floats mid-page (--d-flat 1) only its pill shows: the white arch fades out so it never covers the
+   content under it (stat cards, captions); it is back at the top of the hero and at rest under the close. Opacity only. */
+.d-home [data-d-dock-arc]::before { opacity: calc(1 - var(--d-flat, 0)); }
+.d-home [data-d-dock-rim] { display: none; }
 .d-close__ghost { width: 72px; height: 72px; }
 .d-dock .d-avail { margin: 0; }
 
@@ -391,4 +396,34 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
   .d-wipe { display: none; }
   .d-card:is(:hover, :focus-within) { transform: none; }
   .js .d-get__r:not([data-in]) .d-tick path { stroke-dashoffset: 0; }
+}
+
+/* ---------- Design #228 MUSTs ---------- */
+/* 3: every filled plan button is violet, whatever the older pricing sheets set */
+.dp .pricing-button:not(.pricing-button--quiet) { background: var(--d-violet) !important; color: #fff !important; }
+.dp .pricing-button:not(.pricing-button--quiet):hover { background: var(--d-violet-2) !important; }
+/* 7: on phones the dock is a still bar fixed at the bottom: no scroll-driven squash, no arch over the content */
+@media (max-width: 820px) {
+  .d-home [data-d-cta-dock] { --d-flat: 0 !important; --d-glow: 0 !important; }
+  .d-home [data-d-dock-arc] { display: none; }
+  .d-home [data-d-dock-pill] { inset: auto 0 14px; transform: none; }
+}
+/* 2 + 6: reduced motion has no pinned scenes and no floating dock: the statement and the steps take their natural
+   height (no 306vh / 300vh runway), each step is followed by its own window, and the dock rests at the end of the page,
+   so no arch ever lies over the hero's panel */
+@media (prefers-reduced-motion: reduce) {
+  .d-stmt { height: auto; }
+  .d-stmt__pin { position: relative; height: auto; min-height: 0; padding: 140px 0 120px; }
+  .d-stmt__bowl { display: none; }
+  .d-stmt__text { transform: none !important; }
+  .d-steps__track { height: auto; }
+  .d-steps__mark, .d-steps__stage { display: none; }
+  .d-steps__pin { position: static; display: block; max-width: 980px; margin: 0 auto; }
+  .d-steps__list { gap: 64px; }
+  .d-steps .d-step[data-d-step], .d-steps .d-step[data-d-step] [data-d-step-body] { opacity: 1; transform: none; }
+  .d-steps .d-step[data-d-step]::before { display: none; }
+  .d-steps__mobile { display: block; margin-top: 20px; }
+  .d-home [data-d-cta-dock] { position: relative; }
+  .d-home [data-d-dock-arc] { display: none; }
+  .d-split { min-height: 0; }
 }

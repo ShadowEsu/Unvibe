@@ -47,7 +47,7 @@ export const LISTINGS: readonly Listing[] = [
         src: "/badges/smolstartup-top1-dark.svg",
         alt: "Smol Startup Top 1 Daily Winner",
         width: 195,
-        height: 54,
+        height: 44,
         source: "https://smolstartup.com/smolstartup/images/badges/top1-dark.svg",
         fetched: "2026-10-28",
       },

@@ -43,6 +43,34 @@ export function startDownload(key: DownloadKey) {
   a.remove();
 }
 
+const QUEUE_KEY = "unvibe.dl.start";
+
+/**
+ * Hands the download to the thank-you page. Starting it here and then changing route races in WebKit (the route change
+ * cancels the pending download navigation; Playwright, 6 Nov), so the click only queues the file for this tab and the
+ * thank-you state starts it once it has rendered. No session storage (private mode, blocked): start it here instead.
+ */
+function queueDownload(key: DownloadKey): boolean {
+  try {
+    window.sessionStorage.setItem(QUEUE_KEY, key);
+    return true;
+  } catch {
+    startDownload(key);
+    return false;
+  }
+}
+
+/** The file the last click queued in this tab, once: a reload or a shared thank-you link starts nothing. */
+export function takeQueuedDownload(): DownloadKey | null {
+  try {
+    const key = window.sessionStorage.getItem(QUEUE_KEY);
+    window.sessionStorage.removeItem(QUEUE_KEY);
+    return key === "mac-arm" || key === "mac-intel" || key === "windows" ? key : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The thank-you state: /beta with the first-open steps for the file that just started. */
 export const thanksHref = (key: DownloadKey) => `/beta?dl=${key}#thanks`;
 
@@ -93,7 +121,12 @@ export function DownloadCta({ surface, platform, children, className = "d-cta d-
           return;
         }
         trackDownloadClick(surface, DOWNLOAD_FILES[key].os);
-        startDownload(key);
+        if (window.location.pathname === "/beta" && new URLSearchParams(window.location.search).get("dl") === key) {
+          // Already on this file's thank-you state: the route won't change, so start it right here.
+          startDownload(key);
+          return;
+        }
+        queueDownload(key);
         go(thanksHref(key));
       }}
       {...rest}

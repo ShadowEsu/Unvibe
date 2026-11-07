@@ -14,6 +14,7 @@
  * section. Reduced motion: the final frame (Advanced answer, understood state), static.
  */
 import { useEffect, useRef } from "react";
+import { Os } from "./bits";
 
 const LOOP = 16;
 const SEGMENTS: Record<0 | 1 | 2, [number, number]> = { 0: [0, 2.2], 1: [1.2, 4.6], 2: [6.6, 15] };
@@ -229,7 +230,7 @@ export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
                   <span className="ud-btn ud-btn--primary ud-got">Understand ✓</span>
                   <span className="ud-btn">Explain differently</span>
                   <span className="ud-btn ud-btn--test ud-test">Test me</span>
-                  <span className="ud-saved">Saved on this Mac</span>
+                  <span className="ud-saved"><Os v={{ mac: "Saved on this Mac", windows: "Saved on this PC" }} /></span>
                 </div>
                 <div className="ud-ask">Why does this exist? What breaks if I remove it?<span className="ud-send">↑</span></div>
               </div>

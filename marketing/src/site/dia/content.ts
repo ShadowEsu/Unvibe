@@ -7,6 +7,7 @@
  */
 import { KEPT } from "@/components/paper/WhatLeaves";
 import { CAPTURE_DIR, KEY_CHECK_SHOT, SHOT_CAPTION } from "@/data/homeGallery";
+import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 
 export type Title = { before: string; em: string; after?: string };
 export type OsText = string | { readonly mac: string; readonly windows: string };
@@ -144,7 +145,8 @@ export const D_GET = {
  */
 export const D_THANKS = {
   h1: "Your download has started.",
-  file: (label: string) => `Unvibe 0.1.49 for ${label}.`,
+  // the release every download link serves (Security D16): never a second hard-coded version
+  file: (label: string) => `Unvibe ${BETA_INSTALL_VERSION.replace(/^v/, "")} for ${label}.`,
   lede: "Unvibe isn't notarized by Apple yet, so open it the first time with these steps.",
   ledeWindows: "The Windows build isn't code-signed yet, so open it the first time with these steps.",
   again: "Didn't start? Download again",

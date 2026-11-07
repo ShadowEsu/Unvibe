@@ -46,3 +46,8 @@
   .lo-section { margin-top: 56px; }
   .lo-section h2 { font-size: 28px; }
 }
+
+/* Design #228 MUST 4: the heading and each section sit in the same white card as /faq, never on the code backdrop */
+.lo-head, .lo-section { padding: 32px 36px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px rgb(23 19 31 / 0.08), 0 20px 50px -36px rgb(30 10 80 / 0.4); }
+.lo-section { margin-top: 16px; }
+@media (max-width: 820px) { .lo-head, .lo-section { padding: 22px 18px; border-radius: 18px; } }

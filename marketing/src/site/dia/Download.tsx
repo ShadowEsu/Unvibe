@@ -11,6 +11,7 @@ import { trackDownloadClick } from "@/lib/downloadTracking";
 import { Os } from "./bits";
 import { D_GET, D_THANKS } from "./content";
 import { useVisitor } from "./os";
+import { startDownload, takeQueuedDownload } from "./DownloadCta";
 
 /**
  * The thank-you state (Preston, 6 Nov): after a one-click download, /beta?dl=<file> opens on the file that started and
@@ -21,7 +22,12 @@ function Thanks() {
   const params = useSearchParams();
   const fromUrl = params.get("dl");
   const [picked, setPicked] = useState<DownloadKey | null>(null);
-  useEffect(() => setPicked(null), [fromUrl]);
+  useEffect(() => {
+    setPicked(null);
+    // The click that brought us here queued its file: start it now that the route has settled (DownloadCta).
+    const queued = takeQueuedDownload();
+    if (queued && queued === fromUrl) startDownload(queued);
+  }, [fromUrl]);
   const key = picked ?? (isDownloadKey(fromUrl) ? fromUrl : null);
   useEffect(() => {
     if (key) document.getElementById("thanks")?.focus({ preventScroll: false });
