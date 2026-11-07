@@ -81,6 +81,9 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "package-lock": "/og/og-explain-package-lock-4f8f420b.png",
   "prisma-schema": "/og/og-explain-prisma-schema-43ac14a3.png",
   tailwind: "/og/og-explain-tailwind-ee327891.png",
+  "sql-joins": "/og/og-explain-sql-joins-43a0484a.png",
+  "supabase-rls": "/og/og-explain-supabase-rls-264a5997.png",
+  "cors-error": "/og/og-explain-cors-error-eae48712.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */

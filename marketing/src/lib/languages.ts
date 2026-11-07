@@ -607,6 +607,36 @@ export const languages: Language[] = [
     learningPath: ["Utility classes", "Breakpoints", "Hover and dark", "Content scanning"],
     sample: `<div className="p-6 md:flex">`,
   },
+  {
+    id: "sql-joins",
+    name: "SQL joins",
+    categories: ["data", "backend"],
+    blurb: "How SQL combines rows from 2 or more tables, and which rows JOIN and LEFT JOIN keep.",
+    concepts: ["JOIN and LEFT JOIN", "rows with no match", "the doubled total", "WHERE after a LEFT JOIN"],
+    frameworks: ["SQLite", "PostgreSQL", "MySQL", "Prisma"],
+    learningPath: ["Inner joins", "Left joins", "Rows with no match", "Joins and totals"],
+    sample: `LEFT JOIN orders o ON o.customer_id = c.id`,
+  },
+  {
+    id: "supabase-rls",
+    name: "Supabase RLS",
+    categories: ["backend", "data"],
+    blurb: "The Postgres row level security rules that decide which rows each Supabase user can read and change.",
+    concepts: ["enabling RLS", "using and with check", "auth.uid() and roles", "missing policies"],
+    frameworks: ["Supabase", "PostgreSQL", "Supabase Auth", "Next.js"],
+    learningPath: ["Turn on RLS", "One policy per action", "auth.uid()", "Testing policies"],
+    sample: `using ((select auth.uid()) = user_id)`,
+  },
+  {
+    id: "cors-error",
+    name: "CORS error",
+    categories: ["web", "backend"],
+    blurb: "The browser error a page gets when it reads from an API on another origin that hasn't allowed it.",
+    concepts: ["origins", "the missing header", "the fix", "preflight"],
+    frameworks: ["fetch", "Express", "Vite", "Next.js"],
+    learningPath: ["Origins", "Allow-Origin", "Preflight", "Server-side checks"],
+    sample: `No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
