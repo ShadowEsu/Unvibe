@@ -3337,7 +3337,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
     fileName: "git-rebase-todo",
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
-      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into one, rewords one and drops one before a pull request.",
+      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into the first, rewords one and drops one before a pull request.",
     sampleSummary: "The todo list `git rebase -i main` opened for a branch of 5 commits, edited to fold 2 fix-up commits into the first, reword one and drop one, with part of git's own help text kept below it.",
     sample: `pick 7b4c146 # Add discount codes
 fixup c6d63af # wip
@@ -3361,7 +3361,7 @@ drop 803b36d # Add gitignore
     shows: [
       {
         concept: "pick, fixup and squash",
-        text: "Each line is one commit, oldest first, and git runs them from the top. `pick` keeps a commit as it is. The 2 `fixup` lines folded wip and fix typo into Add discount codes and kept only that commit's message, so the debug lines wip added and fix typo took out left no trace. With `squash` in place of the first `fixup`, git opened the message editor with both messages, Add discount codes and wip, for you to combine.",
+        text: "Each line is one commit, oldest first, and git runs them from the top. `pick` keeps a commit as it is. The 2 `fixup` lines folded wip and fix typo into Add discount codes and kept only that commit's message, so the debug lines wip added and fix typo took out left no trace. With `squash` for wip and the other lines left as `pick`, git opened the message editor with both messages, Add discount codes and wip, for you to combine.",
       },
       {
         concept: "reword and drop",
@@ -3377,27 +3377,27 @@ drop 803b36d # Add gitignore
       },
     ],
     notes: [
-      "Run with git 2.55.0 on Linux in a test repo: main with one commit, and a feature/discounts branch of 5 commits by a test author. `GIT_SEQUENCE_EDITOR` supplied the edited todo list and `GIT_EDITOR` the new message, in place of an editor window. The todo list above is the one git wrote, with the 5 commands edited and 15 of its help lines left out.",
+      "Run with git 2.55.0 on Linux in a test repo: main with one commit, and a feature/discounts branch of 5 commits by a test author. `GIT_SEQUENCE_EDITOR` supplied the edited todo list and `GIT_EDITOR` the new message, in place of an editor window. The todo list above is the one git wrote, with the 5 commands edited and 17 of its 30 help lines left out.",
       "Deleting every line stopped the rebase with `error: nothing to do` and left all 5 commits as they were.",
     ],
     watchOut:
-      "Deleting a line drops that commit, and git doesn't ask. With the Add gitignore line deleted instead of marked `drop`, the rebase printed `Successfully rebased`, exited with code 0, and .gitignore was gone from the branch. The old commits are still in the repo for a while: copy the branch tip's hash before you start, and after the rebase `git cherry-pick 803b36d` brought the dropped commit back.",
+      "Deleting a line drops that commit, and git doesn't ask. With the Add gitignore line deleted instead of marked `drop`, the rebase printed `Successfully rebased`, exited with code 0, and .gitignore was gone from the branch. The old commits stay in the repo for a while, and git kept the old tip in ORIG_HEAD, 803b36d here. Because the dropped commit was that tip, `git cherry-pick 803b36d` brought it back.",
   },
   {
     id: "xargs",
     fileName: "shrink-logs.sh",
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
     description:
-      "Paste an xargs command and get it explained in plain English, free online. The sample gzips week-old logs 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
-    sampleSummary: "A shell script that compresses log files older than 7 days, 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
+      "Paste an xargs command and get it explained in plain English, free online. The sample gzips logs at least 8 days old, 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
+    sampleSummary: "A shell script that compresses log files at least 8 days old (`-mtime +7`), 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
     sample: `# shrink-logs.sh: compress old log files, one gzip per file, 4 at a time
-cd ~/app/logs
+cd ~/app/logs || exit 1
 
 # -print0 / -0: names end in a NUL byte, so spaces in names are safe
 find . -name '*.log' -mtime +7 -print0 | xargs -0 -P 4 -n 1 gzip -v
 
 # -I {}: put each name where {} is, one command per name
-find . -name '*.log.gz' -print0 | xargs -0 -I {} mv {} archive/
+find . -maxdepth 1 -name '*.log.gz' -print0 | xargs -0 -I {} mv {} archive/
 
 # -r: run nothing if find found nothing (without it, GNU xargs runs once)
 find . -name '*.tmp' -print0 | xargs -0 -r rm -v
@@ -3450,7 +3450,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
     shows: [
       {
         concept: "USER, PID and COMMAND",
-        text: "Each row is one process: the account that owns it, its ID and the full command line, so `python3 -c while True: pass` tells 3 Python processes apart. PID 1 is systemd, which starts everything else, and names in square brackets like `[kthreadd]` are kernel threads, with 0 in both memory columns. START is a clock time for processes started today and a date, `Nov05`, for older ones. TTY is `?` for a process with no terminal.",
+        text: "Each row is one process: the account that owns it, its ID and the full command line, so `python3 -c while True: pass` tells 3 Python processes apart. PID 1 is systemd, which starts everything else. Names in square brackets like `[kthreadd]` are usually kernel threads, with 0 for VSZ and RSS; the zombie, `[python3] <defunct>`, gets brackets too. START is a clock time for recent processes and a date, `Nov05`, for older ones. TTY is `?` for a process with no terminal.",
       },
       {
         concept: "%CPU and TIME",
@@ -3466,7 +3466,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
       },
     ],
     notes: [
-      "Run with ps from procps-ng 4.0.7 on Linux, on a machine with 12 CPU cores and 16 GB of RAM. The account name in the sample is a placeholder, devuser, the same length as the real one, so the columns line up as ps printed them.",
+      "Run with ps from procps-ng 4.0.7 on Linux, on a machine with 12 logical CPUs and 16 GB of RAM. The account name in the sample is a placeholder, devuser, the same length as the real one, so the columns line up as ps printed them.",
       "`ps aux | grep` lists the grep as well, because its own command line contains the pattern: with 2 test processes running, `grep 'psgreptest'` returned 3 rows, one of them the grep. `grep '[p]sgreptest'` can't match itself, and returned only the 2.",
       "In Apple's ps manual (github.com/apple-oss-distributions/adv_cmds, adv_cmds-237), `-u` shows user, pid, %cpu, %mem, vsz, rss, tt, state, start, time and command, the same columns. There `I` marks a process asleep for more than about 20 seconds, while procps uses `I` for an idle kernel thread.",
     ],

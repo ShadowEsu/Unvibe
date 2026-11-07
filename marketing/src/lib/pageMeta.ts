@@ -88,7 +88,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   tar: "/og/og-explain-tar-e922b08f.png",
   rsync: "/og/og-explain-rsync-bf6fe9bd.png",
   "git-rebase": "/og/og-explain-git-rebase-61755953.png",
-  xargs: "/og/og-explain-xargs-ed987a81.png",
+  xargs: "/og/og-explain-xargs-f6d7bed7.png",
   "ps-aux": "/og/og-explain-ps-aux-440a0365.png",
 };
 
