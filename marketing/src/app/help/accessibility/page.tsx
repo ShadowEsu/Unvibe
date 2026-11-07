@@ -4,6 +4,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import "../help.css";
 
 const { mac, windows } = SHORTCUTS;
 
@@ -45,7 +46,7 @@ export default function AccessibilityHelpPage() {
 
       <section className="verify" aria-labelledby="steps-title">
         <h2 id="steps-title">Switch it on</h2>
-        <ol>
+        <ol className="help-list">
           <li>
             In Unvibe, open <b>Settings</b> (bottom of the sidebar), then <b>General</b>, and press <b>Allow Accessibility</b>. During
             setup, the last step&apos;s <b>Turn on the shortcut</b> button does the same.

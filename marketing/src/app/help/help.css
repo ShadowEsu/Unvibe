@@ -1,0 +1,5 @@
+/* Help pages (/help/*): the install-help reading cards (.verify, vibe.css), plus room between items
+   and numbered steps (Design S-1 on #242). */
+.fos-page .verify .help-list > li + li { margin-top: 10px; }
+.fos-page .verify ol.help-list { padding-left: 22px; list-style: decimal; }
+.fos-page .verify ol.help-list > li::marker { color: var(--u-text); font-weight: 700; }

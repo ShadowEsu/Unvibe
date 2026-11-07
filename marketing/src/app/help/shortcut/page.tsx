@@ -4,6 +4,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import "../help.css";
 
 const { mac, windows } = SHORTCUTS;
 
@@ -38,7 +39,7 @@ export default function ShortcutHelpPage() {
 
       <section className="verify" aria-labelledby="keys-title">
         <h2 id="keys-title">First: the right keys, with Unvibe running</h2>
-        <ul>
+        <ul className="help-list">
           <li><b>Mac:</b> {mac.anywhere}. That&apos;s the Control key, not Command.</li>
           <li><b>Windows:</b> {windows.anywhere}. Plain {windows.editor} only works in VS Code and Cursor after you add the editor bridge in Unvibe&apos;s <b>Settings › Integrations</b>.</li>
           <li><b>Select the code first.</b> Highlight a few lines in any app, then press the shortcut. With nothing selected, the panel opens without your code and explains nothing.</li>
@@ -48,7 +49,7 @@ export default function ShortcutHelpPage() {
 
       <section className="verify" aria-labelledby="mac-title">
         <h2 id="mac-title">On a Mac</h2>
-        <ul>
+        <ul className="help-list">
           <li>
             <b>The panel opens with a paste box and a Turn on the shortcut button.</b> macOS hasn&apos;t allowed Accessibility for
             Unvibe, so it can&apos;t copy your selection. This also happens after some updates. <Link href="/help/accessibility">Allow
@@ -65,7 +66,7 @@ export default function ShortcutHelpPage() {
 
       <section className="verify" aria-labelledby="win-title">
         <h2 id="win-title">On Windows</h2>
-        <ul>
+        <ul className="help-list">
           <li><b>Check the keys:</b> {windows.anywhere}, all three together. Windows has no permission to allow.</li>
           <li>
             <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection
@@ -77,7 +78,7 @@ export default function ShortcutHelpPage() {
 
       <section className="verify" aria-labelledby="both-title">
         <h2 id="both-title">On both</h2>
-        <ul>
+        <ul className="help-list">
           <li>
             <b>Pressing it does nothing at all, and no panel opens.</b> Another app may own the keys (Unvibe may say &ldquo;That
             shortcut is in use by another app.&rdquo; when it opens). Open <b>Settings › General</b>, click the shortcut next to
