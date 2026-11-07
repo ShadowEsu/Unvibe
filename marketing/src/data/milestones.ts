@@ -35,8 +35,8 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
-    title: "New download and setup tip emails",
-    summary: "The email you get after asking for the download link now has one Get Unvibe button and the install commands for Mac and Windows. If you also tick the box for a setup tip, the email a day later suggests trying Unvibe on code you didn't write and links the help pages for Accessibility and for a shortcut that does nothing. Every email still has an unsubscribe link.",
+    title: "Rewritten download and setup tip emails",
+    summary: "The email you get after asking for the download link or the setup guide now has one Get Unvibe button and the install commands for Mac and Windows. If you also tick the box for a setup tip, the email a day later suggests trying Unvibe on code you didn't write and links the help pages for Accessibility and for a shortcut that does nothing. Both emails still have an unsubscribe link.",
     links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/246", label: "PR #246" }],
   },
   {
