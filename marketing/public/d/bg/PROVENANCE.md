@@ -52,8 +52,8 @@ was downloaded in full and its sha1 equals the one Commons records.
 "HAER No." mark); contrast ×1.06; Lanczos to 2400 and 1200 wide; AVIF via avifenc 1.4.2, WebP via Pillow, the highest
 quality under 220,000 B (2400) / 90,000 B (1200). No tint, no retouching (channel spread ≤ 0.03: pure grey).
 
-**Credit lines (shown in the page's `dp__credit` chip while the photo shows):**
-- /releases: "Golden Gate Bridge, looking north from Fort Point, 1984. Historic American Engineering Record, Library of Congress · public domain"
+**Credit lines (shown in the page's `dg__credit` chip at the end of the page):**
+- /releases: "Golden Gate Bridge, looking north over Fort Point, 1984. Historic American Engineering Record, Library of Congress · public domain" (Security NIT 2215: the camera stood above the fort)
 - /faq: "Golden Gate Bridge, looking south at dusk, 1984. Historic American Engineering Record, Library of Congress · public domain"
 - /investors: "Golden Gate Bridge, from the south tower looking north, 1984. Historic American Engineering Record, Library of Congress · public domain"
 

@@ -3,15 +3,16 @@ import { DiaMotion } from "./motion/DiaMotion";
 
 /** The three photos (marketing/public/d/bg/, PROVENANCE.md): HAER CA-31, Jet Lowe 1984, public domain. */
 const PHOTOS = {
-  changelog: "Golden Gate Bridge, looking north from Fort Point, 1984. Historic American Engineering Record, Library of Congress · public domain",
+  changelog: "Golden Gate Bridge, looking north over Fort Point, 1984. Historic American Engineering Record, Library of Congress · public domain",
   faq: "Golden Gate Bridge, looking south at dusk, 1984. Historic American Engineering Record, Library of Congress · public domain",
   investors: "Golden Gate Bridge, from the south tower looking north, 1984. Historic American Engineering Record, Library of Congress · public domain",
 } as const;
 
 /**
  * The "pricing image" page (Design 2055 §3; ledger 562): a fixed black-and-white photo behind the whole page under a
- * paper veil, its credit in a chip while it shows, and the page's own content on white cards (text never sits on the
- * photo). The photo is decoration (aria-hidden, low fetch priority, out of flow: no CLS); the page H1 stays the LCP.
+ * paper veil, its credit in a chip at the end of the page, and the page's own content on white cards (text never sits on
+ * the photo). The photo is decoration (aria-hidden, low fetch priority, out of flow: no CLS); the page's H1 or, on
+ * phones, its lead is the LCP, so neither ever starts hidden (dia-motion.css).
  * Motion's page-hero entrance runs on data-d-page-bg (dia-motion.css 562 §1).
  */
 export function PhotoPage({ photo, wide, labelledBy, children }: { photo: keyof typeof PHOTOS; wide?: boolean; labelledBy: string; children: ReactNode }) {
