@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import type { KnowledgeObject } from '../src/core/knowledge';
 import { Home, homeRows, homeVibeMood, learningSteps, lessonSource, type HomeLesson, type HomeProps } from '../src/renderer/companion/home';
-import { NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel } from '../src/renderer/companion/nav';
+import { NAV_PINNED, NAV_SPACES, pageLabel } from '../src/renderer/companion/nav';
 
 const noop = () => undefined;
 const props: HomeProps = {
@@ -58,11 +58,10 @@ test('the goal line shows each step done or not', () => {
   assert.match(html, /aria-label="Not done yet"[^>]*><\/span> answer 1 question/);
 });
 
-test('the sidebar keeps Today and Ask Vibe, then Library, Quiz, Briefs; Momentum, Plan and Share sit under More', () => {
-  const labels = (pages: typeof NAV_MORE) => pages.map((p) => pageLabel(p.id));
+test('the sidebar keeps Today and Ask Vibe, then Library, Quiz, Briefs, Momentum, Plan and Share under Learn', () => {
+  const labels = (pages: typeof NAV_SPACES) => pages.map((p) => pageLabel(p.id));
   assert.deepEqual(labels(NAV_PINNED), ['Today', 'Ask Vibe']);
-  assert.deepEqual(labels(NAV_SPACES), ['Library', 'Quiz', 'Briefs']);
-  assert.deepEqual(labels(NAV_MORE), ['Momentum', 'Plan', 'Share']);
+  assert.deepEqual(labels(NAV_SPACES), ['Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']);
 });
 
 test('Vibe waves the first time Home opens on a day, is still after that, and sleeps at the limit', () => {

@@ -7,6 +7,8 @@ import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
 import { linesLabel } from '../../core/linesLabel';
+import { IC } from './icons';
+import { LineIcon } from './lineIcon';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -616,7 +618,7 @@ export function Learn({
   }
 
   return (
-    <div className="learn-page">
+    <div className={`learn-page${intent === 'quiz' ? ' learn-page--quiz' : ''}`}>
       <div className="topline learn-topline">
         <div>
           <h1>{intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'}</h1>
@@ -625,45 +627,53 @@ export function Learn({
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
               : `Saved explanations on this ${deviceName}, with source and freshness where we have it.`}
           </p>
+        </div>
+      </div>
+
+      {catalog.length > 0 ? (
+        <div className="history-tools">
           {intent === 'quiz' && catalog.length > 1 ? (
             <button className="primary-btn mix-start" type="button" onClick={startMix}>
               Quiz me on everything <span>{Math.min(10, catalog.length)} questions</span>
             </button>
           ) : null}
-        </div>
-        {catalog.length > 0 && intent !== 'quiz' ? (
-          <div className="learn-filters" role="group" aria-label="Filter lessons">
-            {([
-              ['all', 'All', counts.all],
-              ['understood', 'Understood', counts.understood],
-              ['needs_review', 'Revisit', counts.needs_review],
-            ] as const).map(([id, label, n]) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={filter === id}
-                className={filter === id ? 'on' : ''}
-                onClick={() => setFilter(id)}
-              >
-                {label}<em>{n}</em>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {catalog.length > 0 ? (
-        <div className="history-tools">
+          {intent !== 'quiz' ? (
+            <div className="learn-filters" role="group" aria-label="Filter lessons">
+              {([
+                ['all', 'All', counts.all],
+                ['understood', 'Understood', counts.understood],
+                ['needs_review', 'Revisit', counts.needs_review],
+              ] as const).map(([id, label, n]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={filter === id}
+                  className={filter === id ? 'on' : ''}
+                  onClick={() => setFilter(id)}
+                >
+                  {label}<em>{n}</em>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <label className="history-search">
             <span className="sr-only">Search your explanations</span>
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search explanations, files, concepts…" />
           </label>
-          {continueItem ? (
-            <button type="button" className="history-continue" onClick={() => openLesson(continueItem, intent === 'quiz' ? 'check' : continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
-              {intent === 'quiz' ? 'Check understanding' : 'Continue where you left off'}
-            </button>
-          ) : null}
         </div>
+      ) : null}
+
+      {continueItem ? (
+        <button type="button" className="history-continue" onClick={() => openLesson(continueItem, intent === 'quiz' ? 'check' : continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
+          <span className="history-continue__text">
+            <span className="history-continue__kicker">{intent === 'quiz' ? 'Check understanding' : 'Continue where you left off'}</span>
+            <span className="history-continue__lesson">
+              <strong>{continueItem.title}</strong>
+              {continueItem.file || continueItem.project ? <span>{continueItem.file || continueItem.project}</span> : null}
+            </span>
+          </span>
+          <span className="history-continue__go" aria-hidden="true"><LineIcon d="M8 5l5 5-5 5" /></span>
+        </button>
       ) : null}
 
       {catalog.length === 0 ? (
@@ -681,6 +691,25 @@ export function Learn({
         ) : (
           <p className="muted" role="status">Nothing in this filter.</p>
         )
+      ) : intent === 'quiz' ? (
+        <div className="lib-feed" ref={feedRef}>
+          <div className="lib-group__rows">
+            {filtered.map((item) => (
+              <div key={item.id} className="survey-line">
+                <button type="button" className="survey-pick" onClick={() => openLesson(item)}>
+                  <LineIcon className="lib-row__icon" d={IC.quiz} />
+                  <span className="survey-pick__body">
+                    <strong>{item.title}</strong>
+                    <span>{item.file || item.project || item.meta || linesLabel(item.lines)}</span>
+                  </span>
+                  <span className="survey-pick__day">{dayGroup(item.ts)}</span>
+                  <span className="survey-pick__go">Check understanding</span>
+                </button>
+                <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="lib-feed" ref={feedRef}>
           {groups.map(([label, items]) => (
@@ -688,39 +717,20 @@ export function Learn({
               <h2 className="lib-group__label">{label}</h2>
               <div className="lib-group__rows">
                 {items.map((item) => (
-                  <div key={item.id} className={intent === 'quiz' ? 'survey-line' : 'lib-line'}>
-                    <button
-                      type="button"
-                      className={intent === 'quiz' ? 'survey-pick' : 'lib-row'}
-                      onClick={() => openLesson(item)}
-                    >
-                      {intent === 'quiz' ? (
-                        <>
-                          <span className="survey-pick__body">
-                            <strong>{item.title}</strong>
-                            <span>
-                              {item.file || item.project || item.meta || linesLabel(item.lines)}
-                              {' · '}
-                              {dayGroup(item.ts)}
-                            </span>
-                          </span>
-                          <span className="survey-pick__go">Check understanding</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="lib-row__body">
-                            <strong>{item.title}</strong>
-                            <span className="know-meta">
-                              <span>{item.project || `This ${deviceName}`}</span>
-                              <span>{item.file || item.scope || 'Selection'}</span>
-                            </span>
-                          </span>
-                          <time dateTime={item.ts}>{clockTime(item.ts)}</time>
-                          <span className="status-pill" data-tone={item.outcome === 'needs_review' ? 'review' : 'current'}>
-                            {item.outcome === 'needs_review' ? 'Review' : 'Current'}
-                          </span>
-                        </>
-                      )}
+                  <div key={item.id} className="lib-line">
+                    <button type="button" className="lib-row" onClick={() => openLesson(item)}>
+                      <LineIcon className="lib-row__icon" d={IC.study} />
+                      <span className="lib-row__body">
+                        <strong>{item.title}</strong>
+                        <span className="know-meta">
+                          <span>{item.project || `This ${deviceName}`}</span>
+                          <span>{item.file || item.scope || 'Selection'}</span>
+                        </span>
+                      </span>
+                      <time dateTime={item.ts}>{clockTime(item.ts)}</time>
+                      <span className="status-pill" data-tone={item.outcome === 'needs_review' ? 'review' : 'current'}>
+                        {item.outcome === 'needs_review' ? 'Review' : 'Current'}
+                      </span>
                     </button>
                     <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />
                   </div>

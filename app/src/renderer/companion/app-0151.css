@@ -1,11 +1,88 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Unvibe 0.1.51 companion in glass (Design app-0151-glass DESIGN-SYSTEM, BOSS ledger 562): the
-   brand aurora behind everything, a floating glass sidebar, the page on the aurora with glass cards,
-   the ask dock floating at the bottom. Loads after v7.css; every rule starts at `.layout` (first
-   run: `.onboard`, which shows before the layout) so it beats v7's own shape by one class. Inter for
-   the UI, Playfair Display for page titles and the greeting, JetBrains Mono for code and labels.
-   Violet is every action (one filled primary per view); lime is only the code-selection mark.
+   Unvibe companion in Spectral (Design agents/design/spectral README §1, §4; Preston's rebrand 03,
+   BOSS ledger 565): paper with two glows, glass cards with a white rim, the floating glass sidebar
+   and ask dock, JetBrains Mono on every string, the accent on every action (one filled primary per
+   view). The iridescent rim is overlay-only; lime only marks selected code. Loads after v7.css;
+   every rule starts at `.layout` (first run: `.onboard`) so it beats v7's own shape by one class.
    ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Spectral values for the older layers' names. v7.css (and v3/v5 under it) still draw most pages;
+   this block, loaded after them at v7's specificity, gives their variables Spectral values. Each
+   name goes once nothing reads it. The --u-violet…--u-radius-control set is the 0.1.51-glass
+   vocabulary used below in this file. ── */
+:root[data-ui="v3"][data-v7] {
+  color-scheme: light;
+  --font-sans: var(--u-font);
+  --font-display: var(--u-font);
+  --font-hand: var(--u-font);
+  --font-mono: var(--u-font);
+  --v-bg: var(--u-paper);
+  --v-surface: var(--u-glass);
+  --v-sunken: var(--u-fill);
+  --v-ink: var(--u-ink);
+  --v-ink-2: var(--u-ink-2);
+  --v-muted: var(--u-ink-2);
+  --v-faint: var(--u-ink-3);
+  --v-line: var(--u-line);
+  --v-line-2: var(--u-line);
+  --v-hover: var(--u-fill);
+  --v-active: var(--u-glass);
+  --v-btn: var(--u-accent);
+  --v-btn-ink: var(--u-accent-on);
+  --v-radius: 18px;
+  --v-radius-sm: 12px;
+  --v-edge: var(--u-line);
+  --v-sel: var(--u-accent);
+  --v-sel-ink: var(--u-accent-on);
+  --v-edge-hi: color-mix(in srgb, var(--u-accent) 35%, transparent);
+  --v-glow: var(--u-accent);
+  --v-tint-base: var(--u-paper);
+  --v-hand-style: normal;
+  --lime: var(--u-mist);
+  --sky: var(--u-fill);
+  --sun: var(--u-amber-tint);
+  --coral: var(--u-amber-tint);
+  --lilac: var(--u-mist);
+  --mint: var(--u-mist);
+  --hard: var(--u-shadow);
+  --hard-sm: 0 2px 8px -3px rgb(40 24 110 / 0.16);
+  --c-violet: var(--u-accent);
+  --grad: var(--u-accent);
+  --focus-ring: color-mix(in srgb, var(--u-accent) 30%, transparent);
+  --u-violet: var(--u-accent);
+  --u-violet-text: var(--u-accent);
+  --u-on-violet: var(--u-accent-on);
+  --u-violet-tint: var(--u-mist);
+  --u-glass-1: var(--u-glass);
+  --u-glass-2: var(--u-glass);
+  --u-solid: rgb(255 255 255 / 0.72);
+  --u-hair: var(--u-line);
+  --u-shadow-glass: var(--u-shadow);
+  --u-canvas: rgb(255 255 255 / 0.72);
+  --u-band: var(--u-fill);
+  --u-plate: var(--u-line);
+  --u-sans: var(--u-font);
+  --u-display: var(--u-font);
+  --u-label: var(--u-w-label) 10.5px/1 var(--u-font);
+  --u-radius-window: 14px;
+  --u-radius-card: 18px;
+  --u-radius-control: var(--u-radius-field);
+  /* Still read by the first-run and Settings rules below (rounds/06 values) until SP4 moves them. */
+  --u-mono: var(--u-font);
+  --u-violet-lip: color-mix(in srgb, var(--u-accent) 78%, #000);
+  --u-code: #18171b;
+  --u-dark-ink: #ededed;
+  --u-dark-ink-2: #b4b4b4;
+  --u-dark-line: rgb(255 255 255 / 0.08);
+  --u-shadow-whisper: 0 0 1px rgb(0 0 0 / 0.4), 0 1px 1px rgb(0 0 0 / 0.04), 0 2px 4px rgb(0 0 0 / 0.04);
+  --u-shadow-float: 0 24px 60px -20px rgb(20 20 20 / 0.28), 0 0 1px rgb(0 0 0 / 0.35);
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] {
+  color-scheme: dark;
+  --hard-sm: 0 2px 8px -3px rgb(0 0 0 / 0.5);
+  --u-solid: rgb(30 27 40 / 0.78);
+  --u-canvas: rgb(30 27 40 / 0.78);
+}
 
 /* ── Ground (Spectral README §3): paper with two soft glows, blush bottom-left and sky top-right at 12 %,
    blurred. Static. ── */
@@ -37,7 +114,7 @@
 :root[data-ui="v3"][data-v7] .layout .topbar__explain {
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 8px; border: 0; border-radius: 999px;
   background: var(--u-glass-2); color: var(--u-ink); font: 600 14px/1 var(--u-sans); letter-spacing: 0;
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), var(--u-shadow-glass); transform: none;
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow); transform: none;
   -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
 }
 /* The pill's dot: the shortcut is ready (decorative; the button's name is its words). */
@@ -52,7 +129,7 @@
   margin: 10px 0 10px 10px; padding: 40px 10px 10px; border-radius: var(--u-radius-window);
   background: linear-gradient(180deg, rgb(255 255 255 / 0.22) 0%, rgb(255 255 255 / 0) 35%), var(--u-glass-1);
   -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), var(--u-shadow-glass);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
 }
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .side { background: linear-gradient(180deg, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0) 35%), var(--u-glass-1); }
 :root[data-ui="v3"][data-v7] .layout .brand { gap: 10px; height: 34px; padding: 0 8px; margin: 0 0 12px; }
@@ -64,7 +141,7 @@
 }
 :root[data-ui="v3"][data-v7] .layout .side-search {
   height: 36px; margin: 0 0 10px; padding: 0 8px 0 10px; border: 0; border-radius: var(--u-radius-control);
-  background: var(--u-glass-2); color: var(--u-ink-3); font: 400 14px/1 var(--u-sans); box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair);
+  background: var(--u-chip); color: var(--u-ink-3); font: var(--u-w-body) 14px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
 }
 :root[data-ui="v3"][data-v7] .layout .side-search:hover { color: var(--u-ink-2); background: var(--u-solid); }
 :root[data-ui="v3"][data-v7] .layout .side-search kbd { border: 0; background: none; color: var(--u-ink-3); font: 500 12px/18px var(--u-sans); box-shadow: none; }
@@ -80,15 +157,16 @@
 :root[data-ui="v3"][data-v7] .layout .side-settings:hover { background: var(--u-band); color: var(--u-ink); transform: none; }
 /* The current page: a glass pill, its icon violet (lilac in dark). */
 :root[data-ui="v3"][data-v7] .layout .nav button.on {
-  background: var(--u-glass-2); color: var(--u-ink); font-weight: 600; transform: none;
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), 0 4px 12px -6px rgb(40 24 110 / 0.18);
+  background: var(--u-glass); color: var(--u-ink); font-weight: var(--u-w-title); transform: none;
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 4px 12px -6px rgb(40 24 110 / 0.16);
 }
-:root[data-ui="v3"][data-v7] .layout .nav button svg,
-:root[data-ui="v3"][data-v7] .layout .side-settings svg { width: 18px; height: 18px; background: transparent; color: currentColor; transform: none; }
-:root[data-ui="v3"][data-v7] .layout .nav button.on svg { color: var(--u-violet-text); }
-:root[data-ui="v3"][data-v7] .layout .nav .side-more { color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .nav .side-more[aria-expanded="true"] { color: var(--u-ink-2); }
-:root[data-ui="v3"][data-v7] .layout .nav__more:not([hidden]) { display: grid; gap: inherit; }
+/* Line icons at 18 px, no tile (beats v7's per-item :nth-child tiles). */
+:root[data-ui="v3"][data-v7] .layout .nav button:nth-child(n) svg,
+:root[data-ui="v3"][data-v7] .layout .side-settings svg {
+  width: 18px; height: 18px; padding: 0; background: transparent; color: currentColor; stroke-width: 1.6; transform: none;
+}
+:root[data-ui="v3"][data-v7] .layout .nav button:nth-child(n).on svg { background: transparent; color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .nav button:hover svg { transform: none; }
 
 /* Meter, then where things are saved (Q9: "Free on this computer" on trial builds). */
 :root[data-ui="v3"][data-v7] .layout .side-usage { gap: 0; padding: 10px; border: 0; border-radius: var(--u-radius-control); background: transparent; box-shadow: none; }
@@ -108,9 +186,9 @@
   width: min(744px, calc(100% - 48px)); min-height: 58px; margin: 0 auto 18px; padding: 0 6px 0 24px; gap: 8px;
   border: 0; border-radius: 999px; background: var(--u-glass-2);
   -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), var(--u-shadow-glass);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
 }
-:root[data-ui="v3"][data-v7] .layout .ask-dock:focus-within { box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 2px var(--u-violet), var(--u-shadow-glass); }
+:root[data-ui="v3"][data-v7] .layout .ask-dock:focus-within { box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 2px var(--u-accent), var(--u-shadow); }
 :root[data-ui="v3"][data-v7] .layout .ask-dock input { font: 400 16px/1 var(--u-sans); letter-spacing: 0; color: var(--u-ink); outline: none; }
 :root[data-ui="v3"][data-v7] .layout .ask-dock input::placeholder { color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .layout .ask-dock button {
@@ -120,8 +198,10 @@
 :root[data-ui="v3"][data-v7] .layout .ask-dock button:hover { background: var(--u-violet); filter: brightness(1.08); box-shadow: none; transform: none; }
 :root[data-ui="v3"][data-v7] .layout .ask-dock button:active { transform: scale(0.98); box-shadow: none; }
 
+/* Every page starts at the same edge as Today and runs the full width (Spectral c-* screens). */
+:root[data-ui="v3"][data-v7] .layout .page { max-width: none; margin: 0; padding: 4px 24px 110px 34px; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) { width: 100%; max-width: none; margin: 0; padding: 0; }
 /* ── Today (glass c-today) ───────────────────────────────────────────────── */
-:root[data-ui="v3"][data-v7] .layout .page--home { padding: 4px 24px 110px 34px; }
 :root[data-ui="v3"][data-v7] .layout .home { display: block; }
 :root[data-ui="v3"][data-v7] .layout .home-hero { display: flex; align-items: center; gap: 18px; }
 :root[data-ui="v3"][data-v7] .layout .home-hero .buddy { flex: none; }
@@ -132,12 +212,12 @@
 /* The one action card, a glass panel tinted violet in dark; while the limit is reached its banner takes the same place. */
 :root[data-ui="v3"][data-v7] .layout .home-card {
   display: flex; align-items: center; gap: 24px; width: 100%; margin: 26px 0 0; padding: 30px 32px; border: 0; border-radius: 18px;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.22) 0%, rgb(255 255 255 / 0) 35%), var(--u-glass-2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), var(--u-shadow-glass);
+  /* The one action card: mist into glass (c-today). */
+  background: linear-gradient(110deg, var(--u-mist) 0%, var(--u-glass) 75%);
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
   color: var(--u-ink); text-align: left; transform: none;
 }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-card { background: linear-gradient(180deg, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0) 35%), rgb(70 52 160 / 0.42); }
 :root[data-ui="v3"][data-v7] .layout .home-cta { cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout .home-cta:hover { background-color: var(--u-solid); }
 :root[data-ui="v3"][data-v7] .layout .home-cta:focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
@@ -192,7 +272,7 @@
   margin: 0; padding: 22px 26px 18px; border-radius: 18px;
   background: linear-gradient(180deg, rgb(255 255 255 / 0.22) 0%, rgb(255 255 255 / 0) 35%), var(--u-glass-2);
   -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: inset 0 0 0 1px var(--u-rim), 0 0 0 1px var(--u-hair), var(--u-shadow-glass);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
 }
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-list { background: linear-gradient(180deg, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0) 35%), var(--u-glass-2); }
 :root[data-ui="v3"][data-v7] .layout .home-list--next { padding: 22px 18px 18px; }
@@ -224,6 +304,111 @@
 :root[data-ui="v3"][data-v7] .layout .home-row__pill { flex: none; margin-left: auto; padding-top: 3px; font: 400 13px/1 var(--u-sans); letter-spacing: 0; color: var(--u-ink-3); background: none; }
 :root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="review"] { padding: 4px 9px; border-radius: 999px; background: var(--u-amber-tint); color: var(--u-amber); font-weight: 500; }
 :root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 12px 0; font: 400 15px/1.4 var(--u-sans); color: var(--u-ink-3); }
+
+/* ── Page heads on every page: one mono title, one ink-2 lead ── */
+:root[data-ui="v3"][data-v7] .layout .topline { margin-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .topline h1 { margin: 0; font: 620 30px/1.15 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .topline .lead { margin: 14px 0 0; font: var(--u-w-body) 14.5px/1.5 var(--u-font); letter-spacing: 0; color: var(--u-ink-2); }
+
+/* ── Buttons: the one filled primary per view is an accent pill ── */
+:root[data-ui="v3"][data-v7] .layout .primary-btn {
+  border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on);
+  font: var(--u-w-label) 14px/1 var(--u-font); letter-spacing: 0; transform: none;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent);
+}
+:root[data-ui="v3"][data-v7] .layout .primary-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .primary-btn:active:not(:disabled) { transform: none; }
+
+/* ── Library and the Quiz list (c-library, c-quiz): tools in one row, the continue card, one glass card of rows ── */
+:root[data-ui="v3"][data-v7] .layout .history-tools { display: flex; align-items: center; gap: 14px; margin: 24px 0 18px; }
+:root[data-ui="v3"][data-v7] .layout .history-search { flex: 0 1 450px; max-width: 450px; margin-left: auto; }
+:root[data-ui="v3"][data-v7] .layout .history-search input {
+  height: 42px; min-height: 42px; padding: 0 18px; border: 0; border-radius: 999px; outline: none;
+  background: var(--u-glass); color: var(--u-ink); font: var(--u-w-body) 14px/1 var(--u-font);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .history-search input::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .history-search input:focus-visible { box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 2px var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .learn-filters {
+  display: inline-flex; flex: none; flex-wrap: nowrap; gap: 2px; padding: 4px; border-radius: 999px; background: var(--u-glass);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .learn-filters button {
+  height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink);
+  font: var(--u-w-label) 14px/1 var(--u-font); letter-spacing: 0; box-shadow: none; transform: none;
+}
+:root[data-ui="v3"][data-v7] .layout .learn-filters button:hover { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .learn-filters button.on,
+:root[data-ui="v3"][data-v7] .layout .learn-filters button[aria-pressed="true"] { background: var(--u-accent); color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 7px; font: var(--u-w-body) 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 0.6; }
+:root[data-ui="v3"][data-v7] .layout .mix-start { flex: none; height: 44px; padding: 0 20px; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .mix-start span { margin-left: 4px; opacity: 0.8; }
+:root[data-ui="v3"][data-v7] .layout .history-continue {
+  display: flex; align-items: center; gap: 18px; width: 100%; margin: 0 0 18px; padding: 20px 22px 20px 26px;
+  border: 0; border-radius: 18px; text-align: left; text-decoration: none; white-space: normal; cursor: pointer;
+  background: linear-gradient(110deg, var(--u-mist) 0%, var(--u-glass) 80%); color: var(--u-ink); font: inherit;
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .history-continue:hover { text-decoration: none; }
+:root[data-ui="v3"][data-v7] .layout .history-continue:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__text { display: grid; gap: 8px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__kicker { font: var(--u-w-label) 13px/1 var(--u-font); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson strong { font: var(--u-w-title) 16px/1.3 var(--u-font); color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson span { font: var(--u-w-body) 14px/1.3 var(--u-font); color: var(--u-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__go { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .history-continue__go svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) .lib-feed {
+  margin: 0 0 110px; padding: 12px 22px 14px 26px; border-radius: 18px; background: var(--u-glass);
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .lib-group { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .layout .page h2.lib-group__label,
+:root[data-ui="v3"][data-v7] .layout .lib-group__label {
+  margin: 12px 0 4px; padding: 0; border: 0; font: var(--u-w-label) 12px/1 var(--u-font); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--u-ink-3);
+}
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows { display: grid; gap: 0; border: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-line,
+:root[data-ui="v3"][data-v7] .layout .survey-line {
+  display: flex; align-items: center; margin: 0; border: 0; border-bottom: 1px solid var(--u-line); border-radius: 0;
+  background: transparent; box-shadow: none; overflow: visible; transform: none; animation: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > :last-child { border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-line:hover,
+:root[data-ui="v3"][data-v7] .layout .survey-line:hover { border-color: var(--u-line); background: transparent; box-shadow: none; transform: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-line .lib-row,
+:root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick {
+  display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: center; gap: 0 18px; flex: 1; min-width: 0;
+  margin: 0; padding: 14px 6px; border: 0; border-radius: 10px; background: transparent; box-shadow: none; transform: none; animation: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lib-line .lib-row:hover,
+:root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick:hover { background: var(--u-fill); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-row__icon { width: 20px; height: 20px; fill: none; stroke: var(--u-accent); stroke-width: 1.6; }
+:root[data-ui="v3"][data-v7] .layout .lib-row__body,
+:root[data-ui="v3"][data-v7] .layout .survey-pick__body { display: grid; gap: 6px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-row__body strong,
+:root[data-ui="v3"][data-v7] .layout .survey-pick__body strong { font: var(--u-w-title) 15px/1.3 var(--u-font); letter-spacing: 0; color: var(--u-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .know-meta,
+:root[data-ui="v3"][data-v7] .layout .survey-pick__body > span { min-width: 0; overflow: hidden; font: var(--u-w-body) 13.5px/1.3 var(--u-font); letter-spacing: 0; color: var(--u-ink-3); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .lib-row time,
+:root[data-ui="v3"][data-v7] .layout .survey-pick__day { font: var(--u-w-body) 13px/1 var(--u-font); letter-spacing: 0; color: var(--u-ink-3); white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill {
+  min-width: 80px; height: 30px; padding: 0 12px; border: 1px solid var(--u-line); border-radius: 999px; text-align: center;
+  background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 13px/28px var(--u-font); animation: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="current"] { border-color: color-mix(in srgb, var(--u-accent) 28%, transparent); background: var(--u-mist); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="review"] { background: var(--u-chip); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .survey-pick__go {
+  height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-label) 14px/40px var(--u-font); box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .survey-line:hover .survey-pick__go { background: var(--u-mist); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .row-trash { flex: none; width: 28px; height: 28px; margin: 0 0 0 4px; border-radius: 8px; background: transparent; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .row-trash:hover { background: var(--u-fill); color: var(--u-ink); }
 
 /* ── First run (rounds/06 screens 6-7): steps, Vibe and a big bubble, one heading, one forward button ── */
 /* Vibe and the footer both take the free height (margin-top: auto), so a short step sits in the middle of the window

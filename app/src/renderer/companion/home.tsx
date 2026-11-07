@@ -5,6 +5,7 @@ import type { KnowledgeObject } from '../../core/knowledge';
 import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { IC } from './icons';
+import { LineIcon } from './lineIcon';
 
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
 export interface TodayGoal { explained: boolean; answered: boolean }
@@ -128,10 +129,6 @@ export function learningSteps(input: { shortcut: string; reviews: number; unders
     { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false },
     { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: input.saved > 0 },
   ];
-}
-
-function StepIcon({ d }: { d: string }) {
-  return <svg className="home-step__icon" viewBox="0 0 20 20" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
 export interface HomeProps {
@@ -282,7 +279,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, to
             <ol>
               {upNext.map((step) => (
                 <li key={step.id}><button type="button" className="home-step" onClick={runStep[step.id]}>
-                  <StepIcon d={step.icon} />
+                  <LineIcon className="home-step__icon" d={step.icon} />
                   <span className="home-row__text">
                     <span className="home-row__title">{step.title}</span>
                     <span className="home-row__source">{step.copy}</span>

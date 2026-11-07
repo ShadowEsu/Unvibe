@@ -9,21 +9,17 @@ export const NAV_PINNED: NavPage[] = [
   { id: 'Chat', icon: IC.chat },
 ];
 
+/** Under LEARN in the sidebar, all listed (Design's Spectral screens, from the 0.1.51-glass layout). */
 export const NAV_SPACES: NavPage[] = [
   { id: 'Learn', icon: IC.study },
   { id: 'Quiz', icon: IC.quiz },
   { id: 'Briefings', icon: IC.briefings },
-];
-
-/** Under "More" in the sidebar (frozen `app.html`): open whenever one of these pages is showing. */
-export const NAV_MORE: NavPage[] = [
   { id: 'Progress', icon: IC.progress },
   { id: 'Plan', icon: IC.plan },
   { id: 'Gift', icon: IC.gift },
 ];
 
-export const NAV = [...NAV_PINNED, ...NAV_SPACES, ...NAV_MORE];
-export const MORE_ICON = 'M5 10h.01 M10 10h.01 M15 10h.01';
+export const NAV = [...NAV_PINNED, ...NAV_SPACES];
 
 /** The name a page goes by in the sidebar and the top bar. */
 export function pageLabel(id: string): string {

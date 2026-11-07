@@ -37,38 +37,23 @@
 }
 
 /*
- * The 0.1.51 design (row 552, design package-1106 SPEC §2, frozen rounds/06/app.html): one set for
- * the panel and the companion. Light is the default; the dark set is the panel's night look.
- * Lime is only the selection mark or the "understood" tick, never text on a light ground and never
- * for errors (those keep the Island's amber dot).
+ * What is left of the 0.1.51 rounds/06 set: only the names companion/app-0151.css still reads. Spectral below
+ * replaces the rest; delete these once that file moves to Spectral names.
  */
 :root {
   --u-canvas: #fcfbf8;
   --u-band: #f4f2ee;
   --u-plate: #eae7e1;
-  --u-ink: #141414;
-  --u-ink-2: #55554f; /* 7.4:1 on canvas */
-  --u-ink-3: #6e6b64; /* 5.1:1 on canvas, 4.75:1 on band: helper text */
-  --u-violet: #5a3fe0; /* actions only; white on it 6.5:1 */
+  --u-violet: #5a3fe0;
   --u-violet-lip: #3f2bb8;
-  --u-lilac: #b8a6ff; /* Vibe only */
-  --u-lime: #d6f45a; /* selected / understood only */
-  --u-amber: #f5a524; /* a problem */
-  --u-dark-canvas: #111013;
-  --u-dark-raised: #1b1a1e;
-  --u-dark-code: #000;
   --u-dark-ink: #ededed;
   --u-dark-ink-2: #b4b4b4;
-  --u-dark-ink-3: #9b98a3;
   --u-dark-line: rgb(255 255 255 / 0.08);
-  --u-code: #18171b; /* code block on light, with --u-dark-ink text */
+  --u-code: #18171b;
   --u-radius-control: 12px;
   --u-radius-card: 20px;
-  --u-radius-flagship: 24px;
-  --u-radius-chip: 999px;
   --u-shadow-whisper: 0 0 1px rgb(0 0 0 / 0.4), 0 1px 1px rgb(0 0 0 / 0.04), 0 2px 4px rgb(0 0 0 / 0.04);
   --u-shadow-float: 0 24px 60px -20px rgb(20 20 20 / 0.28), 0 0 1px rgb(0 0 0 / 0.35);
-  --u-ease: cubic-bezier(0.2, 0.6, 0.25, 1);
   --u-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --u-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -103,6 +88,7 @@
   --u-amber-tint: #fef3e2;
   --u-code-bg: rgb(21 20 26 / 0.04);
   --u-shadow: 0 12px 32px -12px rgb(40 24 110 / 0.22);
+  --u-card-rim: rgb(255 255 255 / 0.86); /* companion cards: a white inner rim (the iridescent one is overlay-only) */
   --u-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --u-w-body: 430;
   --u-w-label: 520;
@@ -130,6 +116,7 @@
   --u-amber-tint: #422c0e;
   --u-code-bg: rgb(0 0 0 / 0.25);
   --u-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  --u-card-rim: rgb(255 255 255 / 0.12);
   color-scheme: dark;
 }
 
@@ -150,38 +137,4 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-}
-
-/*
- * LEGACY, removed as each surface is rebuilt in Spectral: the companion's 0.1.51-glass names
- * (app-0151.css, until the companion re-skin) mapped onto Spectral values, so nothing renders broken
- * in between. The rounds/06 panel set above goes with overlay B (widget.css).
- */
-:root[data-ui="v3"][data-v7] {
-  --u-violet: var(--u-accent);
-  --u-violet-text: var(--u-accent);
-  --u-on-violet: var(--u-accent-on);
-  --u-violet-tint: var(--u-mist);
-  --u-glass-1: var(--u-glass);
-  --u-glass-2: var(--u-glass);
-  --u-solid: rgb(255 255 255 / 0.72);
-  --u-hair: var(--u-line);
-  --u-shadow-glass: var(--u-shadow);
-  --u-canvas: rgb(255 255 255 / 0.72);
-  --u-band: var(--u-fill);
-  --u-plate: var(--u-line);
-  --u-sans: var(--u-font);
-  --u-display: var(--u-font);
-  --u-label: 520 10.5px/1 var(--u-font);
-  --u-radius-window: 14px;
-  --u-radius-card: 16px;
-  --u-radius-control: var(--u-radius-field);
-  --font-sans: var(--u-font);
-  --font-display: var(--u-font);
-  --font-hand: var(--u-font);
-  --font-mono: var(--u-font);
-}
-:root[data-ui="v3"][data-v7][data-theme="dark"] {
-  --u-solid: rgb(30 27 40 / 0.78);
-  --u-canvas: rgb(30 27 40 / 0.78);
 }
