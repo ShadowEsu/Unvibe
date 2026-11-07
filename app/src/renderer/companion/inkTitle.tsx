@@ -1,7 +1,10 @@
 import type { CSSProperties } from 'react';
 
-/** Letters ink in over at most this long, whatever the title's length. */
-const SPREAD_MS = 420;
+/**
+ * The last letter starts inking at most this long after the first, whatever the title's length; with each letter's
+ * 220 ms the title reads as inked in ~240 ms (Design motion review 07 Nov SHOULD 1; Today measured 433 ms before).
+ */
+const SPREAD_MS = 120;
 
 /**
  * A page title that inks in once when the page opens (SP6; Motion site-562 §3 adapted to the app): each letter goes

@@ -1131,7 +1131,8 @@
 :root[data-ui="v3"][data-v7] .layout .survey__modes button span { font: var(--u-w-body) 12.5px/1.45 var(--u-font); color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .layout .survey .primary-btn { border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: var(--u-w-label) 14px/1 var(--u-font); box-shadow: none; transform: none; }
 
-/* ── SP6: page titles ink in once per view (InkTitle): each letter 15 % → full ink, left to right, opacity only,
-   all letters done within ~0.8 s. Reduced motion: the global rule in companion.css drops the animation. ── */
-.ink-title__ch { animation: inkIn 360ms var(--u-ease) both; animation-delay: var(--ink-delay, 0ms); }
+/* ── SP6: page titles ink in once per view (InkTitle): each letter 15 % → full ink over 220 ms, left to right, opacity
+   only; the last letter starts within 120 ms of the first, so the title reads as inked in ~240 ms (Design motion review
+   07 Nov SHOULD 1). Reduced motion: the global rule in companion.css drops the animation. ── */
+.ink-title__ch { animation: inkIn 220ms var(--u-ease) both; animation-delay: var(--ink-delay, 0ms); }
 @keyframes inkIn { from { opacity: 0.15; } }
