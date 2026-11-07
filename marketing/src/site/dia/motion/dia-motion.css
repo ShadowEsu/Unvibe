@@ -20,7 +20,8 @@
    window are LCP candidates, so they are painted from the first frame and only rise; the CTA block also fades. */
 @keyframes dRise { from { transform: translate3d(0, var(--d-rise), 0) scale(var(--d-rise-s, 1)); } }
 @keyframes dRiseFade { from { opacity: 0; transform: translate3d(0, var(--d-rise), 0); } }
-[data-d-hero-rise="h1"] { --d-rise: 14px; animation: dRise 1000ms var(--d-ease-out) both; }
+/* Design round 1: the H1 is on screen in frame 1, so it only rises 8 px (Dia: 24 px from opacity 0). */
+[data-d-hero-rise="h1"] { --d-rise: 8px; animation: dRise 1000ms var(--d-ease-out) both; }
 [data-d-hero-rise="wordmark"] { --d-rise: 36px; --d-rise-s: 0.96; transform-origin: 50% 100%; animation: dRise 1200ms var(--d-ease-out) 80ms both; }
 [data-d-hero-rise="window"] { --d-rise: 80px; animation: dRise 1400ms var(--d-ease-out) 160ms both; }
 [data-d-hero-rise="dock"] { --d-rise: 24px; animation: dRiseFade 900ms var(--d-ease-out) 380ms both; }
@@ -43,10 +44,16 @@
   @keyframes dArch { from { transform: translateX(-50%) translateY(calc(var(--d-arch-h, 120px) * 0.6)); } to { transform: translateX(-50%); } }
 }
 
-/* ── The dock: the sticky bottom CTA arch (≥ 800 px, as Dia). DiaMotion sets --d-flat (0 → 1 over the first 240 px of
-   scroll, back to 0 over the 240 px before the dock comes to rest) and --d-glow (1 → 0 over the first 240 px). */
-[data-d-cta-dock] { --d-dock-h: 152px; --d-flat: 0; --d-glow: 1; position: relative; z-index: 3; height: var(--d-dock-h); pointer-events: none; }
-@media (min-width: 800px) { [data-d-cta-dock] { position: sticky; bottom: 0; } }
+/* ── The dock: the sticky bottom CTA arch, at every width (Design 390-1: the download pill is in the 390 first screen;
+   Dia pins it only ≥ 800 px). DiaMotion sets --d-flat (0 → 1 over the first 200 px of
+   scroll, back to 0 over the 300 px before the dock comes to rest), --d-glow (1 → 0 by 180 px) and --d-rim
+   (smoothstep of --d-flat: the thin rim line Dia draws on the flattened arch; DiaMotion adds its element). */
+[data-d-dock-rim] { /* same ellipse as the arch, only its upward shadows show; opacity only */
+  position: absolute; left: 50%; top: 200px; width: max(141vw, 1100px); aspect-ratio: 2034 / 978; border-radius: 50%;
+  box-shadow: 0 -1px 2px -1px rgb(40 22 96 / 0.12), 0 -7px 18px -8px rgb(56 32 128 / 0.10), 0 -20px 44px -20px rgb(72 44 160 / 0.10);
+  opacity: var(--d-rim, 0); transform: translateX(-50%); pointer-events: none;
+}
+[data-d-cta-dock] { --d-dock-h: 152px; --d-flat: 0; --d-glow: 1; position: sticky; bottom: 0; z-index: 3; height: var(--d-dock-h); pointer-events: none; }
 [data-d-dock-arc] { position: absolute; inset: -200px 0 0; transform-origin: 50% 100%; transform: scaleY(calc(1 - 0.2 * var(--d-flat))); }
 [data-d-dock-arc]::before { /* the arch */
   content: ""; position: absolute; left: 50%; top: 200px; width: max(141vw, 1100px); aspect-ratio: 2034 / 978;
@@ -63,6 +70,27 @@
 }
 [data-d-dock-pill] > * { pointer-events: auto; }
 
+/* ── Hero light (Dia's hero light is a live canvas): DiaMotion adds a small canvas of drifting dappled light inside
+   [data-d-hero-bg], screen-blended over the bubbles still. It fades in like Dia's light (1 s), never under RM. */
+@keyframes dLightIn { from { opacity: 0; } }
+[data-d-hero-light] {
+  position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: screen; opacity: 0.55; pointer-events: none;
+  animation: dLightIn 1000ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+/* ── H2 word reveal (Maze, Design): [data-d-words] on a heading; DiaMotion wraps its words in .d-wd spans (--i = the
+   word's index) and sets data-in on enter: each word goes from 30 % to full ink, 70 ms apart. */
+.js [data-d-words] .d-wd { opacity: 0.3; transition: opacity 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) calc(var(--i, 0) * 70ms); }
+.js [data-d-words][data-in] .d-wd { opacity: 1; }
+
+/* ── Pixel draw-on (Heron, Design): [data-d-pixel] on a pixel Vibe sprite draws on row by row over 400 ms when it
+   enters; --d-rows = the sprite's pixel rows (default 16), so each step reveals one row. */
+@keyframes dPixel { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
+/* Hidden by opacity before entering, not by the clip: IntersectionObserver applies the target's own clip-path, so a fully
+   clipped sprite would never count as entering. The animation's first keyframe takes over the clip (fill: both). */
+.js [data-d-pixel]:not([data-in]) { opacity: 0; }
+[data-d-pixel][data-in] { animation: dPixel 400ms steps(var(--d-rows, 16), end) both; }
+
 /* ── Steps (Dia: bar, number and title 300 ms; body cross-fade 300 ms; shots fade in 700 ms once). Bodies keep their
    space, so switching never moves the list (CLS 0); the inactive ones are transparent. */
 [data-d-step] { position: relative; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.5; }
@@ -76,6 +104,16 @@
 [data-d-step][data-on] [data-d-step-body] { opacity: 1; transform: none; }
 [data-d-shot] { transition: opacity 700ms cubic-bezier(0.87, 0, 0.13, 1); }
 .js [data-d-shot]:not([data-seen]) { opacity: 0; }
+/* The sticky stage's one window (unvibe-site sets data-d-stage on .d-steps__stage): on every step change it comes in from
+   .97 scale and transparent over 700 ms (Dia's active shot). A keyframe name per step, so changing the step swaps the
+   name and restarts the animation without JS. */
+@keyframes dStage0 { from { opacity: 0; transform: scale(0.97); } }
+@keyframes dStage1 { from { opacity: 0; transform: scale(0.97); } }
+@keyframes dStage2 { from { opacity: 0; transform: scale(0.97); } }
+.d-steps__stage .d-win { animation: 700ms cubic-bezier(0.87, 0, 0.13, 1) both; }
+.d-steps__stage[data-d-stage="0"] .d-win { animation-name: dStage0; }
+.d-steps__stage[data-d-stage="1"] .d-win { animation-name: dStage1; }
+.d-steps__stage[data-d-stage="2"] .d-win { animation-name: dStage2; }
 
 /* ── Background swap (Dia pricing: the painting fades in, 420 ms measured; Design set 400 ms; the title turns white over
    300 ms). */
@@ -150,7 +188,7 @@
 [data-d-zoom-slow] { transform-origin: 50% 60%; }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-d-hero-rise], [data-d-arch]::before, [data-d-pills] > *, [data-d-nav-active]::after, [data-d-hero-bg] { animation: none; }
+  [data-d-hero-rise], [data-d-arch]::before, [data-d-pills] > *, [data-d-nav-active]::after, [data-d-hero-bg], .d-steps__stage .d-win { animation: none; }
   [data-d-hero-bg] { transform: scale(1.04); }
   [data-d-cta-dock] { --d-flat: 0 !important; --d-glow: 1 !important; }
   [data-d-step], [data-d-step]::before, [data-d-step] [data-d-step-body], [data-d-shot], [data-d-bgswap], [data-d-swap-ink-on], [data-d-swap-ink] > *,
@@ -159,4 +197,6 @@
   .js [data-d-shot]:not([data-seen]), .js [data-d-enter]:not([data-in]) { opacity: 1; transform: none; filter: none; animation: none; }
   [data-d-enter][data-in] { animation: none; }
   [data-d-zoom-slow] { transform: none !important; }
+  .js [data-d-words] .d-wd { opacity: 1; transition: none; }
+  .js [data-d-pixel]:not([data-in]), [data-d-pixel][data-in] { opacity: 1; clip-path: none; animation: none; }
 }
