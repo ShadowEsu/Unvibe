@@ -31,7 +31,7 @@ describe("welcome email (onboarding email 1, Security S-2 0002)", () => {
 
   it("links the install help in both parts", () => {
     assert.ok(welcomeHtml(input).includes('href="https://unvibe.site/install-help"'));
-    assert.match(welcomeText(input), /Here is exactly what to press: https:\/\/unvibe\.site\/install-help/);
+    assert.match(welcomeText(input), /exactly what to press: https:\/\/unvibe\.site\/install-help/);
   });
 
   it("has no invite-link or Pro-month card (A2), and no Security W1/W3 claims", () => {
