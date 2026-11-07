@@ -8,6 +8,8 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/data/**/*.{js,ts,jsx,tsx,mdx}",
+    // Code samples shown as text, never markup: scanning them only adds unused rules to the site's CSS.
+    "!./src/lib/explainPages.ts",
   ],
   theme: {
     extend: {
