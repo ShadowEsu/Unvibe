@@ -889,7 +889,7 @@ export const milestones: Milestone[] = [
     date: "11 SEP 2026",
     category: "PRODUCT",
     title: "New plans and Windows selection capture",
-    summary: "Pricing listed Free, Pro at $10 a month or $90 a year, Pro Lifetime at $80 once and a Teams founding pilot at $8 per seat. Invite a friend with your 8-character gift code, and you each got a month of Pro, up to five gifts. On Windows, the shortcut could copy and explain the code you had selected. Changed 22 Oct 2026: checkout is closed until payments open, and gifts come from a code entered in the app. Changed 5 Nov 2026: Teams is early access, not on sale yet, with no founding price.",
+    summary: "Pricing listed Free, Pro at $10 a month or $90 a year, Pro Lifetime at $80 once and a Teams founding pilot at $8 per seat. Invite a friend with your 8-character gift code, and you each got a month of Pro, up to five gifts. On Windows, the shortcut could copy and explain the code you had selected. Changed 24 Sep 2026: Pro is $9 a month or $81 a year. Changed 22 Oct 2026: checkout is closed until payments open, Lifetime is no longer offered, and gifts come from a code entered in the app. Changed 5 Nov 2026: Teams is early access, not on sale yet, with no founding price.",
   },
   {
     date: "26 AUG 2026",
