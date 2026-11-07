@@ -53,7 +53,7 @@ const SUMMARY =
  * conditional next batch.
  */
 const REMOVED =
-  /gitlab|linear startup pack|linear's startup pack|openai for startups|chatgpt business|\$23,700|\$4,500|\$1,200|\$500 in program credits|mixpanel pro\b|pro plan|\$145,000|credits offered|offered and not yet redeemed|\$500 offer|\bworth\b|valued at|\$5,000|\$5k|5k batch/i;
+  /gitlab|linear startup pack|linear's startup pack|openai for startups|chatgpt business|\$23,700|\$4,500|\$1,200|\$500 in program credits|mixpanel pro\b|pro plan|\$145,000|credits offered|offered and not yet redeemed|\$500 offer|\bworth\b|valued at|\bfunding\b|\braised\b|\$5,000|\$5k|5k batch/i;
 /** W4 (replaces CL-T1 now that every program has an amount): the total's own phrase, and no older one. */
 const TOTAL_PHRASE = "in startup-program credits and plan value, and committed cash";
 const OLD_TOTAL_PHRASES = /startup-program credits and committed cash|credits from \d+ startup programs|program credits plus self-reported cash|not counted in it|outside the total/i;
@@ -189,7 +189,7 @@ describe("startup programs", () => {
     const words = text(page);
     assert.ok(words.includes(`$233,300 ${TOTAL_PHRASE}`));
     assert.match(words, /7 startup programs we're in/);
-    assert.match(words, /Program credits and plan value \$232,500 · cash \$800\. Credits are not cash, and this is not a funding round\./);
+    assert.match(words, /Program credits and plan value \$232,500 · cash \$800\. Credits are not cash\. Not a round\./);
     for (const row of supportRows()) assert.ok(words.includes(`${row.name} ${row.amount} ${row.detail}`), row.name);
     assert.doesNotMatch(words, OLD_TOTAL_PHRASES);
     assert.doesNotMatch(words, REMOVED);
@@ -248,7 +248,7 @@ describe("startup programs", () => {
     assert.ok(kit.includes(SALESFORCE_ATTRIBUTION));
     assertMarksAtFirstUse(kit, "kit");
     assert.doesNotMatch(kit, RETIRED_NAMES);
-    assert.ok(kit.includes("Support secured with an amount on record: $233,300, of which $232,500 is startup-program credits and plan value and $800 is committed cash. Unvibe is in 7 startup programs, each with an amount the company confirmed."));
+    assert.ok(kit.includes("Support secured with an amount on record: $233,300, of which $232,500 is startup-program credits and plan value and $800 is committed cash. Unvibe is in 7 startup programs, each with an amount on record."));
     const investors = kit.slice(kit.indexOf(SUMMARY) - 200, kit.indexOf(SUMMARY) + SUMMARY.length + 400);
     assert.doesNotMatch(investors.replace(/nothing stronger.*$/m, ""), BANNED_WORDING);
   });

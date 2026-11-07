@@ -957,7 +957,7 @@ export const milestones: Milestone[] = [
     date: "17 JUL 2026",
     category: "COMPANY",
     title: "Unvibe is in Claude for Startups",
-    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools. Not cash. Not a round.",
+    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for 12 months, and perks from other tools. Not cash. Not a round.",
     figure: "$21,500",
   },
   {

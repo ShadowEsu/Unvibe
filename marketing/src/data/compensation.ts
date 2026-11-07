@@ -85,7 +85,7 @@ export const startupPrograms: readonly StartupProgram[] = [
   },
 ];
 
-/** Program credits and plan value, then self-reported cash. Credits are not cash and not a funding round. */
+/** Program credits and plan value, then self-reported cash. Credits are not cash and not a round. */
 export const compensationLines: CompensationLine[] = [
   ...startupPrograms.flatMap((program): CompensationLine[] =>
     program.amountUsd === undefined
