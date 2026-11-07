@@ -163,7 +163,7 @@ export const D_THANKS = {
 /** The footer (mock 09), every link of the live footer (MUST-D6), regrouped. */
 export const D_FOOT = [
   { h: "Product", links: [["Download", "/beta"], ["Pricing", "/pricing"], ["Changelog", "/releases"], ["Explain code", "/explain"], ["Code explainer for Mac", "/code-explainer-mac"], ["Code explainer for Windows", "/code-explainer-windows"], ["Use cases", "/use-cases"]] },
-  { h: "Resources", links: [["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"], ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refund"], ["Open-source notices", "/licenses"]] },
+  { h: "Resources", links: [["Help", "/help"], ["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"], ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refund"], ["Open-source notices", "/licenses"]] },
   { h: "Company", links: [["Investors", "/investors"], ["About", "/about"], ["Building Unvibe", "/build"], ["Listed on", "/listed-on"], ["Contact", "mailto:support@unvibe.site"]] },
 ] as const;
 
