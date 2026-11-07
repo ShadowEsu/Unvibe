@@ -10,12 +10,12 @@ const { mac, windows } = SHORTCUTS;
 
 export const metadata: Metadata = pageMetadata({
   path: "/help",
-  title: "Unvibe help: install, the shortcut, Accessibility and sign-in",
+  title: "Unvibe help: install, shortcut, Accessibility, sign-in",
   absolute: true,
-  description: `Stuck with Unvibe? Opening it the first time, ${mac.anywhere} doing nothing, the Mac Accessibility switch, signing in, and how to reach a person.`,
+  description: `Stuck with Unvibe? Opening it the first time, ${mac.anywhere} doing nothing, the Mac Accessibility switch, signing in, and how to reach us.`,
 });
 
-/** The help hub (HELP-GAPS G7): every /help, /support and /contact guess used to 404. One line per question, each to the page that answers it. */
+/** The help hub (HELP-GAPS G7): every /help guess used to 404. One line per question, each to the page that answers it. */
 export default function HelpIndexPage() {
   return (
     <article className="fos-page">
@@ -24,7 +24,7 @@ export default function HelpIndexPage() {
         <div>
           <p className="pstats__eyebrow">Help</p>
           <h1>What&apos;s stuck?</h1>
-          <p className="fos-page__lead">Pick the question closest to yours. Each answer is a short page with the exact buttons to press.</p>
+          <p className="fos-page__lead">Pick the question closest to yours. Each one links to the page that answers it.</p>
         </div>
       </header>
 
@@ -49,8 +49,8 @@ export default function HelpIndexPage() {
             opens without my code.
           </li>
           <li>
-            <Link href="/help/accessibility">Allow Accessibility on a Mac</Link>, the one permission the shortcut needs, and what to do when
-            it still says Not allowed yet.
+            <Link href="/help/accessibility">Allow Accessibility on a Mac</Link>, the switch the shortcut needs to copy your code, and what
+            to do when it still says Not allowed yet.
           </li>
         </ul>
       </section>
@@ -59,10 +59,13 @@ export default function HelpIndexPage() {
         <h2 id="account-title">Account and plans</h2>
         <ul className="help-list">
           <li>
-            <Link href="/beta#help">Sign-in doesn&apos;t finish, or you&apos;d rather not sign in</Link>. Unvibe works without an account.
+            <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. You can start without an account.
           </li>
           <li>
             <Link href="/faq">Free explanations, plans, privacy and your data</Link>.
+          </li>
+          <li>
+            <Link href="/account-deletion">Delete your account and your data</Link>, from inside the app or by email.
           </li>
         </ul>
       </section>
