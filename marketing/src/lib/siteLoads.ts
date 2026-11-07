@@ -7,9 +7,10 @@
  */
 
 /**
- * The utm_source values counted by name (migration 0013 seeds the same list into site_load_sources, and
- * a test keeps the two equal). Marketing's UTM dictionary (agents/unvibe-marketing/utm-dictionary.md),
- * the launch sites from site/first-party-channels, and first100's listing sites. Never a per-person value.
+ * The utm_source values counted by name (migrations 0013 and 0014 seed the same list into site_load_sources,
+ * and a test keeps them equal). Marketing's UTM dictionary (agents/unvibe-marketing/utm-dictionary.md), the
+ * launch sites from site/first-party-channels, first100's and unvibe-marketing's listing sites (row 550 kit,
+ * agents/unvibe-growth/POSITIONING.md) and unvibe-pm's WEEK-100 channels. Never a per-person value.
  */
 export const SITE_LOAD_SOURCES = [
   "instagram",
@@ -54,6 +55,77 @@ export const SITE_LOAD_SOURCES = [
   "todaylaunches",
   "trylaunch",
   "visalytica",
+  // Migration 0014: row 550 listing sites (POSITIONING.md), sources already in live links, WEEK-100 channels.
+  "microlaunch",
+  "betterlaunch",
+  "danielslaunches",
+  "tinystartups",
+  "peerless",
+  "madealist",
+  "althunt",
+  "feedmystartup",
+  "taaft",
+  "toolify",
+  "thenai",
+  "toolpilot",
+  "magicbox",
+  "aitooly",
+  "alternativeto",
+  "stackshare",
+  "g2",
+  "goodfirms",
+  "softwaresuggest",
+  "saasworthy",
+  "comparecam",
+  "financesonline",
+  "trustpilot",
+  "indiehackers",
+  "hashnode",
+  "gitlab",
+  "f6s",
+  "crunchbase",
+  "brownbook",
+  "activesearchresults",
+  "vsearch",
+  "viesearch",
+  "linkcenter",
+  "linkcentre",
+  "geekwire",
+  "sidehunt",
+  "makerhunt",
+  "indiehunt",
+  "earlyhunt",
+  "unodirectory",
+  "auraplusplus",
+  "producthunt",
+  "devto",
+  "betalist",
+  "viberank",
+  "comingup",
+  "vibecoding",
+  "tooliq",
+  "thetooldirectory",
+  "prolaunch",
+  "navtools",
+  "macupdate",
+  "geeknews",
+  "foundermag",
+  "flowtools",
+  "firsto",
+  "everyai",
+  "dofollowtools",
+  "devtoolsdaily",
+  "buildvoyage",
+  "airespo",
+  "collab",
+  "badge",
+  "unvibe",
+  "email",
+  "hn",
+  "grok",
+  "discord",
+  "dvc",
+  "gdg",
 ] as const;
 
 type KnownSource = (typeof SITE_LOAD_SOURCES)[number];
@@ -77,9 +149,10 @@ export function siteLoadSource(search: URLSearchParams): SiteLoadSource {
 
 /**
  * Pages that are never counted: the same private pages that start no analytics (PRIVATE_PATH in
- * analyticsPrivacy.ts: admin, waitlist admin, private stats links /s/<key>, sign-in and redeem), plus /stats.
+ * analyticsPrivacy.ts: admin, waitlist admin, private stats links /s/<key>, sign-in and redeem), plus /stats
+ * and the download redirects (/download/mac etc., counted as downloads instead: downloadCounter.ts).
  */
-const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|redeem)(?:[/.]|$)/i;
+const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|redeem|download\/(?:mac|mac-intel|windows))(?:[/.]|$)/i;
 
 /**
  * Crawlers, link unfurlers, monitors and headless browsers, checked in memory only and never stored.
@@ -87,6 +160,10 @@ const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|red
  */
 const BOT_UA =
   /(?<!cu)bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|monitor|curl|wget|python|node-fetch|axios|go-http|java\/|okhttp|httpclient|playwright|puppeteer|selenium|phantom/i;
+
+export function isBotUserAgent(ua: string): boolean {
+  return BOT_UA.test(ua);
+}
 
 export interface DocumentRequest {
   method: string;
@@ -110,7 +187,7 @@ export function isCountedLoad(req: DocumentRequest): boolean {
   const purpose = req.header("purpose") ?? req.header("sec-purpose") ?? "";
   if (purpose.includes("prefetch")) return false;
   const ua = req.header("user-agent") ?? "";
-  if (!ua || BOT_UA.test(ua)) return false;
+  if (!ua || isBotUserAgent(ua)) return false;
   return true;
 }
 
@@ -132,7 +209,7 @@ export function siteLoadDay(now = new Date()): string {
 /** Posts one increment. Injected in tests; in production a PostgREST RPC call with the service role. */
 export type SiteLoadPost = (day: string, source: SiteLoadSource) => Promise<boolean>;
 
-function usableEnv(value: string | undefined): string | undefined {
+export function usableEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   if (!trimmed || trimmed === "[SENSITIVE]" || trimmed.toLowerCase() === "sensitive") return undefined;
   return trimmed;
