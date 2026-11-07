@@ -770,6 +770,17 @@ h2 {
   max-width: 68ch;
 }
 
+/* An entry's public links (its PR, release, listing or program page): one wrapping row under the summary. */
+.paper-log__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
 /* Phones: the side column took most of the width and left the text 2-3 words a line. Version and date go on one
    line above the entry, and the text runs full width. */
 @media (max-width: 640px) {
