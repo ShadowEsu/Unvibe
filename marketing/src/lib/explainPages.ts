@@ -3841,6 +3841,7 @@ $ kill 1643167`,
   {
     id: "segmentation-fault",
     fileName: "scores-crash.txt",
+    heading: "segmentation faults",
     related: ["c", "cpp", "assembly", "python-traceback"],
     lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
     description:
@@ -3891,6 +3892,7 @@ best = 0x0`,
   {
     id: "http-headers",
     fileName: "response.txt",
+    heading: "HTTP headers",
     related: ["curl", "cors-error", "json"],
     lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
     description:
@@ -3937,6 +3939,7 @@ Vary: Origin
   {
     id: "dns-records",
     fileName: "notes-app.example.zone",
+    heading: "DNS records",
     related: ["http-headers", "curl", "ssh-config"],
     lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
     description:
