@@ -3711,7 +3711,7 @@ export function deliveryDays(country) {
       },
       {
         concept: "resolving and committing",
-        text: "The fix keeps both changes: `if (order.total >= 75 || order.member)`. With the markers gone, `git diff --check` printed nothing, `git add` marked the file resolved (`All conflicts fixed but you are still merging.`) and `git commit --no-edit` made the merge commit. The fixed file returned 5.99 for a 60 order, 0 for a member and 0 for an 80 order.",
+        text: "The fix keeps both changes: `if (order.total >= 75 || order.member)`. With the markers gone, `git diff --check` printed nothing, `git add` marked the file resolved (`All conflicts fixed but you are still merging.`) and `git commit --no-edit` made the merge commit. The fixed file returned 5.99 for a 60 order, 0 for a member's 60 order and 0 for an 80 order.",
       },
     ],
     notes: [
@@ -3719,16 +3719,16 @@ export function deliveryDays(country) {
       "With `merge.conflictStyle=zdiff3`, git adds a third part between `|||||||` and `=======`: the line as it was before either branch changed it, `if (order.total >= 50) {`. That shows what each side changed, not just where they ended up.",
     ],
     watchOut:
-      "git doesn't stop you from committing the markers. `git add` on the file with `<<<<<<<` still in it marked the conflict resolved, and `git commit` made the merge with exit code 0. `git diff --check` catches it: it printed `leftover conflict marker` for lines 3, 5 and 7 and exited with code 2. Search the file for `<<<<<<<` before you add it.",
+      "git doesn't stop you from committing the markers. `git add` on the file with `<<<<<<<` still in it marked the conflict resolved, and `git commit` made the merge with exit code 0. `git diff --check HEAD~1 HEAD` on that merge caught it: it printed `leftover conflict marker` for lines 3, 5 and 7 and exited with code 2. Search the file for `<<<<<<<` before you add it.",
   },
   {
     id: "npm-error",
     fileName: "npm-install.txt",
     related: ["npm-scripts", "package-lock", "json", "python-traceback"],
-    lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1`, `127` or `ENOENT` means, and which line holds the real cause.",
+    lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
     description:
       "Paste npm error output and get it explained in plain English, free online. The sample is an npm install that fails while a dependency builds a native addon with node-gyp.",
-    sampleSummary: "`npm install` in a test project whose dependency, native-thing, compiles a C++ addon when it installs. Its source file is missing, so the build stops and npm prints its error block. 35 lines of node-gyp detail are left out.",
+    sampleSummary: "`npm install` in a test project whose dependency, native-thing, compiles a C++ addon when it installs. Its source file is missing, so the build stops and npm prints its error block. 33 lines of node-gyp detail and a 2-line Node.js deprecation warning are left out.",
     sample: `$ npm install
 npm error code 1
 npm error path ~/notes-app/node_modules/native-thing
@@ -3750,7 +3750,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
     shows: [
       {
         concept: "code, path and command",
-        text: "`npm error code 1` is the exit code of the command that failed, not an npm error number. `path` and `command` say where and what: the install step of native-thing inside node_modules, `sh -c node-gyp rebuild`. So the failure is in a dependency's build, not in your own files.",
+        text: "`npm error code 1` comes with `command failed`: the dependency's install command exited with an error, and npm itself then exited with code 1. It isn't make's code, which was 2. `path` and `command` say where and what: the install step of native-thing inside node_modules, `sh -c node-gyp rebuild`. So the failure is in a dependency's build, not in your own files.",
       },
       {
         concept: "the line with the cause",
@@ -3766,12 +3766,12 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
       },
     ],
     notes: [
-      "Run with npm 11.10.1 and Node.js 25.7.0 on Linux, in a test project. native-thing is a local test package whose `install` script runs node-gyp on a binding.gyp that lists a missing src/addon.cc. Paths are shortened to ~, and node-gyp used the headers from the local Node.js install, so nothing was downloaded.",
-      "When a script itself fails, npm 11.10.1 adds no `npm error` lines: `npm run dev` with server.js throwing `Error: ENOENT: no such file or directory, open './config.json'` printed only the Node.js error and exited with code 1. A script that doesn't exist gives `npm error Missing script: \"test\"`.",
+      "Run with npm 11.10.1 and Node.js 25.7.0 on Linux, in a test project. native-thing is a local test package whose `install` script runs node-gyp on a binding.gyp that lists a missing src/addon.cc. It was installed with `npm install --install-links`, so the local package was copied into node_modules the way a registry package is; the sample shows the command as `npm install`. Paths are shortened to ~, and node-gyp used the headers from the local Node.js install, so nothing was downloaded.",
+      "When a script itself fails, npm 11.10.1 adds no `npm error` lines: `npm run dev` with server.js throwing `Error: ENOENT: no such file or directory, open './config.json'` printed npm's `> node server.js` header, then only the Node.js error, and exited with code 1. A script that doesn't exist gives `npm error Missing script: \"test\"`.",
       "`npm uninstall native-thing` and a config.json fixed both: `npm run dev` then printed `listening on 3000`.",
     ],
     watchOut:
-      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is in the middle, between 35 lines of node-gyp detail in the full output. Search for that line, the first error from the tool that failed, not for the last line.",
+      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is line 40 of the 52 lines in the full output, after 30 lines of node-gyp detail. Search for that line, the first error from the tool that failed, not for the last line.",
   },
   {
     id: "lsof",
@@ -3780,7 +3780,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
     lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
     description:
       "Paste lsof output and get it explained in plain English, free online. The sample finds what is holding port 3000 when a dev server won't start.",
-    sampleSummary: "A second Node.js server fails with `EADDRINUSE` on port 3000, and lsof finds the first one: its listening row, its connection to a client, and the PIDs to stop.",
+    sampleSummary: "A second Node.js server fails with `EADDRINUSE` on port 3000, and lsof finds the first one: its listening row, its connection to a client, and the one PID to stop. The Node.js error is cut to its `Error:` line.",
     sample: `$ node server.mjs
 Error: listen EADDRINUSE: address already in use :::3000
 $ lsof -i :3000
@@ -3818,10 +3818,10 @@ $ kill 1643167`,
     notes: [
       "Run with lsof 4.99.7, Node.js 25.7.0 and Python 3.14.7 on Linux. The server is a 3-line Node.js HTTP server, and the client is a Python script that keeps 1 connection open, like a browser tab. The account name is replaced with devuser, which has the same length, so the columns stay aligned.",
       "After the server was stopped, the client's row stayed, now in state `CLOSE_WAIT`: the server's end had closed and the client hadn't closed its own yet.",
-      "What `-n`, `-P`, `-t` and `u` mean is from the lsof manual. lsof also ships with macOS, where Apple publishes its source as apple-oss-distributions/lsof; this page didn't run it on a Mac.",
+      "What `-n`, `-P`, `-t` and `u` mean is from the lsof manual. lsof also ships with macOS, where Apple publishes its source (github.com/apple-oss-distributions/lsof); this page didn't run it on a Mac.",
     ],
     watchOut:
-      "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, it would be killed too. Add `-sTCP:LISTEN` to get only the server.",
+      "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
   },
 ];
 
