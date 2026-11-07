@@ -1,4 +1,4 @@
-import { compensationTotalLabel, creditSourcesLabel, SALESFORCE_ATTRIBUTION } from "./compensation";
+import { compensationTotalLabel, SALESFORCE_ATTRIBUTION } from "./compensation";
 
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
@@ -585,13 +585,6 @@ export const milestones: Milestone[] = [
   },
   {
     date: "07 OCT 2026",
-    category: "COMPANY",
-    title: "Unvibe is in Claude for Startups",
-    summary: `Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for a year, and perks from other tools worth about $21.5K to $23K. ${creditSourcesLabel()} credits and committed cash now total ${compensationTotalLabel()}.`,
-    figure: "$21.5K",
-  },
-  {
-    date: "07 OCT 2026",
     category: "PRODUCT",
     title: "Calmer look, Teams ready, clearer shortcut help",
     summary: "The app uses one accent colour instead of four, and the box around the Ask field is gone. If the shortcut cannot read your selection, the panel now says why and offers a one click fix. The sidebar button sits clear of the window buttons and also works with Command backslash. Teams has a real card on the Plan page with team name and seats, ready for checkout.",
@@ -912,7 +905,8 @@ export const milestones: Milestone[] = [
     date: "26 AUG 2026",
     category: "COMPANY",
     title: "Salesforce Launchpad",
-    summary: `Accepted into Salesforce Launchpad: 12 months of Starter Suite funded (50% off year 2). Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
+    summary: `Accepted into Salesforce Launchpad: 12 months of Starter Suite funded by Salesforce, 50% off year 2. Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
+    figure: "$13,500",
   },
   {
     date: "25 AUG 2026",
@@ -923,8 +917,8 @@ export const milestones: Milestone[] = [
   {
     date: "24 AUG 2026",
     category: "COMPANY",
-    title: `${creditSourcesLabel()} credits and committed cash`,
-    summary: `${creditSourcesLabel()} credits plus self-reported cash now total ${compensationTotalLabel()}. The other startup programs Unvibe is in are listed by name, outside the total. Credits are not cash. Not a round.`,
+    title: "Startup-program credits and plan value, and committed cash",
+    summary: `Startup-program credits and plan value plus self-reported cash now total ${compensationTotalLabel()}. Credits are not cash. Not a round.`,
     figure: compensationTotalLabel(),
     pinned: true,
   },
@@ -952,13 +946,6 @@ export const milestones: Milestone[] = [
     category: "DISTRIBUTION",
     title: "Demo videos play again",
     summary: "The homepage demo had stopped playing; it now played from the site itself. A demo of Unvibe in Cursor was added to the homepage.",
-  },
-  {
-    date: "20 AUG 2026",
-    category: "COMPANY",
-    title: "Google for Startups",
-    summary: "Joined Google for Startups: $2,000 in Google Cloud credits, to use over two years. Not cash. Not a round.",
-    figure: "$2,000",
   },
   {
     date: "19 AUG 2026",
@@ -989,7 +976,8 @@ export const milestones: Milestone[] = [
     date: "18 AUG 2026",
     category: "COMPANY",
     title: "Mixpanel for Startups",
-    summary: "Accepted into Mixpanel for Startups: the first year free on the Startup Plan (up to 1B events). Mixpanel values the program at $145,000. Not cash. Not a round.",
+    summary: "Accepted into Mixpanel for Startups: 1 year of Mixpanel's Startup Plan. Not cash. Not a round.",
+    figure: "$144,000",
   },
   {
     date: "17 AUG 2026",
@@ -1146,6 +1134,13 @@ export const milestones: Milestone[] = [
   },
   {
     date: "24 JUL 2026",
+    category: "COMPANY",
+    title: "Google for Startups",
+    summary: "Joined Google for Startups: $2,000 in Google Cloud credits, to use over two years. Not cash. Not a round.",
+    figure: "$2,000",
+  },
+  {
+    date: "24 JUL 2026",
     category: "PRODUCT",
     title: "0.1.2 private beta",
     summary: "Full-product demo mode, Google device sign-in, and optional Accessibility for selected-code capture. Pushed as v0.1.2-google-auth.",
@@ -1217,7 +1212,8 @@ export const milestones: Milestone[] = [
     date: "21 JUL 2026",
     category: "COMPANY",
     title: "MongoDB® for Startups",
-    summary: "Joined MongoDB for Startups as a program member, with $500 in MongoDB Atlas credits offered.",
+    summary: "Joined MongoDB for Startups: $500 in MongoDB Atlas credits. Not cash. Not a round.",
+    figure: "$500",
   },
   {
     date: "20 JUL 2026",
@@ -1236,6 +1232,13 @@ export const milestones: Milestone[] = [
     category: "PRODUCT",
     title: "Unvibe in the browser",
     summary: "unvibe.site/app let you paste code, pick a depth, sign in by email and get a streamed explanation. A secret check ran in the browser before any code was sent. Changed 25 Oct 2026: /app now opens the Try it box on the homepage.",
+  },
+  {
+    date: "17 JUL 2026",
+    category: "COMPANY",
+    title: "Unvibe is in Claude for Startups",
+    summary: "Unvibe joined Claude for Startups, Anthropic's program for early startups: API credits, Claude Team for 12 months, and perks from other tools. Not cash. Not a round.",
+    figure: "$21,500",
   },
   {
     date: "17 JUL 2026",

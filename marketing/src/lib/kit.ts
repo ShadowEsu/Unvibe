@@ -3,7 +3,6 @@ import {
   compensationCreditsUsd,
   compensationProgramCount,
   compensationTotalLabel,
-  creditSourcesLabel,
   formatUsd,
   PROGRAM_NOTICES,
   programsOutsideTotalCount,
@@ -117,7 +116,7 @@ export function kitSections(): KitSection[] {
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Support secured with an amount on record: ${total}, of which ${formatUsd(compensationCreditsUsd())} is ${creditSourcesLabel()} credits and ${formatUsd(compensationCashUsd())} is committed cash. Unvibe is in ${compensationProgramCount()} startup programs; ${programsOutsideTotalCount()} of them are outside that total (an offer not yet redeemed, a company's own program value, or no figure), so never add them to it. Credits are not cash, and this is not a priced round. Never say it is.`,
+      intro: `Unvibe is live, free, and shipping fast. Support secured with an amount on record: ${total}, of which ${formatUsd(compensationCreditsUsd())} is startup-program credits and plan value and ${formatUsd(compensationCashUsd())} is committed cash. Unvibe is in ${compensationProgramCount()} startup programs${programsOutsideTotalCount() > 0 ? `; ${programsOutsideTotalCount()} of them have no figure, so never add one for them` : ", each with an amount on record"}. Credits are not cash, and this is not a priced round. Never say it is.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",

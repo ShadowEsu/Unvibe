@@ -11,22 +11,15 @@ export interface CompensationLine {
 export interface StartupProgram {
   /** Short name for the one-line summaries. */
   brand: string;
-  /** What the credits are called in the total line ("Google Cloud"), where it differs from the brand. */
-  creditSource?: string;
   /** Full program name as shown in lists. */
   program: string;
-  /** Acceptance date (the welcome email where there is one, else the date the earlier site gave). */
+  /** Acceptance date (the company's first welcome or approval email). */
   accepted: string;
   /**
-   * Credit value as the earlier site listed it (self-reported), only where a record supports it. A program
-   * with no supported amount is listed by name and adds nothing to the totals. Credits are not cash.
+   * Credit or plan value, counted in the totals. A program without one is listed by name and terms and adds nothing.
+   * Credits are not cash.
    */
   amountUsd?: number;
-  /**
-   * A figure the company states but that is not secured or not counted (Security 6 Nov, file 20261106-1844): shown
-   * in the amount column as `label`, never added to any total.
-   */
-  offer?: { label: string; state: string };
   detail: string;
   /** Official, unmodified logo file, only where Security has cleared it (MongoDB); every other program is plain text. */
   logo?: { src: string; width: number; height: number };
@@ -40,57 +33,61 @@ export const SALESFORCE_ATTRIBUTION = "Salesforce is a trademark of Salesforce, 
 export const PROGRAM_NOTICES = [SALESFORCE_ATTRIBUTION] as const;
 
 /**
- * The startup programs Unvibe is in, as the earlier site listed them (ledger 317, 28 Oct 2026), minus the lines
- * the record does not support (Security 31 Oct, requests/security/20261031-0208: GitLab, Linear and OpenAI
- * removed). Amounts follow Security's 6 Nov ruling (file 20261106-1844, ledger 557): only a figure the company
- * states in its own email counts (Google $2,000, Deepgram $1,000); MongoDB's $500 is an offer until Atlas billing
- * shows it redeemed; Mixpanel's own published value sits outside the total; Salesforce gives no figure. Logos and
- * notices follow Security's 28 Oct ruling (only MongoDB shows a logo). The homepage, /investors, /about, /kit and
- * the milestones all read this list, so a change is one line.
+ * The startup programs Unvibe is in, as the earlier site listed them (ledger 317, 28 Oct 2026), minus GitLab,
+ * Linear and OpenAI (Security 31 Oct, requests/security/20261031-0208). Amounts: the owner's attestation that each
+ * company confirmed its figure by phone (ledger 559, Security file 20261106-1844, 7 Nov 03:24Z), plus the emails
+ * noted per line. Logos and notices follow Security's 28 Oct ruling (only MongoDB shows a logo). The homepage,
+ * /investors, /about, /kit and the milestones all read this list, so a change is one line.
  */
 export const startupPrograms: readonly StartupProgram[] = [
+  // Preston attests: confirmed by phone with the company, 6 Nov 2026. Membership: Anthropic's "Welcome to Claude for
+  // Startups" email, 17 Jul 2026.
   {
     brand: "Claude for Startups",
     program: "Claude for Startups",
-    accepted: "2026-10-07",
+    accepted: "2026-07-17",
     amountUsd: 21_500,
-    detail: "Anthropic API credits, Claude Team for 12 months, and perks from other tools. Low end of a $21.5K to $23K estimate",
+    detail: "Anthropic API credits, Claude Team for 12 months, and perks from other tools",
   },
-  {
-    brand: "Mixpanel",
-    program: "Mixpanel for Startups",
-    accepted: "2026-08-18",
-    offer: { label: "Mixpanel's own value: $145,000", state: "Member" },
-    detail: "First year free on the Startup Plan (up to 1B events). Mixpanel values the program at $145,000",
-  },
+  // Preston attests: confirmed by phone with the company, 6 Nov 2026. Terms: startups@mixpanel.com, 18 Aug 2026,
+  // "your first year free on the Startup Plan".
+  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", amountUsd: 144_000, detail: "1 year of Mixpanel's Startup Plan" },
+  // PostHog: "Welcome to PostHog's startup program" email, 17 Aug 2026 (acceptance); amount from the same sender's
+  // 27 Aug 2026 email: "we gave you $50,000 of free credit".
   { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
+  // Preston attests: confirmed by phone with the company, 6 Nov 2026. Terms: Salesforce benefits email, 26 Aug 2026,
+  // "we're funding your Starter for the next 12 months (and will be 50% off for your second year)".
   {
     brand: "Salesforce Launchpad",
     program: "Salesforce Launchpad",
     accepted: "2026-08-26",
-    detail: "12 months of Starter Suite funded (50% off year 2)",
+    amountUsd: 13_500,
+    detail: "12 months of Starter Suite funded by Salesforce, 50% off year 2",
   },
+  // Google approval email (cloudstartupsupport-noreply@google.com), 24 Jul 2026: "$2,000 USD* in Google Cloud credits
+  // to use over the next two years".
   {
     brand: "Google for Startups",
-    creditSource: "Google Cloud",
     program: "Google for Startups",
-    accepted: "2026-08-20",
+    accepted: "2026-07-24",
     amountUsd: 2_000,
     detail: "Google Cloud credits, to use over two years",
   },
+  // Deepgram welcome email, 19 Aug 2026: "your initial $1k in free credit allocation". Any later batch is never shown.
   { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", amountUsd: 1_000, detail: "Deepgram API credits" },
+  // Preston attests: confirmed by phone with the company, 6 Nov 2026. Acceptance: MongoDB email, 21 Jul 2026.
   {
     brand: "MongoDB",
     program: "MongoDB for Startups",
     accepted: "2026-07-21",
-    offer: { label: "$500 offer", state: "Offer" },
-    detail: "$500 in MongoDB Atlas credits, offered and not yet redeemed",
+    amountUsd: 500,
+    detail: "$500 in MongoDB Atlas credits",
     logo: { src: "/sponsors/mongodb-logo.svg", width: 1102, height: 278 },
     mark: { name: "MongoDB", symbol: "®" },
   },
 ];
 
-/** Program credits where an amount is on record, then self-reported cash. Credits are not cash and not a funding round. */
+/** Program credits and plan value, then self-reported cash. Credits are not cash and not a round. */
 export const compensationLines: CompensationLine[] = [
   ...startupPrograms.flatMap((program): CompensationLine[] =>
     program.amountUsd === undefined
@@ -155,49 +152,33 @@ export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
 }
 
-/** "Claude, PostHog, Google Cloud and Deepgram": the programs whose credits the total counts. */
-export function creditSourcesLabel(): string {
-  const names = startupPrograms
-    .filter((program) => program.amountUsd !== undefined)
-    .map((program) => program.creditSource ?? program.brand.replace(/ for Startups$/, ""));
-  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-}
-
-/**
- * What the total is, after the amount: "in Claude and PostHog credits and committed cash". Some programs have no
- * counted amount, so the total is never presented as the value of every program (Security CL-T1, 31 Oct).
- */
+/** What the total is, after the amount (Security 1844 W4, which replaces CL-T1 now that every program has an amount). */
 export function compensationTotalPhrase(): string {
-  return `in ${creditSourcesLabel()} credits and committed cash`;
+  return "in startup-program credits and plan value, and committed cash";
 }
 
-/** Programs outside the total: an offer, the company's own program value, or terms with no figure. */
+/** Programs listed by name and terms with no amount, outside the total (none since ledger 559). */
 export function programsOutsideTotalCount(): number {
   return startupPrograms.filter((program) => program.amountUsd === undefined).length;
 }
 
 export interface SupportRow {
   name: string;
-  /** "$50,000"; an offer's label ("$500 offer"); or "No amount" for a program whose terms are on record without a figure. */
+  /** "$50,000", or "No amount" for a program whose terms are on record without a figure. */
   amount: string;
   detail: string;
   state: string;
 }
 
-/** Every source for the investors table and the kit: money lines by amount, then the programs outside the total. */
+/** Every source for the investors table and the kit: money lines by amount, then any program without an amount. */
 export function supportRows(): SupportRow[] {
   const money = [...compensationLines]
     .sort((a, b) => b.amountUsd - a.amountUsd)
     .map((line) => ({ name: line.name, amount: formatUsd(line.amountUsd), detail: line.detail, state: line.state }));
-  const outside = startupPrograms
+  const terms = startupPrograms
     .filter((program) => program.amountUsd === undefined)
-    .map((program) => ({
-      name: program.program,
-      amount: program.offer?.label ?? "No amount",
-      detail: program.detail,
-      state: program.offer?.state ?? "Member",
-    }));
-  return [...money, ...outside];
+    .map((program) => ({ name: program.program, amount: "No amount", detail: program.detail, state: "Member" }));
+  return [...money, ...terms];
 }
 
 /** Startup programs are the credit lines only. Own capital and angel cash are not programs. */
