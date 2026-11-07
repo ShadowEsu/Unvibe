@@ -665,7 +665,7 @@ export const languages: Language[] = [
     concepts: ["-a, -v and -h", "the trailing slash", "-n dry run", "--delete and --exclude"],
     frameworks: ["rsync", "ssh", "cron", "cp"],
     learningPath: ["Copy a folder", "Trailing slashes", "Dry runs", "Mirroring with --delete"],
-    sample: `rsync -avh --delete ~/projects/my-site/ /mnt/backup/my-site`,
+    sample: `rsync -avhn --delete ~/projects/my-site/ /mnt/backup/my-site`,
   },
 ];
 

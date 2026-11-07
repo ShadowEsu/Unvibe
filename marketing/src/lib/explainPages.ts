@@ -3187,9 +3187,9 @@ server.listen(3000);`,
     fileName: "fetch_all.py",
     lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
     description:
-      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample loads 3 pages at once with asyncio.gather and gives up on one after 3 seconds.",
+      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample starts 3 stand-in page loads at once with asyncio.gather and gives up on one after 3 seconds.",
     sampleSummary: "A Python script that starts 3 slow loads at once with `asyncio.gather`, each one a stand-in that sleeps, and gives the slowest a 3 second timeout.",
-    sample: `# fetch_all.py: load 3 pages at once, give up on any that take too long
+    sample: `# fetch_all.py: start 3 stand-in page loads at once, give up on any that take too long
 import asyncio
 import time
 
@@ -3215,7 +3215,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
     shows: [
       {
         concept: "async def and await",
-        text: "`async def` makes `fetch` a coroutine: calling it only creates an object, and nothing inside runs until something awaits it. Called without `await`, `fetch(\"users\", 1.0)` printed nothing, and Python warned `coroutine 'fetch' was never awaited`. `await asyncio.sleep(...)` pauses this one fetch and lets the others run in the meantime.",
+        text: "`async def` makes `fetch` a coroutine function: calling it only creates a coroutine object, and nothing inside runs until something awaits it. Called without `await`, `fetch(\"users\", 1.0)` printed nothing, and Python warned `coroutine 'fetch' was never awaited`. `await asyncio.sleep(...)` pauses this one fetch and lets the others run in the meantime.",
       },
       {
         concept: "gather",
@@ -3223,16 +3223,16 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
       },
       {
         concept: "timeouts",
-        text: "`asyncio.wait_for(..., timeout=3.0)` cancelled reports at 3.0s, 2 seconds before its 5 second sleep would have ended, and its result came back as `TimeoutError()`. `return_exceptions=True` is why the other 2 results survived. Without it, `gather` raised the `TimeoutError` at 3.0s and `main` never got the users and orders results.",
+        text: "`asyncio.wait_for(..., timeout=3.0)` canceled reports at 3.0s, 2 seconds before its 5 second sleep would have ended, and its result came back as `TimeoutError()`. `return_exceptions=True` is why the other 2 results survived. Without it, `gather` raised the `TimeoutError` at 3.0s and `main` never got the users and orders results.",
       },
       {
         concept: "blocking calls",
-        text: "With `time.sleep(1.0)` in place of `await asyncio.sleep(1.0)` for users, orders and reports didn't start until 1.0s, and the script took 4.0s instead of 3.0s. `time.sleep` holds the whole program, so nothing else can run until it returns. A 4 second `time.sleep` in one task held back the other task, so its 3 second timeout started at 4.0s and fired at 7.0s.",
+        text: "When users used `time.sleep(1.0)` instead of `await asyncio.sleep(1.0)`, orders and reports didn't start until 1.0s, and the script took 4.0s instead of 3.0s. `time.sleep` holds the whole program, so nothing else can run until it returns. A 4 second `time.sleep` in one task held back the other task, so its 3 second timeout started at 4.0s and fired at 7.0s.",
       },
     ],
     notes: [
       "Run with Python 3.14.7. The script printed users and orders done at 1.0s and 2.0s, then `'users: 1.0s'`, `'orders: 2.0s'`, `TimeoutError()` and `total 3.0s`. Every timing above is from the same script or a variant of it, rounded to 0.1s.",
-      "`asyncio.TaskGroup`, the newer way to run tasks together, stops the rest when one fails: with reports timing out at 0.5s, it cancelled orders at 0.5s too and raised an `ExceptionGroup`. `gather` without `return_exceptions` did not: `main` got the error at 0.5s, and orders still finished at 2.0s.",
+      "`asyncio.TaskGroup`, the newer way to run tasks together, stops the rest when one fails: with reports timing out at 0.5s, it canceled orders at 0.5s too and raised an `ExceptionGroup`. `gather` without `return_exceptions` did not: `main` got the error at 0.5s, and orders still finished at 2.0s.",
     ],
     watchOut:
       "One ordinary blocking call inside async code slows every task, with no error. `time.sleep`, `requests.get` or a heavy loop in an `async def` holds the program the same way `time.sleep(1.0)` held users here: the other loads waited, and a timeout couldn't fire until the call returned. In async code, use the awaitable version, such as `await asyncio.sleep` or an async HTTP client, or hand the blocking call to `asyncio.to_thread`.",
@@ -3262,7 +3262,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
     shows: [
       {
         concept: "c, t and x",
-        text: "The first letter says what tar does: `c` creates an archive, `t` lists what's in one and `x` extracts it. On a folder holding package.json, src/index.html, src/app.js, node_modules and server.log, `-tzf` listed 5 entries: `my-site/`, `my-site/package.json`, `my-site/src/`, and the 2 files in src. Nothing was unpacked by the listing.",
+        text: "The first letter says what tar does: `c` creates an archive, `t` lists what's in one and `x` extracts it. On a folder holding package.json, src/index.html, src/app.js, node_modules and server.log, `-tzf` listed 5 entries: `my-site/`, `my-site/package.json`, `my-site/src/`, and the 2 files in src. The listing wrote no files.",
       },
       {
         concept: "z, v and f",
@@ -3274,37 +3274,39 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
       },
       {
         concept: "one file out",
-        text: "A name after the archive extracts only that member, written exactly as `-t` lists it: `my-site/package.json`, not `package.json`. A name that wasn't in the archive gave `Not found in archive`. A pattern like `'my-site/src/*.js'` found nothing in GNU tar until `--wildcards` was added, while bsdtar extracted app.js.",
+        text: "A name after the archive extracts only that member, written exactly as `-t` lists it: `my-site/package.json`, not `package.json`. A name that wasn't in the archive gave `Not found in archive`. A pattern like `'my-site/src/*.js'` found nothing in GNU tar until `--wildcards` was added. bsdtar extracted app.js without it, and refused `--wildcards` as an option it doesn't support.",
       },
     ],
     notes: [
-      "Run with GNU tar 1.35, and with bsdtar 3.8.9 from libarchive, the same program as the tar macOS ships, in a newer version. Both made the same archive from the sample. GNU tar's `v` printed plain names, and bsdtar's put `a` before each file it added and `x` before each file it extracted.",
+      "Run with GNU tar 1.35, and with bsdtar 3.8.9 from libarchive. The tar in macOS is Apple's own, older build of bsdtar (github.com/apple-oss-distributions/libarchive). Both packed the same 5 entries from the sample. GNU tar's `v` printed plain names, and bsdtar's put `a` before each file it added and `x` before each file it extracted.",
       "Where they differ: `-xzf` on a plain .tar stopped GNU tar with `gzip: stdin: not in gzip format`, while bsdtar unpacked it. Both unpacked the .tar.gz with `-xf` and no `z`, because each works out the compression itself when reading.",
     ],
     watchOut:
-      "Extracting overwrites files with the same name, without asking. After package.json in ~/restore was changed, running the sample's extract again put the archived version back, with no message and exit code 0. Add `-k` to keep files that already exist: GNU tar then refused each one with `Cannot open: File exists`, and bsdtar skipped them silently. Unpack into an empty folder when you aren't sure what's in an archive.",
+      "Extracting overwrites files with the same name, without asking. After package.json in ~/restore was changed, extracting the archive into ~/restore again put the archived version back, with no warning and exit code 0. Add `-k` to keep files that already exist: GNU tar then refused each one with `Cannot open: File exists`, and bsdtar skipped them silently. Unpack into an empty folder when you aren't sure what's in an archive.",
   },
   {
     id: "rsync",
     fileName: "backup.sh",
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
     description:
-      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, --delete and --exclude.",
-    sampleSummary: "A backup script that mirrors a project folder into a backup drive: a dry run first, then the real run with `--delete` and `--exclude`, then the same copy without the trailing slash.",
-    sample: `# backup.sh: mirror the project into the backup drive, then check it
+      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, a yes to go on, --delete and --exclude.",
+    sampleSummary: "A backup script that mirrors a project folder into a backup drive: a dry run first, a prompt that stops unless you type yes, then the real run with `--delete` and `--exclude`.",
+    sample: `# backup.sh: dry run first, then mirror the project into the backup drive
 SRC=~/projects/my-site/      # trailing slash: copy what's inside my-site
 DEST=/mnt/backup/my-site     # so the files land directly in here
 
 # -n = dry run: list what would change, touch nothing
 rsync -avhn --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
+read -rp "Check every line above. Type yes to run it for real: " ok
+[ "$ok" = yes ] || exit 1
 
 # the real run: -a keeps times and permissions, -v lists files, -h sizes in K/M
 # --delete removes files from DEST that are gone from SRC
 rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
 
-# without the trailing slash, rsync copies the folder itself:
-# this makes /mnt/backup/my-site/my-site
-rsync -avh ~/projects/my-site "$DEST"`,
+# without the trailing slash, rsync would copy the folder itself
+# and make /mnt/backup/my-site/my-site:
+# rsync -avh ~/projects/my-site "$DEST"`,
     shows: [
       {
         concept: "-a, -v and -h",
@@ -3312,11 +3314,11 @@ rsync -avh ~/projects/my-site "$DEST"`,
       },
       {
         concept: "the trailing slash",
-        text: "`~/projects/my-site/` with the slash means what's inside my-site, so package.json landed at /mnt/backup/my-site/package.json. The last line, without the slash, copied the folder itself and made /mnt/backup/my-site/my-site, a second full copy one level down. That line has no `--exclude`, so node_modules and server.log came along too.",
+        text: "`~/projects/my-site/` with the slash means what's inside my-site, so package.json landed at /mnt/backup/my-site/package.json. The commented-out last line, run on its own without the slash, copied the folder itself and made /mnt/backup/my-site/my-site, a second full copy one level down. That line has no `--exclude`, so node_modules and server.log came along too.",
       },
       {
         concept: "-n dry run",
-        text: "`-n` printed the same file list as the real run and ended with `(DRY RUN)`. It even printed `created directory`, but the backup folder was still empty afterwards. Run the `-n` line first whenever `--delete` is in the command, and read every `deleting` line.",
+        text: "`-n` printed the same file list as the real run and ended with `(DRY RUN)`. It even printed `created directory`, but the backup folder was still empty afterwards. The `read` line then waits: with SRC pointed at an empty folder, the dry run listed 3 `deleting` lines, and pressing Enter without typing yes stopped the script with both backup entries still there.",
       },
       {
         concept: "--delete and --exclude",
@@ -3324,11 +3326,11 @@ rsync -avh ~/projects/my-site "$DEST"`,
       },
     ],
     notes: [
-      "Run with rsync 3.5.0 on Linux, with /mnt/backup as a local folder and a small project of package.json, src/index.html, a 150 KB src/logo.png, node_modules and server.log. The rsync that comes with macOS is not this version, so its messages and some options can differ from these.",
-      "With a typo in the source path, `my-sit/`, rsync printed `change_dir \"~/projects/my-sit\" failed: No such file or directory`, exited with code 23 and deleted nothing.",
+      "Run with rsync 3.5.0 on Linux, with /mnt/backup as a local folder and a small project of package.json, src/index.html, a 150 KB src/logo.png, node_modules and server.log. The rsync in macOS is Apple's own build, which includes openrsync, a separate program (github.com/apple-oss-distributions/rsync), so its messages and options can differ from these.",
+      "With a typo in the source path, `my-sit/`, rsync printed `change_dir` for that path, then `failed: No such file or directory`, exited with code 23 and deleted nothing.",
     ],
     watchOut:
-      "`--delete` makes the backup match the source, even when the source is wrong. With an empty folder as the source, the same `--delete` command removed every file in the backup and exited with code 0, as if all went well. Check SRC before a `--delete` run, keep the dry run line, and keep a second copy that the mirror never deletes from.",
+      "`--delete` makes the backup match the source, even when the source is wrong. With an empty folder as the source, a `--delete` run removed every file in the backup and exited with code 0, as if all went well. Check SRC before a `--delete` run, keep the dry run and the yes prompt, and keep a second copy that the mirror never deletes from.",
   },
 ];
 
