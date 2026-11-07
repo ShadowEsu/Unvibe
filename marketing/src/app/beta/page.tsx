@@ -102,7 +102,8 @@ export default function BetaDownloadsPage() {
               </ol>
               <p>
                 A link opened on your phone or in another browser won’t sign you in. If no browser opened, go to{" "}
-                <a className="paper-text-link" style={{ fontSize: "inherit" }} href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
+                {/* In running text: not the section's inline-block, margin-topped .paper-text-link (paper.css .paper-center). */}
+                <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
                 sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
               </p>
             </details>
