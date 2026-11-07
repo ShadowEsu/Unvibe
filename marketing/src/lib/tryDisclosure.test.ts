@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -14,19 +15,17 @@ const marketingRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 /**
  * NEXT_PUBLIC_AI_MAINTENANCE is read once when aiMaintenance.ts loads (Next inlines it at build time),
- * so each flag state renders in its own process: the Try box, the hero and the kit, as the build would.
+ * so each flag state renders in its own process: the Try box and the kit, as the build would.
  */
-function renderWithFlag(flag: "1" | ""): { tryIt: string; hero: string; kit: string } {
+function renderWithFlag(flag: "1" | ""): { tryIt: string; kit: string } {
   const script = [
     'const React = require("react");',
     'const { renderToStaticMarkup } = require("react-dom/server");',
     "Object.assign(globalThis, { React });",
     'const { TryIt } = require("@/components/paper/TryIt");',
-    'const { PhotoHero } = require("@/components/paper/PhotoHero");',
     'const { kitMarkdown } = require("@/lib/kit");',
     "process.stdout.write(JSON.stringify({",
     "  tryIt: renderToStaticMarkup(React.createElement(TryIt)),",
-    "  hero: renderToStaticMarkup(React.createElement(PhotoHero)),",
     "  kit: kitMarkdown(),",
     "}));",
   ].join("\n");
@@ -46,7 +45,7 @@ const PAUSED_LINE = "AI features are paused for maintenance. Back soon.";
 // Try it sends the pasted code to Unvibe's server and Anthropic. Nothing about it runs in the browser.
 describe("Try it disclosure", () => {
   it("the kit says the pasted code goes to Unvibe and Anthropic, not that it runs in the browser", () => {
-    assert.match(live.kit, /try it online on the homepage \(the pasted code goes to Unvibe and Anthropic's Claude API\)/);
+    assert.match(live.kit, /try it online at https:\/\/unvibe\.site\/explain \(the pasted code goes to Unvibe and Anthropic's Claude API\)/);
     assert.doesNotMatch(live.kit, /in the browser/i);
   });
 
@@ -82,15 +81,10 @@ describe("Try it disclosure", () => {
   });
 });
 
-describe("hero Try link", () => {
-  it("with Try it on, the hero links to the Try box as before", () => {
-    assert.match(live.hero, /<a class="vhero__try" href="#try-it">Or try it online first<\/a>/);
-  });
-
-  it("while Try it is paused, the hero renders no link to it and no stand-in", () => {
-    assert.doesNotMatch(paused.hero, /vhero__try/);
-    assert.doesNotMatch(paused.hero, /#try-it/);
-    assert.doesNotMatch(paused.hero, /try it online/i);
-    assert.doesNotMatch(paused.hero, /Watch the demo/);
+// The Try box lives on /explain; the home page links nowhere it isn't.
+describe("Try it links", () => {
+  it("/app and the kit point at /explain, and the home page has no #try-it link", () => {
+    assert.match(readFileSync(path.join(marketingRoot, "next.config.mjs"), "utf8"), /source: "\/app", destination: "\/explain"/);
+    assert.doesNotMatch(readFileSync(path.join(marketingRoot, "src/site/dia/Home.tsx"), "utf8"), /#try-it/);
   });
 });

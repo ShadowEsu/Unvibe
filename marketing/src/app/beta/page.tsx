@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
-import { BetaInstall } from "@/components/paper/BetaInstall";
+import { Download } from "@/site/dia/Download";
+import { DiaMotion } from "@/site/dia/motion/DiaMotion";
 import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
 import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -21,20 +22,16 @@ export const metadata: Metadata = {
 
 const { mac, windows } = SHORTCUTS;
 
+/**
+ * Direction D's download page (plan mock 11) and the one-click download's thank-you state (?dl=). Below the fold,
+ * the live guide, quick fixes and trust lines, unchanged.
+ */
 export default function BetaDownloadsPage() {
   return (
-    <article className="beta-page">
-      {/* No photo band and no eyebrow (Design, ledger 443): the heading, then the download card on the backdrop. */}
-      <header className="beta-page__head paper-wrap paper-center">
-        <h1>Download Unvibe.</h1>
-        <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
-      </header>
-
-      <section className="paper-section" id="install">
-        <div className="paper-wrap paper-center">
-          <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
-        </div>
-      </section>
+    <article className="d d-page dd-page beta-page">
+      <DiaMotion />
+      <Download />
+      <p className="beta-page__lede paper-wrap paper-center">Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
 
       <section className="paper-section">
         <div className="paper-wrap">

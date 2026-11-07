@@ -53,7 +53,7 @@ export default function InvestorsPage() {
 
   return (
     <article className="inv">
-      <header className="inv-hero">
+      <div className="inv-hero">
         <div className="inv-hero__copy">
           <p className="inv-eyebrow">Unvibe for investors</p>
           <h1>The ownership layer for AI-written code.</h1>
@@ -71,7 +71,7 @@ export default function InvestorsPage() {
           <Vibe size={150} />
           <span className="inv-bubble">we&apos;re live, and free to try</span>
         </div>
-      </header>
+      </div>
 
       <section className="inv-stats" aria-label="Unvibe at a glance">
         <div className="inv-stat inv-stat--lime"><b>{total}</b><span>{compensationTotalPhrase()}</span></div>

@@ -20,7 +20,7 @@ export default async function ReleasesPage() {
 
   return (
     <article className="releases-page">
-      <header className="paper-photo-band">
+      <div className="paper-photo-band">
         <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
@@ -33,9 +33,9 @@ export default async function ReleasesPage() {
                 ? "GitHub release data is temporarily unavailable."
                 : "Product and company notes, newest first."}
           </p>
-          <DownloadRow href="/beta" surface="releases" />
+          <DownloadRow surface="releases" />
         </div>
-      </header>
+      </div>
 
       <section className="paper-section">
         <div className="paper-wrap paper-log-wrap paper-glass">

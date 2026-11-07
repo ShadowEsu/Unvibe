@@ -20,7 +20,7 @@ export default function AboutPage() {
   const releases = changelogEntries().filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   return (
     <article className="about-page">
-      <header className="about-page__hero paper-wrap">
+      <div className="about-page__hero paper-wrap">
         <div className="about-page__avatar" aria-hidden="true">
           <Vibe size={84} />
         </div>
@@ -36,7 +36,7 @@ export default function AboutPage() {
             <a className="about-page__btn" href="mailto:support@unvibe.site">Email us</a>
           </div>
         </div>
-      </header>
+      </div>
 
       <section className="paper-wrap" aria-labelledby="about-who">
         <h2 className="about-page__h2" id="about-who">Who it&apos;s for</h2>

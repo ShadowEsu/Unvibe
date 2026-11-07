@@ -17,7 +17,7 @@ export default function KitPage() {
   const sections = kitSections();
   return (
     <article className="kit">
-      <header className="kit__head">
+      <div className="kit__head">
         <div>
           <p className="pstats__eyebrow">Resource kit</p>
           <h1>Everything about Unvibe, in one place.</h1>
@@ -28,7 +28,7 @@ export default function KitPage() {
           </div>
         </div>
         <Vibe size={120} />
-      </header>
+      </div>
 
       <nav className="kit__toc" aria-label="Sections">
         {sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}

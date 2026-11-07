@@ -28,7 +28,7 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "FAQ", path: "/faq" }])) }}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(faqPageJsonLd(faqItems)) }} />
-      <header className="explain-head">
+      <div className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/">Home</Link> <span aria-hidden="true">/</span> FAQ
         </nav>
@@ -37,7 +37,7 @@ export default function FaqPage() {
         <p>
           This page and <a className="paper-text-link" href="/llms.txt">unvibe.site/llms.txt</a> are built so AI assistants can read them.
         </p>
-      </header>
+      </div>
 
       {categories.map((category) => (
         <section key={category} className="explain-card" aria-labelledby={`faq-${category}`}>
