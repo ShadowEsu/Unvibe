@@ -175,6 +175,10 @@
 @keyframes dShow { to { opacity: 1; transform: none; filter: none; } }
 .js [data-d-enter]:not([data-in]) { opacity: 0; transform: translateY(22px) scale(0.98); filter: blur(6px); animation: dShow 1ms 4s forwards; }
 [data-d-enter][data-in] { animation: dEnter 850ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) backwards; }
+/* A page hero's first-viewport text after its H1 (lead, actions, stats) can be the LCP at phone widths (the /investors
+   and /faq lead at 390), so it never hides: the H1's transform-only rise with its own --d stagger. No opacity, no blur,
+   no wait for data-in. */
+.js [data-d-hero-rise="h1"] ~ [data-d-enter]:not([data-in]), [data-d-hero-rise="h1"] ~ [data-d-enter][data-in] { --d-rise: 12px; opacity: 1; transform: none; filter: none; animation: dRise 1000ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) var(--d, 0ms) both; }
 
 /* ── Aurora step pills (/download): the kit's rise, 20 px over 600 ms, at 200 / 350 / 500 ms. */
 [data-d-pills] > * { --d-rise: 20px; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; }
@@ -250,6 +254,7 @@
   .d-btn:is(:hover, :focus-visible) { transform: none; }
   .js [data-d-shot]:not([data-seen]), .js [data-d-enter]:not([data-in]) { opacity: 1; transform: none; filter: none; animation: none; }
   [data-d-enter][data-in] { animation: none; }
+  .js [data-d-hero-rise="h1"] ~ [data-d-enter]:not([data-in]), [data-d-hero-rise="h1"] ~ [data-d-enter][data-in] { animation: none; }
   [data-d-zoom-slow] { transform: none !important; }
   .js [data-d-words] .d-wd { opacity: 1; transition: none; }
   .js [data-d-pixel]:not([data-in]), [data-d-pixel][data-in] { opacity: 1; clip-path: none; animation: none; }
