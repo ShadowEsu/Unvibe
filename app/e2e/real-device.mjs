@@ -79,47 +79,55 @@ function desktopShot(label) {
 
 /**
  * Whole-screen recording around one step, for the demo video (DESKTOP_RECORDING=1, never on someone's own Mac).
- * Mac: `screencapture -v` writes an H.264 .mov until it is interrupted (capped at 120 s); the .mov starts a moment
- * after the process does, so the edit lines it up on the editor window opening (the 'editor opening' event).
+ * Mac: `screencapture -v` writes an H.264 .mov until it gets a key on stdin (capped at 120 s); the .mov starts a
+ * moment after the process does, so the edit lines it up on the select-all highlight appearing against the
+ * 'select all (Command+A): sent' event.
  * Windows: PowerShell copies the screen to numbered JPEG frames about 10 times a second until a stop file appears
- * (capped at 120 s) and writes each frame's capture time (epoch ms) to frames.txt; the frames are uploaded as they
- * are, so nothing in them is re-timed or re-drawn. `mark(event)` writes the time of a real input (epoch ms `at`, and
- * ms since the process started) to <label>-events.json, so a keycap in the edit can be matched to it.
+ * (capped at 120 s) and appends each frame's copy time (epoch ms, taken just before the copy) to frames.txt; a copy
+ * that fails writes no frame, and the frames are uploaded as they are, so nothing in them is re-timed or re-drawn.
+ * `mark(event)` writes the time of a real input (epoch ms `at`, and ms since the recorder started) to
+ * <label>-events.json, so a keycap in the edit can be matched to it.
  * A recording that fails is a NOTE, never a FAIL: the walkthrough's own checks don't depend on it.
  */
 function startDesktopRecording(label) {
-  if (process.env.DESKTOP_RECORDING !== '1' || process.env.E2E_LOCAL === '1') return null;
+  if (process.env.DESKTOP_RECORDING !== '1') return null;
   const dir = process.env.DESKTOP_RECORDING_DIR ?? path.join(out, 'desktop-recording');
-  mkdirSync(dir, { recursive: true });
   const started = Date.now();
   const events = [];
-  const stopFile = path.join(dir, `${label}.stop`);
+  let stopFile;
   let child;
   let file;
+  let ended = null; // when the recorder exited, if it did before stop()
   try {
+    const work = mkdtempSync(path.join(tmpdir(), 'unvibe-recording-')); // the script and stop file, kept out of the upload
+    stopFile = path.join(work, 'stop');
+    mkdirSync(dir, { recursive: true });
     if (os === 'mac') {
       file = path.join(dir, `${label}.mov`);
-      child = spawn('screencapture', ['-x', '-v', '-V', '120', file], { stdio: 'ignore' });
+      // stdin stays open: screencapture -v stops on any character it reads, so /dev/null would end it at once.
+      child = spawn('screencapture', ['-x', '-v', '-V', '120', file], { stdio: ['pipe', 'ignore', 'ignore'] });
     } else {
       file = path.join(dir, label);
       mkdirSync(file, { recursive: true });
-      const script = path.join(dir, `${label}.ps1`);
+      const script = path.join(work, 'record.ps1');
       writeFileSync(script, [
         'param([string]$dir, [string]$stop)',
         'Add-Type -AssemblyName System.Windows.Forms,System.Drawing',
         '$b = [System.Windows.Forms.SystemInformation]::VirtualScreen',
         '$bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height',
         '$g = [System.Drawing.Graphics]::FromImage($bmp)',
+        '$times = Join-Path $dir "frames.txt"',
         '$watch = [Diagnostics.Stopwatch]::StartNew()',
-        '$times = New-Object System.Collections.Generic.List[string]',
         '$i = 0',
         'while (-not (Test-Path $stop) -and $watch.ElapsedMilliseconds -lt 120000) {',
-        '  $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)',
-        '  $i++; $bmp.Save((Join-Path $dir ("{0:D5}.jpg" -f $i)), [System.Drawing.Imaging.ImageFormat]::Jpeg)',
-        '  $times.Add("$i $([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())")',
-        '  $wait = 100 - ($watch.ElapsedMilliseconds % 100); Start-Sleep -Milliseconds $wait',
+        '  try {',
+        '    $t = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()',
+        '    $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)',
+        '    $i++; $bmp.Save((Join-Path $dir ("{0:D5}.jpg" -f $i)), [System.Drawing.Imaging.ImageFormat]::Jpeg)',
+        '    Add-Content -Path $times -Value "$i $t"',
+        '  } catch { }',
+        '  Start-Sleep -Milliseconds (100 - ($watch.ElapsedMilliseconds % 100))',
         '}',
-        'Set-Content -Path (Join-Path $dir "frames.txt") -Value $times',
       ].join('\r\n'));
       child = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-dir', file, '-stop', stopFile], { stdio: 'ignore' });
     }
@@ -127,21 +135,38 @@ function startDesktopRecording(label) {
     report.push(`NOTE  desktop recording ${label}: not started (${e.message.split('\n')[0]})`);
     return null;
   }
-  const closed = new Promise((resolve) => { child.on('close', resolve); child.on('error', resolve); });
+  child.stdin?.on('error', () => {}); // a recorder that already exited must not crash the walkthrough
+  const closed = new Promise((resolve) => {
+    const done = () => { ended ??= Date.now(); resolve(); };
+    child.on('close', done);
+    child.on('error', done);
+  });
+  const waitClosed = (ms) => Promise.race([closed.then(() => true), sleep(ms).then(() => false)]);
   return {
     /** `at`: when it happened (epoch ms), if measured elsewhere; default now. */
     mark(event, at = Date.now()) { events.push({ event, at, ms: at - started }); },
     async stop() {
-      events.push({ event: 'stop', at: Date.now(), ms: Date.now() - started });
-      if (os === 'mac') child.kill('SIGINT');
-      else writeFileSync(stopFile, '');
-      if (await Promise.race([closed.then(() => true), sleep(20000).then(() => false)]) === false) child.kill();
-      writeFileSync(path.join(dir, `${label}-events.json`), JSON.stringify({ os, started: new Date(started).toISOString(), events }, null, 2));
-      const frames = os === 'mac' ? null : (existsSync(file) ? readdirSync(file).filter((f) => f.endsWith('.jpg')).length : 0);
-      const kept = os === 'mac' ? existsSync(file) && statSync(file).size > 0 : frames > 0;
-      report.push(kept
-        ? `NOTE  desktop recording ${label}: ${os === 'mac' ? `${path.basename(file)}, ${statSync(file).size} bytes` : `${frames} frames`}, events in ${label}-events.json`
-        : `NOTE  desktop recording ${label}: nothing was written`);
+      try {
+        const early = ended;
+        this.mark('stop');
+        let killed = false;
+        if (os === 'mac') {
+          child.stdin.end('\n');
+          if (!await waitClosed(5000)) { child.kill('SIGINT'); if (!await waitClosed(15000)) { child.kill(); killed = true; } }
+        } else {
+          writeFileSync(stopFile, '');
+          if (!await waitClosed(20000)) { child.kill(); killed = true; }
+        }
+        writeFileSync(path.join(dir, `${label}-events.json`), JSON.stringify({ os, started: new Date(started).toISOString(), events }, null, 2));
+        const frames = os === 'mac' ? 0 : (existsSync(path.join(file, 'frames.txt')) ? readdirSync(file).filter((f) => f.endsWith('.jpg')).length : 0);
+        const kept = os === 'mac' ? existsSync(file) && statSync(file).size > 0 : frames > 0;
+        const notes = [early ? `the recorder stopped by itself ${early - started} ms after it started` : '', killed ? 'killed after 20 s, may be unfinished' : ''].filter(Boolean);
+        report.push(kept
+          ? `NOTE  desktop recording ${label}: ${os === 'mac' ? `${path.basename(file)}, ${statSync(file).size} bytes` : `${frames} frames`}, events in ${label}-events.json${notes.length ? ` (${notes.join('; ')})` : ''}`
+          : `NOTE  desktop recording ${label}: nothing was written${notes.length ? ` (${notes.join('; ')})` : ''}`);
+      } catch (e) {
+        report.push(`NOTE  desktop recording ${label}: not finished (${e.message.split('\n')[0]})`);
+      }
     },
   };
 }
@@ -536,7 +561,7 @@ else try {
     desktopShot('notepad-selected');
   }
   const r = await waitForExplanation('global-shortcut-explanation', globalSample);
-  recording?.mark('explanation done');
+  recording?.mark(r.ok ? 'explanation done' : 'explanation failed');
   globalShortcutWorked = r.ok;
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
