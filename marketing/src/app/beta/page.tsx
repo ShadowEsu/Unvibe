@@ -89,11 +89,12 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>The app says “Waiting for Google sign-in…”</summary>
               <p>
-                Unvibe opened a sign-in page in your browser. If Google sign-in didn’t finish there, use email on the same
-                page: tick both boxes, type your email, press <strong>Email me a secure sign-in link</strong> and open the link we
-                send. Back on that page, check the code matches the one in the app (type it in if the box is empty), then press
-                <strong> Approve sign-in</strong>.
-                The app finishes a few seconds after that click. If no browser opened, go to{" "}
+                Unvibe opened a sign-in page in your browser (press <strong>Open browser</strong> in Unvibe if you closed it). If
+                Google sign-in didn’t finish there, use email on the same page: tick both boxes, type your email, press
+                {" "}<strong>Email me a secure sign-in link</strong>, and open the email from no-reply@unvibe.site in that same
+                browser on this computer. A link opened on your phone or in another browser won’t sign you in. Back on the page,
+                check the code matches the one in the app (type it in if the box is empty), then press{" "}
+                <strong>Approve sign-in</strong>. The app finishes a few seconds after that click. If no browser opened, go to{" "}
                 <a className="paper-text-link" href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
                 sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
               </p>
@@ -147,7 +148,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>You can start without signing in</summary>
               <p>
-                Unvibe works without an account, and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices: click your name at the bottom of Unvibe’s sidebar, then <strong>Sign in to sync</strong>. {proSentence()}
+                Unvibe works without an account, and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices: click your name (or initials) at the bottom of Unvibe’s sidebar, then <strong>Sign in to sync</strong> and <strong>Continue with Google</strong>. The page that opens in your browser also lets you sign in with email. {proSentence()}
               </p>
               {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
             </details>
