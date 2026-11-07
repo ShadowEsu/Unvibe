@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import HomePage from "@/app/page";
+import { renderHome } from "./testRenderHome";
 import { GLISSE_STYLES_ID, GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 
 // tsx compiles JSX to React.createElement, so rendering components here needs React in scope.
@@ -36,16 +36,20 @@ describe("home surfaces", () => {
     assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
-  it("the hero's panel serves the recording's real poster frame, sized and described, and no video without JS", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    const panel = html.slice(html.indexOf('<div class="ndemo__panel">'), html.indexOf('<div class="nhero__base"'));
-    assert.match(panel, /src="\/unvibe\/real\/0149\/hero-panel-0149-poster\.webp"/);
-    assert.match(panel, /width="622" height="800"/);
-    assert.match(panel, /alt="Unvibe&#x27;s panel explaining the debounce sample at Advanced depth"/);
-    assert.match(html, /<p class="nhero__cap">The panel is a real recording · sample code · Unvibe 0\.1\.49<\/p>/);
-    // The recording is added only in the browser with motion allowed, so no-JS and reduced motion fetch no video.
-    const hero = html.slice(html.indexOf('<section class="nhero"'), html.indexOf("</section>", html.indexOf('<section class="nhero"')));
-    assert.ok(hero.includes("ndemo__panel"), "the slice is the hero");
+  it("the hero's window is the HTML recreation under Security's caption, with no video, no toast and one H1", async () => {
+    const html = await renderHome();
+    const hero = html.slice(html.indexOf('<section class="d-hero"'), html.indexOf("</section>", html.indexOf('<section class="d-hero"')));
+    assert.ok(hero.includes('class="d-win__frame"'), "the slice is the hero");
+    assert.match(hero, /Unvibe 0\.1\.49 panel, recreated in HTML · sample code/);
     assert.doesNotMatch(hero, /<video\b/);
+    assert.doesNotMatch(html, /Saved to your Library/);
+    assert.equal(html.match(/<h1\b/g)?.length, 1);
+    // The one glass header comes from the layout; a page never adds its own.
+    assert.doesNotMatch(html, /<header\b/);
+  });
+
+  it("the layout mounts exactly one header, and no second glass bar", () => {
+    assert.equal(layout.match(/<SiteHeader \/>/g)?.length, 1);
+    assert.doesNotMatch(layout, /<Nav \/>|MobileDownloadBar|ScrollVibe/);
   });
 });

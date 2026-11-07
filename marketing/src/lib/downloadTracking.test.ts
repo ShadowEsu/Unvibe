@@ -4,7 +4,7 @@ import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as React from "react";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
-import { FooterLinks } from "@/components/Footer";
+import { FooterLinks } from "@/site/dia/SiteFooter";
 import { MacBuildLinks } from "@/components/paper/BetaInstall";
 import { siteCommands } from "@/components/paper/SitePalette";
 import { trackPlanCta } from "@/components/redesign/PricingPlans";
@@ -178,15 +178,15 @@ describe("download clicks", () => {
   }
 
   for (const paymentsOpen of [false, true]) {
-    it(`pricing download CTAs send surface pricing (payments ${paymentsOpen ? "open" : "closed"}); Teams email does not`, () => {
+    it(`pricing plan buttons send plan_cta_clicked only (payments ${paymentsOpen ? "open" : "closed"}); the one-click download sends the download event`, () => {
       for (const plan of pricingCopy(paymentsOpen).plans) trackPlanCta(plan);
-      const downloads = sent.filter((item) => item.event === "download_cta_clicked");
-      const toDownloadPage = pricingCopy(paymentsOpen).plans.filter((plan) => plan.href === "/beta").length;
-      assert.ok(toDownloadPage > 0);
-      assert.deepEqual(downloads, Array.from({ length: toDownloadPage }, () => downloadClick("pricing", "other")));
+      assert.ok(pricingCopy(paymentsOpen).plans.some((plan) => plan.href === "/beta"));
+      assert.deepEqual(sent.filter((item) => item.event === "download_cta_clicked"), []);
       assert.equal(sent.filter((item) => item.event === "plan_cta_clicked").length, pricingCopy(paymentsOpen).plans.length);
-      // These links open the download page, not a download, so the "Downloading!" toast must not open.
       assert.deepEqual(dispatched, []);
+      trackDownloadClick("pricing", "mac");
+      assert.deepEqual(sent.filter((item) => item.event === "download_cta_clicked"), [downloadClick("pricing", "mac")]);
+      assert.deepEqual(dispatched, [DOWNLOADED_EVENT]);
     });
   }
 

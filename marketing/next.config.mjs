@@ -5,12 +5,12 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   // The browser workspace at /app needs cloud sign-in that this build does not have, so it is a
-  // dead end for visitors. Send them to the home page's try-it section, which needs no account.
+  // dead end for visitors. Send them to /explain's Try box, which needs no account.
   // Temporary (307) so /app can come back once sign-in works there.
   async redirects() {
     return [
-      { source: "/app", destination: "/#try-it", permanent: false },
-      { source: "/app/:path*", destination: "/#try-it", permanent: false },
+      { source: "/app", destination: "/explain", permanent: false },
+      { source: "/app/:path*", destination: "/explain", permanent: false },
       // A guessed download URL (404 until 27 Oct): the download page. Permanent (308).
       { source: "/download", destination: "/beta", permanent: true },
       // The nav calls /releases "Changelog", so people type /changelog (404 until 6 Nov). Permanent (308).

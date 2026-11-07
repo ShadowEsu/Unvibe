@@ -31,7 +31,7 @@ export default function CodeExplainerMacPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Code explainer for Mac", path: PATH }])) }}
       />
-      <header className="explain-head">
+      <div className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/">Home</Link> <span aria-hidden="true">/</span> Code explainer for Mac
         </nav>
@@ -43,7 +43,7 @@ export default function CodeExplainerMacPage() {
         <div className="os-get">
           <InstallBox os="mac" surface="seo_mac" />
         </div>
-      </header>
+      </div>
 
       <section className="explain-card os-how" aria-labelledby="mac-how">
         <div>

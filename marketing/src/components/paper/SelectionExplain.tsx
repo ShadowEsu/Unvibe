@@ -67,11 +67,11 @@ export function SelectionExplain() {
       aria-label="Unvibe preview"
       style={{ left: card.x, top: card.y }}
     >
-      <header>
+      <div className="sel-card__head">
         <span className="sel-card__logo" aria-hidden="true" />
         <strong>Unvibe</strong>
         <kbd>{typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent) ? "Ctrl Alt U" : "⌃ U"}</kbd>
-      </header>
+      </div>
       <blockquote>&ldquo;{card.text}&rdquo;</blockquote>
       <p>
         That is the gesture. In Cursor, VS Code, Terminal or any app, this opens a plain-English explanation of
