@@ -7,8 +7,8 @@ export const GITHUB_URL = "https://github.com/ShadowEsu/Unvibe";
 
 /**
  * The profiles Unvibe controls, in Design's order. The Organization JSON-LD `sameAs` and the footer's Follow column
- * read this one list, so they can't drift. X and TikTok stay out until those accounts exist; YouTube stays out because
- * the only channel is Preston's personal one (BOSS, 6 Nov).
+ * read this one list. X and TikTok stay out until those accounts exist; YouTube stays out because the only channel is
+ * Preston's personal one (BOSS, 6 Nov).
  */
 export const OFFICIAL_PROFILES = [
   ["GitHub", GITHUB_URL],

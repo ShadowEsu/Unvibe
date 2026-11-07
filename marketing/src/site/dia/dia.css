@@ -78,8 +78,9 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-stmt__text { position: relative; max-width: 1080px; padding: 0 30px; text-align: center; will-change: transform; }
 .d-stmt__h { font-size: clamp(34px, 4.2vw, 62px); line-height: 1.14; letter-spacing: -0.02em; color: var(--d-ink); }
 .d-stmt__h .d-w--em { color: #2c185c; }
-/* The "Unvibe is a …" line above (The idea) (Design, ledger 563): Inter 17/1.5, ink-2, max 34ch, 24 px above the label */
-.d-stmt__entity { max-width: 34ch; margin: 0 auto 24px; font: 400 17px/1.5 var(--d-sans); color: var(--d-ink-2); }
+/* The "Unvibe is a …" line above (The idea) (Design, ledger 563): Inter 17/1.5, max 34ch, 24 px above the label. Ink, not
+   ink-2: the bowl fills to #8b6cf0 behind it while pinned, where ink-2 reads about 3.1:1 and ink stays above 4.5:1. */
+.d-stmt__entity { max-width: 34ch; margin: 0 auto 24px; font: 400 17px/1.5 var(--d-sans); color: var(--d-ink); }
 
 /* ---------- 2 · steps (mock 04): the list and one window pinned together in a 300vh track ---------- */
 .d-steps { padding: 150px 30px 120px; }

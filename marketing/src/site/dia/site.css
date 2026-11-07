@@ -67,7 +67,8 @@ html:not(.js) .dh [data-d-navcta] > * { opacity: 1; }
 
 /* ---------- the footer (mock 09) ---------- */
 .d-foot { position: relative; z-index: 4; padding: 72px max(24px, calc((100% - 1180px) / 2)) 60px; background: var(--d-paper); color: var(--d-ink); font: 500 12.5px/1.3 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; border-top: 1px solid var(--d-line); }
-.d-foot__cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.3fr); gap: 48px; }
+/* Follow (ledger 563) takes only its text's width, and the newsletter keeps room for the field and Subscribe (300 px) */
+.d-foot__cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) max-content minmax(300px, 1.3fr); gap: 48px; }
 .d-foot h2 { margin: 0 0 14px; font: inherit; letter-spacing: inherit; color: var(--d-ink); }
 .d-foot ul { margin: 0; padding: 0; list-style: none; }
 .d-foot li + li { margin-top: 9px; }
