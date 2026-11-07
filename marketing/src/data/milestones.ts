@@ -35,6 +35,17 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
+    title: "A daily count of download link clicks, with nothing that identifies you",
+    summary: "unvibe.site now counts how many times each download link (Mac, Intel Mac or Windows) was used each day and the campaign label (utm_source) of the link that brought the visit, on its server, without waiting for Allow. Each total is a day, a file, a label and a number, with no ID, IP address, cookie, time or page address. The privacy page says so.",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/232", label: "PR #232" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/235", label: "PR #235" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
     title: "Explain package-lock.json, Prisma schemas and Tailwind classes",
     summary: "3 new explain pages: a package-lock.json, a Prisma schema and a card styled with Tailwind CSS classes. Each has its own sample in a Try it box and notes on what that sample did when run with npm 11.10.1, Prisma 7.10.1 and Tailwind CSS 4.3.4.",
     links: [
@@ -42,17 +53,6 @@ export const milestones: Milestone[] = [
       { href: "/explain/prisma-schema", label: "Explain a Prisma schema" },
       { href: "/explain/tailwind", label: "Explain Tailwind CSS" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/231", label: "PR #231" },
-    ],
-  },
-  {
-    date: "6 NOV 2026",
-    category: "PRODUCT",
-    title: "A daily count of download link clicks, with nothing that identifies you",
-    summary: "unvibe.site now counts how many times each download link (Mac, Intel Mac or Windows) was used each day and the campaign label (utm_source) of the link that brought the visit, on its server, without waiting for Allow. Each total is a day, a file, a label and a number, with no ID, IP address, cookie, time or page address. A click is counted once. The privacy page says so.",
-    links: [
-      { href: "/privacy", label: "Privacy" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/232", label: "PR #232" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/235", label: "PR #235" },
     ],
   },
   {
