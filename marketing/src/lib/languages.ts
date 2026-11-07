@@ -757,6 +757,36 @@ export const languages: Language[] = [
     learningPath: ["Reading a row", "Ports and connections", "Names and numbers", "Stopping the right process"],
     sample: `lsof -i :3000`,
   },
+  {
+    id: "segmentation-fault",
+    name: "segmentation fault",
+    categories: ["systems"],
+    blurb: "The crash C and C++ programs give when they touch memory they shouldn't, and how a debugger finds the line and the bad pointer.",
+    concepts: ["Segmentation fault and exit code 139", "the backtrace", "the NULL pointer", "-O0, -O2 and AddressSanitizer"],
+    frameworks: ["GDB", "LLDB", "clang", "AddressSanitizer"],
+    learningPath: ["What the signal means", "Reading a backtrace", "Finding the bad pointer", "Sanitizers"],
+    sample: `gdb --args ./scores 0`,
+  },
+  {
+    id: "http-headers",
+    name: "HTTP headers",
+    categories: ["web", "backend"],
+    blurb: "The lines before a response body: status, content type, caching, cookies and which sites may read it.",
+    concepts: ["status line and body headers", "Cache-Control and ETag", "Set-Cookie", "Access-Control-Allow-Origin and Vary"],
+    frameworks: ["curl", "browser DevTools", "fetch", "Express"],
+    learningPath: ["Status codes", "Caching", "Cookies", "CORS"],
+    sample: `curl -i http://127.0.0.1:8050/notes/42`,
+  },
+  {
+    id: "dns-records",
+    name: "DNS records",
+    categories: ["web", "systems"],
+    blurb: "The records that point a domain at a server and route its email: A, AAAA, CNAME, MX and TXT.",
+    concepts: ["A, AAAA and TTL", "CNAME", "MX", "TXT: SPF and DMARC"],
+    frameworks: ["dig", "BIND", "Vercel", "Cloudflare"],
+    learningPath: ["Addresses", "Aliases", "Email routing", "SPF and DMARC"],
+    sample: `dig notes-app.example MX`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
