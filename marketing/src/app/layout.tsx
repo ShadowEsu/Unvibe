@@ -18,6 +18,7 @@ import "@/site/dia/demo.css";
 import "@/site/dia/motion/dia-motion.css";
 import "@/site/dia/site.css";
 import "@/site/dia/listed.css";
+import "@/site/dia/photo.css";
 import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";

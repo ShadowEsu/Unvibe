@@ -35,6 +35,9 @@ export interface Listing {
   badges?: readonly ListingBadgeFile[];
   /** A pending site that requires a link back before approving. */
   linkRequired?: boolean;
+  /** YYYY-MM-DD (UTC) we submitted Unvibe (first100's LISTINGS-500.md). "Submitted to" names a site only once this is set
+   *  (Security MUST-D20: the line is true only once we submit; D21: the date is recorded). */
+  submitted?: string;
 }
 
 export const LISTINGS: readonly Listing[] = [
@@ -128,12 +131,6 @@ export const LISTINGS: readonly Listing[] = [
   },
   { site: "TinyLaunch", status: "live", href: "https://tinylaunch.com/launch/27829-unvibe" },
   { site: "Uneed", status: "live", href: "https://www.uneed.best/tool/unvibe" },
-  { site: "FounderMag", status: "live", href: "https://foundermag.co/products/unvibe/" },
-  {
-    site: "KrispiTech product showcase",
-    status: "live",
-    href: "https://krispitech.com/the-hidden-cost-of-vibe-coding-and-how-unvibe-helps-you-actually-own-your-codebase/",
-  },
   {
     site: "vibecoding.app",
     status: "live",
@@ -165,21 +162,21 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Indie Hackers", status: "live", href: "https://www.indiehackers.com/product/unvibe" },
   { site: "DevHunt", status: "live", href: "https://devhunt.org/tool/unvibe" },
   { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
-  { site: "Startup Fame", status: "pending", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site", linkRequired: true },
-  { site: "Turbo0", status: "pending", href: "https://turbo0.com/item/unvibe", linkRequired: true },
-  { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true },
-  { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true },
-  { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true },
+  { site: "Startup Fame", status: "pending", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site", linkRequired: true, submitted: "2026-11-07" },
+  { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
+  { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
+  { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true, submitted: "2026-11-07" },
   { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
   {
     site: "AI Tools Prime",
     status: "pending",
     href: "https://www.aitoolsprime.com?utm_source=badge&utm_medium=referral&utm_campaign=featured_badge",
     linkRequired: true,
+    submitted: "2026-11-07",
   },
-  { site: "Dang.ai", status: "pending", href: "https://dang.ai", linkRequired: true },
-  { site: "ToolPilot", status: "pending", href: "https://www.toolpilot.ai", linkRequired: true },
-  { site: "Awesome Tools", status: "pending", href: "https://awesome.tools", linkRequired: true },
+  { site: "Dang.ai", status: "pending", href: "https://dang.ai", linkRequired: true, submitted: "2026-11-06" },
+  { site: "ToolPilot", status: "pending", href: "https://www.toolpilot.ai", linkRequired: true, submitted: "2026-11-06" },
+  { site: "Awesome Tools", status: "pending", href: "https://awesome.tools", linkRequired: true, submitted: "2026-11-06" },
 ];
 
 /** Badges of live listings, shown in the footer on every page and on /listed-on. */
@@ -199,7 +196,8 @@ export const listingBadges = LISTINGS.flatMap(({ site, status, href, badges = []
 /** Live product listings, shown in the footer on every page. Origins are pinned by listings.test.ts. */
 export const listingLinks = LISTINGS.filter(({ status }) => status === "live").map(({ site, href }) => ({ name: site, href }));
 
-/** Pending sites that require a link back while they review a listing: plain text under "Submitted to". */
-export const submittedTo = LISTINGS.filter(({ status, linkRequired }) => status === "pending" && linkRequired).map(
+/** Pending sites we have submitted to that require a link back while they review a listing: plain text under
+ *  "Submitted to". A site we haven't submitted to yet (no date) isn't named. */
+export const submittedTo = LISTINGS.filter(({ status, linkRequired, submitted }) => status === "pending" && linkRequired && submitted).map(
   ({ site, href }) => ({ name: site, href }),
 );
