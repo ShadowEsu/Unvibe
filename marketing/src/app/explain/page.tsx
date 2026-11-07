@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
-import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainHeading, explainPages } from "@/lib/explainPages";
 import { OG_CARDS, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "./mono";
 import "./explain.css";
@@ -31,7 +31,7 @@ export default function ExplainIndexPage() {
         <ul className="explain-langs">
           {explainPages.map((page) => (
             <li key={page.id}>
-              <Link href={`/explain/${page.id}`}>Explain {explainLanguage(page).name} code</Link>
+              <Link href={`/explain/${page.id}`}>Explain {explainHeading(page)}</Link>
               <span>{page.sampleSummary}</span>
             </li>
           ))}
