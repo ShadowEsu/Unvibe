@@ -360,7 +360,7 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
       {err && <div className="field-err">{err}</div>}
       {code ? (
         <div className="signin__code" aria-live="polite">
-          <span>{browserOpened ? 'Finish in your browser. Check this code matches, then press Connect this device:' : 'Your browser did not open. Press Open browser, then check this code matches:'}</span>
+          <span>{browserOpened ? 'Finish in your browser. Check this code matches, then press Approve sign-in:' : 'Your browser did not open. Press Open browser, then check this code matches:'}</span>
           <b>{code}</b>
         </div>
       ) : (
