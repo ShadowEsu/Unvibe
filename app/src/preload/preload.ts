@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { ConsentProvider } from '../core/consent';
 import type { PmfDraft, PmfTextKey } from '../core/pmf';
 import type { ConsentStatus } from '../main/consent';
+import type { SavedLesson, SavedRow } from '../main/panelSaved';
 
 type ConsentAnswer = { ok: true; status: ConsentStatus } | { ok: false; error: string };
 
@@ -40,11 +41,16 @@ const api = {
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
 
-  // widget review (single panel + tabs)
+  // widget review (one panel, one session)
   widgetReady: () => ipcRenderer.send('widget:ready'),
-  setActiveTab: (tabId: string) => ipcRenderer.send('widget:setActiveTab', tabId),
-  addTab: (tabId: string) => ipcRenderer.send('widget:addTab', tabId),
-  closeTab: (tabId: string) => ipcRenderer.send('widget:closeTab', tabId),
+  /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
+  fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** Saved tab: pinned lessons, then Recent, from this computer's store. */
+  savedLessons: (): Promise<{ pinned: SavedRow[]; recent: SavedRow[] }> => ipcRenderer.invoke('widget:savedLessons'),
+  /** One saved lesson's text as stored; never re-reads the file or runs a review. */
+  savedLesson: (id: string): Promise<{ ok: true; lesson: SavedLesson } | { ok: false; error: string }> => ipcRenderer.invoke('widget:savedLesson', id),
+  /** Save: pins (or unpins) the current explanation's lesson. */
+  saveLesson: (pinned: boolean): Promise<{ ok: boolean; pinned?: boolean }> => ipcRenderer.invoke('widget:saveLesson', pinned),
   request: (opts: unknown) => ipcRenderer.send('widget:request', opts),
   cancel: () => ipcRenderer.send('widget:cancel'),
   useClipboard: (opts: unknown) => ipcRenderer.send('widget:useClipboard', opts),
@@ -68,7 +74,6 @@ const api = {
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
   gotIt: () => ipcRenderer.send('widget:gotIt'),
   pin: (pinned: boolean) => ipcRenderer.send('widget:pin', pinned),
-  collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
   openPlan: () => ipcRenderer.send('companion:openPlan'),
@@ -83,11 +88,12 @@ const api = {
     ipcRenderer.on('companion:showPage', listener);
     return () => ipcRenderer.removeListener('companion:showPage', listener);
   },
-  widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
-    ipcRenderer.send('widget:resizeStart', edge),
-  widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
-  onAutocollapse: (cb: (v: boolean) => void) => ipcRenderer.on('widget:autocollapse', (_e, v) => cb(v)),
+  /** Fade: main says the panel lost (true) or got back (false) focus; the page animates its own opacity. */
+  onPanelAway: (cb: (away: boolean) => void) => ipcRenderer.on('panel:away', (_e, away: unknown) => cb(away === true)),
+  /** Settings › Theme or "When I click away" changed. */
+  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
+    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),

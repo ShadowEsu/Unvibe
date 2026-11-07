@@ -39,31 +39,30 @@ export type WidgetEvent =
    * `confirm`: a link started this review, or (Linux) the shortcut read the last highlight, which may be
    * stale; Explain must be pressed before anything is sent. `confirmFrom` says which, for the sheet's wording.
    */
-  | { type: 'init'; tabId: string; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; confirmFrom?: ConfirmReason; providerName: string; mode?: string; level: ExplanationLevel }
+  | { type: 'init'; hasCode: boolean; sourceApp?: string | null; file?: string; lines?: number; language?: string; preview?: string; autoStart?: boolean; consentProvider?: ConsentProvider; confirm?: boolean; confirmFrom?: ConfirmReason; providerName: string; mode?: string; level: ExplanationLevel }
   /** The person hasn't agreed to sending their code to this provider: the panel asks first. */
-  | { type: 'consentNeeded'; tabId: string; provider: ConsentProvider }
+  | { type: 'consentNeeded'; provider: ConsentProvider }
   /**
    * `part: 'detail'`: about a "More detail" run, shown under the short answer; the answer itself stays.
    * `short`: the answer on its way is the short default (its "Not sure:" line shows in the quiet style).
    */
-  | { type: 'status'; tabId: string; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean }
-  | { type: 'consent'; tabId: string; findings: SecretFinding[] }
-  | { type: 'blocked'; tabId: string; findings: SecretFinding[] }
-  | { type: 'token'; tabId: string; text: string; part?: 'detail' }
+  | { type: 'status'; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean }
+  | { type: 'consent'; findings: SecretFinding[] }
+  | { type: 'blocked'; findings: SecretFinding[] }
+  | { type: 'token'; text: string; part?: 'detail' }
   /** `short`: the answer was the short default, so the panel offers "More detail". */
-  | { type: 'done'; tabId: string; model: string; mock: boolean; part?: 'detail'; short?: boolean }
-  | { type: 'error'; tabId: string; message: string; code?: string; upgradePath?: string; part?: 'detail' }
-  | { type: 'cancelled'; tabId: string }
-  | { type: 'question'; tabId: string; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
-  | { type: 'graded'; tabId: string; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
-  | { type: 'usage'; tabId: string; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
-  | { type: 'understood'; tabId: string }
+  | { type: 'done'; model: string; mock: boolean; part?: 'detail'; short?: boolean }
+  | { type: 'error'; message: string; code?: string; upgradePath?: string; part?: 'detail' }
+  | { type: 'cancelled' }
+  | { type: 'question'; question: string; options: string[]; conceptLabel: string; index: number; total: number; mode: QuizMode }
+  | { type: 'graded'; correct: boolean; answerIndex: number; rationale: string; hasMissed: boolean }
+  | { type: 'usage'; used: number; limit: number; remaining: number; resetsAt: string; plan: string }
+  | { type: 'understood' }
   /** Test me could not get a question; the panel keeps the explanation and offers to ask again. */
-  | { type: 'quizError'; tabId: string; message: string };
+  | { type: 'quizError'; message: string };
 
 export interface ReviewSession {
   reviewId: string;
-  tabId: string;
   code: string | null;
   sourceApp: string | null;
   abort: AbortController | null;
@@ -119,7 +118,7 @@ export interface RequestOpts {
 
 function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   if (!win.isDestroyed()) {
-    win.webContents.send('review:event', { ...ev, tabId: session.tabId } as WidgetEvent);
+    win.webContents.send('review:event', ev);
   }
   const typed = ev as { type?: string; message?: string };
   if (typed.type === 'status') pulseBar({ phase: 'thinking', label: 'Thinking' });
@@ -224,6 +223,24 @@ export function markUnderstood(win: BrowserWindow, session: ReviewSession): void
   session.onUnderstood?.();
   void flush();
   send(win, session, { type: 'understood' });
+}
+
+/**
+ * Save (overlay B): pins this explanation's lesson to Saved, or unpins it. Every finished explanation is already
+ * saved to Recent; a lesson not yet saved (or a panel that outlived a wipe) is saved first. Local only.
+ */
+export function pinLesson(win: BrowserWindow, session: ReviewSession, pinned: boolean): boolean {
+  if (wipedSinceRun(session)) return false;
+  if (!session.recorded && !recordReview(win, session, false)) return false;
+  try {
+    return store().setPinned(session.reviewId, pinned);
+  } catch (error) {
+    send(win, session, {
+      type: 'error',
+      message: error instanceof Error ? error.message : 'The explanation could not be saved locally.',
+    });
+    return false;
+  }
 }
 
 export function initWidget(

@@ -1,21 +1,37 @@
-import { app, BrowserWindow, screen, shell, type WebContents } from 'electron';
+import { app, BrowserWindow, screen, shell } from 'electron';
 import path from 'node:path';
-import { settings, type BarPosition, type BarSize } from './settings';
+import { settings, type BarPosition, type BarSize, type InactiveBehavior } from './settings';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-/** Opening size for the review panel (0.1.51 design, Design Q3): tall and narrow, beside the editor. */
-const DEFAULT_WIDGET_W = 440;
-const DEFAULT_WIDGET_H = 740;
+/**
+ * Overlay B (Design b-refined SPEC, Pane): 380 wide; the height fits the content between 360 and 560, past which
+ * the answer scrolls inside while the header and tabs stay. The renderer measures its content (widget:fitHeight).
+ */
+export const PANEL_W = 380;
+export const PANEL_MIN_H = 360;
+export const PANEL_MAX_H = 560;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
 /** A notice's text is showing under the compact Island (renderer bar:setNotice). */
 let barHasNotice = false;
 let limitPauseActive = false;
+/** A file or folder dialog the panel opened is up: its blur is not a click away. */
+let panelDialogs = 0;
+
+/** Runs a dialog the panel opened; meanwhile losing focus neither fades nor hides the panel. */
+export async function whilePanelDialog<T>(work: () => Promise<T>): Promise<T> {
+  panelDialogs += 1;
+  try {
+    return await work();
+  } finally {
+    panelDialogs -= 1;
+  }
+}
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -237,7 +253,7 @@ export function fitPanelBounds(bounds: Electron.Rectangle, workArea: Electron.Re
   if (island && x < island.x + island.width && x + width > island.x && y < island.y + island.height && y + height > island.y) {
     const below = island.y + island.height + 8;
     const room = workArea.y + workArea.height - 12 - below;
-    if (room >= Math.min(height, WIDGET_MIN_H)) {
+    if (room >= Math.min(height, PANEL_MIN_H)) {
       y = below;
       height = Math.min(height, room);
     }
@@ -265,8 +281,8 @@ function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
 function defaultWidgetBounds(): Electron.Rectangle {
   const cursor = screen.getCursorScreenPoint();
   const { workArea } = screen.getDisplayNearestPoint(cursor);
-  const w = DEFAULT_WIDGET_W;
-  const h = DEFAULT_WIDGET_H;
+  const w = PANEL_W;
+  const h = PANEL_MIN_H;
   return {
     width: w,
     height: h,
@@ -275,105 +291,52 @@ function defaultWidgetBounds(): Electron.Rectangle {
   };
 }
 
-/** Opening sizes earlier versions saved for everyone; a panel still at one of them gets today's opening size. */
-const STOCK_PANEL_SIZES: ReadonlyArray<readonly [number, number]> = [
-  [300, 360], [280, 240], [340, 440], [360, 480], [440, 560], [480, 600], [540, 720], [680, 720], [560, 640],
-];
-
-export function isStockPanelSize(width: number, height: number): boolean {
-  return STOCK_PANEL_SIZES.some(([w, h]) => w === width && h === height);
-}
-
-/** Restore user size/position. A panel at an old stock size gets the current opening size; sizes people chose stay. */
+/** Where the panel was last left; its size is always overlay B's (the content decides the height). */
 function resolveWidgetBounds(): Electron.Rectangle {
   const saved = settings().all().lastWidgetBounds;
   if (!saved) return defaultWidgetBounds();
-  if (isStockPanelSize(saved.width, saved.height)) {
-    return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
-  }
-  return { ...saved };
+  return { x: saved.x, y: saved.y, width: PANEL_W, height: PANEL_MIN_H };
 }
 
-/** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
-export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-
-const WIDGET_MIN_W = 420;
-const WIDGET_MIN_H = 460;
-
-export function applyWidgetResize(
-  start: Electron.Rectangle,
-  edge: WidgetResizeEdge,
-  dx: number,
-  dy: number,
-): Electron.Rectangle {
-  let { x, y, width, height } = start;
-  if (edge.includes('e')) width = Math.max(WIDGET_MIN_W, start.width + dx);
-  if (edge.includes('s')) height = Math.max(WIDGET_MIN_H, start.height + dy);
-  if (edge.includes('w')) {
-    width = Math.max(WIDGET_MIN_W, start.width - dx);
-    x = start.x + (start.width - width);
-  }
-  if (edge.includes('n')) {
-    height = Math.max(WIDGET_MIN_H, start.height - dy);
-    y = start.y + (start.height - height);
-  }
-  return { x, y, width, height };
+/** The window height for content this tall: between 360 and 560 (past that the answer scrolls inside). */
+export function panelHeightFor(contentHeight: number): number {
+  if (!Number.isFinite(contentHeight)) return PANEL_MIN_H;
+  return Math.round(Math.min(PANEL_MAX_H, Math.max(PANEL_MIN_H, contentHeight)));
 }
 
-/** The review panel parts setPanelOpacity touches (a structural type so tests can pass a fake). */
-export type DimmablePanel = Pick<BrowserWindow, 'isDestroyed' | 'setOpacity'> & {
-  webContents: Pick<WebContents, 'isDestroyed' | 'insertCSS' | 'removeInsertedCSS'>;
-};
-
-/** Settings allow 0.35–1 for a dimmed panel; anything else is clamped before it reaches the page. */
-const MIN_PANEL_OPACITY = 0.35;
-const panelDim = new WeakMap<object, { queue: Promise<void>; key: string | null }>();
+/** Fits the panel to its content's height, kept inside the work area and clear of a top Island. */
+export function fitPanelHeight(win: BrowserWindow, contentHeight: number): void {
+  if (win.isDestroyed()) return;
+  const current = win.getBounds();
+  const height = panelHeightFor(contentHeight);
+  if (current.height === height && current.width === PANEL_W) return;
+  win.setBounds(clampToVisibleArea({ ...current, width: PANEL_W, height }), false);
+}
 
 /**
- * Sets how see-through the review panel is.
- *
- * On Windows the panel is a transparent window. Without a usable GPU (software compositing), Chromium
- * draws each new frame of a transparent window with UpdateLayeredWindow. BrowserWindow.setOpacity
- * calls SetLayeredWindowAttributes, and after that Windows refuses every UpdateLayeredWindow call:
- * the panel stays frozen on screen with the old review while the page keeps updating underneath
- * (Electron issue #32555; real-device runs 40266232417 and 40266929130). Even setOpacity(1) does it.
- * So on Windows the window's own opacity is never touched; the page dims itself with a stylesheet.
- * Stylesheet changes run strictly one after another, so the last call wins: a quick blur then
- * focus ends undimmed. Other platforms keep win.setOpacity exactly as before.
+ * What the panel does when it loses focus: Fade (the default) drops the pane to 22 % but keeps it clickable;
+ * Hide closes the window and keeps its state for ⌃U. While the explanation limit holds the panel up, it stays.
  */
-export function setPanelOpacity(win: DimmablePanel, opacity: number, platform: NodeJS.Platform = process.platform): Promise<void> {
-  if (win.isDestroyed()) return Promise.resolve();
-  if (platform !== 'win32') {
-    win.setOpacity(opacity);
-    return Promise.resolve();
-  }
-  const value = Number.isFinite(opacity) ? Math.min(1, Math.max(MIN_PANEL_OPACITY, opacity)) : 1;
-  const contents = win.webContents;
-  const state = panelDim.get(contents) ?? { queue: Promise.resolve(), key: null };
-  panelDim.set(contents, state);
-  state.queue = state.queue
-    .then(async () => {
-      if (contents.isDestroyed()) return;
-      if (state.key) {
-        const key = state.key;
-        state.key = null;
-        await contents.removeInsertedCSS(key);
-      }
-      if (value < 1 && !contents.isDestroyed()) state.key = await contents.insertCSS(`html { opacity: ${value} !important; }`);
-    })
-    .catch((error: unknown) => console.warn('[unvibe] review panel opacity not applied', error));
-  return state.queue;
+export function clickAwayOnBlur(behavior: InactiveBehavior, limitPause: boolean): InactiveBehavior | 'stay' {
+  if (limitPause) return 'stay';
+  return behavior === 'hide' ? 'hide' : 'fade';
+}
+
+/** Tells the panel page whether it is faded (it animates the opacity itself, so reduced motion is honoured). */
+function sendAway(win: BrowserWindow, away: boolean): void {
+  if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('panel:away', away);
 }
 
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
-    minWidth: WIDGET_MIN_W,
-    minHeight: WIDGET_MIN_H,
+    minWidth: PANEL_W,
+    minHeight: PANEL_MIN_H,
+    maxWidth: PANEL_W,
+    maxHeight: PANEL_MAX_H,
     frame: false,
     transparent: true,
-    // System resize hits a thick invisible rim outside the card. Resize is handled
-    // from the visible border grips in the renderer instead.
+    // The content decides the height (widget:fitHeight); the width is fixed.
     resizable: false,
     hasShadow: false,
     roundedCorners: false,
@@ -389,33 +352,20 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
-  const persist = () => {
-    if (win.isDestroyed()) return;
-    settings().set({ lastWidgetBounds: win.getBounds() });
-  };
-  // Moving saves where the panel is, not a height the screen shortened it to (fitPanelBounds): the size stays the
-  // one someone chose (resizing saves that, here and in main.ts) or, before any, the size it opened at.
+  // Moving saves where the panel is; its size always comes from overlay B and the content.
   win.on('moved', () => {
     snap(win);
     if (win.isDestroyed()) return;
-    const size = settings().all().lastWidgetBounds ?? bounds;
-    settings().set({ lastWidgetBounds: { ...win.getBounds(), width: size.width, height: size.height } });
+    settings().set({ lastWidgetBounds: win.getBounds() });
   });
-  win.on('resized', persist);
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
-    if (limitPauseActive) {
-      void setPanelOpacity(win, 1);
-      return;
-    }
-    const behavior = settings().all().inactiveBehavior;
-    if (behavior === 'dim') void setPanelOpacity(win, settings().all().widgetOpacityInactive);
+    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0);
+    if (action === 'hide') win.hide();
+    else if (action === 'fade') sendAway(win, true);
   });
-  win.on('focus', () => {
-    if (win.isDestroyed()) return;
-    void setPanelOpacity(win, 1);
-  });
+  win.on('focus', () => sendAway(win, false));
 
   lockNavigation(win);
   win.once('ready-to-show', () => win.showInactive());
@@ -469,7 +419,7 @@ export function raiseLimitPause(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-  void setPanelOpacity(win, 1);
+  sendAway(win, false);
   if (win.isMinimized()) win.restore();
   win.show();
   win.moveTop();

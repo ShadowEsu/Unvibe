@@ -27,11 +27,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { homedir, userInfo } from 'node:os';
 import {
-  applyWidgetResize,
   createBar,
   companionLoading,
   createCompanion,
   currentWidget,
+  fitPanelHeight,
   focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
@@ -40,7 +40,7 @@ import {
   resizeBar,
   setBarNotice,
   showBar,
-  type WidgetResizeEdge,
+  whilePanelDialog,
 } from './windows';
 import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
@@ -50,10 +50,12 @@ import {
   startComprehension,
   gradeComprehension,
   markUnderstood,
+  pinLesson,
   applyBuiltReview,
   type ReviewSession,
   type RequestOpts,
 } from './review';
+import { openSavedLesson, savedLessons } from './panelSaved';
 import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
@@ -160,11 +162,9 @@ let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 let devicePoll: NodeJS.Timeout | null = null;
 let currentDeviceVerificationUrl: string | null = null;
-/** Per-tab review sessions inside the single shared panel. */
-const tabSessions = new Map<string, ReviewSession>();
-let activeTabId = '1';
+/** The one review session inside the single shared panel (overlay B has no review tabs). */
+let panelSession: ReviewSession | undefined;
 let panelReady = false;
-const normalBounds = new Map<number, Electron.Rectangle>();
 let pendingExternalReview: { preferClipboard: boolean } | null = null;
 
 /**
@@ -197,14 +197,12 @@ function handleExternalReviewUrl(rawUrl: string): void {
 }
 
 function makeSession(
-  tabId: string,
   code: string | null,
   sourceApp: string | null,
   level: ExplanationLevel = settings().all().defaultExplanationLevel,
 ): ReviewSession {
   const session: ReviewSession = {
     reviewId: randomUUID(),
-    tabId,
     code,
     sourceApp,
     abort: null,
@@ -253,29 +251,22 @@ async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
   if (fallback) await dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: fallback });
 }
 
-function sessionFor(tabId = activeTabId): ReviewSession | undefined {
-  return tabSessions.get(tabId);
-}
-
 function clearPanelSessions(): void {
-  for (const session of tabSessions.values()) session.abort?.abort();
-  tabSessions.clear();
-  activeTabId = '1';
+  panelSession?.abort?.abort();
+  panelSession = undefined;
   panelReady = false;
 }
 
 /**
- * The review panel, opened if needed. A fresh panel starts with no tab sessions, and the session the
- * caller then puts on its active tab is started once by the renderer's widget:ready, never twice.
+ * The review panel, opened if needed. A fresh panel starts with no session, and the session the
+ * caller then puts on it is started once by the renderer's widget:ready, never twice.
  */
 function openPanel(): { win: BrowserWindow; fresh: boolean } {
   if (currentWidget()) return { win: getOrCreateWidget(), fresh: false };
   const win = getOrCreateWidget();
-  const windowId = win.id;
   clearPanelSessions();
   win.on('closed', () => {
     clearPanelSessions();
-    normalBounds.delete(windowId);
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
     // The companion's paste step stops saying the explanation is opening if none came.
     if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
@@ -294,7 +285,11 @@ function applyFileMeta(session: ReviewSession, meta: FileMeta | undefined): void
   session.snapshotText = meta.sourceFilePath && session.code ? session.code.slice(0, 12_000) : undefined;
 }
 
-function beginCaptureOnActiveTab(
+/**
+ * A new capture replaces the panel's session: its follow-ups, depth and Test me belong to the selection they were
+ * about, so the new one starts at the Settings depth (Design ruling b).
+ */
+function beginCapture(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
@@ -302,17 +297,15 @@ function beginCaptureOnActiveTab(
   meta?: FileMeta,
   credit: SelectionCredit = 'free',
 ): void {
-  const prev = sessionFor(activeTabId);
-  prev?.abort?.abort();
-  // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
-  const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  panelSession?.abort?.abort();
+  const session = makeSession(code, sourceApp);
   applyFileMeta(session, meta);
   if (credit === 'held') session.selectionCredit = 'held';
   if (confirmFrom && code) {
     session.awaitingConfirm = true;
     session.confirmFrom = confirmFrom;
   }
-  tabSessions.set(activeTabId, session);
+  panelSession = session;
   if (!panelReady) return;
   // No selection → calm picker UI (never auto-error / auto-run). A link or Linux-highlight capture waits for Explain.
   const start = Boolean(code) && !session.awaitingConfirm;
@@ -363,12 +356,11 @@ function loadCodeIntoSession(
 }
 
 /** True on Pro. Otherwise the panel, when given, shows the upgrade prompt; callers return 'Pro required'. */
-async function requireProOrError(win: BrowserWindow | null, tabId: string, feature: string): Promise<boolean> {
+async function requireProOrError(win: BrowserWindow | null, feature: string): Promise<boolean> {
   const usage = await resolveAppUsage();
   if (isProPlan(usage.plan)) return true;
   win?.webContents.send('review:event', {
     type: 'error',
-    tabId,
     code: 'pro_required',
     upgradePath: '/plan',
     message: `${feature} is included with Unvibe Pro. Pro connects explanations across diffs, nearby files, and what you already understood.`,
@@ -389,7 +381,7 @@ async function startBuiltReview(
     session.sourceApp = sourceLabel;
     session.reviewId = randomUUID();
     applyBuiltReview(session, built);
-    // A panel that is still loading starts this tab itself on widget:ready.
+    // A panel that is still loading starts this session itself on widget:ready.
     if (!panelReady) return { ok: true };
     initWidget(win, session, { autoStart: true });
     void runReview(win, session, { level: session.level });
@@ -599,7 +591,6 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     raiseLimitPause(win);
     win.webContents.send('review:event', {
       type: 'usage',
-      tabId: '1',
       used: usage.used,
       limit: usage.limit,
       remaining: usage.remaining,
@@ -608,7 +599,6 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     });
     win.webContents.send('review:event', {
       type: 'error',
-      tabId: '1',
       code: 'plan_limit_reached',
       upgradePath: '/plan',
       message: 'You have reached your monthly explanation limit.',
@@ -663,19 +653,10 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
-  if (fresh) {
-    // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
-    const session = makeSession(activeTabId, code, sourceApp);
-    applyFileMeta(session, options.captured?.meta);
-    if (credit === 'held') session.selectionCredit = 'held';
-    if (confirmFrom && code) {
-      session.awaitingConfirm = true;
-      session.confirmFrom = confirmFrom;
-    }
-    tabSessions.set(activeTabId, session);
-    return;
-  }
-  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
+  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e); a fresh panel's
+  // session is started by widget:ready.
+  if (!fresh && !code && !needsGrant && panelSession?.code) return;
+  beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -930,49 +911,34 @@ app.whenReady().then(() => {
     return { ok: true as const, status: consentStatus() };
   });
 
-  // --- widget lifecycle (single panel + tabs) ---
+  // --- widget lifecycle (one panel, one session) ---
   ipcMain.on('widget:ready', (e) => {
     const win = widgetOf(e);
     if (!win) return;
     panelReady = true;
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!session) return;
     const start = Boolean(session.code) && !session.awaitingConfirm;
     initWidget(win, session, { autoStart: start });
     if (start) void runReview(win, session, { level: session.level });
   });
-  ipcMain.on('widget:setActiveTab', (_e, tabId: string) => {
-    if (typeof tabId !== 'string' || !tabId) return;
-    activeTabId = tabId;
-    if (!tabSessions.has(tabId)) tabSessions.set(tabId, makeSession(tabId, null, null));
-  });
-  ipcMain.on('widget:addTab', (e, tabId: string) => {
+  // Overlay B's height fits its content (360–560); the renderer measures it.
+  ipcMain.on('widget:fitHeight', (e, height: unknown) => {
     const win = widgetOf(e);
-    if (!win || typeof tabId !== 'string' || !tabId) return;
-    activeTabId = tabId;
-    const session = makeSession(tabId, null, null);
-    tabSessions.set(tabId, session);
-    initWidget(win, session, { autoStart: false });
+    if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
-  ipcMain.on('widget:closeTab', (e, tabId: string) => {
+  // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a).
+  ipcMain.handle('widget:savedLessons', () => savedLessons(store().events(), store().pinnedIds()));
+  ipcMain.handle('widget:savedLesson', (_e, id: unknown) => openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id));
+  ipcMain.handle('widget:saveLesson', (e, pinned: unknown) => {
     const win = widgetOf(e);
-    if (!win || typeof tabId !== 'string') return;
-    const closing = tabSessions.get(tabId);
-    closing?.abort?.abort();
-    tabSessions.delete(tabId);
-    if (tabSessions.size === 0) {
-      win.close();
-      return;
-    }
-    if (activeTabId === tabId) {
-      activeTabId = [...tabSessions.keys()][0]!;
-      const next = sessionFor(activeTabId);
-      if (next) initWidget(win, next, { autoStart: false });
-    }
+    const session = panelSession;
+    if (!win || !session || typeof pinned !== 'boolean') return { ok: false as const };
+    return pinLesson(win, session, pinned) ? { ok: true as const, pinned } : { ok: false as const };
   });
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
@@ -985,7 +951,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     const text = clipboard.readText().trim();
     if (!text) {
@@ -997,9 +963,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('widget:pickFile', async (e, opts?: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return { ok: false as const };
-    const picked = await chooseCodeFile(win);
+    const picked = await whilePanelDialog(() => chooseCodeFile(win));
     if (!picked.ok) return picked;
     const { filePath, text } = picked;
     const root = await resolveRepoRoot(path.dirname(filePath));
@@ -1047,7 +1013,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
     if (!text) {
@@ -1058,24 +1024,24 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:cancel', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     session.abort?.abort();
-    win.webContents.send('review:event', { type: 'cancelled', tabId: session.tabId });
+    win.webContents.send('review:event', { type: 'cancelled' });
   });
   ipcMain.on('widget:testMe', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) void startComprehension(win, session);
   });
   ipcMain.on('widget:answer', (e, choice: number) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) gradeComprehension(win, session, choice);
   });
   ipcMain.on('widget:gotIt', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) markUnderstood(win, session);
   });
   ipcMain.on('widget:pin', (e, pinned: boolean) => {
@@ -1086,68 +1052,9 @@ app.whenReady().then(() => {
     if (isMac) win.setHiddenInMissionControl(true);
     win.moveTop();
   });
-  ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
-    const win = widgetOf(e);
-    if (!win) return;
-    endWidgetResize();
-    if (collapsed) {
-      normalBounds.set(win.id, win.getBounds());
-      win.setBounds({ ...win.getBounds(), height: 52 });
-    } else {
-      const prev = normalBounds.get(win.id);
-      if (prev) win.setBounds(prev);
-    }
-  });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
   ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
-
-  // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
-  let resizeTick: ReturnType<typeof setInterval> | null = null;
-  let resizeSession: {
-    win: BrowserWindow;
-    edge: WidgetResizeEdge;
-    startBounds: Electron.Rectangle;
-    startCursor: Electron.Point;
-  } | null = null;
-  const endWidgetResize = () => {
-    if (resizeTick) {
-      clearInterval(resizeTick);
-      resizeTick = null;
-    }
-    if (resizeSession && !resizeSession.win.isDestroyed()) {
-      settings().set({ lastWidgetBounds: resizeSession.win.getBounds() });
-    }
-    resizeSession = null;
-  };
-  ipcMain.on('widget:resizeStart', (e, edge: WidgetResizeEdge) => {
-    const win = widgetOf(e);
-    if (!win || win.isDestroyed()) return;
-    const ok: WidgetResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-    if (!ok.includes(edge)) return;
-    endWidgetResize();
-    resizeSession = {
-      win,
-      edge,
-      startBounds: win.getBounds(),
-      startCursor: screen.getCursorScreenPoint(),
-    };
-    resizeTick = setInterval(() => {
-      if (!resizeSession || resizeSession.win.isDestroyed()) {
-        endWidgetResize();
-        return;
-      }
-      const cur = screen.getCursorScreenPoint();
-      const next = applyWidgetResize(
-        resizeSession.startBounds,
-        resizeSession.edge,
-        cur.x - resizeSession.startCursor.x,
-        cur.y - resizeSession.startCursor.y,
-      );
-      resizeSession.win.setBounds(next, false);
-    }, 16);
-  });
-  ipcMain.on('widget:resizeEnd', () => endWidgetResize());
 
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
@@ -1214,12 +1121,12 @@ app.whenReady().then(() => {
     // Only the panel renders the upgrade prompt; Briefs gets `proRequired` and shows its own Pro card.
     const panel = currentWidget();
     const askedFromPanel = panel !== null && widgetOf(e) === panel;
-    if (!(await requireProOrError(askedFromPanel ? panel : null, activeTabId, feature))) {
+    if (!(await requireProOrError(askedFromPanel ? panel : null, feature))) {
       return { ok: false, error: 'Pro required', proRequired: true };
     }
     let root = await resolveRepoRoot();
     if (!root) {
-      const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
+      const picked = await whilePanelDialog(() => dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' }));
       if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
       root = await resolveRepoRoot(picked.filePaths[0]);
     }
@@ -1227,8 +1134,8 @@ app.whenReady().then(() => {
     // Briefs asks from the companion window, which does not render reviews; the review always goes to the panel.
     const { win } = openPanel();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
-    tabSessions.set(activeTabId, session);
+    const session = panelSession ?? makeSession(null, null, opts?.level);
+    panelSession = session;
     if (opts?.level) session.level = opts.level;
     const scope = opts?.scope ?? 'working';
     return startBuiltReview(
@@ -1265,7 +1172,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('origin:lookup', async () => {
-    const session = sessionFor();
+    const session = panelSession;
     const file = session?.payload?.context.primaryFile ?? session?.file;
     const root = await resolveRepoRoot(session?.sourceFilePath ? path.dirname(session.sourceFilePath) : undefined);
     if (!root || !file) {
@@ -1318,7 +1225,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('teachback:grade', (_e, input: { answer?: string }) => {
-    const session = sessionFor();
+    const session = panelSession;
     const explanation = session?.explanationText?.trim() ?? '';
     const answer = String(input?.answer ?? '');
     const result = gradeTeachBack(explanation, answer);
@@ -1346,16 +1253,16 @@ app.whenReady().then(() => {
   ipcMain.handle('review:explainCompare', async (e, opts?: { level?: ExplanationLevel }) => {
     const win = widgetOf(e) ?? getOrCreateWidget();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
-    tabSessions.set(activeTabId, session);
+    const session = panelSession ?? makeSession(null, null, opts?.level);
+    panelSession = session;
     if (opts?.level) session.level = opts.level;
-    if (!(await requireProOrError(win, session.tabId, 'Since last understood'))) {
+    if (!(await requireProOrError(win, 'Since last understood'))) {
       return { ok: false, error: 'Pro required' };
     }
-    const picked = await dialog.showOpenDialog({
+    const picked = await whilePanelDialog(() => dialog.showOpenDialog({
       properties: ['openFile'],
       title: 'Choose a file to compare with what you last understood',
-    });
+    }));
     if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
     return startBuiltReview(
       win,
@@ -1369,9 +1276,9 @@ app.whenReady().then(() => {
     const { win } = openPanel();
     showBar(bar);
     const level = (item.level as ExplanationLevel) || 'intermediate';
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, level);
+    const session = panelSession ?? makeSession(null, null, level);
     session.level = level;
-    tabSessions.set(activeTabId, session);
+    panelSession = session;
     const saved = item.id ? store().eventById(item.id) : undefined;
     const savedCode = saved?.code?.trim();
 
@@ -1399,7 +1306,7 @@ app.whenReady().then(() => {
       return openFromCode(savedCode, saved?.file);
     }
     if (!item.file) {
-      beginCaptureOnActiveTab(win, null, null);
+      beginCapture(win, null, null);
       return { ok: true };
     }
     let root = await resolveRepoRoot();
@@ -1476,6 +1383,11 @@ app.whenReady().then(() => {
     if (patch.barHoverPreview === false) {
       resizeBar(bar, false);
       if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
+    }
+    // The panel follows Settings › Theme and "When I click away" live.
+    const panel = currentWidget();
+    if ((patch.theme !== undefined || patch.inactiveBehavior !== undefined) && panel) {
+      panel.webContents.send('panel:settings', { theme: next.theme, inactiveBehavior: next.inactiveBehavior });
     }
     return { settings: settings().all() };
   });
