@@ -166,6 +166,14 @@ export function ResourcesHub() {
               </div>
             </div>
           </div>
+
+          <p>
+            Want to see it first? Paste a snippet on{" "}
+            <Link href="/explain" className="paper-text-link">
+              Explain code
+            </Link>
+            , pick a depth and Vibe tells you what the code does. Free, no account.
+          </p>
         </section>
       )}
 
