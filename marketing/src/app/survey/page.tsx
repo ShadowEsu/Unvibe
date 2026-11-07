@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Vibe } from "@/components/paper/Vibe";
+import { REPLAY_BLOCK_CLASS } from "@/lib/analyticsPrivacy";
 import { WebSurveyForm } from "@/components/paper/WebSurveyForm";
 import "./survey.css";
 
@@ -13,12 +14,13 @@ export const metadata: Metadata = {
 
 /**
  * The one-question PMF survey (lib/webSurvey.ts). Static: opening it stores nothing, starts no
- * analytics and isn't counted as a site load (analyticsPrivacy.ts PRIVATE_PATH, siteLoads.ts
- * SKIPPED_PATH). Only Send posts the answer.
+ * analytics, sends no visit beacon and isn't counted as a site load (analyticsPrivacy.ts PRIVATE_PATH,
+ * visitBeacon.ts, siteLoads.ts SKIPPED_PATH). Only Send posts the answer. Like the other private
+ * pages, its content is left out of any session replay still running from a client navigation.
  */
 export default function SurveyPage() {
   return (
-    <article className="fos-page survey-page">
+    <article className={`fos-page survey-page ${REPLAY_BLOCK_CLASS}`}>
       <header className="fos-page__head">
         <Vibe size={96} />
         <div>
@@ -32,11 +34,6 @@ export default function SurveyPage() {
 
       <section className="verify">
         <WebSurveyForm />
-        <p className="survey-fine">
-          Anonymous: we don&apos;t ask for your name or email, and the link has nothing in it that says who you are.
-          Don&apos;t include passwords, keys or other people&apos;s personal details in the comment.{" "}
-          <a href="/privacy">Privacy</a>
-        </p>
       </section>
     </article>
   );

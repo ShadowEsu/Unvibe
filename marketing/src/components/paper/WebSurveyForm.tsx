@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   WEB_SURVEY_COMMENT_LABEL,
   WEB_SURVEY_MAX_COMMENT,
@@ -19,6 +19,12 @@ export function WebSurveyForm() {
   const [comment, setComment] = useState("");
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState("");
+  const done = useRef<HTMLDivElement>(null);
+
+  // Send unmounts the form; move focus to the confirmation so keyboard and screen-reader users land on it.
+  useEffect(() => {
+    if (state === "done") done.current?.focus();
+  }, [state]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -48,7 +54,7 @@ export function WebSurveyForm() {
 
   if (state === "done") {
     return (
-      <div className="survey-done" role="status">
+      <div className="survey-done" role="status" tabIndex={-1} ref={done}>
         <p><strong>Sent. Thank you.</strong></p>
         <p>That&apos;s everything. You can close this page.</p>
       </div>
@@ -84,6 +90,11 @@ export function WebSurveyForm() {
       <button type="submit" className="paper-join paper-join--win" disabled={state === "busy"}>
         <span className="paper-join__label">{state === "busy" ? "Sending…" : "Send"}</span>
       </button>
+      <p className="survey-fine">
+        Anonymous: we don&apos;t ask for your name or email, and the link has nothing in it that says who you are.
+        Don&apos;t include passwords, keys or other people&apos;s personal details in the comment.{" "}
+        <a href="/privacy">Privacy</a>
+      </p>
     </form>
   );
 }

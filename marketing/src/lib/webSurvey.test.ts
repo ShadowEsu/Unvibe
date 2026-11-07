@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import * as surveyRoute from "@/app/api/survey/route";
 import type { RateLimitDecision, RateLimitRule } from "@/lib/rateLimit";
-import { handleWebSurvey, WEB_SURVEY_DAILY_LIMIT, WEB_SURVEY_IP_LIMIT, type WebSurveyDeps, type WebSurveyRow } from "@/lib/webSurvey";
+import { handleWebSurvey, WEB_SURVEY_DAILY_LIMIT, WEB_SURVEY_IP_LIMIT, webSurveyDeps, type WebSurveyDeps, type WebSurveyRow } from "@/lib/webSurvey";
 
 function harness(decisions: Partial<Record<string, RateLimitDecision>> = {}, store: "stored" | "unavailable" | "throw" = "stored") {
   const rows: WebSurveyRow[] = [];
@@ -35,15 +35,20 @@ describe("web PMF survey", () => {
     assert.equal(typeof surveyRoute.POST, "function");
   });
 
-  it("stores one anonymous row per Send, with a fresh random key and the comment in q4", async () => {
+  it("stores one row per Send with the comment in q4", async () => {
     const h = harness();
     const first = await handleWebSurvey(post({ answer: "very", comment: "  More   languages\nplease " }), h.deps);
     assert.equal(first.status, 201);
     const second = await handleWebSurvey(post({ answer: "somewhat" }), h.deps);
     assert.equal(second.status, 201);
     assert.deepEqual(h.rows.map((r) => [r.q1, r.q4]), [["very", "More languages please"], ["somewhat", ""]]);
-    assert.notEqual(h.rows[0].installKey, h.rows[1].installKey);
     assert.deepEqual(h.consumed, [WEB_SURVEY_IP_LIMIT.name, WEB_SURVEY_DAILY_LIMIT.name, WEB_SURVEY_IP_LIMIT.name, WEB_SURVEY_DAILY_LIMIT.name]);
+  });
+
+  it("makes each answer's key fresh and in the form the table's check accepts", () => {
+    const keys = [webSurveyDeps.newInstallKey(), webSurveyDeps.newInstallKey()];
+    for (const key of keys) assert.match(key, /^[0-9a-f]{64}$/);
+    assert.notEqual(keys[0], keys[1]);
   });
 
   it("stores both N/A answers as na, which the score leaves out", async () => {

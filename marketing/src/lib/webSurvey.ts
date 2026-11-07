@@ -101,7 +101,11 @@ export async function handleWebSurvey(request: Request, deps: WebSurveyDeps = we
   if (network === "limited") return reply(429, { error: "That's a lot of answers from this network. Try again in an hour." });
   if (network === "unavailable") return reply(503, { error: "Couldn't save that just now. Try again in a minute." });
   const everyone = await deps.consume(WEB_SURVEY_DAILY_LIMIT, GLOBAL_KEY);
-  if (everyone === "limited") return reply(429, { error: "The survey has had all the answers it can take today. Try again tomorrow." });
+  if (everyone === "limited") {
+    // A fixed line to search the Vercel logs for: the survey is closed for the rest of the UTC day.
+    console.error("web survey daily limit reached (pmf-web-day-all)");
+    return reply(429, { error: "The survey has had all the answers it can take today. Try again tomorrow." });
+  }
   if (everyone === "unavailable") return reply(503, { error: "Couldn't save that just now. Try again in a minute." });
 
   let body: unknown;
@@ -113,7 +117,10 @@ export async function handleWebSurvey(request: Request, deps: WebSurveyDeps = we
   const parsed = parseWebSurvey(body);
   if ("error" in parsed) return reply(400, { error: parsed.error });
 
-  const result = await deps.store({ installKey: deps.newInstallKey(), ...parsed.row }).catch(() => "unavailable" as const);
+  const result = await deps.store({ installKey: deps.newInstallKey(), ...parsed.row }).catch(() => {
+    console.error("web survey store threw");
+    return "unavailable" as const;
+  });
   if (result !== "stored") return reply(503, { error: "Couldn't save that just now. Try again in a minute." });
   return reply(201, { ok: true });
 }
