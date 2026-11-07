@@ -30,7 +30,6 @@ import { FeedbackWidget } from "@/components/paper/FeedbackWidget";
 import { ReminderToast } from "@/components/paper/ReminderToast";
 import { SiteHeader } from "@/site/dia/SiteHeader";
 import { SiteFooter } from "@/site/dia/SiteFooter";
-import { Cursor } from "@/site/dia/Cursor";
 import { OsClass } from "@/site/dia/os";
 import { OS_BOOT } from "@/site/dia/osBoot";
 import { PRODUCT_FEATURES, PRODUCT_HOW, PRODUCT_SENTENCE } from "@/lib/productFacts";
@@ -209,7 +208,6 @@ export default function RootLayout({
           <SitePalette />
           <FeedbackWidget />
           <ReminderToast />
-          <Cursor />
         </Providers>
         <script dangerouslySetInnerHTML={{ __html: monoWhenWanted }} />
       </body>
