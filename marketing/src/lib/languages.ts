@@ -667,6 +667,36 @@ export const languages: Language[] = [
     learningPath: ["Copy a folder", "Trailing slashes", "Dry runs", "Mirroring with --delete"],
     sample: `rsync -avhn --delete ~/projects/my-site/ /mnt/backup/my-site`,
   },
+  {
+    id: "git-rebase",
+    name: "git rebase",
+    categories: ["systems", "scripting"],
+    blurb: "Rewriting a branch's commits before you share them: the rebase todo list of pick, fixup, squash, reword and drop.",
+    concepts: ["pick, fixup and squash", "reword and drop", "new hashes and the push", "reordering"],
+    frameworks: ["git", "GitHub", "GitLab", "git reflog"],
+    learningPath: ["Reading the todo list", "Folding commits", "Rewording and dropping", "Pushing a rewritten branch"],
+    sample: `git rebase -i main`,
+  },
+  {
+    id: "xargs",
+    name: "xargs",
+    categories: ["systems", "scripting"],
+    blurb: "The command that turns a list of names into arguments for another command, often after find: -0, -n, -P, -I {} and -r.",
+    concepts: ["-print0 and -0", "-n and -P", "-I {}", "-r on empty input"],
+    frameworks: ["find", "GNU findutils", "parallel", "bash"],
+    learningPath: ["Names to arguments", "Spaces in names", "Batches and parallel runs", "Empty input"],
+    sample: `find . -name '*.log' -mtime +7 -print0 | xargs -0 -P 4 -n 1 gzip -v`,
+  },
+  {
+    id: "ps-aux",
+    name: "ps aux",
+    categories: ["systems", "scripting"],
+    blurb: "The list of every running process: who owns it, how much CPU and memory it uses, and what its STAT letters mean.",
+    concepts: ["USER, PID and COMMAND", "%CPU and TIME", "VSZ and RSS", "STAT letters"],
+    frameworks: ["procps", "top", "kill", "pgrep"],
+    learningPath: ["Reading a row", "CPU use", "Memory use", "Process states"],
+    sample: `ps aux --sort=-%cpu | head -5`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

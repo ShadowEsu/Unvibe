@@ -3332,6 +3332,147 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
     watchOut:
       "`--delete` makes the backup match the source, even when the source is wrong. With an empty folder as the source, a `--delete` run removed every file in the backup and exited with code 0, as if all went well. Check SRC before a `--delete` run, keep the dry run and the yes prompt, and keep a second copy that the mirror never deletes from.",
   },
+  {
+    id: "git-rebase",
+    fileName: "git-rebase-todo",
+    lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
+    description:
+      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into one, rewords one and drops one before a pull request.",
+    sampleSummary: "The todo list `git rebase -i main` opened for a branch of 5 commits, edited to fold 2 fix-up commits into the first, reword one and drop one, with part of git's own help text kept below it.",
+    sample: `pick 7b4c146 # Add discount codes
+fixup c6d63af # wip
+fixup 998ecaf # fix typo
+reword 0c79299 # Use discount in checkout
+drop 803b36d # Add gitignore
+
+# Rebase 94f964d..803b36d onto 94f964d (5 commands)
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
+# d, drop <commit> = remove commit
+# These lines can be re-ordered; they are executed from top to bottom.
+# If you remove a line here THAT COMMIT WILL BE LOST.
+# However, if you remove everything, the rebase will be aborted.`,
+    shows: [
+      {
+        concept: "pick, fixup and squash",
+        text: "Each line is one commit, oldest first, and git runs them from the top. `pick` keeps a commit as it is. The 2 `fixup` lines folded wip and fix typo into Add discount codes and kept only that commit's message, so the debug lines wip added and fix typo took out left no trace. With `squash` in place of the first `fixup`, git opened the message editor with both messages, Add discount codes and wip, for you to combine.",
+      },
+      {
+        concept: "reword and drop",
+        text: "`reword` kept the change and stopped for a new message: Use discount in checkout became Apply discount codes at checkout. `drop` removed the Add gitignore commit, and its .gitignore file with it. The branch went from 5 commits to 2, and git printed `Successfully rebased and updated refs/heads/feature/discounts`.",
+      },
+      {
+        concept: "new hashes and the push",
+        text: "A rebase writes new commits: the 2 left were 0076ae5 and 1279aa9, and none of the old hashes was on the branch any more. The copy on the remote still pointed at the old tip, 803b36d, so a plain `git push` was rejected as `non-fast-forward`. `git push --force-with-lease` replaced it, and printed `forced update`.",
+      },
+      {
+        concept: "reordering",
+        text: "Lines can be moved, and git applies them in the new order. With fix typo moved above wip, the rebase stopped at fix typo with `The previous cherry-pick is now empty`, because the debug lines it takes out weren't there yet, and exited with code 1. `git rebase --abort` put the branch back to all 5 commits.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 on Linux in a test repo: main with one commit, and a feature/discounts branch of 5 commits by a test author. `GIT_SEQUENCE_EDITOR` supplied the edited todo list and `GIT_EDITOR` the new message, in place of an editor window. The todo list above is the one git wrote, with the 5 commands edited and 15 of its help lines left out.",
+      "Deleting every line stopped the rebase with `error: nothing to do` and left all 5 commits as they were.",
+    ],
+    watchOut:
+      "Deleting a line drops that commit, and git doesn't ask. With the Add gitignore line deleted instead of marked `drop`, the rebase printed `Successfully rebased`, exited with code 0, and .gitignore was gone from the branch. The old commits are still in the repo for a while: copy the branch tip's hash before you start, and after the rebase `git cherry-pick 803b36d` brought the dropped commit back.",
+  },
+  {
+    id: "xargs",
+    fileName: "shrink-logs.sh",
+    lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
+    description:
+      "Paste an xargs command and get it explained in plain English, free online. The sample gzips week-old logs 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
+    sampleSummary: "A shell script that compresses log files older than 7 days, 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
+    sample: `# shrink-logs.sh: compress old log files, one gzip per file, 4 at a time
+cd ~/app/logs
+
+# -print0 / -0: names end in a NUL byte, so spaces in names are safe
+find . -name '*.log' -mtime +7 -print0 | xargs -0 -P 4 -n 1 gzip -v
+
+# -I {}: put each name where {} is, one command per name
+find . -name '*.log.gz' -print0 | xargs -0 -I {} mv {} archive/
+
+# -r: run nothing if find found nothing (without it, GNU xargs runs once)
+find . -name '*.tmp' -print0 | xargs -0 -r rm -v
+
+# the one that breaks: plain find | xargs splits "error log.log" in two
+find . -name '*.log' | xargs ls -l`,
+    shows: [
+      {
+        concept: "-print0 and -0",
+        text: "xargs reads names from its input and adds them to the end of the command. `-print0` ends each name with a NUL byte and `-0` splits only there, so `jobs 2.log` stayed one name. The last line has neither, and xargs split on the space: ls got `./error` and `log.log`, printed `cannot access` for each, and xargs exited with code 123. A file named it's.log stopped plain xargs with `unmatched single quote`.",
+      },
+      {
+        concept: "-n and -P",
+        text: "`-n 1` gives each command one name, so the 5 old logs ran gzip 5 times. Without `-n`, xargs ran one gzip with all 5 names. `-P 4` runs up to 4 commands at once: 5 jobs that each sleep 1 second took 2.0 seconds with `-P 4` and 5.0 with `-P 1`. Output can mix: the `-v` lines of 4 gzips came out tangled on one line.",
+      },
+      {
+        concept: "-I {}",
+        text: "`-I {}` runs one command per name and puts the name where `{}` is, here in the middle, because `mv` needs the folder last. All 5 .log.gz files ended up in archive/, `jobs 2.log.gz` included, while the 2 newer logs stayed where they were.",
+      },
+      {
+        concept: "-r on empty input",
+        text: "With no .tmp files, find printed nothing, and GNU xargs still ran `rm -v` once with no names: rm printed `missing operand` and xargs exited with code 123. With `-r`, nothing ran and the exit code was 0, which matters in a script that stops on the first error.",
+      },
+    ],
+    notes: [
+      "Run with GNU findutils 4.11.0 (find and xargs) and gzip 1.14 on Linux, in a test logs folder of 7 files: 5 last changed 10 days ago, `jobs 2.log` among them, and 2 new ones, `error log.log` and today.log.",
+      "The xargs in macOS is a BSD version. Its manual in Apple's source (github.com/apple-oss-distributions/shell_cmds, shell_cmds-329) says it doesn't run the command on empty input, and that `-r` is accepted there but does nothing.",
+    ],
+    watchOut:
+      "Plain `find | xargs rm` can delete the wrong file. In a folder with a file named keep and a file named `keep me.tmp`, `find . -name '*.tmp' | xargs rm -v` printed `removed './keep'`, then `cannot remove 'me.tmp'`. The .tmp file was still there and keep was gone. Use `-print0` with `-0` every time a command deletes or moves files.",
+  },
+  {
+    id: "ps-aux",
+    fileName: "ps-aux.txt",
+    lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
+    description:
+      "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a big Python list, a stopped job and a zombie.",
+    sampleSummary: "`ps aux` output trimmed to the header, PID 1 and 2, and a test session: a Node server, a Python loop using a full CPU core, a Python list of 60 million items, a sleeping job, a stopped job and a zombie.",
+    sample: `$ ps aux   # Linux, procps-ng 4.0.7: the header, PID 1 and 2, then a test session
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.0  21516  4780 ?        Ss   Nov05   0:41 /usr/lib/systemd/systemd --switched-root --system --deserialize=56 splash
+root           2  0.0  0.0      0     0 ?        S    Nov05   0:00 [kthreadd]
+devuser   880085  0.1  0.3 1276360 53804 ?       SNl  21:54   0:00 node -e require("http").createServer((q,r)=>r.end("ok")).listen(4321)
+devuser   880086 99.2  0.0  17632  9512 ?        R<   21:54   0:06 python3 -c while True: pass
+devuser   880087  2.1  2.9 486384 478368 ?       S<   21:54   0:00 python3 -c import time; x = [0] * 60_000_000; time.sleep(600)
+devuser   880088  0.0  0.0   6252  2528 ?        S<   21:54   0:00 sleep 600
+devuser   880089  0.0  0.0  17632  9808 ?        S<   21:54   0:00 python3 -c import os, time if os.fork() == 0: os._exit(0) time.sleep(600)
+devuser   880090  0.0  0.0   6252  2524 ?        T<   21:54   0:00 sleep 600
+devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <defunct>`,
+    shows: [
+      {
+        concept: "USER, PID and COMMAND",
+        text: "Each row is one process: the account that owns it, its ID and the full command line, so `python3 -c while True: pass` tells 3 Python processes apart. PID 1 is systemd, which starts everything else, and names in square brackets like `[kthreadd]` are kernel threads, with 0 in both memory columns. START is a clock time for processes started today and a date, `Nov05`, for older ones. TTY is `?` for a process with no terminal.",
+      },
+      {
+        concept: "%CPU and TIME",
+        text: "`99.2` means the loop kept one CPU core busy. In procps, %CPU is CPU time divided by how long the process has existed, not what it is doing right now: a process that was busy for its first 3 seconds and then slept showed 49.8 at 6 seconds and 24.9 at 12. TIME, `0:06` for the loop, is its total CPU time so far.",
+      },
+      {
+        concept: "VSZ and RSS",
+        text: "Both are in KiB. RSS is memory actually in RAM: the list of 60 million items had 478368, about 467 MiB, and %MEM showed 2.9, its share of this machine's 16 GB. VSZ is address space the process has reserved, often far bigger: the Node server's VSZ was 1276360, about 1.2 GiB, with an RSS of only 53804. When something uses too much memory, look at RSS.",
+      },
+      {
+        concept: "STAT letters",
+        text: "The first letter is the state: `R` running, `S` asleep until something happens, `T` stopped (that sleep got `kill -STOP`), `Z` a zombie, a process that has exited but whose parent hasn't collected it yet. Letters after it add detail: `s` leads a session, `l` has more than one thread, `N` runs at low priority and `<` at raised priority.",
+      },
+    ],
+    notes: [
+      "Run with ps from procps-ng 4.0.7 on Linux, on a machine with 12 CPU cores and 16 GB of RAM. The account name in the sample is a placeholder, devuser, the same length as the real one, so the columns line up as ps printed them.",
+      "`ps aux | grep` lists the grep as well, because its own command line contains the pattern: with 2 test processes running, `grep 'psgreptest'` returned 3 rows, one of them the grep. `grep '[p]sgreptest'` can't match itself, and returned only the 2.",
+      "In Apple's ps manual (github.com/apple-oss-distributions/adv_cmds, adv_cmds-237), `-u` shows user, pid, %cpu, %mem, vsz, rss, tt, state, start, time and command, the same columns. There `I` marks a process asleep for more than about 20 seconds, while procps uses `I` for an idle kernel thread.",
+    ],
+    watchOut:
+      "A zombie can't be killed: it has already exited. `kill -9` on the zombie's PID left it in state `Z`, and it went away only when its parent, the Python process that forked it, was killed. If zombies pile up, the fix is in the parent, which has to wait for its children.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
