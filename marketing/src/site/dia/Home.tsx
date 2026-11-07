@@ -37,10 +37,26 @@ function Hero() {
   return (
     <section className="d-hero" aria-labelledby="d-hero-h">
       <div className="d-hero__bg" data-d-hero-bg="" aria-hidden="true" />
-      <h1 id="d-hero-h" className="d-hero__h1 d-serif" data-d-hero-rise="h1">{D_HERO.h1}</h1>
+      <div className="d-hero__top" data-d-hero-rise="h1">
+        <h1 id="d-hero-h" className="d-hero__h1 d-serif">{D_HERO.h1}</h1>
+        <TryWeb />
+      </div>
       <p className="d-hero__mark" aria-hidden="true" data-d-hero-rise="wordmark">{D_HERO.wordmark}</p>
       <DemoWindow rise />
     </section>
+  );
+}
+
+/** "Or try it in your browser first →" (Design 2032 + 2050 pick d, Security 2033: plain /explain): one quiet text link
+ *  10 px under the hero tagline at every width, above the wordmark, so no phone's dock ever covers it. */
+function TryWeb() {
+  return (
+    <p className="d-try">
+      <Link href="/explain">
+        {D_HERO.tryIt}{" "}
+        <span className="d-try__arrow" aria-hidden="true">→</span>
+      </Link>
+    </p>
   );
 }
 
