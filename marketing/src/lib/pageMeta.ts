@@ -98,7 +98,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   lsof: "/og/og-explain-lsof-0d8347e2.png",
   "segmentation-fault": "/og/og-explain-segmentation-fault-8bf27563.png",
   "http-headers": "/og/og-explain-http-headers-bdd9d71e.png",
-  "dns-records": "/og/og-explain-dns-records-38bb6983.png",
+  "dns-records": "/og/og-explain-dns-records-a6acf223.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */

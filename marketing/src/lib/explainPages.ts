@@ -3938,7 +3938,7 @@ Vary: Origin
   },
   {
     id: "dns-records",
-    fileName: "notes-app.example.zone",
+    fileName: "notes-app.zone",
     heading: "DNS records",
     related: ["http-headers", "curl", "ssh-config"],
     lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
