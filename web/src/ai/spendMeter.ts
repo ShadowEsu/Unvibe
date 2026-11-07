@@ -4,11 +4,11 @@ import { noStoreFetch } from '@/lib/serviceSupabase';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
- * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS): the Anthropic key may spend $50
- * per calendar month; Unvibe's share is $25 per UTC calendar month, with a $5 per UTC day guard (a
- * fifth of the month) so one bad day can't burn the month, and a $1 per UTC day share per account (a
- * fifth of the day guard) so one account can't use up the day for everyone. Counted on the database
- * so every serverless instance shares one count.
+ * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS; doubled 2026-11-06, "double that cap"): the
+ * Anthropic key may spend $50 per calendar month, and Unvibe's share is $50 per UTC calendar month, with a $10 per
+ * UTC day guard (a fifth of the month) so one bad day can't burn the month, and a $1 per UTC day share per account
+ * so one account can't use up the day for everyone. Counted on the database so every serverless instance shares
+ * one count.
  *
  * Each call reserves its worst case before the request leaves and settles afterwards from the usage
  * Anthropic measured. A call that failed or was cut off without measured usage keeps its whole
@@ -32,8 +32,8 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrices>> = {
 };
 /** Room for the Messages API's own framing tokens around the system prompt and the user turn. */
 const FRAMING_TOKENS = 64;
-export const DAY_CAP_NANO_USD = 5_000_000_000; // $5 per UTC day
-export const MONTH_CAP_NANO_USD = 25_000_000_000; // $25 per UTC calendar month
+export const DAY_CAP_NANO_USD = 10_000_000_000; // $10 per UTC day
+export const MONTH_CAP_NANO_USD = 50_000_000_000; // $50 per UTC calendar month
 export const ACCOUNT_DAY_CAP_NANO_USD = 1_000_000_000; // $1 per account per UTC day
 
 export const AI_LIMIT_TODAY = "AI limit reached for today. Explanations come back after midnight UTC.";
