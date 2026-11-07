@@ -3836,7 +3836,7 @@ $ kill 1643167`,
 $ ./scores 3
 best: player3 with 74
 $ bash -c './scores 0; echo "exit code: $?"'
-bash: line 1: 1711429 Segmentation fault         (core dumped) ./scores 0
+bash: line 1: 1755872 Segmentation fault         (core dumped) ./scores 0
 exit code: 139
 $ gdb -q -batch -ex run -ex bt -ex "print best" -ex "info locals" --args ./scores 0
 Program received signal SIGSEGV, Segmentation fault.
@@ -3858,7 +3858,7 @@ best = 0x0`,
       },
       {
         concept: "the NULL pointer",
-        text: "`print best` showed `0x0`: `best` is NULL, so `best->name` and `best->score` read from address 0 and a few bytes past it. `info locals` shows why: `count = 0`, so `find_best` never went into its loop and returned NULL, and `main` used it without checking.",
+        text: "`print best` showed `0x0`: `best` is NULL, so `best->score` reads from address 0x10, 16 bytes past NULL, and `best->name` would hand `printf` address 0. `info locals` shows why: `count = 0`. In scores.c, which isn't in the sample, line 28 sets `best = find_best(players, count)`, and `find_best` returns NULL when `count` is 0, because it never goes into its loop. `main` used it without checking.",
       },
       {
         concept: "-O0, -O2 and AddressSanitizer",
@@ -3866,12 +3866,13 @@ best = 0x0`,
       },
     ],
     notes: [
-      "Run with clang 22.1.8 and GDB 17.2 on Linux x86-64. The sample is the commands and their output from one run, with the build folder's path left out. The `bash: line 1:` prefix comes from running the crash under `bash -c`; a terminal prints the same `Segmentation fault (core dumped)` part.",
+      "Run with clang 22.1.8 and GDB 17.2 on Linux x86-64. The sample is the commands and their output from one run, with the build folder's path and 3 of GDB's 11 lines left out (2 thread-library messages and a blank line). The `bash: line 1:` line, with the process ID, is how `bash -c` reported the crash; the sample runs it that way so `echo` can print the exit code.",
+      "What SIGSEGV means comes from the signal(7) manual, the 128 plus signal number exit code from the bash manual, and the order `bt` lists frames in from the GDB manual.",
       "Address 0x10 is 16 bytes past NULL: in `struct player`, `name` takes the first 16 bytes, so `score` starts at byte 16.",
       "Adding `if (best == NULL)` before the `printf` fixed it: with 0 players the program printed `no players` and exited with code 0, and with 3 it still printed `best: player3 with 74`.",
     ],
     watchOut:
-      "The line that crashes isn't always the line with the bug. Line 29 only used the pointer; the NULL came from `find_best`, which returns NULL when there are no players. The fix belongs where that value is used or made, not in the `printf`. GDB's `print` on each pointer in the crashing line is the quickest way to find which one is bad.",
+      "The line that crashes isn't always the line with the bug. Line 29 only used the pointer; the NULL came from `find_best`, which returns NULL when there are no players. The fix that worked here is a NULL check before the `printf` uses `best`. GDB's `print` on each pointer in the crashing line shows which one is bad: `print best` gave `0x0`.",
   },
   {
     id: "http-headers",
@@ -3884,7 +3885,7 @@ best = 0x0`,
     sample: `$ curl -i http://127.0.0.1:8050/notes/42
 HTTP/1.1 200 OK
 Server: BaseHTTP/0.6 Python/3.14.7
-Date: Sat, 07 Nov 2026 09:39:16 GMT
+Date: Sat, 07 Nov 2026 09:47:53 GMT
 Content-Type: application/json; charset=utf-8
 Content-Length: 46
 Cache-Control: private, max-age=60
@@ -3905,7 +3906,7 @@ Vary: Origin
       },
       {
         concept: "Set-Cookie",
-        text: "`Set-Cookie` asks the client to store `session=abc123` for every path (`Path=/`) for 3600 seconds (`Max-Age`). `HttpOnly` hides it from the page's JavaScript, `Secure` limits it to HTTPS, and `SameSite=Lax` keeps it off most requests started by other sites. curl stored it in its cookie file with an `#HttpOnly_` prefix and the Secure column set to TRUE.",
+        text: "`Set-Cookie` asks the client to store `session=abc123` for every path (`Path=/`) for 3600 seconds (`Max-Age`). `HttpOnly` hides it from the page's JavaScript, `Secure` limits it to HTTPS, and `SameSite=Lax` keeps it off most requests started by other sites. curl stored it in its cookie file with an `#HttpOnly_` prefix and the Secure column set to TRUE, and sent it back as `Cookie: session=abc123`, even though this test ran over plain HTTP to 127.0.0.1. Check Secure cookies on the real HTTPS site.",
       },
       {
         concept: "Access-Control-Allow-Origin and Vary",
@@ -3913,11 +3914,11 @@ Vary: Origin
       },
     ],
     notes: [
-      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. What `private`, `max-age`, `HttpOnly`, `Secure`, `SameSite` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run: curl is not a browser and doesn't apply them.",
+      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. The run used `curl -si` with the carriage returns at the ends of the header lines removed; the sample shows the command as `curl -i`. What `private`, `max-age`, `ETag`, `HttpOnly`, `Secure`, `SameSite`, `Vary` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run. The run used curl, not a browser, so it shows what the server sent, not what a browser does with it.",
       "`/notes` answered `301 Moved Permanently` with `Location: /notes/42`. curl stopped there without `-L`; with `-L` it followed 1 redirect and got 200.",
     ],
     watchOut:
-      "An error status doesn't make curl fail. For a missing page the server answered `HTTP/1.1 404 Not Found` and curl still exited with code 0, so a script that checks only the exit code sees success. With `-f`, curl exited with code 22 on the 404.",
+      "An error status doesn't make curl fail. For a missing page the server answered `HTTP/1.1 404 Not Found` and curl exited with code 0, so a script that checks only the exit code sees success. With `-f`, curl exited with code 22 on the 404.",
   },
   {
     id: "dns-records",
@@ -3949,11 +3950,11 @@ _dmarc  IN  TXT   "v=DMARC1; p=quarantine; rua=mailto:dmarc@notes-app.example"
       },
       {
         concept: "CNAME",
-        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query.",
+        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query. This server only holds zones and has recursion off, so it doesn't chase names for dig; a resolver, like the one your computer normally asks, follows the CNAME for you (RFC 1034).",
       },
       {
         concept: "MX",
-        text: "`MX` records say which servers take email for the domain. The number is the preference: mail goes to mx1, with 10, before mx2, with 20. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
+        text: "`MX` records say which servers take email for the domain. The number is the preference: lower comes first, so mail goes to mx1, with 10, before mx2, with 20. dig listed the 2 records in the file's order, but the number decides, not the order. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
       },
       {
         concept: "TXT: SPF and DMARC",
@@ -3961,11 +3962,11 @@ _dmarc  IN  TXT   "v=DMARC1; p=quarantine; rua=mailto:dmarc@notes-app.example"
       },
     ],
     notes: [
-      "Run with BIND 9.20.26: `named-checkzone` loaded the file (`OK`), and named, started as a normal user on 127.0.0.1, served it to `dig` from the same release. The names end in .example and the addresses are documentation ranges, all reserved for examples, so no real domain or public DNS server was involved.",
-      "A name with no records got `status: NXDOMAIN` with 0 answers, plus the zone's SOA record. A CNAME can't share its name with other records: a `www` TXT record next to the CNAME, or a CNAME on the bare domain, stopped the zone loading with `CNAME and other data`. What SPF, DMARC and CAA records mean comes from their standards, not from this run.",
+      "Run with BIND 9.20.26: `named-checkzone` loaded the file (`OK`), and named, started as a normal user on 127.0.0.1, served it to `dig` from the same release. The zone's names end in .example and the addresses are documentation ranges, all reserved for examples, so no real domain or public DNS server was involved.",
+      "A name that doesn't exist got `status: NXDOMAIN` with 0 answers, plus the zone's SOA record. A CNAME can't share its name with other records: a `www` TXT record next to the CNAME, or a CNAME on the bare domain, stopped the zone loading with `CNAME and other data`. `CAA 0 issue \"letsencrypt.org\"` says only Let's Encrypt may issue certificates for the domain. What TTLs, MX preference numbers, SPF, DMARC and CAA records mean comes from their standards, not from this run.",
     ],
     watchOut:
-      "The dot at the end of a name matters. With `mx1.mail.example` written without it, named-checkzone still said `OK`, but the server answered `10 mx1.mail.example.notes-app.example.`: a name without the final dot gets the zone's own domain added. In a DNS provider's web form the rules can differ, so compare what dig returns with what you meant.",
+      "The dot at the end of a name matters. With `mx1.mail.example` written without it, named-checkzone still said `OK`, with only a warning that `mx1.mail.example.notes-app.example` has no address records, but the server answered `10 mx1.mail.example.notes-app.example.`: a name without the final dot gets the zone's own domain added. In a DNS provider's web form the rules can differ, so compare what dig returns with what you meant.",
   },
 ];
 
