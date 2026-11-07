@@ -5,7 +5,8 @@ import { changelogAnchors, changelogArchive, changelogEntries, milestones } from
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
 describe("milestones", () => {
-  it("are dated DD MON YYYY and listed newest first, as /releases shows them", () => {
+  it("are dated DD MON YYYY and shown newest first on /releases, starred entries included", () => {
+    assert.deepEqual(changelogEntries(), milestones, "/releases shows the list in its own order");
     let previous = Number.POSITIVE_INFINITY;
     for (const { date, title } of milestones) {
       const match = /^(\d{1,2}) ([A-Z]{3}) (\d{4})$/.exec(date);
@@ -13,6 +14,16 @@ describe("milestones", () => {
       const time = Date.UTC(Number(match[3]), MONTHS.indexOf(match[2]!), Number(match[1]));
       assert.ok(time <= previous, `${title} (${date}) is newer than the entry above it`);
       previous = time;
+    }
+  });
+
+  it("link only to public pages: an https URL or a page on this site, each once per entry", () => {
+    for (const { title, links = [] } of milestones) {
+      for (const { href, label } of links) {
+        assert.match(href, /^(https:\/\/[^\s]+|\/[a-z0-9\-/]*)$/, `${title}: link ${href}`);
+        assert.ok(label.trim().length > 0, `${title}: a link with no label`);
+      }
+      assert.equal(new Set(links.map((link) => link.href)).size, links.length, `${title}: the same link twice`);
     }
   });
 

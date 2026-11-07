@@ -2,22 +2,230 @@ import { compensationTotalLabel, creditSourcesLabel, SALESFORCE_ATTRIBUTION } fr
 
 export type MilestoneCategory = "PRODUCT" | "INFRA" | "COMPANY" | "DISTRIBUTION";
 
+export interface MilestoneLink {
+  href: string;
+  label: string;
+}
+
 export interface Milestone {
   date: string;
   category: MilestoneCategory;
   title: string;
   summary: string;
   figure?: string;
+  /** Shown with a star. It doesn't move the entry: the changelog is newest first, always. */
   pinned?: boolean;
+  /** Public pages for the entry: the pull request or release behind it, or the listing or program page it names. */
+  links?: readonly MilestoneLink[];
 }
 
 export const milestones: Milestone[] = [
   {
+    date: "6 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "A page that lists where Unvibe is listed",
+    summary: "A new Listed on page, linked from the footer, links every live directory listing and the directories Unvibe is being submitted to, which ask for a link back while they review a listing. Its 2 lists sit in reading cards, so the links stay clear of the background.",
+    links: [
+      { href: "/listed-on", label: "Listed on" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/215", label: "PR #215" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/217", label: "PR #217" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "A daily count of page loads, with nothing that identifies you",
+    summary: "unvibe.site now counts how many pages were loaded each day and the campaign label (utm_source) of the link that brought each visit, on its server, without waiting for Allow. Each total is a day, a label and a number, with no ID, IP address, cookie, time or page address. The privacy page and the Global Privacy Control line in the analytics bar say so.",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/211", label: "PR #211" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "The beta email's download button fits your computer",
+    summary: "The download button in the beta welcome email opened the Apple silicon Mac file for everyone, which won't run on Windows or an Intel Mac. It now opens unvibe.site/beta, which picks the build for your computer.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/210", label: "PR #210" }],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain git diff output, React useEffect and Python tracebacks",
+    summary: "3 new explain pages: git diff output, a React component's useEffect, and a Python traceback. Each has its own sample in a Try it box and notes on what that sample did when run with git 2.55.0, React 19.3.1 and Python 3.14.7.",
+    links: [
+      { href: "/explain/git-diff", label: "Explain git diff" },
+      { href: "/explain/react-useeffect", label: "Explain React useEffect" },
+      { href: "/explain/python-traceback", label: "Explain a Python traceback" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/205", label: "PR #205" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "Full explanations use lists, not tables",
+    summary: "A full-depth explanation now gives steps or a timeline as a short numbered or bulleted list instead of a table, which the app showed as rows of raw | characters. This changed on the server, so it applies to every installed version.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/204", label: "PR #204" }],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Install from Terminal first, with real first-open screenshots",
+    summary: "Every place the site offers Unvibe now starts with a one-line install to paste into Terminal on a Mac or PowerShell on Windows, with a Copy button. Unvibe isn't notarized by Apple yet, so a downloaded .dmg opens to a message that macOS can't verify it; the Terminal line doesn't. The .dmg and .exe are still there, with numbered first-open steps, real screenshots of the macOS 15 Open Anyway screen and the Windows SmartScreen Run anyway screen, and a link to the release's SHA-256 checksums.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/192", label: "PR #192" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/194", label: "PR #194" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/196", label: "PR #196" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "The home page shows the real app",
+    summary: "A new section under the hero shows 7 cards of real Unvibe 0.1.49 screenshots with sample code: the depths, a follow-up, Test me, the Library, Briefs, the key check and the privacy settings. The hero window's side panel now plays a real recording of 0.1.49 on sample code: the first answer, then Beginner, Advanced and a Test me question; the editor beside it is drawn. With reduced motion or JavaScript off, it shows one still frame and loads no video.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/191", label: "PR #191" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/197", label: "PR #197" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Sign in with an email link first",
+    summary: "On every sign-in page, the one the app opens on api.unvibe.site and /activate and /redeem on unvibe.site, the email link is now the first option and Continue with Google comes second. The Terms and age boxes still come first and cover both.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/199", label: "PR #199" }],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Pricing states the gift terms and the Teams status plainly",
+    summary: "The Pro card now says a new account gets a free month, plus a month for each friend who signs in and enters your gift code in the app, if their account hasn't had a gift yet (up to five). Teams is marked early access and not on sale yet, and no longer mentions a founding price.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/200", label: "PR #200" }],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Privacy page: daily install totals",
+    summary: "The privacy page now says unvibe.site keeps daily totals of how many times the install scripts were downloaded and finished installing, next to the daily totals of Allow and No thanks answers. Each total is a day and a number, with no ID, IP address, cookie, time or page address.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/202", label: "PR #202" }],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "Listed on 9 more sites",
+    summary: "Unvibe was listed on AIToolsCapital, AISO Tools, AI ToolBoard, the awesome-vibe-coding-resources list on GitHub, OpenUpvote, JunkStartups, ShowMySites, The Hack Stack and sideprojects.net.",
+    links: [
+      { href: "https://aitoolscapital.com/tools/unvibe", label: "AIToolsCapital" },
+      { href: "https://aisotools.com/tool/unvibe", label: "AISO Tools" },
+      { href: "https://aitoolboard.com/tools/unvibe", label: "AI ToolBoard" },
+      { href: "https://github.com/acvnace/awesome-vibe-coding-resources", label: "awesome-vibe-coding-resources" },
+      { href: "https://openupvote.com/project/unvibe", label: "OpenUpvote" },
+      { href: "https://junkstartups.com/startups/unvibe", label: "JunkStartups" },
+      { href: "https://www.showmysites.com/unvibe/unvibe/", label: "ShowMySites" },
+      { href: "https://thehackstack.com/s/unvibe/", label: "The Hack Stack" },
+      { href: "https://sideprojects.net/projects/unvibe", label: "sideprojects.net" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "33 more Explain code pages",
+    summary: "Explain code gained pages for Dart, Lua, YAML, awk, Makefile, Perl, sed, JSON, PowerShell, cron, .gitignore, tsconfig.json, jQuery, .env, .bashrc, XML, git log, npm scripts, SQLite, .zshrc, fish, SSH config, chmod, curl, pyproject.toml, ESLint config, Markdown, CSV, INI, requirements.txt, grep, GraphQL and find. Each page has its own sample, notes on what that sample did when it was run or parsed, as each page says, and a Try it box. A long line in the Try it editor now fades at the right edge to show it scrolls. Try it's key check also refuses unquoted keys and passwords in .env-style lines, and passwords written into a URL unless the host is local or the password is a placeholder.",
+    links: [
+      { href: "/explain", label: "All explain pages" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pulls?q=is%3Apr+is%3Amerged+%22SEO%3A+%2Fexplain%22", label: "The explain page PRs" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/166", label: "PR #166" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/173", label: "PR #173" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "A new home page",
+    summary: "The home page has a violet hero with a demo window and the download right under it, a floating menu bar on every page, and how it works in 4 steps with a real capture for each. On wide screens the analytics card is smaller and no longer covers the download button.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/156", label: "PR #156" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/159", label: "PR #159" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "A FAQ page and files AI assistants can read",
+    summary: "A new /faq page lists 20 questions and answers. /llms.txt and /llms-full.txt describe Unvibe, its prices, allowances and pages in a plain format built for AI assistants to read, from the same data as the pages. The footer's line of directory listings still in progress was removed.",
+    links: [
+      { href: "/faq", label: "FAQ" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/153", label: "PR #153" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/154", label: "PR #154" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Use-case pages",
+    summary: "3 new pages show where Unvibe fits: reviewing an AI agent's change before you accept it, learning from the code AI writes for you, and reading a codebase you didn't write. Their worked examples are labelled as hand-written.",
+    links: [
+      { href: "/use-cases", label: "Use cases" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/135", label: "PR #135" },
+    ],
+  },
+  {
+    date: "5 NOV 2026",
+    category: "PRODUCT",
+    title: "Emails, privacy and open-source notices",
+    summary: "The welcome email no longer says a waitlist signup starts with a free month of Pro, the gift offer says each receiving account gets one gift, and no email goes out from a fallback address. The privacy page covers account tips and notices, so the sign-in page asks you to agree again the next time you sign in. A new Open-source notices page carries the MIT licence of the glisse library the site uses. The changelog keeps its newest 12 entries open and folds older ones by month.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/139", label: "PR #139" },
+      { href: "/licenses", label: "Open-source notices" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/145", label: "PR #145" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/136", label: "PR #136" },
+    ],
+  },
+  {
+    date: "4 NOV 2026",
+    category: "PRODUCT",
+    title: "A brighter, shorter site that scrolls smoothly",
+    summary: "The site moved to tinted panels with fewer words: the home page went from 14 sections to 10. Later the same day, the blur behind those panels was replaced with solid tints, because it made scrolling slow; the layout stayed the same. Home and the download page share one download card, and home says what leaves your computer before the download.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/144", label: "PR #144" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/147", label: "PR #147" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/130", label: "PR #130" },
+    ],
+  },
+  {
+    date: "4 NOV 2026",
+    category: "PRODUCT",
+    title: "Clearer words about keys, fonts and plans",
+    summary: "The site says code is checked for keys and tokens, not filtered: the app checks it, and a known key blocks the request. The privacy page lists Google Fonts, which the desktop app's windows load in every released version so far, so Google receives your IP address and app details. Pricing defines the explanation allowances once, says \"soon\" only once and shows no Pro button while Pro isn't on sale; the Windows download says what it is and how big it is. The beta and invite emails no longer use emoji. A regex page joined Explain code.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/134", label: "PR #134" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/137", label: "PR #137" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/127", label: "PR #127" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/133", label: "PR #133" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/131", label: "PR #131" },
+      { href: "/explain/regex", label: "Explain regex" },
+    ],
+  },
+  {
     date: "4 NOV 2026",
     category: "PRODUCT",
     title: "Explanations start with a short answer",
-    summary: "An explanation now opens as a short answer of a few sentences, with names from your code in code style and a quiet line for anything Unvibe is not sure about. More detail opens the full explanation under it. If an explanation is refused or breaks before it arrives, for example while AI features are paused, the free trial gives that credit back. A one-line selection now reads 1 line, not 1 lines.",
+    summary: "An explanation now opens as a short answer of a few sentences, with names from your code in code style and a quiet line for anything Unvibe is not sure about. More detail opens the full explanation under it. Try it on the site answers short too. If an explanation is refused or breaks before it arrives, for example while AI features are paused, the free trial gives that credit back. A one-line selection now reads 1 line, not 1 lines.",
     figure: "v0.1.49",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.49", label: "Release v0.1.49" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/116", label: "PR #116" },
+    ],
+  },
+  {
+    date: "3 NOV 2026",
+    category: "PRODUCT",
+    title: "Sign-in errors say so, and a daily share per account",
+    summary: "A sign-in that comes back with an error now says so and offers to try again, on /redeem and on /activate. Each account gets a daily share of the hosted AI budget; past it, explanations stop with \"Daily AI limit reached for your account. Explanations come back after midnight UTC.\"",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/117", label: "PR #117" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/115", label: "PR #115" },
+    ],
   },
   {
     date: "2 NOV 2026",
@@ -25,6 +233,39 @@ export const milestones: Milestone[] = [
     title: "The panel says why an explanation could not start",
     summary: "When Unvibe's service stopped an explanation and said why, for example while AI features were paused for maintenance, the panel showed that reason instead of saying the explanation ended before it was complete. In a narrow panel, the Depth row wrapped onto a second line instead of cutting off Expert.",
     figure: "v0.1.48",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.48", label: "Release v0.1.48" }],
+  },
+  {
+    date: "2 NOV 2026",
+    category: "PRODUCT",
+    title: "Pro is 200 explanations a month, and deleting your account removes your sign-in",
+    summary: "Pro includes 200 AI explanations a month, up from 100; signed-in Free stays at 50 a month. Pro isn't on sale yet. Delete my account now also deletes your sign-in identity: the email and any Google name. Redeeming a code asks for the same Terms and age agreement as signing in. A refund policy page went up, and the Terms name the seller, renewal, tax and refunds. The web plan page no longer scrolls sideways on phones, and the app's Plan tab loads again for a returning account.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/122", label: "PR #122" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/125", label: "PR #125" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/120", label: "PR #120" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/121", label: "PR #121" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/119", label: "PR #119" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/124", label: "PR #124" },
+      { href: "/refund", label: "Refund policy" },
+    ],
+  },
+  {
+    date: "2 NOV 2026",
+    category: "PRODUCT",
+    title: "Explanations use Claude Opus 5.5, and PostHog leaves the site",
+    summary: "Hosted explanations moved from Claude Haiku 5.5 to Claude Opus 5.5, under a monthly spend cap. PostHog was removed from unvibe.site, so Mixpanel is the only analytics, and only after you press Allow; the privacy page is dated 2 November 2026. The feedback page names the one event it sends with your consent. While Try it is paused, the home page hides its Try link.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/114", label: "PR #114" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/112", label: "PR #112" },
+    ],
+  },
+  {
+    date: "1 NOV 2026",
+    category: "PRODUCT",
+    title: "A daily count of analytics answers, with nothing that identifies you",
+    summary: "When you press Allow or No thanks on the analytics bar, unvibe.site adds one to that day's count of that answer. The count has no ID, IP address, cookie, time or page address, and the privacy page says so.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/105", label: "PR #105" }],
   },
   {
     date: "31 OCT 2026",
@@ -32,6 +273,14 @@ export const milestones: Milestone[] = [
     title: "The app names Claude when it asks to send code, and asks for your feedback",
     summary: "The agreement the app shows before your code first leaves the computer named Anthropic's Claude, the provider explanations use since 30 Oct, and everyone who agreed before was asked again; nothing was sent until they agreed. On Free and the trial, Briefs' AI buttons were marked Pro, and pressing one showed a card saying Pro opens soon instead of a bare error. A short optional survey in the panel asked four questions about Unvibe; answers went to the team with the app version and your random install ID, which the thanks screen showed so you could ask for deletion. While an answer streamed, raw markdown markers no longer showed.",
     figure: "v0.1.47",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.47", label: "Release v0.1.47" }],
+  },
+  {
+    date: "31 OCT 2026",
+    category: "INFRA",
+    title: "A maintenance switch for AI features",
+    summary: "AI features can now be paused for maintenance. While they are, explanations, quizzes and Try it stop and send nothing to the AI provider.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/109", label: "PR #109" }],
   },
   {
     date: "30 OCT 2026",
@@ -39,6 +288,7 @@ export const milestones: Milestone[] = [
     title: "Cleaner bold labels and a paste step that asks again",
     summary: "Inline code inside a bold label rendered as code instead of raw backticks. During setup, the paste step asked again after Cancel instead of stopping.",
     figure: "v0.1.46",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.46", label: "Release v0.1.46" }],
   },
   {
     date: "30 OCT 2026",
@@ -46,12 +296,32 @@ export const milestones: Milestone[] = [
     title: "The app asks before your code first leaves the computer",
     summary: "Before the first explanation of your own code, the app asked for your agreement to send it, recorded the answer on your computer for that AI provider, and checked it before every send; turning the switch off withdrew it. Setup progress was off unless you turned it on, and updating switched it off once for existing installs. On a Mac, the first run started with pasting your own code, then offered the shortcut. A review started from a link waited for you to press Explain. Today showed a daily goal, and the streak counters were removed. The panel's Teach box became readable in the light look. The app's Electron build turned off running as plain Node, NODE_OPTIONS and the --inspect debugger.",
     figure: "v0.1.45",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.45", label: "Release v0.1.45" }],
   },
   {
     date: "30 OCT 2026",
     category: "PRODUCT",
     title: "Explanations moved to Anthropic's Claude",
-    summary: "Hosted explanations in the app and in Try it moved to Anthropic's Claude API (Claude Haiku). A spend cap was checked before every request, and requests stopped at the cap instead of switching to another provider. The privacy page, data controls and the Try it box named Anthropic.",
+    summary: "Hosted explanations in the app and in Try it moved to Anthropic's Claude API (Claude Haiku). A spend cap was checked before every request, and requests stopped at the cap instead of switching to another provider. The privacy page, data controls and the Try it box named Anthropic. Changed 2 Nov 2026: hosted explanations use Claude Opus 5.5.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/101", label: "PR #101" }],
+  },
+  {
+    date: "30 OCT 2026",
+    category: "PRODUCT",
+    title: "Privacy copy names the file path",
+    summary: "The privacy page, FAQ, About and the Windows page say what an explanation sends the way the app does it: the selected code and its file path.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/102", label: "PR #102" }],
+  },
+  {
+    date: "29 OCT 2026",
+    category: "PRODUCT",
+    title: "The site asks first: Try it, analytics and email tips",
+    summary: "Try it asks before it sends your code to the AI provider, with 2 unticked boxes: one to send it and one to say you're 18 or older. Analytics load only after you press Allow, Global Privacy Control is honoured, and Analytics settings in the footer changes your answer. The setup-tip email has its own unticked box. Every page got its own link preview card, and Mac and Windows code explainer pages went up.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/96", label: "PR #96" },
+      { href: "/code-explainer-mac", label: "Code explainer for Mac" },
+      { href: "/code-explainer-windows", label: "Code explainer for Windows" },
+    ],
   },
   {
     date: "27 OCT 2026",
@@ -89,6 +359,7 @@ export const milestones: Milestone[] = [
     title: "Your own code in the first minute, and typed questions checked for secrets",
     summary: "The first run now ends on your own code: select a few lines in any app and press the shortcut. On a Mac, Accessibility is asked the first time you press it, and after Unvibe explains your own code once, it asks whether to open when you log in. While payments are closed, the upgrade offer says Pro isn't open yet instead of showing prices. The setup sample no longer counts as your own activity on the computer where you ran it. Follow-up questions, lesson questions and Chat messages go through the same secret check as selected code. Signed-in friends can enter your gift code on their Share page, and you each get a month of Pro. The app now sends setup progress tied to a random install ID (never your code or email), with a switch in Settings to turn it off.",
     figure: "v0.1.44",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.44", label: "Release v0.1.44" }],
   },
   {
     date: "25 OCT 2026",
@@ -618,7 +889,7 @@ export const milestones: Milestone[] = [
     date: "11 SEP 2026",
     category: "PRODUCT",
     title: "New plans and Windows selection capture",
-    summary: "Pricing listed Free, Pro at $10 a month or $90 a year, Pro Lifetime at $80 once and a Teams founding pilot at $8 per seat. Invite a friend with your 8-character gift code, and you each got a month of Pro, up to five gifts. On Windows, the shortcut could copy and explain the code you had selected. Changed 22 Oct 2026: checkout is closed until payments open, and gifts come from a code entered in the app.",
+    summary: "Pricing listed Free, Pro at $10 a month or $90 a year, Pro Lifetime at $80 once and a Teams founding pilot at $8 per seat. Invite a friend with your 8-character gift code, and you each got a month of Pro, up to five gifts. On Windows, the shortcut could copy and explain the code you had selected. Changed 22 Oct 2026: checkout is closed until payments open, and gifts come from a code entered in the app. Changed 5 Nov 2026: Teams is early access, not on sale yet, with no founding price.",
   },
   {
     date: "26 AUG 2026",
@@ -743,7 +1014,7 @@ export const milestones: Milestone[] = [
     date: "17 AUG 2026",
     category: "PRODUCT",
     title: "Free is 30 explanations a month",
-    summary: "Free, trial, and unsigned beta now stop after 30 AI explanations. Pro stays at 100. Pricing on the site matches that cap. Changed 22 Oct 2026: unsigned use is 50 explanations in the first 30 days, and signed-in Free is 50 a month.",
+    summary: "Free, trial, and unsigned beta now stop after 30 AI explanations. Pro stays at 100. Pricing on the site matches that cap. Changed 22 Oct 2026: unsigned use is 50 explanations in the first 30 days, and signed-in Free is 50 a month. Changed 2 Nov 2026: Pro is 200 a month.",
     figure: "30 / month",
   },
   {
@@ -1014,10 +1285,9 @@ export const milestones: Milestone[] = [
   },
 ];
 
+/** Newest first, exactly as listed: a starred entry stays at its own date (an old pinned entry used to sit on top). */
 export function changelogEntries(): Milestone[] {
-  const pinned = milestones.filter((item) => item.pinned);
-  const rest = milestones.filter((item) => !item.pinned);
-  return [...pinned, ...rest];
+  return milestones;
 }
 
 export function changelogPreview(limit = 5): Milestone[] {
