@@ -11,7 +11,7 @@ export interface SetupTipInput {
   siteUrl: string;
 }
 
-export const SETUP_TIP_SUBJECT = "Today's tip: try Unvibe on code you didn't write";
+export const SETUP_TIP_SUBJECT = "Your setup tip: try Unvibe on code you didn't write";
 export const SETUP_TIP_PREVIEW = `Copy a few lines from any file and paste them into Unvibe. Then let ${SHORTCUTS.mac.anywhere} do it straight from your editor.`;
 
 // Copy: unvibe-support's onboarding email 2 (Security S-2 0002), casual rewrite for ledger 569 with the same facts and links. Where it lives, per the app: the
@@ -26,7 +26,7 @@ Here's the setup tip you asked for: try Unvibe on real code of your own today.
 
 1. Open Unvibe. You'll find it in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.
 2. Open a file you didn't write yourself, maybe from an AI tool or a teammate, and copy a few lines.
-3. Paste them into Unvibe. The explanation opens in a panel beside your editor. Ask it a follow-up, or press Test me.
+3. Paste them into Unvibe. The explanation opens in a panel beside your editor, where you can ask a follow-up or press Test me.
 
 Then skip the copying altogether:
 
@@ -35,9 +35,9 @@ Then skip the copying altogether:
 
 Fix a shortcut that does nothing: ${site}/help/shortcut
 
-Haven't installed it yet? No worries. Paste this into Terminal on a Mac: ${BETA_INSTALL_COMMAND}, or get the Windows version at ${site}/beta.
+Haven't installed it yet? Paste this into Terminal on a Mac: ${BETA_INSTALL_COMMAND}, or get the Windows version at ${site}/beta.
 
-Anything in the way? Just reply and we'll help.
+If anything gets in the way, reply to this email and we'll help.
 
 Have fun with it,
 The Unvibe team
@@ -55,12 +55,12 @@ export function setupTipHtml(input: SetupTipInput): string {
 <div style="display:none;max-height:0;overflow:hidden">${escape(SETUP_TIP_PREVIEW)}</div>
 <p>Hi again,</p>
 <p>Here's the setup tip you asked for: try Unvibe on real code of your own today.</p>
-<ol><li>Open Unvibe. You'll find it in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.</li><li>Open a file you didn't write yourself, maybe from an AI tool or a teammate, and copy a few lines.</li><li>Paste them into Unvibe. The explanation opens in a panel beside your editor. Ask it a follow-up, or press Test me.</li></ol>
+<ol><li>Open Unvibe. You'll find it in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.</li><li>Open a file you didn't write yourself, maybe from an AI tool or a teammate, and copy a few lines.</li><li>Paste them into Unvibe. The explanation opens in a panel beside your editor, where you can ask a follow-up or press Test me.</li></ol>
 <p>Then skip the copying altogether:</p>
 <ul><li><b>On a Mac,</b> select code in any app and press <b>${escape(SHORTCUTS.mac.anywhere)}</b>. The first time, macOS asks you to allow Accessibility so Unvibe can copy your selection: <a href="${accessibility}" style="${link}">${accessibility}</a></li><li><b>On Windows,</b> select code and press <b>${escape(SHORTCUTS.windows.anywhere)}</b>. Nothing to allow.</li></ul>
 <table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 20px"><tr><td bgcolor="#d9f45c" style="border:2px solid #141414;border-radius:14px;background:#d9f45c"><a href="${escape(`${site}/help/shortcut`)}" style="display:inline-block;padding:12px 22px;font-size:16px;font-weight:800;line-height:1.2;color:#141414;text-decoration:none">Fix a shortcut that does nothing</a></td></tr></table>
-<p>Haven't installed it yet? No worries. Paste this into Terminal on a Mac: <code style="${code}">${escape(BETA_INSTALL_COMMAND)}</code>, or get the Windows version at <a href="${beta}" style="${link}">${beta}</a>.</p>
-<p>Anything in the way? Just reply and we'll help.</p>
+<p>Haven't installed it yet? Paste this into Terminal on a Mac: <code style="${code}">${escape(BETA_INSTALL_COMMAND)}</code>, or get the Windows version at <a href="${beta}" style="${link}">${beta}</a>.</p>
+<p>If anything gets in the way, reply to this email and we'll help.</p>
 <p>Have fun with it,<br><b>The Unvibe team</b></p>
 <p style="font-size:12px;color:#66635d">You asked for one setup tip when you got Unvibe at <a href="${escape(site)}" style="color:#66635d">unvibe.site</a>. This is it, and nothing else is scheduled. Unsubscribe any time: <a href="${escape(input.unsubscribeUrl)}" style="color:#66635d;word-break:break-all">${escape(input.unsubscribeUrl)}</a></p></div>`;
 }
