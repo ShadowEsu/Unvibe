@@ -3020,6 +3020,168 @@ model Post {
     watchOut:
       "Classes put together from pieces silently do nothing. `bg-${color}-500` looks fine in the code and produced no CSS at all, so the element just had no background. Write the full class name for every option, for example a map from `red` to `bg-red-500`, so Tailwind can find each one.",
   },
+  {
+    id: "sql-joins",
+    fileName: "joins.sql",
+    lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
+    description:
+      "Paste SQL joins and get them explained in plain English, free online. The sample is 4 queries over customers, orders and refunds, including one whose totals come out doubled.",
+    sampleSummary: "4 queries of the kind an AI assistant writes for a small shop's report, over 3 tables: customers, orders and refunds. Run in SQLite 3.53.4 with 3 customers, 3 orders and 2 refunds.",
+    sample: `-- Tables: customers(id, name), orders(id, customer_id, total),
+-- refunds(id, customer_id, amount)
+
+-- 1. Customers with their orders
+SELECT c.name, o.total
+FROM customers c
+JOIN orders o ON o.customer_id = c.id;
+
+-- 2. Every customer, with or without orders
+SELECT c.name, o.total
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id;
+
+-- 3. Customers who never ordered
+SELECT c.name
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id
+WHERE o.id IS NULL;
+
+-- 4. What each customer spent, and what was refunded
+SELECT c.name, SUM(o.total) AS spent, SUM(r.amount) AS refunded
+FROM customers c
+JOIN orders o ON o.customer_id = c.id
+LEFT JOIN refunds r ON r.customer_id = c.id
+GROUP BY c.id;`,
+    shows: [
+      {
+        concept: "JOIN and LEFT JOIN",
+        text: "`JOIN` keeps only the rows that match on both sides: query 1 returned 3 rows, Ana twice and Ben once. `LEFT JOIN` keeps every row of the left table and fills the right side with NULL where nothing matches: query 2 returned 4 rows, the same 3 plus Cy with an empty total.",
+      },
+      {
+        concept: "rows with no match",
+        text: "Query 3 is a `LEFT JOIN` that keeps only the rows where the right side came back empty, `WHERE o.id IS NULL`, and it returned `Cy`, the one customer with no orders. The same question written with `NOT EXISTS` and a subquery also returned `Cy`.",
+      },
+      {
+        concept: "the doubled total",
+        text: "Query 4 joins orders and refunds to the same customer at once. Ana has 2 orders and 2 refunds, so the join made 4 rows for her, each order paired with each refund, and both sums counted everything twice: `spent` came out as 100.0 and `refunded` as 20.0, against 50 and 10. Ben has no refunds, so his `refunded` came back empty, NULL, not 0.",
+      },
+      {
+        concept: "WHERE after a LEFT JOIN",
+        text: "A condition on the right-hand table in `WHERE` turns a `LEFT JOIN` back into a plain `JOIN`. With `WHERE o.total > 10` added to query 2, Cy disappeared and 3 rows came back. Moved into the join itself, `ON o.customer_id = c.id AND o.total > 10`, Cy stayed, with an empty total.",
+      },
+    ],
+    notes: [
+      "Run with SQLite 3.53.4 on a fresh database built from the 3 tables in the comment. `JOIN` and `LEFT JOIN` work the same way in PostgreSQL and MySQL. SQLite has accepted `FULL JOIN` since version 3.39, and here a `FULL JOIN` of orders and customers returned 4 rows.",
+      "Query 2 has no `ORDER BY`, so the database can return its rows in any order: it listed Ana's 20.0 before her 30.0, the other way round from query 1.",
+    ],
+    watchOut:
+      "A total that is too big, with no error, usually comes from the join, not the data. Add up each table on its own first, then join the results: with orders and refunds each summed per customer in a subquery, Ana came back as 50.0 spent and 10.0 refunded. Running the joined rows without `SUM` and `GROUP BY` shows the repeats: 4 rows for Ana.",
+  },
+  {
+    id: "supabase-rls",
+    fileName: "todos.sql",
+    lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
+    description:
+      "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each signed-in user reads, adds and updates only their own rows.",
+    sampleSummary: "SQL of the kind an AI app builder writes for a Supabase todos table: the table, row level security switched on, and 3 policies that tie each row to the signed-in user.",
+    sample: `-- todos: each signed-in user sees and changes only their own rows
+create table todos (
+  id bigint generated always as identity primary key,
+  user_id uuid not null default auth.uid() references auth.users,
+  task text not null,
+  done boolean not null default false
+);
+
+alter table todos enable row level security;
+
+create policy "read own todos" on todos
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "add own todos" on todos
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create policy "update own todos" on todos
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);`,
+    shows: [
+      {
+        concept: "enabling RLS",
+        text: "`enable row level security` makes every query on the table see only the rows a policy allows. Without that line the policies did nothing: Ana and a signed-out visitor both read every todo, hers and Sam's. With it on and no policies at all, Ana read 0 rows, and adding a todo failed with `new row violates row-level security policy`.",
+      },
+      {
+        concept: "using and with check",
+        text: "`using` decides which existing rows a query can see or touch, and `with check` decides what a new or changed row may look like. Ana read her 2 todos and Sam read his 1. Ana adding a todo with Sam's `user_id` failed the `with check` test. Her update to Sam's todo changed 0 rows, with no error, because `using` hid it from her.",
+      },
+      {
+        concept: "auth.uid() and roles",
+        text: "`auth.uid()` returns the id of the signed-in user making the request, read from their login token. `to authenticated` limits a policy to signed-in requests, so a signed-out visitor, the `anon` role, read 0 rows and couldn't add one. Supabase's docs recommend `(select auth.uid())` over a bare `auth.uid()` so Postgres works it out once per query, not once per row.",
+      },
+      {
+        concept: "missing policies",
+        text: "There is no `delete` policy, so nobody signed in can delete: Ana deleting her own todo changed 0 rows. The update policy also leans on the select policy: with the select policy taken out, Ana could still add a todo but read 0 rows, and marking it done changed 0 rows.",
+      },
+    ],
+    notes: [
+      "Run on PostgreSQL 18.6 through PGlite 0.5.15, with a small stand-in for Supabase's `auth` schema and its `anon` and `authenticated` roles, and `auth.uid()` copied from Supabase's own source. Each request set the role and the login token's claims in a transaction, the way Supabase's Data API does.",
+      "The table's owner skips these policies: as `postgres`, the run read all 3 todos. Supabase's `service_role` key skips them too, so it belongs on a server, never in the browser.",
+      "Taking out the update policy's `with check` line didn't open a hole here: Postgres then tests the changed row with `using`, so giving Ana's todo to Sam still failed.",
+    ],
+    watchOut:
+      "A view can quietly skip every policy. A view over todos, created by the table owner and granted to signed-in users, showed Sam his own todo and Ana's. After `alter view ... set (security_invoker = true)`, the view applied the policies and Sam saw only his own.",
+  },
+  {
+    id: "cors-error",
+    fileName: "cors-error.txt",
+    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
+    description:
+      "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
+    sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: the setup many AI-built apps start with, a front end and an API on different ports.",
+    sample: `// Browser console on http://localhost:5173
+Access to fetch at 'http://localhost:3000/api/todos' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+Failed to load resource: net::ERR_FAILED
+
+// api/server.js: the API the front end calls
+const http = require("node:http");
+
+const server = http.createServer((req, res) => {
+  if (req.url === "/api/todos" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify([{ id: 1, task: "Buy milk" }]));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+server.listen(3000);`,
+    shows: [
+      {
+        concept: "origins",
+        text: "An origin is the scheme, host and port together. `http://localhost:5173` and `http://localhost:3000` differ only in the port, and that is enough to make them different origins, so the browser treats the API as another site and applies CORS.",
+      },
+      {
+        concept: "the missing header",
+        text: "The request did reach the API: the server logged `GET /api/todos` and answered 200. The browser then kept the reply from the page because it had no `Access-Control-Allow-Origin` header, and `fetch` threw `TypeError: Failed to fetch`. A request sent from outside the browser, with the same `Origin` header, got the JSON back.",
+      },
+      {
+        concept: "the fix",
+        text: "Adding `\"Access-Control-Allow-Origin\": \"http://localhost:5173\"` to the reply's headers made the same fetch work. `*` worked too, but it lets any site's pages read the reply. A value naming another origin, `http://localhost:3000`, failed with `has a value 'http://localhost:3000' that is not equal to the supplied origin`.",
+      },
+      {
+        concept: "preflight",
+        text: "An `Authorization` header made the browser ask first: it sent `OPTIONS /api/todos`, got this server's 404 and stopped with `Response to preflight request doesn't pass access control check`, even with Allow-Origin on the GET. Answering `OPTIONS` with 204, Allow-Origin and `Access-Control-Allow-Headers: Authorization` let the GET through, and the todos came back.",
+      },
+    ],
+    notes: [
+      "Run with Node 25.7.0 and Chromium 156, driven by Playwright. The 2 console lines in the sample are what Chromium logged; the page's own `catch` printed `TypeError Failed to fetch`.",
+      "`mode: 'no-cors'` doesn't fix it. The request went out and the server answered 200, but the page got an empty response with status 0, and `res.json()` failed with `Unexpected end of input`.",
+    ],
+    watchOut:
+      "CORS doesn't protect your API. It only stops pages from other origins, in a browser, from reading the reply: the request reached the server every time, and a request from outside a browser read the todos with no header at all. Keep real checks, such as who is signed in, on the server.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
