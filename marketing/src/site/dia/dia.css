@@ -51,7 +51,11 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 /* Motion's bubbles still (CC0, recoloured; PROVENANCE.md beside it): a CSS background, never the LCP, never preloaded */
 .d-hero__bg { position: absolute; inset: -6%; z-index: -2; background: #5a3cc6 image-set(url("/d/bg/hero-bubbles-1440.avif") type("image/avif"), url("/d/bg/hero-bubbles-1440.webp") type("image/webp")) center / cover no-repeat; }
 @media (max-width: 600px) { .d-hero__bg { background-image: image-set(url("/d/bg/hero-bubbles-390.avif") type("image/avif"), url("/d/bg/hero-bubbles-390.webp") type("image/webp")); } }
-.d-hero__h1 { position: absolute; top: calc(116 * var(--s)); left: 0; right: 0; padding: 0 24px; text-align: center; font-size: max(28px, calc(38.8 * var(--s))); line-height: 1.1; letter-spacing: -0.01em; white-space: nowrap; color: #fff; }
+.d-hero__top { position: absolute; top: calc(116 * var(--s)); left: 0; right: 0; padding: 0 24px; text-align: center; }
+/* a soft violet shade behind the tagline + try link: the 15 px link measures >= 5:1 (p10) on the real bubbles at
+   390-2560; at white .86 without it, it was 3.4:1 */
+.d-hero__top::before { content: ""; position: absolute; z-index: -1; left: 50%; top: -28px; bottom: -20px; width: min(980px, 100%); transform: translateX(-50%); background: radial-gradient(closest-side, rgb(46 22 138 / 0.5), rgb(46 22 138 / 0.36) 55%, rgb(46 22 138 / 0)); pointer-events: none; }
+.d-hero__h1 { font-size: max(28px, calc(38.8 * var(--s))); line-height: 1.1; letter-spacing: -0.01em; white-space: nowrap; color: #fff; }
 .d-w { display: inline-block; white-space: nowrap; }
 .d-w--em { font-style: italic; }
 .d-hero__mark { position: absolute; z-index: -1; top: calc(198 * var(--s)); left: 0; right: 0; text-align: center; font-family: var(--font-wordmark); font-style: var(--wm-style); font-weight: var(--wm-weight); font-size: calc(var(--wm-size) * var(--s)); line-height: 0.9; letter-spacing: -0.02em; color: rgb(255 255 255 / 0.92); white-space: nowrap; user-select: none; }
@@ -357,7 +361,8 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 /* ---------- phones (Dia home-390: 28 px H1, window full-bleed minus 16, steps stacked with the window under each) ---------- */
 @media (max-width: 820px) {
   .d-hero { --s: calc(100vw / 390 * 0.36); padding-top: 284px; padding-bottom: 150px; }
-  .d-hero__h1 { top: 96px; font-size: 28px; white-space: normal; text-wrap: balance; }
+  .d-hero__top { top: 96px; }
+  .d-hero__h1 { font-size: 28px; white-space: normal; text-wrap: balance; }
   .d-hero__mark { top: 190px; font-size: 30vw; }
   .d-win { width: calc(100% - 16px); }
   .d-win__frame { border-radius: 12px; }
@@ -463,3 +468,14 @@ html[data-dl]:not([data-dl-ready]) :is(.dd-page > :not(.dt), .d-foot) { display:
 .d-cap { color: rgb(23 19 31 / 0.74); }
 /* phones: the still dock is the pill alone; "Available for macOS and Windows" would sit over the captions */
 @media (max-width: 820px) { .d-home [data-d-dock-pill] .d-avail { display: none; } }
+/* "Or try it in your browser first →" (Design 2032 + 2050, Security 2033): a quiet text link 10 px under the hero
+   tagline at every width, to plain /explain (no utm on an internal link). White (not Design's .86) because .86 measured
+   3.4:1 at p10 even on the shade; white measures 5.0-5.3:1 */
+.d-try { margin: 10px 0 0; font: 500 15px/1.4 var(--d-sans); }
+.d-try a { display: inline-block; padding-block: 4px; color: #fff; text-decoration: underline 1px rgb(255 255 255 / 0.45); text-underline-offset: 3px; }
+.d-try a:hover, .d-try a:focus-visible { text-decoration-color: currentColor; }
+/* the inherited violet focus ring vanishes on the violet hero (lead review on #237): white, like .try__go */
+.d-try a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 2px; }
+.d-try__arrow { display: inline-block; transition: transform 0.2s ease; }
+.d-try a:hover .d-try__arrow { transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) { .d-try__arrow { transition: none; } .d-try a:hover .d-try__arrow { transform: none; } }

@@ -26,6 +26,8 @@ export const D_HERO = {
   wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
+  /** The web try under the tagline (Unvibe lead, 6 Nov: home had no visible way to /explain; Security 2033 GO). */
+  tryIt: "Or try it in your browser first",
   caption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
 } as const;
 
