@@ -1950,7 +1950,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -1989,6 +1989,7 @@ function App() {
               setAskDraft('');
               setPage('Chat');
             }}>
+              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
               <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
               <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
             </form>

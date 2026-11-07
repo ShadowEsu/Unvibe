@@ -1,13 +1,40 @@
 /*
- * Overlay B, refined (Design b-refined SPEC) in Spectral (Design spectral README §1, §3.1). Every colour, weight,
- * radius and the rim come from shared/tokens.css; dark is :root[data-theme="dark"] (Settings › Theme). One typeface
- * for every string, JetBrains Mono, no italics. Motion is transform and opacity only, and none with reduced motion.
+ * Overlay B, refined (Design b-refined SPEC), in 0.1.49's "Ink terminal" (round 2, ledger 574; Design
+ * requests/unvibe-app/20261107-1159-design-r2-options-abc.md): a warm black window next to your code in both themes.
+ * Bricolage for titles, Inter for reading, JetBrains Mono for code and keycaps, Instrument Serif Italic for Vibe's
+ * notes. Lime is the next step (the current tab and depth, the primary, the send key). Every rule reads the shared
+ * token names; this window gives them the Ink terminal's values. Motion is transform and opacity only, and none with
+ * reduced motion.
  */
-:root {
+:root, :root[data-theme="light"], :root[data-theme="dark"] {
+  --u-ink: #f4f2ea; /* 15.9:1 on #141413 */
+  --u-ink-2: #d4d1c8;
+  --u-ink-3: #aeaba2; /* 8.0 on #141413; #75726a is never text */
+  --u-paper: #141413;
+  --u-glass: #141413;
+  --u-chip: #1e1e1c;
+  --u-fill: #272725;
+  --u-raised: #272725;
+  --u-line: #2f2f2c;
+  --u-edge: #75726a; /* outlined buttons and chips: 3.6:1, a visible control edge */
+  --u-accent: #d6f45a;
+  --u-accent-on: #141413;
+  --u-mist: rgb(214 244 90 / 0.14);
+  --u-code-bg: #0d0d0c;
+  --u-rim: linear-gradient(#000, #000);
+  --u-blur: none;
+  --u-shadow: 0 0 0 1px rgb(255 255 255 / 0.04) inset, 0 24px 60px -18px rgb(0 0 0 / 0.7);
+  --u-card-rim: #2f2f2c;
+  --u-amber: #ffd84d;
+  --u-amber-tint: #3a2c10;
+  --p-sky: #9fd8ff;
+  --p-sun: #ffd84d;
+  --p-lilac: #b8a6ff;
+  color-scheme: dark;
   /* Shared components (paste box, shortcut guide, consent form, Vibe) read these names. */
   --font-sans: var(--u-font);
-  --font-mono: var(--u-font);
-  --font-display: var(--u-font);
+  --font-mono: var(--u-font-mono);
+  --font-display: var(--u-font-display);
   --fg: var(--u-ink);
   --muted: var(--u-ink-2);
   --line: var(--u-line);
@@ -23,7 +50,8 @@ body {
   -webkit-font-smoothing: antialiased;
   font-synthesis: none;
 }
-em, i, cite { font-style: normal; }
+code, pre, kbd { font-family: var(--u-font-mono); }
+::selection { background: var(--u-lime); color: #141413; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled, [aria-disabled="true"] { cursor: default; }
@@ -31,7 +59,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .ob-icon { flex: none; display: block; }
 
-/* ── The pane: 380 wide, glass, the iridescent rim, radius 18; header and tabs pinned, the body scrolls ── */
+/* ── The pane: 380 wide, warm black with a 1.5 px black edge, radius 14; header and tabs pinned, the body scrolls ── */
 .ob {
   position: relative;
   display: flex;
@@ -65,7 +93,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 }
 .ob-head__vibe { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
 .ob-head__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.ob-head__title { overflow: hidden; font-size: 13px; line-height: 16px; font-weight: 640; white-space: nowrap; text-overflow: ellipsis; }
+.ob-head__title { overflow: hidden; font: 800 15px/18px var(--u-font-display); letter-spacing: -0.03em; white-space: nowrap; text-overflow: ellipsis; }
 .ob-meta { display: block; overflow: hidden; color: var(--u-ink-3); font-size: 10.5px; line-height: 14px; font-weight: var(--u-w-label); white-space: nowrap; text-overflow: ellipsis; }
 .ob-head__close {
   flex: none;
@@ -95,7 +123,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-foot:not(:has(> :nth-child(2))) { padding-bottom: 0; }
 .ob-toast-region:empty { display: none; }
 
-/* Tabs, 54 pt, pinned: a 16 pt icon over a 10.5 label; 80 × 42 targets; the active one a mist pill in accent. */
+/* Tabs, 54 pt, pinned: outlined keycaps (a 16 pt icon over a 10.5 label, 80 × 42 targets, a 3 px lip); the active one
+   filled lime with ink, pressed down onto its lip. */
 .ob-tabs {
   flex: none;
   display: grid;
@@ -113,16 +142,18 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 3px;
   width: 80px;
   height: 42px;
-  border: 0;
+  border: 1.5px solid var(--u-edge);
+  border-bottom-width: 3px;
   border-radius: var(--u-radius-field);
-  background: transparent;
+  background: var(--u-chip);
   color: var(--u-ink-2);
   font-size: 10.5px;
   line-height: 13px;
   font-weight: var(--u-w-label);
+  transition: transform 160ms var(--u-press);
 }
-.ob-tab:hover:not([aria-disabled="true"]) { background: var(--u-fill); }
-.ob-tab.is-on { background: var(--u-mist); color: var(--u-accent); font-weight: 620; }
+.ob-tab:hover:not([aria-disabled="true"]) { border-color: var(--u-ink-3); color: var(--u-ink); }
+.ob-tab.is-on { border-color: #000; border-bottom-width: 1.5px; background: var(--u-lime); color: #141413; font-weight: 700; transform: translateY(1.5px); }
 .ob-tab[aria-disabled="true"] { opacity: 0.45; }
 
 /* ── Depth: one 26 pt segmented control; the current depth an accent pill; Expert keeps its Pro marker ── */
@@ -170,7 +201,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-code { border: 1px solid var(--u-line); border-radius: var(--u-radius-field); background: var(--u-chip); overflow: hidden; }
 .ob-code__row { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 10px; }
 .ob-code__tick { flex: none; width: 3px; height: 14px; border-radius: 2px; background: var(--u-lime); }
-.ob-code__line { flex: 1; min-width: 0; overflow: hidden; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.ob-code__line { flex: 1; min-width: 0; overflow: hidden; font: 500 12px/18px var(--u-font-mono); white-space: nowrap; text-overflow: ellipsis; }
 .ob-code__all {
   display: none;
   max-height: 240px;
@@ -179,7 +210,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   padding: 8px 12px 10px;
   border-top: 1px solid var(--u-line);
   background: var(--u-code-bg);
-  font: var(--u-w-body) 12px/18px var(--u-font);
+  font: var(--u-w-body) 12px/18px var(--u-font-mono);
   white-space: pre;
 }
 .ob-code.is-open .ob-code__all { display: block; }
@@ -196,19 +227,18 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 }
 .ob-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-/* ── The answer: 13/20 mono; code words share the size, in mist chips with accent text ── */
+/* ── The answer: Inter 13/20; code words in mono on a raised chip in sun (0.1.49's Ink terminal); bold gets a lime
+   highlighter under it ── */
 .ob-answer { display: grid; gap: 8px; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.ob-answer p { margin: 0; }
+.ob-answer p { margin: 0; color: #e4e1d8; }
 .ob-answer code.inline {
   padding: 1px 5px;
   border-radius: 6px;
-  background: var(--u-mist);
-  color: var(--u-accent);
-  font: inherit;
-  font-weight: var(--u-w-label);
+  background: var(--u-raised);
+  color: var(--p-sun);
+  font: 500 12px/1 var(--u-font-mono);
 }
-:root[data-theme="dark"] .ob-answer code.inline { color: var(--u-ink); }
-.ob-answer strong { font-weight: 620; }
+.ob-answer strong { color: #fff; font-weight: 650; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.28) 62%); }
 .ob-answer .rich-heading { margin: 6px 0 0; font-size: 13px; line-height: 20px; font-weight: 640; }
 .ob-answer .rich-heading:first-child { margin-top: 0; }
 .ob-answer .rich-list { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
@@ -226,12 +256,11 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .codeblock { border: 1px solid var(--u-line); border-radius: var(--u-radius-field); background: var(--u-code-bg); overflow: hidden; }
 .codeblock .cb-head { display: flex; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid var(--u-line); color: var(--u-ink-3); font-size: 10.5px; font-weight: var(--u-w-label); }
 .codeblock .cb-head button { padding: 0; border: 0; background: none; color: var(--u-accent); font-size: 10.5px; }
-.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font: var(--u-w-body) 12px/18px var(--u-font); }
-.tk-k { color: var(--u-accent); }
-.tk-s { color: #2f7d4f; }
+.codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font: var(--u-w-body) 12px/18px var(--u-font-mono); }
+.tk-k { color: var(--p-lilac); }
+.tk-s { color: var(--u-lime); }
 .tk-c { color: var(--u-ink-3); }
-.tk-n { color: var(--u-amber); }
-:root[data-theme="dark"] .tk-s { color: #8fe0b2; }
+.tk-n { color: var(--p-sun); }
 .cursor { display: inline-block; width: 7px; height: 15px; margin-left: 2px; vertical-align: -2px; background: var(--u-ink); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .rich-w { animation: richWordIn 120ms linear; }
@@ -254,27 +283,31 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-steps .is-now { color: var(--u-ink); font-weight: 620; }
 .ob-steps .is-now i { border-color: var(--u-accent); box-shadow: inset 0 0 0 3px var(--u-glass), inset 0 0 0 9px var(--u-accent); }
 
-/* ── Chips (28 pt, small: no big button), buttons, the Ask field ── */
+/* ── Chips and buttons: real keys. Outlined on the Ink surface with a black hard shadow; the primary of a state
+   (Explain my clipboard, Retry, Continue, Cancel on a secret) filled lime. They press down 2 px. ── */
 .ob-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ob-chip, .ob-btn, .pmf-card .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--u-line);
-  border-radius: var(--u-radius-chip);
+  padding: 0 11px;
+  border: 1.5px solid var(--u-edge);
+  border-radius: 8px;
   background: var(--u-chip);
   color: var(--u-ink);
   font-size: 12px;
-  font-weight: var(--u-w-label);
+  font-weight: 650;
   white-space: nowrap;
+  box-shadow: 2px 2px 0 #000;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
 }
-.ob-chip:hover:not(:disabled), .ob-btn.ghost:hover:not(:disabled), .pmf-card .btn.ghost:hover:not(:disabled) { border-color: var(--u-accent); }
-.ob-chip.is-on { border-color: var(--u-accent); background: var(--u-mist); color: var(--u-accent); }
-.ob-chip:disabled, .ob-btn:disabled, .pmf-card .btn:disabled { opacity: 0.5; }
-/* The primary of a state (Explain my clipboard, Retry, Continue, Cancel on a secret): the accent fill. */
-.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost) { border-color: var(--u-accent); background: var(--u-accent); color: var(--u-accent-on); }
+.ob-chip:hover:not(:disabled), .ob-btn:hover:not(:disabled), .pmf-card .btn:hover:not(:disabled) { border-color: var(--u-ink-3); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 #000; }
+.ob-chip:active:not(:disabled), .ob-btn:active:not(:disabled), .pmf-card .btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+.ob-chip.is-on { border-color: #000; background: var(--u-lime); color: #141413; }
+.ob-chip:disabled, .ob-btn:disabled, .pmf-card .btn:disabled { opacity: 0.5; box-shadow: none; }
+.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost) { border-color: #000; background: var(--u-lime); color: #141413; }
+.ob-btn:not(.ghost):hover:not(:disabled), .pmf-card .btn:not(.ghost):hover:not(:disabled) { border-color: #000; }
 .ob-btn { height: 30px; padding: 0 14px; }
 .ob-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -284,7 +317,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 6px;
   height: 32px;
   padding: 0 3px 0 12px;
-  border: 1px solid var(--u-line);
+  border: 1.5px solid var(--u-edge);
   border-radius: var(--u-radius-field);
   background: var(--u-chip);
 }
@@ -298,18 +331,17 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   place-items: center;
   width: 26px;
   height: 26px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--u-accent);
-  color: var(--u-accent-on);
+  border: 1.5px solid #000;
+  border-radius: 7px;
+  background: var(--u-lime);
+  color: #141413;
 }
 .ob-ask__send:disabled { opacity: 0.45; }
 
-/* The toast is a small glass pill (Design motion review 07 Nov SHOULD 3), like the rest of overlay B's surfaces. */
+/* The toast: a small pill on the Ink surface with a hairline edge. */
 .ob-toast {
-  display: flex; width: fit-content; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px;
-  background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
-  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 6px 16px -10px rgb(40 24 110 / 0.35);
+  display: flex; width: fit-content; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border: 1.5px solid var(--u-edge); border-radius: 999px;
+  background: var(--u-chip); box-shadow: 2px 2px 0 #000;
   color: var(--u-ink-2); font-size: 12px; animation: toastIn 200ms var(--u-ease) both;
 }
 .ob-toast.is-leaving { animation: toastOut 160ms var(--u-ease) both; }
@@ -362,7 +394,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   background: var(--u-chip);
   box-shadow: 0 1px 0 var(--u-line);
   color: var(--u-ink);
-  font: var(--u-w-label) 11px/1 var(--u-font);
+  font: 700 11px/1 var(--u-font-mono);
 }
 .ob-picker { gap: 14px; }
 .ob-picker__pro { justify-self: stretch; display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--u-line); }
@@ -386,7 +418,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-progress span { padding: 2px 8px; border: 1px solid var(--u-line); border-radius: var(--u-radius-chip); }
 .ob-progress .on { border-color: var(--u-accent); color: var(--u-accent); }
 .ob-preview { justify-self: stretch; max-height: 160px; overflow: auto; border: 1px solid var(--u-line); border-radius: var(--u-radius-field); background: var(--u-code-bg); }
-.ob-preview pre { margin: 0; padding: 8px 12px; font: var(--u-w-body) 12px/18px var(--u-font); }
+.ob-preview pre { margin: 0; padding: 8px 12px; font: var(--u-w-body) 12px/18px var(--u-font-mono); }
 
 /* The shared consent form, in the pane's type and accent. */
 .ob .consent-form { gap: 12px; max-width: none; }
@@ -497,4 +529,14 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 :root[data-away] .cursor, :root[data-away] .ob-quiz--wait i { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .ob, .ob.is-leaving, .ob-body, .ob-quiz, .ob-toast, .ob-toast.is-leaving, .more-detail__body, .rich-w, .cursor, .ob-quiz--wait i { animation: none; }
+  /* Keys still show pressed and lifted states, without moving. */
+  .ob-chip, .ob-btn, .pmf-card .btn, .ob-tab { transition: none; }
+  .ob-chip:is(:hover, :active), .ob-btn:is(:hover, :active), .pmf-card .btn:is(:hover, :active), .ob-tab.is-on { transform: none; }
 }
+
+/* ── Round 2 options B and C (ledger 574), shown by <html data-r2="b|c"> for the renders Preston picks from; A is
+   everything above. Whichever is picked folds into the rules above and this block goes. ── */
+/* B: 0.1.49's rule "lime is the next step, sky is test me": the Test me key is sky. */
+:root[data-r2="b"] #ob-tab-test { border-color: #000; background: var(--p-sky); color: #141413; }
+/* C: lime as a highlighter on code: the selection's line sits on the same band as Library's. */
+:root[data-r2="c"] .ob-code__line { padding: 0 4px; border-radius: 3px; background: rgb(214 244 90 / 0.22); color: var(--u-ink); }

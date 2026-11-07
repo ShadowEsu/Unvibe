@@ -9,6 +9,7 @@ import { NAV_PINNED, NAV_SPACES, pageLabel } from '../src/renderer/companion/nav
 const noop = () => undefined;
 const props: HomeProps = {
   shortcutKeys: ['Ctrl', 'Alt', 'U'], shortcut: 'Ctrl+Alt+U', userName: 'Sam Lee', reviews: 3, understood: 0,
+  stats: { reviews: 3, linesReviewed: 0, linesUnderstood: 0, concepts: 0 },
   today: { explained: true, answered: false }, history: [],
   usage: { used: 8, limit: 50, remaining: 42, resetsAt: '2026-12-01T00:00:00Z', plan: 'trial' },
   onPlan: noop, onLibrary: noop, onBriefs: noop, onQuiz: noop, onAsk: noop,
@@ -47,9 +48,12 @@ test('learning steps: explained, understood and a saved lesson mark their steps 
   assert.deepEqual(all.filter((s) => !s.done).map((s) => s.title), ['Take a quick quiz', 'Ask one more thing']);
 });
 
-test('Home leaves out the voice card and the stickers', () => {
-  const html = home({ history: [lesson('a')] });
-  for (const gone of ['Try voice', 'voice-cta', 'sticker']) assert.ok(!html.includes(gone), gone);
+test('the stat stickers count what was done: no zeros, one or many, and no voice card', () => {
+  const html = home({ history: [lesson('a')], stats: { reviews: 1, linesReviewed: 1397, linesUnderstood: 0, concepts: 3 } });
+  const stickers = [...html.matchAll(/class="home-stat" data-stat="(\w+)"><b>(\d+)<\/b> (.*?)<\/li>/g)].map((m) => `${m[1]}:${m[2]} ${m[3]}`);
+  assert.deepEqual(stickers, ['reviews:1 explanation', 'lines:1397 lines explained', 'concepts:3 concepts']);
+  assert.ok(!home({ stats: { reviews: 0, linesReviewed: 0, linesUnderstood: 0, concepts: 0 } }).includes('home-stats'));
+  for (const gone of ['Try voice', 'voice-cta']) assert.ok(!html.includes(gone), gone);
 });
 
 test('the goal line shows each step done or not', () => {

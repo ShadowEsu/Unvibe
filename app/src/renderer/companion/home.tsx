@@ -132,6 +132,20 @@ export function learningSteps(input: { shortcut: string; reviews: number; unders
   ];
 }
 
+/** What the stat stickers count, from the learning profile on this computer. */
+export interface HomeStats { reviews: number; linesReviewed: number; linesUnderstood: number; concepts: number }
+
+/** The stat stickers (0.1.49's Today): what was done, never a zero and no streak (Design audit 2026-10-22 item 5). */
+export function homeStats(stats: HomeStats): Array<{ id: 'reviews' | 'lines' | 'understood' | 'concepts'; n: number; label: string }> {
+  const all = [
+    { id: 'reviews' as const, n: stats.reviews, one: 'explanation', many: 'explanations' },
+    { id: 'lines' as const, n: stats.linesReviewed, one: 'line explained', many: 'lines explained' },
+    { id: 'understood' as const, n: stats.linesUnderstood, one: 'line understood', many: 'lines understood' },
+    { id: 'concepts' as const, n: stats.concepts, one: 'concept', many: 'concepts' },
+  ];
+  return all.filter((stat) => stat.n > 0).map((stat) => ({ id: stat.id, n: stat.n, label: stat.n === 1 ? stat.one : stat.many }));
+}
+
 export interface HomeProps {
   /** The shortcut as separate keys (⌃ U on a Mac; Ctrl Alt U on Windows). */
   shortcutKeys: string[];
@@ -141,6 +155,7 @@ export interface HomeProps {
   reviews: number;
   /** Lessons marked understood (the profile's count): "Save the lesson" is then done. */
   understood: number;
+  stats: HomeStats;
   today: TodayGoal | null;
   history: HomeLesson[];
   usage: HomeUsage | null;
@@ -153,7 +168,7 @@ export interface HomeProps {
 
 /** Today (Design's glass c-today): Vibe and the greeting, one action card, the daily goal, then Up next (main's learning
  *  steps, while any are left) beside Recently understood. */
-export function Home({ shortcutKeys, shortcut, userName, reviews, understood, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk }: HomeProps) {
+export function Home({ shortcutKeys, shortcut, userName, reviews, understood, stats, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk }: HomeProps) {
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [proOpen, setProOpen] = useState(false);
@@ -229,15 +244,22 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, to
     : brief ? 'You changed some code, want the story?'
       : reviews === 0 ? `Select any code and press ${shortcut}. I'll explain it.`
         : 'Ready when you are.';
+  const stickers = homeStats(stats);
   return (
     <div className="home">
       <header className="home-hero">
         <Buddy mood={mood} react={hello === 'not-yet' ? 0 : 1} size={64} label="Vibe" />
         <div className="home-hero__copy">
-          <h1><InkTitle text={`${dayGreeting()}${first ? `, ${first}.` : '.'}`} /></h1>
+          {/* The name in Instrument Serif Italic, as 0.1.49 set it; the heading still reads "Good evening, Sam." */}
+          <h1>{first ? <><InkTitle text={`${dayGreeting()},`} /> <em><InkTitle text={`${first}.`} /></em></> : <InkTitle text={`${dayGreeting()}.`} />}</h1>
           <p className="home-hero__note">{note}</p>
         </div>
       </header>
+      {stickers.length ? (
+        <ul className="home-stats" aria-label="Learning overview">
+          {stickers.map((stat) => <li key={stat.id} className="home-stat" data-stat={stat.id}><b>{stat.n}</b> {stat.label}</li>)}
+        </ul>
+      ) : null}
       {limitOffer ? (
         // While the limit is reached, its banner takes the action card's place, and its action is the one primary.
         <div className="limit-banner home-card" role="status">

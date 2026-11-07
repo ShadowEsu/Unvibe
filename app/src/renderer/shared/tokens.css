@@ -30,73 +30,84 @@
   --uv-fast: 140ms;
   --uv-normal: 200ms;
   --uv-slow: 280ms;
-  /* Spectral: every string in the bundled JetBrains Mono (shared/fonts.css). */
-  --uv-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --uv-display: var(--uv-font);
-  --uv-mono: var(--uv-font);
+  /* 0.1.49's type (shared/fonts.css): Inter for reading, Bricolage Grotesque for headings, mono for code only. */
+  --uv-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --uv-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --uv-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 /*
- * 0.1.51 Spectral (Design agents/design/spectral README §1, rebrand option 03; colours, contrast
- * measured there). Every window: the panel (overlay B) and the companion. Light is the default.
- * - The accent is every action: selected depth, send, links, active tab, focus ring.
- * - Blush, lilac and sky are the rim and the soft glows only, never text.
- * - Lime is only the code-selection tick; amber only problems.
- * - One typeface for every string: JetBrains Mono (OFL). No ✓ glyph in it: use the check icon.
+ * Unvibe 0.1.51, round 2 (ledger 574; Design requests/unvibe-app/20261107-1159-design-r2-options-abc.md): 0.1.49's
+ * "Paper and ink" (v7.css) for every window. Warm paper, black ink, white cards with an ink border and a hard
+ * shadow, filled ink and outlined buttons that press down like keys. Lime is the one next step and never text on
+ * paper. Dark (new; 0.1.49's main window was light only) comes from 0.1.49's own overlay, the Ink terminal.
+ * Type: Bricolage Grotesque headings, Inter reading, Instrument Serif Italic for Vibe's notes, JetBrains Mono for
+ * code and keycaps only.
  */
 :root {
-  --u-ink: #15141a; /* 18.3:1 on white */
-  --u-ink-2: #4a4757; /* 9.0 */
-  --u-ink-3: #6e6b7b; /* 5.2 (4.8 on paper): meta, placeholders */
-  --u-paper: #f7f6fb; /* the window ground behind the glass */
-  --u-accent: #4e38d2; /* 7.45:1 on white */
+  --u-ink: #141414; /* 18.4:1 on white */
+  --u-ink-2: #3d3a35; /* 11.3 */
+  --u-ink-3: #66635d; /* 5.9 on white (5.3 on paper): meta, placeholders */
+  --u-paper: #f5f2ea; /* the window ground */
+  --u-accent: #141414; /* filled buttons, the current tab, focus ring */
   --u-accent-on: #fff;
-  --u-mist: #ece8ff; /* active tab, code-word chips (with accent text) */
-  --u-blush: #f3a6b8;
-  --u-lilac: #c9b6ff;
-  --u-sky: #9cc8f5;
-  --u-rim: linear-gradient(135deg, #f3a6b8, #c9b6ff, #9cc8f5); /* 1.5 px, pane / ghost / quick look / primary card */
-  --u-glass: rgb(255 255 255 / 0.55);
-  --u-blur: blur(30px) saturate(1.8);
-  --u-chip: rgb(255 255 255 / 0.55); /* chips and fields, with --u-line */
-  --u-line: rgb(21 20 26 / 0.08); /* hairline */
-  --u-fill: rgb(21 20 26 / 0.04); /* tracks, quiet hovers */
-  --u-lime: #d6f45a; /* the code-selection tick only */
-  --u-amber: #b45309;
-  --u-amber-tint: #fef3e2;
-  --u-code-bg: rgb(21 20 26 / 0.04);
-  --u-shadow: 0 12px 32px -12px rgb(40 24 110 / 0.22);
-  --u-card-rim: rgb(255 255 255 / 0.86); /* companion cards: a white inner rim (the iridescent one is overlay-only) */
-  --u-sheet: rgb(255 255 255 / 0.9); /* an inset page inside a glass frame (Settings) */
-  --u-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --u-w-body: 430;
-  --u-w-label: 520;
-  --u-w-title: 620;
-  --u-radius-pane: 18px;
+  --u-mist: #eef8c4; /* active chips and code-word chips, ink text on lime tint */
+  --u-blush: #f3d9cf;
+  --u-lilac: #ece9e1;
+  --u-sky: #f1eee6;
+  --u-rim: linear-gradient(#141414, #141414); /* overlay edges: a plain ink line */
+  --u-glass: #ffffff; /* cards: solid paper, no blur */
+  --u-blur: none;
+  --u-chip: #ffffff; /* chips and fields, with --u-line */
+  --u-line: #e6e1d6; /* hairline */
+  --u-fill: #efebe1; /* tracks, quiet hovers */
+  --u-raised: #faf8f3; /* sunken wells, code */
+  --u-lime: #d6f45a; /* the one next step; ink text on it, never lime text */
+  --u-amber: #b26b00;
+  --u-amber-tint: #fff3d6;
+  --u-code-bg: #faf8f3;
+  --u-shadow: 3px 3px 0 #141414; /* hard shadow on cards you act on */
+  --u-shadow-sm: 2px 2px 0 #141414; /* buttons and chips */
+  --u-card-rim: #141414; /* card and button border (1.5 px) */
+  --u-sheet: #ffffff;
+  --u-press: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --u-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --u-font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --u-font-hand: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --u-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --u-w-body: 400;
+  --u-w-label: 600;
+  --u-w-title: 800;
+  --u-radius-pane: 14px;
   --u-radius-chip: 999px; /* chips are pills */
-  --u-radius-field: 12px;
+  --u-radius-field: 10px;
   --u-ease: cubic-bezier(0.2, 0.6, 0.25, 1);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --u-ink: #f3f1fa; /* 16.1:1 on #17151f */
-  --u-ink-2: #c4bfd6; /* 10.1 */
-  --u-ink-3: #9a95ae; /* 6.3 */
-  --u-paper: #17151f;
-  --u-accent: #c9b6ff; /* lilac; 10.0 */
-  --u-accent-on: #15141a;
-  --u-mist: rgb(201 182 255 / 0.16);
-  --u-rim: linear-gradient(135deg, #c47892, #9680dc, #6e96c8); /* dimmed so it doesn't glow */
-  --u-glass: rgb(23 21 31 / 0.66);
-  --u-chip: rgb(255 255 255 / 0.06);
-  --u-line: rgb(243 241 250 / 0.1);
-  --u-fill: rgb(243 241 250 / 0.05);
+  --u-ink: #f4f2ea; /* 14.6:1 on #1e1e1c */
+  --u-ink-2: #d4d1c8; /* 11.0 */
+  --u-ink-3: #aeaba2; /* 7.2: meta (never #75726a for text) */
+  --u-paper: #141413;
+  --u-accent: #f4f2ea; /* filled buttons: paper with dark text */
+  --u-accent-on: #141413;
+  --u-mist: rgb(214 244 90 / 0.16);
+  --u-blush: #3a2a24;
+  --u-lilac: #2a2926;
+  --u-sky: #272725;
+  --u-rim: linear-gradient(#4a4944, #4a4944);
+  --u-glass: #1e1e1c;
+  --u-chip: #1e1e1c;
+  --u-line: #2f2f2c;
+  --u-fill: #272725;
+  --u-raised: #272725;
   --u-amber: #fbbf24;
-  --u-amber-tint: #422c0e;
-  --u-code-bg: rgb(0 0 0 / 0.25);
-  --u-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.5);
-  --u-card-rim: rgb(255 255 255 / 0.12);
-  --u-sheet: rgb(30 28 40 / 0.92);
+  --u-amber-tint: #3a2c10;
+  --u-code-bg: #272725;
+  --u-shadow: 3px 3px 0 #000;
+  --u-shadow-sm: 2px 2px 0 #000;
+  --u-card-rim: #4a4944;
+  --u-sheet: #1e1e1c;
   color-scheme: dark;
 }
 

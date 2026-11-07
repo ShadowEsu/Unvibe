@@ -1,16 +1,53 @@
 /*
- * Bundled font, the unmodified upstream OFL file (source and sha256 in fonts/FONTS.md). Concatenated
+ * Bundled fonts, unmodified upstream OFL files (sources and sha256 in fonts/FONTS.md). Concatenated
  * into each renderer stylesheet by scripts/build.mjs, which copies fonts/ to dist/renderer/fonts/, so
- * the path below is relative to the built dist/renderer/<window>/<window>.css. No font comes from a
- * CDN: the windows make no request to Google or anyone else for type. Spectral sets every string in
- * JetBrains Mono (Design agents/design/spectral README §1).
+ * the paths below are relative to the built dist/renderer/<window>/<window>.css. No font comes
+ * from a CDN: the windows make no request to Google or anyone else for type. 0.1.49's families:
+ * Bricolage Grotesque for headings, Inter for reading, Instrument Serif Italic for Vibe's notes and
+ * accents, JetBrains Mono for code only.
  */
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter/InterVariable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../fonts/bricolage-grotesque/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("../fonts/instrument-serif/InstrumentSerif-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("../fonts/instrument-serif/InstrumentSerif-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 @font-face {
   font-family: "JetBrains Mono";
   src: url("../fonts/jetbrains-mono/JetBrainsMono[wght].ttf") format("truetype");
   font-weight: 100 800;
   font-style: normal;
   font-display: swap;
+}
+/*
+ * Inter and Bricolage Grotesque carry an optical-size axis. 0.1.49's files were the opsz 14 cuts
+ * (Bricolage's own default, 96, sets headings about 10% narrower and re-wraps them), so it is pinned
+ * at 14. Fonts without the axis ignore it. !important because the `font:` shorthand resets it.
+ */
+*, *::before, *::after {
+  font-variation-settings: "opsz" 14 !important;
 }
 /*
  * Code shows the characters a person would type: no `=>` drawn as one arrow glyph or `===` as one
