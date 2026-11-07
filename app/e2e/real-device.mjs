@@ -8,11 +8,13 @@
 //      UNVIBE_E2E_PROFILE (optional profile folder; default a new temp folder),
 //      E2E_INSTALL_ID (the run's install id, qa-prefixed; CI flags it as QA in a later step, so this
 //      script never holds the admin token),
-//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into other apps, no whole-screen shots).
+//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into other apps, no whole-screen shots),
+//      DESKTOP_RECORDING=1 (also record the whole screen around the global-shortcut step, for the demo
+//      video; written to DESKTOP_RECORDING_DIR, default <SHOTS_DIR>/desktop-recording).
 import { chromium } from 'playwright';
 import { launchApp, readStore } from './cdp-launch.mjs';
-import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -73,6 +75,75 @@ function desktopShot(label) {
     else execFileSync('powershell', ['-NoProfile', '-Command',
       `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=[System.Windows.Forms.SystemInformation]::VirtualScreen; $bmp=New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g=[System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Left,$b.Top,0,0,$bmp.Size); $bmp.Save('${file}')`]);
   } catch (e) { log(false, `Desktop screenshot ${label}`, e.message.split('\n')[0]); }
+}
+
+/**
+ * Whole-screen recording around one step, for the demo video (DESKTOP_RECORDING=1, never on someone's own Mac).
+ * Mac: `screencapture -v` writes an H.264 .mov until it is interrupted (capped at 120 s); the .mov starts a moment
+ * after the process does, so the edit lines it up on the editor window opening (the 'editor opening' event).
+ * Windows: PowerShell copies the screen to numbered JPEG frames about 10 times a second until a stop file appears
+ * (capped at 120 s) and writes each frame's capture time (epoch ms) to frames.txt; the frames are uploaded as they
+ * are, so nothing in them is re-timed or re-drawn. `mark(event)` writes the time of a real input (epoch ms `at`, and
+ * ms since the process started) to <label>-events.json, so a keycap in the edit can be matched to it.
+ * A recording that fails is a NOTE, never a FAIL: the walkthrough's own checks don't depend on it.
+ */
+function startDesktopRecording(label) {
+  if (process.env.DESKTOP_RECORDING !== '1' || process.env.E2E_LOCAL === '1') return null;
+  const dir = process.env.DESKTOP_RECORDING_DIR ?? path.join(out, 'desktop-recording');
+  mkdirSync(dir, { recursive: true });
+  const started = Date.now();
+  const events = [];
+  const stopFile = path.join(dir, `${label}.stop`);
+  let child;
+  let file;
+  try {
+    if (os === 'mac') {
+      file = path.join(dir, `${label}.mov`);
+      child = spawn('screencapture', ['-x', '-v', '-V', '120', file], { stdio: 'ignore' });
+    } else {
+      file = path.join(dir, label);
+      mkdirSync(file, { recursive: true });
+      const script = path.join(dir, `${label}.ps1`);
+      writeFileSync(script, [
+        'param([string]$dir, [string]$stop)',
+        'Add-Type -AssemblyName System.Windows.Forms,System.Drawing',
+        '$b = [System.Windows.Forms.SystemInformation]::VirtualScreen',
+        '$bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height',
+        '$g = [System.Drawing.Graphics]::FromImage($bmp)',
+        '$watch = [Diagnostics.Stopwatch]::StartNew()',
+        '$times = New-Object System.Collections.Generic.List[string]',
+        '$i = 0',
+        'while (-not (Test-Path $stop) -and $watch.ElapsedMilliseconds -lt 120000) {',
+        '  $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)',
+        '  $i++; $bmp.Save((Join-Path $dir ("{0:D5}.jpg" -f $i)), [System.Drawing.Imaging.ImageFormat]::Jpeg)',
+        '  $times.Add("$i $([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())")',
+        '  $wait = 100 - ($watch.ElapsedMilliseconds % 100); Start-Sleep -Milliseconds $wait',
+        '}',
+        'Set-Content -Path (Join-Path $dir "frames.txt") -Value $times',
+      ].join('\r\n'));
+      child = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-dir', file, '-stop', stopFile], { stdio: 'ignore' });
+    }
+  } catch (e) {
+    report.push(`NOTE  desktop recording ${label}: not started (${e.message.split('\n')[0]})`);
+    return null;
+  }
+  const closed = new Promise((resolve) => { child.on('close', resolve); child.on('error', resolve); });
+  return {
+    /** `at`: when it happened (epoch ms), if measured elsewhere; default now. */
+    mark(event, at = Date.now()) { events.push({ event, at, ms: at - started }); },
+    async stop() {
+      events.push({ event: 'stop', at: Date.now(), ms: Date.now() - started });
+      if (os === 'mac') child.kill('SIGINT');
+      else writeFileSync(stopFile, '');
+      if (await Promise.race([closed.then(() => true), sleep(20000).then(() => false)]) === false) child.kill();
+      writeFileSync(path.join(dir, `${label}-events.json`), JSON.stringify({ os, started: new Date(started).toISOString(), events }, null, 2));
+      const frames = os === 'mac' ? null : (existsSync(file) ? readdirSync(file).filter((f) => f.endsWith('.jpg')).length : 0);
+      const kept = os === 'mac' ? existsSync(file) && statSync(file).size > 0 : frames > 0;
+      report.push(kept
+        ? `NOTE  desktop recording ${label}: ${os === 'mac' ? `${path.basename(file)}, ${statSync(file).size} bytes` : `${frames} frames`}, events in ${label}-events.json`
+        : `NOTE  desktop recording ${label}: nothing was written`);
+    },
+  };
 }
 
 async function windowWith(app, part, timeout = 30000) {
@@ -401,19 +472,29 @@ try {
 
 // --- Global shortcut in another app ------------------------------------------------------------
 let globalShortcutWorked = false;
+// Off unless the run asks for it (workflow input desktop_recording); starts before the editor opens, stops 2 s after
+// the explanation is done (or failed).
+const recording = local ? null : startDesktopRecording('global-shortcut');
 if (local) report.push('NOTE  global shortcut in another app: skipped (E2E_LOCAL: no keystrokes into the person\'s own apps)');
 else try {
   const file = path.join(tmpdir(), 'unvibe-sample.js');
   const globalSample = sample.replace('function total', 'function selectedTotal');
   writeFileSync(file, globalSample);
+  if (recording) await sleep(1500); // the recorder's first frames, before anything on screen changes
   if (os === 'mac') {
+    recording?.mark('editor opening');
     execFileSync('open', ['-a', 'TextEdit', file]);
     await sleep(3000);
+    recording?.mark('select all (Command+A): sending');
     execFileSync('osascript', ['-e', 'tell application "TextEdit" to activate', '-e', 'delay 1', '-e', 'tell application "System Events" to keystroke "a" using command down']);
+    recording?.mark('select all (Command+A): sent');
     await sleep(800);
     desktopShot('textedit-selected');
+    recording?.mark(`shortcut (${shortcut}): sending`);
     execFileSync('osascript', ['-e', 'tell application "System Events" to keystroke "u" using control down']);
+    recording?.mark(`shortcut (${shortcut}): sent`);
   } else {
+    recording?.mark('editor opening');
     execFile('notepad', [file]);
     await sleep(3000);
     // No main-process check of the registration first: the explanation below only appears if it is.
@@ -443,17 +524,25 @@ else try {
       '}',
       'if ((Title) -notlike "*unvibe-sample*") { throw "Notepad is not the foreground window (foreground: $(Title))" }',
       '$w = New-Object -ComObject WScript.Shell',
-      "$w.SendKeys('^a'); Start-Sleep -Milliseconds 500",
+      "$w.SendKeys('^a'); \"selectall $([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())\"; Start-Sleep -Milliseconds 500",
       'if ((Title) -notlike "*unvibe-sample*") { throw "Notepad lost focus before the shortcut (foreground: $(Title))" }',
-      '$w.SendKeys($keys)',
+      '$w.SendKeys($keys); "shortcut $([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"',
     ].join('\r\n'));
-    execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focusScript, '-keys', keys], { encoding: 'utf8' });
+    const sent = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focusScript, '-keys', keys], { encoding: 'utf8' });
+    // The script prints when each SendKeys call returned (epoch ms), so the recording's events carry the real times.
+    for (const [, what, at] of sent.matchAll(/^(selectall|shortcut) (\d+)\s*$/gm)) {
+      recording?.mark(`${what === 'selectall' ? 'select all (Ctrl+A)' : `shortcut (${shortcut})`}: sent`, Number(at));
+    }
     desktopShot('notepad-selected');
   }
   const r = await waitForExplanation('global-shortcut-explanation', globalSample);
+  recording?.mark('explanation done');
   globalShortcutWorked = r.ok;
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
+finally {
+  if (recording) { await sleep(2000); await recording.stop(); }
+}
 if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered', `${shortcut} (shown by the step above)`);
 
 // Launch-at-login question: due after the first explanation of the user's own code (the editor
