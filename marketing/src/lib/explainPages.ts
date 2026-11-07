@@ -3771,7 +3771,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
       "`npm uninstall native-thing` and a config.json fixed both: `npm run dev` then printed `listening on 3000`.",
     ],
     watchOut:
-      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is line 40 of the 52 lines in the full output, after 30 lines of node-gyp detail. Search for that line, the first error from the tool that failed, not for the last line.",
+      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is line 40 of the 52 lines in the full output, after 28 lines of node-gyp detail and a 2-line Node.js deprecation warning. Search for that line, the first error from the tool that failed, not for the last line.",
   },
   {
     id: "lsof",
