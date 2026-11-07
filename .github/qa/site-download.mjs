@@ -156,6 +156,20 @@ try {
       .map((el) => { const b = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} '${el.innerText.replace(/\s+/g, " ").slice(0, 50)}' at ${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)}`; });
   });
   r(`NOTE  fixed layers over the card at 1440x900: ${pick.overlaps.length ? pick.overlaps.join(" | ") : "none"}`);
+  // #240 (7 Nov): the setup-email ask moves into the card ([data-remind-inline]); the floating toast (.remind without
+  // --inline) must then stay closed, including one opened by the download click before the jump to /beta. Before
+  // #240 there is no in-card ask, and the floating toast is the only one (a NOTE above).
+  pick.ask = await page.evaluate(() => {
+    const shown = (el) => { const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return b.width > 0 && b.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
+    const inline = [...document.querySelectorAll("[data-remind-inline]")].filter(shown);
+    const floating = [...document.querySelectorAll(".remind:not(.remind--inline)")].filter(shown);
+    return { inline: inline.length, inCard: inline.filter((el) => el.closest("section#thanks")).length, floating: floating.length,
+      emailBoxes: [...document.querySelectorAll('input[type="email"]')].filter(shown).length };
+  });
+  if (pick.ask.inline > 0) {
+    check(pick.ask.inCard === 1 && pick.ask.floating === 0 && pick.ask.emailBoxes === 1, "one setup-email ask, in the card, nothing floating over it (#240)",
+      `in card ${pick.ask.inCard}, floating toasts ${pick.ask.floating}, email boxes on screen ${pick.ask.emailBoxes}`);
+  } else r(`NOTE  no in-card setup-email ask on this page (before #240); floating toasts ${pick.ask.floating}`);
   await page.screenshot({ path: join(OUT, "site-2-thanks.png") });
   await page.screenshot({ path: join(OUT, "site-3-thanks-full.png"), fullPage: true });
   if (other[EXPECT]) {
