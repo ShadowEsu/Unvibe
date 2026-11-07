@@ -3,8 +3,9 @@ import { explainLanguage, type ExplainPage } from "@/lib/explainPages";
 
 /**
  * Link-preview cards: static 1200x630 PNGs in public/og. The home card (also every page's default) is the live
- * hero's look, ledger 570: bubbles, the H1, the free pill and the shortcuts, all inside a 600x600 centre box so
- * square and 2:1 crops keep them (render script and checks: boss-handoff agents/unvibe-site/og-570). The other
+ * hero's look, ledger 570 option B: bubbles, the H1, the free pill and the shortcuts inside a 600x600 centre box so
+ * square and 2:1 crops keep them; the real debounce sample and the real 0.1.49 panel explaining it bleed off the
+ * edges (render script and checks: boss-handoff agents/unvibe-site/og-570). The other
  * product cards are Design's option B "Flow" (27 Oct; agents/design/unvibe-link-preview-2026-10-27/final-b).
  * Names carry the first 8 hex of the file's sha256, so a new card never hides behind a cached one.
  * A card shows a panel only next to the exact code it explains: language cards show only their
@@ -17,7 +18,7 @@ export type OgCard = { file: string; alt: string };
 const FREE = "Free for Mac and Windows.";
 
 export const OG_CARDS = {
-  home: { file: "/og/og-home-38f1b10b.png", alt: `Understand the code your AI writes. ${FREE}` },
+  home: { file: "/og/og-home-14aee211.png", alt: `Understand the code your AI writes. ${FREE}` },
   beta: { file: "/og/og-beta-7d194b93.png", alt: `Download Unvibe. ${FREE}` },
   pricing: { file: "/og/og-pricing-9f940be2.png", alt: `Start free. No card needed. ${FREE}` },
   mac: { file: "/og/og-mac-c241a9bf.png", alt: `A code explainer for your Mac. ${FREE}` },
