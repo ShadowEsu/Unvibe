@@ -56,10 +56,10 @@ describe("download files (fixed map, this release only)", () => {
     }
   });
 
-  it("every site download link goes through the counter on unvibe.site", () => {
-    assert.equal(BETA_MAC_DIRECT_DOWNLOAD, `${SITE}/download/mac`);
-    assert.equal(BETA_MAC_INTEL_DIRECT_DOWNLOAD, `${SITE}/download/mac-intel`);
-    assert.equal(BETA_WINDOWS_DIRECT_DOWNLOAD, `${SITE}/download/windows`);
+  it("every site download link goes through the counter on the page's own host", () => {
+    assert.equal(BETA_MAC_DIRECT_DOWNLOAD, "/download/mac");
+    assert.equal(BETA_MAC_INTEL_DIRECT_DOWNLOAD, "/download/mac-intel");
+    assert.equal(BETA_WINDOWS_DIRECT_DOWNLOAD, "/download/windows");
   });
 });
 
@@ -77,6 +77,13 @@ describe("which download requests count", () => {
     assert.equal(isCountedDownload(req({ headers: { "sec-purpose": "prefetch;prerender" } })), false);
     assert.equal(isCountedDownload(req({ search: "notrack=1" })), false);
     assert.equal(isCountedDownload(req({ headers: { referer: `${SITE}/beta?notrack=1` } })), false);
+  });
+
+  it("counts a link click (a document navigation) but not another site embedding the address", () => {
+    assert.equal(isCountedDownload(req({ headers: { "sec-fetch-dest": "document" } })), true);
+    for (const dest of ["image", "empty", "iframe", "script"]) {
+      assert.equal(isCountedDownload(req({ headers: { "sec-fetch-dest": dest } })), false, dest);
+    }
   });
 });
 
@@ -106,11 +113,14 @@ describe("download source (utm_source only, closed list)", () => {
     assert.equal(downloadSource(req({ headers: { host: preview, referer: `${SITE}/?utm_source=g2` } })), "none");
   });
 
-  it("survives the one-click button's move to the thank-you state, which keeps utm_source and nothing else", () => {
+  it("survives the one-click button's move to the thank-you state, which keeps utm_source and notrack only", () => {
     assert.equal(thanksHref("mac-arm", "?utm_source=devhunt&utm_medium=directory&ref=abc"), "/beta?dl=mac-arm&utm_source=devhunt#thanks");
     assert.equal(thanksHref("windows", ""), "/beta?dl=windows#thanks");
     const thanks = new URL(thanksHref("mac-intel", "?utm_source=DevHunt"), SITE).toString();
     assert.equal(downloadSource(req({ headers: { referer: thanks } })), "devhunt");
+    const own = new URL(thanksHref("mac-arm", "?notrack=1&utm_source=x"), SITE).toString();
+    assert.equal(own, `${SITE}/beta?dl=mac-arm&utm_source=x&notrack=1#thanks`);
+    assert.equal(isCountedDownload(req({ headers: { referer: own } })), false);
   });
 });
 

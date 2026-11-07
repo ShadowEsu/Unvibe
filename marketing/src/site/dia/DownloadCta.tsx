@@ -73,12 +73,15 @@ export function takeQueuedDownload(): DownloadKey | null {
 
 /**
  * The thank-you state: /beta with the first-open steps for the file that just started. It keeps the page's
- * utm_source (only that), so the file's counted link (/download/<file>, downloadCounter.ts) still knows which
- * link brought the visitor: the browser sends this address as the Referer when the download starts.
+ * utm_source and ?notrack=1 (only those), so the file's counted link (/download/<file>, downloadCounter.ts)
+ * still knows which link brought the visitor, and still skips our own visits: the browser sends this address
+ * as the Referer when the download starts.
  */
 export const thanksHref = (key: DownloadKey, search = "") => {
-  const source = new URLSearchParams(search).get("utm_source");
-  return `/beta?dl=${key}${source ? `&utm_source=${encodeURIComponent(source)}` : ""}#thanks`;
+  const params = new URLSearchParams(search);
+  const source = params.get("utm_source");
+  const notrack = params.get("notrack") === "1" ? "&notrack=1" : "";
+  return `/beta?dl=${key}${source ? `&utm_source=${encodeURIComponent(source)}` : ""}${notrack}#thanks`;
 };
 
 /** This visitor's file, or null on a phone; `platform` pins Mac or Windows on a computer. */

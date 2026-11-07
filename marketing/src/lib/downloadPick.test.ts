@@ -36,7 +36,7 @@ test("every file is a counted link that redirects to a v0.1.49 release asset", (
   assert.equal(BETA_INSTALL_TAG, "v0.1.49");
   const counted = { "mac-arm": "mac", "mac-intel": "mac-intel", windows: "windows" } as const;
   for (const [pick, file] of Object.entries(counted) as [keyof typeof counted, (typeof counted)[keyof typeof counted]][]) {
-    assert.equal(DOWNLOAD_FILES[pick].url, `https://unvibe.site/download/${file}`);
+    assert.equal(DOWNLOAD_FILES[pick].url, `/download/${file}`);
     assert.match(COUNTED_FILES[file].url, /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\/v0\.1\.49\//);
   }
   assert.match(COUNTED_FILES.mac.url, /mac-arm64\.dmg$/);

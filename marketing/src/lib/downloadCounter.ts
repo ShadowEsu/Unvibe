@@ -55,12 +55,16 @@ function ownReferrerSearch(req: DownloadRequest): URLSearchParams | null {
 }
 
 /**
- * Whether to count this request: a GET from a browser. HEAD requests, link previews, crawlers and scripts
- * still get the redirect but aren't counted, and neither is a click from our own `?notrack=1` visit.
+ * Whether to count this request: a browser navigating to the link (a click sends `sec-fetch-dest: document`
+ * even when the answer becomes a download). HEAD requests, link previews, crawlers, scripts, and other sites
+ * embedding the address as an image or fetch still get the redirect but aren't counted, and neither is a
+ * click from our own `?notrack=1` visit.
  */
 export function isCountedDownload(req: DownloadRequest): boolean {
   if (req.method !== "GET") return false;
   if (req.search.get("notrack") === "1" || ownReferrerSearch(req)?.get("notrack") === "1") return false;
+  const dest = req.header("sec-fetch-dest");
+  if (dest !== null && dest !== "document") return false;
   const ua = req.header("user-agent") ?? "";
   if (!ua || isBotUserAgent(ua)) return false;
   const purpose = req.header("purpose") ?? req.header("sec-purpose") ?? "";

@@ -156,8 +156,8 @@ export function kitSections(): KitSection[] {
       title: "Links",
       bullets: [
         `Site and download: ${SITE}`,
-        `Mac direct download: ${BETA_MAC_DIRECT_DOWNLOAD}`,
-        `Windows direct download: ${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
+        `Mac direct download: ${SITE}${BETA_MAC_DIRECT_DOWNLOAD}`,
+        `Windows direct download: ${SITE}${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
         `Pricing: ${SITE}/pricing`,
         `Investors: ${SITE}/investors`,
         `About: ${SITE}/about`,
