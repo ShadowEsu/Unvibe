@@ -125,16 +125,18 @@ button { font: inherit; }
 /* A notice (F-18): its text under the compact row (above it at the bottom), at most three lines in
    the 64 px windows.ts adds (BAR_NOTICE_H), so it never grows over the editor. */
 .island--notice:not(.island--attached):not(.island--bottom) { display: flex; flex-direction: column; }
-/* Neutral text with an amber dot: lime means selected/done in Unvibe, and a notice is usually a
-   problem (Design S-1 SHOULD on #213). Balanced lines, so no lone last word. */
+/* Neutral text (lime means selected/done in Unvibe), with a dot: amber for a problem, grey for
+   information. Balanced lines, so no lone last word. */
 .island__notice {
   margin: 0; padding: 6px 16px 10px; max-height: 64px; overflow: hidden;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   color: #ededed; font-size: 12px; line-height: 16px; font-weight: 550; text-align: center; text-wrap: balance;
   animation: island-notice-in 180ms cubic-bezier(.22,.8,.24,1) both;
 }
-/* The dot hangs left of the first line (net width 0), so both lines stay centred on their text. */
-.island__notice::before { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 6px 1px -12px; border-radius: 50%; background: #f5a524; vertical-align: middle; }
+/* The dot hangs left of the first line (net width 0), so both lines stay centred on their text.
+   Neutral for information; amber only when something went wrong. */
+.island__notice::before { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 6px 1px -12px; border-radius: 50%; background: #b4b4b4; vertical-align: middle; }
+.island__notice--problem::before { background: #f5a524; }
 @keyframes island-notice-in { from { opacity: 0; transform: translateY(-4px); } }
 .island--bottom .island__notice { padding: 10px 16px 6px; animation-name: island-notice-in-up; }
 @keyframes island-notice-in-up { from { opacity: 0; transform: translateY(4px); } }

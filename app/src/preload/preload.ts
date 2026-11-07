@@ -13,8 +13,9 @@ const api = {
   openSettings: () => ipcRenderer.send('bar:openSettings'),
   companionReview: () => ipcRenderer.send('companion:review'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean }> => ipcRenderer.invoke('app:info'),
-  onBarNotify: (cb: (msg: string) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, message: string) => cb(message);
+  onBarNotify: (cb: (notice: { text: string; problem: boolean }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, notice: { text: string; problem: boolean }) =>
+      cb({ text: String(notice.text), problem: notice.problem === true });
     ipcRenderer.on('bar:notify', listener);
     return () => ipcRenderer.removeListener('bar:notify', listener);
   },
