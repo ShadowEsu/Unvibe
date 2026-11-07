@@ -4,10 +4,11 @@ import { noStoreFetch } from '@/lib/serviceSupabase';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
- * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS; doubled 2026-11-06, "double that cap"): the
- * Anthropic key may spend $50 per calendar month, and Unvibe's share is $50 per UTC calendar month, with a $10 per
- * UTC day guard (a fifth of the month) so one bad day can't burn the month, and a $1 per UTC day share per account
- * so one account can't use up the day for everyone. Counted on the database so every serverless instance shares
+ * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS; doubled 2026-11-06, "double that cap"): Unvibe's
+ * share is $50 per UTC calendar month, with a $10 per UTC day guard (a fifth of the month) so one bad day can't burn
+ * the month, and a $1 per UTC day share per account so one account can't use up the day for everyone. The Anthropic
+ * key's own $50 per month limit is the binding ceiling until it is raised at Anthropic. Preston 2026-11-06: up to
+ * $40/week OK; Gemini key comes when real usage grows. Counted on the database so every serverless instance shares
  * one count.
  *
  * Each call reserves its worst case before the request leaves and settles afterwards from the usage
