@@ -19,7 +19,7 @@ describe("the page-not-found page", () => {
 
   it("offers the likely destinations and the site search", () => {
     const links = Array.from(markup.matchAll(/<a [^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g), (match) => [match[2], match[1]]);
-    assert.deepEqual(links, [["Download", "/beta"], ["Help", "/help"], ["Install help", "/install-help"], ["Pricing", "/pricing"], ["Changelog", "/releases"]]);
+    assert.deepEqual(links, [["Download", "/beta"], ["Help", "/help"], ["Install help", "/install-help"], ["Pricing", "/pricing"]]);
     assert.match(visible, /Press ⌘K or Ctrl\+K to search the site\./);
   });
 

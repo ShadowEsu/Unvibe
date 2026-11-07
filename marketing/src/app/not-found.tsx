@@ -5,13 +5,13 @@ export const metadata: Metadata = {
   title: "Page not found",
 };
 
-/** Where people who land on a missing page most likely meant to go (Design W15). */
+/** Where people who land on a missing page most likely meant to go (Design W15). Four, so they fit one row at 1440;
+ *  Changelog stays one click away in the nav and the footer. */
 const LIKELY = [
   ["Download", "/beta"],
   ["Help", "/help"],
   ["Install help", "/install-help"],
   ["Pricing", "/pricing"],
-  ["Changelog", "/releases"],
 ] as const;
 
 /** Says plainly what happened, never blames the visitor, and offers the likely destinations and search. */
