@@ -76,7 +76,7 @@ function Steps() {
   return (
     <section ref={root} className="d-steps" aria-labelledby="d-steps-h" data-d-steps="" data-d-arch="">
       <p className="d-label d-mono" data-d-enter="">{D_STEPS.label}</p>
-      <h2 id="d-steps-h" className="d-h2 d-serif" data-d-words=""><T t={D_STEPS.h2} /></h2>
+      <h2 id="d-steps-h" className="d-h2 d-serif" data-d-ink=""><T t={D_STEPS.h2} /></h2>
       <div className="d-steps__track">
         {D_STEPS.items.map((item, i) => <div key={item.n} id={`d-shot-${i}`} className="d-steps__mark" data-d-shot={i} aria-hidden="true" />)}
         <div className="d-steps__pin">
@@ -144,7 +144,7 @@ function Cards() {
     <section className="d-cards" aria-labelledby="d-cards-h" data-d-arch="">
       <p className="d-label d-mono" data-d-enter="">{D_CARDS.label}</p>
       <div className="d-cards__head">
-        <h2 id="d-cards-h" className="d-h2 d-serif" data-d-words=""><T t={D_CARDS.h2} /></h2>
+        <h2 id="d-cards-h" className="d-h2 d-serif" data-d-ink=""><T t={D_CARDS.h2} /></h2>
         <PixelVibe className="d-cards__vibe" />
       </div>
       <div className="d-cards__grid">
@@ -228,7 +228,7 @@ function Privacy() {
     <section className="d-privacy" aria-labelledby="d-privacy-h">
       <div className="d-privacy__l">
         <p className="d-label d-mono d-left" data-d-enter="">{D_PRIVACY.label}</p>
-        <h2 id="d-privacy-h" className="d-h2 d-serif d-left" data-d-words=""><T t={D_PRIVACY.h2} /></h2>
+        <h2 id="d-privacy-h" className="d-h2 d-serif d-left" data-d-ink=""><T t={D_PRIVACY.h2} /></h2>
         {D_PRIVACY.lines.map((line, i) => <p key={line} className="d-privacy__p" data-d-enter="" style={d(80 + i * 50)}>{line}</p>)}
         <div className="d-privacy__kept" data-d-enter="" style={d(200)}>
           <h3 className="d-mono">{D_PRIVACY.keptTitle}</h3>
@@ -324,7 +324,7 @@ function Close() {
       <section className="d-close" aria-labelledby="d-close-h" data-d-arch="">
         {/* eslint-disable-next-line @next/next/no-img-element -- our own mark */}
         <img className="d-close__ghost" src="/brand/vibe.svg" width={72} height={72} alt="" data-d-enter="" />
-        <h2 id="d-close-h" className="d-h2 d-serif" data-d-words=""><T t={D_CLOSE.h2} /></h2>
+        <h2 id="d-close-h" className="d-h2 d-serif" data-d-ink=""><T t={D_CLOSE.h2} /></h2>
       </section>
     </>
   );

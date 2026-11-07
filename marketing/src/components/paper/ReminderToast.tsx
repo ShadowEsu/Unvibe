@@ -22,6 +22,7 @@ const ASKED_KEY = "unvibe.reminderAsked";
  */
 function ReminderForm({ code, inline, surface, onSent }: { code: string; inline?: boolean; surface: string; onSent?: () => void }) {
   const tipId = useId();
+  const errorId = useId();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
@@ -73,10 +74,10 @@ function ReminderForm({ code, inline, surface, onSent }: { code: string; inline?
         <label htmlFor={tipId}>Also email me one setup tip tomorrow</label>
       </div>
       <div className="remind__row">
-        <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="email" required maxLength={240} autoComplete="email" placeholder="you@example.com" aria-label="Email" aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} value={email} onChange={(e) => setEmail(e.target.value)} />
         <button type="submit" disabled={state === "sending"}>{state === "sending" ? "…" : "Send it"}</button>
       </div>
-      {error ? <p className="remind__error" role="alert">{error}</p> : null}
+      {error ? <p id={errorId} className="remind__error" role="alert">{error}</p> : null}
       <p className="remind__fine"><a href="/privacy">Privacy</a></p>
     </form>
   );
