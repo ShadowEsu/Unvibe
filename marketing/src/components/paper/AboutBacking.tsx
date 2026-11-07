@@ -11,7 +11,7 @@ export function AboutBacking() {
     <section className="paper-wrap about-backing" aria-labelledby="about-backing-title">
       <h2 id="about-backing-title">Startup programs we&apos;re in</h2>
       <p className="about-backing__lead">
-        <b>{compensationTotalLabel()}</b> {compensationTotalPhrase()}, plus {programsOutsideTotalCount()} more startup programs not counted in it.
+        <b>{compensationTotalLabel()}</b> {compensationTotalPhrase()}{programsOutsideTotalCount() > 0 ? `, plus ${programsOutsideTotalCount()} more startup programs not counted in it` : ""}.
       </p>
       <p className="about-backing__lead">{startupProgramsLine()}.</p>
       <ProgramList firstUse={false} />
