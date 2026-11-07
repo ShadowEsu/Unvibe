@@ -47,7 +47,7 @@ export const milestones: Milestone[] = [
     date: "6 NOV 2026",
     category: "DISTRIBUTION",
     title: "Unvibe's GitHub, Instagram and LinkedIn in the footer",
-    summary: "The footer has a new Follow column with links to Unvibe on GitHub, Instagram and LinkedIn, and the icon row under the newsletter now keeps only the support email link. The home page now says in one sentence what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
+    summary: "The footer has a new Follow column with links to Unvibe on GitHub, Instagram and LinkedIn, and the icon row under the newsletter is gone; the support email stays under Contact. The home page now says in one sentence what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
     links: [
       { href: "https://github.com/ShadowEsu/Unvibe/pull/239", label: "PR #239" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/243", label: "PR #243" },
