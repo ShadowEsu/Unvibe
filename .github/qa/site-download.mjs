@@ -103,7 +103,12 @@ try {
   pick.size = statSync(saved).size;
   pick.sha256 = createHash("sha256").update(bytes).digest("hex");
   const sumsName = EXPECT === "windows" ? "SHA256SUMS-windows.txt" : "SHA256SUMS-mac.txt";
-  const sums = await (await fetch(`https://github.com/ShadowEsu/Unvibe/releases/download/v${pick.version}/${sumsName}`)).text();
+  // GitHub can drop one request (run 42342630427, Intel: "fetch failed"), so the checksum file gets three tries.
+  let sums = "";
+  for (let i = 0; i < 3 && !sums; i++) {
+    try { sums = await (await fetch(`https://github.com/ShadowEsu/Unvibe/releases/download/v${pick.version}/${sumsName}`)).text(); }
+    catch (e) { r(`NOTE  ${sumsName} fetch try ${i + 1}: ${String(e).slice(0, 80)}`); await new Promise((res) => setTimeout(res, 5000)); }
+  }
   const want = sums.split("\n").map((l) => l.trim().split(/\s+\*?/)).find(([, n]) => n === pick.file)?.[0] ?? "";
   check(!failure && want && pick.sha256 === want, "the download completes and matches the release's checksum",
     `${pick.size.toLocaleString("en-US")} B, sha256 ${pick.sha256.slice(0, 16)}…, ${sumsName} says ${want ? want.slice(0, 16) + "…" : "NOT LISTED"}${failure ? `, failure ${failure}` : ""}`);
@@ -172,7 +177,8 @@ try {
       .filter((el) => { const b = el.getBoundingClientRect(); return b.left < nb.right - 1 && b.right > nb.left + 1 && b.top < nb.bottom - 1 && b.bottom > nb.top + 1; })
       .map((el) => `${el.tagName.toLowerCase()} '${(el.textContent || el.getAttribute("placeholder") || "").trim().slice(0, 30)}'`) : [];
     return { inline: inline.length, inCard: inline.filter((el) => el.closest("section#thanks")).length, floating: floating.length,
-      emailBoxes: [...document.querySelectorAll('input[type="email"]')].filter(shown).length,
+      // The setup-email asks' own email boxes (the footer's newsletter box is a different form, far below the card).
+      emailBoxes: [...document.querySelectorAll('.remind input[type="email"]')].filter(shown).length,
       tipBox: box ? (box.checked ? "ticked" : "unticked") : "none", noThanks: nb ? `${Math.round(nb.width)}x${Math.round(nb.height)}` : "none", noThanksOverlaps: hits };
   });
   if (pick.ask.inline > 0) {
