@@ -4,6 +4,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { HELP_SHOTS, HelpShot } from "../HelpShot";
 import "../help.css";
 
 const { mac, windows } = SHORTCUTS;
@@ -18,8 +19,8 @@ export const metadata: Metadata = pageMetadata({
 /**
  * The one macOS permission the shortcut needs. Steps and quoted wording are the shipped app's (checked against the
  * v0.1.49 source: app/src/renderer/companion/companion.tsx PermRow and setup step 4,
- * app/src/renderer/shared/shortcutGuide.tsx, app/src/main/main.ts repairAccessibilityAfterUpdate). No screenshots
- * until QA's macOS 15 captures of 0.1.49 land.
+ * app/src/renderer/shared/shortcutGuide.tsx, app/src/main/main.ts repairAccessibilityAfterUpdate). The one
+ * screenshot is a real macOS 15 capture (HelpShot.tsx).
  */
 export default function AccessibilityHelpPage() {
   return (
@@ -52,7 +53,12 @@ export default function AccessibilityHelpPage() {
             setup, the last step&apos;s <b>Turn on the shortcut</b> button does the same.
           </li>
           <li>macOS opens <b>System Settings › Privacy &amp; Security › Accessibility</b>.</li>
-          <li>Find <b>Unvibe</b> in the list and switch it on. macOS may ask for your password.</li>
+          <li>
+            Find <b>Unvibe</b> in the list and switch it on. macOS may ask for your password.
+            <div className="help-shots">
+              <HelpShot {...HELP_SHOTS.accessibility} />
+            </div>
+          </li>
           <li>Come back to Unvibe. The screen updates by itself and says <b>Allowed</b>.</li>
         </ol>
         <p>Then select code in any app and press {mac.anywhere}.</p>

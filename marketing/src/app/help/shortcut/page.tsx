@@ -4,6 +4,7 @@ import { Vibe } from "@/components/paper/Vibe";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { HELP_SHOTS, HelpShot } from "../HelpShot";
 import "../help.css";
 
 const { mac, windows } = SHORTCUTS;
@@ -19,8 +20,8 @@ export const metadata: Metadata = pageMetadata({
  * Help for a shortcut that does nothing. Each symptom is what the shipped app shows (checked against the
  * v0.1.49 source: app/src/main/main.ts startReview and registerShortcut, app/src/renderer/widget/widget.tsx's
  * empty and paste states, app/src/renderer/shared/limitOffer.ts, companion.tsx Settings). Notices the app
- * may also show come second: they can be skipped (notify.ts) and fade after a few seconds. No screenshots
- * until QA's macOS 15 captures of 0.1.49 land.
+ * may also show come second: they can be skipped (notify.ts) and fade after a few seconds. Screenshots are
+ * real macOS 15 captures (HelpShot.tsx).
  */
 export default function ShortcutHelpPage() {
   return (
@@ -56,10 +57,14 @@ export default function ShortcutHelpPage() {
             Accessibility</Link>, one switch. Until then, copy the code (⌘C) and paste it into that box: it explains it the same way.
           </li>
           <li>
-            <b>You pressed Don&apos;t Allow when macOS asked to let Unvibe control System Events</b> (usually the first time Unvibe
-            opened). Unvibe uses System Events to copy your selection, so after that the panel opens without your code, and macOS
-            doesn&apos;t ask again. Open <b>System Settings › Privacy &amp; Security › Automation</b>, find
-            <b> Unvibe</b>, and switch on <b>System Events</b>. Then select the code and press {mac.anywhere} again.
+            <b>You pressed Don&apos;t Allow when macOS asked to let Unvibe control System Events.</b> macOS asks once, a few seconds
+            after Unvibe first opens. Unvibe uses System Events to copy your selection, so after a Don&apos;t Allow the panel opens without your code, and
+            macOS doesn&apos;t ask again. Open <b>System Settings › Privacy &amp; Security › Automation</b>, find <b>Unvibe</b>, and
+            switch on <b>System Events</b>. Then select the code and press {mac.anywhere} again.
+            <div className="help-shots">
+              <HelpShot {...HELP_SHOTS.question} />
+              <HelpShot {...HELP_SHOTS.automation} />
+            </div>
           </li>
         </ul>
       </section>
