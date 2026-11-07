@@ -3665,7 +3665,7 @@ LBB0_4:
       },
     ],
     notes: [
-      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S` writes assembly text instead of building a program, so no Mac was needed. The sample is the `_sum` function from that output with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the file's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
+      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S` writes assembly text instead of building a program, so no Mac was needed. The sample is the `_sum` function from that output with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the output's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
       "At `-O2` the function grew to 62 instructions and 3 loops. The main loop loads 4 128-bit `q` registers per pass, adds them with `add.4s` and counts down by 16, so it takes 16 ints at a time. A second loop takes 4 at a time, and the `-O1` loop is left for the last few. The x86-64 `-O2` build still returned the same 4 results.",
       "Apple's guide Writing ARM64 code for Apple platforms (developer.apple.com) says macOS follows the 64-bit Arm standard apart from a few listed differences, such as `x18` being reserved. None of them changes the registers used here.",
     ],
