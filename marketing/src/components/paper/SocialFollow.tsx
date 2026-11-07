@@ -17,32 +17,6 @@ function XMark() {
   );
 }
 
-function LinkedInMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M5.41 3.75a1.78 1.78 0 1 0 0 3.56 1.78 1.78 0 0 0 0-3.56ZM7.12 20.25H3.7V8.9h3.42V20.25ZM12.2 8.9h3.28v1.55h.05c.46-.87 1.58-1.79 3.25-1.79 3.48 0 4.12 2.29 4.12 5.27v6.32h-3.42v-5.6c0-1.34-.03-3.06-1.87-3.06-1.86 0-2.15 1.45-2.15 2.95v5.71H12.2V8.9Z"
-      />
-    </svg>
-  );
-}
-
-function InstagramMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M8 3.75h8A4.25 4.25 0 0 1 20.25 8v8A4.25 4.25 0 0 1 16 20.25H8A4.25 4.25 0 0 1 3.75 16V8A4.25 4.25 0 0 1 8 3.75Z"
-      />
-      <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="17.2" cy="6.8" r="0.85" fill="currentColor" />
-    </svg>
-  );
-}
-
 function MailMark() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -96,36 +70,21 @@ function ColorInstagramMark() {
   );
 }
 
-const socialProfiles = [
-  // X and TikTok are hidden until their accounts exist (x.com/unvibe_app is a 404, and
-  // tiktok.com/@unvibe_app reports no such account).
-  { name: "LinkedIn", href: LINKEDIN_URL, Mark: LinkedInMark },
-  { name: "Instagram", href: INSTAGRAM_URL, Mark: InstagramMark },
-] as const;
-
 const followSum = [
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: ColorLinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: ColorInstagramMark },
 ] as const;
 
-interface SocialFollowLinksProps {
-  includeMail?: boolean;
-  className?: string;
-}
-
-export function SocialFollowLinks({ includeMail = false, className = "paper-footer__social" }: SocialFollowLinksProps) {
+/**
+ * The support mail icon under the footer newsletter. The profiles moved to the footer's text Follow column (Design,
+ * ledger 563), so this row keeps only mail.
+ */
+export function SupportMailLink({ className = "paper-footer__social" }: { className?: string }) {
   return (
     <div className={className}>
-      {socialProfiles.map(({ name, href, Mark }) => (
-        <a key={name} href={href} target="_blank" rel="noopener noreferrer" aria-label={`Unvibe on ${name}`}>
-          <Mark />
-        </a>
-      ))}
-      {includeMail ? (
-        <a href={supportMailto} aria-label={`Email ${SUPPORT_EMAIL}`}>
-          <MailMark />
-        </a>
-      ) : null}
+      <a href={supportMailto} aria-label={`Email ${SUPPORT_EMAIL}`}>
+        <MailMark />
+      </a>
     </div>
   );
 }
