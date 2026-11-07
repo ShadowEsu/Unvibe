@@ -130,8 +130,10 @@ try {
   pick.cardText = text.slice(0, 1200);
   const missing = steps[exp.os].want.filter((s) => !text.includes(s));
   const wrong = steps[exp.os].not.filter((s) => text.includes(s));
-  check(pick.cardOs === exp.os && text.includes(exp.label), "the thank-you card is for this computer's build",
-    `data-os ${pick.cardOs}, names '${(text.match(/Unvibe [0-9.]+ for [^.]+\./) || ["?"])[0]}', want '${exp.label}'`);
+  // The label is styled uppercase, and innerText returns it that way (run 42338399554: 'UNVIBE 0.1.49 FOR WINDOWS.').
+  const named = (text.match(/unvibe [0-9.]+ for [^.]+\./i) || [""])[0];
+  check(pick.cardOs === exp.os && named.toLowerCase().endsWith(exp.label.toLowerCase()), "the thank-you card is for this computer's build",
+    `data-os ${pick.cardOs}, names '${named || "?"}', want '${exp.label}'`);
   check(missing.length === 0 && wrong.length === 0, `the thank-you card shows the ${exp.os === "mac" ? "Mac" : "Windows"} first-open steps`,
     `missing ${missing.length ? missing.join(", ") : "none"}; other system's words: ${wrong.length ? wrong.join(", ") : "none"}`);
   // Anything covering the card's steps or links at this size (the setup-email pop-up, the feedback button).
