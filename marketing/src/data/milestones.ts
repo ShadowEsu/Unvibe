@@ -21,6 +21,43 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "7 NOV 2026",
+    category: "PRODUCT",
+    title: "The home page demo's caption stays clear of the download button",
+    summary: "On laptop-sized screens, the caption under the home page's step-by-step demo, \"Unvibe 0.1.49 panel, recreated in HTML · sample code\", could sit under the floating download button. The demo window now stops 16 px above the button, so the caption stays readable. Phones and larger screens look the same as before.",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/259", label: "PR #259" },
+    ],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "A new preview card for shared links",
+    summary: "When a link to unvibe.site is shared, the preview card now shows the home page's headline, \"Understand the code your AI writes.\", the Free for Mac and Windows pill and the shortcuts, Control+U on a Mac and Ctrl+Alt+U on Windows. All of it sits in the middle square of the card, so square crops keep it. Pages without a card of their own use it too.",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/257", label: "PR #257" },
+    ],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "PRODUCT",
+    title: "Friendlier welcome and setup tip emails",
+    summary: "The welcome email and the setup tip that follows the next day are rewritten in a more casual voice. The links, install steps, shortcuts, reply address and unsubscribe link are the same as before.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/255", label: "PR #255" }],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "Related pages on explain pages",
+    summary: "26 explain pages now start their list of other languages with a Related row of up to 4 close matches, then the full list. On the SQL page, the row is SQL joins, Supabase RLS, Prisma schema and SQLite.",
+    links: [
+      { href: "/explain/sql", label: "Explain SQL" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/253", label: "PR #253" },
+    ],
+  },
+  {
     date: "6 NOV 2026",
     category: "DISTRIBUTION",
     title: "Explain code is linked from Resources",
