@@ -16,13 +16,13 @@ export const metadata: Metadata = pageMetadata({ path: "/explain", title, descri
 export default function ExplainIndexPage() {
   return (
     <article className={`explain-page ${explainMono.variable}`}>
-      <header className="explain-head">
+      <div className="explain-head">
         <h1>Explain code in plain English</h1>
         <p>Paste a snippet, pick a depth and Vibe tells you what the code does. Free, no account.</p>
-      </header>
+      </div>
 
       <section aria-label="Try it">
-        <TryIt answerSurface="explain_answer" errorSurface="explain_try" emailHref="/#email-link" />
+        <TryIt answerSurface="explain_answer" errorSurface="explain_try" emailHref="/beta#email-link" />
       </section>
 
       <section className="explain-card" aria-labelledby="explain-langs-title">

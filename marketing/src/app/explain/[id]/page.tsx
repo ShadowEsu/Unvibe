@@ -46,7 +46,7 @@ export default function ExplainLanguagePage({ params }: Params) {
           __html: jsonLdScript(breadcrumbJsonLd([{ name: "Explain code", path: "/explain" }, { name, path: `/explain/${page.id}` }])),
         }}
       />
-      <header className="explain-head">
+      <div className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}
         </nav>
@@ -54,7 +54,7 @@ export default function ExplainLanguagePage({ params }: Params) {
         <p>
           <Prose text={page.lead} />
         </p>
-      </header>
+      </div>
 
       <section aria-label={`Try it with a ${name} sample`}>
         <TryIt
@@ -62,7 +62,7 @@ export default function ExplainLanguagePage({ params }: Params) {
           fileName={page.fileName}
           answerSurface="explain_answer"
           errorSurface="explain_try"
-          emailHref="/#email-link"
+          emailHref="/beta#email-link"
         />
       </section>
 

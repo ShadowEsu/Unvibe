@@ -1391,13 +1391,13 @@ h2 {
 
 .console-page .console-analytics__eyebrow,
 .console-page .console-analytics article > span,
-.console-page .console-analytics article header > span {
+.console-page .console-analytics article .ca-head > span {
   color: var(--ink);
 }
 
 .console-page .console-analytics__header p,
 .console-page .console-analytics__grid small,
-.console-page .console-analytics__panels header small,
+.console-page .console-analytics__panels .ca-head small,
 .console-page .console-analytics__bar-value,
 .console-page .console-analytics__bars small,
 .console-page .console-analytics__sources li,
@@ -1445,7 +1445,7 @@ h2 {
   transform: translateY(-1px);
 }
 
-.console-page .console-analytics__people > header {
+.console-page .console-analytics__people > .ca-head {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -1618,8 +1618,8 @@ h2 {
   box-shadow: var(--shadow-card);
 }
 
-.console-page .console-analytics__visits header,
-.console-page .console-analytics__people header {
+.console-page .console-analytics__visits .ca-head,
+.console-page .console-analytics__people .ca-head {
   margin-bottom: 1rem;
 }
 

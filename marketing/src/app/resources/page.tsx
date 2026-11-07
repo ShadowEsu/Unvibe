@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMetadata({
 export default function ResourcesPage() {
   return (
     <article className="launch-subpage paper-resources-page">
-      <header className="paper-photo-band paper-photo-band--short">
+      <div className="paper-photo-band paper-photo-band--short">
         <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
@@ -24,7 +24,7 @@ export default function ResourcesPage() {
             Get set up, choose an explanation depth, and see exactly how your code is handled.
           </p>
         </div>
-      </header>
+      </div>
 
       <section className="paper-section">
         <div className="paper-wrap">

@@ -17,11 +17,10 @@ export const CSP_REPORT_GROUP = "csp";
 const ANALYTICS_SCRIPT_HOSTS = ["https://cdn.mxpnl.com"];
 const ANALYTICS_CONNECT_HOSTS = ["https://api-js.mixpanel.com"];
 /**
- * Directory badge images loaded from the directory itself, only after the visitor allowed analytics
- * (`remoteSrc` in src/data/listings.ts). Every badge also has a copy in public/badges, shown before
- * that; a test keeps this list equal to the remote badge origins.
+ * Directory badge image hosts: none. Every badge is a copy in public/badges, never the directory's own
+ * image (Security B1, no hotlinking); a test keeps this list empty and img-src free of third-party hosts.
  */
-export const LISTING_IMAGE_HOSTS = ["https://toolindex.net"];
+export const LISTING_IMAGE_HOSTS = [];
 
 /** An env URL's origin, or nothing when it is unset or not a URL. */
 function origin(url) {
@@ -42,7 +41,7 @@ export function reportOnlyCsp({ api = "https://api.unvibe.site", supabase = "" }
     "default-src 'self'",
     `script-src 'self' ${ANALYTICS_SCRIPT_HOSTS.join(" ")}`,
     `connect-src ${connect.join(" ")}`,
-    `img-src 'self' data: blob: ${LISTING_IMAGE_HOSTS.join(" ")}`,
+    ["img-src 'self' data: blob:", ...LISTING_IMAGE_HOSTS].join(" "),
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
     "media-src 'self'",
