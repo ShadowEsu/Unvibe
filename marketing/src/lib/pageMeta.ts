@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { explainLanguage, type ExplainPage } from "@/lib/explainPages";
+import { explainHeading, type ExplainPage } from "@/lib/explainPages";
 
 /**
  * Link-preview cards: static 1200x630 PNGs in public/og, drawn by Design (option B "Flow", picked
@@ -32,7 +32,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   typescript: "/og/og-explain-typescript-9328f8c2.png",
   sql: "/og/og-explain-sql-0d9df631.png",
   graphql: "/og/og-explain-graphql-6bd3229b.png",
-  "git-log": "/og/og-explain-git-log-a16206ef.png",
+  "git-log": "/og/og-explain-git-log-f7514c77.png",
   bash: "/og/og-explain-bash-f04ec8df.png",
   powershell: "/og/og-explain-powershell-c4ef5527.png",
   curl: "/og/og-explain-curl-d7836fd3.png",
@@ -75,34 +75,34 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   perl: "/og/og-explain-perl-6a375c1e.png",
   sed: "/og/og-explain-sed-052acff4.png",
   grep: "/og/og-explain-grep-dae0ebb6.png",
-  "git-diff": "/og/og-explain-git-diff-cbe86ac3.png",
+  "git-diff": "/og/og-explain-git-diff-dffb3d0b.png",
   "react-useeffect": "/og/og-explain-react-useeffect-7ff74901.png",
-  "python-traceback": "/og/og-explain-python-traceback-6de7a848.png",
+  "python-traceback": "/og/og-explain-python-traceback-23ee8426.png",
   "package-lock": "/og/og-explain-package-lock-4f8f420b.png",
   "prisma-schema": "/og/og-explain-prisma-schema-43ac14a3.png",
   tailwind: "/og/og-explain-tailwind-ee327891.png",
   "sql-joins": "/og/og-explain-sql-joins-43a0484a.png",
   "supabase-rls": "/og/og-explain-supabase-rls-264a5997.png",
-  "cors-error": "/og/og-explain-cors-error-eae48712.png",
+  "cors-error": "/og/og-explain-cors-error-01a55b96.png",
   asyncio: "/og/og-explain-asyncio-fb6e0e21.png",
   tar: "/og/og-explain-tar-e922b08f.png",
   rsync: "/og/og-explain-rsync-bf6fe9bd.png",
   "git-rebase": "/og/og-explain-git-rebase-61755953.png",
   xargs: "/og/og-explain-xargs-f6d7bed7.png",
-  "ps-aux": "/og/og-explain-ps-aux-440a0365.png",
+  "ps-aux": "/og/og-explain-ps-aux-2801e138.png",
   systemd: "/og/og-explain-systemd-84c56c8b.png",
   terraform: "/og/og-explain-terraform-65e898b5.png",
   assembly: "/og/og-explain-assembly-c80056c7.png",
-  "git-merge-conflict": "/og/og-explain-git-merge-conflict-0069f0db.png",
-  "npm-error": "/og/og-explain-npm-error-8f09ac10.png",
-  lsof: "/og/og-explain-lsof-b14d7132.png",
+  "git-merge-conflict": "/og/og-explain-git-merge-conflict-ef5769f1.png",
+  "npm-error": "/og/og-explain-npm-error-c9a33fdc.png",
+  lsof: "/og/og-explain-lsof-0d8347e2.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
 export function explainCard(page: ExplainPage): OgCard {
   const file = EXPLAIN_CARD_FILES[page.id];
   if (!file) return OG_CARDS.explain;
-  return { file, alt: `Explain ${explainLanguage(page).name} code in plain English. ${FREE}` };
+  return { file, alt: `Explain ${explainHeading(page)} in plain English. ${FREE}` };
 }
 
 /**
