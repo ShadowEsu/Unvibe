@@ -163,12 +163,24 @@ try {
     const shown = (el) => { const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return b.width > 0 && b.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
     const inline = [...document.querySelectorAll("[data-remind-inline]")].filter(shown);
     const floating = [...document.querySelectorAll(".remind:not(.remind--inline)")].filter(shown);
+    const ask = inline.find((el) => el.closest("section#thanks"));
+    // Security (7 Nov): the tip box starts unticked, and "No thanks" overlaps nothing else in the ask.
+    const box = ask?.querySelector('input[type="checkbox"]');
+    const no = [...(ask?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "No thanks");
+    const nb = no?.getBoundingClientRect();
+    const hits = nb ? [...ask.querySelectorAll("*")].filter((el) => el !== no && !no.contains(el) && !el.contains(no) && shown(el) && el.children.length === 0)
+      .filter((el) => { const b = el.getBoundingClientRect(); return b.left < nb.right - 1 && b.right > nb.left + 1 && b.top < nb.bottom - 1 && b.bottom > nb.top + 1; })
+      .map((el) => `${el.tagName.toLowerCase()} '${(el.textContent || el.getAttribute("placeholder") || "").trim().slice(0, 30)}'`) : [];
     return { inline: inline.length, inCard: inline.filter((el) => el.closest("section#thanks")).length, floating: floating.length,
-      emailBoxes: [...document.querySelectorAll('input[type="email"]')].filter(shown).length };
+      emailBoxes: [...document.querySelectorAll('input[type="email"]')].filter(shown).length,
+      tipBox: box ? (box.checked ? "ticked" : "unticked") : "none", noThanks: nb ? `${Math.round(nb.width)}x${Math.round(nb.height)}` : "none", noThanksOverlaps: hits };
   });
   if (pick.ask.inline > 0) {
     check(pick.ask.inCard === 1 && pick.ask.floating === 0 && pick.ask.emailBoxes === 1, "one setup-email ask, in the card, nothing floating over it (#240)",
       `in card ${pick.ask.inCard}, floating toasts ${pick.ask.floating}, email boxes on screen ${pick.ask.emailBoxes}`);
+    check(pick.ask.tipBox === "unticked", "the 'Also email me one setup tip tomorrow' box starts unticked", pick.ask.tipBox);
+    check(pick.ask.noThanks !== "none" && pick.ask.noThanksOverlaps.length === 0, "'No thanks' is shown and overlaps nothing in the ask",
+      `No thanks ${pick.ask.noThanks}; overlapping: ${pick.ask.noThanksOverlaps.join(", ") || "none"}`);
   } else r(`NOTE  no in-card setup-email ask on this page (before #240); floating toasts ${pick.ask.floating}`);
   await page.screenshot({ path: join(OUT, "site-2-thanks.png") });
   await page.screenshot({ path: join(OUT, "site-3-thanks-full.png"), fullPage: true });
