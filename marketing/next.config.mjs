@@ -15,6 +15,9 @@ const nextConfig = {
       { source: "/download", destination: "/beta", permanent: true },
       // The nav calls /releases "Changelog", so people type /changelog (404 until 6 Nov). Permanent (308).
       { source: "/changelog", destination: "/releases", permanent: true },
+      // Guessed help URLs (404 until /help existed): the help hub. Permanent (308). The footer's Contact is a mailto.
+      { source: "/support", destination: "/help", permanent: true },
+      { source: "/contact", destination: "/help", permanent: true },
       // Legacy admin path: a real redirect, so no page (and no inherited "index, follow") is ever served.
       { source: "/waitlist-admin", destination: "/waitlist", permanent: false },
     ];
