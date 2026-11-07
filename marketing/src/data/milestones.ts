@@ -23,6 +23,25 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
+    title: "Explain git rebase, xargs and ps aux",
+    summary: "3 new explain pages: the todo list git rebase -i opens, a script that compresses old logs with find and xargs, and ps aux output from a test session with a busy process, a stopped job and a zombie. Each has its own sample in a Try it box and notes on what that sample did when run with git 2.55.0, GNU findutils 4.11.0 and procps-ng 4.0.7.",
+    links: [
+      { href: "/explain/git-rebase", label: "Explain git rebase" },
+      { href: "/explain/xargs", label: "Explain xargs" },
+      { href: "/explain/ps-aux", label: "Explain ps aux" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/249", label: "PR #249" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "New download and setup tip emails",
+    summary: "The email you get after asking for the download link now has one Get Unvibe button and the install commands for Mac and Windows. If you also tick the box for a setup tip, the email a day later suggests trying Unvibe on code you didn't write and links the help pages for Accessibility and for a shortcut that does nothing. Every email still has an unsubscribe link.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/246", label: "PR #246" }],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
     title: "Explain Python asyncio, tar and rsync",
     summary: "3 new explain pages: a Python script that runs 3 slow loads at once with asyncio, a tar script that packs and unpacks a site backup, and an rsync backup script with a dry run first. Each has its own sample in a Try it box and notes on what that sample did when run with Python 3.14.7, GNU tar 1.35, bsdtar 3.8.9 and rsync 3.5.0.",
     links: [
