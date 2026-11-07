@@ -78,7 +78,7 @@ export default async function InvestorsPage() {
     <PhotoPage photo="investors" wide labelledBy="inv-h">
       <PhotoHead>
         <p className="dg__eyebrow">Unvibe for investors</p>
-        <h1 id="inv-h" data-d-hero-rise="h1">The ownership layer for AI-written code.</h1>
+        <h1 id="inv-h" data-d-hero-rise="h1">The ownership layer for <span className="dg-nowrap">AI-written</span> code.</h1>
         <p className="dg__lead" data-d-enter="" style={enterDelay(120)}>
           AI writes code faster than people can understand it. Unvibe sits beside the editor, explains what changed,
           checks that it stuck, and keeps the knowledge fresh as the code moves.
