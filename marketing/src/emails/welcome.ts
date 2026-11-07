@@ -19,9 +19,11 @@ export interface WelcomeInput {
   siteUrl?: string;
 }
 
-export const WELCOME_SUBJECT = "Your Unvibe download, and the fastest way to install it";
+// Copy: casual rewrite for ledger 569 (Preston: "casual, informal and more fun"), same facts and links as
+// unvibe-support's onboarding email 1 (Security S-2 0002). One joke at most: the sign-off.
+export const WELCOME_SUBJECT = "Here's Unvibe, and the one-line install";
 export const WELCOME_PREVIEW =
-  "Paste one line into Terminal or PowerShell and Unvibe opens, without the extra security prompts that come with the download.";
+  "Paste one line into Terminal or PowerShell and Unvibe opens, with none of the extra security prompts the downloaded file brings.";
 
 const INK = "#141414";
 const PAPER = "#f6f1e7";
@@ -52,18 +54,19 @@ export function welcomeHtml(input: WelcomeInput): string {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${PAPER}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:${PAPER}">
 <tr><td style="padding:0 28px 12px">
-<p style="${p}">Thanks for getting Unvibe. It explains the code your AI tools write, in a panel right beside your editor.</p>
-<p style="${p}">The fastest install is one line, on the computer you'll use it on.</p>
-<p style="${p}"><b style="color:${INK}">On a Mac:</b> open Terminal (press ⌘ Space, type Terminal), paste this, press Return:</p>
+<p style="${p}">Hi there,</p>
+<p style="${p}">Thanks for grabbing Unvibe! It explains the code your AI tools write, in a panel right next to your editor.</p>
+<p style="${p}">The quickest way in is one line, pasted on the computer you'll use it on.</p>
+<p style="${p}"><b style="color:${INK}">On a Mac:</b> open Terminal (press ⌘ Space, type Terminal), paste this and hit Return:</p>
 ${pre}<code>${escape(BETA_INSTALL_COMMAND)}</code></pre>
-<p style="${p}"><b style="color:${INK}">On Windows:</b> open PowerShell (Start, type PowerShell), paste this, press Enter:</p>
+<p style="${p}"><b style="color:${INK}">On Windows:</b> open PowerShell (Start, type PowerShell), paste this and hit Enter:</p>
 ${pre}<code>${escape(BETA_WINDOWS_INSTALL_COMMAND)}</code></pre>
-<p style="${p}">Each line checks the download against its published checksum before installing, then opens Unvibe. You can read both scripts first at <a href="${escape(l.installHelp)}" style="${link}">unvibe.site/install-help</a>.</p>
+<p style="${p}">Both lines check the download against its published checksum before installing, then open Unvibe for you. You can read both scripts first at <a href="${escape(l.installHelp)}" style="${link}">unvibe.site/install-help</a>.</p>
 <table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 20px"><tr><td bgcolor="${LIME}" style="border:2px solid ${INK};border-radius:14px;background:${LIME}"><a href="${escape(l.get)}" style="display:inline-block;padding:14px 28px;font-size:17px;font-weight:800;line-height:1.2;color:${INK};text-decoration:none">Get Unvibe</a></td></tr></table>
-<p style="${p}">Would rather download the file? The button above has it too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here is exactly what to press: <a href="${escape(l.installHelp)}" style="${link}">${escape(l.installHelp)}</a></p>
-<p style="${p}">When it opens, Unvibe explains a short sample for you, then one of your own snippets. No account needed.</p>
-<p style="${p}">Reply to this email if anything gets in the way and we'll help.</p>
-<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:${INK}"><b>The Unvibe team</b></p>
+<p style="${p}">Prefer the file? The button has that too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here's exactly what to press: <a href="${escape(l.installHelp)}" style="${link}">${escape(l.installHelp)}</a></p>
+<p style="${p}">Once it's open, Unvibe explains a short sample first, then one of your own snippets. You don't need an account.</p>
+<p style="${p}">Stuck anywhere? Just reply to this email and we'll help you sort it out.</p>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:${INK}">Happy reading (the code kind),<br><b>The Unvibe team</b></p>
 </td></tr>
 <tr><td style="padding:0 28px 12px;font-size:12px;line-height:1.5;color:#7a7a7a">You get this because ${escape(input.email)} asked for Unvibe at <a href="${escape(l.site)}" style="color:#7a7a7a">unvibe.site</a>. ${followUp(input)} Unsubscribe any time: <a href="${escape(input.unsubscribeUrl)}" style="color:#7a7a7a;word-break:break-all">${escape(input.unsubscribeUrl)}</a></td></tr>
 </table></td></tr></table></body></html>`;
@@ -71,28 +74,31 @@ ${pre}<code>${escape(BETA_WINDOWS_INSTALL_COMMAND)}</code></pre>
 
 export function welcomeText(input: WelcomeInput): string {
   const l = links(input);
-  return `Thanks for getting Unvibe. It explains the code your AI tools write, in a panel right beside your editor.
+  return `Hi there,
 
-The fastest install is one line, on the computer you'll use it on.
+Thanks for grabbing Unvibe! It explains the code your AI tools write, in a panel right next to your editor.
 
-On a Mac: open Terminal (press ⌘ Space, type Terminal), paste this, press Return:
+The quickest way in is one line, pasted on the computer you'll use it on.
+
+On a Mac: open Terminal (press ⌘ Space, type Terminal), paste this and hit Return:
 
 ${BETA_INSTALL_COMMAND}
 
-On Windows: open PowerShell (Start, type PowerShell), paste this, press Enter:
+On Windows: open PowerShell (Start, type PowerShell), paste this and hit Enter:
 
 ${BETA_WINDOWS_INSTALL_COMMAND}
 
-Each line checks the download against its published checksum before installing, then opens Unvibe. You can read both scripts first at unvibe.site/install-help.
+Both lines check the download against its published checksum before installing, then open Unvibe for you. You can read both scripts first at unvibe.site/install-help.
 
 Get Unvibe: ${l.get}
 
-Would rather download the file? The button above has it too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here is exactly what to press: ${l.installHelp}
+Prefer the file? The link above has that too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here's exactly what to press: ${l.installHelp}
 
-When it opens, Unvibe explains a short sample for you, then one of your own snippets. No account needed.
+Once it's open, Unvibe explains a short sample first, then one of your own snippets. You don't need an account.
 
-Reply to this email if anything gets in the way and we'll help.
+Stuck anywhere? Just reply to this email and we'll help you sort it out.
 
+Happy reading (the code kind),
 The Unvibe team
 
 You get this because ${input.email} asked for Unvibe at unvibe.site. ${followUp(input)} Unsubscribe any time: ${input.unsubscribeUrl}`;

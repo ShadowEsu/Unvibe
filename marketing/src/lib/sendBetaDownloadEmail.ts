@@ -11,22 +11,24 @@ export interface SetupTipInput {
   siteUrl: string;
 }
 
-export const SETUP_TIP_SUBJECT = "Try Unvibe on code you didn't write";
+export const SETUP_TIP_SUBJECT = "Your setup tip: try Unvibe on code you didn't write";
 export const SETUP_TIP_PREVIEW = `Copy a few lines from any file and paste them into Unvibe. Then let ${SHORTCUTS.mac.anywhere} do it straight from your editor.`;
 
-// Copy: unvibe-support's onboarding email 2 (Security S-2 0002). Where it lives, per the app: the
+// Copy: unvibe-support's onboarding email 2 (Security S-2 0002), casual rewrite for ledger 569 with the same facts and links. Where it lives, per the app: the
 // Mac Dock icon always shows and the tray icon sits in the menu bar or notification area
 // (app/src/main/main.ts). The footer promises nothing else is scheduled: this is the only email
 // sent with scheduled_at, so a later lifecycle email must change that line in the same change.
 export function setupTipText(input: SetupTipInput): string {
   const site = input.siteUrl.replace(/\/$/, "");
-  return `Here's the setup tip you asked for: try Unvibe on real code of your own today.
+  return `Hi again,
 
-1. Open Unvibe. It lives in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.
-2. Open a file you didn't write yourself, from an AI tool or a teammate. Copy a few lines.
-3. Paste them into Unvibe. The explanation opens in a panel beside your editor, and you can ask a follow-up or press Test me.
+Here's the setup tip you asked for: try Unvibe on real code of your own today.
 
-Then skip the copying:
+1. Open Unvibe. You'll find it in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.
+2. Open a file you didn't write yourself, maybe from an AI tool or a teammate, and copy a few lines.
+3. Paste them into Unvibe. The explanation opens in a panel beside your editor, where you can ask a follow-up or press Test me.
+
+Then skip the copying altogether:
 
 - On a Mac, select code in any app and press ${SHORTCUTS.mac.anywhere}. The first time, macOS asks you to allow Accessibility so Unvibe can copy your selection: ${site}/help/accessibility
 - On Windows, select code and press ${SHORTCUTS.windows.anywhere}. Nothing to allow.
@@ -35,8 +37,9 @@ Fix a shortcut that does nothing: ${site}/help/shortcut
 
 Haven't installed it yet? Paste this into Terminal on a Mac: ${BETA_INSTALL_COMMAND}, or get the Windows version at ${site}/beta.
 
-Reply to this email if anything gets in the way and we'll help.
+If anything gets in the way, reply to this email and we'll help.
 
+Have fun with it,
 The Unvibe team
 
 You asked for one setup tip when you got Unvibe at unvibe.site. This is it, and nothing else is scheduled. Unsubscribe any time: ${input.unsubscribeUrl}`;
@@ -50,14 +53,15 @@ export function setupTipHtml(input: SetupTipInput): string {
   const beta = escape(`${site}/beta`);
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:16px;line-height:1.55;color:#141414;max-width:520px">
 <div style="display:none;max-height:0;overflow:hidden">${escape(SETUP_TIP_PREVIEW)}</div>
+<p>Hi again,</p>
 <p>Here's the setup tip you asked for: try Unvibe on real code of your own today.</p>
-<ol><li>Open Unvibe. It lives in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.</li><li>Open a file you didn't write yourself, from an AI tool or a teammate. Copy a few lines.</li><li>Paste them into Unvibe. The explanation opens in a panel beside your editor, and you can ask a follow-up or press Test me.</li></ol>
-<p>Then skip the copying:</p>
+<ol><li>Open Unvibe. You'll find it in your Dock or taskbar, with an icon in the Mac menu bar or the Windows notification area.</li><li>Open a file you didn't write yourself, maybe from an AI tool or a teammate, and copy a few lines.</li><li>Paste them into Unvibe. The explanation opens in a panel beside your editor, where you can ask a follow-up or press Test me.</li></ol>
+<p>Then skip the copying altogether:</p>
 <ul><li><b>On a Mac,</b> select code in any app and press <b>${escape(SHORTCUTS.mac.anywhere)}</b>. The first time, macOS asks you to allow Accessibility so Unvibe can copy your selection: <a href="${accessibility}" style="${link}">${accessibility}</a></li><li><b>On Windows,</b> select code and press <b>${escape(SHORTCUTS.windows.anywhere)}</b>. Nothing to allow.</li></ul>
 <table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 20px"><tr><td bgcolor="#d9f45c" style="border:2px solid #141414;border-radius:14px;background:#d9f45c"><a href="${escape(`${site}/help/shortcut`)}" style="display:inline-block;padding:12px 22px;font-size:16px;font-weight:800;line-height:1.2;color:#141414;text-decoration:none">Fix a shortcut that does nothing</a></td></tr></table>
 <p>Haven't installed it yet? Paste this into Terminal on a Mac: <code style="${code}">${escape(BETA_INSTALL_COMMAND)}</code>, or get the Windows version at <a href="${beta}" style="${link}">${beta}</a>.</p>
-<p>Reply to this email if anything gets in the way and we'll help.</p>
-<p><b>The Unvibe team</b></p>
+<p>If anything gets in the way, reply to this email and we'll help.</p>
+<p>Have fun with it,<br><b>The Unvibe team</b></p>
 <p style="font-size:12px;color:#66635d">You asked for one setup tip when you got Unvibe at <a href="${escape(site)}" style="color:#66635d">unvibe.site</a>. This is it, and nothing else is scheduled. Unsubscribe any time: <a href="${escape(input.unsubscribeUrl)}" style="color:#66635d;word-break:break-all">${escape(input.unsubscribeUrl)}</a></p></div>`;
 }
 
