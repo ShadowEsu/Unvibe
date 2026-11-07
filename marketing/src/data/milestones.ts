@@ -22,6 +22,47 @@ export interface Milestone {
 export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "Explain code is linked from Resources",
+    summary: "The Quickstart section on Resources now ends with a line that links Explain code, where you can paste a snippet, pick a depth and see what Vibe says about it, free and with no account.",
+    links: [
+      { href: "/resources", label: "Resources" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/254", label: "PR #254" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "A Help page for when you're stuck",
+    summary: "A new Help page asks what's stuck and links the page that answers each problem: a Mac or Windows warning when you first open Unvibe, a shortcut that does nothing, allowing Accessibility on a Mac, sign-in that doesn't finish, plans and privacy, and deleting your account. Help is the first link under Resources in the footer and one of the links on the page-not-found screen, and unvibe.site/support and unvibe.site/contact now lead to it.",
+    links: [
+      { href: "/help", label: "Help" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/250", label: "PR #250" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "New look for the changelog, FAQ and investors pages",
+    summary: "The changelog, the FAQ and the investors page now sit on black-and-white public domain photos of the Golden Gate Bridge from the Library of Congress, with every word on white cards and the photo credit at the end of the page. The investors page was rebuilt: what has shipped, the numbers so far, the startup programs, the resource runway and where Unvibe is listed. The header links Investors where FAQ was (FAQ is in the footer), the custom cursor is gone, and the lists of directories name a site only once it is live or its submission date is recorded.",
+    links: [
+      { href: "/investors", label: "Investors" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/247", label: "PR #247" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/252", label: "PR #252" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "Clearer sign-in help on the beta page",
+    summary: "The beta page's quick fixes now say what to do when Google sign-in doesn't finish: on the same sign-in page, ask for an email link, open it in the same browser on the same computer, check the code and press Approve sign-in. The tip about starting without an account now says how to sign in later, from your name at the bottom of the app's sidebar.",
+    links: [
+      { href: "/beta", label: "Beta page" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/248", label: "PR #248" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
     category: "PRODUCT",
     title: "Explain git rebase, xargs and ps aux",
     summary: "3 new explain pages: the todo list git rebase -i opens, a script that compresses old logs with find and xargs, and ps aux output from a test session with a busy process, a stopped job and a zombie. Each has its own sample in a Try it box and notes on what that sample did when run with git 2.55.0, GNU findutils 4.11.0 and procps-ng 4.0.7.",
@@ -729,7 +770,7 @@ export const milestones: Milestone[] = [
     date: "06 OCT 2026",
     category: "PRODUCT",
     title: "Answers start instantly, quiz me on everything, a livelier Island",
-    summary: "Explanations now stream word by word the moment the AI starts writing, instead of waiting for the whole answer. Quick Quiz has a new Quiz me on everything run: up to ten questions across your saved lessons, revisit ones first, with a score at the end. On the Island, Vibe hops when an answer lands. Investors can now page through the pitch deck right on unvibe.site/investors.",
+    summary: "Explanations now stream word by word the moment the AI starts writing, instead of waiting for the whole answer. Quick Quiz has a new Quiz me on everything run: up to ten questions across your saved lessons, revisit ones first, with a score at the end. On the Island, Vibe hops when an answer lands. Investors can now page through the pitch deck right on unvibe.site/investors (taken off the site on 22 Oct).",
     figure: "v0.1.28",
   },
   {
