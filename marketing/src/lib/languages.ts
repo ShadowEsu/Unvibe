@@ -637,6 +637,36 @@ export const languages: Language[] = [
     learningPath: ["Origins", "Allow-Origin", "Preflight", "Server-side checks"],
     sample: `No 'Access-Control-Allow-Origin' header is present on the requested resource.`,
   },
+  {
+    id: "asyncio",
+    name: "Python asyncio",
+    categories: ["backend", "scripting"],
+    blurb: "Python's async and await: how one program waits on several slow things at once, and what stops them all.",
+    concepts: ["async def and await", "gather", "timeouts", "blocking calls"],
+    frameworks: ["asyncio", "FastAPI", "aiohttp", "httpx"],
+    learningPath: ["Coroutines", "Running at once", "Timeouts and errors", "What blocks"],
+    sample: `await asyncio.gather(fetch("users", 1.0), fetch("orders", 2.0))`,
+  },
+  {
+    id: "tar",
+    name: "tar",
+    categories: ["systems", "scripting"],
+    blurb: "The command that packs folders into one .tar or .tar.gz file, lists it and unpacks it: what c, x, t, z, v and f mean.",
+    concepts: ["c, t and x", "z, v and f", "-C and --exclude", "one file out"],
+    frameworks: ["GNU tar", "bsdtar", "gzip", "zip"],
+    learningPath: ["Create", "List", "Extract", "Pick and skip files"],
+    sample: `tar -xzvf site-backup.tar.gz -C ~/restore`,
+  },
+  {
+    id: "rsync",
+    name: "rsync",
+    categories: ["systems", "scripting"],
+    blurb: "The command that copies only what changed between 2 folders, often for backups: -a, -v, -n, --delete and the trailing slash.",
+    concepts: ["-a, -v and -h", "the trailing slash", "-n dry run", "--delete and --exclude"],
+    frameworks: ["rsync", "ssh", "cron", "cp"],
+    learningPath: ["Copy a folder", "Trailing slashes", "Dry runs", "Mirroring with --delete"],
+    sample: `rsync -avhn --delete ~/projects/my-site/ /mnt/backup/my-site`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
