@@ -336,6 +336,23 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dt__more { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 24px; font-size: 15px; color: var(--d-ink-2); }
 .dt__more a { color: var(--d-violet); font-weight: 500; }
 .dt__more a:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* the setup-guide ask in the flow under the links (Design 2055 §9; ReminderInline): a hairline, then one row at
+   ≥ 880 px (the text left; the box, email and button right), stacked below; "No thanks" folds it away */
+.dt .remind--inline { position: relative; inset: auto; z-index: auto; width: auto; max-width: 760px; margin: 24px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--d-line); border-radius: 0; background: none; color: var(--d-ink); animation: none; font: 400 15px/1.45 var(--d-sans); }
+.dt .remind--inline p { margin: 0; font-size: 15px; }
+.dt .remind--inline .remind__form { display: grid; gap: 10px 28px; grid-template-areas: "text" "check" "row" "err" "fine"; }
+.dt .remind--inline .remind__text { grid-area: text; }
+.dt .remind--inline .remind__check { grid-area: check; margin: 0; }
+.dt .remind--inline .remind__row { grid-area: row; }
+.dt .remind--inline .remind__error { grid-area: err; margin: 0 !important; }
+.dt .remind--inline .remind__fine { grid-area: fine; margin: 0; min-height: 24px; display: flex; align-items: center; }
+.dt .remind--inline .remind__done { color: var(--d-ink); }
+.dt .remind__no { position: absolute; right: 0; bottom: 0; min-height: 24px; padding: 0; border: 0; background: none; font: 500 14px/1 var(--d-sans); color: var(--d-ink-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.dt .remind__no:hover { color: var(--d-ink); }
+@media (min-width: 880px) {
+  /* the error spans its own row above Privacy, so "No thanks" (bottom right, on Privacy's row) never covers it */
+  .dt .remind--inline .remind__form { grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); grid-template-areas: "text check" "text row" "err err" "fine fine"; }
+}
 
 /* ---------- phones (Dia home-390: 28 px H1, window full-bleed minus 16, steps stacked with the window under each) ---------- */
 @media (max-width: 820px) {

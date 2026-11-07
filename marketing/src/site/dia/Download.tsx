@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import { EmailMeLink } from "@/components/paper/EmailMeLink";
 import { INSTALL_COPY, InstallBox } from "@/components/paper/InstallBox";
+import { ReminderInline } from "@/components/paper/ReminderToast";
 import { track } from "@/lib/analytics";
 import { DOWNLOAD_FILES, isDownloadKey, type DownloadKey } from "@/lib/downloadPick";
 import { trackDownloadClick } from "@/lib/downloadTracking";
@@ -76,6 +77,9 @@ function Thanks() {
           ))}
           <Link href="/install-help">{D_GET.help} <span aria-hidden="true">→</span></Link>
         </p>
+        {/* the setup-guide ask in the flow, under the links (Design 2055 §9): the floating toast covered step 1 and
+            "Intel Mac? Download here" at 1440 × 900 (QA run 42338399554), so it stays closed here */}
+        <ReminderInline />
       </div>
     </section>
   );
