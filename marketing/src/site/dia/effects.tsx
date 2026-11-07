@@ -115,8 +115,6 @@ export function Statement({ id, labelledBy, children }: { id?: string; labelledB
     const css = getComputedStyle(sec);
     const cols = { out: hex(css.getPropertyValue("--bowl-out").trim() || "#faf8f5"), rim: hex(css.getPropertyValue("--bowl-rim").trim() || "#e4deff"), core: hex(css.getPropertyValue("--bowl-core").trim() || "#b8a6ff") };
     const chars = Array.from(tx.querySelectorAll<HTMLElement>(".d-ch"));
-    const navctas = Array.from(document.querySelectorAll<HTMLElement>("[data-d-navcta]"));
-    const setNav = (on: boolean) => navctas.forEach((n) => n.toggleAttribute("data-on", on));
     const rm = reduced();
     const q0 = () => 0.69 + (window.scrollY - (sec.getBoundingClientRect().top + window.scrollY)) / window.innerHeight;
     const cur = { tip: -0.3, half: 0.3, soft: 0.1 };
@@ -136,7 +134,6 @@ export function Statement({ id, labelledBy, children }: { id?: string; labelledB
       tx.style.transform = rm ? "" : `translate3d(0, ${(0.205 * (1 - s) ** 2 * window.innerHeight).toFixed(1)}px, 0)`;
       const p = clamp((q - 0.56) / 2.03);
       paint(chars, rm ? 1 : p, 0.16, STATEMENT_LO);
-      setNav(rm || p > 0.4 || q > 2.75);
       const settling = intro < 1 || Math.abs(tgt.tip - cur.tip) + Math.abs(tgt.half - cur.half) + Math.abs(tgt.soft - cur.soft) > 0.002;
       if (visible && !rm && settling) raf = requestAnimationFrame(frame);
     };
@@ -147,7 +144,6 @@ export function Statement({ id, labelledBy, children }: { id?: string; labelledB
     io.observe(sec);
     const onScroll = () => {
       if (visible && !raf) raf = requestAnimationFrame(frame);
-      else if (!visible) setNav(rm || q0() > 1.2);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     raf = requestAnimationFrame(frame);

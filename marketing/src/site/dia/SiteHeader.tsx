@@ -10,19 +10,26 @@ import { DownloadCta } from "./DownloadCta";
  * The one header on every page (Preston, 6 Nov: "make sure only 1 glass effect header"; plan rev 3 mock 19): a pinned
  * mirror-glass pill that blurs and tints whatever scrolls under it (blur 18 px, saturate 1.8, a lens edge, a sheen,
  * a white rim). Past 80 px it settles to 94 % and turns a little more solid (ANIMATIONS #2), and a 2 px lime line
- * inside its bottom edge grows with the page's scroll (#3). The home page pops its "Download free" from a dot once
- * the statement is 40 % read (#21, effects.tsx sets data-on); every other page shows it from the start. Phones get the
+ * inside its bottom edge grows with the page's scroll (#3). "Download free" sits inside the glass at its end, as in
+ * mock 19: on a first visit to home it pops from a dot just after the hero rises (#21); everywhere else, and without JS,
+ * it is there from the first frame. It keeps its slot either way, so the links never move. Phones get the
  * ghost + wordmark + a "+" that opens the links inside the glass. /activate is a full-screen card: no header there.
  */
 export function SiteHeader() {
   const pathname = usePathname() ?? "/";
   const home = pathname === "/";
   const [open, setOpen] = useState(false);
+  const [cta, setCta] = useState(!home);
   const root = useRef<HTMLElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setOpen(false), [pathname]);
 
+  useEffect(() => {
+    if (cta) return undefined;
+    const timer = window.setTimeout(() => setCta(true), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900);
+    return () => window.clearTimeout(timer);
+  }, [cta]);
   useEffect(() => {
     const el = root.current;
     if (!el) return undefined;
@@ -77,7 +84,7 @@ export function SiteHeader() {
             </li>
           ))}
         </ul>
-        <DownloadCta surface="nav" className="dh__cta d-btn" data-d-navcta="" data-on={home ? undefined : ""}>
+        <DownloadCta surface="nav" className="dh__cta d-btn" data-d-navcta="" data-on={cta ? "" : undefined}>
           <span>{D_NAV_CTA}</span>
         </DownloadCta>
         <button
