@@ -16,14 +16,14 @@ export default function InstallHelpPage() {
   return (
     <article className="fos-page">
       <InstallHelpViewed />
-      <header className="fos-page__head">
+      <div className="fos-page__head">
         <Vibe size={96} />
         <div>
           <p className="pstats__eyebrow">Install help</p>
           <h1>Opening Unvibe the first time.</h1>
           <p className="fos-page__lead">Unvibe is free and brand new, so Apple and Microsoft have not verified it yet. The first time you open the download, a Mac asks you to approve it in System Settings and Windows shows a blue warning. Here is exactly what to press, or paste one line and skip both.</p>
         </div>
-      </header>
+      </div>
       <h2 className="sr-only">First-open steps for Mac and Windows</h2>
       <FirstOpenSteps surface="install_help" />
       <section className="verify" aria-labelledby="verify-title">

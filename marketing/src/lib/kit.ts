@@ -111,7 +111,7 @@ export function kitSections(): KitSection[] {
         "Objection: \"Is it really free?\" Answer: yes. Change Briefs are free too. Pro adds Expert depth, the AI explanation of a Brief and nearby-file context, and signing in to the app gives you a free month of Pro.",
         AI_MAINTENANCE
           ? `Call to action: ${SITE} (download).`
-          : `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
+          : `Call to action: ${SITE} (download), or try it online at ${SITE}/explain (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
       ],
     },
     {

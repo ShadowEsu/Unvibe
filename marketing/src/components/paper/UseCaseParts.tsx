@@ -19,7 +19,7 @@ const sentAnswer = faqItems.find((item) => item.id === "sent")?.answer ?? "";
 /** Breadcrumb (with its JSON-LD), H1 and the page's opening paragraph. */
 export function UseCaseHead({ useCase, heading, children }: { useCase: UseCase; heading: string; children: ReactNode }) {
   return (
-    <header className="explain-head">
+    <div className="explain-head">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -38,7 +38,7 @@ export function UseCaseHead({ useCase, heading, children }: { useCase: UseCase; 
       </nav>
       <h1>{heading}</h1>
       {children}
-    </header>
+    </div>
   );
 }
 

@@ -63,7 +63,8 @@ describe("pricing copy while payments are closed", () => {
 
   it("gives the Pro card an outlined Download free, says it isn't on sale and how to try it today", () => {
     const pro = planCard(false, "pro");
-    assert.match(pro, /<a [^>]*href="\/beta"[^>]*>Download free<\/a>/);
+    // The one-click download (DownloadCta): /beta without JS, then the pill's dot after the label.
+    assert.match(pro, /<a [^>]*href="\/beta"[^>]*>Download free<span class="d-btn__dot"/);
     assert.match(pro, /class="[^"]*pricing-button--quiet/);
     assert.doesNotMatch(pro, /upgrade|checkout|subscribe/i);
     assert.match(pro, /<p class="plan-note">Not on sale yet<\/p>/);

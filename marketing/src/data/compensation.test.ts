@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import HomePage from "@/app/page";
+import { renderHome } from "@/lib/testRenderHome";
 import AboutPage from "@/app/about/page";
 import InvestorsPage from "@/app/investors/page";
 import { kitMarkdown } from "@/lib/kit";
@@ -165,21 +165,16 @@ describe("startup programs", () => {
     assert.equal(createHash("sha256").update(readFileSync(join(dir, "mongodb-logo.svg"))).digest("hex"), LOGO_SHA256);
   });
 
-  it("home: no credits line in the hero (it lives on /investors), and the strip is one line plus the investors link", () => {
-    const home = render(HomePage);
-    // Design and Security, 2026-11-04: the $ total is investor proof, so the home hero no longer carries it.
+  it("home: no credits line, no $ total and no program names (they live on /investors and /about)", async () => {
+    const home = (await renderHome()).replace(/\s+/g, " ");
+    // Design and Security, 2026-11-04: the $ total is investor proof, so the home page doesn't carry it.
     assert.doesNotMatch(home, /vhero__backing/);
     assert.doesNotMatch(text(home), /\$72,300/);
-    assert.match(home, /<a href="\/investors#backing">investors page<\/a>/);
-    const strip = section(home, /<section id="backing"/);
-    assert.match(text(strip), /Unvibe is in Claude for Startups\./);
-    // Design 466: the 7-name list left the home page (it is on /investors and /about), so the strip has no logo.
-    assert.doesNotMatch(strip, /<img\b|program-list/);
     // The Salesforce notice goes with the name: if Salesforce is ever named on home again, its attribution must be too.
     if (/Salesforce/.test(text(home))) assert.ok(text(home).includes(SALESFORCE_ATTRIBUTION), "home: Salesforce attribution");
     assert.doesNotMatch(text(home), SPONSOR_READING);
     assert.doesNotMatch(text(home), ALL_PROGRAMS_TOTAL);
-    assert.doesNotMatch(text(strip), BANNED_WORDING);
+    assert.doesNotMatch(text(home), BANNED_WORDING);
   });
 
   it("/investors shows the total tied to its sources, the count, the 7 names in #backing and every source with its amount or terms", () => {

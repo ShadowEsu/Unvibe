@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import HomePage from "@/app/page";
+import { renderHome } from "./testRenderHome";
 import BetaDownloadsPage from "@/app/beta/page";
 import { BetaInstall } from "@/components/paper/BetaInstall";
 import { INSTALL_COPY } from "@/components/paper/InstallBox";
@@ -69,23 +69,26 @@ describe("install.sh: a download cut off part way runs nothing", () => {
   });
 });
 
-describe("download card: the same card on home #install and /beta", () => {
-  for (const [name, Page] of [["home", HomePage], ["/beta", BetaDownloadsPage]] as const) {
-    it(`${name} renders it inside #install`, () => {
-      const html = renderToStaticMarkup(createElement(Page));
-      const install = html.slice(html.indexOf('id="install"'));
-      assert.ok(html.includes('id="install"'), `${name} has no #install`);
-      assert.match(install, /^[^]*?class="paper-beta paper-beta--page dl-card"/);
-      assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
-    });
-  }
+describe("/beta: one install box inside #install, Terminal line first (MUST-D13)", () => {
+  it("renders the box once, the command before the .dmg links, the first-open steps open", () => {
+    const html = renderToStaticMarkup(createElement(BetaDownloadsPage));
+    const install = html.slice(html.indexOf('id="install"'));
+    assert.ok(html.includes('id="install"'), "/beta has no #install");
+    assert.equal(count(html, /class="ninst"/), 1);
+    const command = install.indexOf('class="ninst__box"');
+    const dmg = install.indexOf(BETA_MAC_DIRECT_DOWNLOAD);
+    assert.ok(command >= 0 && dmg > command, "the Terminal line comes before the .dmg");
+    assert.match(install.slice(dmg), /<details class="ninst__steps" open="">/);
+  });
 });
 
-describe("home has one download card", () => {
-  it("the install section closes the page, with no closing card repeating it (Design 466)", () => {
-    const html = renderToStaticMarkup(createElement(HomePage));
-    assert.equal(count(html, /class="paper-beta paper-beta--page dl-card"/), 1);
-    assert.doesNotMatch(html, /class="paper-invite__card/);
-    assert.equal(html.lastIndexOf("<section"), html.lastIndexOf("<section", html.indexOf('id="install"')), "#install is the last section");
+describe("home: every download button is the one-click download, /beta without JS", () => {
+  it("each one carries its server fallback to /beta and the file pick", async () => {
+    const html = await renderHome();
+    const buttons = html.match(/<a [^>]*data-dl=""[^>]*>/g) ?? [];
+    assert.ok(buttons.length >= 1);
+    for (const button of buttons) assert.match(button, /href="\/beta"/);
+    // No install box on home: the download is one click, the steps follow on /beta's thank-you.
+    assert.doesNotMatch(html, /class="ninst"/);
   });
 });
