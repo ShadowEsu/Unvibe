@@ -3067,15 +3067,15 @@ GROUP BY c.id;`,
       },
       {
         concept: "WHERE after a LEFT JOIN",
-        text: "A condition on the right-hand table in `WHERE` turns a `LEFT JOIN` back into a plain `JOIN`. With `WHERE o.total > 10` added to query 2, Cy disappeared and 3 rows came back. Moved into the join itself, `ON o.customer_id = c.id AND o.total > 10`, Cy stayed, with an empty total.",
+        text: "A condition like `o.total > 25` on the right-hand table in `WHERE` throws away the rows where that side came back NULL, so the `LEFT JOIN` acts like a plain `JOIN`. With `WHERE o.total > 25` added to query 2, only Ana's 30.0 came back. Moved into the join itself, `ON o.customer_id = c.id AND o.total > 25`, Ana's 30.0 came back with Ben and Cy, both with an empty total.",
       },
     ],
     notes: [
-      "Run with SQLite 3.53.4 on a fresh database built from the 3 tables in the comment. `JOIN` and `LEFT JOIN` work the same way in PostgreSQL and MySQL. SQLite has accepted `FULL JOIN` since version 3.39, and here a `FULL JOIN` of orders and customers returned 4 rows.",
+      "Run with SQLite 3.53.4 on a fresh database built from the 3 tables in the comment. `JOIN` and `LEFT JOIN` work the same way in PostgreSQL and MySQL. SQLite has accepted `FULL JOIN` since version 3.39, and here a `FULL JOIN` of orders and customers returned 4 rows; MySQL has no `FULL JOIN`.",
       "Query 2 has no `ORDER BY`, so the database can return its rows in any order: it listed Ana's 20.0 before her 30.0, the other way round from query 1.",
     ],
     watchOut:
-      "A total that is too big, with no error, usually comes from the join, not the data. Add up each table on its own first, then join the results: with orders and refunds each summed per customer in a subquery, Ana came back as 50.0 spent and 10.0 refunded. Running the joined rows without `SUM` and `GROUP BY` shows the repeats: 4 rows for Ana.",
+      "A total that is too big, with no error, can come from the join, not the data. Add up each table on its own first, then join the results: with orders and refunds each summed per customer in a subquery, Ana came back as 50.0 spent and 10.0 refunded. Running the joined rows without `SUM` and `GROUP BY` shows the repeats: 4 rows for Ana.",
   },
   {
     id: "supabase-rls",
@@ -3109,7 +3109,7 @@ create policy "update own todos" on todos
     shows: [
       {
         concept: "enabling RLS",
-        text: "`enable row level security` makes every query on the table see only the rows a policy allows. Without that line the policies did nothing: Ana and a signed-out visitor both read every todo, hers and Sam's. With it on and no policies at all, Ana read 0 rows, and adding a todo failed with `new row violates row-level security policy`.",
+        text: "`enable row level security` makes every query from the `anon` and `authenticated` roles see only the rows a policy allows. Without that line the policies did nothing: Ana and a signed-out visitor both read every todo, hers and Sam's. With it on and no policies at all, Ana read 0 rows, and adding a todo failed with `new row violates row-level security policy`.",
       },
       {
         concept: "using and with check",
@@ -3121,16 +3121,16 @@ create policy "update own todos" on todos
       },
       {
         concept: "missing policies",
-        text: "There is no `delete` policy, so nobody signed in can delete: Ana deleting her own todo changed 0 rows. The update policy also leans on the select policy: with the select policy taken out, Ana could still add a todo but read 0 rows, and marking it done changed 0 rows.",
+        text: "There is no `delete` policy, so nobody signed in can delete: Ana deleting her own todo changed 0 rows. The update policy also leans on the select policy: with the select policy taken out, Ana could still add a todo with a plain insert but read 0 rows, and marking it done changed 0 rows.",
       },
     ],
     notes: [
       "Run on PostgreSQL 18.6 through PGlite 0.5.15, with a small stand-in for Supabase's `auth` schema and its `anon` and `authenticated` roles, and `auth.uid()` copied from Supabase's own source. Each request set the role and the login token's claims in a transaction, the way Supabase's Data API does.",
-      "The table's owner skips these policies: as `postgres`, the run read all 3 todos. Supabase's `service_role` key skips them too, so it belongs on a server, never in the browser.",
-      "Taking out the update policy's `with check` line didn't open a hole here: Postgres then tests the changed row with `using`, so giving Ana's todo to Sam still failed.",
+      "The table's owner skips these policies, and in this run `postgres`, which owns the table and is a superuser, read all 3 todos. Supabase's `service_role` key skips them too, so it belongs on a server, never in the browser.",
+      "Taking out the update policy's `with check` line didn't open a hole: Postgres then tests the changed row with `using`, so Ana giving all her todos to Sam failed. With `with check (true)` instead, the same update went through and the todo became Sam's.",
     ],
     watchOut:
-      "A view can quietly skip every policy. A view over todos, created by the table owner and granted to signed-in users, showed Sam his own todo and Ana's. After `alter view ... set (security_invoker = true)`, the view applied the policies and Sam saw only his own.",
+      "A view can quietly skip every policy. A view over todos, created by the table owner and granted to signed-in users, showed Sam his own todo and Ana's. After `alter view ... set (security_invoker = true)`, which needs Postgres 15 or later, the view applied the policies and Sam saw only his own.",
   },
   {
     id: "cors-error",
@@ -3138,7 +3138,7 @@ create policy "update own todos" on todos
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
-    sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: the setup many AI-built apps start with, a front end and an API on different ports.",
+    sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: a common setup, with the front end and the API on different ports.",
     sample: `// Browser console on http://localhost:5173
 Access to fetch at 'http://localhost:3000/api/todos' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
 Failed to load resource: net::ERR_FAILED
@@ -3160,7 +3160,7 @@ server.listen(3000);`,
     shows: [
       {
         concept: "origins",
-        text: "An origin is the scheme, host and port together. `http://localhost:5173` and `http://localhost:3000` differ only in the port, and that is enough to make them different origins, so the browser treats the API as another site and applies CORS.",
+        text: "An origin is the scheme, host and port together. `http://localhost:5173` and `http://localhost:3000` differ only in the port, and that is enough to make them different origins, so the browser treats the API as another origin and applies CORS.",
       },
       {
         concept: "the missing header",
@@ -3168,11 +3168,11 @@ server.listen(3000);`,
       },
       {
         concept: "the fix",
-        text: "Adding `\"Access-Control-Allow-Origin\": \"http://localhost:5173\"` to the reply's headers made the same fetch work. `*` worked too, but it lets any site's pages read the reply. A value naming another origin, `http://localhost:3000`, failed with `has a value 'http://localhost:3000' that is not equal to the supplied origin`.",
+        text: "Adding `\"Access-Control-Allow-Origin\": \"http://localhost:5173\"` to the reply's headers made the same fetch work. `*` worked too, but it lets pages from any origin read the reply. A value naming another origin, `http://localhost:3000`, failed with `has a value 'http://localhost:3000' that is not equal to the supplied origin`.",
       },
       {
         concept: "preflight",
-        text: "An `Authorization` header made the browser ask first: it sent `OPTIONS /api/todos`, got this server's 404 and stopped with `Response to preflight request doesn't pass access control check`, even with Allow-Origin on the GET. Answering `OPTIONS` with 204, Allow-Origin and `Access-Control-Allow-Headers: Authorization` let the GET through, and the todos came back.",
+        text: "An `Authorization` header made the browser ask first: it sent `OPTIONS /api/todos`, which this server answered with 404 and no Allow-Origin, and stopped with `Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present`, without sending the GET. Answering `OPTIONS` with 204, Allow-Origin and `Access-Control-Allow-Headers: Authorization` let the GET through, and the todos came back.",
       },
     ],
     notes: [
@@ -3180,7 +3180,7 @@ server.listen(3000);`,
       "`mode: 'no-cors'` doesn't fix it. The request went out and the server answered 200, but the page got an empty response with status 0, and `res.json()` failed with `Unexpected end of input`.",
     ],
     watchOut:
-      "CORS doesn't protect your API. It only stops pages from other origins, in a browser, from reading the reply: the request reached the server every time, and a request from outside a browser read the todos with no header at all. Keep real checks, such as who is signed in, on the server.",
+      "CORS doesn't protect your API. It decides what pages from other origins, in a browser, can do with a reply: the plain GET reached the server and got its 200 even when the page couldn't read the answer, and a request from outside a browser read the todos although the reply had no `Access-Control-Allow-Origin` header. Keep real checks, such as who is signed in, on the server.",
   },
 ];
 
