@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 /** Where people who land on a missing page most likely meant to go (Design W15). */
 const LIKELY = [
   ["Download", "/beta"],
+  ["Help", "/help"],
   ["Install help", "/install-help"],
   ["Pricing", "/pricing"],
   ["Changelog", "/releases"],
