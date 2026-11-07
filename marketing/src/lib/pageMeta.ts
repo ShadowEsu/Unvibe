@@ -84,6 +84,9 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "sql-joins": "/og/og-explain-sql-joins-43a0484a.png",
   "supabase-rls": "/og/og-explain-supabase-rls-264a5997.png",
   "cors-error": "/og/og-explain-cors-error-eae48712.png",
+  asyncio: "/og/og-explain-asyncio-fb6e0e21.png",
+  tar: "/og/og-explain-tar-e922b08f.png",
+  rsync: "/og/og-explain-rsync-bf6fe9bd.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
