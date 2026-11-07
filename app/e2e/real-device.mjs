@@ -505,12 +505,12 @@ else try {
   const file = path.join(tmpdir(), 'unvibe-sample.js');
   const globalSample = sample.replace('function total', 'function selectedTotal');
   writeFileSync(file, globalSample);
-  if (recording) await sleep(1500); // the recorder's first frames, before anything on screen changes
+  if (recording) await sleep(1500); // lead-in while the recorder starts; frames.txt and events.json carry the real times
   if (os === 'mac') {
     recording?.mark('editor opening');
     execFileSync('open', ['-a', 'TextEdit', file]);
     await sleep(3000);
-    recording?.mark('select all (Command+A): sending');
+    // No 'sending' mark: this call also activates TextEdit and waits 1 s before the key.
     execFileSync('osascript', ['-e', 'tell application "TextEdit" to activate', '-e', 'delay 1', '-e', 'tell application "System Events" to keystroke "a" using command down']);
     recording?.mark('select all (Command+A): sent');
     await sleep(800);
