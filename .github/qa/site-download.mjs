@@ -79,7 +79,8 @@ try {
   r(`pressing the first visible download button: '${pick.button}'`);
   const t0 = Date.now();
   const [download] = await Promise.all([page.waitForEvent("download", { timeout: 90000 }), cta.click()]);
-  pick.url = download.url();
+  // GitHub's CDN URL carries a short-lived signature (sig=, jwt=): keep only its host and path in the evidence.
+  pick.url = ((u) => `${u.origin}${u.pathname}`)(new URL(download.url()));
   pick.file = download.suggestedFilename();
   pick.secondsToStart = (Date.now() - t0) / 1000;
   const key = Object.keys(files).find((k) => new RegExp(`^Unvibe-[0-9.]+${files[k].replace(/\./g, "\\.")}$`).test(pick.file)) ?? "unknown";
