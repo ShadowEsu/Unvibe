@@ -3610,6 +3610,65 @@ output "app_name" {
     watchOut:
       "Changing one value can destroy things, not just edit them. With `-var env=production`, the plan said `must be replaced` for both resources and ended `Plan: 2 to add, 0 to change, 2 to destroy`. Apply deleted out/staging.json and replaced the name. Read the destroy count in every plan before you type yes. The state file also keeps a copy of what it wrote: terraform.tfstate held the JSON file's full content in plain text, so never commit it.",
   },
+  {
+    id: "assembly",
+    fileName: "sum.s",
+    related: ["c", "cpp", "make"],
+    lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `cmp` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
+    description:
+      "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64 for a Mac, with its registers and loop.",
+    sampleSummary: "A 7-line C function that adds up an array of ints, and the arm64 assembly clang 22.1.8 made from it at `-O1` for macOS: 13 instructions, with the C on top as comments.",
+    sample: `; sum.c (clang 22.1.8, -O1, arm64-apple-macos)
+; int sum(const int *nums, int count) {
+;     int total = 0;
+;     for (int i = 0; i < count; i++) {
+;         total += nums[i];
+;     }
+;     return total;
+; }
+	.globl	_sum                            ; -- Begin function sum
+_sum:                                   ; @sum
+	cmp	w1, #1
+	b.lt	LBB0_4
+	mov	w8, #0                          ; =0x0
+	mov	w9, w1
+LBB0_2:                                 ; =>This Inner Loop Header: Depth=1
+	ldr	w10, [x0], #4
+	add	w8, w10, w8
+	subs	x9, x9, #1
+	b.ne	LBB0_2
+	mov	x0, x8
+	ret
+LBB0_4:
+	mov	w8, #0                          ; =0x0
+	mov	x0, x8
+	ret`,
+    shows: [
+      {
+        concept: "registers and arguments",
+        text: "The C names are gone, and registers hold the values. Arm's calling convention, the AAPCS64, passes the first 8 integer and pointer arguments in `x0` to `x7` and returns the result in `x0`, so `nums` arrives in `x0`, `count` in `w1`, and `mov x0, x8` hands back the total. `w1` is the low 32 bits of `x1`, the size of an `int`. A caller built the same way put the array's address in `x0` and 4 in `w1`, then jumped to `_sum`.",
+      },
+      {
+        concept: "compare and branch",
+        text: "`cmp w1, #1` and `b.lt LBB0_4` skip the loop when `count` is less than 1, and LBB0_4 returns 0. The loop is the 4 lines from LBB0_2: `ldr w10, [x0], #4` loads one int and moves `x0` 4 bytes on to the next one, `add` adds it to the total in `w8`, `subs` takes 1 off a copy of `count` in `x9`, and `b.ne` jumps back until that copy reaches 0. No register counts `i` up: the compiler counts down instead.",
+      },
+      {
+        concept: "-O0 and -O1",
+        text: "At `-O0` the same function was 25 instructions, with a loop of 16. It kept `nums`, `count`, `total` and `i` in memory on the stack and loaded them again on every pass: 13 of its instructions read or write `[sp, ...]`. At `-O1` it was 13 instructions with a loop of 4, and none of them touched the stack.",
+      },
+      {
+        concept: "arm64 and x86-64",
+        text: "The same C built for x86-64 Linux is a different instruction set: `testl` and `jle` instead of `cmp` and `b.lt`, `nums` in `rdi` and `count` in `esi`, and a loop that adds straight from memory with one `addl (%rdi,%rdx,4), %eax`. Every arm64 instruction took 4 bytes, and the x86-64 ones took 1 to 6. Linked with a test `main` and run, it returned 16 for 3, 5, -2 and 10, 0 for a count of 0 or -3, and 703 for the numbers 1 to 37.",
+      },
+    ],
+    notes: [
+      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S sum.c` writes the assembly to sum.s instead of building a program, so no Mac was needed. The sample is the `_sum` function from that file with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the file's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
+      "At `-O2` the function grew to 62 instructions and 3 loops. The main loop loads 4 128-bit `q` registers per pass, adds them with `add.4s` and counts down by 16, so it takes 16 ints at a time. A second loop takes 4 at a time, and the `-O1` loop is left for the last few. The x86-64 `-O2` build still returned the same 4 results.",
+      "Apple's guide Writing ARM64 code for Apple platforms (developer.apple.com) says macOS follows the 64-bit Arm standard apart from a few listed differences, such as `x18` being reserved. None of them changes the registers used here.",
+    ],
+    watchOut:
+      "The function you're looking for may not be in the assembly at all. With `sum` and a `main` that calls it in one file, `-O1` turned `main` into 2 instructions, `mov w0, #16` and `ret`: the compiler worked out the total of 3, 5, -2 and 10 itself, and nothing calls `sum`, though it is still in the file. In the x86-64 build, a gdb breakpoint on `sum` never stopped, and the program exited with 16. At `-O0`, `main` calls `sum`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */

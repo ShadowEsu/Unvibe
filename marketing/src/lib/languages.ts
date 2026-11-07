@@ -717,6 +717,16 @@ export const languages: Language[] = [
     learningPath: ["Providers", "Resources", "Plan before apply", "Variables and state"],
     sample: `terraform plan -var env=production`,
   },
+  {
+    id: "assembly",
+    name: "Assembly",
+    categories: ["systems"],
+    blurb: "The instructions a compiler makes from C, written out as text: registers, loads, compares and branches, on arm64 and x86-64.",
+    concepts: ["registers and arguments", "compare and branch", "-O0 and -O1", "arm64 and x86-64"],
+    frameworks: ["clang", "Compiler Explorer", "LLDB", "gdb"],
+    learningPath: ["Registers", "Loads and stores", "Compares and branches", "Optimization levels"],
+    sample: `ldr w10, [x0], #4`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
