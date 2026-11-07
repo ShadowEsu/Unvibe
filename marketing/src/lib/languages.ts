@@ -697,6 +697,16 @@ export const languages: Language[] = [
     learningPath: ["Reading a row", "CPU use", "Memory use", "Process states"],
     sample: `ps aux --sort=-%cpu | head -5`,
   },
+  {
+    id: "systemd",
+    name: "systemd service",
+    categories: ["systems", "backend"],
+    blurb: "The unit files that keep a server process running on Linux: what to start, where, with which settings, and when to restart it.",
+    concepts: ["[Unit], [Service] and [Install]", "WorkingDirectory= and ExecStart=", "Environment= and EnvironmentFile=", "Restart= and RestartSec="],
+    frameworks: ["systemd", "systemctl", "journalctl", "cron"],
+    learningPath: ["Reading a unit file", "Starting a service", "Settings and .env files", "Restarts and limits"],
+    sample: `systemctl --user status notes-api`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

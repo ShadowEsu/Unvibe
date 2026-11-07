@@ -3501,6 +3501,57 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
     watchOut:
       "A zombie can't be killed: it has already exited. `kill -9` on the zombie's PID left it in state `Z`, and it went away only when its parent, the Python process that forked it, was killed. If zombies pile up, the fix is in the parent, which has to wait for its children.",
   },
+  {
+    id: "systemd",
+    fileName: "notes-api.service",
+    related: ["bash", "env", "cron"],
+    lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
+    description:
+      "Paste a systemd service file and get each line explained in plain English, free online. The sample keeps a small Python API running as a user service and restarts it 2 seconds after a crash.",
+    sampleSummary: "A user service file for a small Python API: the folder it runs in, its settings from `Environment=` and an optional .env file, and a restart 2 seconds after it crashes.",
+    sample: `# notes-api.service: keep a small Python API running, restart it if it crashes
+# install: systemctl --user link ./notes-api.service, then start notes-api
+[Unit]
+Description=Notes API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/apps/notes-api
+Environment=APP_ENV=production PORT=8040
+EnvironmentFile=-%h/apps/notes-api/.env
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target`,
+    shows: [
+      {
+        concept: "[Unit], [Service] and [Install]",
+        text: "`[Unit]` names the service and sets its order, `[Service]` says what to run and how, and `[Install]` is only read by `systemctl --user enable`. Enabling it created a link to the file in default.target.wants, the list of what your user session starts. `systemd-analyze --user verify` printed nothing for this file and exited with code 0.",
+      },
+      {
+        concept: "WorkingDirectory= and ExecStart=",
+        text: "`ExecStart=` is the command, with the full path to the program. `%h` is your home folder, so python3 started in ~/apps/notes-api and found app.py there. With that folder missing, systemd printed `Changing to the requested working directory failed` and `Failed at step CHDIR`, then kept trying again because of `Restart=on-failure`.",
+      },
+      {
+        concept: "Environment= and EnvironmentFile=",
+        text: "`Environment=` set APP_ENV=production and PORT=8040, and the app reported both. A .env file with `PORT=8041` won over that line: the app moved to 8041 and 8040 stopped answering. The `-` before the path makes the file optional. Without it, a missing .env stopped the start with `Failed to load environment files: No such file or directory`.",
+      },
+      {
+        concept: "Restart= and RestartSec=",
+        text: "`Restart=on-failure` brings the service back when it exits with an error. When the app exited with code 1, systemd logged `status=1/FAILURE`, then `Scheduled restart job, restart counter is at 1`, and 2 seconds later a new process answered. When the app exited with code 0, it stayed stopped, because a clean exit isn't a failure.",
+      },
+    ],
+    notes: [
+      "Run with systemd 261 and Python 3.14.7 on Linux as a user service, with no root: `systemctl --user link` pointed systemd at the file and `systemctl --user start notes-api` started it. app.py is a short test server that reports its settings and exits with code 1 or 0 on request.",
+      "After an edit to the file, `systemctl --user status` warned that the unit file `changed on disk` and said to run `systemctl --user daemon-reload` to load the new version.",
+      "From the systemd manuals rather than a run: `After=` only sets the order and doesn't start network.target by itself (systemd.unit), and default.target is the main target of the user service manager (systemd.special).",
+    ],
+    watchOut:
+      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 5 times, then printed `Start request repeated too quickly` and left it failed, with nothing on port 8040. The limit is 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so it can start again.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
