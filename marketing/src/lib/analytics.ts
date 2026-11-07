@@ -2,7 +2,7 @@
  * Privacy respecting analytics abstraction.
  *
  * Mixpanel loads via mixpanel-browser (autocapture + session replay inside
- * Mixpanel Pro startup credits). We never send code contents, emails, or other
+ * Mixpanel for Startups, the Startup Plan). We never send code contents, emails, or other
  * personal data: replays mask all text and inputs, and emails, tokens and codes
  * are stripped from every URL before it leaves the page (analyticsPrivacy.ts).
  * An anonymous id is kept in localStorage. Nothing loads or is sent until the

@@ -11,6 +11,8 @@ export interface CompensationLine {
 export interface StartupProgram {
   /** Short name for the one-line summaries. */
   brand: string;
+  /** What the credits are called in the total line ("Google Cloud"), where it differs from the brand. */
+  creditSource?: string;
   /** Full program name as shown in lists. */
   program: string;
   /** Acceptance date (the welcome email where there is one, else the date the earlier site gave). */
@@ -20,6 +22,11 @@ export interface StartupProgram {
    * with no supported amount is listed by name and adds nothing to the totals. Credits are not cash.
    */
   amountUsd?: number;
+  /**
+   * A figure the company states but that is not secured or not counted (Security 6 Nov, file 20261106-1844): shown
+   * in the amount column as `label`, never added to any total.
+   */
+  offer?: { label: string; state: string };
   detail: string;
   /** Official, unmodified logo file, only where Security has cleared it (MongoDB); every other program is plain text. */
   logo?: { src: string; width: number; height: number };
@@ -35,9 +42,11 @@ export const PROGRAM_NOTICES = [SALESFORCE_ATTRIBUTION] as const;
 /**
  * The startup programs Unvibe is in, as the earlier site listed them (ledger 317, 28 Oct 2026), minus the lines
  * the record does not support (Security 31 Oct, requests/security/20261031-0208: GitLab, Linear and OpenAI
- * removed, Google and Deepgram without an amount). Amounts are self-reported; logos and notices follow Security's 28 Oct ruling
- * (only MongoDB shows a logo). The homepage, /investors, /about, /kit and the milestones all read this list,
- * so a change is one line.
+ * removed). Amounts follow Security's 6 Nov ruling (file 20261106-1844, ledger 557): only a figure the company
+ * states in its own email counts (Google $2,000, Deepgram $1,000); MongoDB's $500 is an offer until Atlas billing
+ * shows it redeemed; Mixpanel's own published value sits outside the total; Salesforce gives no figure. Logos and
+ * notices follow Security's 28 Oct ruling (only MongoDB shows a logo). The homepage, /investors, /about, /kit and
+ * the milestones all read this list, so a change is one line.
  */
 export const startupPrograms: readonly StartupProgram[] = [
   {
@@ -47,21 +56,35 @@ export const startupPrograms: readonly StartupProgram[] = [
     amountUsd: 21_500,
     detail: "Anthropic API credits, Claude Team for 12 months, and perks from other tools. Low end of a $21.5K to $23K estimate",
   },
-  { brand: "Mixpanel", program: "Mixpanel for Startups", accepted: "2026-08-18", detail: "First year free on the Startup Plan" },
+  {
+    brand: "Mixpanel",
+    program: "Mixpanel for Startups",
+    accepted: "2026-08-18",
+    offer: { label: "Mixpanel's own value: $145,000", state: "Member" },
+    detail: "First year free on the Startup Plan (up to 1B events). Mixpanel values the program at $145,000",
+  },
   { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
   {
     brand: "Salesforce Launchpad",
     program: "Salesforce Launchpad",
     accepted: "2026-08-26",
-    detail: "Starter Suite free for 12 months, then 50% off the second year",
+    detail: "12 months of Starter Suite funded (50% off year 2)",
   },
-  { brand: "Google for Startups", program: "Google for Startups", accepted: "2026-08-20", detail: "Program member" },
-  { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", detail: "Program member" },
+  {
+    brand: "Google for Startups",
+    creditSource: "Google Cloud",
+    program: "Google for Startups",
+    accepted: "2026-08-20",
+    amountUsd: 2_000,
+    detail: "Google Cloud credits, to use over two years",
+  },
+  { brand: "Deepgram", program: "Deepgram Startup Program", accepted: "2026-08-19", amountUsd: 1_000, detail: "Deepgram API credits" },
   {
     brand: "MongoDB",
     program: "MongoDB for Startups",
     accepted: "2026-07-21",
-    detail: "Program member",
+    offer: { label: "$500 offer", state: "Offer" },
+    detail: "$500 in MongoDB Atlas credits, offered and not yet redeemed",
     logo: { src: "/sponsors/mongodb-logo.svg", width: 1102, height: 278 },
     mark: { name: "MongoDB", symbol: "®" },
   },
@@ -132,42 +155,49 @@ export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
 }
 
-/** "Claude and PostHog": the programs whose credits the total counts (brand without "for Startups"). */
+/** "Claude, PostHog, Google Cloud and Deepgram": the programs whose credits the total counts. */
 export function creditSourcesLabel(): string {
-  const names = startupPrograms.filter((program) => program.amountUsd !== undefined).map((program) => program.brand.replace(/ for Startups$/, ""));
+  const names = startupPrograms
+    .filter((program) => program.amountUsd !== undefined)
+    .map((program) => program.creditSource ?? program.brand.replace(/ for Startups$/, ""));
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 /**
- * What the total is, after the amount: "in Claude and PostHog credits and committed cash". Most programs have no
- * amount on record, so the total is never presented as the value of every program (Security CL-T1, 31 Oct).
+ * What the total is, after the amount: "in Claude and PostHog credits and committed cash". Some programs have no
+ * counted amount, so the total is never presented as the value of every program (Security CL-T1, 31 Oct).
  */
 export function compensationTotalPhrase(): string {
   return `in ${creditSourcesLabel()} credits and committed cash`;
 }
 
-/** Programs listed by name with their terms but no amount. */
-export function programsWithoutAmountCount(): number {
+/** Programs outside the total: an offer, the company's own program value, or terms with no figure. */
+export function programsOutsideTotalCount(): number {
   return startupPrograms.filter((program) => program.amountUsd === undefined).length;
 }
 
 export interface SupportRow {
   name: string;
-  /** "$50,000", or "No amount" for a program whose terms are on record without a figure. */
+  /** "$50,000"; an offer's label ("$500 offer"); or "No amount" for a program whose terms are on record without a figure. */
   amount: string;
   detail: string;
   state: string;
 }
 
-/** Every source for the investors table and the kit: money lines by amount, then the programs with no amount. */
+/** Every source for the investors table and the kit: money lines by amount, then the programs outside the total. */
 export function supportRows(): SupportRow[] {
   const money = [...compensationLines]
     .sort((a, b) => b.amountUsd - a.amountUsd)
     .map((line) => ({ name: line.name, amount: formatUsd(line.amountUsd), detail: line.detail, state: line.state }));
-  const terms = startupPrograms
+  const outside = startupPrograms
     .filter((program) => program.amountUsd === undefined)
-    .map((program) => ({ name: program.program, amount: "No amount", detail: program.detail, state: "Member" }));
-  return [...money, ...terms];
+    .map((program) => ({
+      name: program.program,
+      amount: program.offer?.label ?? "No amount",
+      detail: program.detail,
+      state: program.offer?.state ?? "Member",
+    }));
+  return [...money, ...outside];
 }
 
 /** Startup programs are the credit lines only. Own capital and angel cash are not programs. */

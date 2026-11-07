@@ -12,7 +12,7 @@ import {
   compensationTotalPhrase,
   creditSourcesLabel,
   formatUsd,
-  programsWithoutAmountCount,
+  programsOutsideTotalCount,
   supportRows,
 } from "@/data/compensation";
 import { milestones } from "@/data/milestones";
@@ -99,7 +99,7 @@ export default function InvestorsPage() {
       <section className="inv-section" id="support">
         <p className="inv-eyebrow">Resource runway</p>
         <h2>Where the {total} comes from.</h2>
-        <p className="inv-lead">Every source by name. {creditSourcesLabel()} credits {credits} · cash {cash}. The other {programsWithoutAmountCount()} programs are listed with their terms and no amount. Credits are not cash, and this is not a funding round.</p>
+        <p className="inv-lead">Every source by name. {creditSourcesLabel()} credits {credits} · cash {cash}. The other {programsOutsideTotalCount()} programs are listed with their terms and any offer, outside the total. Credits are not cash, and this is not a funding round.</p>
         <div className="inv-table" role="table" aria-label="Support by source">
           <div className="inv-row inv-row--head" role="row">
             <span role="columnheader">Source</span><span role="columnheader">Amount</span><span role="columnheader">What it is</span><span role="columnheader">Status</span>
