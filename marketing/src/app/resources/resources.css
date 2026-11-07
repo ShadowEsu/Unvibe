@@ -71,6 +71,20 @@
   line-height: 1.55;
 }
 
+/* One plain line under a section's cards, set like the section lead; its link keeps the sentence's size. */
+.resources-section__more {
+  max-width: 44rem;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+}
+
+.resources-section__more .paper-text-link {
+  font-size: inherit;
+}
+
 .resources-grid {
   display: grid;
   gap: 1.25rem;

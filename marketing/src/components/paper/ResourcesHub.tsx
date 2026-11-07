@@ -167,7 +167,7 @@ export function ResourcesHub() {
             </div>
           </div>
 
-          <p>
+          <p className="resources-section__more">
             Want to see it first? Paste a snippet on{" "}
             <Link href="/explain" className="paper-text-link">
               Explain code
