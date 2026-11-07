@@ -1,0 +1,78 @@
+name: QA macOS permission stills
+
+# QA only, on the qa/install-matrix branch (unvibe-support, Fri 6 Nov: #242's /help/shortcut and /help/accessibility).
+# The released 0.1.49 DMG on macOS 15: the System Events question at first launch (Don't Allow on one runner, Allow on
+# the other), the Automation pane, then Unvibe's own Allow Accessibility button, macOS's question and the
+# Accessibility pane. No hosted-AI call. Runs only when the commit message holds "[tcc-shots]".
+# Each install's id is qa- prefixed before its first launch, flagged before launch, after first contact and at the end.
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-tcc-shots
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    if: contains(github.event.head_commit.message, '[tcc-shots]')
+    strategy:
+      fail-fast: false
+      matrix:
+        answer: [deny, allow]
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      INSTALL_ID: qa-tcc-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.answer }}
+      ANSWER: ${{ matrix.answer }}
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Playwright (to press the app's own button through its debug port)
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+
+      - name: Set up (screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: First launch, System Events question, Automation pane, Allow Accessibility, Accessibility pane
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/tcc-shots.sh "$RUNNER_TEMP/m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          echo "store install id: ${id:-none} (seeded $INSTALL_ID)"
+          for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | sort -u); do
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$x\"}") || answer=$'\ncurl failed'
+            echo "QA install flag $x: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*')"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tcc-shots-${{ matrix.answer }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
