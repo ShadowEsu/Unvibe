@@ -78,6 +78,9 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "git-diff": "/og/og-explain-git-diff-cbe86ac3.png",
   "react-useeffect": "/og/og-explain-react-useeffect-7ff74901.png",
   "python-traceback": "/og/og-explain-python-traceback-6de7a848.png",
+  "package-lock": "/og/og-explain-package-lock-4f8f420b.png",
+  "prisma-schema": "/og/og-explain-prisma-schema-43ac14a3.png",
+  tailwind: "/og/og-explain-tailwind-ee327891.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
