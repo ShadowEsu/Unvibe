@@ -13,7 +13,7 @@
  * transform/opacity). It pauses off screen and in a hidden tab. `step` (0/1/2) loops one segment for the steps
  * section. Reduced motion: the final frame (Advanced answer, understood state), static.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Os } from "./bits";
 
 const LOOP = 16;
@@ -107,6 +107,14 @@ function stateAt(t: number) {
 
 export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
   const root = useRef<HTMLDivElement>(null);
+  // WCAG 2.2.2: the loop runs longer than 5 s, so a visible, labelled Pause/Play button stops it (reduced motion: no loop).
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const syncRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    pausedRef.current = paused;
+    syncRef.current();
+  }, [paused]);
   useEffect(() => {
     const el = root.current;
     if (!el) return undefined;
@@ -148,17 +156,20 @@ export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
     const play = () => { if (!running) { running = true; start = 0; raf = requestAnimationFrame(frame); } };
     const pause = () => { running = false; cancelAnimationFrame(raf); };
     let inView = false;
-    const sync = () => (inView && !document.hidden ? play() : pause());
+    const sync = () => (inView && !document.hidden && !pausedRef.current ? play() : pause());
+    syncRef.current = sync;
     const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; sync(); }, { threshold: 0.15 });
     io.observe(el);
     document.addEventListener("visibilitychange", sync);
     apply(from);
-    return () => { pause(); io.disconnect(); fit.disconnect(); document.removeEventListener("visibilitychange", sync); };
+    return () => { syncRef.current = () => undefined; pause(); io.disconnect(); fit.disconnect(); document.removeEventListener("visibilitychange", sync); };
   }, [step]);
 
   const keyset = (keys: string[], os: string) => <span className={`ud-keys__set ${os}`}>{keys.map((k) => <span key={k} className="ud-key">{k}</span>)}</span>;
   const all = [...CONTEXT_BEFORE, ...CODE, ...CONTEXT_AFTER];
   return (
+    <div className="ud-wrap">
+    <button type="button" className="ud-pause" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>{paused ? "Play demo" : "Pause demo"}</button>
     <div className="ud" ref={root} aria-hidden="true" data-ud-step={step ?? "loop"}>
       <div className="ud-stage">
         <div className="ud-editor">
@@ -238,6 +249,7 @@ export function UnvibeDemo({ step }: { step?: 0 | 1 | 2 }) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -10,6 +10,11 @@ export function applyOsClasses() {
   const win = !phone && (forced === "win" || (forced !== "mac" && /Windows/i.test(ua)));
   document.documentElement.classList.toggle("os-win", win);
   document.documentElement.classList.toggle("os-phone", phone);
+  // /beta?dl=… loaded from the server: Download.tsx's thank-you renders client-side, so until it has, CSS holds back the
+  // rest of the page (dia.css), and the thank-you never pushes painted content down (CLS 0; Motion #228 M1).
+  if (window.location.pathname === "/beta" && /^(mac-arm|mac-intel|windows)$/.test(new URLSearchParams(window.location.search).get("dl") ?? "")) {
+    document.documentElement.setAttribute("data-dl", "");
+  }
 }
 
 /** Runs inline in <head> (app/layout.tsx), before the first paint of a page loaded from the server. */

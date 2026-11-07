@@ -29,6 +29,8 @@ function Thanks() {
     if (queued && queued === fromUrl) startDownload(queued);
   }, [fromUrl]);
   const key = picked ?? (isDownloadKey(fromUrl) ? fromUrl : null);
+  // rendered: the rest of /beta may paint now (osBoot.ts held it back while the thank-you was pending)
+  useEffect(() => document.documentElement.setAttribute("data-dl-ready", ""), []);
   useEffect(() => {
     if (key) document.getElementById("thanks")?.focus({ preventScroll: false });
   }, [key]);

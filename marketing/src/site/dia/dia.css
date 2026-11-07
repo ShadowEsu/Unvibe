@@ -427,3 +427,17 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
   .d-home [data-d-dock-arc] { display: none; }
   .d-split { min-height: 0; }
 }
+/* unvibe-site review: the window captions sit on the pale bubbles, so each gets a dark violet scrim (white text ≥ 7:1) */
+.d-hero .d-win__cap, .d-steps__card .d-win__cap { width: fit-content; max-width: calc(100% - 16px); margin: 14px auto 0; padding: 5px 10px; border-radius: 6px; background: rgb(32 18 90 / 0.78); color: #fff; }
+/* Motion #228 M1: /beta?dl= from the server shows the thank-you first; the page under it appears once it has rendered */
+html[data-dl]:not([data-dl-ready]) :is(.dd-page > :not(.dt), .d-foot) { display: none !important; }
+/* Motion #228 M2: captions on the bubbles tiles get the same scrim as the window captions */
+.d-tile figcaption { width: fit-content; max-width: calc(100% - 16px); margin: 14px auto 0; padding: 5px 10px; border-radius: 6px; background: rgb(32 18 90 / 0.78); color: #fff; }
+/* Motion #228 M3: the /beta panel's copy sits on a deeper violet floor (white ≥ 4.5:1 at every width) */
+.dd__bg::after { background: linear-gradient(to top, rgb(40 22 120 / 0.9), rgb(40 22 120 / 0.78) 45%, rgb(40 22 120 / 0.2) 80%); }
+@media (max-width: 820px) { .dd__bg::after { background: rgb(40 22 120 / 0.8); } }
+/* Security MUST-D22: every capture caption over art or bubbles is a chip with a solid-enough scrim (≥ 4.5:1 measured) */
+.d-brief__card figcaption, .d-split__lib figcaption { width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; padding: 5px 10px; border-radius: 6px; background: rgb(32 18 90 / 0.78); color: #fff; }
+.d-split__lib figcaption { margin-left: 0; }
+/* Motion D22 (cards): the cards caption at ≥ 70 % ink */
+.d-cap { color: rgb(23 19 31 / 0.74); }

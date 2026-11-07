@@ -140,3 +140,10 @@
   .ud[data-ud-step="0"] .ud-keys, .ud[data-ud-step="1"] .ud-keys { bottom: 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .ud * { transition: none !important; animation: none !important; } }
+
+/* the demo's Pause/Play (WCAG 2.2.2): over the window's bottom-right corner; no loop under reduced motion, so no button */
+.ud-wrap { position: relative; }
+.ud-pause { position: absolute; z-index: 5; right: 10px; bottom: 10px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(23 19 31 / 0.8); color: #fff; font: 500 12px/1 var(--d-sans); cursor: pointer; }
+.ud-pause:hover { background: rgb(23 19 31 / 0.92); }
+.ud-pause:focus-visible { outline: 2px solid var(--d-violet, #5a3fe0); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .ud-pause { display: none; } }
