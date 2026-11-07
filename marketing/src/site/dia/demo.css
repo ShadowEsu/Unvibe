@@ -149,3 +149,17 @@
 @media (prefers-reduced-motion: reduce) { .ud-pause { display: none; } }
 /* phones: the still dock covers the window's bottom edge, so the button sits top-right */
 @media (max-width: 820px) { .ud-pause { top: 8px; bottom: auto; right: 8px; height: 28px; } }
+/* ≤ 480 px (Design, 7 Nov: on 390 the status sat on "from Cursor" and Saved, and Pause covered Saved and ✕): the
+   header is the mark, the title, then the meta line with the status chip at its right end, each on one line; Saved
+   and ✕ are demo chrome and go. Pause returns to the window's bottom-right corner, as on desktop. */
+@media (max-width: 480px) {
+  .ud-head { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; column-gap: 8px; row-gap: 2px; }
+  .ud-meta { display: contents; }
+  .ud-vibe { grid-row: 1 / span 2; }
+  .ud-t { grid-column: 2 / -1; }
+  .ud-s { grid-column: 2; margin-top: 0; overflow: hidden; text-overflow: ellipsis; }
+  .ud-statusdot { grid-column: 3; grid-row: 2; }
+  .ud-status { grid-column: 4; grid-row: 2; margin-right: 0; }
+  .ud-icon { display: none; }
+  .ud-pause { top: auto; bottom: 10px; right: 10px; height: 30px; }
+}
