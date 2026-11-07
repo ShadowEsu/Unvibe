@@ -577,6 +577,36 @@ export const languages: Language[] = [
     learningPath: ["Read the last line", "Find your line", "Common errors", "Chained errors"],
     sample: `KeyError: 'qty'`,
   },
+  {
+    id: "package-lock",
+    name: "package-lock.json",
+    categories: ["web", "backend"],
+    blurb: "The file npm writes to pin the exact version, download address and hash of every package a project installs.",
+    concepts: ["version and resolved", "integrity", "nested packages", "npm ci and npm install"],
+    frameworks: ["npm", "Node.js", "pnpm", "Yarn"],
+    learningPath: ["Ranges and pins", "Integrity hashes", "Nested copies", "npm ci in CI"],
+    sample: `"version": "2.1.1",`,
+  },
+  {
+    id: "prisma-schema",
+    name: "Prisma schema",
+    categories: ["backend", "data"],
+    blurb: "The schema.prisma file that describes a database's tables for Prisma, and the client code it generates.",
+    concepts: ["models and fields", "attributes", "relations", "the generator and datasource"],
+    frameworks: ["Prisma", "Next.js", "PostgreSQL", "SQLite"],
+    learningPath: ["Models", "Attributes", "Relations", "Migrations"],
+    sample: `email String @unique`,
+  },
+  {
+    id: "tailwind",
+    name: "Tailwind CSS",
+    categories: ["web"],
+    blurb: "The CSS framework where small class names like p-6 and md:flex do the styling, in the markup itself.",
+    concepts: ["utility classes", "breakpoints", "states and dark mode", "how classes are found"],
+    frameworks: ["Tailwind CSS", "React", "Next.js", "Vite"],
+    learningPath: ["Utility classes", "Breakpoints", "Hover and dark", "Content scanning"],
+    sample: `<div className="p-6 md:flex">`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
