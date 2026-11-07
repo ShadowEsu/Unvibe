@@ -29,8 +29,8 @@ export function PhotoPage({ photo, wide, labelledBy, children }: { photo: keyof 
         <div className="dg__veil" />
       </div>
       <article className="dg" aria-labelledby={labelledBy}>{children}</article>
-      {/* fixed bottom right on desktop; in the flow at the end of the page on phones (photo.css) */}
-      <p className="dg__credit" data-d-enter="" style={enterDelay(280)}>{PHOTOS[photo]}</p>
+      {/* on the photo at the end of the page, right-aligned (photo.css) */}
+      <p className="dg__credit" data-d-enter="">{PHOTOS[photo]}</p>
     </div>
   );
 }

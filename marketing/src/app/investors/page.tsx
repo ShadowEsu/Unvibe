@@ -18,6 +18,7 @@ import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { PRICING } from "@/lib/pricing";
+import { BtnDot } from "@/site/dia/effects";
 import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
 
 export const metadata: Metadata = pageMetadata({
@@ -83,8 +84,8 @@ export default async function InvestorsPage() {
           checks that it stuck, and keeps the knowledge fresh as the code moves.
         </p>
         <div className="dg__actions" data-d-enter="" style={enterDelay(200)}>
-          <a className="d-btn d-cta" href={MAIL}>Talk to us</a>
-          <Link className="d-btn dgi-btn--glass" href="/beta">Try Unvibe free</Link>
+          <a className="d-cta d-btn" href={MAIL}>Talk to us<BtnDot /></a>
+          <Link className="d-pill-link d-btn" href="/beta">Try Unvibe free<BtnDot /></Link>
         </div>
         <dl className="dgi-stats" data-d-enter="" style={enterDelay(280)}>
           <div><dt>{total}</dt><dd>{compensationTotalPhrase()}</dd></div>
