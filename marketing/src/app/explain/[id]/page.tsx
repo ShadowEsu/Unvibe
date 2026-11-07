@@ -85,18 +85,18 @@ export default function ExplainLanguagePage({ params }: Params) {
 
       <ExplainDownload language={name} />
 
-      {related.length > 0 && (
-        <nav className="explain-card explain-more" aria-labelledby="explain-related-title">
-          <h2 id="explain-related-title">Related</h2>
-          <ul>
-            {related.map((other) => (
-              <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
-            ))}
-          </ul>
-        </nav>
-      )}
-
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
+        {related.length > 0 && (
+          <>
+            <h2 id="explain-related-title">Related</h2>
+            <ul>
+              {related.map((other) => (
+                <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
+              ))}
+            </ul>
+            <hr className="explain-more__rule" />
+          </>
+        )}
         <h2 id="explain-more-title">Explain code in another language</h2>
         <ul>
           {others.map((other) => (
