@@ -90,12 +90,19 @@ export default function BetaDownloadsPage() {
               <summary>The app says “Waiting for Google sign-in…”</summary>
               <p>
                 Unvibe opened a sign-in page in your browser (press <strong>Open browser</strong> in Unvibe if you closed it). If
-                Google sign-in didn’t finish there, use email on the same page: tick both boxes, type your email, press
-                {" "}<strong>Email me a secure sign-in link</strong>, and open the email from no-reply@unvibe.site in that same
-                browser on this computer. A link opened on your phone or in another browser won’t sign you in. Back on the page,
-                check the code matches the one in the app (type it in if the box is empty), then press{" "}
-                <strong>Approve sign-in</strong>. The app finishes a few seconds after that click. If no browser opened, go to{" "}
-                <a className="paper-text-link" href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
+                Google sign-in didn’t finish there, use email on the same page:
+              </p>
+              <ol>
+                <li>Tick both boxes.</li>
+                <li>Type your email and press <strong>Email me a secure <span style={{ whiteSpace: "nowrap" }}>sign-in</span> link</strong>.</li>
+                {/* The sender lives in Supabase's SMTP settings, not this repo: re-check it here whenever SMTP changes. */}
+                <li>Open the email from Unvibe (no-reply@unvibe.site) and its link in that same browser on this computer.</li>
+                <li>Back on the page, check the code matches the one in the app (type it in if the box is empty).</li>
+                <li>Press <strong style={{ whiteSpace: "nowrap" }}>Approve sign-in</strong>. The app finishes a few seconds later.</li>
+              </ol>
+              <p>
+                A link opened on your phone or in another browser won’t sign you in. If no browser opened, go to{" "}
+                <a className="paper-text-link" style={{ fontSize: "inherit" }} href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
                 sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
               </p>
             </details>
