@@ -18,7 +18,12 @@ import { join } from "node:path";
 const { SITE, OUT, EXPECT } = process.env;
 // The file each pick should start; the release version is read from the file the site hands out (0.1.49 today).
 const files = { "mac-arm": "-mac-arm64.dmg", "mac-intel": "-mac-x64.dmg", windows: "-win-x64-portable.exe" };
-const other = { "mac-arm": "-mac-x64.dmg", "mac-intel": "-mac-arm64.dmg" };
+// The other Mac build's link on the card: the GitHub file (as at #228's head) or, since #235 (7 Nov), the counted
+// first-party redirect /download/<file>.
+const other = {
+  "mac-arm": ['a[href$="-mac-x64.dmg"]:visible', 'a[href*="/download/mac-intel"]:visible'],
+  "mac-intel": ['a[href$="-mac-arm64.dmg"]:visible', 'a[href$="/download/mac"]:visible', 'a[href*="/download/mac?"]:visible'],
+};
 // What the thank-you card (section#thanks, #228's Download.tsx) must say for each pick: its heading names the build
 // (D_THANKS.file with downloadPick's label), and the steps are InstallBox's first-open steps for that OS. The card's
 // "Unvibe Not Opened" is a picture, so the Mac check reads the step words; the rest of /beta (the full install guide
@@ -154,8 +159,9 @@ try {
   await page.screenshot({ path: join(OUT, "site-2-thanks.png") });
   await page.screenshot({ path: join(OUT, "site-3-thanks-full.png"), fullPage: true });
   if (other[EXPECT]) {
-    const alt = await page.locator(`a[href$="${other[EXPECT]}"]:visible`).count();
-    check(alt > 0, "the other Mac build is one click away on the thank-you page", `${alt} visible link(s) to ${other[EXPECT]}`);
+    const alt = thanks.locator(other[EXPECT].join(", "));
+    const hrefs = await alt.evaluateAll((els) => els.map((e) => e.getAttribute("href")));
+    check(hrefs.length > 0, "the other Mac build is one click away on the thank-you card", `${hrefs.length} visible link(s): ${hrefs.join(", ") || "none"}`);
   }
 } catch (e) {
   check(false, "site download flow", String(e).slice(0, 300));
