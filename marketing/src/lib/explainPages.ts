@@ -3914,7 +3914,7 @@ Vary: Origin
       },
     ],
     notes: [
-      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. The run used `curl -si` with the carriage returns at the ends of the header lines removed; the sample shows the command as `curl -i`. What `private`, `max-age`, `ETag`, `HttpOnly`, `Secure`, `SameSite`, `Vary` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run. The run used curl, not a browser, so it shows what the server sent, not what a browser does with it.",
+      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. The run used `curl -si` with the carriage returns at the ends of the header lines removed; the sample shows the command as `curl -i`. What `private`, `max-age`, `ETag`, `HttpOnly`, `Secure`, `SameSite`, `Vary` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run. curl isn't a browser, so this shows what the server sent, not what a browser does with it.",
       "`/notes` answered `301 Moved Permanently` with `Location: /notes/42`. curl stopped there without `-L`; with `-L` it followed 1 redirect and got 200.",
     ],
     watchOut:
@@ -3950,11 +3950,11 @@ _dmarc  IN  TXT   "v=DMARC1; p=quarantine; rua=mailto:dmarc@notes-app.example"
       },
       {
         concept: "CNAME",
-        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query. This server only holds zones and has recursion off, so it doesn't chase names for dig; a resolver, like the one your computer normally asks, follows the CNAME for you (RFC 1034).",
+        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query. This server only holds zones and has recursion off, so it followed the CNAME only inside notes-app.example, not into hosting.example, even though it serves that zone too; a resolver, like the one your computer normally asks, follows the CNAME for you (RFC 1034).",
       },
       {
         concept: "MX",
-        text: "`MX` records say which servers take email for the domain. The number is the preference: lower comes first, so mail goes to mx1, with 10, before mx2, with 20. dig listed the 2 records in the file's order, but the number decides, not the order. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
+        text: "`MX` records say which servers take email for the domain. The number is the preference: lower comes first, so mail goes to mx1, with 10, before mx2, with 20. dig listed the 20 record first, the reverse of the file's order, but the number decides, not the order. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
       },
       {
         concept: "TXT: SPF and DMARC",
