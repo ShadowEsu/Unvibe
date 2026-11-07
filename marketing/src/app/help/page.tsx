@@ -59,8 +59,8 @@ export default function HelpIndexPage() {
         <h2 id="account-title">Account and plans</h2>
         <ul className="help-list">
           <li>
-            <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. You can start without an account. Check your
-            Spam folder if the sign-in email doesn&apos;t arrive.
+            <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. Check your Spam folder if the
+            sign-in email doesn&apos;t arrive. You can start without an account.
           </li>
           <li>
             <Link href="/faq">Free explanations, plans, privacy and your data</Link>.
