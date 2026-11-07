@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
-import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainCard, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "../mono";
@@ -36,7 +36,7 @@ export default function ExplainLanguagePage({ params }: Params) {
   const page = explainPages.find(({ id }) => id === params.id);
   if (!page) notFound();
   const { name } = explainLanguage(page);
-  const others = explainPages.filter(({ id }) => id !== page.id);
+  const { related, others } = explainLinks(page);
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
@@ -86,6 +86,17 @@ export default function ExplainLanguagePage({ params }: Params) {
       <ExplainDownload language={name} />
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
+        {related.length > 0 && (
+          <>
+            <h2 id="explain-related-title">Related</h2>
+            <ul>
+              {related.map((other) => (
+                <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
+              ))}
+            </ul>
+            <hr className="explain-more__rule" />
+          </>
+        )}
         <h2 id="explain-more-title">Explain code in another language</h2>
         <ul>
           {others.map((other) => (

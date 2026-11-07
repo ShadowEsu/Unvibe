@@ -20,6 +20,8 @@ export interface ExplainPage {
   id: string;
   /** File name in the Try it editor's title bar. */
   fileName: string;
+  /** Up to 4 other explain page ids that a reader of this page is likely to want next, shown before the full list. */
+  related?: readonly string[];
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -38,6 +40,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
+    related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
     description:
       "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
@@ -195,6 +198,7 @@ tzdata; sys_platform == "win32"`,
   {
     id: "javascript",
     fileName: "profiles.js",
+    related: ["react-useeffect", "cors-error", "typescript", "json"],
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
       "Get any JavaScript snippet explained in plain English online, free. The sample loads several users at once with fetch and Promise.allSettled.",
@@ -302,6 +306,7 @@ $(function () {
   {
     id: "typescript",
     fileName: "users.ts",
+    related: ["javascript", "react-useeffect", "tsconfig"],
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
       "Paste TypeScript and see what the code and its types mean, free online. The sample loads a user with a generic Result type, narrowing and async/await.",
@@ -518,6 +523,7 @@ export default [
   {
     id: "sql",
     fileName: "report.sql",
+    related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
       "Paste a SQL query and read what it returns, explained in plain English, free. The sample ranks customers by spend with a LEFT JOIN, GROUP BY and RANK().",
@@ -616,6 +622,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
       "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
@@ -932,6 +939,7 @@ ls -l bin config`,
   {
     id: "find",
     fileName: "clean-project.sh",
+    related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
       "Paste find commands and get them explained in plain English, free online. The sample looks through a project for logs, big files, recent changes and empty folders, and counts lines in its code.",
@@ -1212,6 +1220,7 @@ puts members.sort.map(&:name).inspect`,
   {
     id: "sqlite",
     fileName: "shop.sql",
+    related: ["sql", "sql-joins", "prisma-schema"],
     lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
     description:
       "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index, inserts rows and runs a report.",
@@ -1323,6 +1332,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
+    related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
       "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
@@ -1370,6 +1380,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
+    related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
       "Paste CSS and get a plain English explanation, free online. The sample lays out product cards with grid, flexbox and a custom property for the accent color.",
@@ -2100,6 +2111,7 @@ subject = Your invoice from Acme`,
   {
     id: "json",
     fileName: "package.json",
+    related: ["package-lock", "npm-scripts", "javascript"],
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
     description:
       "Paste JSON and get a plain English explanation, free online. The sample is a package.json for a small Node tool: its scripts, dependencies and version ranges.",
@@ -2425,6 +2437,7 @@ clean:
   {
     id: "gitignore",
     fileName: ".gitignore",
+    related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
       "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with a few exceptions kept in.",
@@ -2703,6 +2716,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    related: ["git-log", "git-rebase", "gitignore", "bash"],
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
       "Paste git diff output and get a plain English explanation, free online. The sample is a staged change: a cart total gets tax, and a file moves into lib/.",
@@ -2762,6 +2776,7 @@ rename to lib/money.js`,
   {
     id: "react-useeffect",
     fileName: "Profile.jsx",
+    related: ["javascript", "typescript", "tailwind", "npm-scripts"],
     lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
     description:
       "Paste React code with useEffect and get it explained in plain English, free online. The sample loads a user when userId changes and cancels the old request.",
@@ -2820,6 +2835,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
       "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
@@ -2867,6 +2883,7 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
     description:
       "Paste a package-lock.json and get it explained in plain English, free online. The sample is 3 packages from a small project's lock file, one of them nested inside another.",
@@ -2921,6 +2938,7 @@ KeyError: 'qty'`,
   {
     id: "prisma-schema",
     fileName: "prisma/schema.prisma",
+    related: ["sql", "sqlite", "sql-joins", "env"],
     lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
     description:
       "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts, with a relation between them.",
@@ -2977,6 +2995,7 @@ model Post {
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
+    related: ["css", "html", "react-useeffect"],
     lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
     description:
       "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with up to 12 utility classes on one element, the way AI assistants write them.",
@@ -3023,6 +3042,7 @@ model Post {
   {
     id: "sql-joins",
     fileName: "joins.sql",
+    related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
     description:
       "Paste SQL joins and get them explained in plain English, free online. The sample is 4 queries over customers, orders and refunds, including one whose totals come out doubled.",
@@ -3080,6 +3100,7 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
+    related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
     description:
       "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each signed-in user reads, adds and updates only their own rows.",
@@ -3135,6 +3156,7 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    related: ["javascript", "curl", "json"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
@@ -3185,6 +3207,7 @@ server.listen(3000);`,
   {
     id: "asyncio",
     fileName: "fetch_all.py",
+    related: ["python", "python-traceback", "javascript"],
     lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
     description:
       "Paste Python asyncio code and get async and await explained in plain English, free online. The sample starts 3 stand-in page loads at once with asyncio.gather and gives up on one after 3 seconds.",
@@ -3240,6 +3263,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
   {
     id: "tar",
     fileName: "backup-site.sh",
+    related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
     description:
       "Paste a tar command and get its flags explained in plain English, free online. The sample packs a project into a .tar.gz without node_modules, lists it and unpacks a copy.",
@@ -3287,6 +3311,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
   {
     id: "rsync",
     fileName: "backup.sh",
+    related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
     description:
       "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, a yes to go on, --delete and --exclude.",
@@ -3335,6 +3360,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
+    related: ["git-log", "git-diff", "gitignore"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
       "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into the first, rewords one and drops one before a pull request.",
@@ -3386,6 +3412,7 @@ drop 803b36d # Add gitignore
   {
     id: "xargs",
     fileName: "shrink-logs.sh",
+    related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
     description:
       "Paste an xargs command and get it explained in plain English, free online. The sample gzips logs at least 8 days old, 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
@@ -3432,6 +3459,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
+    related: ["bash", "grep", "awk"],
     lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
     description:
       "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a big Python list, a stopped job and a zombie.",
@@ -3480,6 +3508,14 @@ export function explainLanguage(page: ExplainPage): Language {
   const language = languages.find((entry) => entry.id === page.id);
   if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
   return language;
+}
+
+/** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
+export function explainLinks(page: ExplainPage): { related: ExplainPage[]; others: ExplainPage[] } {
+  const relatedIds = page.related ?? [];
+  const related = relatedIds.flatMap((id) => explainPages.filter((other) => other.id === id));
+  const others = explainPages.filter(({ id }) => id !== page.id && !relatedIds.includes(id));
+  return { related, others };
 }
 
 /** Every /explain URL path, index first. */
