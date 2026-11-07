@@ -83,7 +83,7 @@ export default function ExplainLanguagePage({ params }: Params) {
         <p className="explain-watch"><b>Watch out:</b> <Prose text={page.watchOut} /></p>
       </section>
 
-      <ExplainDownload language={name} />
+      <ExplainDownload subject={explainHeading(page)} />
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
         {related.length > 0 && (
