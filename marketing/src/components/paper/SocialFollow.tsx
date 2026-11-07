@@ -2,20 +2,8 @@ import {
   INSTAGRAM_URL,
   LINKEDIN_URL,
   SUPPORT_EMAIL,
-  X_URL,
   supportMailto,
 } from "@/lib/contact";
-
-function XMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M14.1 10.35 22.05 1.5h-1.88l-6.9 7.68L7.77 1.5H1.5l8.33 11.72L1.5 22.5h1.88l7.28-8.1 5.81 8.1H22.5L14.1 10.35Zm-2.58 2.86-.84-1.17L4.06 2.86h2.89l5.4 7.5.84 1.17 7.03 9.77h-2.89l-5.81-8.09Z"
-      />
-    </svg>
-  );
-}
 
 function MailMark() {
   return (
@@ -27,17 +15,6 @@ function MailMark() {
         d="M4.5 6.75h15A1.75 1.75 0 0 1 21.25 8.5v9A1.75 1.75 0 0 1 19.5 19.25h-15A1.75 1.75 0 0 1 2.75 17.5v-9A1.75 1.75 0 0 1 4.5 6.75Z"
       />
       <path fill="none" stroke="currentColor" strokeWidth="1.5" d="m4 7.5 8 6.2 8-6.2" />
-    </svg>
-  );
-}
-
-function ColorXMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="var(--logo-x)"
-        d="M14.1 10.35 22.05 1.5h-1.88l-6.9 7.68L7.77 1.5H1.5l8.33 11.72L1.5 22.5h1.88l7.28-8.1 5.81 8.1H22.5L14.1 10.35Zm-2.58 2.86-.84-1.17L4.06 2.86h2.89l5.4 7.5.84 1.17 7.03 9.77h-2.89l-5.81-8.09Z"
-      />
     </svg>
   );
 }
