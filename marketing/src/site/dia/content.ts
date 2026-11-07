@@ -41,6 +41,8 @@ export const D_STATS = {
 } as const;
 
 export const D_STATEMENT = {
+  /** The plain "Unvibe is a …" line for search engines and readers (ledger 563; Security string GO 2041, Design's spec). */
+  entity: "Unvibe is a free desktop app for Mac and Windows that explains the code you select in plain English.",
   label: "(The idea)",
   lines: ["Select code in any app.", "Press one shortcut.", "Unvibe explains it beside your editor,"],
   last: "at",

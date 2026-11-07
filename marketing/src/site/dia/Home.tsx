@@ -357,6 +357,7 @@ export function Home({ copy, faq }: { copy: PricingCopy; faq: ReadonlyArray<{ id
         <Ribbon />
         <Numbers />
         <Statement labelledBy="d-stmt-h">
+          <p className="d-stmt__entity">{D_STATEMENT.entity}</p>
           <p className="d-label d-mono">{D_STATEMENT.label}</p>
           <h2 id="d-stmt-h" className="d-stmt__h d-serif">
             <Letters parts={[
