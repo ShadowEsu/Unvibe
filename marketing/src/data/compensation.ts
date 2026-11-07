@@ -11,6 +11,8 @@ export interface CompensationLine {
 export interface StartupProgram {
   /** Short name for the one-line summaries. */
   brand: string;
+  /** What the credits are called in the total line ("Google Cloud"), where it differs from the brand. */
+  creditSource?: string;
   /** Full program name as shown in lists. */
   program: string;
   /** Acceptance date (the welcome email where there is one, else the date the earlier site gave). */
@@ -58,7 +60,7 @@ export const startupPrograms: readonly StartupProgram[] = [
     brand: "Mixpanel",
     program: "Mixpanel for Startups",
     accepted: "2026-08-18",
-    offer: { label: "$145,000 program value", state: "Member" },
+    offer: { label: "Mixpanel's own value: $145,000", state: "Member" },
     detail: "First year free on the Startup Plan (up to 1B events). Mixpanel values the program at $145,000",
   },
   { brand: "PostHog", program: "PostHog for Startups", accepted: "2026-08-17", amountUsd: 50_000, detail: "PostHog credits" },
@@ -70,6 +72,7 @@ export const startupPrograms: readonly StartupProgram[] = [
   },
   {
     brand: "Google for Startups",
+    creditSource: "Google Cloud",
     program: "Google for Startups",
     accepted: "2026-08-20",
     amountUsd: 2_000,
@@ -152,9 +155,11 @@ export function compensationTotalLabel(): string {
   return formatUsd(compensationTotalUsd());
 }
 
-/** "Claude and PostHog": the programs whose credits the total counts (brand without "for Startups"). */
+/** "Claude, PostHog, Google Cloud and Deepgram": the programs whose credits the total counts. */
 export function creditSourcesLabel(): string {
-  const names = startupPrograms.filter((program) => program.amountUsd !== undefined).map((program) => program.brand.replace(/ for Startups$/, ""));
+  const names = startupPrograms
+    .filter((program) => program.amountUsd !== undefined)
+    .map((program) => program.creditSource ?? program.brand.replace(/ for Startups$/, ""));
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 

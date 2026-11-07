@@ -632,7 +632,7 @@ export const milestones: Milestone[] = [
     date: "26 AUG 2026",
     category: "COMPANY",
     title: "Salesforce Launchpad",
-    summary: `Accepted into Salesforce Launchpad: Starter Suite free for 12 months, then 50% off the second year. Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
+    summary: `Accepted into Salesforce Launchpad: 12 months of Starter Suite funded (50% off year 2). Not cash. Not a round. ${SALESFORCE_ATTRIBUTION}`,
   },
   {
     date: "25 AUG 2026",
