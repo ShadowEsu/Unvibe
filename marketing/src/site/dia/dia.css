@@ -89,7 +89,14 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-steps__mark:nth-child(1) { top: 0; }
 .d-steps__mark:nth-child(2) { top: calc(100% / 3); }
 .d-steps__mark:nth-child(3) { top: calc(200% / 3); }
-.d-steps__pin { position: sticky; top: max(96px, calc(50vh - 310px)); display: grid; grid-template-columns: 380px minmax(0, 1fr); align-items: center; gap: 60px; }
+/* The pinned stage always ends 16 px above the floating dock, so Security's caption under the window is never covered
+   (Motion, 7 Nov: covered at 1440 x 810). --d-dock-clear = the flat dock's button top above the viewport bottom
+   (dia-motion.css [data-d-dock-pill]: 22 px inset, 42 px drop, 0.85 scale of its 91 px column = 57 px) + 16 px.
+   The window keeps its 1115:690 shape, so the stage's width follows the height left under the pin's top: 142 px of
+   chrome (status chip 42, card padding 60, caption 40) plus the window, plus the card's 80 px side padding. */
+.d-steps { --d-dock-clear: 74px; --d-pin-top: max(96px, calc(50vh - 310px)); }
+.d-steps__pin { position: sticky; top: var(--d-pin-top); display: grid; grid-template-columns: 380px minmax(0, 1fr); align-items: center; gap: 60px; }
+.d-steps__stage { justify-self: center; width: 100%; max-width: calc((100vh - var(--d-dock-clear) - var(--d-pin-top) - 142px) * 1115 / 690 + 80px); }
 .d-steps__list { display: grid; gap: 30px; }
 .d-step { display: block; padding: 4px 0 4px 24px; color: var(--d-ink); }
 .d-step__n { display: block; font: 500 12px/1 var(--d-mono); letter-spacing: 0.08em; color: var(--d-ink-3); }
