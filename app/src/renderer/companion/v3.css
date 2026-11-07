@@ -43,27 +43,6 @@
   --focus-ring: rgb(27 26 23 / 0.18);
   --card-shadow: none;
 }
-:root[data-ui="v3"][data-theme="dark"] {
-  --v-bg: #141413;
-  --v-surface: #1c1c1a;
-  --v-sunken: #222220;
-  --v-ink: #f2f0ec;
-  --v-ink-2: #d8d5cf;
-  --v-muted: #a6a29a;
-  --v-faint: #78746d;
-  --v-line: #2e2d2a;
-  --v-line-2: #262624;
-  --v-hover: #262624;
-  --v-active: #2a2a27;
-  --v-btn: #f2f0ec;
-  --v-btn-ink: #141413;
-  --v-btn-hover: #dcd9d3;
-  --v-good: #6fcf97;
-  --v-warn: #e0b45a;
-  --v-shadow: none;
-  --glass: var(--v-surface);
-  --focus-ring: rgb(242 240 236 / 0.22);
-}
 
 /* Base: no photo wash, no gradients. */
 :root[data-ui="v3"] body { background: var(--v-bg); color: var(--v-ink); font-size: 14px; letter-spacing: -0.006em; }
@@ -265,7 +244,6 @@
   border: 1px solid var(--v-line); border-radius: 14px; background: var(--v-surface);
   box-shadow: 0 10px 28px -16px rgb(27 26 23 / 0.28);
 }
-:root[data-ui="v3"][data-theme="dark"] .ask-dock { box-shadow: none; }
 :root[data-ui="v3"] .ask-dock:focus-within { border-color: var(--v-faint); box-shadow: 0 10px 28px -16px rgb(27 26 23 / 0.28), 0 0 0 3px var(--focus-ring); }
 :root[data-ui="v3"] .ask-dock input { font-size: 14.5px; border: 0; box-shadow: none; background: transparent; }
 :root[data-ui="v3"] .ask-dock input:focus { box-shadow: none; }
@@ -355,7 +333,6 @@
   border: 1px solid var(--v-line); border-radius: 16px; background: var(--v-surface); padding: 10px 10px 8px 14px;
   box-shadow: 0 12px 32px -18px rgb(27 26 23 / 0.3);
 }
-:root[data-ui="v3"][data-theme="dark"] .chat-composer { box-shadow: none; }
 :root[data-ui="v3"] .chat-composer:focus-within { border-color: var(--v-faint); box-shadow: 0 12px 32px -18px rgb(27 26 23 / 0.3), 0 0 0 3px var(--focus-ring); }
 :root[data-ui="v3"] .chat-composer textarea { border: 0; padding: 4px 0; background: transparent; box-shadow: none; font-size: 15px; resize: none; }
 :root[data-ui="v3"] .chat-composer textarea:focus { box-shadow: none; border: 0; }

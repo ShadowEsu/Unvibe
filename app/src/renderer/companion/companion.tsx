@@ -1595,7 +1595,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div><div className="setrow"><div><div className="sl">Credits</div><div className="sd">JetBrains Mono, © 2020 The JetBrains Mono Project Authors, SIL Open Font License 1.1</div></div></div></>}
         </div>
       </div>
     </div>
@@ -1721,14 +1721,25 @@ function App() {
     };
   }, []);
 
-  // Paper and ink: a light, playful companion next to the dark explain panel.
+  // The 0.1.51 glass has a real dark theme: follow the Theme setting (System follows macOS/Windows,
+  // live). Until the settings load, light.
   useEffect(() => {
-    document.documentElement.dataset.theme = 'light';
     document.documentElement.dataset.ui = 'v3';
     document.documentElement.dataset.v7 = '';
     // Windows draws its caption buttons over the top-right corner; CSS reserves room for them.
     document.documentElement.dataset.platform = platformAttr;
   }, []);
+  const themePreference = settings?.theme ?? 'light';
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = themePreference === 'dark' || (themePreference === 'system' && media.matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    };
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [themePreference]);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
@@ -1945,7 +1956,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}

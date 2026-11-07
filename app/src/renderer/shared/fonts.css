@@ -50,7 +50,7 @@
 @font-face {
   font-family: "JetBrains Mono";
   src: url("../fonts/jetbrains-mono/JetBrainsMono[wght].ttf") format("truetype");
-  font-weight: 400 700;
+  font-weight: 100 800;
   font-style: normal;
   font-display: swap;
 }

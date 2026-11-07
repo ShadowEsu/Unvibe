@@ -72,3 +72,116 @@
   --u-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --u-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
+
+/*
+ * 0.1.51 Spectral (Design agents/design/spectral README §1, Preston's pick 03; colours, contrast
+ * measured there). Every window: the panel (overlay B) and the companion. Light is the default.
+ * - The accent is every action: selected depth, send, links, active tab, focus ring.
+ * - Blush, lilac and sky are the rim and the soft glows only, never text.
+ * - Lime is only the code-selection tick; amber only problems.
+ * - One typeface for every string: JetBrains Mono (OFL). No ✓ glyph in it: use the check icon.
+ */
+:root {
+  --u-ink: #15141a; /* 18.3:1 on white */
+  --u-ink-2: #4a4757; /* 9.0 */
+  --u-ink-3: #6e6b7b; /* 5.2 (4.8 on paper): meta, placeholders */
+  --u-paper: #f7f6fb; /* the window ground behind the glass */
+  --u-accent: #4e38d2; /* 7.45:1 on white */
+  --u-accent-on: #fff;
+  --u-mist: #ece8ff; /* active tab, code-word chips (with accent text) */
+  --u-blush: #f3a6b8;
+  --u-lilac: #c9b6ff;
+  --u-sky: #9cc8f5;
+  --u-rim: linear-gradient(135deg, #f3a6b8, #c9b6ff, #9cc8f5); /* 1.5 px, pane / ghost / quick look / primary card */
+  --u-glass: rgb(255 255 255 / 0.55);
+  --u-blur: blur(30px) saturate(1.8);
+  --u-chip: rgb(255 255 255 / 0.55); /* chips and fields, with --u-line */
+  --u-line: rgb(21 20 26 / 0.08); /* hairline */
+  --u-fill: rgb(21 20 26 / 0.04); /* tracks, quiet hovers */
+  --u-lime: #d6f45a; /* the code-selection tick only */
+  --u-amber: #b45309;
+  --u-amber-tint: #fef3e2;
+  --u-code-bg: rgb(21 20 26 / 0.04);
+  --u-shadow: 0 12px 32px -12px rgb(40 24 110 / 0.22);
+  --u-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --u-w-body: 430;
+  --u-w-label: 520;
+  --u-w-title: 620;
+  --u-radius-pane: 18px;
+  --u-radius-chip: 999px; /* chips are pills */
+  --u-radius-field: 12px;
+  --u-ease: cubic-bezier(0.2, 0.6, 0.25, 1);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --u-ink: #f3f1fa; /* 16.1:1 on #17151f */
+  --u-ink-2: #c4bfd6; /* 10.1 */
+  --u-ink-3: #9a95ae; /* 6.3 */
+  --u-paper: #17151f;
+  --u-accent: #c9b6ff; /* lilac; 10.0 */
+  --u-accent-on: #15141a;
+  --u-mist: rgb(201 182 255 / 0.16);
+  --u-rim: linear-gradient(135deg, #c47892, #9680dc, #6e96c8); /* dimmed so it doesn't glow */
+  --u-glass: rgb(23 21 31 / 0.66);
+  --u-chip: rgb(255 255 255 / 0.06);
+  --u-line: rgb(243 241 250 / 0.1);
+  --u-fill: rgb(243 241 250 / 0.05);
+  --u-amber: #fbbf24;
+  --u-amber-tint: #422c0e;
+  --u-code-bg: rgb(0 0 0 / 0.25);
+  --u-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+/*
+ * The iridescent rim on a rounded, translucent shape: a 1.5 px gradient ring drawn by a masked
+ * ::before, so the glass inside stays see-through (a border-box gradient would show through it).
+ * The element needs position: relative (or absolute/fixed) and its own border-radius.
+ */
+.u-rim { position: relative; }
+.u-rim::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: var(--u-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/*
+ * LEGACY, removed as each surface is rebuilt in Spectral: the companion's 0.1.51-glass names
+ * (app-0151.css, until the companion re-skin) mapped onto Spectral values, so nothing renders broken
+ * in between. The rounds/06 panel set above goes with overlay B (widget.css).
+ */
+:root[data-ui="v3"][data-v7] {
+  --u-violet: var(--u-accent);
+  --u-violet-text: var(--u-accent);
+  --u-on-violet: var(--u-accent-on);
+  --u-violet-tint: var(--u-mist);
+  --u-glass-1: var(--u-glass);
+  --u-glass-2: var(--u-glass);
+  --u-solid: rgb(255 255 255 / 0.72);
+  --u-hair: var(--u-line);
+  --u-shadow-glass: var(--u-shadow);
+  --u-canvas: rgb(255 255 255 / 0.72);
+  --u-band: var(--u-fill);
+  --u-plate: var(--u-line);
+  --u-sans: var(--u-font);
+  --u-display: var(--u-font);
+  --u-label: 520 10.5px/1 var(--u-font);
+  --u-radius-window: 14px;
+  --u-radius-card: 16px;
+  --u-radius-control: var(--u-radius-field);
+  --font-sans: var(--u-font);
+  --font-display: var(--u-font);
+  --font-hand: var(--u-font);
+  --font-mono: var(--u-font);
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] {
+  --u-solid: rgb(30 27 40 / 0.78);
+  --u-canvas: rgb(30 27 40 / 0.78);
+}

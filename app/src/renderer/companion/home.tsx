@@ -4,6 +4,7 @@ import { localDayKey } from '../../core/learning';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
+import { IC } from './icons';
 
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
 export interface TodayGoal { explained: boolean; answered: boolean }
@@ -14,8 +15,10 @@ export interface HomeLesson { id: string; ts: string; title: string; meta: strin
 /** What Home reads from the usage line. */
 export interface HomeUsage { used: number; limit: number; remaining: number; resetsAt: string; plan?: string }
 
-/** Home keeps to three rows (Design, frozen `app.html`). */
-export const HOME_ROWS = 3;
+/** Recently understood keeps to five rows (Design's glass Today, c-today; main showed five too). */
+export const HOME_ROWS = 5;
+/** Up next shows at most three steps that aren't done. */
+export const UP_NEXT_ROWS = 3;
 /** The local day Vibe last waved on Home. */
 export const HOME_WAVE_KEY = 'unvibe.homeWaveDay';
 /** How long Home must be on screen before today's wave counts as seen (a Home that flashes past at launch doesn't use it up). */
@@ -111,6 +114,26 @@ function TodayGoalLine({ goal }: { goal: TodayGoal }) {
   );
 }
 
+export type LearningStepId = '01' | '02' | '03' | '04' | '05';
+export interface LearningStep { id: LearningStepId; title: string; copy: string; icon: string; done: boolean }
+
+/** Main's five learning steps, word for word (Design: Up next is these, in the glass row style). Quiz and Ask are
+ *  never marked done, as on main. "Read the change brief" is done once anything is saved: main's rule (its feed was
+ *  the saved lessons). */
+export function learningSteps(input: { shortcut: string; reviews: number; understood: number; saved: number }): LearningStep[] {
+  return [
+    { id: '01', title: 'Review a change', copy: `Select code and press ${input.shortcut}.`, icon: IC.spark, done: input.reviews > 0 },
+    { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: input.understood > 0 },
+    { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false },
+    { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false },
+    { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: input.saved > 0 },
+  ];
+}
+
+function StepIcon({ d }: { d: string }) {
+  return <svg className="home-step__icon" viewBox="0 0 20 20" aria-hidden="true" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+}
+
 export interface HomeProps {
   /** The shortcut as separate keys (⌃ U on a Mac; Ctrl Alt U on Windows). */
   shortcutKeys: string[];
@@ -118,16 +141,21 @@ export interface HomeProps {
   shortcut: string;
   userName?: string;
   reviews: number;
+  /** Lessons marked understood (the profile's count): "Save the lesson" is then done. */
+  understood: number;
   today: TodayGoal | null;
   history: HomeLesson[];
   usage: HomeUsage | null;
   onPlan: () => void;
   onLibrary: () => void;
   onBriefs: () => void;
+  onQuiz: () => void;
+  onAsk: () => void;
 }
 
-/** Home (frozen `app.html` §5): Vibe and the note, one action card, the daily goal, three recent rows. */
-export function Home({ shortcutKeys, shortcut, userName, reviews, today, history, usage, onPlan, onLibrary, onBriefs }: HomeProps) {
+/** Today (Design's glass c-today): Vibe and the greeting, one action card, the daily goal, then Up next (main's learning
+ *  steps, while any are left) beside Recently understood. */
+export function Home({ shortcutKeys, shortcut, userName, reviews, understood, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk }: HomeProps) {
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [proOpen, setProOpen] = useState(false);
@@ -191,6 +219,12 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, today, history
   const first = greetFirst(userName);
   const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
   const rows = homeRows(knowledge, history);
+  const steps = learningSteps({ shortcut, reviews, understood, saved: history.length });
+  const stepsDone = steps.filter((step) => step.done).length;
+  const upNext = steps.filter((step) => !step.done).slice(0, UP_NEXT_ROWS);
+  const runStep: Record<LearningStepId, () => void> = {
+    '01': () => window.unvibe.companionReview(), '02': onLibrary, '03': onQuiz, '04': onAsk, '05': onBriefs,
+  };
   // Vibe's notes in sentence case (Design's copy, S7): no "this month" at the limit, since the paused card under it
   // says when they refill.
   const note = explainDisabled ? 'You\'re out of free explanations for now.'
@@ -241,24 +275,42 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, today, history
         </button>
       ) : null}
       {today ? <TodayGoalLine goal={today} /> : null}
-      <section className="home-list" aria-labelledby="home-recent">
-        <header><h2 id="home-recent">Recently understood</h2><button type="button" className="link-btn" onClick={onLibrary}>See all</button></header>
-        {rows.length ? (
-          <ul>
-            {rows.map((row) => (
-              <li key={row.id}><button type="button" className="home-row" onClick={onLibrary}>
-                <span className="home-row__text">
-                  <span className="home-row__title">{row.title}</span>
-                  {row.source ? <span className="home-row__source">{row.source}</span> : null}
-                </span>
-                {row.tone === 'understood'
-                  ? <time className="home-row__pill" data-tone="understood" dateTime={row.ts}>{row.pill}</time>
-                  : <span className="home-row__pill" data-tone="review">{row.pill}</span>}
-              </button></li>
-            ))}
-          </ul>
-        ) : <p className="home-list__empty">Nothing yet. Your first explanation lands here!</p>}
-      </section>
+      <div className={`home-cols${upNext.length ? '' : ' home-cols--one'}`}>
+        {upNext.length ? (
+          <section className="home-list home-list--next" aria-labelledby="home-next">
+            <header><h2 id="home-next">Up next</h2><span className="home-list__count">{stepsDone} of {steps.length} done</span></header>
+            <ol>
+              {upNext.map((step) => (
+                <li key={step.id}><button type="button" className="home-step" onClick={runStep[step.id]}>
+                  <StepIcon d={step.icon} />
+                  <span className="home-row__text">
+                    <span className="home-row__title">{step.title}</span>
+                    <span className="home-row__source">{step.copy}</span>
+                  </span>
+                </button></li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+        <section className="home-list" aria-labelledby="home-recent">
+          <header><h2 id="home-recent">Recently understood</h2><button type="button" className="link-btn" onClick={onLibrary}>See all</button></header>
+          {rows.length ? (
+            <ul>
+              {rows.map((row) => (
+                <li key={row.id}><button type="button" className="home-row" onClick={onLibrary}>
+                  <span className="home-row__text">
+                    <span className="home-row__title">{row.title}</span>
+                    {row.source ? <span className="home-row__source">{row.source}</span> : null}
+                  </span>
+                  {row.tone === 'understood'
+                    ? <time className="home-row__pill" data-tone="understood" dateTime={row.ts}>{row.pill}</time>
+                    : <span className="home-row__pill" data-tone="review">{row.pill}</span>}
+                </button></li>
+              ))}
+            </ul>
+          ) : <p className="home-list__empty">Nothing yet. Your first explanation lands here!</p>}
+        </section>
+      </div>
     </div>
   );
 }

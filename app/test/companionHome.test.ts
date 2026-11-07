@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import type { KnowledgeObject } from '../src/core/knowledge';
-import { Home, homeRows, homeVibeMood, lessonSource, type HomeLesson, type HomeProps } from '../src/renderer/companion/home';
+import { Home, homeRows, homeVibeMood, learningSteps, lessonSource, type HomeLesson, type HomeProps } from '../src/renderer/companion/home';
 import { NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel } from '../src/renderer/companion/nav';
 
 const noop = () => undefined;
 const props: HomeProps = {
-  shortcutKeys: ['Ctrl', 'Alt', 'U'], shortcut: 'Ctrl+Alt+U', userName: 'Sam Lee', reviews: 3,
+  shortcutKeys: ['Ctrl', 'Alt', 'U'], shortcut: 'Ctrl+Alt+U', userName: 'Sam Lee', reviews: 3, understood: 0,
   today: { explained: true, answered: false }, history: [],
   usage: { used: 8, limit: 50, remaining: 42, resetsAt: '2026-12-01T00:00:00Z', plan: 'trial' },
-  onPlan: noop, onLibrary: noop, onBriefs: noop,
+  onPlan: noop, onLibrary: noop, onBriefs: noop, onQuiz: noop, onAsk: noop,
 };
 const home = (over: Partial<HomeProps> = {}) => renderToStaticMarkup(createElement(Home, { ...props, ...over }));
 const lesson = (id: string, over: Partial<HomeLesson> = {}): HomeLesson => ({ id, ts: '2026-11-01T10:00:00Z', title: `Lesson ${id}`, meta: 'Unvibe · Understood', outcome: 'understood', ...over });
@@ -32,9 +32,24 @@ test('at the limit, the banner takes the card\'s place and its action is the one
   assert.equal(html.match(/class="primary-btn"/g)?.length, 1);
 });
 
-test('Home leaves out Up next, the voice card and the stickers', () => {
+test('Up next lists the first three learning steps not done yet, with how many are done', () => {
+  const html = home({ reviews: 3, understood: 0, history: [] });
+  const titles = [...html.matchAll(/class="home-step".*?class="home-row__title">(.*?)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(titles, ['Save the lesson', 'Take a quick quiz', 'Ask one more thing']);
+  assert.match(html, /1 of 5 done/);
+});
+
+test('learning steps: explained, understood and a saved lesson mark their steps done; quiz and ask never are', () => {
+  const none = learningSteps({ shortcut: '⌃U', reviews: 0, understood: 0, saved: 0 });
+  assert.deepEqual(none.filter((s) => s.done).map((s) => s.id), []);
+  assert.equal(none[0]!.copy, 'Select code and press ⌃U.');
+  const all = learningSteps({ shortcut: '⌃U', reviews: 2, understood: 1, saved: 1 });
+  assert.deepEqual(all.filter((s) => !s.done).map((s) => s.title), ['Take a quick quiz', 'Ask one more thing']);
+});
+
+test('Home leaves out the voice card and the stickers', () => {
   const html = home({ history: [lesson('a')] });
-  for (const gone of ['Up next', 'Try voice', 'voice-cta', 'sticker', 'today-cols']) assert.ok(!html.includes(gone), gone);
+  for (const gone of ['Try voice', 'voice-cta', 'sticker']) assert.ok(!html.includes(gone), gone);
 });
 
 test('the goal line shows each step done or not', () => {
@@ -57,11 +72,11 @@ test('Vibe waves the first time Home opens on a day, is still after that, and sl
   assert.equal(homeVibeMood('2026-11-05', '2026-11-06', true), 'sleepy');
 });
 
-test('rows: three at most, one of them may need a look again, none before anything is understood', () => {
-  const history = ['a', 'b', 'c', 'd'].map((id) => lesson(id));
-  assert.deepEqual(homeRows([], history).map((row) => row.id), ['a', 'b', 'c']);
-  assert.deepEqual(homeRows([known('k1', 'CURRENT'), known('k2', 'CURRENT'), known('k3', 'CURRENT'), known('s1', 'MAY_BE_STALE'), known('s2', 'STALE')], history)
-    .map((row) => `${row.id}:${row.tone}:${row.pill}`).slice(2), ['s1:review:Review']);
+test('rows: five at most, one of them may need a look again, none before anything is understood', () => {
+  const history = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => lesson(id));
+  assert.deepEqual(homeRows([], history).map((row) => row.id), ['a', 'b', 'c', 'd', 'e']);
+  assert.deepEqual(homeRows([known('k1', 'CURRENT'), known('k2', 'CURRENT'), known('k3', 'CURRENT'), known('k4', 'CURRENT'), known('k5', 'CURRENT'), known('s1', 'MAY_BE_STALE'), known('s2', 'STALE')], history)
+    .map((row) => `${row.id}:${row.tone}:${row.pill}`).slice(4), ['s1:review:Review']);
   assert.deepEqual(homeRows([known('s1', 'MAY_BE_STALE')], [lesson('n', { outcome: 'needs_review' })]), []);
 });
 
