@@ -12,7 +12,7 @@ export interface SetupTipInput {
 }
 
 export const SETUP_TIP_SUBJECT = "Your setup tip: try Unvibe on code you didn't write";
-export const SETUP_TIP_PREVIEW = `Copy a few lines from any file and paste them into Unvibe. Then let ${SHORTCUTS.mac.anywhere} do it straight from your editor.`;
+export const SETUP_TIP_PREVIEW = "Copy a few lines from any file and paste them into Unvibe. Then let the shortcut do it straight from your editor.";
 
 // Copy: unvibe-support's onboarding email 2 (Security S-2 0002), casual rewrite for ledger 569 with the same facts and links. Where it lives, per the app: the
 // Mac Dock icon always shows and the tray icon sits in the menu bar or notification area
