@@ -441,3 +441,5 @@ html[data-dl]:not([data-dl-ready]) :is(.dd-page > :not(.dt), .d-foot) { display:
 .d-split__lib figcaption { margin-left: 0; }
 /* Motion D22 (cards): the cards caption at ≥ 70 % ink */
 .d-cap { color: rgb(23 19 31 / 0.74); }
+/* phones: the still dock is the pill alone; "Available for macOS and Windows" would sit over the captions */
+@media (max-width: 820px) { .d-home [data-d-dock-pill] .d-avail { display: none; } }
