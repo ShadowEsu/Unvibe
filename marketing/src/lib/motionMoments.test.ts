@@ -6,6 +6,7 @@ import InvestorsPage from "@/app/investors/page";
 import { ChangelogList } from "@/components/paper/ChangelogList";
 import { CountUp } from "@/components/paper/CountUp";
 import { WhoItsForCards } from "@/components/paper/WhoItsFor";
+import { milestones } from "@/data/milestones";
 import {
   ARRIVE_LIMIT,
   SKELETON_AFTER_MS,
@@ -79,11 +80,12 @@ describe("count-up", () => {
     assert.match(arrived, /aria-label="3"><span aria-hidden="true">3<\/span>/);
   });
 
-  it("/investors renders its real releases count, not 0, in both the label and the digits", () => {
-    const page = renderToStaticMarkup(createElement(InvestorsPage));
-    const stat = page.match(/aria-label="(\d+)\+"><span aria-hidden="true">(\d+)\+<\/span>/);
-    assert.ok(stat, "the releases count-up is missing");
-    assert.equal(stat[1], stat[2]);
+  it("/investors renders its real versions count, not 0, each version once", async () => {
+    const page = renderToStaticMarkup(await InvestorsPage());
+    const stat = page.match(/<dt>(\d+)<\/dt><dd>versions in the changelog, latest v[\d.]+<\/dd>/);
+    assert.ok(stat, "the versions stat is missing");
+    const figures = milestones.filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).map((m) => m.figure);
+    assert.equal(Number(stat[1]), new Set(figures).size);
     assert.ok(Number(stat[1]) > 0);
   });
 });
