@@ -3532,11 +3532,11 @@ WantedBy=default.target`,
     shows: [
       {
         concept: "[Unit], [Service] and [Install]",
-        text: "`[Unit]` names the service and sets its order, `[Service]` says what to run and how, and `[Install]` is only read by `systemctl --user enable`. Enabling it created a link to the file in default.target.wants, the list of what your user session starts. `systemd-analyze --user verify` printed nothing for this file and exited with code 0.",
+        text: "`[Unit]` names the service and sets its order, `[Service]` says what to run and how, and `[Install]` is ignored while the service runs: `systemctl --user enable` and `disable` read it (systemd.unit). Enabling it created a link to the file in default.target.wants, the list of what your user session starts. `systemd-analyze --user verify` printed nothing for this file and exited with code 0.",
       },
       {
         concept: "WorkingDirectory= and ExecStart=",
-        text: "`ExecStart=` is the command, with the full path to the program. `%h` is your home folder, so python3 started in ~/apps/notes-api and found app.py there. With that folder missing, systemd printed `Changing to the requested working directory failed` and `Failed at step CHDIR`, then kept trying again because of `Restart=on-failure`.",
+        text: "`ExecStart=` is the command, with the full path to the program. `%h` is your home folder, so python3 started in ~/apps/notes-api and found app.py there. With that folder missing, systemd printed `Changing to the requested working directory failed` and `Failed at step CHDIR`, then scheduled a restart because of `Restart=on-failure`, which failed the same way.",
       },
       {
         concept: "Environment= and EnvironmentFile=",
@@ -3544,24 +3544,24 @@ WantedBy=default.target`,
       },
       {
         concept: "Restart= and RestartSec=",
-        text: "`Restart=on-failure` brings the service back when it exits with an error. When the app exited with code 1, systemd logged `status=1/FAILURE`, then `Scheduled restart job, restart counter is at 1`, and 2 seconds later a new process answered. When the app exited with code 0, it stayed stopped, because a clean exit isn't a failure.",
+        text: "`Restart=on-failure` brings the service back when it exits with an error. When the app exited with code 1, systemd logged `status=1/FAILURE`, then `Scheduled restart job, restart counter is at 1`, and after the 2-second `RestartSec=` wait a new process, with a new PID, answered. When the app exited with code 0, it stayed stopped, because a clean exit isn't a failure.",
       },
     ],
     notes: [
       "Run with systemd 261 and Python 3.14.7 on Linux as a user service, with no root: `systemctl --user link` pointed systemd at the file and `systemctl --user start notes-api` started it. app.py is a short test server that reports its settings and exits with code 1 or 0 on request.",
       "After an edit to the file, `systemctl --user status` warned that the unit file `changed on disk` and said to run `systemctl --user daemon-reload` to load the new version.",
-      "From the systemd manuals rather than a run: `After=` only sets the order and doesn't start network.target by itself (systemd.unit), and default.target is the main target of the user service manager (systemd.special).",
+      "`After=network.target` does nothing in a user service. `After=` only sets the order and doesn't start anything by itself (systemd.unit), and network.target belongs to the system service manager: it isn't in the user manager's list of units (systemd.special), and `systemctl --user show network.target` printed `LoadState=not-found`. default.target is the main target of the user service manager (systemd.special).",
     ],
     watchOut:
-      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 5 times, then printed `Start request repeated too quickly` and left it failed, with nothing on port 8040. The limit is 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so it can start again.",
+      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 5 times, then printed `Start request repeated too quickly` and left it failed, with nothing on port 8040. This file doesn't set a limit, so systemd's defaults applied: 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so you can start it right away.",
   },
   {
     id: "terraform",
     fileName: "main.tf",
-    related: ["json", "yaml", "env"],
+    related: ["yaml", "json", "ini"],
     lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
     description:
-      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only local providers, so it runs without a cloud account.",
+      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only the local and random providers, so it runs without a cloud account.",
     sampleSummary: "A main.tf that pins 2 providers, takes an `env` variable, makes a random name and writes it into a JSON file, then prints the name as an output.",
     sample: `# main.tf: write a small config file with a random name, no cloud account needed
 terraform {
@@ -3591,7 +3591,7 @@ output "app_name" {
     shows: [
       {
         concept: "providers and init",
-        text: "`required_providers` says which plugins the code needs and pins their versions. `terraform init` downloaded hashicorp/local v2.9.1 and hashicorp/random v3.9.1, printed `signed by HashiCorp` for each, and wrote .terraform.lock.hcl with those versions. Terraform's own message says to commit that lock file so every machine gets the same versions.",
+        text: "`required_providers` says which plugins the code needs and pins their versions. `terraform init` downloaded hashicorp/local v2.9.1 and hashicorp/random v3.9.1, printed `signed by HashiCorp` for each, and wrote .terraform.lock.hcl with those versions. Terraform's own message says to commit that lock file so later `terraform init` runs pick the same versions.",
       },
       {
         concept: "resources and references",
@@ -3599,7 +3599,7 @@ output "app_name" {
       },
       {
         concept: "plan and apply",
-        text: "`terraform plan` lists what would change and changes nothing: `Plan: 2 to add, 0 to change, 0 to destroy`. `apply` does it, and asks you to type yes first. Answering no printed `Apply cancelled.`, and `-auto-approve` skips the question. Run again with nothing changed, apply printed `No changes. Your infrastructure matches the configuration.`",
+        text: "`terraform plan` lists what would change and changes nothing: `Plan: 2 to add, 0 to change, 0 to destroy`. `apply` does it, but asks first: `Only 'yes' will be accepted to approve.` Answering no printed `Apply cancelled.` and created nothing, and `-auto-approve` skips the question. Run again with nothing changed, apply printed `No changes. Your infrastructure matches the configuration.`",
       },
       {
         concept: "variables and outputs",
@@ -3607,7 +3607,7 @@ output "app_name" {
       },
     ],
     notes: [
-      "Run with Terraform 1.17.1 on Linux, downloaded from releases.hashicorp.com and checked against HashiCorp's signed checksums, in an empty folder with no backend, so the state stayed in a local terraform.tfstate. No cloud account or credentials were used.",
+      "Run with Terraform 1.17.1 on Linux, downloaded from releases.hashicorp.com and checked against HashiCorp's signed checksums, in a new folder holding only main.tf, with no backend, so the state stayed in a local terraform.tfstate. No cloud account or credentials were used.",
       "When out/production.json was deleted by hand, the next plan noticed and planned to write it again: `local_file.config will be created`, `Plan: 1 to add`.",
     ],
     watchOut:
@@ -3617,7 +3617,7 @@ output "app_name" {
     id: "assembly",
     fileName: "sum.s",
     related: ["c", "cpp", "make"],
-    lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `cmp` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
+    lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
     description:
       "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64 for a Mac, with its registers and loop.",
     sampleSummary: "A 7-line C function that adds up an array of ints, and the arm64 assembly clang 22.1.8 made from it at `-O1` for macOS: 13 instructions, with the C on top as comments.",
@@ -3653,7 +3653,7 @@ LBB0_4:
       },
       {
         concept: "compare and branch",
-        text: "`cmp w1, #1` and `b.lt LBB0_4` skip the loop when `count` is less than 1, and LBB0_4 returns 0. The loop is the 4 lines from LBB0_2: `ldr w10, [x0], #4` loads one int and moves `x0` 4 bytes on to the next one, `add` adds it to the total in `w8`, `subs` takes 1 off a copy of `count` in `x9`, and `b.ne` jumps back until that copy reaches 0. No register counts `i` up: the compiler counts down instead.",
+        text: "`cmp w1, #1` and `b.lt LBB0_4` skip the loop when `count` is less than 1, and LBB0_4 returns 0. The loop is the 4 instructions after LBB0_2: `ldr w10, [x0], #4` loads one int and moves `x0` 4 bytes on to the next one, `add` adds it to the total in `w8`, `subs` takes 1 off a copy of `count` in `x9`, and `b.ne` jumps back until that copy reaches 0. No register counts `i` up: the compiler counts down instead.",
       },
       {
         concept: "-O0 and -O1",
@@ -3665,7 +3665,7 @@ LBB0_4:
       },
     ],
     notes: [
-      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S sum.c` writes the assembly to sum.s instead of building a program, so no Mac was needed. The sample is the `_sum` function from that file with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the file's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
+      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S` writes assembly text instead of building a program, so no Mac was needed. The sample is the `_sum` function from that output with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the file's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
       "At `-O2` the function grew to 62 instructions and 3 loops. The main loop loads 4 128-bit `q` registers per pass, adds them with `add.4s` and counts down by 16, so it takes 16 ints at a time. A second loop takes 4 at a time, and the `-O1` loop is left for the last few. The x86-64 `-O2` build still returned the same 4 results.",
       "Apple's guide Writing ARM64 code for Apple platforms (developer.apple.com) says macOS follows the 64-bit Arm standard apart from a few listed differences, such as `x18` being reserved. None of them changes the registers used here.",
     ],
