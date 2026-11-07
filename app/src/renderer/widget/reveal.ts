@@ -41,9 +41,9 @@ export interface Revealed {
 /**
  * ChatGPT-style progressive reveal of streamed text, one revealStep per frame, for the answer and for More detail.
  * While `live` (streaming or done) the shown text catches up with `full`; otherwise `full` shows as it is. The effect
- * re-runs as text arrives and when streaming ends, which lets a held last word show. `resetKey` (the tab) starts over.
+ * re-runs as text arrives and when streaming ends, which lets a held last word show.
  */
-export function useRevealedText(full: string, streaming: boolean, live: boolean, resetKey: string): Revealed {
+export function useRevealedText(full: string, streaming: boolean, live: boolean): Revealed {
   const [shown, setShown] = useState('');
   useEffect(() => {
     if (!live || full.length === 0) {
@@ -65,7 +65,7 @@ export function useRevealedText(full: string, streaming: boolean, live: boolean,
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [full, streaming, live, resetKey]);
+  }, [full, streaming, live]);
   const typing = live && (streaming || shown.length < full.length);
   // The words stay wrapped for one fade after the reveal ends, so the last ones finish their 120 ms instead of snapping.
   const [linger, setLinger] = useState(false);

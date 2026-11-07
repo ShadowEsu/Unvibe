@@ -79,6 +79,8 @@ for (const name of ['bar', 'widget', 'companion']) {
 // stylesheet reaches as ../fonts/. Each family's OFL.txt and FONTS.md travel with the files into the
 // packaged app (package.json "files": dist/**), as OFL §2 requires.
 cpSync('src/renderer/shared/fonts', 'dist/renderer/fonts', { recursive: true });
+// Licences for code drawn into the renderer (the inlined Lucide icons, ISC) ship beside it the same way.
+cpSync('src/renderer/shared/licences', 'dist/renderer/licences', { recursive: true });
 mkdirSync('dist/assets', { recursive: true });
 for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
   try {

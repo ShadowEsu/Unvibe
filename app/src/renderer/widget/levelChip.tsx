@@ -1,6 +1,7 @@
+import { useRef, type KeyboardEvent } from 'react';
 import type { ExplanationLevel } from '../../core/protocol';
 import { isProPlan } from '../../core/plan';
-import { MenuButton, type MenuItem } from './panelMenu';
+import { Icon } from './icons';
 
 export const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'new', label: 'New' },
@@ -15,37 +16,54 @@ export function expertLocked(plan?: string): boolean {
   return plan === undefined || !isProPlan(plan);
 }
 
-/** The depth menu (Design Q12): all five, a lime tick on the current one; locked Expert shows a lock and "Pro" and opens nothing. */
-export function levelItems(level: ExplanationLevel, plan: string | undefined, onPick: (id: ExplanationLevel) => void): MenuItem[] {
-  return LEVELS.map((l) => {
-    const locked = l.id === 'expert' && expertLocked(plan);
-    return {
-      id: l.id,
-      label: l.label,
-      checked: l.id === level,
-      disabled: locked,
-      locked,
-      tag: locked ? 'Pro' : undefined,
-      title: locked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`,
-      dataLevel: l.id,
-      onSelect: () => onPick(l.id),
-    };
-  });
-}
-
-/** The panel's one depth control (SPEC §4): a chip "Beginner ▾" whose menu holds all five depths. */
-export function LevelChip({ level, plan, disabled, onPick }: {
+/**
+ * Overlay B's one depth control (SPEC Depth): a 26 pt segmented row of all five, the current one an accent pill.
+ * Expert always carries its "Pro" marker (Security N3); locked, it adds a lock and picks nothing. A radio group:
+ * the arrows move between depths that can be picked, and moving picks.
+ */
+export function DepthControl({ level, plan, disabled, onPick }: {
   level: ExplanationLevel;
   plan?: string;
   disabled: boolean;
   onPick: (id: ExplanationLevel) => void;
 }) {
-  const label = LEVELS.find((l) => l.id === level)?.label ?? level;
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const open = LEVELS.filter((l) => !(l.id === 'expert' && expertLocked(plan)));
+  const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+    if (!step || disabled) return;
+    event.preventDefault();
+    const at = open.findIndex((l) => l.id === level);
+    const next = open[(at + step + open.length) % open.length]!;
+    onPick(next.id);
+    refs.current[LEVELS.findIndex((l) => l.id === next.id)]?.focus();
+  };
   return (
-    <MenuButton className="depth-chip" items={levelItems(level, plan, onPick)} menuLabel="Explanation depth" ariaLabel={`Depth: ${label}`} align="start" disabled={disabled}>
-      {/* Keyed by depth, so a new depth mounts a new label and plays depthLabelIn. */}
-      <span key={level} className="depth-chip__label">{label}</span>
-      <small aria-hidden="true">▾</small>
-    </MenuButton>
+    <div className="ob-depth" role="radiogroup" aria-label="Explanation depth" onKeyDown={onKey}>
+      {LEVELS.map((l, i) => {
+        const locked = l.id === 'expert' && expertLocked(plan);
+        const on = l.id === level;
+        return (
+          <button
+            key={l.id}
+            ref={(el) => { refs.current[i] = el; }}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            tabIndex={on ? 0 : -1}
+            data-level={l.id}
+            className={`ob-depth__item${on ? ' is-on' : ''}`}
+            disabled={disabled || locked}
+            title={locked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
+            onClick={() => { if (!on) onPick(l.id); }}
+          >
+            {l.label}
+            {l.id === 'expert' ? (
+              <span className="ob-pro">{locked ? <Icon name="lock" size={9} /> : null}Pro</span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
