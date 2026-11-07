@@ -193,20 +193,6 @@ jobs:
           npx next build > "$RUNNER_TEMP/next-build.log" 2>&1 || { tail -60 "$RUNNER_TEMP/next-build.log"; exit 1; }
           tail -5 "$RUNNER_TEMP/next-build.log"
 
-      - name: Serve the site
-        if: env.SITE_REF != ''
-        shell: pwsh
-        run: |
-          $env:NEXT_TELEMETRY_DISABLED = '1'
-          Start-Process -FilePath node -ArgumentList 'node_modules\next\dist\bin\next', 'start', '-p', '3000', '-H', '127.0.0.1' `
-            -WorkingDirectory "$env:GITHUB_WORKSPACE\site\marketing" -WindowStyle Hidden `
-            -RedirectStandardOutput "$env:RUNNER_TEMP\next-start.log" -RedirectStandardError "$env:RUNNER_TEMP\next-start.err"
-          for ($i = 0; $i -lt 60; $i++) {
-            try { if ((Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200) { break } } catch {}
-            Start-Sleep 2
-          }
-          "site answers: $((Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing).StatusCode)"
-
       - name: Playwright for the site's download button
         shell: bash
         run: |
@@ -214,17 +200,24 @@ jobs:
           npm init -y >/dev/null && npm install playwright@1.64.1 >/dev/null
           cp "$GITHUB_WORKSPACE/.github/qa/site-download.mjs" .
 
+      # The site is served in this same step: Windows runners end a step's child processes with the step (run
+      # 42337276591: 200 at the end of a separate serve step, connection refused in the next).
       - name: The site's download button, in Google Chrome
         shell: bash
         env:
           EXPECT: windows
+          NEXT_TELEMETRY_DISABLED: "1"
         run: |
+          if [ -n "$SITE_REF" ]; then
+            ( cd "$GITHUB_WORKSPACE/site/marketing" && node node_modules/next/dist/bin/next start -p 3000 -H 127.0.0.1 > "$RUNNER_TEMP/next-start.log" 2>&1 & )
+            for i in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)" = 200 ] && break; sleep 2; done
+            echo "site answers: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)"
+          fi
           export OUT="$RUNNER_TEMP\\m"; cd "$RUNNER_TEMP/pws"
           node site-download.mjs || echo "SITE_FAIL=1" >> "$GITHUB_ENV"
-          o="$(cygpath "$RUNNER_TEMP")/m"
-          if [ -s "$o/dl-file.txt" ]; then
-            echo "DL_FILE=$(cat "$o/dl-file.txt")" >> "$GITHUB_ENV"
-            echo "V=$(node -e 'console.log(require(process.argv[1]).version)' "$o/pick.json")" >> "$GITHUB_ENV"
+          if [ -s "$OUT\\dl-file.txt" ]; then
+            echo "DL_FILE=$(cat "$OUT\\dl-file.txt")" >> "$GITHUB_ENV"
+            echo "V=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).version)' "$OUT\\pick.json")" >> "$GITHUB_ENV"
           fi
 
       - name: Open that file as the thank-you page says, first launch, QA flag

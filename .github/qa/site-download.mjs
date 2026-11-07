@@ -19,9 +19,18 @@ const { SITE, OUT, EXPECT } = process.env;
 // The file each pick should start; the release version is read from the file the site hands out (0.1.49 today).
 const files = { "mac-arm": "-mac-arm64.dmg", "mac-intel": "-mac-x64.dmg", windows: "-win-x64-portable.exe" };
 const other = { "mac-arm": "-mac-x64.dmg", "mac-intel": "-mac-arm64.dmg" };
+// What the thank-you card (section#thanks, #228's Download.tsx) must say for each pick: its heading names the build
+// (D_THANKS.file with downloadPick's label), and the steps are InstallBox's first-open steps for that OS. The card's
+// "Unvibe Not Opened" is a picture, so the Mac check reads the step words; the rest of /beta (the full install guide
+// for both systems, below the card) doesn't count.
+const card = {
+  "mac-arm": { label: "for Mac (Apple silicon).", os: "mac" },
+  "mac-intel": { label: "for Mac (Intel).", os: "mac" },
+  windows: { label: "for Windows.", os: "windows" },
+};
 const steps = {
-  mac: { want: ["Applications", "Unvibe Not Opened", "Privacy & Security", "Open Anyway"], not: ["Windows protected your PC"] },
-  windows: { want: ["Windows protected your PC", "More info", "Run anyway"], not: ["Unvibe Not Opened"] },
+  mac: { want: ["Your download has started.", "Applications", "Privacy & Security", "Open Anyway"], not: ["Run anyway"] },
+  windows: { want: ["Your download has started.", "Run anyway"], not: ["Open Anyway", "Privacy & Security"] },
 };
 mkdirSync(OUT, { recursive: true });
 const report = join(OUT, "site-report.txt");
@@ -102,20 +111,43 @@ try {
     } catch { return null; }
   };
   pick.markChrome = mark(await download.path());
+  // Playwright's saveAs copy drops the mark; put Chrome's own mark back, so the install row opens what a visitor has.
+  if (pick.markChrome) {
+    if (process.platform === "darwin") execFileSync("xattr", ["-w", "com.apple.quarantine", pick.markChrome, saved]);
+    else writeFileSync(`${saved}:Zone.Identifier`, readFileSync(`${await download.path()}:Zone.Identifier`));
+  }
   pick.mark = mark(saved);
-  r(`browser's mark: on Chrome's file ${pick.markChrome ?? "none"}; on the saved copy ${pick.mark ?? "none"}`);
+  r(`browser's mark: on Chrome's file ${pick.markChrome ?? "none"}; on the copy the install row opens ${pick.mark ?? "none"}`);
   writeFileSync(join(OUT, "dl-file.txt"), saved);
 
-  // The first-open steps the thank-you page shows (visible text only, so the other OS's hidden tab doesn't count).
-  const thanks = page.locator("#thanks");
+  // The thank-you card: its OS, the build it names, and the first-open steps in it (visible text of the card only).
+  const thanks = page.locator("section#thanks");
   await thanks.scrollIntoViewIfNeeded({ timeout: 15000 }).catch(() => {});
   await page.waitForTimeout(1000);
-  const text = (await page.locator("main").innerText().catch(() => "")).replace(/\s+/g, " ");
-  const os = EXPECT === "windows" ? "windows" : "mac";
-  const missing = steps[os].want.filter((s) => !text.includes(s));
-  const wrong = steps[os].not.filter((s) => text.includes(s));
-  check(missing.length === 0 && wrong.length === 0, `the thank-you page shows the ${os === "mac" ? "Mac" : "Windows"} first-open steps`,
-    `missing ${missing.length ? missing.join(", ") : "none"}; other OS's steps shown: ${wrong.length ? wrong.join(", ") : "none"}`);
+  const text = (await thanks.innerText().catch(() => "")).replace(/\s+/g, " ");
+  const exp = card[EXPECT];
+  pick.cardOs = await thanks.getAttribute("data-os").catch(() => null);
+  pick.cardText = text.slice(0, 1200);
+  const missing = steps[exp.os].want.filter((s) => !text.includes(s));
+  const wrong = steps[exp.os].not.filter((s) => text.includes(s));
+  check(pick.cardOs === exp.os && text.includes(exp.label), "the thank-you card is for this computer's build",
+    `data-os ${pick.cardOs}, names '${(text.match(/Unvibe [0-9.]+ for [^.]+\./) || ["?"])[0]}', want '${exp.label}'`);
+  check(missing.length === 0 && wrong.length === 0, `the thank-you card shows the ${exp.os === "mac" ? "Mac" : "Windows"} first-open steps`,
+    `missing ${missing.length ? missing.join(", ") : "none"}; other system's words: ${wrong.length ? wrong.join(", ") : "none"}`);
+  // Anything covering the card's steps or links at this size (the setup-email pop-up, the feedback button).
+  pick.overlaps = await page.evaluate(() => {
+    const card = document.querySelector("section#thanks")?.getBoundingClientRect();
+    if (!card) return [];
+    return [...document.querySelectorAll("body *")].filter((el) => {
+      const s = getComputedStyle(el);
+      if (!["fixed", "sticky"].includes(s.position) || s.visibility === "hidden" || s.display === "none" || Number(s.opacity) === 0) return false;
+      const b = el.getBoundingClientRect();
+      if (b.width < 40 || b.height < 30 || el.closest("header, nav")) return false;
+      return b.left < card.right && b.right > card.left && b.top < card.bottom && b.bottom > card.top;
+    }).filter((el, _, all) => !all.some((o) => o !== el && o.contains(el)))
+      .map((el) => { const b = el.getBoundingClientRect(); return `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} '${el.innerText.replace(/\s+/g, " ").slice(0, 50)}' at ${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)}`; });
+  });
+  r(`NOTE  fixed layers over the card at 1440x900: ${pick.overlaps.length ? pick.overlaps.join(" | ") : "none"}`);
   await page.screenshot({ path: join(OUT, "site-2-thanks.png") });
   await page.screenshot({ path: join(OUT, "site-3-thanks-full.png"), fullPage: true });
   if (other[EXPECT]) {
