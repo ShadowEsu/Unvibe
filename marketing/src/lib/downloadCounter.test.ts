@@ -22,12 +22,11 @@ const CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.
 const SITE = "https://unvibe.site";
 
 function req(overrides: Partial<{ method: string; search: string; headers: Record<string, string> }> = {}): DownloadRequest {
-  const headers: Record<string, string> = { "user-agent": CHROME, ...overrides.headers };
+  const headers: Record<string, string> = { host: "unvibe.site", "user-agent": CHROME, ...overrides.headers };
   return {
     method: overrides.method ?? "GET",
     search: new URLSearchParams(overrides.search ?? ""),
     header: (name) => headers[name] ?? null,
-    origin: SITE,
   };
 }
 
@@ -97,6 +96,14 @@ describe("download source (utm_source only, closed list)", () => {
     assert.equal(downloadSource(req({ headers: { referer: "https://unvibe.site.evil.example/?utm_source=x" } })), "none");
     assert.equal(downloadSource(req({ headers: { referer: "not a url" } })), "none");
     assert.equal(downloadSource(req()), "none");
+    assert.equal(downloadSource(req({ headers: { host: "", referer: `${SITE}/beta?utm_source=devhunt` } })), "none");
+  });
+
+  it("matches the page by this request's host, so preview deployments and proxies work", () => {
+    const preview = "unvibe-site-git-x-shadowesu.vercel.app";
+    assert.equal(downloadSource(req({ headers: { host: preview, referer: `https://${preview}/beta?utm_source=g2` } })), "g2");
+    assert.equal(downloadSource(req({ headers: { host: "127.0.0.1:3103", "x-forwarded-host": "unvibe.site", referer: `${SITE}/?utm_source=g2` } })), "g2");
+    assert.equal(downloadSource(req({ headers: { host: preview, referer: `${SITE}/?utm_source=g2` } })), "none");
   });
 
   it("survives the one-click button's move to the thank-you state, which keeps utm_source and nothing else", () => {

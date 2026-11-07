@@ -35,17 +35,20 @@ export interface DownloadRequest {
   method: string;
   search: URLSearchParams;
   header: (name: string) => string | null;
-  /** This request's own origin, e.g. "https://unvibe.site". */
-  origin: string;
 }
 
-/** The referring page's query string when it is one of our own pages, else null. Read in memory only. */
+/**
+ * The referring page's query string when it is one of our own pages (same host as this request, e.g.
+ * unvibe.site or a preview deployment), else null. Read in memory only. The Host header is used rather than
+ * the request URL, which `next start` reports as localhost.
+ */
 function ownReferrerSearch(req: DownloadRequest): URLSearchParams | null {
   const referer = req.header("referer");
-  if (!referer) return null;
+  const host = (req.header("x-forwarded-host") ?? req.header("host"))?.split(",")[0].trim().toLowerCase();
+  if (!referer || !host) return null;
   try {
     const from = new URL(referer);
-    return from.origin === req.origin ? from.searchParams : null;
+    return from.host.toLowerCase() === host ? from.searchParams : null;
   } catch {
     return null;
   }

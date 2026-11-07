@@ -13,12 +13,10 @@ async function serve(request: Request, params: { file: string }): Promise<Respon
   const file = downloadFile(params.file);
   if (!file) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
 
-  const url = new URL(request.url);
   const req: DownloadRequest = {
     method: request.method,
-    search: url.searchParams,
+    search: new URL(request.url).searchParams,
     header: (name) => request.headers.get(name),
-    origin: url.origin,
   };
   if (isCountedDownload(req)) await recordDownload(DOWNLOAD_FILES[file].asset, downloadSource(req));
 
