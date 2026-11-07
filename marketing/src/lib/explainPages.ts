@@ -993,6 +993,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
+    related: ["cpp", "make", "assembly"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -1786,6 +1787,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
   {
     id: "cron",
     fileName: "crontab",
+    related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
       "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup, weekday reports and a monthly job.",
@@ -2003,6 +2005,7 @@ end`,
   {
     id: "yaml",
     fileName: "ci.yml",
+    related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
       "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
