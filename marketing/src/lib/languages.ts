@@ -619,7 +619,7 @@ export const languages: Language[] = [
   },
   {
     id: "supabase-rls",
-    name: "Supabase RLS policies",
+    name: "Supabase RLS",
     categories: ["backend", "data"],
     blurb: "The Postgres row level security rules that decide which rows each Supabase user can read and change.",
     concepts: ["enabling RLS", "using and with check", "auth.uid() and roles", "missing policies"],
