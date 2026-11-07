@@ -6,6 +6,7 @@ import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
+import { InkTitle } from './inkTitle';
 
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
 export interface TodayGoal { explained: boolean; answered: boolean }
@@ -233,7 +234,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, to
       <header className="home-hero">
         <Buddy mood={mood} react={hello === 'not-yet' ? 0 : 1} size={64} label="Vibe" />
         <div className="home-hero__copy">
-          <h1>{dayGreeting()}{first ? `, ${first}.` : '.'}</h1>
+          <h1><InkTitle text={`${dayGreeting()}${first ? `, ${first}.` : '.'}`} /></h1>
           <p className="home-hero__note">{note}</p>
         </div>
       </header>

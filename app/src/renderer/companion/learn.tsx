@@ -9,6 +9,7 @@ import type { ConsentProvider } from '../../core/consent';
 import { linesLabel } from '../../core/linesLabel';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
+import { InkTitle } from './inkTitle';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -462,7 +463,7 @@ export function Learn({
           {!survey ? (
             <div className="lesson-doc__head">
               <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
-              <h1>{open.title}</h1>
+              <h1><InkTitle text={open.title} /></h1>
               <div className="lesson-doc__row">
                 <p className="lesson-doc__meta">
                   <span>{[open.file || open.project || open.meta, open.language, levelLabel].filter(Boolean).join(' · ')}</span>
@@ -649,7 +650,7 @@ export function Learn({
     <div className={`learn-page${intent === 'quiz' ? ' learn-page--quiz' : ''}`}>
       <div className="topline learn-topline">
         <div>
-          <h1>{intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'}</h1>
+          <h1><InkTitle text={intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'} /></h1>
           <p className="lead lead--tight">
             {intent === 'quiz'
               ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'

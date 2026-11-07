@@ -7,6 +7,7 @@ import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
+import { InkTitle } from './inkTitle';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -97,7 +98,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       <div className="briefings__head">
         <div>
           <div className="kicker">Change Brief</div>
-          <h1>Briefings</h1>
+          <h1><InkTitle text="Briefings" /></h1>
           <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
         {needsRepo && !busy ? null : (

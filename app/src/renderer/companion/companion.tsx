@@ -26,6 +26,7 @@ import { accessibilityRow, type AccessibilityState } from './settingsRows';
 import { FADE_OPACITY } from '../widget/clickAway';
 import { Home, type TodayGoal } from './home';
 import { IC } from './icons';
+import { InkTitle } from './inkTitle';
 import { NAV, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
 import { trackWindowAway } from '../shared/windowAway';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
@@ -819,7 +820,7 @@ function Progress({ profile }: { profile: Profile | null }) {
     : null;
   return (
     <>
-      <div className="topline"><h1>Momentum</h1></div>
+      <div className="topline"><h1><InkTitle text="Momentum" /></h1></div>
       <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
       <div className="metrics">
         <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${linesLabel(profile?.linesReviewed ?? 0)}` : 'Not enough data yet.'}</span></article>
@@ -980,7 +981,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
         <div className="page-head">
           <div>
             <div className="eyebrow">Plan & usage</div>
-            <h1>Start free. Grow when your projects do.</h1>
+            <h1><InkTitle text="Start free. Grow when your projects do." /></h1>
             <p>Your AI model access is included. You never need to paste in your own provider API key.</p>
           </div>
         </div>

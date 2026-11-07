@@ -7,6 +7,7 @@ import { deviceName, isWindows, voiceHowTo } from '../shared/platform';
 import { chatAskRequest } from './chatRequest';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
+import { InkTitle } from './inkTitle';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -323,7 +324,7 @@ export function Chat({
     <div className={`chat-page${empty ? ' chat-page--empty' : ''}`}>
       {!empty ? (
         <header className="chat-top">
-          <h1 className="chat-title">Ask Vibe</h1>
+          <h1 className="chat-title"><InkTitle text="Ask Vibe" /></h1>
           <button type="button" className="ghost-link" onClick={startNew}>
             New question
           </button>
