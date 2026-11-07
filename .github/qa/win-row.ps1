@@ -109,15 +109,22 @@ if ($Kind -eq 'ps1') {
   Note "app running after a silent install, before anything opens it: $([bool]$already)"
 } else {
   # The site's ".exe" link, saved as a browser does (Internet zone), opened like a double-click.
-  $asset = if ($Kind -eq 'setupexe') { "Unvibe-$env:V-win-x64-setup.exe" } else { "Unvibe-$env:V-win-x64-portable.exe" }
+  # DL_FILE (qa-first-open.yml): the file the site's own download button saved in a real browser on this runner.
+  $asset = if ($env:DL_FILE) { Split-Path $env:DL_FILE -Leaf } elseif ($Kind -eq 'setupexe') { "Unvibe-$env:V-win-x64-setup.exe" } else { "Unvibe-$env:V-win-x64-portable.exe" }
   $exe = "$env:USERPROFILE\Downloads\$asset"
   $u = "https://github.com/ShadowEsu/Unvibe/releases/download/v$env:V/$asset"
   # An RC that isn't released yet: the same file from the build-only run's artifact (RC_DIR), then saved as above.
-  if ($env:RC_DIR) { Copy-Item (Get-ChildItem $env:RC_DIR -Recurse -Filter $asset | Select-Object -First 1).FullName $exe }
+  if ($env:DL_FILE) { if ((Resolve-Path $env:DL_FILE).Path -ne $exe) { Copy-Item $env:DL_FILE $exe -Force } }
+  elseif ($env:RC_DIR) { Copy-Item (Get-ChildItem $env:RC_DIR -Recurse -Filter $asset | Select-Object -First 1).FullName $exe }
   else { Invoke-WebRequest -Uri $u -OutFile $exe -UseBasicParsing }
-  Set-Content -Path $exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
+  $motw = Get-Content $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue
+  if ($env:DL_FILE -and $motw) { $how = "the browser's own Mark of the Web: $($motw -join ' ')" }
+  else {
+    Set-Content -Path $exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`nReferrerUrl=https://unvibe.site/`r`nHostUrl=$u"
+    $how = if ($env:DL_FILE) { 'Mark of the Web ZoneId=3 ADDED (the browser saved none)' } else { 'Mark of the Web ZoneId=3' }
+  }
   $sig = Get-AuthenticodeSignature $exe
-  Note "downloaded $asset ($((Get-Item $exe).Length) bytes), Mark of the Web ZoneId=3; Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
+  Note "downloaded $asset ($((Get-Item $exe).Length) bytes), $how; Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
   Start-Process explorer.exe -ArgumentList "`"$exe`""
   Start-Sleep 12
   Shot 'smartscreen-1-double-click'
@@ -212,6 +219,9 @@ if (-not (Flag 'first-contact')) { Note 'FAIL  QA flag right after first contact
 Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep 3
 $env:UNVIBE_EXE = $exe; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+# NO_EXPLAIN=1 (qa-first-open.yml while BOSS's AI pause is on): stop at first launch, no hosted-AI call.
+if ($env:NO_EXPLAIN -eq '1') { Note 'NOTE  first explanation skipped (NO_EXPLAIN=1: no hosted-AI call in this run)' }
+else {
 # RC builds: the lead's notice rows (N-0..N-3) after the first explanation.
 if ($env:RC_DIR) { $env:NOTICES = '1' }
 $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru
@@ -219,6 +229,7 @@ $null = $j.Handle
 if (-not $j.WaitForExit(600000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation (and the RC notice rows): no result in 10 min' }
 Note "first explanation (exit $($j.ExitCode)):"
 if (Test-Path "$Out\explain-report.txt") { Get-Content "$Out\explain-report.txt" | ForEach-Object { Note "  $_" } }
+}
 Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
 if ($isSetup) {
   # Uninstall the way Settings › Apps does it, silently: the registered uninstaller with /S.

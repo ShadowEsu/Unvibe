@@ -71,10 +71,20 @@ curl)
 dmg)
   asset="Unvibe-$V-mac-$([ "$arch" = arm64 ] && echo arm64 || echo x64).dmg"
   dmg="$HOME/Downloads/$asset"
-  curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$asset"
-  # What Safari writes on a download; curl doesn't, so it is added as a browser would.
-  xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$dmg"
-  r "downloaded $asset ($(stat -f %z "$dmg") bytes) with a browser's quarantine mark"
+  if [ -n "${DL_FILE:-}" ]; then
+    # qa-first-open.yml: the file the site's own download button saved in a real browser on this runner.
+    asset=$(basename "$DL_FILE"); dmg="$HOME/Downloads/$asset"
+    [ "$DL_FILE" -ef "$dmg" ] || ditto "$DL_FILE" "$dmg"
+    q=$(xattr -p com.apple.quarantine "$dmg" 2>/dev/null)
+    if [ -n "$q" ]; then how="the browser's own quarantine mark ($q)"
+    else xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Google Chrome;$(uuidgen)" "$dmg"; how="a quarantine mark ADDED (the browser saved none)"; fi
+  else
+    curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$asset"
+    # What Safari writes on a download; curl doesn't, so it is added as a browser would.
+    xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$dmg"
+    how="a browser's quarantine mark"
+  fi
+  r "downloaded $asset ($(stat -f %z "$dmg") bytes) with $how"
   open "$dmg"
   vol=""; for i in $(seq 1 60); do vol=$(ls -d /Volumes/*/Unvibe.app 2>/dev/null | head -1); [ -n "$vol" ] && break; sleep 1; done
   [ -n "$vol" ] || { r "FAIL  install: the DMG did not mount"; prompts dmg-mount; }
@@ -147,9 +157,14 @@ flag first-contact || r "FAIL  QA flag right after first contact"
 
 # First explanation, on the same profile, through the app's debug port.
 osascript -e 'tell application id "com.unvibe.app" to quit' > /dev/null 2>&1; sleep 3; pkill -x Unvibe 2>/dev/null; sleep 2
+if [ "${NO_EXPLAIN:-}" = 1 ]; then
+  # qa-first-open.yml while BOSS's AI pause is on: stop at first launch, no hosted-AI call.
+  r "NOTE  first explanation skipped (NO_EXPLAIN=1: no hosted-AI call in this run)"
+else
 UNVIBE_EXE=/Applications/Unvibe.app/Contents/MacOS/Unvibe USER_DATA="$store_dir" OUT="$out" UNVIBE_OS=mac \
   NODE_PATH="$RUNNER_TEMP/pw/node_modules" t 420 node "$RUNNER_TEMP/pw/first-explain.mjs" > "$out/explain.log" 2>&1
 r "first explanation (exit $?):"; sed 's/^/  /' "$out/explain-report.txt" 2>/dev/null | tee -a "$out/report.txt"
+fi
 pkill -x Unvibe 2>/dev/null
 grep -q '^FAIL\|^  FAIL' "$out/report.txt" && exit 1
 exit 0

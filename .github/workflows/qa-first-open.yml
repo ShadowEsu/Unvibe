@@ -1,0 +1,272 @@
+name: QA first open
+
+# QA only, on the qa/install-matrix branch (unvibe-pm, Fri 6 Nov: the Show HN first-open check, due Sun 8 Nov 14:00 PT).
+# A visitor's whole first open, on clean runners: the site's own "Download" button in the real Google Chrome (#228's
+# OS-aware pick: Mac Apple silicon, Mac Intel from Chrome's architecture hint, Windows), the file it starts (checked
+# against the release's SHA256SUMS), the thank-you page's first-open steps, then that same file opened the way those
+# steps say (macOS: .dmg, Applications, "Unvibe Not Opened", Privacy & Security; Windows: SmartScreen, Run anyway)
+# through to the app's first window.
+# Runs only when the commit message holds "[first-open]". The site:
+#   "[site:<commit>]"  that commit's marketing/ built and served on the runner (a PR before it merges; no secret needed)
+#   "[site:live]"      https://unvibe.site (the default)
+# No hosted-AI call (BOSS, Sat 7 - Mon 9 Nov): the rows stop at first launch (NO_EXPLAIN=1).
+# Each install's id is qa- prefixed before its first launch, flagged before install, after first contact and at the end.
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+
+# Never cancel a run between an install and its QA flag.
+concurrency:
+  group: qa-first-open
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    if: contains(github.event.head_commit.message, '[first-open]')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-15, expect: mac-arm }
+          - { runner: macos-26, expect: mac-arm }
+          - { runner: macos-15-intel, expect: mac-intel }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      INSTALL_ID: qa-firstopen-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
+      NO_EXPLAIN: "1"
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - name: Which site
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          ref=$(printf '%s' "$MSG" | sed -n 's/.*\[site:\([0-9a-f]\{7,40\}\)\].*/\1/p' | head -1)
+          if [ -n "$ref" ]; then echo "SITE_REF=$ref" >> "$GITHUB_ENV"; echo "SITE=http://127.0.0.1:3000" >> "$GITHUB_ENV"; echo "site: commit $ref built here"
+          else echo "SITE=https://unvibe.site" >> "$GITHUB_ENV"; echo "site: https://unvibe.site"; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SITE_REF != ''
+        with:
+          ref: ${{ env.SITE_REF }}
+          path: site
+          sparse-checkout: marketing
+
+      - name: Build and serve the site
+        if: env.SITE_REF != ''
+        working-directory: site/marketing
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          echo "node $(node -v), commit $(git rev-parse HEAD)"
+          npm ci --no-audit --no-fund > "$RUNNER_TEMP/npm-ci.log" 2>&1 || { tail -30 "$RUNNER_TEMP/npm-ci.log"; exit 1; }
+          npx next build > "$RUNNER_TEMP/next-build.log" 2>&1 || { tail -60 "$RUNNER_TEMP/next-build.log"; exit 1; }
+          tail -5 "$RUNNER_TEMP/next-build.log"
+          nohup npx next start -p 3000 -H 127.0.0.1 > "$RUNNER_TEMP/next-start.log" 2>&1 &
+          for i in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)" = 200 ] && break; sleep 2; done
+          echo "site answers: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)"
+
+      - name: Playwright for the site's download button
+        run: |
+          mkdir -p "$RUNNER_TEMP/pws" && cd "$RUNNER_TEMP/pws"
+          npm init -y >/dev/null && npm install playwright@1.64.1 >/dev/null
+          cp "$GITHUB_WORKSPACE/.github/qa/site-download.mjs" .
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: The site's download button, in Google Chrome
+        env:
+          OUT: ${{ runner.temp }}/m
+          EXPECT: ${{ matrix.expect }}
+        run: |
+          cd "$RUNNER_TEMP/pws"
+          node site-download.mjs || echo "SITE_FAIL=1" >> "$GITHUB_ENV"
+          if [ -s "$OUT/dl-file.txt" ]; then
+            echo "DL_FILE=$(cat "$OUT/dl-file.txt")" >> "$GITHUB_ENV"
+            echo "V=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$OUT/pick.json")" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open that file as the thank-you page says, first launch, QA flag
+        if: env.DL_FILE != ''
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/mac-row.sh dmg "$RUNNER_TEMP/m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          echo "store install id: ${id:-none} (seeded $INSTALL_ID)"
+          for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | sort -u); do
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$x\"}") || answer=$'\ncurl failed'
+            echo "QA install flag $x: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*')"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: first-open-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}/m
+            ${{ runner.temp }}/next-*.log
+          retention-days: 14
+
+      - name: Site check result
+        if: env.SITE_FAIL == '1' || env.DL_FILE == ''
+        run: |
+          echo "::error::the site download check failed (see site-report.txt)"; exit 1
+
+  windows:
+    if: contains(github.event.head_commit.message, '[first-open]')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2025, windows-2022]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      INSTALL_ID: qa-firstopen-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
+      NO_EXPLAIN: "1"
+    steps:
+      - name: Require the QA flag token
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { Write-Error 'UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed.'; exit 1 }
+          'QA flag token present'
+
+      - name: Which site
+        shell: bash
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          ref=$(printf '%s' "$MSG" | sed -n 's/.*\[site:\([0-9a-f]\{7,40\}\)\].*/\1/p' | head -1)
+          if [ -n "$ref" ]; then echo "SITE_REF=$ref" >> "$GITHUB_ENV"; echo "SITE=http://127.0.0.1:3000" >> "$GITHUB_ENV"; echo "site: commit $ref built here"
+          else echo "SITE=https://unvibe.site" >> "$GITHUB_ENV"; echo "site: https://unvibe.site"; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SITE_REF != ''
+        with:
+          ref: ${{ env.SITE_REF }}
+          path: site
+          sparse-checkout: marketing
+
+      - name: Build the site
+        if: env.SITE_REF != ''
+        shell: bash
+        working-directory: site/marketing
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          echo "node $(node -v), commit $(git rev-parse HEAD)"
+          npm ci --no-audit --no-fund > "$RUNNER_TEMP/npm-ci.log" 2>&1 || { tail -30 "$RUNNER_TEMP/npm-ci.log"; exit 1; }
+          npx next build > "$RUNNER_TEMP/next-build.log" 2>&1 || { tail -60 "$RUNNER_TEMP/next-build.log"; exit 1; }
+          tail -5 "$RUNNER_TEMP/next-build.log"
+
+      - name: Serve the site
+        if: env.SITE_REF != ''
+        shell: pwsh
+        run: |
+          $env:NEXT_TELEMETRY_DISABLED = '1'
+          Start-Process -FilePath node -ArgumentList 'node_modules\next\dist\bin\next', 'start', '-p', '3000', '-H', '127.0.0.1' `
+            -WorkingDirectory "$env:GITHUB_WORKSPACE\site\marketing" -WindowStyle Hidden `
+            -RedirectStandardOutput "$env:RUNNER_TEMP\next-start.log" -RedirectStandardError "$env:RUNNER_TEMP\next-start.err"
+          for ($i = 0; $i -lt 60; $i++) {
+            try { if ((Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200) { break } } catch {}
+            Start-Sleep 2
+          }
+          "site answers: $((Invoke-WebRequest -Uri 'http://127.0.0.1:3000/' -UseBasicParsing).StatusCode)"
+
+      - name: Playwright for the site's download button
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pws" && cd "$RUNNER_TEMP/pws"
+          npm init -y >/dev/null && npm install playwright@1.64.1 >/dev/null
+          cp "$GITHUB_WORKSPACE/.github/qa/site-download.mjs" .
+
+      - name: The site's download button, in Google Chrome
+        shell: bash
+        env:
+          EXPECT: windows
+        run: |
+          export OUT="$RUNNER_TEMP\\m"; cd "$RUNNER_TEMP/pws"
+          node site-download.mjs || echo "SITE_FAIL=1" >> "$GITHUB_ENV"
+          o="$(cygpath "$RUNNER_TEMP")/m"
+          if [ -s "$o/dl-file.txt" ]; then
+            echo "DL_FILE=$(cat "$o/dl-file.txt")" >> "$GITHUB_ENV"
+            echo "V=$(node -e 'console.log(require(process.argv[1]).version)' "$o/pick.json")" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open that file as the thank-you page says, first launch, QA flag
+        if: env.DL_FILE != ''
+        shell: powershell
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: .github\qa\win-row.ps1 -Kind exe -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          $ids = @($env:INSTALL_ID)
+          Get-ChildItem $env:APPDATA, $env:LOCALAPPDATA -Recurse -Filter 'unvibe-store.json' -ErrorAction SilentlyContinue | ForEach-Object {
+            $i = (Get-Content $_.FullName -Raw | ConvertFrom-Json -AsHashtable)['installId']; if ($i) { $ids += $i }; "store $($_.FullName): $i"
+          }
+          foreach ($x in ($ids | Sort-Object -Unique)) {
+            try {
+              $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+                -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
+                -Body (@{ installId = $x } | ConvertTo-Json -Compress)
+              "QA install flag ${x}: $($r.StatusCode) matched=$(($r.Content | ConvertFrom-Json).matched)"
+            } catch { "QA install flag ${x}: $($_.Exception.Message)" }
+          }
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: first-open-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}\m
+            ${{ runner.temp }}\next-*.log
+            ${{ runner.temp }}\next-start.err
+          retention-days: 14
+
+      - name: Site check result
+        if: env.SITE_FAIL == '1' || env.DL_FILE == ''
+        shell: bash
+        run: |
+          echo "::error::the site download check failed (see site-report.txt)"; exit 1
