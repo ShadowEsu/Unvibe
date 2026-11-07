@@ -2904,7 +2904,7 @@ KeyError: 'qty'`,
       },
       {
         concept: "nested packages",
-        text: "`debug` 2.6.9 needs `ms` `2.0.0` exactly, but the project asked for `^2.1.1`. Both can't sit in `node_modules/ms`, so npm gave debug its own copy at `node_modules/debug/node_modules/ms`. After `npm ci`, the project's own `require(\"ms\")` loaded 2.1.1 and debug's loaded 2.0.0.",
+        text: "`debug` 2.6.9 needs `ms` `2.0.0` exactly, but the project asked for `^2.1.1`. Both can't sit in `node_modules/ms`, so npm gave debug its own copy at `node_modules/debug/node_modules/ms`. After `npm ci`, `ms` looked up from the project resolved to 2.1.1, and from debug's folder to 2.0.0.",
       },
       {
         concept: "npm ci and npm install",
@@ -2913,7 +2913,7 @@ KeyError: 'qty'`,
     ],
     notes: [
       "Run with npm 11.10.1 on Node 25.7.0, against the public npm registry. `lockfileVersion` 3, at the top of the full file, is the format npm 9 and later write.",
-      "The sample leaves out the first 14 lines, which hold the project's own name, version and the ranges copied from package.json, and the 2 closing lines.",
+      "The sample leaves out the first 14 lines, which hold the project's own name and version, `lockfileVersion` and the ranges copied from package.json, and the 2 closing lines.",
     ],
     watchOut:
       "Deleting the lock to make an error go away quietly changes your versions. With the lock gone, `npm install` picked `ms` 2.1.3, the newest version in the `^2.1.1` range, not the 2.1.1 the project had been running. Commit package-lock.json, and use `npm ci` on servers and in CI so they install what you tested.",
@@ -2952,19 +2952,19 @@ model Post {
     shows: [
       {
         concept: "models and fields",
-        text: "Each `model` becomes a table and each field a column, written as name, type, then attributes. `prisma migrate diff` turned `model User` into `CREATE TABLE \"User\"`. `name String?` became `\"name\" TEXT` and a new user with no name stored `NULL`; without the `?` it became `\"name\" TEXT NOT NULL`.",
+        text: "Each `model` becomes a table and each field a column, written as name, type, then attributes, except relation fields like `author` and `posts`, which link tables instead of storing a value. `prisma migrate diff` turned `model User` into `CREATE TABLE \"User\"`. `name String?` became `\"name\" TEXT` and a new user with no name stored `NULL`; without the `?` it became `\"name\" TEXT NOT NULL`.",
       },
       {
         concept: "attributes",
-        text: "`@id` marks the primary key and `@default(autoincrement())` gives each new row the next number: the first user got id 1. `@unique` on `email` became a unique index: adding a second `ana@example.com` failed with `UNIQUE constraint failed: User.email`. `@default(now())` filled `createdAt` and `@default(false)` left a new post unpublished.",
+        text: "`@id` marks the primary key and `@default(autoincrement())` gives each new row the next number: the first user got id 1. `@unique` on `email` became a unique index: adding a second `ana@example.com` failed with `UNIQUE constraint failed: User.email`. `@default(now())` became `DEFAULT CURRENT_TIMESTAMP`, which filled `createdAt`, and `@default(false)` left a new post unpublished.",
       },
       {
         concept: "relations",
-        text: "`author User @relation(fields: [authorId], references: [id])` says `authorId` holds a `User`'s `id`, and became a foreign key: a post for user 99, who doesn't exist, failed with `FOREIGN KEY constraint failed`. `posts Post[]` is the other side, a list with no column of its own. Without it, `prisma validate` stopped: the relation field `author` `is missing an opposite relation field on the model User`.",
+        text: "`author User @relation(...)` says `authorId` holds a `User`'s `id`, and became a foreign key: a post for user 99, who doesn't exist, failed with `FOREIGN KEY constraint failed`. `posts Post[]` is the other side, a list with no column of its own. Without it, `prisma validate` stopped: the relation field `author` `is missing an opposite relation field on the model User`.",
       },
       {
         concept: "the generator and datasource",
-        text: "`generator client` tells `prisma generate` to write the code your app uses to query the database: it wrote client.ts and the files next to it into src/generated/prisma, the `output` folder. `datasource db` names the database type, here SQLite. In Prisma 7 the connection address lives in prisma.config.ts: with `url = env(\"DATABASE_URL\")` added here, `prisma validate` stopped, saying the datasource property `url` is no longer supported in schema files.",
+        text: "`generator client` tells `prisma generate` to write the code your app uses to query the database: it wrote client.ts and the files next to it into src/generated/prisma, the `output` folder. `datasource db` names the database type, here SQLite. In Prisma 7 the address the command line tool uses lives in prisma.config.ts, and your app passes its own connection to `new PrismaClient()`: with `url = env(\"DATABASE_URL\")` added here, `prisma validate` stopped, saying the datasource property `url` is no longer supported in schema files.",
       },
     ],
     notes: [
@@ -2972,15 +2972,15 @@ model Post {
       "`onDelete: Cascade` made the foreign key `ON DELETE CASCADE`: deleting a user with 2 posts left 0 posts. With it taken out, Prisma wrote `ON DELETE RESTRICT` instead, and deleting a user who still had a post failed and left the user in place.",
     ],
     watchOut:
-      "Changing this file doesn't change your database. The tables only change when a migration runs, for example `prisma migrate dev`, and your app's query code only changes when `prisma generate` runs. Before applying a migration, read the SQL it will run: making `name` required became `\"name\" TEXT NOT NULL`, which a table that already has users without a name can't hold.",
+      "Changing this file doesn't change your database. The tables only change when you run a command such as `prisma migrate dev` or `prisma db push`, and your app's query code only changes when `prisma generate` runs. Before applying a migration, read the SQL it will run: making `name` required became `\"name\" TEXT NOT NULL`, which a table that already has users without a name can't hold.",
   },
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
-    lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, colour, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
+    lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
     description:
-      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with a dozen utility classes per line, the way AI assistants write them.",
-    sampleSummary: "A React component of the kind an AI assistant writes with Tailwind CSS: a pricing card whose layout, colours and button states all come from class names.",
+      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with up to 12 utility classes on one element, the way AI assistants write them.",
+    sampleSummary: "A React component of the kind an AI assistant writes with Tailwind CSS: a pricing card whose layout, colors and button states all come from class names.",
     sample: `export function PlanCard({ plan }) {
   return (
     <div className="mx-auto max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:flex md:max-w-2xl md:gap-6 dark:bg-gray-900">
@@ -2998,7 +2998,7 @@ model Post {
     shows: [
       {
         concept: "utility classes",
-        text: "Each class sets one or two CSS properties. Sizes count in steps of `--spacing`, 0.25rem: `p-6` became `padding: calc(var(--spacing) * 6)`, 1.5rem, and `size-24` set both width and height to 6rem. `max-w-sm` is 24rem, `rounded-2xl` 1rem, and `line-clamp-2` cuts the blurb off after 2 lines.",
+        text: "Most classes set 1 or 2 CSS properties; `line-clamp-2` sets 4. Sizes count in steps of `--spacing`, 0.25rem: `p-6` became `padding: calc(var(--spacing) * 6)`, 1.5rem, and `size-24` set both width and height to 6rem. `max-w-sm` is 24rem, `rounded-2xl` 1rem, and `line-clamp-2` cuts the blurb off after 2 lines.",
       },
       {
         concept: "breakpoints",
@@ -3006,7 +3006,7 @@ model Post {
       },
       {
         concept: "states and dark mode",
-        text: "`hover:bg-indigo-500` only applies under `@media (hover: hover)`, so on a touch screen that can't hover the button keeps its normal colour. `disabled:opacity-50` matches `:disabled`. `dark:` followed the system setting, `prefers-color-scheme: dark`. With `@custom-variant dark (&:where(.dark, .dark *))` in the CSS, it followed a `dark` class instead.",
+        text: "`hover:bg-indigo-500` only applies under `@media (hover: hover)`, so on a touch screen that can't hover the button keeps its normal color. `disabled:opacity-50` matches `:disabled`. `dark:` followed the system setting, `prefers-color-scheme: dark`. With `@custom-variant dark (&:where(.dark, .dark *))` in the CSS, it followed a `dark` class instead.",
       },
       {
         concept: "how classes are found",
