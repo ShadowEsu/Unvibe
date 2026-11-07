@@ -231,8 +231,8 @@ p { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .vribbon__track { animation: none; }
-  html .svibe, .svibe__body, .fb-tab { transition: none; }
-  .fb-tab:hover, .fb-tab:active { transform: none; }
+  html .svibe, .svibe__body, .fb-tab.lg-button { transition: none; }
+  .fb-tab.lg-button:hover, .fb-tab.lg-button:active { transform: none; }
 }
 
 .paper-beta__download-btn { white-space: nowrap; min-width: min(26rem, 100%); }
@@ -297,17 +297,19 @@ p { font-size: 17px; }
 .invite__copy, .invite__result { min-width: 0; max-width: 100%; }
 .invite :is(input, button):focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 
-/* ── Feedback: the tab and close button are Glisse Buttons, the dialog a solid sheet; their fills are in glass.css ── */
-.fb-tab {
+/* ── Feedback: the tab and close button are Glisse Buttons, the dialog a solid sheet; their fills are in glass.css ──
+   Two classes (as glass.css does): Glisse's own `.lg-button { position: relative }` ties a lone `.fb-tab` on
+   specificity, so the fixed position would hang on which CSS chunk loads last. */
+.fb-tab.lg-button {
   position: fixed; left: 20px; bottom: 20px; z-index: 60; min-height: 40px; padding: 0.45rem 1rem; border: 1px solid var(--u-line);
   border-radius: 999px; color: var(--u-text); font: 700 var(--u-step--1) var(--font-sans);
   cursor: pointer; transition: transform var(--u-dur-hover) var(--u-ease);
 }
-.fb-tab:hover { transform: translateY(-1px); }
-.fb-tab:active { transform: translateY(1px); transition-duration: var(--u-dur-press); }
+.fb-tab.lg-button:hover { transform: translateY(-1px); }
+.fb-tab.lg-button:active { transform: translateY(1px); transition-duration: var(--u-dur-press); }
 @media (max-width: 767px) {
   /* Keep feedback available after the footer, not over the email CTA or video. */
-  .fb-tab { position: relative; left: auto; bottom: auto; display: block; margin: 0 auto 1.5rem; min-height: 44px; }
+  .fb-tab.lg-button { position: relative; left: auto; bottom: auto; display: block; margin: 0 auto 1.5rem; min-height: 44px; }
 }
 .fb-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 1rem; background: rgb(20 20 20 / 0.45); animation: vFade 200ms ease both; }
 .fb-dialog { position: relative; width: min(500px, 100%); max-height: calc(100vh - 2rem); overflow: auto; padding: 1.8rem; border: 1.5px solid var(--v-ink); border-radius: 26px; color: var(--v-ink); animation: vPop 360ms var(--v-press) both; }
