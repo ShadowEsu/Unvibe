@@ -30,6 +30,24 @@ import '../shared/tokens.css';
 /**
  * `aiConsent`: the first-send agreement (sending code to the provider, Terms, 18+);
  * `confirm`: a link started this review, Explain sends it; `consent`: a secret was found.
+ *
+ * Where each phase goes in overlay B (Design b-refined SPEC + b-states mocks). Every phase keeps the 50 pt
+ * header and the four bottom tabs; the body is the Explain tab unless noted, with main's strings:
+ * - boot: "Capturing selection…" status line.
+ * - ready: depth + code row, then "Reading your code in context…" with its three progress steps.
+ * - aiConsent: the consent form (b-consent), Continue primary, Not now quiet.
+ * - confirm: "Explain this code?" sheet with the clipboard preview; Explain primary, Cancel quiet.
+ * - empty: the picker (b-empty): "Ready when you are." with keycaps, Explain my clipboard, Choose a file…,
+ *   Review project changes (Pro tags) and the paste box. A Mac without Accessibility keeps the paste-first picker.
+ * - consent: "Possible secret detected" (b-secret): amber badge, findings card, Cancel primary, Send anyway quiet.
+ * - blocked: "Blocked: credential detected" (b-blocked): amber lock badge, findings card, no action.
+ * - streaming: depth + code row; Vibe's three thinking steps until words arrive (b-thinking), then the answer
+ *   (b-streaming). The footer holds only "Stop generating".
+ * - done: the answer with code-word chips, Understand · Save · Explain differently, the Ask field.
+ * - error: "Couldn't explain that" (b-error): amber badge, the message, Retry (or the limit / Pro offers).
+ * - limit pause: the survey offer replaces the body; the tabs stay.
+ * Test me (quiz loading/answering/graded/failed) is the Test me tab (b-graded); follow-ups, Why and Teach it back
+ * are the Ask tab; pinned and recent lessons are the Saved tab.
  */
 type Phase = 'boot' | 'ready' | 'aiConsent' | 'confirm' | 'empty' | 'consent' | 'blocked' | 'streaming' | 'done' | 'error';
 
