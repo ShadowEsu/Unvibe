@@ -3553,7 +3553,7 @@ WantedBy=default.target`,
       "`After=network.target` does nothing in a user service. `After=` only sets the order and doesn't start anything by itself (systemd.unit), and network.target belongs to the system service manager: it isn't in the user manager's list of units (systemd.special), and `systemctl --user show network.target` printed `LoadState=not-found`. default.target is the main target of the user service manager (systemd.special).",
     ],
     watchOut:
-      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 5 times, then printed `Start request repeated too quickly` and left it failed, with nothing on port 8040. This file doesn't set a limit, so systemd's defaults applied: 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so you can start it right away.",
+      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 4 times, refused the 5th with `Start request repeated too quickly` and left it failed, with nothing on port 8040. This file doesn't set a limit, so systemd's defaults applied: 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so you can start it right away.",
   },
   {
     id: "terraform",
