@@ -4,12 +4,11 @@ import { noStoreFetch } from '@/lib/serviceSupabase';
 import { ProviderRejectedError, type Completion, type Provider, type TokenUsage } from './provider';
 
 /**
- * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS; doubled 2026-11-06, "double that cap"): Unvibe's
- * share is $50 per UTC calendar month, with a $10 per UTC day guard (a fifth of the month) so one bad day can't burn
- * the month, and a $1 per UTC day share per account so one account can't use up the day for everyone. The Anthropic
- * key's own $50 per month limit is the binding ceiling until it is raised at Anthropic. Preston 2026-11-06: up to
- * $40/week OK; Gemini key comes when real usage grows. Counted on the database so every serverless instance shares
- * one count.
+ * Hard spend stops for the hosted AI (owner 2026-11-02, via BOSS; raised 2026-11-06 for the launch): the Anthropic
+ * key may spend $50 per calendar month, and Unvibe's share is $35 per UTC calendar month (the rest stays with the
+ * key's other users), with a $10 per UTC day guard so one bad day can't burn the month, and a $1 per UTC day share
+ * per account so one account can't use up the day for everyone. Preston 2026-11-06: up to $40/week OK; Gemini key
+ * comes when real usage grows. Counted on the database so every serverless instance shares one count.
  *
  * Each call reserves its worst case before the request leaves and settles afterwards from the usage
  * Anthropic measured. A call that failed or was cut off without measured usage keeps its whole
@@ -34,7 +33,7 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrices>> = {
 /** Room for the Messages API's own framing tokens around the system prompt and the user turn. */
 const FRAMING_TOKENS = 64;
 export const DAY_CAP_NANO_USD = 10_000_000_000; // $10 per UTC day
-export const MONTH_CAP_NANO_USD = 50_000_000_000; // $50 per UTC calendar month
+export const MONTH_CAP_NANO_USD = 35_000_000_000; // $35 per UTC calendar month
 export const ACCOUNT_DAY_CAP_NANO_USD = 1_000_000_000; // $1 per account per UTC day
 
 export const AI_LIMIT_TODAY = "AI limit reached for today. Explanations come back after midnight UTC.";

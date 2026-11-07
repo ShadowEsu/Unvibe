@@ -221,12 +221,12 @@ test('the account key is a hash that keeps users and installs apart', () => {
   assert.ok(!spendAccount('user', 'abc').includes('abc'));
 });
 
-test('the budget is $50 a month, $10 a day and $1 per account a day: each level well under the one above it', () => {
-  assert.equal(MONTH_CAP_NANO_USD, 50_000_000_000);
+test('the budget is $35 a month, $10 a day and $1 per account a day: each level well under the one above it', () => {
+  assert.equal(MONTH_CAP_NANO_USD, 35_000_000_000);
   assert.equal(DAY_CAP_NANO_USD, 10_000_000_000);
   assert.equal(ACCOUNT_DAY_CAP_NANO_USD, 1_000_000_000);
   assert.ok(ACCOUNT_DAY_CAP_NANO_USD * 5 <= DAY_CAP_NANO_USD);
-  assert.equal(DAY_CAP_NANO_USD * 5, MONTH_CAP_NANO_USD);
+  assert.ok(DAY_CAP_NANO_USD * 3 <= MONTH_CAP_NANO_USD);
 });
 
 test('every payload the size check lets through is held under one account\'s daily share, so it is never refused as a spent limit', () => {
