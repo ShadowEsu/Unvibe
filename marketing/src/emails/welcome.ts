@@ -1,16 +1,16 @@
 /**
  * The one welcome email everyone gets after joining the waitlist or downloading Unvibe.
- * Table layout and inline styles so it renders in Gmail, Outlook and Apple Mail.
+ * Copy: unvibe-support's onboarding email 1 (Security S-2 0002). Its one call to action is /beta,
+ * which picks the build for the reader's OS. Table layout and inline styles so it renders in Gmail,
+ * Outlook and Apple Mail.
  */
 
-import { GIFT_LINK_NOTE, GIFT_OFFER } from "../lib/giftOffer";
-import { FEEDBACK_BONUS_MIN_WORDS, FEEDBACK_MAX_WORDS } from "../lib/feedback";
+import { escapeEmailHtml as escape } from "./escapeHtml";
+import { BETA_INSTALL_COMMAND, BETA_WINDOWS_INSTALL_COMMAND } from "../lib/betaOffer";
 
 export interface WelcomeInput {
   email: string;
-  referralCode: string;
-  feedbackUrl: string;
-  /** Present when they came from a download, so the email can hand the installer back. */
+  /** Where the button goes; /beta on the site when not given (the download route passes /beta too). */
   downloadUrl?: string;
   /** Signed unsubscribe link for the footer, see lib/unsubscribe. */
   unsubscribeUrl: string;
@@ -19,99 +19,81 @@ export interface WelcomeInput {
   siteUrl?: string;
 }
 
-export const WELCOME_SUBJECT = "You're in! Welcome to Unvibe";
+export const WELCOME_SUBJECT = "Your Unvibe download, and the fastest way to install it";
+export const WELCOME_PREVIEW =
+  "Paste one line into Terminal or PowerShell and Unvibe opens, without the extra security prompts that come with the download.";
 
 const INK = "#141414";
 const PAPER = "#f6f1e7";
-
-function escape(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
-}
+const LIME = "#d9f45c";
 
 function links(input: WelcomeInput) {
   const site = (input.siteUrl ?? "https://unvibe.site").replace(/\/$/, "");
-  const code = input.referralCode.toLowerCase();
   return {
     site,
-    banner: `${site}/email/welcome-banner.png`,
-    referral: `${site}/?ref=${encodeURIComponent(code)}`,
-    download: input.downloadUrl || `${site}/#install`,
+    get: input.downloadUrl || `${site}/beta`,
+    installHelp: `${site}/install-help`,
   };
-}
-
-/**
- * Buttons are images: Gmail's dark mode on phones repaints coloured backgrounds and text,
- * but never images, so the lime and lilac buttons stay exactly on brand. Alt text keeps them
- * usable with images off. Files are @2x; sizes here are the 1x display size.
- */
-export const EMAIL_BUTTONS = {
-  get: { file: "btn-get.png", width: 185, height: 55, label: "Get Unvibe free" },
-  download: { file: "btn-download.png", width: 202, height: 55, label: "Download Unvibe" },
-  months: { file: "btn-months.png", width: 230, height: 55, label: "See your Pro months" },
-  feedback: { file: "btn-feedback.png", width: 281, height: 55, label: "Give feedback, get a month" },
-  try: { file: "btn-try.png", width: 183, height: 55, label: "Try Unvibe free" },
-} as const;
-
-export function imageButton(site: string, href: string, kind: keyof typeof EMAIL_BUTTONS): string {
-  const b = EMAIL_BUTTONS[kind];
-  return `<a href="${escape(href)}" style="display:inline-block;text-decoration:none"><img src="${site}/email/${b.file}" width="${b.width}" height="${b.height}" alt="${b.label}" style="display:block;border:0;width:${b.width}px;height:${b.height}px;font-weight:800;font-size:16px;color:${INK}"></a>`;
-}
-
-function card(inner: string, background = "#ffffff"): string {
-  return `<tr><td style="padding:0 28px 18px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:2px solid ${INK};border-radius:18px;background:${background}"><tr><td style="padding:22px 22px 24px">${inner}</td></tr></table></td></tr>`;
-}
-
-export function welcomeHtml(input: WelcomeInput): string {
-  const l = links(input);
-  const h2 = `margin:0 0 8px;font-size:21px;line-height:1.25;color:${INK}`;
-  const p = `margin:0 0 16px;font-size:16px;line-height:1.55;color:#3b3b3b`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Welcome to Unvibe</title><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head>
-<body style="margin:0;padding:0;background:${PAPER};font-family:Helvetica,Arial,sans-serif;color:${INK}">
-<div style="display:none;max-height:0;overflow:hidden">Thank you for joining. How to get Unvibe and your invite link are inside.</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${PAPER}"><tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:${PAPER}">
-<tr><td style="padding:0 0 20px"><a href="${l.site}"><img src="${l.banner}" width="600" alt="You're in. Welcome to Unvibe." style="display:block;width:100%;height:auto;border:2px solid ${INK};border-radius:20px"></a></td></tr>
-<tr><td style="padding:0 28px 18px">
-<h1 style="margin:0 0 12px;font-size:30px;line-height:1.15;color:${INK}">Congrats, you're in!</h1>
-<p style="${p}">Thank you so much for trying Unvibe. Unvibe explains the code AI writes for you, right beside your editor, so you actually understand what you ship.</p>
-<p style="margin:0">${imageButton(l.site, l.download, input.downloadUrl ? "download" : "get")}</p>
-<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#555">Opening it the first time takes a few extra steps on a Mac or PC. <a href="${l.site}/install-help" style="color:#141414;font-weight:700">Here is exactly what to press</a>.</p>
-</td></tr>
-${card(`<h2 style="${h2}">Your invite link</h2><p style="${p}">Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE} ${GIFT_OFFER}</p><p style="margin:0;padding:12px 14px;border:2px dashed ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:15px;word-break:break-all"><a href="${escape(l.referral)}" style="color:${INK}">${escape(l.referral)}</a></p>`, "#eef9c8")}
-${card(`<h2 style="${h2}">Tell us what you think, get a free month</h2><p style="${p}">Give Unvibe some stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add <b>a free month of Pro</b> to this email.</p>${imageButton(l.site, input.feedbackUrl, "feedback")}`)}
-<tr><td style="padding:6px 28px 28px">
-<p style="${p}">Thank you so much. Seriously. Reply to this email any time, it comes straight to us.</p>
-<p style="margin:0;font-size:16px;line-height:1.55;color:${INK}"><b>The Unvibe team</b></p>
-</td></tr>
-<tr><td style="padding:0 28px 12px;font-size:12px;line-height:1.5;color:#7a7a7a">You get this because ${escape(input.email)} joined Unvibe at <a href="${l.site}" style="color:#7a7a7a">unvibe.site</a>. ${followUp(input)} <a href="${escape(input.unsubscribeUrl)}" style="color:#7a7a7a">Unsubscribe</a> any time.</td></tr>
-</table></td></tr></table></body></html>`;
-}
-
-export function welcomeText(input: WelcomeInput): string {
-  const l = links(input);
-  return `Congrats, you're in!
-
-Thank you so much for trying Unvibe. Unvibe explains the code AI writes for you, right beside your editor.
-
-${input.downloadUrl ? "Download Unvibe" : "Get Unvibe free"}: ${l.download}
-Opening it the first time takes a few extra steps on a Mac or PC. Here is exactly what to press: ${l.site}/install-help
-
-YOUR INVITE LINK
-${l.referral}
-Send this link to a friend so they can get Unvibe. ${GIFT_LINK_NOTE}
-${GIFT_OFFER}
-
-TELL US WHAT YOU THINK, GET A FREE MONTH
-Stars and a few honest words (at least ${FEEDBACK_BONUS_MIN_WORDS}, up to ${FEEDBACK_MAX_WORDS}). Do it from this link and we add a free month of Pro.
-${input.feedbackUrl}
-
-Thank you so much. Reply any time, it comes straight to us.
-The Unvibe team
-
-${followUp(input)} Unsubscribe any time: ${input.unsubscribeUrl}`;
 }
 
 /** The footer promise must match what we really send next; used by both parts. */
 function followUp(input: WelcomeInput): string {
   return input.setupTipFollows ? "This email and one setup tip tomorrow." : "Just this email.";
+}
+
+export function welcomeHtml(input: WelcomeInput): string {
+  const l = links(input);
+  const p = `margin:0 0 16px;font-size:16px;line-height:1.55;color:#3b3b3b`;
+  const link = `color:${INK};font-weight:700;word-break:break-all`;
+  const pre = `<pre style="margin:0 0 18px;padding:12px 14px;border:2px solid ${INK};border-radius:12px;background:#ffffff;font-family:Menlo,Consolas,monospace;font-size:14px;line-height:1.5;color:${INK};white-space:pre-wrap;word-break:break-all">`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Welcome to Unvibe</title><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head>
+<body style="margin:0;padding:0;background:${PAPER};font-family:Helvetica,Arial,sans-serif;color:${INK}">
+<div style="display:none;max-height:0;overflow:hidden">${WELCOME_PREVIEW}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${PAPER}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:${PAPER}">
+<tr><td style="padding:0 28px 12px">
+<p style="${p}">Thanks for getting Unvibe. It explains the code your AI tools write, in a panel right beside your editor.</p>
+<p style="${p}">The fastest install is one line, on the computer you'll use it on.</p>
+<p style="${p}"><b style="color:${INK}">On a Mac:</b> open Terminal (press ⌘ Space, type Terminal), paste this, press Return:</p>
+${pre}<code>${escape(BETA_INSTALL_COMMAND)}</code></pre>
+<p style="${p}"><b style="color:${INK}">On Windows:</b> open PowerShell (Start, type PowerShell), paste this, press Enter:</p>
+${pre}<code>${escape(BETA_WINDOWS_INSTALL_COMMAND)}</code></pre>
+<p style="${p}">Each line checks the download against its published checksum before installing, then opens Unvibe. You can read both scripts first at <a href="${escape(l.installHelp)}" style="${link}">unvibe.site/install-help</a>.</p>
+<table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 20px"><tr><td style="border:2px solid ${INK};border-radius:14px;background:${LIME}"><a href="${escape(l.get)}" style="display:inline-block;padding:14px 28px;font-size:17px;font-weight:800;line-height:1.2;color:${INK};text-decoration:none">Get Unvibe</a></td></tr></table>
+<p style="${p}">Would rather download the file? The button above has it too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here is exactly what to press: <a href="${escape(l.installHelp)}" style="${link}">${escape(l.installHelp)}</a></p>
+<p style="${p}">When it opens, Unvibe explains a short sample for you, then one of your own snippets. No account needed.</p>
+<p style="${p}">Reply to this email if anything gets in the way and we'll help.</p>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.55;color:${INK}"><b>The Unvibe team</b></p>
+</td></tr>
+<tr><td style="padding:0 28px 12px;font-size:12px;line-height:1.5;color:#7a7a7a">You get this because ${escape(input.email)} asked for Unvibe at <a href="${escape(l.site)}" style="color:#7a7a7a">unvibe.site</a>. ${followUp(input)} Unsubscribe any time: <a href="${escape(input.unsubscribeUrl)}" style="color:#7a7a7a;word-break:break-all">${escape(input.unsubscribeUrl)}</a></td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+export function welcomeText(input: WelcomeInput): string {
+  const l = links(input);
+  return `Thanks for getting Unvibe. It explains the code your AI tools write, in a panel right beside your editor.
+
+The fastest install is one line, on the computer you'll use it on.
+
+On a Mac: open Terminal (press ⌘ Space, type Terminal), paste this, press Return:
+
+${BETA_INSTALL_COMMAND}
+
+On Windows: open PowerShell (Start, type PowerShell), paste this, press Enter:
+
+${BETA_WINDOWS_INSTALL_COMMAND}
+
+Each line checks the download against its published checksum before installing, then opens Unvibe. You can read both scripts first at unvibe.site/install-help.
+
+Get Unvibe: ${l.get}
+
+Would rather download the file? The button above has it too. Unvibe isn't verified by Apple or signed for Windows yet, so the first open shows a warning. Here is exactly what to press: ${l.installHelp}
+
+When it opens, Unvibe explains a short sample for you, then one of your own snippets. No account needed.
+
+Reply to this email if anything gets in the way and we'll help.
+
+The Unvibe team
+
+You get this because ${input.email} asked for Unvibe at unvibe.site. ${followUp(input)} Unsubscribe any time: ${input.unsubscribeUrl}`;
 }
