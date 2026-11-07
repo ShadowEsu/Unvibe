@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Unvibe companion in Spectral (Design agents/design/spectral README §1, §4; Preston's rebrand 03,
-   BOSS ledger 565): paper with two glows, glass cards with a white rim, the floating glass sidebar
+   Unvibe companion in Spectral (Design agents/design/spectral README §1, §4; rebrand option 03):
+   paper with two glows, glass cards with a white rim, the floating glass sidebar
    and ask dock, JetBrains Mono on every string, the accent on every action (one filled primary per
    view). The iridescent rim is overlay-only; lime only marks selected code. Loads after v7.css;
    every rule starts at `.layout` (first run: `.onboard`) so it beats v7's own shape by one class.

@@ -12,7 +12,7 @@ export function splitUnsure(text: string): { main: string; unsure: string } {
 }
 
 /**
- * The short default answer (Preston 2026-11-02): one plain paragraph, then the "Not sure:" line in the quiet style.
+ * The short default answer (product call, 2026-11-02): one plain paragraph, then the "Not sure:" line in the quiet style.
  * `words` fades words in as they arrive (renderRich), in whichever part is still arriving.
  */
 export function ShortAnswer({ text, streaming = false, words = false }: { text: string; streaming?: boolean; words?: boolean }) {
