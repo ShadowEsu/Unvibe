@@ -178,9 +178,9 @@ describe("startup programs", () => {
     assert.doesNotMatch(text(home), BANNED_WORDING);
   });
 
-  it("/investors shows the total tied to its sources, the count, the 7 names in #backing and every source with its amount or terms", () => {
-    const page = render(InvestorsPage);
-    assertProgramSection(section(page, /<section class="inv-section" id="backing"/), "/investors#backing");
+  it("/investors shows the total tied to its sources, the count, the 7 names in #backing and every source with its amount or terms", async () => {
+    const page = renderToStaticMarkup(await InvestorsPage()).replace(/\s+/g, " ");
+    assertProgramSection(section(page, /<section class="dg__card" id="backing"/), "/investors#backing");
     const words = text(page);
     assert.ok(words.includes(`$233,300 ${TOTAL_PHRASE}`));
     assert.match(words, /7 startup programs we're in/);

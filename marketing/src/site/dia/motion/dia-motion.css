@@ -175,6 +175,10 @@
 @keyframes dShow { to { opacity: 1; transform: none; filter: none; } }
 .js [data-d-enter]:not([data-in]) { opacity: 0; transform: translateY(22px) scale(0.98); filter: blur(6px); animation: dShow 1ms 4s forwards; }
 [data-d-enter][data-in] { animation: dEnter 850ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) backwards; }
+/* A page hero's first-viewport text after its H1 (lead, actions, stats) can be the LCP at phone widths (the /investors
+   and /faq lead at 390), so it never hides: the H1's transform-only rise with its own --d stagger. No opacity, no blur,
+   no wait for data-in. */
+.js [data-d-hero-rise="h1"] ~ [data-d-enter]:not([data-in]), [data-d-hero-rise="h1"] ~ [data-d-enter][data-in] { --d-rise: 12px; opacity: 1; transform: none; filter: none; animation: dRise 1000ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) var(--d, 0ms) both; }
 
 /* ── Aurora step pills (/download): the kit's rise, 20 px over 600 ms, at 200 / 350 / 500 ms. */
 [data-d-pills] > * { --d-rise: 20px; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; }
@@ -187,6 +191,60 @@
    effects.tsx). */
 [data-d-zoom-slow] { transform-origin: 50% 60%; }
 
+/* ── Ledger 562 §1: header entrance on every full page load (a client-side navigation keeps the header, so it never
+   replays). The pill drops by transform only: opacity under 1 on .dh would make it the backdrop root and flatten the
+   glass's blur, so the fade sits on the glass and on each part of the bar. `backwards` hands the transform back to
+   .dh's own settled scale when it ends. */
+@keyframes dHdrDrop { from { transform: translateY(-14px) scale(0.98); } }
+@keyframes dHdrPop { 0% { opacity: 0; transform: scale(0.6); } 60% { opacity: 1; transform: scale(1.08); } }
+@keyframes dHdrItem { from { opacity: 0; transform: translateY(6px); } }
+.dh { animation: dHdrDrop 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.dh__glass { animation: dFadeIn 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.dh__mark img { animation: dHdrPop 520ms cubic-bezier(0.22, 0.7, 0.2, 1) 60ms backwards; }
+.dh__links li, .dh__toggle { animation: dHdrItem 450ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.dh__links li:nth-child(1) { animation-delay: 120ms; }
+.dh__links li:nth-child(2) { animation-delay: 165ms; }
+.dh__links li:nth-child(3) { animation-delay: 210ms; }
+.dh__links li:nth-child(4) { animation-delay: 255ms; }
+.dh__links li:nth-child(5) { animation-delay: 300ms; }
+.dh__links li:nth-child(n + 6) { animation-delay: 345ms; }
+.dh__toggle { animation-delay: 120ms; }
+
+/* ── 562 §1: the shared page-hero entrance (pricing, changelog, FAQ, investors, beta). data-d-page-bg on the full-bleed
+   image layer: it fades in and settles from 1.06; never the LCP (the page H1 is, and it only rises: data-d-hero-rise). */
+@keyframes dPageSettle { from { transform: scale(1.06); } }
+[data-d-page-bg] { transform-origin: 50% 40%; animation: dFadeIn 700ms cubic-bezier(0.77, 0, 0.175, 1) backwards, dPageSettle 1600ms cubic-bezier(0.19, 1, 0.22, 1) backwards; }
+
+/* ── 562 §2: the header indicator. DiaMotion adds <span data-d-nav-ind> to .dh__bar: a strip across the whole bar at the
+   links' height, shown through clip-path (inset to the hovered/focused/active link, round 10 px), so it glides
+   without touching layout. --l / --r come from each link's rect relative to the bar (measured on load, font load and
+   resize, never while moving); --h is the links' height, centred in the bar. */
+[data-d-nav-ind] {
+  position: absolute; left: 0; right: 0; top: calc(50% - var(--h, 40px) / 2); height: var(--h, 40px); border-radius: 10px; pointer-events: none;
+  background: rgb(90 63 224 / 0.09); clip-path: inset(0 var(--r, 0px) 0 var(--l, 0px) round 10px); opacity: 0;
+  transition: clip-path 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
+}
+[data-d-nav-ind][data-on] { opacity: 1; transition: clip-path 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 140ms ease; }
+[data-d-nav-ind][data-jump] { transition: none; }
+@media (max-width: 820px) { [data-d-nav-ind] { display: none; } }
+/* the phone menu: the panel reveals from the top, its items rise one after another (React toggles [hidden]) */
+@keyframes dMenuIn { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
+.dh__menu:not([hidden]) { animation: dMenuIn 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.dh__menu:not([hidden]) li, .dh__menu:not([hidden]) .dh__menu-cta { animation: dHdrItem 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.dh__menu li:nth-child(1) { animation-delay: 40ms; }
+.dh__menu li:nth-child(2) { animation-delay: 75ms; }
+.dh__menu li:nth-child(3) { animation-delay: 110ms; }
+.dh__menu li:nth-child(4) { animation-delay: 145ms; }
+.dh__menu li:nth-child(n + 5) { animation-delay: 180ms; }
+.dh__menu .dh__menu-cta { animation-delay: 215ms; }
+
+/* ── 562 §3: the "(Test me)" ink-in, reusable. data-d-ink on a section H2: DiaMotion splits it into letters (.d-il) inside
+   unbreakable words (.d-iw) and sets each letter's opacity from .15 to 1 with the section's scroll; the lime .d-hl
+   sweep runs once the heading is half inked (data-in). data-d-ink-zoom: 1.08 → 1 as the section arrives. */
+.d-iw { white-space: nowrap; }
+.js [data-d-ink]:not([data-in]) .d-hl::before { transform: scaleX(0); }
+[data-d-ink-zoom] { transform-origin: 50% 50%; }
+
 @media (prefers-reduced-motion: reduce) {
   [data-d-hero-rise], [data-d-arch]::before, [data-d-pills] > *, [data-d-nav-active]::after, [data-d-hero-bg], .d-steps__stage .d-win { animation: none; }
   [data-d-hero-bg] { transform: scale(1.04); }
@@ -196,7 +254,12 @@
   .d-btn:is(:hover, :focus-visible) { transform: none; }
   .js [data-d-shot]:not([data-seen]), .js [data-d-enter]:not([data-in]) { opacity: 1; transform: none; filter: none; animation: none; }
   [data-d-enter][data-in] { animation: none; }
+  .js [data-d-hero-rise="h1"] ~ [data-d-enter]:not([data-in]), [data-d-hero-rise="h1"] ~ [data-d-enter][data-in] { animation: none; }
   [data-d-zoom-slow] { transform: none !important; }
   .js [data-d-words] .d-wd { opacity: 1; transition: none; }
   .js [data-d-pixel]:not([data-in]), [data-d-pixel][data-in] { opacity: 1; clip-path: none; animation: none; }
+  .dh, .dh__glass, .dh__mark img, .dh__links li, .dh__toggle, [data-d-page-bg], .dh__menu:not([hidden]), .dh__menu:not([hidden]) li, .dh__menu:not([hidden]) .dh__menu-cta { animation: none; }
+  [data-d-nav-ind], [data-d-nav-ind][data-on] { transition: none; }
+  .js [data-d-ink]:not([data-in]) .d-hl::before { transform: none; }
+  [data-d-ink-zoom] { transform: none !important; }
 }

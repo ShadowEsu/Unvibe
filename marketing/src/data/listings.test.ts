@@ -18,8 +18,6 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://toolindex.net",
   "https://tinylaunch.com",
   "https://www.uneed.best",
-  "https://foundermag.co",
-  "https://krispitech.com",
   "https://vibecoding.app",
   "https://strategic-flow-audit.replit.app",
   "https://agentwork.tools",
@@ -38,7 +36,6 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://devhunt.org",
   "https://daniellaunches.com",
   "https://startupfa.me",
-  "https://turbo0.com",
   "https://dododirectory.com",
   "https://sumodir.com",
   "https://postmake.io",
@@ -66,6 +63,14 @@ describe("footer listings", () => {
       if (status === "pending") assert.equal(badges, undefined, `${site} is pending and has a badge`);
     }
     for (const { name } of submittedTo) assert.doesNotMatch(name, /featured|listed|as seen on/i, name);
+  });
+
+  it("names a pending site under 'Submitted to' only once its submission date is recorded (Security MUST-D20, D21)", () => {
+    const named = new Set(submittedTo.map(({ name }) => name));
+    for (const { site, status, linkRequired, submitted } of LISTINGS) {
+      if (submitted !== undefined) assert.match(submitted, /^\d{4}-\d{2}-\d{2}$/, `${site}: submitted is YYYY-MM-DD`);
+      if (status === "pending" && linkRequired) assert.equal(named.has(site), submitted !== undefined, `${site}: named ${named.has(site)}, submitted ${submitted}`);
+    }
   });
 
   it(`keeps every badge file under ${BADGE_LIMIT_BYTES / 1024} KB (Security R-7)`, () => {

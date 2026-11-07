@@ -312,6 +312,164 @@ export function DiaMotion() {
       });
     }
 
+    // ── Header indicator (ledger 562 §2): one lilac strip behind the links, shown through clip-path inset to the hovered or
+    //    focused link and resting on the active one (aria-current). Positions are measured on load, resize and font load
+    //    only, never while moving. The header persists across client navigation, so a route change glides it to the new
+    //    active link. Reduced motion: CSS drops the transition, so it jumps.
+    const bar = document.querySelector<HTMLElement>(".dh__bar");
+    const ul = bar?.querySelector<HTMLElement>(".dh__links");
+    if (bar && ul) {
+      const ind = document.createElement("span");
+      ind.setAttribute("data-d-nav-ind", "");
+      ind.setAttribute("aria-hidden", "true");
+      bar.insertBefore(ind, ul);
+      let boxes = new Map<HTMLElement, { l: number; r: number }>();
+      let target: HTMLElement | null = null;
+      // From rects relative to the bar, divided by the bar's own scale: right mid-entrance (the items carry a transform,
+      // which would make each <li> the links' offsetParent), with the settled .94 scale and after a resize.
+      const measure = () => {
+        const br = bar.getBoundingClientRect();
+        const s = br.width / (bar.offsetWidth || 1);
+        const links = Array.from(ul.querySelectorAll<HTMLElement>("a"));
+        boxes = new Map(links.map((a) => {
+          const ar = a.getBoundingClientRect();
+          return [a, { l: (ar.left - br.left) / s, r: (br.right - ar.right) / s }];
+        }));
+        if (links[0]) ind.style.setProperty("--h", `${links[0].offsetHeight}px`);
+      };
+      const activeLink = () => ul.querySelector<HTMLElement>('a[aria-current="page"]');
+      const go = (a: HTMLElement | null) => {
+        const b = a ? boxes.get(a) : undefined;
+        if (!a || !b) {
+          target = null;
+          ind.removeAttribute("data-on");
+          return;
+        }
+        const appearing = !target;
+        if (appearing) ind.setAttribute("data-jump", ""); // first show: no slide from a stale spot
+        ind.style.setProperty("--l", `${b.l}px`);
+        ind.style.setProperty("--r", `${b.r}px`);
+        if (appearing) {
+          void ind.offsetWidth; // commit the jump before the transition comes back
+          ind.removeAttribute("data-jump");
+        }
+        target = a;
+        ind.setAttribute("data-on", "");
+      };
+      const linkOf = (t: EventTarget | null) => (t instanceof Element ? t.closest<HTMLElement>(".dh__links a") : null);
+      const onOver = (e: PointerEvent) => { const a = linkOf(e.target); if (a) go(a); };
+      const onLeave = () => { if (!ul.contains(document.activeElement)) go(activeLink()); };
+      const onFocusIn = (e: FocusEvent) => { const a = linkOf(e.target); if (a) go(a); };
+      const onFocusOut = (e: FocusEvent) => { if (!ul.contains(e.relatedTarget as Node | null)) go(activeLink()); };
+      const onResize = () => { measure(); go(target ?? activeLink()); };
+      measure();
+      go(activeLink());
+      void document.fonts?.ready.then(onResize);
+      ul.addEventListener("pointerover", onOver);
+      ul.addEventListener("pointerleave", onLeave);
+      ul.addEventListener("focusin", onFocusIn);
+      ul.addEventListener("focusout", onFocusOut);
+      window.addEventListener("resize", onResize);
+      // aria-current moves when the route changes (the links themselves stay)
+      const routes = new MutationObserver(() => { if (!ul.matches(":hover") && !ul.contains(document.activeElement)) go(activeLink()); });
+      routes.observe(ul, { subtree: true, attributes: true, attributeFilter: ["aria-current"] });
+      cleanups.push(() => {
+        routes.disconnect();
+        ul.removeEventListener("pointerover", onOver);
+        ul.removeEventListener("pointerleave", onLeave);
+        ul.removeEventListener("focusin", onFocusIn);
+        ul.removeEventListener("focusout", onFocusOut);
+        window.removeEventListener("resize", onResize);
+        ind.remove();
+      });
+    }
+
+    // ── "(Test me)" ink-in, reusable (ledger 562 §3; the violet split's own code stays in effects.tsx): [data-d-ink] section
+    //    H2s are split into letters inside unbreakable words; each letter's opacity runs .15 → 1 as the section scrolls
+    //    in, p = clamp((0.8 − top/vh) / 0.65), spread .35, exactly as the split. data-in once p ≥ .5 (the lime sweep).
+    //    [data-d-ink-zoom] inside the same section: scale 1.08 → 1. One shared rAF, only for sections near the view.
+    //    Reduced motion: nothing is split or moved.
+    const inkHeads = Array.from(document.querySelectorAll<HTMLElement>("[data-d-ink]"));
+    const inkZooms = Array.from(document.querySelectorAll<HTMLElement>("[data-d-ink-zoom]"));
+    if (!reduce && (inkHeads.length || inkZooms.length)) {
+      type Ink = { sec: HTMLElement; letters: HTMLElement[]; head?: HTMLElement; zoom?: HTMLElement; last: number };
+      const items: Ink[] = [];
+      for (const h of inkHeads) {
+        if (h.querySelector(".d-il")) continue;
+        const label = h.innerText.replace(/\s+/g, " ").trim(); // the visible text only (one OS variant)
+        const texts: Text[] = [];
+        const walker = document.createTreeWalker(h, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) texts.push(n as Text);
+        for (const tn of texts) {
+          const parts = (tn.textContent ?? "").split(/(\s+)/);
+          if (!parts.some((p) => p.trim())) continue;
+          const frag = document.createDocumentFragment();
+          for (const p of parts) {
+            if (!p) continue;
+            if (!p.trim()) {
+              frag.appendChild(document.createTextNode(p));
+              continue;
+            }
+            const w = document.createElement("span");
+            w.className = "d-iw";
+            for (const ch of Array.from(p)) {
+              const l = document.createElement("span");
+              l.className = "d-il";
+              l.textContent = ch;
+              w.appendChild(l);
+            }
+            frag.appendChild(w);
+          }
+          tn.replaceWith(frag);
+        }
+        if (label) h.setAttribute("aria-label", label);
+        const letters = Array.from(h.querySelectorAll<HTMLElement>(".d-il")).filter((l) => l.offsetParent !== null); // skip the hidden OS variant
+        items.push({ sec: h.closest<HTMLElement>("section") ?? h, letters, head: h, last: -1 });
+      }
+      for (const z of inkZooms) items.push({ sec: z.closest<HTMLElement>("section") ?? z, letters: [], zoom: z, last: -1 });
+      const live = new Set<Ink>();
+      let iraf = 0;
+      const apply = () => {
+        iraf = 0;
+        const vh = window.innerHeight;
+        live.forEach((it) => {
+          const top = it.sec.getBoundingClientRect().top / vh;
+          if (it.zoom) it.zoom.style.transform = `scale(${(1.08 - 0.08 * Math.min(1, Math.max(0, 1 - top))).toFixed(4)})`;
+          if (!it.head) return;
+          const p = Math.min(1, Math.max(0, (0.8 - top) / 0.65));
+          if (Math.abs(p - it.last) < 0.002) return;
+          it.last = p;
+          const n = it.letters.length;
+          it.letters.forEach((l, i) => {
+            const x = Math.min(1, Math.max(0, (p * 1.35 - i / n) / 0.35));
+            l.style.opacity = (0.15 + 0.85 * x * x * (3 - 2 * x)).toFixed(3);
+          });
+          if (p >= 0.5) it.head.setAttribute("data-in", "");
+        });
+      };
+      const onScroll = () => {
+        if (!iraf && live.size) iraf = requestAnimationFrame(apply);
+      };
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            for (const it of items) if (it.sec === e.target) (e.isIntersecting ? live.add(it) : live.delete(it));
+          }
+          onScroll();
+        },
+        { rootMargin: "30% 0px" },
+      );
+      for (const sec of Array.from(new Set(items.map((it) => it.sec)))) io.observe(sec);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll);
+      cleanups.push(() => {
+        io.disconnect();
+        window.removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onScroll);
+        if (iraf) cancelAnimationFrame(iraf);
+      });
+    }
+
     return () => {
       for (const c of cleanups) c();
     };
