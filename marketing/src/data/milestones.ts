@@ -23,6 +23,41 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
+    title: "Explain SQL joins, Supabase RLS policies and CORS errors",
+    summary: "3 new explain pages: SQL joins, Supabase row level security policies, and a CORS error with the API code behind it. Each has its own sample in a Try it box and notes on what that sample did when run with SQLite 3.53.4, PostgreSQL 18.6 through PGlite 0.5.15, and Chromium 156.",
+    links: [
+      { href: "/explain/sql-joins", label: "Explain SQL joins" },
+      { href: "/explain/supabase-rls", label: "Explain Supabase RLS" },
+      { href: "/explain/cors-error", label: "Explain a CORS error" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/238", label: "PR #238" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "A daily count of download link clicks, with nothing that identifies you",
+    summary: "unvibe.site now counts how many times each download link (Mac, Intel Mac or Windows) was used each day and the campaign label (utm_source) of the link that brought the visit, on its server, without waiting for Allow. Each total is a day, a file, a label and a number, with no ID, IP address, cookie, time or page address. The privacy page says so.",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/232", label: "PR #232" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/235", label: "PR #235" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain package-lock.json, Prisma schemas and Tailwind classes",
+    summary: "3 new explain pages: a package-lock.json, a Prisma schema and a card styled with Tailwind CSS classes. Each has its own sample in a Try it box and notes on what that sample did when run with npm 11.10.1, Prisma 7.10.1 and Tailwind CSS 4.3.4.",
+    links: [
+      { href: "/explain/package-lock", label: "Explain package-lock.json" },
+      { href: "/explain/prisma-schema", label: "Explain a Prisma schema" },
+      { href: "/explain/tailwind", label: "Explain Tailwind CSS" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/231", label: "PR #231" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
     title: "A new look for unvibe.site",
     summary: "The site has a new home page, one header on every page and a new footer that shows where Unvibe is listed and where it has been submitted. The download button starts the file for your computer in one click: the .exe on Windows, and on a Mac the Apple silicon build, or the Intel one when your browser reports an Intel Mac, with the other Mac file one click away. On a phone it opens a page where you can email yourself the link. Pricing and the beta page moved to the new look, and the Try it box moved from the home page to Explain code.",
     links: [
