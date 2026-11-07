@@ -474,6 +474,8 @@ html[data-dl]:not([data-dl-ready]) :is(.dd-page > :not(.dt), .d-foot) { display:
 .d-try { margin: 10px 0 0; font: 500 15px/1.4 var(--d-sans); }
 .d-try a { display: inline-block; padding-block: 4px; color: #fff; text-decoration: underline 1px rgb(255 255 255 / 0.45); text-underline-offset: 3px; }
 .d-try a:hover, .d-try a:focus-visible { text-decoration-color: currentColor; }
+/* the inherited violet focus ring vanishes on the violet hero (lead review on #237): white, like .try__go */
+.d-try a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 2px; }
 .d-try__arrow { display: inline-block; transition: transform 0.2s ease; }
 .d-try a:hover .d-try__arrow { transform: translateX(2px); }
 @media (prefers-reduced-motion: reduce) { .d-try__arrow { transition: none; } .d-try a:hover .d-try__arrow { transform: none; } }
