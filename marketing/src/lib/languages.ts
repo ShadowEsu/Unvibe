@@ -707,6 +707,16 @@ export const languages: Language[] = [
     learningPath: ["Reading a unit file", "Starting a service", "Settings and .env files", "Restarts and limits"],
     sample: `systemctl --user status notes-api`,
   },
+  {
+    id: "terraform",
+    name: "Terraform",
+    categories: ["backend", "systems"],
+    blurb: "Infrastructure written as code: resources, variables and outputs, and the plan you read before Terraform changes anything.",
+    concepts: ["providers and init", "resources and references", "plan and apply", "variables and outputs"],
+    frameworks: ["Terraform", "OpenTofu", "HCL", "AWS"],
+    learningPath: ["Providers", "Resources", "Plan before apply", "Variables and state"],
+    sample: `terraform plan -var env=production`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

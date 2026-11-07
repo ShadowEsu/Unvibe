@@ -3552,6 +3552,64 @@ WantedBy=default.target`,
     watchOut:
       "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 5 times, then printed `Start request repeated too quickly` and left it failed, with nothing on port 8040. The limit is 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so it can start again.",
   },
+  {
+    id: "terraform",
+    fileName: "main.tf",
+    related: ["json", "yaml", "env"],
+    lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
+    description:
+      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only local providers, so it runs without a cloud account.",
+    sampleSummary: "A main.tf that pins 2 providers, takes an `env` variable, makes a random name and writes it into a JSON file, then prints the name as an output.",
+    sample: `# main.tf: write a small config file with a random name, no cloud account needed
+terraform {
+  required_providers {
+    local  = { source = "hashicorp/local", version = "2.9.1" }
+    random = { source = "hashicorp/random", version = "3.9.1" }
+  }
+}
+
+variable "env" {
+  type    = string
+  default = "staging"
+}
+
+resource "random_pet" "name" {
+  keepers = { env = var.env }
+}
+
+resource "local_file" "config" {
+  filename = "\${path.module}/out/\${var.env}.json"
+  content  = jsonencode({ env = var.env, name = random_pet.name.id })
+}
+
+output "app_name" {
+  value = random_pet.name.id
+}`,
+    shows: [
+      {
+        concept: "providers and init",
+        text: "`required_providers` says which plugins the code needs and pins their versions. `terraform init` downloaded hashicorp/local v2.9.1 and hashicorp/random v3.9.1, printed `signed by HashiCorp` for each, and wrote .terraform.lock.hcl with those versions. Terraform's own message says to commit that lock file so every machine gets the same versions.",
+      },
+      {
+        concept: "resources and references",
+        text: "Each `resource` block is one thing Terraform manages. `random_pet.name.id` points at the name the first resource makes, so Terraform created random_pet first and the file second, and wrote out/staging.json with `{\"env\":\"staging\",\"name\":\"immense-dassie\"}`. A typo, `random_pet.nme.id`, stopped `terraform validate` with `Reference to undeclared resource`.",
+      },
+      {
+        concept: "plan and apply",
+        text: "`terraform plan` lists what would change and changes nothing: `Plan: 2 to add, 0 to change, 0 to destroy`. `apply` does it, and asks you to type yes first. Answering no printed `Apply cancelled.`, and `-auto-approve` skips the question. Run again with nothing changed, apply printed `No changes. Your infrastructure matches the configuration.`",
+      },
+      {
+        concept: "variables and outputs",
+        text: "`env` defaults to staging, and `-var env=production` changes it for one run. The `output` printed `app_name = \"immense-dassie\"` after the first apply, and `terraform output` prints it again any time. Because the name's `keepers` include `env`, changing env made a new name, powerful-giraffe, instead of keeping the old one.",
+      },
+    ],
+    notes: [
+      "Run with Terraform 1.17.1 on Linux, downloaded from releases.hashicorp.com and checked against HashiCorp's signed checksums, in an empty folder with no backend, so the state stayed in a local terraform.tfstate. No cloud account or credentials were used.",
+      "When out/production.json was deleted by hand, the next plan noticed and planned to write it again: `local_file.config will be created`, `Plan: 1 to add`.",
+    ],
+    watchOut:
+      "Changing one value can destroy things, not just edit them. With `-var env=production`, the plan said `must be replaced` for both resources and ended `Plan: 2 to add, 0 to change, 2 to destroy`. Apply deleted out/staging.json and replaced the name. Read the destroy count in every plan before you type yes. The state file also keeps a copy of what it wrote: terraform.tfstate held the JSON file's full content in plain text, so never commit it.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
