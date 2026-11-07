@@ -1,23 +1,4 @@
-import {
-  INSTAGRAM_URL,
-  LINKEDIN_URL,
-  SUPPORT_EMAIL,
-  supportMailto,
-} from "@/lib/contact";
-
-function MailMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M4.5 6.75h15A1.75 1.75 0 0 1 21.25 8.5v9A1.75 1.75 0 0 1 19.5 19.25h-15A1.75 1.75 0 0 1 2.75 17.5v-9A1.75 1.75 0 0 1 4.5 6.75Z"
-      />
-      <path fill="none" stroke="currentColor" strokeWidth="1.5" d="m4 7.5 8 6.2 8-6.2" />
-    </svg>
-  );
-}
+import { INSTAGRAM_URL, LINKEDIN_URL } from "@/lib/contact";
 
 function ColorLinkedInMark() {
   return (
@@ -51,20 +32,6 @@ const followSum = [
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: ColorLinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: ColorInstagramMark },
 ] as const;
-
-/**
- * The support mail icon under the footer newsletter. The profiles moved to the footer's text Follow column (Design,
- * ledger 563), so this row keeps only mail.
- */
-export function SupportMailLink({ className = "paper-footer__social" }: { className?: string }) {
-  return (
-    <div className={className}>
-      <a href={supportMailto} aria-label={`Email ${SUPPORT_EMAIL}`}>
-        <MailMark />
-      </a>
-    </div>
-  );
-}
 
 export function GrowthFollowLinks() {
   return (

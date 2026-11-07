@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { listingBadges, listingLinks, submittedTo } from "@/data/listings";
 import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
-import { SupportMailLink } from "@/components/paper/SocialFollow";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { OFFICIAL_PROFILES } from "@/lib/contact";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
@@ -46,7 +45,6 @@ export function SiteFooter() {
           <img className="d-foot__ghost" src="/brand/vibe.svg" width={48} height={48} alt="" />
           <p className="d-foot__newsh">Get the newsletter. One email when something ships.</p>
           <NewsletterSignup id="footer" />
-          <SupportMailLink />
         </div>
       </div>
       <div className="d-foot__dirs">
