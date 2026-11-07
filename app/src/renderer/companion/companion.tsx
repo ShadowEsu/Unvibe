@@ -23,9 +23,10 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { VibeBubble } from '../shared/vibeBubble';
 import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
 import { accessibilityRow, type AccessibilityState } from './settingsRows';
+import { FADE_OPACITY } from '../widget/clickAway';
 import { Home, type TodayGoal } from './home';
 import { IC } from './icons';
-import { MORE_ICON, NAV, NAV_MORE, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
+import { NAV, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
 import { trackWindowAway } from '../shared/windowAway';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
@@ -71,7 +72,7 @@ interface Settings {
   barSize: 'small' | 'medium' | 'large';
   followActiveDisplay: boolean; soundEffects: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
-  widgetOpacityInactive: number; inactiveBehavior: string;
+  inactiveBehavior: 'fade' | 'hide';
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
@@ -1527,7 +1528,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Island' && (
             <>
               <div className="settings-section-label">OVERLAY PREVIEW</div>
-              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
+              <OverlayPreview position={settings.barPosition} dimmed={FADE_OPACITY} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
@@ -1542,13 +1543,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
-              <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
-                <select className="sel-input" aria-label="Inactive widget" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
-                  <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
-                </select>
-              </div>
-              <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
-                <input className="range" aria-label="Dimmed opacity" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
+              <div className="settings-section-label">PANEL</div>
+              <div className="setrow settings-location"><div><div className="sl">When I click away</div></div>
+                <div className="location-grid" role="group" aria-label="When I click away">
+                  {([['fade', 'Fade'], ['hide', 'Hide']] as const).map(([behavior, label]) => <button key={behavior} type="button" className={settings.inactiveBehavior === behavior ? 'on' : ''} aria-pressed={settings.inactiveBehavior === behavior} onClick={() => void onSettings({ inactiveBehavior: behavior })}>{label}</button>)}
+                </div>
               </div>
             </>
           )}
@@ -1605,7 +1604,6 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [navOpen, setNavOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const toggleSideRef = useRef<() => void>(() => {});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
@@ -1790,8 +1788,6 @@ function App() {
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
   const sideCompact = sideWidth < 178;
-  // More opens whenever one of its pages is showing (from a link, search or main), so the current page is in view.
-  useEffect(() => { if (NAV_MORE.some((p) => p.id === page)) setMoreOpen(true); }, [page]);
   const sideHidden = settings?.sidebarHidden ?? false;
   toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
   const searchGroups = (() => {
@@ -1889,10 +1885,6 @@ function App() {
           <p className="side-spaces">Learn</p>
           <nav className="nav nav--spaces">
             {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
-            <button type="button" className="side-more" aria-expanded={moreOpen} aria-controls="companion-more" aria-label="More" title={sideCompact ? 'More' : undefined} onClick={() => setMoreOpen((open) => !open)}>
-              <Icon d={MORE_ICON} /><span className="nav-label">More</span>
-            </button>
-            <div id="companion-more" className="nav__more" hidden={!moreOpen}>{NAV_MORE.map((p) => navButton(p, p.id === page))}</div>
           </nav>
           <div className="spacer" />
           {usageLine ? (
