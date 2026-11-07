@@ -4,7 +4,7 @@ import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import sitemap from "@/app/sitemap";
 import { TryIt } from "@/components/paper/TryIt";
-import { EXPLAIN_PATHS, explainLanguage, explainPages } from "./explainPages";
+import { EXPLAIN_PATHS, explainLanguage, explainLinks, explainPages } from "./explainPages";
 import { languages } from "./languages";
 // The API's own check (marketing can't import web through "@/"; this file only needs node:crypto).
 import { looksSecret } from "../../../web/src/lib/tryDemo";
@@ -85,6 +85,16 @@ describe("explain pages", () => {
         assert.notEqual(other, id, `${id} lists itself as related`);
         assert.ok(ids.has(other), `${id}: related page "${other}" has no /explain page`);
       }
+    }
+  });
+
+  it("link every other page exactly once: related first, then the rest", () => {
+    for (const page of explainPages) {
+      const { related, others } = explainLinks(page);
+      assert.deepEqual(related.map(({ id }) => id), [...(page.related ?? [])], `${page.id}: related row out of order`);
+      const linked = [...related, ...others].map(({ id }) => id);
+      const expected = explainPages.filter(({ id }) => id !== page.id).map(({ id }) => id);
+      assert.deepEqual([...linked].sort(), [...expected].sort(), `${page.id}: a page linked twice, missed or linking itself`);
     }
   });
 

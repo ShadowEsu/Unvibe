@@ -198,7 +198,7 @@ tzdata; sys_platform == "win32"`,
   {
     id: "javascript",
     fileName: "profiles.js",
-    related: ["react-useeffect", "cors-error", "asyncio", "typescript"],
+    related: ["react-useeffect", "cors-error", "typescript", "json"],
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
       "Get any JavaScript snippet explained in plain English online, free. The sample loads several users at once with fetch and Promise.allSettled.",
@@ -306,6 +306,7 @@ $(function () {
   {
     id: "typescript",
     fileName: "users.ts",
+    related: ["javascript", "react-useeffect", "tsconfig"],
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
       "Paste TypeScript and see what the code and its types mean, free online. The sample loads a user with a generic Result type, narrowing and async/await.",
@@ -1219,6 +1220,7 @@ puts members.sort.map(&:name).inspect`,
   {
     id: "sqlite",
     fileName: "shop.sql",
+    related: ["sql", "sql-joins", "prisma-schema"],
     lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
     description:
       "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index, inserts rows and runs a report.",
@@ -1330,6 +1332,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
+    related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
       "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
@@ -1377,6 +1380,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
+    related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
       "Paste CSS and get a plain English explanation, free online. The sample lays out product cards with grid, flexbox and a custom property for the accent color.",
@@ -2107,6 +2111,7 @@ subject = Your invoice from Acme`,
   {
     id: "json",
     fileName: "package.json",
+    related: ["package-lock", "npm-scripts", "javascript"],
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
     description:
       "Paste JSON and get a plain English explanation, free online. The sample is a package.json for a small Node tool: its scripts, dependencies and version ranges.",
@@ -2432,6 +2437,7 @@ clean:
   {
     id: "gitignore",
     fileName: ".gitignore",
+    related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
       "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with a few exceptions kept in.",
@@ -2829,7 +2835,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
-    related: ["python", "asyncio", "requirements-txt", "pyproject-toml"],
+    related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
       "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
@@ -2932,7 +2938,7 @@ KeyError: 'qty'`,
   {
     id: "prisma-schema",
     fileName: "prisma/schema.prisma",
-    related: ["sql", "sql-joins", "supabase-rls", "env"],
+    related: ["sql", "sqlite", "sql-joins", "env"],
     lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
     description:
       "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts, with a relation between them.",
@@ -3502,6 +3508,14 @@ export function explainLanguage(page: ExplainPage): Language {
   const language = languages.find((entry) => entry.id === page.id);
   if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
   return language;
+}
+
+/** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
+export function explainLinks(page: ExplainPage): { related: ExplainPage[]; others: ExplainPage[] } {
+  const relatedIds = page.related ?? [];
+  const related = relatedIds.flatMap((id) => explainPages.filter((other) => other.id === id));
+  const others = explainPages.filter(({ id }) => id !== page.id && !relatedIds.includes(id));
+  return { related, others };
 }
 
 /** Every /explain URL path, index first. */

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
-import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainCard, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "../mono";
@@ -36,8 +36,7 @@ export default function ExplainLanguagePage({ params }: Params) {
   const page = explainPages.find(({ id }) => id === params.id);
   if (!page) notFound();
   const { name } = explainLanguage(page);
-  const related = (page.related ?? []).map((id) => explainPages.find((other) => other.id === id)).filter((other) => other !== undefined);
-  const others = explainPages.filter(({ id }) => id !== page.id && !page.related?.includes(id));
+  const { related, others } = explainLinks(page);
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
