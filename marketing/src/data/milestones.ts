@@ -36,7 +36,7 @@ export const milestones: Milestone[] = [
     date: "6 NOV 2026",
     category: "PRODUCT",
     title: "Help for when the shortcut does nothing",
-    summary: "2 new help pages. One goes through what to check when Control+U, or Ctrl+Alt+U on Windows, does nothing: the right keys, a selection, Unvibe running, then what can block it on a Mac, on Windows or on both. The other explains why Unvibe asks for Accessibility on a Mac, how to switch it on, what to do when it still says Not allowed yet, and how to turn it off. Each step matches what Unvibe 0.1.49 shows, with real macOS 15 screenshots.",
+    summary: "2 new help pages. One goes through what to check when Control+U, or Ctrl+Alt+U on Windows, does nothing: the right keys, a selection, Unvibe running, then what can block it on a Mac, on Windows or on both. The other explains why Unvibe asks for Accessibility on a Mac, how to switch it on, what to do when it still says Not allowed yet, and how to turn it off. Each step was checked against Unvibe 0.1.49, with real macOS 15 screenshots.",
     links: [
       { href: "/help/shortcut", label: "The shortcut does nothing" },
       { href: "/help/accessibility", label: "Allow Accessibility" },
