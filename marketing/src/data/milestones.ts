@@ -23,6 +23,35 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
+    title: "Explain Python asyncio, tar and rsync",
+    summary: "3 new explain pages: a Python script that runs 3 slow loads at once with asyncio, a tar script that packs and unpacks a site backup, and an rsync backup script with a dry run first. Each has its own sample in a Try it box and notes on what that sample did when run with Python 3.14.7, GNU tar 1.35, bsdtar 3.8.9 and rsync 3.5.0.",
+    links: [
+      { href: "/explain/asyncio", label: "Explain Python asyncio" },
+      { href: "/explain/tar", label: "Explain tar" },
+      { href: "/explain/rsync", label: "Explain rsync" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/244", label: "PR #244" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "COMPANY",
+    title: "Unvibe's GitHub, Instagram and LinkedIn in the footer",
+    summary: "The footer has a new Follow column with links to Unvibe on GitHub, Instagram and LinkedIn, and the icon row under the newsletter now keeps only the support email. The home page now says in one line what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/239", label: "PR #239" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/243", label: "PR #243" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
+    title: "The setup guide email no longer covers the download steps",
+    summary: "After a download, the thank-you page used to show a floating card offering the setup guide by email, and on a 1440 by 900 screen it covered part of the first step and the link to the other Mac file. The offer now sits inside the page, under the download links, and No thanks folds it away.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/240", label: "PR #240" }],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
     title: "Explain SQL joins, Supabase RLS policies and CORS errors",
     summary: "3 new explain pages: SQL joins, Supabase row level security policies, and a CORS error with the API code behind it. Each has its own sample in a Try it box and notes on what that sample did when run with SQLite 3.53.4, PostgreSQL 18.6 through PGlite 0.5.15, and Chromium 156.",
     links: [
