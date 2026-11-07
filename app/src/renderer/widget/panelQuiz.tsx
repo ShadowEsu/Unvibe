@@ -1,8 +1,7 @@
 import type { Ref } from 'react';
 import type { QuizMode } from '../../core/protocol';
 import { Buddy } from '../shared/buddy';
-import { VibeBubble } from '../shared/vibeBubble';
-import { PrimaryButton } from './panelBody';
+import { Icon } from './icons';
 
 export interface Quiz {
   phase: 'loading' | 'answering' | 'grading' | 'graded' | 'failed';
@@ -22,13 +21,14 @@ export interface Quiz {
 
 const MODE_LABEL: Partial<Record<QuizMode, string>> = { scenario: 'Prove it', recall: 'Recall' };
 
-/** "Test me · 1 of 3 · Prove it" (SPEC §4): where you are and what kind of question this is. */
-export function quizKicker(quiz: Quiz): string {
-  const parts = ['Test me'];
-  if (quiz.total && quiz.total > 1) parts.push(`${quiz.index ?? 1} of ${quiz.total}`);
-  const mode = quiz.mode ? MODE_LABEL[quiz.mode] : undefined;
-  if (mode) parts.push(mode);
-  return parts.join(' · ');
+/** "Question 1 of 3" (SPEC Test me): where you are. */
+export function quizCount(quiz: Quiz): string {
+  return `Question ${quiz.index ?? 1} of ${quiz.total ?? 3}`;
+}
+
+/** The kind of question and the depth it is at, beside the count ("Prove it · Advanced"). */
+export function quizKind(quiz: Quiz, depth?: string): string {
+  return [quiz.mode ? MODE_LABEL[quiz.mode] : undefined, depth].filter(Boolean).join(' · ');
 }
 
 /** What Vibe says about an answer, verbatim from the side panel before the redesign. */
@@ -37,7 +37,7 @@ export function quizVerdict(quiz: Quiz): string {
   return quiz.hasMissed ? 'Correct. Earlier misses are saved to revisit.' : 'Correct. That one is understood.';
 }
 
-/** After the last question, a plain line under Vibe's bubble (Design Q10); nothing before then. */
+/** After the last question, a plain line under the verdict (Design Q10); nothing before then. */
 export function quizEndLine(quiz: Quiz): string | null {
   if ((quiz.index ?? 1) < (quiz.total ?? 3)) return null;
   return quiz.hasMissed ? "That's all three for this code. Missed ones come back in your review queue." : 'All three right.';
@@ -48,17 +48,19 @@ export function quizHasNext(quiz: Quiz): boolean {
 }
 
 /**
- * Test me in the panel's body (SPEC §4): the question, four options (the right one turns into a lime ✓), and Vibe's
- * verdict in its bubble with the reasoning and, after the last question, the end line under it.
+ * The Test me tab (SPEC Test me): "Question x of n", the question at 13.5, four 40 pt rows lettered A–D to press.
+ * Pressing a row answers; the picked row gets the accent outline and tint, the right one the check, a wrong pick an ×.
+ * Vibe's verdict line (main's strings) and the reasoning follow. The card rises in once per question.
  */
-export function QuizCard({ quiz, questionRef, onChoose }: {
+export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
   quiz: Quiz;
+  depth?: string;
   questionRef?: Ref<HTMLHeadingElement>;
-  onChoose: (index: number) => void;
+  onAnswer: (index: number) => void;
 }) {
   if (quiz.phase === 'loading') {
     return (
-      <div className="quiz quiz--wait" role="status">
+      <div className="ob-quiz ob-quiz--wait" role="status">
         <span>Writing a question…</span>
         <i aria-hidden="true" /><i aria-hidden="true" /><i aria-hidden="true" />
       </div>
@@ -66,58 +68,59 @@ export function QuizCard({ quiz, questionRef, onChoose }: {
   }
   if (quiz.phase === 'failed') {
     return (
-      <div className="quiz" role="alert">
-        <div className="quiz__kicker">Test me</div>
-        <p className="quiz__why">{quiz.error}</p>
+      <div className="ob-quiz" role="alert">
+        <div className="ob-quiz__kicker">Test me</div>
+        <p className="ob-quiz__why">{quiz.error}</p>
       </div>
     );
   }
   const graded = quiz.phase === 'graded';
   const endLine = graded ? quizEndLine(quiz) : null;
+  const kind = quizKind(quiz, depth);
   return (
-    <>
-      <div className="quiz">
-        <div className="quiz__kicker">{quizKicker(quiz)}</div>
-        <h2 className="quiz__q" ref={questionRef} tabIndex={-1}>{quiz.question}</h2>
-        <div className="quiz__opts">
-          {quiz.options?.map((option, i) => {
-            const right = graded && i === quiz.answerIndex;
-            const state = graded ? (right ? ' right' : i === quiz.choice ? ' wrong' : '') : i === quiz.choice ? ' sel' : '';
-            return (
-              <button
-                key={i}
-                type="button"
-                className={`opt${state}`}
-                aria-pressed={graded ? undefined : i === quiz.choice}
-                disabled={quiz.phase !== 'answering'}
-                onClick={() => onChoose(i)}
-              >
-                <em aria-hidden="true">{right ? '✓' : String.fromCharCode(65 + i)}</em>
-                <span>{option}</span>
-              </button>
-            );
-          })}
-        </div>
+    <div className="ob-quiz" key={`${quiz.index ?? 1}:${quiz.question}`}>
+      <div className="ob-quiz__kicker"><span>{quizCount(quiz)}</span>{kind ? <span>{kind}</span> : null}</div>
+      <h2 className="ob-quiz__q" ref={questionRef} tabIndex={-1}>{quiz.question}</h2>
+      <div className="ob-quiz__opts">
+        {quiz.options?.map((option, i) => {
+          const picked = i === quiz.choice;
+          const right = graded && i === quiz.answerIndex;
+          const wrong = graded && picked && !right;
+          const state = `${picked ? ' is-picked' : ''}${right ? ' is-right' : ''}${wrong ? ' is-wrong' : ''}`;
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`ob-opt${state}`}
+              aria-pressed={picked}
+              disabled={quiz.phase !== 'answering'}
+              onClick={() => onAnswer(i)}
+            >
+              <em aria-hidden="true">{String.fromCharCode(65 + i)}</em>
+              <span>{option}</span>
+              {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={14} /></span> : null}
+              {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={14} /></span> : null}
+            </button>
+          );
+        })}
       </div>
       {graded ? (
-        <>
-          <div className={`verdict ${quiz.correct ? 'ok' : 'no'}`}>
-            {/* The bubble already names Vibe; the art is decoration here. */}
-            <span aria-hidden="true"><Buddy mood={quiz.correct ? 'celebrate' : 'confused'} size={44} label="Vibe" /></span>
-            <VibeBubble>{quizVerdict(quiz)}</VibeBubble>
+        <div className={`ob-verdict ${quiz.correct ? 'is-ok' : 'is-no'}`}>
+          <span aria-hidden="true"><Buddy mood={quiz.correct ? 'celebrate' : 'confused'} size={26} label="Vibe" /></span>
+          <div>
+            <p className="ob-verdict__line" role="status">{quizVerdict(quiz)}</p>
+            {quiz.rationale ? <p className="ob-quiz__why">{quiz.rationale}</p> : null}
+            {endLine ? <p className="ob-quiz__end">{endLine}</p> : null}
           </div>
-          {quiz.rationale ? <p className="quiz__why">{quiz.rationale}</p> : null}
-          {endLine ? <p className="quiz__end">{endLine}</p> : null}
-        </>
+        </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
-/** The footer while Test me is open: one primary action for where you are, and a quiet way out. */
-export function QuizActions({ quiz, onCheck, onAnother, onRetry, onClose }: {
+/** The Test me footer: after an answer, the next question or back to the explanation; after a failure, try again. */
+export function QuizActions({ quiz, onAnother, onRetry, onClose }: {
   quiz: Quiz;
-  onCheck: () => void;
   onAnother: () => void;
   onRetry: () => void;
   onClose: () => void;
@@ -125,28 +128,19 @@ export function QuizActions({ quiz, onCheck, onAnother, onRetry, onClose }: {
   if (quiz.phase === 'graded') {
     const next = quizHasNext(quiz);
     return (
-      <div className="p-actions">
-        {next ? <PrimaryButton onClick={onAnother}>Another question</PrimaryButton> : null}
-        {next ? <button type="button" className="btn-quiet" onClick={onClose}>Hide question</button> : <PrimaryButton onClick={onClose}>Hide question</PrimaryButton>}
+      <div className="ob-chips">
+        {next ? <button type="button" className="ob-btn" onClick={onAnother}>Another question</button> : null}
+        <button type="button" className={next ? 'ob-btn ghost' : 'ob-btn'} onClick={onClose}>Hide question</button>
       </div>
     );
   }
   if (quiz.phase === 'failed') {
     return (
-      <div className="p-actions">
-        <PrimaryButton onClick={onRetry}>Try again</PrimaryButton>
-        <button type="button" className="btn-quiet" onClick={onClose}>Hide</button>
+      <div className="ob-chips">
+        <button type="button" className="ob-btn" onClick={onRetry}>Try again</button>
+        <button type="button" className="ob-btn ghost" onClick={onClose}>Hide</button>
       </div>
     );
   }
-  return (
-    <div className="p-actions">
-      {quiz.phase === 'loading' ? null : (
-        <PrimaryButton disabled={quiz.choice === undefined || quiz.phase === 'grading'} onClick={onCheck}>
-          {quiz.phase === 'grading' ? 'Checking…' : 'Check'}
-        </PrimaryButton>
-      )}
-      <button type="button" className="btn-quiet" onClick={onClose}>Cancel</button>
-    </div>
-  );
+  return null;
 }
