@@ -3182,6 +3182,154 @@ server.listen(3000);`,
     watchOut:
       "CORS doesn't protect your API. It decides what pages from other origins, in a browser, can do with a reply: the plain GET reached the server and got its 200 even when the page couldn't read the answer, and a request from outside a browser read the todos although the reply had no `Access-Control-Allow-Origin` header. Keep real checks, such as who is signed in, on the server.",
   },
+  {
+    id: "asyncio",
+    fileName: "fetch_all.py",
+    lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
+    description:
+      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample loads 3 pages at once with asyncio.gather and gives up on one after 3 seconds.",
+    sampleSummary: "A Python script that starts 3 slow loads at once with `asyncio.gather`, each one a stand-in that sleeps, and gives the slowest a 3 second timeout.",
+    sample: `# fetch_all.py: load 3 pages at once, give up on any that take too long
+import asyncio
+import time
+
+async def fetch(name, seconds):
+    print(f"{time.perf_counter() - START:.1f}s start {name}")
+    await asyncio.sleep(seconds)  # stands in for a network call
+    print(f"{time.perf_counter() - START:.1f}s done {name}")
+    return f"{name}: {seconds}s"
+
+async def main():
+    results = await asyncio.gather(
+        fetch("users", 1.0),
+        fetch("orders", 2.0),
+        asyncio.wait_for(fetch("reports", 5.0), timeout=3.0),
+        return_exceptions=True,
+    )
+    for r in results:
+        print(repr(r))
+
+START = time.perf_counter()
+asyncio.run(main())
+print(f"total {time.perf_counter() - START:.1f}s")`,
+    shows: [
+      {
+        concept: "async def and await",
+        text: "`async def` makes `fetch` a coroutine: calling it only creates an object, and nothing inside runs until something awaits it. Called without `await`, `fetch(\"users\", 1.0)` printed nothing, and Python warned `coroutine 'fetch' was never awaited`. `await asyncio.sleep(...)` pauses this one fetch and lets the others run in the meantime.",
+      },
+      {
+        concept: "gather",
+        text: "`asyncio.gather` started all 3 at once: users, orders and reports each printed `0.0s start`. Users finished at 1.0s and orders at 2.0s, and the whole script took 3.0s. Awaiting the same 3 one after another took 6.0s, because each one started only when the one before had finished.",
+      },
+      {
+        concept: "timeouts",
+        text: "`asyncio.wait_for(..., timeout=3.0)` cancelled reports at 3.0s, 2 seconds before its 5 second sleep would have ended, and its result came back as `TimeoutError()`. `return_exceptions=True` is why the other 2 results survived. Without it, `gather` raised the `TimeoutError` at 3.0s and `main` never got the users and orders results.",
+      },
+      {
+        concept: "blocking calls",
+        text: "With `time.sleep(1.0)` in place of `await asyncio.sleep(1.0)` for users, orders and reports didn't start until 1.0s, and the script took 4.0s instead of 3.0s. `time.sleep` holds the whole program, so nothing else can run until it returns. A 4 second `time.sleep` in one task held back the other task, so its 3 second timeout started at 4.0s and fired at 7.0s.",
+      },
+    ],
+    notes: [
+      "Run with Python 3.14.7. The script printed users and orders done at 1.0s and 2.0s, then `'users: 1.0s'`, `'orders: 2.0s'`, `TimeoutError()` and `total 3.0s`. Every timing above is from the same script or a variant of it, rounded to 0.1s.",
+      "`asyncio.TaskGroup`, the newer way to run tasks together, stops the rest when one fails: with reports timing out at 0.5s, it cancelled orders at 0.5s too and raised an `ExceptionGroup`. `gather` without `return_exceptions` did not: `main` got the error at 0.5s, and orders still finished at 2.0s.",
+    ],
+    watchOut:
+      "One ordinary blocking call inside async code slows every task, with no error. `time.sleep`, `requests.get` or a heavy loop in an `async def` holds the program the same way `time.sleep(1.0)` held users here: the other loads waited, and a timeout couldn't fire until the call returned. In async code, use the awaitable version, such as `await asyncio.sleep` or an async HTTP client, or hand the blocking call to `asyncio.to_thread`.",
+  },
+  {
+    id: "tar",
+    fileName: "backup-site.sh",
+    lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
+    description:
+      "Paste a tar command and get its flags explained in plain English, free online. The sample packs a project into a .tar.gz without node_modules, lists it and unpacks a copy.",
+    sampleSummary: "A shell script that packs a small website folder into a .tar.gz without node_modules and log files, lists what's inside, unpacks a copy into another folder, then pulls out one file.",
+    sample: `# backup-site.sh: pack the site into one file, check it, unpack a copy
+cd ~/projects
+
+# c = create, z = gzip it, v = list each file, f = the archive's name
+tar -czvf site-backup.tar.gz --exclude='node_modules' --exclude='*.log' my-site
+
+# t = list what's inside without unpacking
+tar -tzf site-backup.tar.gz
+
+# x = extract; -C = into this folder (it must already exist)
+mkdir -p ~/restore
+tar -xzvf site-backup.tar.gz -C ~/restore
+
+# pull out one file only
+tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
+    shows: [
+      {
+        concept: "c, t and x",
+        text: "The first letter says what tar does: `c` creates an archive, `t` lists what's in one and `x` extracts it. On a folder holding package.json, src/index.html, src/app.js, node_modules and server.log, `-tzf` listed 5 entries: `my-site/`, `my-site/package.json`, `my-site/src/`, and the 2 files in src. Nothing was unpacked by the listing.",
+      },
+      {
+        concept: "z, v and f",
+        text: "`z` runs the archive through gzip, `v` prints each file as tar works, and `f` names the archive file, so the name must come straight after it. Written `tar -cfz x.tar.gz my-site`, tar took `z` as the archive's name: it made a file called `z` and failed on `x.tar.gz: Cannot stat: No such file or directory`.",
+      },
+      {
+        concept: "-C and --exclude",
+        text: "`--exclude` patterns kept node_modules and server.log out of the archive. GNU tar only applies them when they come before the folder: put after `my-site`, it said `--exclude ‘node_modules’ has no effect`, exited with code 2 and still packed node_modules. `-C ~/restore` unpacked into ~/restore, so the files landed in ~/restore/my-site. With a folder that didn't exist, GNU tar stopped with `Cannot open: No such file or directory`.",
+      },
+      {
+        concept: "one file out",
+        text: "A name after the archive extracts only that member, written exactly as `-t` lists it: `my-site/package.json`, not `package.json`. A name that wasn't in the archive gave `Not found in archive`. A pattern like `'my-site/src/*.js'` found nothing in GNU tar until `--wildcards` was added, while bsdtar extracted app.js.",
+      },
+    ],
+    notes: [
+      "Run with GNU tar 1.35, and with bsdtar 3.8.9 from libarchive, the same program as the tar macOS ships, in a newer version. Both made the same archive from the sample. GNU tar's `v` printed plain names, and bsdtar's put `a` before each file it added and `x` before each file it extracted.",
+      "Where they differ: `-xzf` on a plain .tar stopped GNU tar with `gzip: stdin: not in gzip format`, while bsdtar unpacked it. Both unpacked the .tar.gz with `-xf` and no `z`, because each works out the compression itself when reading.",
+    ],
+    watchOut:
+      "Extracting overwrites files with the same name, without asking. After package.json in ~/restore was changed, running the sample's extract again put the archived version back, with no message and exit code 0. Add `-k` to keep files that already exist: GNU tar then refused each one with `Cannot open: File exists`, and bsdtar skipped them silently. Unpack into an empty folder when you aren't sure what's in an archive.",
+  },
+  {
+    id: "rsync",
+    fileName: "backup.sh",
+    lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
+    description:
+      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, --delete and --exclude.",
+    sampleSummary: "A backup script that mirrors a project folder into a backup drive: a dry run first, then the real run with `--delete` and `--exclude`, then the same copy without the trailing slash.",
+    sample: `# backup.sh: mirror the project into the backup drive, then check it
+SRC=~/projects/my-site/      # trailing slash: copy what's inside my-site
+DEST=/mnt/backup/my-site     # so the files land directly in here
+
+# -n = dry run: list what would change, touch nothing
+rsync -avhn --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
+
+# the real run: -a keeps times and permissions, -v lists files, -h sizes in K/M
+# --delete removes files from DEST that are gone from SRC
+rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
+
+# without the trailing slash, rsync copies the folder itself:
+# this makes /mnt/backup/my-site/my-site
+rsync -avh ~/projects/my-site "$DEST"`,
+    shows: [
+      {
+        concept: "-a, -v and -h",
+        text: "`-a` copies folders inside folders and keeps each file's times and permissions, `-v` lists every file it copies and `-h` writes sizes like `150.03K`. The first real run listed package.json, src/index.html and src/logo.png. Run again with nothing changed, it listed no files at all: rsync skips a file whose size and time already match.",
+      },
+      {
+        concept: "the trailing slash",
+        text: "`~/projects/my-site/` with the slash means what's inside my-site, so package.json landed at /mnt/backup/my-site/package.json. The last line, without the slash, copied the folder itself and made /mnt/backup/my-site/my-site, a second full copy one level down. That line has no `--exclude`, so node_modules and server.log came along too.",
+      },
+      {
+        concept: "-n dry run",
+        text: "`-n` printed the same file list as the real run and ended with `(DRY RUN)`. It even printed `created directory`, but the backup folder was still empty afterwards. Run the `-n` line first whenever `--delete` is in the command, and read every `deleting` line.",
+      },
+      {
+        concept: "--delete and --exclude",
+        text: "After src/index.html was deleted from the project, the next run printed `deleting src/index.html` and removed it from the backup. Without `--delete`, a file deleted from the project stayed in the backup. Excluded files are protected: a node_modules folder already in the backup survived `--delete`, and only `--delete-excluded` removed it.",
+      },
+    ],
+    notes: [
+      "Run with rsync 3.5.0 on Linux, with /mnt/backup as a local folder and a small project of package.json, src/index.html, a 150 KB src/logo.png, node_modules and server.log. The rsync that comes with macOS is not this version, so its messages and some options can differ from these.",
+      "With a typo in the source path, `my-sit/`, rsync printed `change_dir \"~/projects/my-sit\" failed: No such file or directory`, exited with code 23 and deleted nothing.",
+    ],
+    watchOut:
+      "`--delete` makes the backup match the source, even when the source is wrong. With an empty folder as the source, the same `--delete` command removed every file in the backup and exited with code 0, as if all went well. Check SRC before a `--delete` run, keep the dry run line, and keep a second copy that the mirror never deletes from.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
