@@ -12,6 +12,7 @@ import type { ProgressStep } from './progress';
 import { openToken, sealToken } from '../core/tokenVault';
 import { mergeRemoteEvents } from '../core/syncModel';
 import { cleanPmfDraft, earliestFirstRun, type PmfDraft, type PmfStatus } from '../core/pmf';
+import { deviceName } from './deviceName';
 
 interface AccountData {
   userId: string;
@@ -135,7 +136,7 @@ class Store {
       writeFileSync(temporary, JSON.stringify(data), { mode: 0o600 });
       renameSync(temporary, this.file);
     } catch (error) {
-      throw new Error('Unvibe could not save learning data on this Mac. Check disk space and file permissions, then try again.', { cause: error });
+      throw new Error(`Unvibe could not save learning data on this ${deviceName}. Check disk space and file permissions, then try again.`, { cause: error });
     }
   }
 

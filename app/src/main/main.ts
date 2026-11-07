@@ -124,6 +124,7 @@ import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
 import { isProPlan } from '../core/plan';
+import { deviceName } from './deviceName';
 
 function osUserName(): string {
   try {
@@ -1172,7 +1173,7 @@ app.whenReady().then(() => {
     if (typeof input?.note !== 'string') return { ok: false, error: 'Note must be text.' };
     try {
       const saved = store().updateLesson(input.id, { note: input.note });
-      return saved ? { ok: true } : { ok: false, error: 'That lesson is no longer on this Mac.' };
+      return saved ? { ok: true } : { ok: false, error: `That lesson is no longer on this ${deviceName}.` };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Could not save this note.' };
     }

@@ -18,6 +18,7 @@ import { scanTypedText } from '../core/secretFilter';
 import { ConsentRequiredError, isConsentProvider, type ConsentProvider } from '../core/consent';
 import { codeConsented } from './consentStore';
 import { providerInUse } from './consent';
+import { deviceName } from './deviceName';
 
 /** Typed text has no consent step, so any secret finding stops it before anything leaves the Mac. */
 const SECRET_IN_MESSAGE = 'That looks like it contains a key, token, or password, so nothing was sent. Remove it and try again.';
@@ -82,7 +83,7 @@ function lessonPayload(
   level?: ExplanationLevel,
 ): { payload: ReviewRequestPayload; event: LocalEvent } | { error: string } {
   const event = store().eventById(eventId);
-  if (!event) return { error: 'That lesson is no longer on this Mac.' };
+  if (!event) return { error: `That lesson is no longer on this ${deviceName}.` };
   if (!event.code?.trim()) return { error: 'This lesson has no saved code yet. Open a fresh explanation first.' };
   const payload: ReviewRequestPayload = {
     scope: (event.scope as ReviewRequestPayload['scope']) || 'selection',
