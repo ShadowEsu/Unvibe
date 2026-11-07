@@ -23,6 +23,18 @@ export const milestones: Milestone[] = [
   {
     date: "6 NOV 2026",
     category: "PRODUCT",
+    title: "Explain SQL joins, Supabase RLS policies and CORS errors",
+    summary: "3 new explain pages: SQL joins, Supabase row level security policies, and a CORS error with the API code behind it. Each has its own sample in a Try it box and notes on what that sample did when run with SQLite 3.53.4, PostgreSQL 18.6 through PGlite 0.5.15, and Chromium 156.",
+    links: [
+      { href: "/explain/sql-joins", label: "Explain SQL joins" },
+      { href: "/explain/supabase-rls", label: "Explain Supabase RLS" },
+      { href: "/explain/cors-error", label: "Explain a CORS error" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/238", label: "PR #238" },
+    ],
+  },
+  {
+    date: "6 NOV 2026",
+    category: "PRODUCT",
     title: "Explain package-lock.json, Prisma schemas and Tailwind classes",
     summary: "3 new explain pages: a package-lock.json, a Prisma schema and a card styled with Tailwind CSS classes. Each has its own sample in a Try it box and notes on what that sample did when run with npm 11.10.1, Prisma 7.10.1 and Tailwind CSS 4.3.4.",
     links: [
