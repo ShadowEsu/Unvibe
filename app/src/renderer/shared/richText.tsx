@@ -255,7 +255,8 @@ function renderTextBlock(block: string, key: string, words?: WordCounter): React
     if (table) {
       const rows: string[][] = [];
       i += 2;
-      while (i < lines.length && lines[i]!.trim() !== '' && lines[i]!.includes('|') && !HEADING_RE.test(lines[i]!)) {
+      // Rows run until a blank line, a heading or a list item (a "- a | b" bullet right under a table is a list).
+      while (i < lines.length && lines[i]!.trim() !== '' && lines[i]!.includes('|') && !HEADING_RE.test(lines[i]!) && !LIST_RE.test(lines[i]!)) {
         rows.push(tableCells(lines[i]!));
         i += 1;
       }

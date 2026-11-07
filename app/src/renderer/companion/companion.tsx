@@ -1315,7 +1315,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow setrow--stack">
         <div className="sl">Rough cost per explanation · {selected?.label ?? provider}{selected?.model ? ` · ${selected.model}` : ''}</div>
         <div className="sd" style={{ marginBottom: 10 }}>
-          Estimates update when you change the provider. List prices only — your provider bill may differ.
+          Estimates update when you change the provider. List prices only; your provider bill may differ.
         </div>
         {costs ? (
           <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">

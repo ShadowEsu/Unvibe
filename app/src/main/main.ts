@@ -659,8 +659,12 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
-  // A fresh panel's session is started by widget:ready.
-  if (restoring) return;
+  // A fresh panel's session is started by widget:ready. A restore ends the "Loading" pulse sent above, as the failure
+  // pulse used to (review MUST).
+  if (restoring) {
+    pulseBar({ phase: 'idle', label: 'Ready' });
+    return;
+  }
   beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 

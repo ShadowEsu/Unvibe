@@ -427,7 +427,7 @@ export function Learn({
     const askCard = (
       <div className="study-assistant">
         <div className="study-assistant__head">
-          <span className="learning-kicker">Ask about this lesson</span>
+          <h2 className="learning-kicker">Ask about this lesson</h2>
         </div>
         <p className="muted">Short clarifying questions work best.</p>
         <textarea
@@ -470,7 +470,7 @@ export function Learn({
                   <span aria-hidden="true"> · </span>
                   <time dateTime={open.ts}>{new Date(open.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
                   <span className={`pill pill--${open.outcome}`}>{outcomeName(open.outcome)}</span>
-                  {askLeft !== null && mode === 'restudy' ? <span className="lesson-doc__left">{askLeft} questions left today</span> : null}
+                  {askLeft !== null ? <span className="lesson-doc__left">{askLeft} questions left today</span> : null}
                 </p>
                 {intent === 'quiz' ? null : modes}
                 <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
@@ -482,7 +482,7 @@ export function Learn({
             <div className="lesson-grid">
               <section className="lesson-card lesson-card--code" aria-labelledby="lesson-code-title">
                 <div className="lesson-card__head">
-                  <span className="learning-kicker" id="lesson-code-title">Selected code</span>
+                  <h2 className="learning-kicker" id="lesson-code-title">Selected code</h2>
                   {fileName ? <span className="lesson-card__file">{fileName}</span> : null}
                 </div>
                 {open.code ? <LessonCode code={open.code} language={open.language} numbered /> : (
@@ -498,7 +498,7 @@ export function Learn({
               <section className="lesson-card lesson-note" aria-labelledby="lesson-note-title">
                 <div className="lesson-note__head">
                   <div>
-                    <span className="learning-kicker" id="lesson-note-title">My note</span>
+                    <h2 className="learning-kicker" id="lesson-note-title">My note</h2>
                     <p>Capture what you want to remember. This stays on this {deviceName}.</p>
                   </div>
                   <span className={`lesson-note__status lesson-note__status--${noteStatus}`} role="status">

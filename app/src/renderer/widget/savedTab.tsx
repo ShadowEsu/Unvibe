@@ -35,13 +35,16 @@ export function SavedTab({ version }: { version: number }) {
     return () => { live = false; };
   }, [version, reload]);
 
+  // Keyed on the lesson's id, not the object: Save replaces the object, and focus must stay on the Save chip.
+  const openId = open?.id ?? null;
   useEffect(() => {
-    if (open) headingRef.current?.focus();
-    else if (returnTo.current && lists) {
-      listRef.current?.querySelector<HTMLButtonElement>(`[data-lesson="${CSS.escape(returnTo.current)}"]`)?.focus();
-      returnTo.current = null;
-    }
-  }, [open, lists]);
+    if (openId) headingRef.current?.focus();
+  }, [openId]);
+  useEffect(() => {
+    if (openId || !returnTo.current || !lists) return;
+    listRef.current?.querySelector<HTMLButtonElement>(`[data-lesson="${CSS.escape(returnTo.current)}"]`)?.focus();
+    returnTo.current = null;
+  }, [openId, lists]);
 
   const show = async (id: string) => {
     setError('');

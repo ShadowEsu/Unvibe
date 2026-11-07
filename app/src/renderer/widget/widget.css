@@ -86,7 +86,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
    actions are pinned at that edge and stay crisp. */
 .ob-scroll:not(:has(.consent-form)) { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); }
 .ob-scroll:focus { outline: none; }
-.ob-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 14px; animation: viewIn 150ms var(--u-ease) both; }
+/* 20 px at the bottom: the last chip and its focus ring sit above the 16 px fade. */
+.ob-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 20px; animation: viewIn 150ms var(--u-ease) both; }
 @keyframes viewIn { from { opacity: 0; } }
 .ob-foot { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 0 16px 12px; }
 .ob-foot:not(:has(> :nth-child(2))) { padding-bottom: 0; }

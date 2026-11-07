@@ -101,6 +101,13 @@ test('table columns keep their alignment and short rows are padded to the header
   assert.match(html, /<tr><td class="is-left">1<\/td><td class="is-center"><\/td><td class="is-right"><\/td><\/tr>/);
 });
 
+test('a list right under a table stays a list, even when its items hold a pipe', () => {
+  const html = markup('| a | b |\n|---|---|\n| 1 | 2 |\n- `x | y` pipes x into y\n- plain item');
+  assert.equal(html.match(/<tr>/g)?.length, 2);
+  assert.match(html, /<\/table><\/div><ul class="rich-list">/);
+  assert.equal(html.match(/<li>/g)?.length, 2);
+});
+
 test('a line with pipes but no matching separator row is not a table', () => {
   const prose = [
     'Use `a | b` here.\nNext line.', '| a | b |\n|---|', '| a | b |\n|---|---|---|', 'Intro\n| a | b |',

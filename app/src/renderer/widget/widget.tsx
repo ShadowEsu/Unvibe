@@ -96,6 +96,11 @@ interface PanelState {
   teachEvidence: string;
   /** The provider the consent form names while phase is `aiConsent`. */
   consentProvider: ConsentProvider | null;
+  /**
+   * A follow-up that main held back for a sheet on Explain (the AI agreement or a possible secret). Send anyway sends
+   * this question, not a new explanation; Cancel or Agree put it back in the Ask field.
+   */
+  refusedQuestion: string;
   /** A link started this review: after agreeing, show the confirm sheet, not an explanation. */
   confirmAfterConsent: boolean;
   /** Agree was just pressed with nothing captured; main is reading the clipboard it asked for. */
@@ -119,6 +124,8 @@ interface PanelState {
 }
 
 const NO_DETAIL: DetailState = { phase: 'idle', text: '', error: '', open: false };
+/** A follow-up with a credential in it: the blocked sheet's own words, shown in the Ask thread. */
+const FOLLOW_UP_BLOCKED = 'Blocked: credential detected. Nothing was sent. Remove the secret from the selection or your question and try again.';
 
 function freshState(): PanelState {
   return {
@@ -141,6 +148,7 @@ function freshState(): PanelState {
     teachChecks: [],
     teachEvidence: '',
     consentProvider: null,
+    refusedQuestion: '',
     confirmAfterConsent: false,
     agreedJustNow: false,
     confirmAfterAgree: false,
@@ -185,12 +193,14 @@ function reduceEvent(s: PanelState, ev: WidgetEvent): PanelState {
       case 'done': return withLastFollowUp(s, { phase: 'done' });
       case 'error': return withLastFollowUp(s, { phase: 'error', error: ev.message ?? 'Something went wrong.' });
       case 'cancelled': return withLastFollowUp(s, null);
-      // Asked to agree first, or a secret in the question: the follow-up is not sent; the sheet below says why.
+      // Asked to agree first, or a possible secret in the question: the follow-up is held; the sheet on Explain says
+      // why and keeps the question. A credential is never sent, so that refusal stays in the Ask thread.
       case 'consentNeeded':
       case 'consent':
-      case 'blocked':
-        s = withLastFollowUp(s, null);
+        s = { ...withLastFollowUp(s, null), refusedQuestion: asking.question };
         break;
+      case 'blocked':
+        return withLastFollowUp(s, { phase: 'error', error: FOLLOW_UP_BLOCKED });
       default: break;
     }
   }
@@ -544,9 +554,12 @@ function Widget() {
   // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon.
   useEffect(() => {
     let theme: ThemePreference = START_THEME;
+    // The last click-away setting seen; main sends the whole set (theme and click-away together) on any change.
+    let behavior: string | undefined;
     void window.unvibe.getSettings().then(async (st) => {
-      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; inactiveBehavior?: string };
       theme = settings.theme ?? 'light';
+      behavior ??= settings.inactiveBehavior;
       configureTones({ enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' });
       if (settings.features) setFeatures((prev) => ({ ...prev, ...settings.features }));
       let stored: string | null = null;
@@ -566,8 +579,10 @@ function Widget() {
         theme = next.theme;
         applyTheme(theme);
       }
-      // Fade ↔ Hide changed: start from the solid panel instead of keeping an old fade (review NIT).
-      if (next.inactiveBehavior) setFade((prev) => nextFade(prev, 'back'));
+      // Fade ↔ Hide changed: start from the solid panel instead of keeping an old fade. A theme change alone keeps
+      // the fade.
+      if (next.inactiveBehavior && behavior !== undefined && next.inactiveBehavior !== behavior) setFade((prev) => nextFade(prev, 'back'));
+      if (next.inactiveBehavior) behavior = next.inactiveBehavior;
     });
     window.unvibe.onPanelAway((away) => {
       window.clearTimeout(hoverTimer.current);
@@ -590,9 +605,10 @@ function Widget() {
         setUsage((current) => ({ used: ev.used, limit: ev.limit, remaining: ev.remaining, resetsAt: ev.resetsAt, plan: ev.plan, selections: current?.selections }));
       }
       if (ev.type === 'error' && 'code' in ev && ev.code === 'pro_required') setProGate(true);
-      // A new selection, the AI agreement, or a secret/credential sheet shows on Explain: a follow-up refused for one of
-      // these arrives while Ask is open, and Ask doesn't draw them (review MUST).
-      if (ev.type === 'init' || ev.type === 'consentNeeded' || ev.type === 'consent' || ev.type === 'blocked') {
+      // A new selection, the AI agreement or a possible secret shows on Explain: a follow-up held for one of these
+      // arrives while Ask is open, and Ask doesn't draw those sheets (review MUST). A blocked follow-up stays in the
+      // Ask thread (reduceEvent); a blocked explanation shows its sheet on Explain.
+      if (ev.type === 'init' || ev.type === 'consentNeeded' || ev.type === 'consent' || (ev.type === 'blocked' && !followUpLive(stateRef.current.followUps))) {
         setView('explain');
         setTeachOpen(false);
       }
@@ -676,12 +692,13 @@ function Widget() {
    * can be asked for again. Focus stays on the button.
    */
   const toggleDetail = () => {
-    if (followUpBusy()) return;
     const current = s.detail;
     if (current.phase === 'done' || current.phase === 'streaming') {
       patch({ detail: { ...current, open: !current.open } });
       return;
     }
+    // Showing or hiding loaded detail is fine while a follow-up streams; starting a run is not (one run at a time).
+    if (followUpBusy()) return;
     patch({ detail: { phase: 'streaming', text: '', error: '', open: true } });
     // Not request(): More detail is a follow-up, not a new explanation, so an exhausted explanation
     // allowance must not replace the answer on screen; a refusal shows under the short answer.
@@ -706,6 +723,19 @@ function Widget() {
   useEffect(() => { if (quizKey) questionRef.current?.focus(); }, [quizKey]);
 
   const askInputRef = useRef<HTMLInputElement>(null);
+  /** Sends a follow-up into the Ask thread; `consented` after "Send anyway" on a possible secret in it. */
+  const askFollowUp = (question: string, consented = false) => {
+    setS((prev) => ({
+      ...prev,
+      ask: '',
+      refusedQuestion: '',
+      phase: prev.phase === 'consent' ? 'done' : prev.phase,
+      followUps: [...prev.followUps, { id: Date.now(), question, answer: '', phase: 'waiting' }],
+    }));
+    setView('ask');
+    window.unvibe.request({ level: s.level, question, ...(consented ? { consented: true } : {}) });
+  };
+
   const sendAsk = () => {
     const question = s.ask.trim();
     if (!question || followUpBusy()) return;
@@ -715,9 +745,13 @@ function Widget() {
       setView('explain');
       return;
     }
-    setS((prev) => ({ ...prev, ask: '', followUps: [...prev.followUps, { id: Date.now(), question, answer: '', phase: 'waiting' }] }));
+    askFollowUp(question);
+  };
+
+  /** Back from a sheet that held a follow-up: the answer again, the question back in the Ask field. */
+  const returnHeldQuestion = (phase: Phase) => {
+    patch({ phase, consentProvider: null, ask: s.refusedQuestion, refusedQuestion: '' });
     setView('ask');
-    window.unvibe.request({ level: s.level, question });
   };
 
   const toggleSave = async () => {
@@ -880,7 +914,8 @@ function Widget() {
                   void window.unvibe.explainAfterConsent().then((result) => {
                     if (!result.explained) patch({ phase: 'empty', agreedJustNow: false });
                   });
-                } else if (next) patch({ phase: next, consentProvider: null });
+                } else if (next === 'done' && s.refusedQuestion) returnHeldQuestion('done');
+                else if (next) patch({ phase: next, consentProvider: null });
                 else request({});
               }}
               onCancel={closePanel}
@@ -932,8 +967,8 @@ function Widget() {
             <Findings findings={s.findings} />
             <p className="ob-sub">Nothing has been sent. Send anyway, or close and clean the selection.</p>
             <div className="ob-actions">
-              <button className="ob-btn" onClick={closePanel}>Cancel</button>
-              <button className="ob-btn ghost" onClick={() => request({ consented: true })}>Send anyway</button>
+              <button className="ob-btn" onClick={() => (s.refusedQuestion ? returnHeldQuestion('done') : closePanel())}>Cancel</button>
+              <button className="ob-btn ghost" onClick={() => (s.refusedQuestion ? askFollowUp(s.refusedQuestion, true) : request({ consented: true }))}>Send anyway</button>
             </div>
           </div>
         );
@@ -1162,12 +1197,16 @@ function Widget() {
         role="tablist"
         aria-label="Panel"
         onKeyDown={(event) => {
-          const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-          if (!step) return;
-          event.preventDefault();
           const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-          const at = tabs.indexOf(document.activeElement as HTMLButtonElement);
-          tabs[(Math.max(0, at) + step + tabs.length) % tabs.length]?.focus();
+          const at = Math.max(0, tabs.indexOf(document.activeElement as HTMLButtonElement));
+          const to = event.key === 'ArrowRight' ? (at + 1) % tabs.length
+            : event.key === 'ArrowLeft' ? (at - 1 + tabs.length) % tabs.length
+            : event.key === 'Home' ? 0
+            : event.key === 'End' ? tabs.length - 1
+            : -1;
+          if (to < 0) return;
+          event.preventDefault();
+          tabs[to]?.focus();
         }}
       >
         {TABS.map((tab) => {
