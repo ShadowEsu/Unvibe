@@ -56,7 +56,7 @@
     "afterSign": "scripts/afterSignHook.cjs",
     "artifactName": "Unvibe-${version}-${os}-${arch}.${ext}",
     "mac": {
-      "icon": "build/icon.png",
+      "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "target": [
         {
@@ -130,7 +130,7 @@
       ]
     },
     "win": {
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",

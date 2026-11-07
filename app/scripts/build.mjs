@@ -82,7 +82,9 @@ cpSync('src/renderer/shared/fonts', 'dist/renderer/fonts', { recursive: true });
 // Licences for code drawn into the renderer (the inlined Lucide icons, ISC) ship beside it the same way.
 cpSync('src/renderer/shared/licences', 'dist/renderer/licences', { recursive: true });
 mkdirSync('dist/assets', { recursive: true });
-for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png']) {
+// Spectral icon set (Design spectral/icon): the app icon, the macOS menu-bar template and the Windows tray, each
+// with an @2x that Electron picks on HiDPI.
+for (const f of ['icon.png', 'icon.icns', 'trayTemplate.png', 'trayTemplate@2x.png', 'tray.png', 'tray@2x.png']) {
   try {
     cpSync(`build/${f}`, `dist/assets/${f}`);
   } catch {

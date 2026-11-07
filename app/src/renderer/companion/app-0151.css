@@ -469,8 +469,19 @@
    and a tall one (the shortcut guide) scrolls. Steps change without a transition: SPEC §6 names no step motion. */
 :root[data-ui="v3"][data-v7] .onboard {
   position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; overflow-y: auto;
-  padding: 56px clamp(24px, 8vw, 80px) 0; background: var(--u-canvas); color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
+  padding: 56px clamp(24px, 8vw, 80px) 0; background: transparent; color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
 }
+/* The shortcut guide (shared/shortcutGuide.css) in Spectral: the done check and "you" row in the accent, the
+   illustration's switch the accent rather than macOS green (o-shortcut). */
+:root[data-ui="v3"][data-v7] .shortcut-guide__steps li.is-done::before {
+  border-color: var(--u-accent);
+  background: var(--u-accent) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 14px no-repeat;
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .shortcut-guide__steps li.is-done::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='%2315141A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+:root[data-ui="v3"][data-v7] .shortcut-art__row.is-you { outline: 2px solid var(--u-accent); background: var(--u-mist); }
+:root[data-ui="v3"][data-v7] .shortcut-art__switch.is-on { background: var(--u-accent); }
 :root[data-ui="v3"][data-v7] .onboard__top { display: grid; justify-items: center; gap: 14px; }
 :root[data-ui="v3"][data-v7] .onboard__steps { display: flex; gap: 6px; }
 :root[data-ui="v3"][data-v7] .onboard__steps i { width: 56px; height: 4px; border-radius: 4px; background: var(--u-plate); }
@@ -532,7 +543,7 @@
    at the 620 px minimum), so the forward button never scrolls away; in a short step it sits in place. */
 :root[data-ui="v3"][data-v7] .onboard__foot {
   position: sticky; bottom: 0; z-index: 1; display: flex; align-self: stretch; justify-content: space-between; align-items: flex-start; gap: 16px;
-  margin-top: auto; padding: 28px 0 36px; background: var(--u-canvas);
+  margin-top: auto; padding: 28px 0 36px; background: linear-gradient(to top, var(--u-paper) 65%, transparent);
 }
 :root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
 :root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
@@ -606,7 +617,7 @@
    Only the action and understood colours plus neutrals: amber means a problem and lilac is Vibe's own (tokens.css). */
 :root[data-ui="v3"][data-v7] .onboard__confetti { position: fixed; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
 :root[data-ui="v3"][data-v7] .onboard__confetti i {
-  position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border-radius: 3px; background: var(--u-lime);
+  position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border-radius: 3px; background: var(--u-accent);
   animation: onboardConfetti 1.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; animation-delay: calc(var(--i) * 18ms);
 }
 :root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+2) { background: var(--u-violet-lip); }
