@@ -36,7 +36,8 @@ export default function ExplainLanguagePage({ params }: Params) {
   const page = explainPages.find(({ id }) => id === params.id);
   if (!page) notFound();
   const { name } = explainLanguage(page);
-  const others = explainPages.filter(({ id }) => id !== page.id);
+  const related = (page.related ?? []).map((id) => explainPages.find((other) => other.id === id)).filter((other) => other !== undefined);
+  const others = explainPages.filter(({ id }) => id !== page.id && !page.related?.includes(id));
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
@@ -84,6 +85,17 @@ export default function ExplainLanguagePage({ params }: Params) {
       </section>
 
       <ExplainDownload language={name} />
+
+      {related.length > 0 && (
+        <nav className="explain-card explain-more" aria-labelledby="explain-related-title">
+          <h2 id="explain-related-title">Related</h2>
+          <ul>
+            {related.map((other) => (
+              <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
         <h2 id="explain-more-title">Explain code in another language</h2>

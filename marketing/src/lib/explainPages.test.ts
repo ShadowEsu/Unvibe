@@ -76,6 +76,18 @@ describe("explain pages", () => {
     }
   });
 
+  it("only list related pages that exist, never themselves, each once and at most 4", () => {
+    const ids = new Set(explainPages.map((page) => page.id));
+    for (const { id, related = [] } of explainPages) {
+      assert.ok(related.length <= 4, `${id}: ${related.length} related pages, the row fits 4`);
+      assert.equal(new Set(related).size, related.length, `${id}: a related page twice`);
+      for (const other of related) {
+        assert.notEqual(other, id, `${id} lists itself as related`);
+        assert.ok(ids.has(other), `${id}: related page "${other}" has no /explain page`);
+      }
+    }
+  });
+
   it("are all in the sitemap, once each", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
     assert.deepEqual(EXPLAIN_PATHS, ["/explain", ...explainPages.map((page) => `/explain/${page.id}`)]);
