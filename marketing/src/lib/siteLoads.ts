@@ -159,7 +159,7 @@ const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|red
  * `bot` skips CUBOT phones' model name.
  */
 const BOT_UA =
-  /(?<!cu)bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|monitor|curl|wget|python|node-fetch|axios|go-http|java\/|okhttp|httpclient|playwright|puppeteer|selenium|phantom/i;
+  /(?<!cu)bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|mastodon|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|monitor|curl|wget|python|node-fetch|axios|go-http|java\/|okhttp|httpclient|playwright|puppeteer|selenium|phantom/i;
 
 export function isBotUserAgent(ua: string): boolean {
   return BOT_UA.test(ua);

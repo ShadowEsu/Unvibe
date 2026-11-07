@@ -4,8 +4,16 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
+import { NextRequest, type NextFetchEvent } from "next/server";
 import { GET, HEAD } from "@/app/download/[file]/route";
-import { BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
+import { middleware } from "@/middleware";
+import {
+  BETA_INSTALL_TAG,
+  BETA_MAC_DOWNLOAD_URL,
+  BETA_MAC_INTEL_DOWNLOAD_URL,
+  BETA_WINDOWS_ASSET,
+  BETA_WINDOWS_DOWNLOAD_URL,
+} from "@/lib/betaInstallScript";
 import { BETA_MAC_DIRECT_DOWNLOAD, BETA_MAC_INTEL_DIRECT_DOWNLOAD, BETA_WINDOWS_DIRECT_DOWNLOAD } from "@/lib/betaOffer";
 import {
   DOWNLOAD_FILES,
@@ -39,6 +47,13 @@ describe("download files (fixed map, this release only)", () => {
     assert.match(DOWNLOAD_FILES.mac.url, /mac-arm64\.dmg$/);
     assert.match(DOWNLOAD_FILES["mac-intel"].url, /mac-x64\.dmg$/);
     assert.match(DOWNLOAD_FILES.windows.url, /win-x64-.*\.exe$/);
+  });
+
+  it("follows the release's own file constants, so switching the Windows file (portable → setup.exe at 0.1.50) moves the link", () => {
+    assert.equal(DOWNLOAD_FILES.mac.url, BETA_MAC_DOWNLOAD_URL);
+    assert.equal(DOWNLOAD_FILES["mac-intel"].url, BETA_MAC_INTEL_DOWNLOAD_URL);
+    assert.equal(DOWNLOAD_FILES.windows.url, BETA_WINDOWS_DOWNLOAD_URL);
+    assert.ok(DOWNLOAD_FILES.windows.url.endsWith(`/${BETA_WINDOWS_ASSET}`));
   });
 
   it("stores only the assets migration 0014 allows", () => {
@@ -145,7 +160,7 @@ describe("recordDownload", () => {
   });
 });
 
-describe("/download/<file> route", () => {
+describe("/download/<file>: the route redirects, the middleware counts", () => {
   let server: Server;
   let bodies: Record<string, unknown>[] = [];
   const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY };
@@ -176,37 +191,59 @@ describe("/download/<file> route", () => {
     }
   });
 
-  const call = (method: "GET" | "HEAD", file: string, query = "", headers: Record<string, string> = { "user-agent": CHROME }) =>
-    (method === "GET" ? GET : HEAD)(new Request(`${SITE}/download/${file}${query}`, { method, headers }), { params: { file } });
+  const route = (method: "GET" | "HEAD", file: string, query = "") =>
+    (method === "GET" ? GET : HEAD)(new Request(`${SITE}/download/${file}${query}`, { method }), { params: { file } });
 
-  it("counts a click once and redirects to the release asset, uncached, without passing the query on", async () => {
-    const res = await call("GET", "windows", "?utm_source=email&next=https://evil.example", {
-      "user-agent": CHROME,
+  /** Runs the middleware for a request and waits for whatever it handed to waitUntil. */
+  async function count(path: string, headers: Record<string, string> = {}, method = "GET") {
+    const waits: Promise<unknown>[] = [];
+    const event = { waitUntil: (p: Promise<unknown>) => waits.push(p) } as unknown as NextFetchEvent;
+    const res = middleware(new NextRequest(`${SITE}${path}`, { method, headers: { host: "unvibe.site", "user-agent": CHROME, ...headers } }), event);
+    await Promise.all(waits);
+    return { res, waits };
+  }
+
+  it("the route answers at once with a 302 to the release asset, uncached, without passing the query on", () => {
+    for (const file of DOWNLOAD_FILE_NAMES) {
+      const res = route("GET", file, "?utm_source=email&next=https://evil.example");
+      assert.equal(res.status, 302);
+      assert.equal(res.headers.get("location"), DOWNLOAD_FILES[file].url);
+      assert.equal(res.headers.get("cache-control"), "no-store");
+    }
+    assert.equal(route("HEAD", "mac").headers.get("location"), DOWNLOAD_FILES.mac.url);
+  });
+
+  it("the route answers 404 for any other name, with no redirect", () => {
+    for (const file of ["thanks", "linux", "__proto__", "mac.dmg"]) {
+      const res = route("GET", file);
+      assert.equal(res.status, 404, file);
+      assert.equal(res.headers.get("location"), null, file);
+    }
+  });
+
+  it("the middleware counts a click once, after the response, and passes the request through untouched", async () => {
+    const { res, waits } = await count("/download/windows?utm_source=email", {
       referer: `${SITE}/beta?utm_source=devhunt`,
+      "sec-fetch-dest": "document",
+      accept: "*/*",
     });
-    assert.equal(res.status, 302);
-    assert.equal(res.headers.get("location"), DOWNLOAD_FILES.windows.url);
-    assert.equal(res.headers.get("cache-control"), "no-store");
+    assert.equal(res.headers.get("x-middleware-next"), "1");
+    assert.equal(res.headers.get("location"), null);
+    assert.equal(waits.length, 1);
     assert.equal(bodies.length, 1);
     assert.deepEqual(Object.keys(bodies[0]).sort(), ["p_asset", "p_day", "p_source"]);
     assert.equal(bodies[0].p_asset, "windows");
     assert.equal(bodies[0].p_source, "email");
   });
 
-  it("redirects HEAD and bots without counting them", async () => {
-    const head = await call("HEAD", "mac");
-    assert.equal(head.status, 302);
-    assert.equal(head.headers.get("location"), DOWNLOAD_FILES.mac.url);
-    const bot = await call("GET", "mac", "", { "user-agent": "Googlebot/2.1" });
-    assert.equal(bot.status, 302);
-    assert.equal(bodies.length, 0);
-  });
-
-  it("answers 404 for any other name, with no redirect and no count", async () => {
-    for (const file of ["thanks", "linux", "__proto__", "mac.dmg"]) {
-      const res = await call("GET", file);
-      assert.equal(res.status, 404, file);
-      assert.equal(res.headers.get("location"), null, file);
+  it("the middleware doesn't count HEAD, bots, embeds or unknown names as downloads", async () => {
+    for (const [path, headers, method] of [
+      ["/download/mac", {}, "HEAD"],
+      ["/download/mac", { "user-agent": "WhatsApp/2.24" }, "GET"],
+      ["/download/mac", { "sec-fetch-dest": "image" }, "GET"],
+      ["/download/linux", { accept: "text/html", "sec-fetch-dest": "document" }, "GET"],
+    ] as const) {
+      await count(path, headers, method);
     }
     assert.equal(bodies.length, 0);
   });
