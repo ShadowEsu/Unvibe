@@ -87,6 +87,9 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   asyncio: "/og/og-explain-asyncio-fb6e0e21.png",
   tar: "/og/og-explain-tar-e922b08f.png",
   rsync: "/og/og-explain-rsync-bf6fe9bd.png",
+  "git-rebase": "/og/og-explain-git-rebase-61755953.png",
+  xargs: "/og/og-explain-xargs-f6d7bed7.png",
+  "ps-aux": "/og/og-explain-ps-aux-440a0365.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */
