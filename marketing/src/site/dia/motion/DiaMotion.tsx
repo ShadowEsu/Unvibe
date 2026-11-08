@@ -312,7 +312,7 @@ export function DiaMotion() {
       });
     }
 
-    // ── Header indicator (ledger 562 §2): one lilac strip behind the links, shown through clip-path inset to the hovered or
+    // ── Header indicator (ledger 562 §2): one underline under the links, shown through clip-path inset to the hovered or
     //    focused link and resting on the active one (aria-current). Positions are measured on load, resize and font load
     //    only, never while moving. The header persists across client navigation, so a route change glides it to the new
     //    active link. Reduced motion: CSS drops the transition, so it jumps.
@@ -326,7 +326,7 @@ export function DiaMotion() {
       let boxes = new Map<HTMLElement, { l: number; r: number }>();
       let target: HTMLElement | null = null;
       // From rects relative to the bar, divided by the bar's own scale: right mid-entrance (the items carry a transform,
-      // which would make each <li> the links' offsetParent), with the settled .94 scale and after a resize.
+      // which would make each <li> the links' offsetParent) and after a resize.
       const measure = () => {
         const br = bar.getBoundingClientRect();
         const s = br.width / (bar.offsetWidth || 1);
