@@ -697,6 +697,36 @@ export const languages: Language[] = [
     learningPath: ["Reading a row", "CPU use", "Memory use", "Process states"],
     sample: `ps aux --sort=-%cpu | head -5`,
   },
+  {
+    id: "systemd",
+    name: "systemd service",
+    categories: ["systems", "backend"],
+    blurb: "The unit files that keep a server process running on Linux: what to start, where, with which settings, and when to restart it.",
+    concepts: ["[Unit], [Service] and [Install]", "WorkingDirectory= and ExecStart=", "Environment= and EnvironmentFile=", "Restart= and RestartSec="],
+    frameworks: ["systemd", "systemctl", "journalctl", "cron"],
+    learningPath: ["Reading a unit file", "Starting a service", "Settings and .env files", "Restarts and limits"],
+    sample: `systemctl --user status notes-api`,
+  },
+  {
+    id: "terraform",
+    name: "Terraform",
+    categories: ["backend", "systems"],
+    blurb: "Infrastructure written as code: resources, variables and outputs, and the plan you read before Terraform changes anything.",
+    concepts: ["providers and init", "resources and references", "plan and apply", "variables and outputs"],
+    frameworks: ["Terraform", "OpenTofu", "HCL", "AWS"],
+    learningPath: ["Providers", "Resources", "Plan before apply", "Variables and state"],
+    sample: `terraform plan -var env=production`,
+  },
+  {
+    id: "assembly",
+    name: "Assembly",
+    categories: ["systems"],
+    blurb: "The instructions a compiler makes from C, written out as text: registers, loads, compares and branches, on arm64 and x86-64.",
+    concepts: ["registers and arguments", "compare and branch", "-O0 and -O1", "arm64 and x86-64"],
+    frameworks: ["clang", "Compiler Explorer", "LLDB", "gdb"],
+    learningPath: ["Registers", "Loads and stores", "Compares and branches", "Optimization levels"],
+    sample: `ldr w10, [x0], #4`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [

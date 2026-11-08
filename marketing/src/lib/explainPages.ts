@@ -993,6 +993,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
+    related: ["cpp", "make", "assembly"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -1786,6 +1787,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
   {
     id: "cron",
     fileName: "crontab",
+    related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
       "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup, weekday reports and a monthly job.",
@@ -2003,6 +2005,7 @@ end`,
   {
     id: "yaml",
     fileName: "ci.yml",
+    related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
       "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
@@ -3500,6 +3503,174 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
     ],
     watchOut:
       "A zombie can't be killed: it has already exited. `kill -9` on the zombie's PID left it in state `Z`, and it went away only when its parent, the Python process that forked it, was killed. If zombies pile up, the fix is in the parent, which has to wait for its children.",
+  },
+  {
+    id: "systemd",
+    fileName: "notes-api.service",
+    related: ["bash", "env", "cron"],
+    lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
+    description:
+      "Paste a systemd service file and get each line explained in plain English, free online. The sample keeps a small Python API running as a user service and restarts it 2 seconds after a crash.",
+    sampleSummary: "A user service file for a small Python API: the folder it runs in, its settings from `Environment=` and an optional .env file, and a restart 2 seconds after it crashes.",
+    sample: `# notes-api.service: keep a small Python API running, restart it if it crashes
+# install: systemctl --user link ./notes-api.service, then start notes-api
+[Unit]
+Description=Notes API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/apps/notes-api
+Environment=APP_ENV=production PORT=8040
+EnvironmentFile=-%h/apps/notes-api/.env
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target`,
+    shows: [
+      {
+        concept: "[Unit], [Service] and [Install]",
+        text: "`[Unit]` names the service and sets its order, `[Service]` says what to run and how, and `[Install]` is ignored while the service runs: `systemctl --user enable` and `disable` read it (systemd.unit). Enabling it created a link to the file in default.target.wants, the list of what your user session starts. `systemd-analyze --user verify` printed nothing for this file and exited with code 0.",
+      },
+      {
+        concept: "WorkingDirectory= and ExecStart=",
+        text: "`ExecStart=` is the command, with the full path to the program. `%h` is your home folder, so python3 started in ~/apps/notes-api and found app.py there. With that folder missing, systemd printed `Changing to the requested working directory failed` and `Failed at step CHDIR`, then scheduled a restart because of `Restart=on-failure`, which failed the same way.",
+      },
+      {
+        concept: "Environment= and EnvironmentFile=",
+        text: "`Environment=` set APP_ENV=production and PORT=8040, and the app reported both. A .env file with `PORT=8041` won over that line: the app moved to 8041 and 8040 stopped answering. The `-` before the path makes the file optional. Without it, a missing .env stopped the start with `Failed to load environment files: No such file or directory`.",
+      },
+      {
+        concept: "Restart= and RestartSec=",
+        text: "`Restart=on-failure` brings the service back when it exits with an error. When the app exited with code 1, systemd logged `status=1/FAILURE`, then `Scheduled restart job, restart counter is at 1`, and after the 2-second `RestartSec=` wait a new process, with a new PID, answered. When the app exited with code 0, it stayed stopped, because a clean exit isn't a failure.",
+      },
+    ],
+    notes: [
+      "Run with systemd 261 and Python 3.14.7 on Linux as a user service, with no root: `systemctl --user link` pointed systemd at the file and `systemctl --user start notes-api` started it. app.py is a short test server that reports its settings and exits with code 1 or 0 on request.",
+      "After an edit to the file, `systemctl --user status` warned that the unit file `changed on disk` and said to run `systemctl --user daemon-reload` to load the new version.",
+      "`After=network.target` does nothing in a user service. `After=` only sets the order and doesn't start anything by itself (systemd.unit), and network.target belongs to the system service manager: it isn't in the user manager's list of units (systemd.special), and `systemctl --user show network.target` printed `LoadState=not-found`. default.target is the main target of the user service manager (systemd.special).",
+    ],
+    watchOut:
+      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 4 times, refused the 5th with `Start request repeated too quickly` and left it failed, with nothing on port 8040. This file doesn't set a limit, so systemd's defaults applied: 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so you can start it right away.",
+  },
+  {
+    id: "terraform",
+    fileName: "main.tf",
+    related: ["yaml", "json", "ini"],
+    lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
+    description:
+      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only the local and random providers, so it runs without a cloud account.",
+    sampleSummary: "A main.tf that pins 2 providers, takes an `env` variable, makes a random name and writes it into a JSON file, then prints the name as an output.",
+    sample: `# main.tf: write a small config file with a random name, no cloud account needed
+terraform {
+  required_providers {
+    local  = { source = "hashicorp/local", version = "2.9.1" }
+    random = { source = "hashicorp/random", version = "3.9.1" }
+  }
+}
+
+variable "env" {
+  type    = string
+  default = "staging"
+}
+
+resource "random_pet" "name" {
+  keepers = { env = var.env }
+}
+
+resource "local_file" "config" {
+  filename = "\${path.module}/out/\${var.env}.json"
+  content  = jsonencode({ env = var.env, name = random_pet.name.id })
+}
+
+output "app_name" {
+  value = random_pet.name.id
+}`,
+    shows: [
+      {
+        concept: "providers and init",
+        text: "`required_providers` says which plugins the code needs and pins their versions. `terraform init` downloaded hashicorp/local v2.9.1 and hashicorp/random v3.9.1, printed `signed by HashiCorp` for each, and wrote .terraform.lock.hcl with those versions. Terraform's own message says to commit that lock file so later `terraform init` runs pick the same versions.",
+      },
+      {
+        concept: "resources and references",
+        text: "Each `resource` block is one thing Terraform manages. `random_pet.name.id` points at the name the first resource makes, so Terraform created random_pet first and the file second, and wrote out/staging.json with `{\"env\":\"staging\",\"name\":\"immense-dassie\"}`. A typo, `random_pet.nme.id`, stopped `terraform validate` with `Reference to undeclared resource`.",
+      },
+      {
+        concept: "plan and apply",
+        text: "`terraform plan` lists what would change and changes nothing: `Plan: 2 to add, 0 to change, 0 to destroy`. `apply` does it, but asks first: `Only 'yes' will be accepted to approve.` Answering no printed `Apply cancelled.` and created nothing, and `-auto-approve` skips the question. Run again with nothing changed, apply printed `No changes. Your infrastructure matches the configuration.`",
+      },
+      {
+        concept: "variables and outputs",
+        text: "`env` defaults to staging, and `-var env=production` changes it for one run. The `output` printed `app_name = \"immense-dassie\"` after the first apply, and `terraform output` prints it again any time. Because the name's `keepers` include `env`, changing env made a new name, powerful-giraffe, instead of keeping the old one.",
+      },
+    ],
+    notes: [
+      "Run with Terraform 1.17.1 on Linux, downloaded from releases.hashicorp.com and checked against HashiCorp's signed checksums, in a new folder holding only main.tf, with no backend, so the state stayed in a local terraform.tfstate. No cloud account or credentials were used.",
+      "When out/production.json was deleted by hand, the next plan noticed and planned to write it again: `local_file.config will be created`, `Plan: 1 to add`.",
+    ],
+    watchOut:
+      "Changing one value can destroy things, not just edit them. With `-var env=production`, the plan said `must be replaced` for both resources and ended `Plan: 2 to add, 0 to change, 2 to destroy`. Apply deleted out/staging.json and replaced the name. Read the destroy count in every plan before you type yes. The state file also keeps a copy of what it wrote: terraform.tfstate held the JSON file's full content in plain text, so never commit it.",
+  },
+  {
+    id: "assembly",
+    fileName: "sum.s",
+    related: ["c", "cpp", "make"],
+    lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
+    description:
+      "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64 for a Mac, with its registers and loop.",
+    sampleSummary: "A 7-line C function that adds up an array of ints, and the arm64 assembly clang 22.1.8 made from it at `-O1` for macOS: 13 instructions, with the C on top as comments.",
+    sample: `; sum.c (clang 22.1.8, -O1, arm64-apple-macos)
+; int sum(const int *nums, int count) {
+;     int total = 0;
+;     for (int i = 0; i < count; i++) {
+;         total += nums[i];
+;     }
+;     return total;
+; }
+	.globl	_sum                            ; -- Begin function sum
+_sum:                                   ; @sum
+	cmp	w1, #1
+	b.lt	LBB0_4
+	mov	w8, #0                          ; =0x0
+	mov	w9, w1
+LBB0_2:                                 ; =>This Inner Loop Header: Depth=1
+	ldr	w10, [x0], #4
+	add	w8, w10, w8
+	subs	x9, x9, #1
+	b.ne	LBB0_2
+	mov	x0, x8
+	ret
+LBB0_4:
+	mov	w8, #0                          ; =0x0
+	mov	x0, x8
+	ret`,
+    shows: [
+      {
+        concept: "registers and arguments",
+        text: "The C names are gone, and registers hold the values. Arm's calling convention, the AAPCS64, passes the first 8 integer and pointer arguments in `x0` to `x7` and returns the result in `x0`, so `nums` arrives in `x0`, `count` in `w1`, and `mov x0, x8` hands back the total. `w1` is the low 32 bits of `x1`, the size of an `int`. A caller built the same way put the array's address in `x0` and 4 in `w1`, then jumped to `_sum`.",
+      },
+      {
+        concept: "compare and branch",
+        text: "`cmp w1, #1` and `b.lt LBB0_4` skip the loop when `count` is less than 1, and LBB0_4 returns 0. The loop is the 4 instructions after LBB0_2: `ldr w10, [x0], #4` loads one int and moves `x0` 4 bytes on to the next one, `add` adds it to the total in `w8`, `subs` takes 1 off a copy of `count` in `x9`, and `b.ne` jumps back until that copy reaches 0. No register counts `i` up: the compiler counts down instead.",
+      },
+      {
+        concept: "-O0 and -O1",
+        text: "At `-O0` the same function was 25 instructions, with a loop of 16. It kept `nums`, `count`, `total` and `i` in memory on the stack and loaded them again on every pass: 13 of its instructions read or write `[sp, ...]`. At `-O1` it was 13 instructions with a loop of 4, and none of them touched the stack.",
+      },
+      {
+        concept: "arm64 and x86-64",
+        text: "The same C built for x86-64 Linux is a different instruction set: `testl` and `jle` instead of `cmp` and `b.lt`, `nums` in `rdi` and `count` in `esi`, and a loop that adds straight from memory with one `addl (%rdi,%rdx,4), %eax`. Every arm64 instruction took 4 bytes, and the x86-64 ones took 1 to 6. Linked with a test `main` and run, it returned 16 for 3, 5, -2 and 10, 0 for a count of 0 or -3, and 703 for the numbers 1 to 37.",
+      },
+    ],
+    notes: [
+      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S` writes assembly text instead of building a program, so no Mac was needed. The sample is the `_sum` function from that output with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the output's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
+      "At `-O2` the function grew to 62 instructions and 3 loops. The main loop loads 4 128-bit `q` registers per pass, adds them with `add.4s` and counts down by 16, so it takes 16 ints at a time. A second loop takes 4 at a time, and the `-O1` loop is left for the last few. The x86-64 `-O2` build still returned the same 4 results.",
+      "Apple's guide Writing ARM64 code for Apple platforms (developer.apple.com) says macOS follows the 64-bit Arm standard apart from a few listed differences, such as `x18` being reserved. None of them changes the registers used here.",
+    ],
+    watchOut:
+      "The function you're looking for may not be in the assembly at all. With `sum` and a `main` that calls it in one file, `-O1` turned `main` into 2 instructions, `mov w0, #16` and `ret`: the compiler worked out the total of 3, 5, -2 and 10 itself, and nothing calls `sum`, though it is still in the file. In the x86-64 build, a gdb breakpoint on `sum` never stopped, and the program exited with 16. At `-O0`, `main` calls `sum`.",
   },
 ];
 
