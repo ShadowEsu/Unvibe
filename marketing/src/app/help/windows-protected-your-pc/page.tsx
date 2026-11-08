@@ -80,14 +80,13 @@ export default function WindowsProtectedYourPcPage() {
             <b>Work or school PC.</b> An administrator can remove the button. Email us and we&apos;ll help.
           </li>
           <li>
-            <b>Smart App Control is on (Windows 11).</b> Microsoft&apos;s{" "}
+            <b>Smart App Control is on (Windows 11).</b> Email us first and we&apos;ll help. Microsoft&apos;s{" "}
             <a href="https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions" rel="noopener noreferrer">
               Smart App Control FAQ
             </a>{" "}
-            says an unsigned app is blocked, that there is no way to allow a single app, and that it can be turned off in the
-            Windows Security app&apos;s settings; recent Windows updates let it be turned back on later without reinstalling Windows.
-            Turning a protection off is your call: it stops checking every app, not just Unvibe. If you&apos;d rather not, email us.
-            We haven&apos;t tested whether the PowerShell line gets past Smart App Control, so don&apos;t count on it there.
+            says an unsigned app is blocked, that there is currently no way to allow a single app, and that Smart App Control can be
+            turned off in the Windows Security app&apos;s settings; recent Windows updates let it be turned back on later without
+            reinstalling Windows. Turning it off is your call: it stops checking every app, not just Unvibe.
           </li>
         </ul>
       </section>

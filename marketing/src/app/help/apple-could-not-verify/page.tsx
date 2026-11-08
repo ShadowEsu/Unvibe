@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   title: "\u201cApple could not verify Unvibe is free of malware\u201d: how to open Unvibe on a Mac",
   absolute: true,
   description:
-    "macOS says \u201cUnvibe\u201d Not Opened and that Apple could not verify it. Press Done, then Open Anyway in System Settings \u203a Privacy & Security, or install with one Terminal line and skip the dialog.",
+    "macOS says \u201cUnvibe\u201d Not Opened and that Apple could not verify it. Press Done, then Open Anyway in System Settings \u203a Privacy & Security. Not opened the download yet? One Terminal line installs Unvibe without the dialog.",
 });
 
 /**
@@ -32,7 +32,7 @@ export default function AppleCouldNotVerifyPage() {
           <p className="fos-page__lead">
             The first time you open the Unvibe download, macOS shows a box that says &ldquo;Apple could not verify &lsquo;Unvibe&rsquo;
             is free of malware that may harm your Mac or compromise your privacy.&rdquo; Unvibe isn&apos;t notarized by Apple yet, so
-            macOS can&apos;t check it. Here is what to press, and a way to install that never shows the box.
+            macOS can&apos;t check it. Here is what to press, and, if you haven&apos;t opened the download yet, a way to install that never shows the box.
           </p>
         </div>
       </header>
@@ -58,7 +58,7 @@ export default function AppleCouldNotVerifyPage() {
             Anyway button &ldquo;is available for about an hour after you try to open the app&rdquo;, so if it&apos;s gone, open Unvibe
             from Applications again, then come back to Security.
           </li>
-          <li>That&apos;s once: macOS saves Unvibe as an exception. Later versions install from inside the app.</li>
+          <li>Apple says macOS then saves Unvibe as an exception, so you do this once. Later versions install from inside the app.</li>
         </ol>
         <p>
           On macOS 14 or older, you can instead Control-click Unvibe in Applications, choose <b>Open</b>, then press <b>Open</b>{" "}
@@ -84,21 +84,21 @@ export default function AppleCouldNotVerifyPage() {
         <h2 id="other-title">Other things macOS can say</h2>
         <ul className="help-list">
           <li>
-            <b>&ldquo;Unvibe is damaged and can&apos;t be opened.&rdquo;</b> That was a bug in older downloads. Delete Unvibe from
+            <b>macOS says Unvibe is &ldquo;damaged&rdquo;.</b> That was a bug in older downloads. Delete Unvibe from
             Applications, then install with the Terminal line above.
           </li>
           <li>
-            <b>&ldquo;Apple cannot check it for malicious software&rdquo; or &ldquo;the developer cannot be verified&rdquo;.</b> Apple&apos;s older
-            wording for the same block. Open Anyway works the same way.
+            <b>Older wording.</b> Apple&apos;s own guide also describes this block as &ldquo;Apple cannot check [app] for malicious
+            software&rdquo; and &ldquo;the app developer cannot be verified&rdquo;. The same steps apply.
           </li>
           <li>
-            <b>No Open Anyway button, or the Security settings are greyed out.</b> Apple says these settings may not be available when
+            <b>No Open Anyway button, or the Security settings are grayed out.</b> Apple says these settings may not be available when
             a Mac is managed by a system administrator or IT department. Email us and we&apos;ll help.
           </li>
         </ul>
         <p>
-          We can&apos;t tell you Unvibe is safe to override a warning for; nobody can on a dialog. What we can show is the code: both
-          install scripts are readable, and the Terminal line verifies the download before anything runs.
+          Apple&apos;s warning is Apple&apos;s call, and overriding it is yours. What we can show is the code: both install scripts are
+          readable, and the Terminal line checks the download before it installs anything.
         </p>
       </section>
 
