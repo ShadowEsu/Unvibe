@@ -80,8 +80,9 @@ export default async function ExplainCursorCodePage() {
       <section className="explain-card" aria-labelledby="cursor-example">
         <h2 id="cursor-example">A worked example</h2>
         <p>
-          You ask Cursor&apos;s Agent for a search box that loads results as you type. Among the files it changes is
-          this hook:
+          Say you ask Cursor&apos;s Agent for a search box that loads results as you type. This hook is a sample
+          written by hand for this page, the kind of code an agent hands back for that request. It is not a recorded
+          Cursor run:
         </p>
         <UseCaseSample file="useSearch.ts" code={HOOK} />
         <p>
@@ -92,8 +93,8 @@ export default async function ExplainCursorCodePage() {
             The effect runs again every time <code>query</code> changes, and the function it returns runs first,
             before the next run. That function calls <code>controller.abort()</code>, which cancels the previous
             request. Without it, a slow answer for &ldquo;re&rdquo; could arrive after the answer for
-            &ldquo;react&rdquo; and overwrite it. Cursor added <code>AbortController</code> for that reason, without
-            being asked.
+            &ldquo;react&rdquo; and overwrite it. An agent often adds <code>AbortController</code> for that reason
+            without being asked, and the request did not ask for it.
           </li>
           <li>
             A cancelled request still ends. Its <code>finally</code> runs and sets <code>loading</code> to false,
@@ -120,8 +121,8 @@ export default async function ExplainCursorCodePage() {
           </li>
         </ul>
         <p>
-          Cursor did what you asked. It also made two decisions you did not ask about, one of them wrong. Reading the
-          hook is how you find out which. Start with the lines you would not have written yourself: here,{" "}
+          The sample does what was asked. It also makes two decisions that were not asked for, one of them wrong.
+          Reading the hook is how you find out which. Start with the lines you would not have written yourself: here,{" "}
           <code>AbortController</code>, <code>signal</code>, <code>finally</code> and the dependency array.
         </p>
       </section>
