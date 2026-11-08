@@ -24,6 +24,12 @@ export interface ListingBadgeFile {
   fetched: string;
   /** Where the badge links when the site asks for something other than the listing URL. */
   href?: string;
+  /** Self-hosted copy of the site's dark variant, shown when the visitor's system is in dark mode. */
+  darkSrc?: string;
+  /** The site asks for this exact size, so it's shown at width × height instead of the badge row's 30 px height. */
+  exactSize?: true;
+  /** Shown on /listed-on only, not in the footer (so not on the homepage; BOSS, ledger 581). */
+  listedOnOnly?: true;
 }
 
 export interface Listing {
@@ -166,7 +172,26 @@ export const LISTINGS: readonly Listing[] = [
   { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true, submitted: "2026-11-07" },
-  { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
+  {
+    site: "Nick Launches",
+    status: "live",
+    href: "https://nicklaunches.com/products/unvibe/",
+    linkRequired: true,
+    // Security 20261107-1810: byte copies of their free "Featured" badge (every launch gets it), 244 × 56 as they ask
+    badges: [
+      {
+        src: "/badges/nicklaunches-featured.png",
+        darkSrc: "/badges/nicklaunches-featured-dark.png",
+        alt: "Featured on Nick Launches",
+        width: 244,
+        height: 56,
+        source: "https://nicklaunches.com/badges/featured.png",
+        fetched: "2026-11-08",
+        exactSize: true,
+        listedOnOnly: true,
+      },
+    ],
+  },
   {
     site: "AI Tools Prime",
     status: "pending",
@@ -179,19 +204,25 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Awesome Tools", status: "pending", href: "https://awesome.tools", linkRequired: true, submitted: "2026-11-06" },
 ];
 
-/** Badges of live listings, shown in the footer on every page and on /listed-on. */
+/** Badges of live listings, shown on /listed-on; the footer (every page) shows those without `listedOnOnly`. */
 export const listingBadges = LISTINGS.flatMap(({ site, status, href, badges = [] }) =>
   status === "live"
     ? badges.map((badge, index) => ({
         name: index === 0 ? site : `${site} ${index + 1}`,
         href: badge.href ?? href,
         src: badge.src,
+        darkSrc: badge.darkSrc,
         alt: badge.alt,
         width: badge.width,
         height: badge.height,
+        exactSize: badge.exactSize === true,
+        listedOnOnly: badge.listedOnOnly === true,
       }))
     : [],
 );
+
+/** The footer's badges: every live listing's badge except the /listed-on-only ones. */
+export const footerBadges = listingBadges.filter(({ listedOnOnly }) => !listedOnOnly);
 
 /** Live product listings, shown in the footer on every page. Origins are pinned by listings.test.ts. */
 export const listingLinks = LISTINGS.filter(({ status }) => status === "live").map(({ site, href }) => ({ name: site, href }));

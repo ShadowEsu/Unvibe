@@ -27,7 +27,12 @@ export default function ListedOnPage() {
           {listingBadges.map((badge) => (
             <li key={badge.name}>
               <a href={badge.href} target="_blank" rel="noopener">
-                <img src={badge.src} alt={badge.alt} width={badge.width} height={badge.height} loading="lazy" decoding="async" />
+                {/* a site's dark variant follows the visitor's system theme; an exact-size badge keeps the size it asks for */}
+                <picture>
+                  {badge.darkSrc ? <source srcSet={badge.darkSrc} media="(prefers-color-scheme: dark)" /> : null}
+                  <img src={badge.src} alt={badge.alt} width={badge.width} height={badge.height} loading="lazy" decoding="async"
+                    style={badge.exactSize ? { width: badge.width, height: badge.height } : undefined} />
+                </picture>
               </a>
             </li>
           ))}
