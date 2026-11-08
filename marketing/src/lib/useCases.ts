@@ -45,6 +45,14 @@ export const useCases: readonly UseCase[] = [
       "How to read an unfamiliar file top-down before you change it, with a worked JavaScript example, from callers and imports to tests and git history.",
     summary: "A teammate's code, an old project or an open-source repo. How to read a file before you change it.",
   },
+  {
+    slug: "explain-cursor-code",
+    name: "Explain code Cursor wrote",
+    title: "Explain the code Cursor wrote",
+    description:
+      "How to read what Cursor's Agent or Tab wrote before you accept it, with a worked React hook in TypeScript, explained at the depth you pick.",
+    summary: "Cursor wrote it and you accepted it. How to find out what it does, line by line, before you ship it.",
+  },
 ];
 
 export const pathForUseCase = (useCase: UseCase): string => `${USE_CASES_INDEX.path}/${useCase.slug}`;
