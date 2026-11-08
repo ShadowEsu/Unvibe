@@ -1,36 +1,18 @@
 /*
- * Overlay B, refined (Design b-refined SPEC), in 0.1.49's "Ink terminal" (round 2, ledger 574; Design
- * requests/unvibe-app/20261107-1159-design-r2-options-abc.md): a warm black window next to your code in both themes.
- * Bricolage for titles, Inter for reading, JetBrains Mono for code and keycaps, Instrument Serif Italic for Vibe's
- * notes. Lime is the next step (the current tab and depth, the primary, the send key). Every rule reads the shared
- * token names; this window gives them the Ink terminal's values. Motion is transform and opacity only, and none with
- * reduced motion.
+ * Overlay B, refined (Design b-refined SPEC), in round 2 glass (ledger 574, resumed 584; Design
+ * requests/unvibe-app/20261107-1939-design-r2-options-glass.md): a glass pane beside your code. The aurora sits behind
+ * the header; the body is a solid reading plate; tabs and chips are glass; violet is every action; lime marks only
+ * the selected code line. Inter for titles and reading, JetBrains Mono for code and keycaps. Every rule reads the
+ * shared token names (shared/tokens.css gives the light and dark values); this block adds the pane's own. Motion is
+ * transform and opacity only, and none with reduced motion.
  */
-:root, :root[data-theme="light"], :root[data-theme="dark"] {
-  --u-ink: #f4f2ea; /* 15.9:1 on #141413 */
-  --u-ink-2: #d4d1c8;
-  --u-ink-3: #aeaba2; /* 8.0 on #141413; #75726a is never text */
-  --u-paper: #141413;
-  --u-glass: #141413;
-  --u-chip: #1e1e1c;
-  --u-fill: #272725;
-  --u-raised: #272725;
-  --u-line: #2f2f2c;
-  --u-edge: #75726a; /* outlined buttons and chips: 3.6:1, a visible control edge */
-  --u-accent: #d6f45a;
-  --u-accent-on: #141413;
-  --u-mist: rgb(214 244 90 / 0.14);
-  --u-code-bg: #0d0d0c;
-  --u-rim: linear-gradient(#000, #000);
-  --u-blur: none;
-  --u-shadow: 0 0 0 1px rgb(255 255 255 / 0.04) inset, 0 24px 60px -18px rgb(0 0 0 / 0.7);
-  --u-card-rim: #2f2f2c;
-  --u-amber: #ffd84d;
-  --u-amber-tint: #3a2c10;
-  --p-sky: #9fd8ff;
-  --p-sun: #ffd84d;
-  --p-lilac: #b8a6ff;
-  color-scheme: dark;
+:root {
+  --u-edge: var(--u-hair); /* outlined chips: the hairline */
+  --u-shadow: 0 24px 60px -18px rgb(40 24 110 / 0.45), 0 0 0 1px var(--u-hair);
+  --p-sky: #1d6fd1; /* code tokens on the light code well */
+  --p-sun: #a35a00;
+  --p-lilac: #5a3fe0;
+  --p-string: #1f7a4c;
   /* Shared components (paste box, shortcut guide, consent form, Vibe) read these names. */
   --font-sans: var(--u-font);
   --font-mono: var(--u-font-mono);
@@ -39,6 +21,13 @@
   --muted: var(--u-ink-2);
   --line: var(--u-line);
   --panel-tint: var(--u-chip);
+}
+:root[data-theme="dark"] {
+  --u-shadow: 0 24px 60px -18px rgb(0 0 0 / 0.7), 0 0 0 1px var(--u-hair);
+  --p-sky: #9fd8ff;
+  --p-sun: #ffd84d;
+  --p-lilac: #b8a6ff;
+  --p-string: #a3e09a;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -51,7 +40,7 @@ body {
   font-synthesis: none;
 }
 code, pre, kbd { font-family: var(--u-font-mono); }
-::selection { background: var(--u-lime); color: #141413; }
+::selection { background: var(--u-mist); color: var(--u-ink); }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled, [aria-disabled="true"] { cursor: default; }
@@ -59,7 +48,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .ob-icon { flex: none; display: block; }
 
-/* ── The pane: 380 wide, warm black with a 1.5 px black edge, radius 14; header and tabs pinned, the body scrolls ── */
+/* ── The pane: 380 wide, the aurora under its veil behind a glass-1 header and tabs, the body on a solid plate; a 1 px
+   rim, the hairline and the floating shadow; header and tabs pinned, the body scrolls ── */
 .ob {
   position: relative;
   display: flex;
@@ -68,19 +58,21 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   height: 100%;
   overflow: hidden;
   border-radius: var(--u-radius-pane);
-  background: var(--u-glass);
-  -webkit-backdrop-filter: var(--u-blur);
-  backdrop-filter: var(--u-blur);
-  box-shadow: var(--u-shadow);
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center top / cover no-repeat, var(--u-paper);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), var(--u-shadow);
   isolation: isolate;
   animation: panelIn 250ms var(--u-ease) both;
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .ob { background: var(--u-paper); }
+  :root { --u-glass-1: var(--u-paper); --u-glass: var(--u-sheet); --u-solid: var(--u-sheet); --u-blur: none; }
 }
 .ob.u-rim::before { z-index: 3; }
 .ob.is-leaving { animation: panelOut 160ms var(--u-ease) both; }
 @keyframes panelIn { from { opacity: 0; transform: translateX(12px); } }
 @keyframes panelOut { to { opacity: 0; transform: translateX(8px); } }
-
-/* Header, 50 pt: Vibe, the first symbol at 13/640, meta at 10.5, × with a 28 pt target. Drags the window. */
+/* Header, 50 pt, glass-1 over the aurora: Vibe, the first symbol at 13/640, meta at 10.5, × with a 28 pt target.
+   Drags the window. */
 .ob-head {
   flex: none;
   display: flex;
@@ -88,12 +80,15 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 10px;
   height: 50px;
   padding: 0 12px 0 14px;
-  border-bottom: 1px solid var(--u-line);
+  background: var(--u-sheen), var(--u-glass-1);
+  -webkit-backdrop-filter: var(--u-blur);
+  backdrop-filter: var(--u-blur);
+  box-shadow: 0 1px 0 var(--u-hair);
   -webkit-app-region: drag;
 }
 .ob-head__vibe { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
 .ob-head__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.ob-head__title { overflow: hidden; font: 800 15px/18px var(--u-font-display); letter-spacing: -0.03em; white-space: nowrap; text-overflow: ellipsis; }
+.ob-head__title { overflow: hidden; font: 700 14px/18px var(--u-font); letter-spacing: -0.015em; white-space: nowrap; text-overflow: ellipsis; }
 .ob-meta { display: block; overflow: hidden; color: var(--u-ink-3); font-size: 10.5px; line-height: 14px; font-weight: var(--u-w-label); white-space: nowrap; text-overflow: ellipsis; }
 .ob-head__close {
   flex: none;
@@ -109,7 +104,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 }
 .ob-head__close:hover { background: var(--u-fill); color: var(--u-ink); }
 
-.ob-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* The reading plate: solid (≥ .88 alpha) under everything you read; the footer sits on it too. */
+.ob-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; background: var(--u-solid); }
 /* A line cut at the scroll edge reads as "more below" (Design S-1 SHOULD 1). Not while the agreement shows: its
    actions are pinned at that edge and stay crisp. */
 .ob-scroll:not(:has(.consent-form)) { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); }
@@ -119,12 +115,11 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 /* A new tab's body comes in from 55 %, not 0: no blank frames between the old tab and the new one (Design motion
    review 07 Nov SHOULD 2). */
 @keyframes viewIn { from { opacity: 0.55; } }
-.ob-foot { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 0 16px 12px; }
-.ob-foot:not(:has(> :nth-child(2))) { padding-bottom: 0; }
+.ob-foot { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 0 16px 12px; background: var(--u-solid); }
 .ob-toast-region:empty { display: none; }
 
-/* Tabs, 54 pt, pinned: outlined keycaps (a 16 pt icon over a 10.5 label, 80 × 42 targets, a 3 px lip); the active one
-   filled lime with ink, pressed down onto its lip. */
+/* Tabs, 54 pt, pinned on glass-1: a 16 pt icon over a 10.5 label, 80 × 42 targets; the active one on the violet tint
+   in violet. */
 .ob-tabs {
   flex: none;
   display: grid;
@@ -133,7 +128,10 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   justify-items: center;
   height: 54px;
   padding: 0 8px;
-  border-top: 1px solid var(--u-line);
+  background: var(--u-glass-1);
+  -webkit-backdrop-filter: var(--u-blur);
+  backdrop-filter: var(--u-blur);
+  box-shadow: 0 -1px 0 var(--u-hair);
 }
 .ob-tab {
   display: grid;
@@ -142,18 +140,17 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 3px;
   width: 80px;
   height: 42px;
-  border: 1.5px solid var(--u-edge);
-  border-bottom-width: 3px;
+  border: 0;
   border-radius: var(--u-radius-field);
-  background: var(--u-chip);
+  background: transparent;
   color: var(--u-ink-2);
   font-size: 10.5px;
   line-height: 13px;
   font-weight: var(--u-w-label);
-  transition: transform 160ms var(--u-press);
+  transition: background 120ms ease, color 120ms ease;
 }
-.ob-tab:hover:not([aria-disabled="true"]) { border-color: var(--u-ink-3); color: var(--u-ink); }
-.ob-tab.is-on { border-color: #000; border-bottom-width: 1.5px; background: var(--u-lime); color: #141413; font-weight: 700; transform: translateY(1.5px); }
+.ob-tab:hover:not([aria-disabled="true"]) { background: var(--u-fill); color: var(--u-ink); }
+.ob-tab.is-on { background: var(--u-mist); color: var(--u-accent-text); font-weight: 700; }
 .ob-tab[aria-disabled="true"] { opacity: 0.45; }
 
 /* ── Depth: one 26 pt segmented control; the current depth an accent pill; Expert keeps its Pro marker ── */
@@ -198,10 +195,12 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-depth__item.is-on .ob-pro { background: var(--u-accent-on); color: var(--u-accent); }
 
 /* ── The code row: one 32 pt line, the lime tick, "Show code"; open, the whole selection pushes content down ── */
-.ob-code { border: 1px solid var(--u-line); border-radius: var(--u-radius-field); background: var(--u-chip); overflow: hidden; }
+/* The selected-code card: the code well, the lime band on the selected line (the only lime), "Show code". */
+.ob-code { border: 0; border-radius: var(--u-radius-field); background: var(--u-code-bg); box-shadow: 0 0 0 1px var(--u-hair); overflow: hidden; }
 .ob-code__row { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 10px; }
 .ob-code__tick { flex: none; width: 3px; height: 14px; border-radius: 2px; background: var(--u-lime); }
-.ob-code__line { flex: 1; min-width: 0; overflow: hidden; font: 500 12px/18px var(--u-font-mono); white-space: nowrap; text-overflow: ellipsis; }
+.ob-code__line { flex: 1; min-width: 0; overflow: hidden; padding: 0 6px; border-radius: 4px; background: rgb(214 244 90 / 0.45); color: var(--u-ink); font: 500 12px/18px var(--u-font-mono); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-theme="dark"] .ob-code__line { background: rgb(214 244 90 / 0.22); }
 .ob-code__all {
   display: none;
   max-height: 240px;
@@ -227,18 +226,18 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 }
 .ob-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-/* ── The answer: Inter 13/20; code words in mono on a raised chip in sun (0.1.49's Ink terminal); bold gets a lime
-   highlighter under it ── */
+/* ── The answer: Inter 13/20 on the plate; code words are violet-tint chips in violet mono; emphasis is 620 with a
+   violet underline ── */
 .ob-answer { display: grid; gap: 8px; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.ob-answer p { margin: 0; color: #e4e1d8; }
+.ob-answer p { margin: 0; color: var(--u-ink); }
 .ob-answer code.inline {
   padding: 1px 5px;
   border-radius: 6px;
-  background: var(--u-raised);
-  color: var(--p-sun);
+  background: var(--u-mist);
+  color: var(--u-accent-text);
   font: 500 12px/1 var(--u-font-mono);
 }
-.ob-answer strong { color: #fff; font-weight: 650; background: linear-gradient(transparent 62%, rgb(214 244 90 / 0.28) 62%); }
+.ob-answer strong { color: var(--u-ink); font-weight: 620; text-decoration: underline; text-decoration-color: var(--u-accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .ob-answer .rich-heading { margin: 6px 0 0; font-size: 13px; line-height: 20px; font-weight: 640; }
 .ob-answer .rich-heading:first-child { margin-top: 0; }
 .ob-answer .rich-list { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
@@ -258,7 +257,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .codeblock .cb-head button { padding: 0; border: 0; background: none; color: var(--u-accent); font-size: 10.5px; }
 .codeblock pre { margin: 0; padding: 8px 10px; overflow-x: auto; font: var(--u-w-body) 12px/18px var(--u-font-mono); }
 .tk-k { color: var(--p-lilac); }
-.tk-s { color: var(--u-lime); }
+.tk-s { color: var(--p-string); }
 .tk-c { color: var(--u-ink-3); }
 .tk-n { color: var(--p-sun); }
 .cursor { display: inline-block; width: 7px; height: 15px; margin-left: 2px; vertical-align: -2px; background: var(--u-ink); animation: blink 1s steps(1) infinite; }
@@ -283,8 +282,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-steps .is-now { color: var(--u-ink); font-weight: 620; }
 .ob-steps .is-now i { border-color: var(--u-accent); box-shadow: inset 0 0 0 3px var(--u-glass), inset 0 0 0 9px var(--u-accent); }
 
-/* ── Chips and buttons: real keys. Outlined on the Ink surface with a black hard shadow; the primary of a state
-   (Explain my clipboard, Retry, Continue, Cancel on a secret) filled lime. They press down 2 px. ── */
+/* ── Chips and buttons: glass pills with the hairline; the primary of a state (Explain my clipboard, Retry, Continue,
+   Cancel on a secret, Understand) a violet fill. Hover marks the hairline violet; press scales to 97 %. ── */
 .ob-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ob-chip, .ob-btn, .pmf-card .btn {
   display: inline-flex;
@@ -292,22 +291,22 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 6px;
   height: 28px;
   padding: 0 11px;
-  border: 1.5px solid var(--u-edge);
-  border-radius: 8px;
-  background: var(--u-chip);
+  border: 0;
+  border-radius: 999px;
+  background: var(--u-glass);
   color: var(--u-ink);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
-  box-shadow: 2px 2px 0 #000;
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
   transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
 }
-.ob-chip:hover:not(:disabled), .ob-btn:hover:not(:disabled), .pmf-card .btn:hover:not(:disabled) { border-color: var(--u-ink-3); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 #000; }
-.ob-chip:active:not(:disabled), .ob-btn:active:not(:disabled), .pmf-card .btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
-.ob-chip.is-on { border-color: #000; background: var(--u-lime); color: #141413; }
-.ob-chip:disabled, .ob-btn:disabled, .pmf-card .btn:disabled { opacity: 0.5; box-shadow: none; }
-.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost) { border-color: #000; background: var(--u-lime); color: #141413; }
-.ob-btn:not(.ghost):hover:not(:disabled), .pmf-card .btn:not(.ghost):hover:not(:disabled) { border-color: #000; }
+.ob-chip:hover:not(:disabled), .ob-btn:hover:not(:disabled), .pmf-card .btn:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent); }
+.ob-chip:active:not(:disabled), .ob-btn:active:not(:disabled), .pmf-card .btn:active:not(:disabled) { transform: scale(0.97); }
+.ob-chip.is-on { background: var(--u-mist); color: var(--u-accent-text); }
+.ob-chip:disabled, .ob-btn:disabled, .pmf-card .btn:disabled { opacity: 0.5; }
+.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm); }
+.ob-btn:not(.ghost):hover:not(:disabled), .pmf-card .btn:not(.ghost):hover:not(:disabled) { box-shadow: var(--u-shadow-sm); filter: brightness(1.08); }
 .ob-btn { height: 30px; padding: 0 14px; }
 .ob-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -317,11 +316,12 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 6px;
   height: 32px;
   padding: 0 3px 0 12px;
-  border: 1.5px solid var(--u-edge);
-  border-radius: var(--u-radius-field);
-  background: var(--u-chip);
+  border: 0;
+  border-radius: 999px;
+  background: var(--u-glass);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
 }
-.ob-ask:focus-within { border-color: var(--u-accent); }
+.ob-ask:focus-within { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 2px var(--u-accent); }
 .ob-ask__input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; font-size: 12px; }
 .ob-ask__input::placeholder { color: var(--u-ink-3); }
 .ob-ask .ob-chip { height: 24px; padding: 0 8px; }
@@ -331,17 +331,17 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   place-items: center;
   width: 26px;
   height: 26px;
-  border: 1.5px solid #000;
-  border-radius: 7px;
-  background: var(--u-lime);
-  color: #141413;
+  border: 0;
+  border-radius: 50%;
+  background: var(--u-accent);
+  color: var(--u-accent-on);
 }
 .ob-ask__send:disabled { opacity: 0.45; }
 
-/* The toast: a small pill on the Ink surface with a hairline edge. */
+/* The toast: a small glass pill. */
 .ob-toast {
-  display: flex; width: fit-content; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border: 1.5px solid var(--u-edge); border-radius: 999px;
-  background: var(--u-chip); box-shadow: 2px 2px 0 #000;
+  display: flex; width: fit-content; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border: 0; border-radius: 999px;
+  background: var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm);
   color: var(--u-ink-2); font-size: 12px; animation: toastIn 200ms var(--u-ease) both;
 }
 .ob-toast.is-leaving { animation: toastOut 160ms var(--u-ease) both; }
@@ -477,8 +477,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-askview { display: grid; gap: 12px; }
 .ob-thread { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .ob-thread__turn { display: grid; gap: 8px; }
-.ob-thread__q { justify-self: end; max-width: 85%; padding: 6px 12px; border-radius: var(--u-radius-field); background: var(--u-mist); color: var(--u-accent); font-weight: var(--u-w-label); }
-:root[data-theme="dark"] .ob-thread__q { color: var(--u-ink); }
+.ob-thread__q { justify-self: end; max-width: 85%; padding: 6px 12px; border-radius: var(--u-radius-field); background: var(--u-mist); color: var(--u-accent-text); font-weight: var(--u-w-label); }
 .ob-teach { display: grid; gap: 4px; }
 .ob-teach p { display: flex; align-items: center; gap: 6px; }
 
@@ -534,9 +533,24 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   .ob-chip:is(:hover, :active), .ob-btn:is(:hover, :active), .pmf-card .btn:is(:hover, :active), .ob-tab.is-on { transform: none; }
 }
 
-/* ── Round 2 options B and C (ledger 574), shown by <html data-r2="b|c"> for the renders Preston picks from; A is
-   everything above. Whichever is picked folds into the rules above and this block goes. ── */
-/* B: 0.1.49's rule "lime is the next step, sky is test me": the Test me key is sky. */
-:root[data-r2="b"] #ob-tab-test { border-color: #000; background: var(--p-sky); color: #141413; }
-/* C: lime as a highlighter on code: the selection's line sits on the same band as Library's. */
-:root[data-r2="c"] .ob-code__line { padding: 0 4px; border-radius: 3px; background: rgb(214 244 90 / 0.22); color: var(--u-ink); }
+/* ── Round 2 options G2 and G3 (Design 1939), shown by <html data-r2="g2|g3">; G1 is everything above. Whichever is
+   picked folds into the rules above and this block goes. ── */
+/* G2 "Studio": the pane is one solid plate with a hairline; the header carries no aurora; the code card is the only
+   glass; the primary is an ink fill. */
+:root[data-r2="g2"] {
+  --u-paper: #ffffff; --u-veil: rgb(255 255 255 / 0.96); --u-accent: #15141a; --u-accent-on: #f3f1fa; --u-accent-text: #5a3fe0; --u-mist: #efeef5;
+  --u-glass-1: #ffffff; --u-glass: #ffffff; --u-solid: #ffffff; --u-chip: #ffffff; --u-blur: none; --u-rim-line: transparent; --u-sheen: linear-gradient(transparent, transparent);
+  --u-hair: rgb(21 20 26 / 0.1); --u-line: rgb(21 20 26 / 0.1); --u-fill: rgb(21 20 26 / 0.05); --u-shadow-sm: 0 1px 2px rgb(21 20 26 / 0.08);
+}
+:root[data-r2="g2"][data-theme="dark"] {
+  --u-paper: #1c1927; --u-veil: rgb(28 25 39 / 0.96); --u-accent: #f3f1fa; --u-accent-on: #15141a; --u-accent-text: #b8a6ff; --u-mist: #262236;
+  --u-glass-1: #1c1927; --u-glass: #1c1927; --u-solid: #1c1927; --u-chip: #1c1927;
+  --u-hair: rgb(243 241 250 / 0.12); --u-line: rgb(243 241 250 / 0.12); --u-fill: rgb(243 241 250 / 0.06); --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+:root[data-r2="g2"] .ob-code { background: var(--u-raised); }
+:root[data-r2="g2"] .ob-tab.is-on { background: var(--u-fill); color: var(--u-ink); }
+/* G3 "Soft": glass-2 at r18; the active tab is a violet pill. */
+:root[data-r2="g3"] { --u-radius-pane: 18px; --u-radius-field: 12px; --u-veil: rgb(250 248 252 / 0.5); }
+:root[data-r2="g3"][data-theme="dark"] { --u-veil: rgb(16 12 34 / 0.72); }
+:root[data-r2="g3"] .ob-tab.is-on { background: var(--u-accent); color: var(--u-accent-on); }
+:root[data-r2="g3"] .ob-tab { border-radius: 12px; }

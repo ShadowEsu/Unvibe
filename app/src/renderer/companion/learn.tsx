@@ -755,9 +755,6 @@ export function Learn({
                           <span>{item.project || `This ${deviceName}`}</span>
                           <span>{item.file || item.scope || 'Selection'}</span>
                         </span>
-                        {/* Round 2 option C: the snippet's first three lines, the explained one under a lime band. Hidden in
-                            A and B (app-0151.css); the lesson itself carries the code for screen readers. */}
-                        {item.code ? <span className="lib-row__code" aria-hidden="true">{item.code.split('\n').slice(0, 3).map((line, i) => <span key={i} className={i === 0 ? 'is-explained' : undefined}>{line || ' '}</span>)}</span> : null}
                       </span>
                       <time dateTime={item.ts}>{clockTime(item.ts)}</time>
                       <span className="status-pill" data-tone={item.outcome === 'needs_review' ? 'review' : 'current'}>

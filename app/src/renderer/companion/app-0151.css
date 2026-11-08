@@ -1,15 +1,15 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Unvibe companion in Spectral (Design agents/design/spectral README §1, §4; rebrand option 03):
-   paper with two glows, glass cards with a white rim, the floating glass sidebar
-   and ask dock, JetBrains Mono on every string, the accent on every action (one filled primary per
-   view). The iridescent rim is overlay-only; lime only marks selected code. Loads after v7.css;
-   every rule starts at `.layout` (first run: `.onboard`) so it beats v7's own shape by one class.
+   Unvibe companion, round 2 glass (Design requests/unvibe-app/20261107-1939-design-r2-options-glass.md on the
+   6 Nov app-0151-glass system): every window on the brand aurora under a veil, a floating glass-1 sidebar, the
+   content straight on the ground, glass-2 cards and controls, anything you read on a solid plate, violet on every
+   action, lime only on the selected code line, Inter for the UI and display, mono for code and keycaps only.
+   Less on screen: Today is the greeting, one primary and two lists. Loads after v7.css; every rule starts at
+   `.layout` (first run: `.onboard`) so it beats v7's own shape by one class.
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Spectral values for the older layers' names. v7.css (and v3/v5 under it) still draw most pages;
-   this block, loaded after them at v7's specificity, gives their variables Spectral values. Each
-   name goes once nothing reads it. The --u-violet…--u-radius-control set is the 0.1.51-glass
-   vocabulary used below in this file. ── */
+/* ── Glass values for the older layers' names. v7.css (and v3/v5 under it) still draw most pages; this block, loaded
+   after them at v7's specificity, gives their variables the shared tokens' values. Each name goes once nothing reads
+   it. ── */
 :root[data-ui="v3"][data-v7] {
   color-scheme: light;
   /* companion.css's base theme names */
@@ -47,11 +47,11 @@
   --v-btn-ink: var(--u-accent-on);
   --v-radius: var(--u-radius-pane);
   --v-radius-sm: var(--u-radius-field);
-  --v-edge: var(--u-card-rim);
+  --v-edge: var(--u-hair);
   --v-sel: var(--u-accent);
   --v-sel-ink: var(--u-accent-on);
-  --v-edge-hi: var(--u-ink);
-  --v-glow: var(--u-lime);
+  --v-edge-hi: var(--u-accent);
+  --v-glow: var(--u-accent);
   --v-tint-base: var(--u-glass);
   --v-hand-style: italic;
   --lime: var(--u-lime);
@@ -66,332 +66,315 @@
   --grad: var(--u-accent);
   --focus-ring: color-mix(in srgb, var(--u-accent) 22%, transparent);
   --u-violet: var(--u-accent);
-  --u-violet-text: var(--u-accent);
+  --u-violet-text: var(--u-accent-text);
   --u-on-violet: var(--u-accent-on);
   --u-violet-tint: var(--u-mist);
-  --u-glass-1: var(--u-glass);
   --u-glass-2: var(--u-glass);
-  --u-solid: var(--u-glass);
-  --u-hair: var(--u-line);
   --u-shadow-glass: var(--u-shadow);
-  --u-canvas: var(--u-glass);
+  --u-canvas: var(--u-solid);
   --u-band: var(--u-fill);
-  --u-plate: var(--u-line);
+  --u-plate: var(--u-hair);
   --u-sans: var(--u-font);
   --u-display: var(--u-font-display);
-  --u-label: var(--u-w-label) 11px/1 var(--u-font);
-  --u-radius-window: 14px;
+  --u-label: var(--u-w-label) 12px/1 var(--u-font);
+  --u-radius-window: var(--u-radius-pane);
   --u-radius-card: 14px;
   --u-radius-control: var(--u-radius-field);
   /* Read by the first-run rules below. The try-it editor is a sheet in the theme (o-try), not a dark panel. */
   --u-mono: var(--u-font-mono);
   --u-violet-lip: color-mix(in srgb, var(--u-accent) 78%, #000);
-  --u-code: var(--u-sheet);
   --u-dark-ink: var(--u-ink);
   --u-dark-ink-2: var(--u-ink-3);
   --u-dark-line: var(--u-line);
-  --u-shadow-whisper: 0 0 0 1.5px var(--u-card-rim);
+  --u-shadow-whisper: 0 0 0 1px var(--u-hair);
   --u-shadow-float: var(--u-shadow);
 }
 :root[data-ui="v3"][data-v7][data-theme="dark"] {
   color-scheme: dark;
 }
 
-/* ── Ground and shell (0.1.49, v7.css "Paper and ink"): v7 draws the dusk wash, the sidebar, the white working card,
-   the top bar (title, Search, the lime Explain key) and the ask bar. This file adds only dark mode, which 0.1.49 didn't
-   have: the Ink terminal's palette (Design r2 table), and what v7 left as fixed light colours. ── */
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: #3a3a37; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .sync-state { color: var(--u-ink-3); }
-/* Lime tiles behind the current page's icon keep ink icons on them in both modes. */
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on svg { background: var(--u-lime); color: #141413; }
-/* Lime chips carry ink text in both modes. */
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .brand .badge { border-color: var(--u-lime); color: #141413; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .topbar__explain { border-color: #000; color: #141413; }
+/* ── Ground and shell: the aurora under a veil fills the window; the sidebar floats as glass-1 (inset 10 px, radius 14,
+   rim, hairline, shadow); the content sits straight on the ground with a transparent top bar; the ask dock floats at
+   the bottom as glass-2. v7's dusk wash, white working card and ink edges go. ── */
+:root[data-ui="v3"][data-v7] .layout {
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root[data-ui="v3"][data-v7] .layout { background: var(--u-paper); }
+  :root[data-ui="v3"][data-v7] { --u-glass-1: var(--u-paper); --u-glass: var(--u-sheet); --u-solid: var(--u-sheet); --u-blur: none; }
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
+:root[data-ui="v3"][data-v7] .layout .sync-state { color: var(--u-ink-3); }
+/* The glass recipe, once: tint, blur, the 1 px inner rim, the hairline outside, the top sheen and the soft shadow. */
+:root[data-ui="v3"][data-v7] .layout .side,
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .plan-pick__card, .metric-card),
+:root[data-ui="v3"][data-v7] .layout .ask-dock,
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) {
+  border: 0; background: var(--u-sheen), var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .side {
+  margin: 10px 0 10px 10px; padding: 44px 10px 10px; border-radius: var(--u-radius-pane); background: var(--u-sheen), var(--u-glass-1);
+}
+:root[data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .side { padding-top: 14px; }
+:root[data-ui="v3"][data-v7] .layout .brand .name { font: 700 17px/1 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .brand .badge { border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 10.5px/18px var(--u-font); padding: 0 7px; }
+:root[data-ui="v3"][data-v7] .layout .side-search {
+  border: 0; border-radius: var(--u-radius-field); background: var(--u-glass); color: var(--u-ink-3);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
+}
+:root[data-ui="v3"][data-v7] .layout .side-search:hover { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent); }
+/* Section labels: 12 px Inter 600 sentence case, ink-3 (Design: no serif eyebrows, no mono caps). */
+:root[data-ui="v3"][data-v7] .layout .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--u-ink-3); font: 600 12px/1 var(--u-font); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button,
+:root[data-ui="v3"][data-v7] .layout .side-settings { border: 0; border-radius: var(--u-radius-field); color: var(--u-ink-2); font: 500 13.5px var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button:hover,
+:root[data-ui="v3"][data-v7] .layout .side-settings:hover { background: var(--u-fill); color: var(--u-ink); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button:hover svg { transform: none; }
+/* The current page: the violet tint with violet text and icon; no tile, no lift. */
+:root[data-ui="v3"][data-v7] .layout .nav button.on { background: var(--u-mist); color: var(--u-accent-text); font-weight: 600; box-shadow: none; transform: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button svg,
+:root[data-ui="v3"][data-v7] .layout .nav button:nth-child(n) svg,
+:root[data-ui="v3"][data-v7] .layout .nav button.on svg,
+:root[data-ui="v3"][data-v7] .layout .nav--top button:nth-child(n).on svg,
+:root[data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(n).on svg { width: 18px; height: 18px; padding: 0; border-radius: 0; background: none; box-shadow: none; color: currentColor; }
+:root[data-ui="v3"][data-v7] .layout .side-usage { border: 0; border-radius: var(--u-radius-field); background: var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .side-usage:hover { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .side-usage__bar { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout .side-usage__bar i { background: var(--u-accent); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .content { margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .topbar { height: 54px; padding: 0 16px 0 24px; border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .topbar__title { color: var(--u-ink-3); font: 600 13px/1 var(--u-font); letter-spacing: 0; }
 /* Windows and Linux draw min/max/close (titleBarOverlay, 138 px) over the top-right corner: keep Search and Explain
    clear of it. Only macOS puts its controls on the left (createCompanion in main/windows.ts). */
 :root[data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .topbar { padding-right: 150px; }
-/* Keycaps are the keyboard: mono, the one place besides code (Design r2 type roles). */
-:root[data-ui="v3"][data-v7] .layout kbd { font-family: var(--u-font-mono); font-weight: 700; }
-/* The ask bar's shortcut chip, as in 0.1.49: lime with an ink rim. */
-:root[data-ui="v3"][data-v7] .layout .ask-dock__shortcut { flex: none; padding: 0 6px; border: 1.5px solid var(--u-ink); border-radius: 6px; background: var(--u-lime); color: #141414; font: 700 11px/20px var(--u-font-mono); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .ask-dock__shortcut { border-color: var(--u-lime); }
+:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain) {
+  height: 34px; border: 0; border-radius: 999px; background: var(--u-glass); color: var(--u-ink-2); font: 600 13px var(--u-font);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm); transform: none;
+  transition: box-shadow 140ms ease, transform 160ms var(--u-press);
+}
+:root[data-ui="v3"][data-v7] .layout .topbar__explain { padding: 0 14px 0 6px; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain):hover:not(:disabled) { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain):active:not(:disabled) { transform: scale(0.97); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+/* Keycaps: white caps with a 3 px ink-2 lip, mono (keys and code are the exception to "no mono UI"). */
+:root[data-ui="v3"][data-v7] .layout kbd,
+:root[data-ui="v3"][data-v7] .layout .topbar kbd,
+:root[data-ui="v3"][data-v7] .layout .side-search kbd,
+:root[data-ui="v3"][data-v7] .layout .topbar__explain kbd {
+  padding: 0 6px; border: 1px solid var(--u-hair); border-bottom: 3px solid var(--u-ink-2); border-radius: 6px; background: #fff; color: var(--u-ink);
+  font: 700 11px/18px var(--u-font-mono); box-shadow: none;
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout kbd { background: #2a2542; border-bottom-color: #3a3454; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock { width: min(680px, calc(100% - 48px)); margin: 0 auto 18px; padding: 6px 6px 6px 10px; border-radius: 999px; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock:focus-within { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 2px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .ask-dock__shortcut { flex: none; padding: 0 6px; border: 1px solid var(--u-hair); border-bottom: 3px solid var(--u-ink-2); border-radius: 6px; background: #fff; color: var(--u-ink); font: 700 11px/18px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .ask-dock__shortcut { background: #2a2542; border-bottom-color: #3a3454; }
 :root[data-ui="v3"][data-v7] .layout .ask-dock input::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .ask-dock button { height: 36px; border-radius: 999px; }
 
-/* ── Buttons (Design r2): every primary action is a real button. Filled: ink with white text (paper with dark text in
-   dark). Outlined: a 1.5 px ink edge on the surface. Radius 10, at least 36 high, a 2 px hard shadow; they press down
-   2 px with the shadow gone. Reduced motion (companion.css) drops the movement. ── */
+/* ── Buttons: one filled primary per view (violet, white 600 text, radius 10, 36 high, a soft shadow); secondary is a
+   glass pill with ink text and a hairline; quiet is violet text. Hover brightens, press scales to 97 % (transform
+   only; reduced motion keeps the colour change and drops the scale). ── */
 :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button),
 :root[data-ui="v3"][data-v7] .layout .home-card .primary-btn {
-  min-height: 36px; height: auto; padding: 0 16px; border: 1.5px solid var(--u-accent); border-radius: 10px;
-  background: var(--u-accent); color: var(--u-accent-on); font: 700 13.5px/34px var(--u-font); letter-spacing: -0.006em;
+  min-height: 36px; height: auto; padding: 0 16px; border: 0; border-radius: var(--u-radius-field);
+  background: var(--u-accent); color: var(--u-accent-on); font: 600 13.5px/36px var(--u-font); letter-spacing: -0.006em;
   filter: none; box-shadow: var(--u-shadow-sm); transform: none;
-  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press), background 140ms ease;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press), filter 140ms ease;
 }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button) { box-shadow: 2px 2px 0 #000; }
 :root[data-ui="v3"][data-v7] .layout :is(.soft-btn, .act, .field-btn, .btn.ghost),
 :root[data-ui="v3"][data-v7] .layout .home-card .soft-btn {
-  min-height: 36px; height: auto; padding: 0 14px; border: 1.5px solid var(--u-ink); border-radius: 10px;
-  background: var(--u-glass); color: var(--u-ink); font: 650 13.5px/34px var(--u-font); letter-spacing: -0.006em;
-  box-shadow: var(--u-shadow-sm); transform: none;
+  min-height: 36px; height: auto; padding: 0 14px; border: 0; border-radius: var(--u-radius-field);
+  background: var(--u-glass); color: var(--u-ink); font: 600 13.5px/36px var(--u-font); letter-spacing: -0.006em;
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm); transform: none;
   transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press), background 140ms ease;
 }
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn):hover:not(:disabled) {
-  filter: none; transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--u-hard, #141414);
-}
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button):hover:not(:disabled) { background: var(--u-accent); }
-:root[data-ui="v3"][data-v7] .layout :is(.soft-btn, .act, .field-btn, .btn.ghost):hover:not(:disabled) { background: var(--u-raised); }
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn):active:not(:disabled) {
-  transform: translate(2px, 2px); box-shadow: 0 0 0 transparent;
-}
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .soft-btn, .btn):disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
-:root[data-ui="v3"][data-v7] { --u-hard: #141414; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] { --u-hard: #000; }
-/* Text links are for secondary actions inside prose: ink with a lime underline (0.1.49). */
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button):hover:not(:disabled) { background: var(--u-accent); filter: brightness(1.08); transform: none; box-shadow: var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout :is(.soft-btn, .act, .field-btn, .btn.ghost):hover:not(:disabled) { background: var(--u-solid); transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn):active:not(:disabled) { transform: scale(0.97); filter: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .soft-btn, .btn):disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* Text buttons for secondary actions inside prose: violet, with a visible hit area. */
 :root[data-ui="v3"][data-v7] .layout .link-btn {
-  padding: 0; border: 0; background: none; color: var(--u-ink); font: 650 13px/1.3 var(--u-font);
-  text-decoration: underline; text-decoration-color: var(--u-lime); text-decoration-thickness: 3px; text-underline-offset: 3px;
+  min-height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--u-accent-text); font: 600 13px/28px var(--u-font);
+  text-decoration: none;
 }
-:root[data-ui="v3"][data-v7] .layout .link-btn:hover { text-decoration-color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .link-btn:hover { background: var(--u-mist); text-decoration: none; }
 
-/* Every page starts at the same edge as Today and runs the full width of the working card. */
-:root[data-ui="v3"][data-v7] .layout .page { max-width: none; margin: 0; }
-:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) { width: 100%; max-width: none; margin: 0; padding: 0; }
+/* Every page starts at the same edge as Today and runs the full width of the content. */
+:root[data-ui="v3"][data-v7] .layout .page { max-width: none; margin: 0; padding: 12px 36px 150px; }
+:root[data-ui="v3"][data-v7] .layout .page > .fade-in { max-width: 980px; margin: 0 auto; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) { width: 100%; max-width: 980px; margin: 0 auto; padding: 0; }
 
-/* ── Today (0.1.49's Today on the new Home): Vibe and the greeting, the stat stickers, the ink banner, the daily goal,
-   then Up next beside Recently understood. ── */
-:root[data-ui="v3"][data-v7] .layout .home { display: grid; gap: 18px; }
-:root[data-ui="v3"][data-v7] .layout .home-hero { display: flex; align-items: center; gap: 16px; }
+/* ── Today, less on screen: Vibe and the greeting, the one primary (Explain any code, as a glass card with its keys),
+   then Up next beside Recently understood on glass-2. The stat stickers and the goal line are gone (Design 1939). ── */
+:root[data-ui="v3"][data-v7] .layout .home { display: grid; gap: 24px; }
+:root[data-ui="v3"][data-v7] .layout .home-hero { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
 :root[data-ui="v3"][data-v7] .layout .home-hero .buddy { flex: none; }
 :root[data-ui="v3"][data-v7] .layout .home-hero__copy { min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .home-hero h1 { margin: 0 0 2px; font: 800 34px/1.08 var(--u-font-display); letter-spacing: -0.04em; color: var(--u-ink); }
-/* The name in Instrument Serif Italic, as 0.1.49 set it. */
-:root[data-ui="v3"][data-v7] .layout .home-hero h1 em { font: italic 400 1.08em/1 var(--u-font-hand); letter-spacing: -0.01em; }
-/* Vibe's note: handwritten, a little tilted, in 0.1.49's violet ink (lilac in dark). */
-:root[data-ui="v3"][data-v7] .layout .home-hero__note {
-  margin: 2px 0 0; transform: rotate(-1.5deg); transform-origin: left; color: #5b4bd6; font: italic 400 24px/1.1 var(--u-font-hand); letter-spacing: 0;
-}
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-hero__note { color: #b8a6ff; }
+/* Upright display, no accent word: the name is the same face and weight as the greeting. */
+:root[data-ui="v3"][data-v7] .layout .home-hero h1 { margin: 0 0 4px; font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-hero h1 em { font: inherit; letter-spacing: inherit; font-style: normal; }
+/* Vibe's voice: Instrument Serif Italic, 15 px, ink-2, under the headline, never inside it. */
+:root[data-ui="v3"][data-v7] .layout .home-hero__note { margin: 0; transform: none; color: var(--u-ink-2); font: italic 400 17px/1.3 var(--u-font-hand); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-stats, :root[data-ui="v3"][data-v7] .layout .home-goal { display: none; }
 
-/* The stat stickers: pills with an ink rim and a 2 px hard shadow; the number in Bricolage, its words in Inter. Paper,
-   except "lines explained", which is lime (0.1.49). */
-:root[data-ui="v3"][data-v7] .layout .home-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-:root[data-ui="v3"][data-v7] .layout .home-stat {
-  display: inline-flex; align-items: baseline; gap: 5px; padding: 6px 12px; border: 1.5px solid var(--u-ink); border-radius: 999px;
-  background: var(--u-glass); color: var(--u-ink); font: 550 13px/1.2 var(--u-font); box-shadow: var(--u-shadow-sm);
-}
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-stat { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .home-stat b { font: 800 16px/1 var(--u-font-display); letter-spacing: -0.03em; }
-:root[data-ui="v3"][data-v7] .layout .home-stat[data-stat="lines"] { border-color: #141414; background: var(--u-lime); color: #141414; }
-
-/* The one action: an ink card with a lime under-offset and its keycap chip (0.1.49's "Explain any code"). */
+/* The one action: a glass-2 card with the keys on the right; the whole card is the button. */
 :root[data-ui="v3"][data-v7] .layout .home-cta {
-  display: flex; align-items: center; gap: 14px; width: 100%; margin: 0; padding: 18px 18px 18px 20px; text-align: left; cursor: pointer;
-  border: 1.5px solid #141414; border-radius: 16px; background: #141414; color: #fff; box-shadow: 4px 4px 0 var(--u-lime);
-  transition: transform 200ms var(--u-press), box-shadow 200ms var(--u-press);
+  display: flex; align-items: center; gap: 16px; width: 100%; margin: 0; padding: 20px 22px; text-align: left; cursor: pointer;
+  border-radius: var(--u-radius-card); color: var(--u-ink); transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
 }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-cta { border-color: var(--u-card-rim); background: #0b0b0a; }
-:root[data-ui="v3"][data-v7] .layout .home-cta:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--u-lime); }
-:root[data-ui="v3"][data-v7] .layout .home-cta:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--u-lime); }
-:root[data-ui="v3"][data-v7] .layout .home-cta:focus-visible { outline: 2px solid var(--u-ink); outline-offset: 4px; }
-:root[data-ui="v3"][data-v7] .layout .home-card__text { display: grid; gap: 3px; flex: 1; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text b { font: 750 19px/1.25 var(--u-font-display); letter-spacing: -0.025em; color: #fff; }
-:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text small { color: #bdbab3; font: 400 13px/1.4 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .home-cta__keys {
-  display: inline-flex; align-items: center; gap: 3px; flex: none; margin-left: auto; padding: 4px 10px; border: 1.5px solid var(--u-lime);
-  border-bottom-width: 3px; border-radius: 8px; color: var(--u-lime);
-}
-:root[data-ui="v3"][data-v7] .layout .home-cta__keys kbd { padding: 0; border: 0; background: none; color: inherit; font: 800 13px/1.2 var(--u-font-mono); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .home-cta:hover { transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .home-cta:active { transform: scale(0.99); }
+:root[data-ui="v3"][data-v7] .layout .home-cta:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .layout .home-card__text { display: grid; gap: 4px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text b { font: 600 17px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text small { color: var(--u-ink-2); font: 400 13.5px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-cta__keys { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; padding: 0; border: 0; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-cta__keys kbd { padding: 0 10px; font: 700 13px/30px var(--u-font-mono); }
 
-/* The free limit's card takes the banner's place: paper grey, an ink rim, the survey filled and the plan outlined. */
-:root[data-ui="v3"][data-v7] .layout .home-card.limit-banner {
-  display: flex; align-items: center; gap: 20px; margin: 0; padding: 18px 20px; border: 1.5px solid var(--u-ink); border-radius: 14px;
-  background: var(--u-sky); color: var(--u-ink); box-shadow: var(--u-shadow-sm);
-}
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-card.limit-banner { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text strong { font: 750 16px/1.25 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
+/* The free limit's card takes the action card's place, with the survey filled and the plan on glass. */
+:root[data-ui="v3"][data-v7] .layout .home-card.limit-banner { display: flex; align-items: center; gap: 20px; margin: 0; padding: 20px 22px; border-radius: var(--u-radius-card); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text strong { font: 600 17px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text p { margin: 0; font: 400 13.5px/1.5 var(--u-font); color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .layout .home-card.limit-banner .limit-banner__actions { display: grid; gap: 10px; flex: none; margin-left: auto; }
-/* "Review what changed": a text link under the card, never a second filled button. */
-:root[data-ui="v3"][data-v7] .layout .home-brief { justify-self: start; margin: -6px 0 0 4px; }
+/* "Review what changed": a text button under the card, never a second filled button. */
+:root[data-ui="v3"][data-v7] .layout .home-brief { justify-self: start; margin: -12px 0 0 -6px; }
 
-/* Today's goal: quiet on purpose, no hard shadow or colour fill; checks fill lime when done. */
-:root[data-ui="v3"][data-v7] .layout .home-goal {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 0; padding: 14px 16px; border: 1.5px solid var(--u-line); border-radius: 14px;
-  background: var(--u-glass); color: var(--u-ink-2); font: 550 14px/1.7 var(--u-font);
-}
-:root[data-ui="v3"][data-v7] .layout .home-goal > span { display: inline-flex; align-items: center; gap: 8px; }
-:root[data-ui="v3"][data-v7] .layout .home-goal > span:has(.is-done) { color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .home-goal__label { margin-right: 2px; color: var(--u-ink-3); font: 600 14px/1.7 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .home-goal__check {
-  display: inline-grid; place-items: center; width: 18px; height: 18px; border: 1.5px solid var(--u-ink-3); border-radius: 5px;
-  color: #141414; font: 800 11px/1 var(--u-font); box-shadow: none;
-}
-:root[data-ui="v3"][data-v7] .layout .home-goal__check.is-done { border-color: var(--u-ink); background: var(--u-lime); }
-/* A goal that turns done while Home is showing fills its box: it grows from 60 % as it fades in (240 ms), then the tick
-   draws left to right (160 ms, from 120 ms). No overshoot. Reduced motion (companion.css) removes both.
-   Motion, app-0151 moment 5. */
-:root[data-ui="v3"][data-v7] .layout .home-goal__check.is-new { animation: goalCheckIn 240ms var(--u-ease) both; }
-:root[data-ui="v3"][data-v7] .layout .home-goal__tick { display: inline-block; }
-:root[data-ui="v3"][data-v7] .layout .home-goal__check.is-new .home-goal__tick { animation: goalTickIn 160ms var(--u-ease) 120ms both; }
-@keyframes goalCheckIn { 0% { opacity: 0; transform: scale(0.6); } 50% { opacity: 1; } 100% { transform: none; } }
-@keyframes goalTickIn { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
-
-/* Up next and Recently understood: two flat lists side by side (lists sit flat; only the next step lifts). */
-:root[data-ui="v3"][data-v7] .layout .home-cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 22px; align-items: start; margin: 0; }
+/* Up next and Recently understood: two glass-2 cards side by side; rows inside sit on hairlines. */
+:root[data-ui="v3"][data-v7] .layout .home-cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; margin: 0; }
 :root[data-ui="v3"][data-v7] .layout .home-cols--one { grid-template-columns: minmax(0, 1fr); }
 @container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .home-cols { grid-template-columns: minmax(0, 1fr); } }
-:root[data-ui="v3"][data-v7] .layout .home-list { min-width: 0; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .layout .home-list > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; padding: 0 2px 6px; }
-:root[data-ui="v3"][data-v7] .layout .home-list h2 { margin: 0; font: 750 16px/1.2 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .home-list__count { color: var(--u-ink-3); font: 600 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-list { min-width: 0; margin: 0; padding: 18px 20px 14px; border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .layout .home-list > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; padding: 0 0 10px; }
+:root[data-ui="v3"][data-v7] .layout .home-list h2 { margin: 0; font: 600 15px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-list__count { color: var(--u-ink-3); font: 500 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-list .link-btn { margin-right: -6px; }
 /* One track sized to the column (an implicit track grows to the nowrap text and spills into the next column). */
-:root[data-ui="v3"][data-v7] .layout .home-list :is(ul, ol) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0; padding: 0; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .home-list :is(ul, ol) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; padding: 0; list-style: none; }
 :root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 6px 10px; border: 1.5px solid transparent; border-radius: 10px;
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0; padding: 8px 8px; border: 0; border-radius: 10px;
   background: transparent; color: var(--u-ink-2); text-align: left; cursor: pointer; box-shadow: none; transform: none;
-  transition: background 120ms ease, border-color 120ms ease, transform 200ms var(--u-press);
+  transition: background 120ms ease, transform 160ms var(--u-press);
 }
-:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row):hover { background: var(--u-raised); border-color: var(--u-line); color: var(--u-ink); transform: translateX(3px); }
-/* The next step: an outlined row with a hard shadow and a lime mark (0.1.49's .row.is-next). */
-:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step { border-color: var(--u-ink); background: var(--u-glass); color: var(--u-ink); box-shadow: var(--u-shadow-sm); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .home-list--next li:first-child .home-step { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .home-step__icon { flex: none; width: 22px; height: 22px; padding: 3px; box-sizing: border-box; border-radius: 50%; fill: none; stroke: var(--u-ink-2); stroke-width: 1.8; }
-:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-lime); stroke: #141414; box-shadow: inset 0 0 0 1.5px #141414; }
-:root[data-ui="v3"][data-v7] .layout .home-row__text { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .home-row__title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; font: 600 13.5px/1.3 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .home-row__source { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink-3); font: 450 12.5px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-list li + li :is(.home-step, .home-row) { box-shadow: 0 -1px 0 var(--u-hair); border-radius: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row):hover { background: var(--u-fill); color: var(--u-ink); transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row):active { transform: scale(0.99); }
+/* The next step: a solid row with a violet mark. */
+:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step { background: var(--u-solid); color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .home-step__icon { flex: none; width: 24px; height: 24px; padding: 4px; box-sizing: border-box; border-radius: 7px; background: var(--u-fill); fill: none; stroke: var(--u-ink-2); stroke-width: 1.8; }
+:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-mist); stroke: var(--u-accent-text); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .home-row__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-row__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink); font: 500 13.5px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-row__source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink-3); font: 400 12.5px/1.3 var(--u-font); }
 /* The file name in a recent row is code: mono. */
-:root[data-ui="v3"][data-v7] .layout .home-row .home-row__source { font: 450 12px/1.3 var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .home-row .home-row__source { font: 400 12px/1.3 var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .home-row__pill { flex: none; margin-left: auto; color: var(--u-ink-3); font: 500 12px/1 var(--u-font); background: none; }
-:root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="review"] { padding: 2px 8px; border: 1.5px solid var(--u-ink); border-radius: 999px; background: var(--u-amber-tint); color: var(--u-ink); font-weight: 700; }
-:root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 10px; color: var(--u-ink-3); font: italic 400 20px/1.2 var(--u-font-hand); }
+:root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="review"] { padding: 3px 8px; border: 0; border-radius: 999px; background: var(--u-amber-tint); color: var(--u-amber); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 6px 8px 10px; color: var(--u-ink-3); font: 400 13.5px/1.5 var(--u-font); }
 
-/* ── Page heads: Bricolage 800, the lead in Inter ── */
-:root[data-ui="v3"][data-v7] .layout .topline { margin-bottom: 0; }
-:root[data-ui="v3"][data-v7] .layout :is(.topline, .page-head) h1 { max-width: none; margin: 0; font: 800 30px/1.08 var(--u-font-display); letter-spacing: -0.04em; color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .topline .lead { margin: 10px 0 0; font: 400 14.5px/1.55 var(--u-font); color: var(--u-ink-3); }
+/* ── Page heads: Inter 700 28, the lead in Inter 14 ink-2; section labels 12 px Inter 600 sentence case ── */
+:root[data-ui="v3"][data-v7] .layout .topline { margin: 8px 0 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.topline, .page-head, .briefings__head) h1 { max-width: none; margin: 0; font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout :is(.topline .lead, .page-head p, .briefings__head p) { max-width: 72ch; margin: 6px 0 0; font: 400 14px/1.55 var(--u-font); color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .layout .page-head { max-width: none; margin: 0 0 6px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .layout .page-head p { max-width: 80ch; margin: 10px 0 0; font: 400 14.5px/1.55 var(--u-font); color: var(--u-ink-3); }
-/* Eyebrows and kickers in Instrument Serif Italic (0.1.49). */
-:root[data-ui="v3"][data-v7] .layout :is(.eyebrow, .kicker) { margin: 0 0 4px; color: var(--u-ink-3); font: italic 400 19px/1 var(--u-font-hand); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.eyebrow, .kicker, .agent-review__eyebrow, .history-continue__kicker) { margin: 0 0 4px; color: var(--u-ink-3); font: 600 12px/1.2 var(--u-font); letter-spacing: 0; text-transform: none; font-style: normal; }
 
-/* ── Library and the Quiz list (0.1.49's rows): the tools, the continue card you act on, then groups of outlined
-   rows that lift when you point at them ── */
-:root[data-ui="v3"][data-v7] .layout .history-tools { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; }
-:root[data-ui="v3"][data-v7] .layout .history-search { flex: 0 1 420px; max-width: 420px; margin-left: auto; }
+/* ── Library, less on screen: the search and the filters on one line, the continue card, then one glass-2 container
+   per day with rows on hairlines ── */
+:root[data-ui="v3"][data-v7] .layout .history-tools { display: flex; align-items: center; gap: 10px; margin: 18px 0 16px; }
+:root[data-ui="v3"][data-v7] .layout .history-search { flex: 0 1 360px; max-width: 360px; margin-left: auto; }
 :root[data-ui="v3"][data-v7] .layout .history-search input {
-  height: 38px; min-height: 38px; padding: 0 14px; border: 1.5px solid var(--u-line); border-radius: 10px; outline: none;
-  background: var(--u-glass); color: var(--u-ink); font: 400 14px/1 var(--u-font); box-shadow: none;
+  height: 36px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; outline: none;
+  background: var(--u-glass); color: var(--u-ink); font: 400 13.5px/1 var(--u-font);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
 }
 :root[data-ui="v3"][data-v7] .layout .history-search input::placeholder { color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .history-search input:focus-visible { border-color: var(--u-ink); box-shadow: 0 0 0 3px rgb(214 244 90 / 0.6); }
-:root[data-ui="v3"][data-v7] .layout .learn-filters { display: inline-flex; flex: none; flex-wrap: nowrap; gap: 6px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
-:root[data-ui="v3"][data-v7] .layout .learn-filters button {
-  height: 32px; padding: 0 12px; border: 1.5px solid var(--u-line); border-radius: 999px; background: var(--u-glass); color: var(--u-ink-2);
-  font: 650 13px/1 var(--u-font); box-shadow: none; transform: none;
+:root[data-ui="v3"][data-v7] .layout .history-search input:focus-visible { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 2px var(--u-accent); }
+/* Filters and Briefs' scopes: one segmented glass track with a solid thumb on the chosen one. */
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) {
+  display: inline-flex; flex: none; flex-wrap: nowrap; gap: 2px; padding: 3px; border-radius: 999px; background: var(--u-glass-1);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
 }
-:root[data-ui="v3"][data-v7] .layout .learn-filters button:hover { border-color: var(--u-ink); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .learn-filters button.on,
-:root[data-ui="v3"][data-v7] .layout .learn-filters button[aria-pressed="true"] { border-color: var(--u-accent); background: var(--u-accent); color: var(--u-accent-on); }
-:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 0.7; }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button {
+  height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2);
+  font: 600 13px/1 var(--u-font); box-shadow: none; transform: none; transition: background 120ms ease, color 120ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:hover { color: var(--u-ink); background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: var(--u-ink-3); opacity: 1; }
 :root[data-ui="v3"][data-v7] .layout .mix-start { flex: none; white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .mix-start span { margin-left: 4px; opacity: 0.8; }
 :root[data-ui="v3"][data-v7] .layout .history-continue {
-  display: flex; align-items: center; gap: 16px; width: 100%; margin: 0 0 18px; padding: 16px 16px 16px 20px;
-  border: 1.5px solid var(--u-ink); border-radius: 14px; text-align: left; text-decoration: none; white-space: normal; cursor: pointer;
-  background: var(--u-glass); color: var(--u-ink); font: inherit; box-shadow: var(--u-shadow);
-  transition: transform 200ms var(--u-press), box-shadow 200ms var(--u-press);
+  display: flex; align-items: center; gap: 16px; width: 100%; margin: 0 0 20px; padding: 16px 16px 16px 20px;
+  border-radius: var(--u-radius-card); text-align: left; text-decoration: none; white-space: normal; cursor: pointer;
+  color: var(--u-ink); font: inherit; transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
 }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .history-continue { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .history-continue:hover { text-decoration: none; transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--u-hard); }
-:root[data-ui="v3"][data-v7] .layout .history-continue:active { transform: translate(3px, 3px); box-shadow: 0 0 0 transparent; }
-:root[data-ui="v3"][data-v7] .layout .history-continue:focus-visible { outline: 2px solid var(--u-ink); outline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .layout .history-continue:hover { text-decoration: none; transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .history-continue:active { transform: scale(0.99); }
+:root[data-ui="v3"][data-v7] .layout .history-continue:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
 :root[data-ui="v3"][data-v7] .layout .history-continue__text { display: grid; gap: 4px; flex: 1; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .history-continue__kicker { color: #5b4bd6; font: italic 400 19px/1 var(--u-font-hand); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .history-continue__kicker { color: #b8a6ff; }
 :root[data-ui="v3"][data-v7] .layout .history-continue__lesson { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .history-continue__lesson strong { font: 750 17px/1.3 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-:root[data-ui="v3"][data-v7] .layout .history-continue__lesson span { font: 450 13px/1.3 var(--u-font); color: var(--u-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson strong { font: 600 16px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson span { font: 400 12.5px/1.3 var(--u-font-mono); color: var(--u-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :root[data-ui="v3"][data-v7] .layout .history-continue__go {
-  display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1.5px solid var(--u-accent); border-radius: 10px;
+  display: grid; place-items: center; flex: none; width: 38px; height: 38px; border: 0; border-radius: 999px;
   background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm);
 }
-:root[data-ui="v3"][data-v7] .layout .history-continue__go svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__go svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
 :root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) .lib-feed { margin: 0 0 110px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .layout .lib-group { margin: 0; }
-:root[data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 18px; }
 :root[data-ui="v3"][data-v7] .layout .page h2.lib-group__label,
-:root[data-ui="v3"][data-v7] .layout .lib-group__label { margin: 0 0 6px; padding: 0 4px 2px; border: 0; color: var(--u-ink-3); font: italic 400 19px/1 var(--u-font-hand); letter-spacing: 0; text-transform: none; }
-:root[data-ui="v3"][data-v7] .layout .lib-group__rows { display: grid; gap: 6px; border: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__label { margin: 0 0 8px; padding: 0 4px; border: 0; color: var(--u-ink-3); font: 600 12px/1.2 var(--u-font); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows { display: grid; gap: 0; padding: 4px; border-radius: var(--u-radius-card); }
 :root[data-ui="v3"][data-v7] .layout :is(.lib-line, .survey-line) {
-  display: flex; align-items: center; margin: 0; border: 1.5px solid var(--u-line); border-radius: 12px; background: var(--u-glass);
-  box-shadow: none; overflow: hidden; transform: none; animation: none;
-  transition: border-color 120ms ease, transform 200ms var(--u-press), box-shadow 200ms var(--u-press);
+  display: flex; align-items: center; margin: 0; border: 0; border-radius: 10px; background: transparent;
+  box-shadow: none; overflow: hidden; transform: none; animation: none; transition: background 120ms ease;
 }
-:root[data-ui="v3"][data-v7] .layout .lib-group__rows > :last-child { border-bottom: 1.5px solid var(--u-line); }
-:root[data-ui="v3"][data-v7] .layout :is(.lib-line, .survey-line):hover { border-color: var(--u-ink); background: var(--u-glass); box-shadow: var(--u-shadow-sm); transform: translate(-1px, -1px); }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > :last-child { border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > * + * { box-shadow: 0 -1px 0 var(--u-hair); border-radius: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-line, .survey-line):hover { background: var(--u-fill); transform: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > * + *:hover { box-shadow: 0 -1px 0 var(--u-hair); }
 :root[data-ui="v3"][data-v7] .layout .lib-line .lib-row,
 :root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick {
-  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; align-items: center; gap: 0 14px; flex: 1; min-width: 0;
-  margin: 0; padding: 11px 14px; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none;
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: center; gap: 0 14px; flex: 1; min-width: 0;
+  margin: 0; padding: 11px 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none;
 }
 :root[data-ui="v3"][data-v7] .layout .lib-line .lib-row:hover,
 :root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick:hover { background: transparent; transform: none; }
-:root[data-ui="v3"][data-v7] .layout .lib-row__icon { width: 22px; height: 22px; padding: 3px; box-sizing: border-box; border-radius: 6px; background: var(--u-fill); fill: none; stroke: var(--u-ink); stroke-width: 1.7; }
+:root[data-ui="v3"][data-v7] .layout .lib-row__icon { width: 24px; height: 24px; padding: 4px; box-sizing: border-box; border-radius: 7px; background: var(--u-mist); fill: none; stroke: var(--u-accent-text); stroke-width: 1.7; }
 :root[data-ui="v3"][data-v7] .layout :is(.lib-row__body, .survey-pick__body) { display: grid; gap: 2px; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout :is(.lib-row__body, .survey-pick__body) strong { font: 700 15px/1.3 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:root[data-ui="v3"][data-v7] .layout :is(.know-meta, .survey-pick__body > span) { min-width: 0; overflow: hidden; font: 450 12.5px/1.3 var(--u-font); color: var(--u-ink-3); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-row__body, .survey-pick__body) strong { font: 600 14px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout :is(.know-meta, .survey-pick__body > span) { min-width: 0; overflow: hidden; font: 400 12.5px/1.3 var(--u-font); color: var(--u-ink-3); white-space: nowrap; text-overflow: ellipsis; }
 :root[data-ui="v3"][data-v7] .layout :is(.lib-row time, .survey-pick__day) { font: 500 12px/1 var(--u-font); color: var(--u-ink-3); white-space: nowrap; }
-:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill {
-  min-width: 0; height: auto; padding: 0 8px; border: 1.5px solid var(--u-ink); border-radius: 999px; text-align: center;
-  background: var(--u-glass); color: var(--u-ink); font: 700 11px/19px var(--u-font); animation: none;
-}
-:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="current"] { background: var(--u-mist); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="review"] { background: var(--u-amber-tint); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .lib-row .status-pill { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .survey-pick__go {
-  height: auto; padding: 4px 12px; border: 1.5px solid var(--u-ink); border-radius: 999px; background: var(--u-glass); color: var(--u-ink);
-  font: 700 12px/1.3 var(--u-font); box-shadow: var(--u-shadow-sm);
-}
-:root[data-ui="v3"][data-v7] .layout .survey-line:hover .survey-pick__go { background: var(--u-lime); color: #141414; }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill { min-width: 0; height: auto; padding: 0 9px; border: 0; border-radius: 999px; text-align: center; font: 600 11px/20px var(--u-font); animation: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="current"] { background: var(--u-mist); color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="review"] { background: var(--u-amber-tint); color: var(--u-amber); }
+:root[data-ui="v3"][data-v7] .layout .survey-pick__go { height: auto; padding: 5px 12px; border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 12px/1.3 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .survey-line:hover .survey-pick__go { background: var(--u-accent); color: var(--u-accent-on); }
 :root[data-ui="v3"][data-v7] .layout .row-trash { flex: none; width: 28px; height: 28px; margin: 0 8px 0 0; border-radius: 8px; background: transparent; color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .row-trash:hover { background: var(--u-blush); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .row-trash:hover { background: var(--u-fill); color: var(--u-ink); }
 
-/* ── Popovers (account menu, search palette): paper with an ink rim and the hard shadow ── */
-:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) {
-  border: 1.5px solid var(--u-card-rim); border-radius: 14px; background: var(--u-sheet); -webkit-backdrop-filter: none; backdrop-filter: none;
-  box-shadow: var(--u-shadow);
-}
+/* ── Popovers (account menu, search palette): glass-2 with the rim and the floating shadow ── */
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) { border-radius: var(--u-radius-card); }
 /* "Saved on this computer" (or the email) wraps to a second line instead of hiding behind the plan pill (S-1 23:25). */
 :root[data-ui="v3"][data-v7] .acct-menu__who span { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
 
-/* ── Cards on every other page: white paper, a hairline edge, flat; the ones you act on add an ink edge and lift ── */
-:root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card) {
-  border: 1.5px solid var(--u-line); border-radius: 14px; background: var(--u-glass); transform: none;
-  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
-}
+/* ── Cards on every other page: glass-2 with the rim; a card you can act on marks hover with the violet hairline ── */
+:root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card) { border-radius: var(--u-radius-card); transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.tile, .briefings__card, .metric-card):hover { transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
 
-/* ── Briefs (Change brief): the head, the scope keys, the review card you work through, the brief and its files ── */
-:root[data-ui="v3"][data-v7] .layout .briefings__head h1 { margin: 0; font: 800 30px/1.08 var(--u-font-display); letter-spacing: -0.04em; color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .briefings__head p { color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .briefings__scopes button {
-  height: 32px; padding: 0 12px; border: 1.5px solid var(--u-line); border-radius: 999px; background: var(--u-glass); color: var(--u-ink-2);
-  font: 650 13px/1 var(--u-font); box-shadow: none;
-}
-:root[data-ui="v3"][data-v7] .layout .briefings__scopes button:hover { border-color: var(--u-ink); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .briefings__scopes button:is(.on, [aria-selected="true"]) { border-color: var(--u-accent); background: var(--u-accent); color: var(--u-accent-on); }
-:root[data-ui="v3"][data-v7] .layout .agent-review { border: 1.5px solid var(--u-ink); border-radius: 14px; background: var(--u-glass); box-shadow: var(--u-shadow); }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .agent-review { border-color: var(--u-card-rim); }
-:root[data-ui="v3"][data-v7] .layout .agent-review__eyebrow { color: #5b4bd6; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .agent-review__eyebrow { color: #b8a6ff; }
-:root[data-ui="v3"][data-v7] .layout .agent-review__checks input { background: var(--u-glass); border-color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked { background: var(--u-lime); }
-:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { color: #141414; }
-:root[data-ui="v3"][data-v7] .layout .briefings__card h2 { font: 750 16px/1.25 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .briefings__file { border-radius: 10px; }
-:root[data-ui="v3"][data-v7] .layout .briefings__file span:first-child { font: 600 12.5px/1.3 var(--u-font-mono); color: var(--u-ink); }
-
+/* ── Briefs (Change brief), less on screen: the head with the repo picker, the scopes, then the review card and the
+   brief's files on glass-2 ── */
+:root[data-ui="v3"][data-v7] .layout .agent-review { border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input { border: 1.5px solid var(--u-ink-3); border-radius: 6px; background: var(--u-solid); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked { border-color: var(--u-accent); background: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .briefings__card h2 { font: 600 15px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .briefings__file { border-radius: 10px; background: var(--u-solid); }
+:root[data-ui="v3"][data-v7] .layout .briefings__file span:first-child { font: 500 12.5px/1.3 var(--u-font-mono); color: var(--u-ink); }
 /* ── Momentum (c-momentum): four metric cards in one row, the heat map in the accent ramp ── */
 :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 24px 0 22px; }
 @container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1078,63 +1061,98 @@
   :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .home-cta, .home-step, .home-row, .history-continue, .lib-line, .survey-line, .topbar__explain, .nav button):is(:hover, :active, .on) { transform: none; }
 }
 
-/* ── Round 2 options B and C (ledger 574), shown by <html data-r2="b|c"> for the renders Preston picks from; A is
-   everything above. Whichever is picked folds into the rules above and this block goes. ── */
-.layout .lib-row__code { display: none; }
+/* ── Round 2 options G2 and G3 (Design requests/unvibe-app/20261107-1939-design-r2-options-glass.md), shown by
+   <html data-r2="g2|g3"> for the renders Preston picks from; G1 "Violet glass" is everything above. Whichever is
+   picked folds into the rules above and this block goes. ── */
 
-/* B, "A, richer": 0.1.49's sticker colours back as meaning, never wallpaper. */
-:root[data-r2="b"] { --r2-lime: #d6f45a; --r2-sky: #9fd8ff; --r2-sun: #ffd84d; --r2-coral: #ff9a76; --r2-lilac: #b8a6ff; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-stat { border-color: #141414; color: #141414; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-stat[data-stat="reviews"] { background: var(--r2-lilac); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-stat[data-stat="lines"] { background: var(--r2-lime); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-stat[data-stat="understood"] { background: var(--r2-sky); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-stat[data-stat="concepts"] { background: var(--r2-sun); }
-/* Every sidebar item gets its colour tile, the same colour as its page's header band. */
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav button svg { width: 26px; height: 26px; padding: 4px; border-radius: 7px; box-shadow: inset 0 0 0 1.5px #141414; color: #141414; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--top button:nth-child(1) svg { background: var(--r2-lime); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--top button:nth-child(2) svg { background: var(--r2-lilac); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(1) svg { background: var(--r2-sky); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(2) svg { background: var(--r2-sun); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(3) svg { background: var(--r2-coral); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(4) svg { background: var(--r2-lime); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(5) svg { background: var(--r2-lilac); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(6) svg { background: var(--r2-sun); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .nav button.on svg { color: #141414; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .learn-topline h1 .ink-title,
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .briefings__head h1 { width: fit-content; background: linear-gradient(transparent 58%, var(--r2-band) 58%); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .learn-topline { --r2-band: var(--r2-sky); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .briefings__head { --r2-band: var(--r2-coral); }
-:root[data-r2="b"][data-ui="v3"][data-v7][data-theme="dark"] .layout .learn-topline { --r2-band: rgb(159 216 255 / 0.4); }
-:root[data-r2="b"][data-ui="v3"][data-v7][data-theme="dark"] .layout .briefings__head { --r2-band: rgb(255 154 118 / 0.4); }
-/* Stronger cards: 4 px hard shadows on Today's action cards, a 2 px edge on the banner, a colour strip on Library and
-   Briefs cards by status or kind. */
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .home-cta { border-width: 2px; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout :is(.home-card.limit-banner, .home-list--next li:first-child .home-step, .history-continue) { box-shadow: 4px 4px 0 var(--u-hard); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .lib-line { border-left: 5px solid var(--r2-lime); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .lib-line:has(.status-pill[data-tone="review"]) { border-left-color: var(--r2-sun); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="current"] { background: var(--r2-lime); color: #141414; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="review"] { background: var(--r2-sun); color: #141414; }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .agent-review { border-top: 6px solid var(--r2-coral); }
-:root[data-r2="b"][data-ui="v3"][data-v7] .layout .briefings__card { border-top: 6px solid var(--r2-sky); }
+/* G2 "Studio" (ElevenLabs): a near-neutral ground with the aurora only as a faint glow at the top edge; a flat
+   sidebar column with a hairline divider; solid hairline cards, r12, no rim sheen; the primary is an ink fill;
+   Inter 600 24 px display; Vibe's voice in Inter; the most compact density (13 px body, 8 px gaps). */
+:root[data-r2="g2"] {
+  --u-paper: #f7f6fb; --u-accent: #15141a; --u-accent-on: #f3f1fa; --u-accent-text: #5a3fe0; --u-mist: #efeef5;
+  --u-glass-1: #f7f6fb; --u-glass: #ffffff; --u-solid: #ffffff; --u-chip: #ffffff; --u-blur: none;
+  --u-rim-line: transparent; --u-sheen: linear-gradient(transparent, transparent); --u-hair: rgb(21 20 26 / 0.1); --u-line: rgb(21 20 26 / 0.1); --u-fill: rgb(21 20 26 / 0.05);
+  --u-shadow: 0 1px 2px rgb(21 20 26 / 0.06); --u-shadow-sm: 0 1px 2px rgb(21 20 26 / 0.08);
+  --u-radius-card: 12px; --u-radius-field: 10px; --u-w-title: 600;
+}
+:root[data-r2="g2"][data-theme="dark"] {
+  --u-paper: #15131f; --u-accent: #f3f1fa; --u-accent-on: #15141a; --u-accent-text: #b8a6ff; --u-mist: #262236;
+  --u-glass-1: #15131f; --u-glass: #1c1927; --u-solid: #1c1927; --u-chip: #1c1927;
+  --u-hair: rgb(243 241 250 / 0.12); --u-line: rgb(243 241 250 / 0.12); --u-fill: rgb(243 241 250 / 0.06);
+  --u-shadow: 0 1px 2px rgb(0 0 0 / 0.3); --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout {
+  background: linear-gradient(var(--u-paper) 0%, transparent 100%), linear-gradient(rgb(247 246 251 / 0.88), rgb(247 246 251 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
+}
+:root[data-r2="g2"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
+  background: linear-gradient(var(--u-paper) 0%, transparent 100%), linear-gradient(rgb(21 19 31 / 0.88), rgb(21 19 31 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
+}
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .side { margin: 0; border-radius: 0; background: var(--u-glass-1); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 1px 0 0 var(--u-hair); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .ask-dock),
+:root[data-r2="g2"][data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain, .side-search, .side-usage, .history-search input, .soft-btn, .act, .field-btn) { box-shadow: 0 0 0 1px var(--u-hair); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .nav button.on { background: var(--u-fill); color: var(--u-ink); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-hero h1, .topline h1, .page-head h1, .briefings__head h1) { font: 600 24px/1.2 var(--u-font); letter-spacing: -0.015em; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-hero__note { font: 400 14px/1.4 var(--u-font); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home { gap: 16px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner) { padding: 16px 18px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-cols { gap: 12px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-list { padding: 14px 16px 10px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) { min-height: 38px; padding: 6px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-row__title, .lib-row__body strong, .history-continue__lesson strong) { font-size: 13px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-line .lib-row { padding: 9px 10px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 12px; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-row__icon { background: var(--u-fill); stroke: var(--u-ink-2); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-accent); stroke: var(--u-accent-on); }
+:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .history-continue__go { border-radius: 10px; }
 
-/* C, "Paper, ink and highlighter": upright headlines, a flat paper ground with an ink divider, lime as a highlighter
-   on code, and the keycap inside every button that has a shortcut. */
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .home-hero h1 em { font: inherit; letter-spacing: inherit; }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout { background: var(--u-paper); }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .side { border-right: 1.5px solid var(--u-ink); }
-:root[data-r2="c"][data-ui="v3"][data-v7][data-theme="dark"] .layout .side { border-right-color: var(--u-card-rim); }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .content { margin: 0; border: 0; border-radius: 0; }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .home-stat:not([data-stat="lines"]) { background: var(--u-glass); }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .lib-row__code {
-  display: grid; margin: 8px 0 2px; padding: 6px 0; border-radius: 6px; background: var(--u-raised);
-  font: 500 12px/18px var(--u-font-mono); font-variant-ligatures: none; color: var(--u-ink-2); white-space: pre; overflow: hidden;
+/* G3 "Soft" (Dia): a pastel aurora (lilac, peach, sky) under glass; Bricolage 700 28 px display; the primary violet
+   at r14; glass-2 cards at r18; the sidebar as floating glass tabs on top (Today, Ask Vibe) with the list under them;
+   airy density (14 px body, 12 px gaps). */
+:root[data-r2="g3"] {
+  --u-font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --u-radius-card: 18px; --u-radius-field: 14px; --u-radius-pane: 18px;
 }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .lib-row__code > span { padding: 0 10px; overflow: hidden; white-space: pre; text-overflow: ellipsis; }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .lib-row__code > .is-explained { background: rgb(214 244 90 / 0.55); color: var(--u-ink); }
-:root[data-r2="c"][data-ui="v3"][data-v7][data-theme="dark"] .layout .lib-row__code > .is-explained { background: rgb(214 244 90 / 0.22); }
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .lib-line .lib-row { align-items: start; }
-/* The keyboard on the buttons: Ask Vibe shows ↵ (Search ⌘K and Explain ⌃U carry theirs already). */
-:root[data-r2="c"][data-ui="v3"][data-v7] .layout .ask-dock button::after {
-  content: "↵" / ""; display: inline-block; margin-left: 8px; padding: 0 5px; border: 1.5px solid currentColor; border-bottom-width: 3px; border-radius: 5px;
-  font: 700 11px/16px var(--u-font-mono);
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout {
+  background:
+    radial-gradient(900px 520px at 8% 0%, rgb(255 214 196 / 0.75), transparent 60%),
+    radial-gradient(800px 520px at 92% 12%, rgb(196 220 255 / 0.75), transparent 60%),
+    radial-gradient(900px 600px at 50% 100%, rgb(214 200 255 / 0.7), transparent 60%),
+    linear-gradient(rgb(250 248 252 / 0.6), rgb(250 248 252 / 0.6)), url("./aurora.webp") center / cover no-repeat, #f6f3fb;
 }
+:root[data-r2="g3"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
+  background:
+    radial-gradient(900px 520px at 8% 0%, rgb(120 70 60 / 0.5), transparent 60%),
+    radial-gradient(800px 520px at 92% 12%, rgb(50 80 140 / 0.5), transparent 60%),
+    radial-gradient(900px 600px at 50% 100%, rgb(90 70 150 / 0.5), transparent 60%),
+    linear-gradient(rgb(16 12 34 / 0.8), rgb(16 12 34 / 0.8)), url("./aurora.webp") center / cover no-repeat, #16122a;
+}
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .side { margin: 12px 0 12px 12px; padding-top: 40px; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+:root[data-r2="g3"][data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .side { padding-top: 10px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .brand { margin-bottom: 14px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin: 10px 0 14px; padding: 4px; border-radius: 16px;
+  background: var(--u-sheen), var(--u-glass-1); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
+}
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top button { flex-direction: column; justify-content: center; gap: 4px; height: 54px; border-radius: 12px; font-size: 12px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top button.on { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--spaces {
+  padding: 6px; border-radius: 16px; background: var(--u-sheen), var(--u-glass-1); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
+}
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--spaces button { border-radius: 11px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .side-spaces { margin: 0 0 6px; padding: 0 10px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-hero h1, .topline h1, .page-head h1, .briefings__head h1) { font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home { gap: 28px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home-cols { gap: 24px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home-list { padding: 20px 22px 16px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) { min-height: 48px; padding: 10px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-row__title, .lib-row__body strong) { font-size: 14px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-line .lib-row { padding: 13px 14px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-group__rows { padding: 6px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 22px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button, .soft-btn, .act, .field-btn) { border-radius: 14px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .ask-dock { border-radius: 22px; }
+:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm); }
