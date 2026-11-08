@@ -84,7 +84,7 @@ export default function WindowsProtectedYourPcPage() {
             <a href="https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions" rel="noopener noreferrer">
               Smart App Control FAQ
             </a>{" "}
-            says an unsigned app is blocked, that there is currently no way to allow a single app, and that Smart App Control can be
+            says it blocks an unsigned app when its security service can&apos;t vouch for it, that there is currently no way to allow a single app, and that Smart App Control can be
             turned off in the Windows Security app&apos;s settings; recent Windows updates let it be turned back on later without
             reinstalling Windows. Turning it off is your call: it stops checking every app, not just Unvibe.
           </li>

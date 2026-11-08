@@ -92,8 +92,8 @@ export default function AppleCouldNotVerifyPage() {
             software&rdquo; and &ldquo;the app developer cannot be verified&rdquo;. The same steps apply.
           </li>
           <li>
-            <b>No Open Anyway button, or the Security settings are grayed out.</b> Apple says these settings may not be available when
-            a Mac is managed by a system administrator or IT department. Email us and we&apos;ll help.
+            <b>No Open Anyway button, or the Security settings are grayed out.</b> Apple says some Security settings may not be
+            available when a Mac is managed by a system administrator or IT department. Email us and we&apos;ll help.
           </li>
         </ul>
         <p>
@@ -105,7 +105,7 @@ export default function AppleCouldNotVerifyPage() {
       <p className="fos-page__help">
         Still stuck? Email <a href={`mailto:${SUPPORT_EMAIL}?subject=Unvibe%20Mac%20install`}>{SUPPORT_EMAIL}</a> with a screenshot
         and your macOS version. All the install steps for Mac and Windows: <Link href="/install-help">Install help</Link>. Last
-        checked with Unvibe 0.1.49 on macOS 15.
+        checked with Unvibe 0.1.49 on macOS 15 and 26.
       </p>
     </article>
   );
