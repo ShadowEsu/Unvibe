@@ -177,14 +177,15 @@ export const LISTINGS: readonly Listing[] = [
     status: "live",
     href: "https://nicklaunches.com/products/unvibe/",
     linkRequired: true,
-    // Security 20261107-1810: byte copies of their free "Featured" badge (every launch gets it), 244 × 56 as they ask
+    // Security 20261107-1810: byte copies of their free "Featured" badge (every launch gets it). Shown 174 × 40, their
+    // snippet's 244 × 56 shape at 40 px tall so it sits with the 30 px row (Design SHOULD, BOSS; their terms set no size)
     badges: [
       {
         src: "/badges/nicklaunches-featured.png",
         darkSrc: "/badges/nicklaunches-featured-dark.png",
         alt: "Featured on Nick Launches",
-        width: 244,
-        height: 56,
+        width: 174,
+        height: 40,
         source: "https://nicklaunches.com/badges/featured.png",
         fetched: "2026-11-08",
         exactSize: true,
