@@ -160,7 +160,7 @@ export function SiteHeader() {
             </li>
           ))}
         </ul>
-        <DownloadCta surface="nav" className="d-cta d-btn dh__menu-cta" onClick={() => setOpen(false)}>{D_NAV_CTA}</DownloadCta>
+        <DownloadCta surface="nav" className="d-cta dh__menu-cta" dot={false} onClick={() => setOpen(false)}>{D_NAV_CTA}</DownloadCta>
       </div>
     </header>
   );
