@@ -8,6 +8,7 @@ import { BtnDot, Letters, Statement, Stats, VioletSplit } from "./effects";
 import { Faq, Os, PixelVibe, PixelWipe, Pixels, Ribbon, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
 import { DiaMotion } from "./motion/DiaMotion";
+import { ProblemSection } from "./Problem";
 import { UnvibeDemo } from "./UnvibeDemo";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
@@ -356,6 +357,7 @@ export function Home({ copy, faq }: { copy: PricingCopy; faq: ReadonlyArray<{ id
         <Hero />
         <Ribbon />
         <Numbers />
+        <ProblemSection />
         <Statement labelledBy="d-stmt-h">
           <p className="d-stmt__entity">{D_STATEMENT.entity}</p>
           <p className="d-label d-mono">{D_STATEMENT.label}</p>

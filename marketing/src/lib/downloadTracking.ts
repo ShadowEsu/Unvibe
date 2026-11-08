@@ -51,7 +51,8 @@ export type DownloadSurface =
   | "releases"
   | "build"
   | "resources"
-  | "redeem";
+  | "redeem"
+  | "why";
 
 /** A click on a download button or link. */
 export function trackDownloadClick(surface: DownloadSurface, platform: DownloadPlatform): void {

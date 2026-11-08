@@ -24,6 +24,7 @@ export const OG_CARDS = {
   mac: { file: "/og/og-mac-c241a9bf.png", alt: `A code explainer for your Mac. ${FREE}` },
   windows: { file: "/og/og-windows-1d3f1db8.png", alt: `A code explainer for Windows. ${FREE}` },
   explain: { file: "/og/og-explain-8fbfbcab.png", alt: `Explain code in plain English. ${FREE}` },
+  why: { file: "/og/og-why-953485f6.png", alt: "Nobody read the code. Why I'm building Unvibe, a founder's note with four sourced numbers." },
 } as const satisfies Record<string, OgCard>;
 
 /** Each language page's own card, by page id. */
