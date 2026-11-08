@@ -25,6 +25,19 @@
 [data-d-hero-rise="wordmark"] { --d-rise: 36px; --d-rise-s: 0.96; transform-origin: 50% 100%; animation: dRise 1200ms var(--d-ease-out) 80ms both; }
 [data-d-hero-rise="window"] { --d-rise: 80px; animation: dRise 1400ms var(--d-ease-out) 160ms both; }
 [data-d-hero-rise="dock"] { --d-rise: 24px; animation: dRiseFade 900ms var(--d-ease-out) 380ms both; }
+/* Desktop intro (Preston, 8 Nov): the H1's words rise one after another, the wordmark rises and settles to full size behind them, the
+   window tilts flat as it lands, then the download block. Each starts painted (opacity ≥ .16, never 0) so the LCP
+   lands in frame 1; transform and opacity only. Phones keep the single rises above. */
+@keyframes dHeroWord { from { opacity: 0.16; transform: translate3d(0, 0.42em, 0); } }
+@keyframes dMarkIn { from { opacity: 0.3; transform: translate3d(0, 48px, 0) scale(0.96); } }
+@keyframes dWinIn { from { transform: perspective(1600px) translate3d(0, 96px, 0) rotateX(12deg) scale(0.97); } }
+@media (min-width: 821px) {
+  [data-d-hero-rise="h1"]:has(.d-hw) { animation: none; }
+  .d-hw { display: inline-block; animation: dHeroWord 900ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) calc(60ms + var(--i, 0) * 55ms) both; }
+  [data-d-hero-rise="wordmark"] { animation: dMarkIn 1300ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) 180ms both; }
+  [data-d-hero-rise="window"] { transform-origin: 50% 0; animation: dWinIn 1500ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) 300ms both; }
+  [data-d-hero-rise="dock"] { animation-delay: 650ms; }
+}
 /* The hero's background photo layer: data-d-hero-bg on an absolute layer inset -6 % (inside the hero's overflow:hidden),
    carrying the bubbles image. It fades in over 600 ms as it loads in (Dia's background fade; the image can't be the
    LCP: it's under Chrome's low-entropy line), then drifts slowly, transform only: 40 s each way. */

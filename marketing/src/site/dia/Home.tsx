@@ -34,11 +34,25 @@ function DemoWindow({ step, rise }: { step?: 0 | 1 | 2; rise?: boolean }) {
 }
 
 /** The H1 is plain text, visible in the first frame; it only rises (ANIMATIONS #12). */
+/** The H1 as one span per word (--i = its index) for the desktop word rise; the spaces stay plain text, so it reads as one line. */
+function HeroWords({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(" ").map((word, i) => (
+        <span key={i}>
+          {i > 0 && " "}
+          <span className="d-hw" style={{ "--i": i } as CSSProperties}>{word}</span>
+        </span>
+      ))}
+    </>
+  );
+}
+
 function Hero() {
   return (
     <section className="d-hero" aria-labelledby="d-hero-h">
       <div className="d-hero__bg" data-d-hero-bg="" aria-hidden="true" />
-      <h1 id="d-hero-h" className="d-hero__h1 d-serif" data-d-hero-rise="h1">{D_HERO.h1}</h1>
+      <h1 id="d-hero-h" className="d-hero__h1 d-serif" data-d-hero-rise="h1"><HeroWords text={D_HERO.h1} /></h1>
       <p className="d-hero__mark" aria-hidden="true" data-d-hero-rise="wordmark">{D_HERO.wordmark}</p>
       <DemoWindow rise />
     </section>
