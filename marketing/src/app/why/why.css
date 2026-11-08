@@ -6,8 +6,8 @@
 .why-page .verify { max-width: 760px; }
 .why-page .verify > p, .why-page .verify > ul, .why-page .verify > ol { max-width: 68ch; }
 .why-page .verify > * + p, .why-page .verify > * + ul, .why-page .verify > * + table { margin-top: 12px; }
-.why-page .verify > ul { list-style: disc; }
-.why-page .verify > ul > li + li { margin-top: 6px; }
+.why-page .verify > ul:not(.why-figures) { list-style: disc; }
+.why-page .verify > ul:not(.why-figures) > li + li { margin-top: 6px; }
 .why-page .verify h3 { margin: 18px 0 6px; font: 800 18px/1.3 var(--font-sans); color: var(--u-text); }
 .why-page sup { font-size: 0.72em; line-height: 0; }
 .why-page sup a { padding: 0 1px; text-decoration-thickness: 2px !important; }
