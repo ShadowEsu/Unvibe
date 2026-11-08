@@ -3,10 +3,12 @@ import { browserTrackingDisabled } from "@/lib/trackingOptOut";
 
 const ANON_KEY = "unvibe_anon_id";
 
+/** Pages that never send a visit, even after Allow: admin and stats pages, and /survey, which promises that opening it stores nothing. */
 function shouldSkip(pathname: string): boolean {
   return (
     /\/waitlist(?:-admin)?(?:\/|$)/.test(pathname) ||
     /\/(?:stats(?:\.html)?|console)(?:\/|$)/i.test(pathname) ||
+    /^\/survey(?:\/|$)/.test(pathname) ||
     pathname.startsWith("/api/")
   );
 }
