@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { KEY_CHECK_SHOT, SHOT_CAPTION } from "@/data/homeGallery";
 import { pageMetadata } from "@/lib/pageMeta";
@@ -82,16 +82,16 @@ const SOURCE_NUMBER = new Map<SourceId, number>(SOURCES.map((s, i) => [s.id, i +
 
 /** Superscript citation numbers that jump to the Sources list (Design rule 4). */
 function C({ s }: { s: SourceId | readonly SourceId[] }) {
-  const ids: readonly SourceId[] = typeof s === "string" ? [s] : s;
+  const ids = (typeof s === "string" ? [s] : [...s]).sort((a, b) => (SOURCE_NUMBER.get(a) ?? 0) - (SOURCE_NUMBER.get(b) ?? 0));
   return (
     <sup>
       {ids.map((id, i) => {
         const n = SOURCE_NUMBER.get(id);
         return (
-          <span key={id}>
+          <Fragment key={id}>
             {i > 0 && ","}
             <a href={`#source-${n}`} aria-label={`Source ${n}`}>{n}</a>
-          </span>
+          </Fragment>
         );
       })}
     </sup>
