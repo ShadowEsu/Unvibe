@@ -42,6 +42,7 @@ export const SITE_ROUTES: ReadonlySet<string> = new Set([
   "listed-on",
   "pricing", "privacy", "redeem", "refund", "releases", "resources", "rewards", "s", "survey", "terms", "use-cases",
   "waitlist",
+  "why",
 ]);
 
 /**
