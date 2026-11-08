@@ -40,7 +40,7 @@ export const SITE_ROUTES: ReadonlySet<string> = new Set([
   "about", "account-deletion", "activate", "beta", "build", "code-explainer-mac", "licenses",
   "code-explainer-windows", "console", "data-controls", "explain", "faq", "help", "install-help", "investors", "kit",
   "listed-on",
-  "pricing", "privacy", "redeem", "refund", "releases", "resources", "rewards", "s", "terms", "use-cases",
+  "pricing", "privacy", "redeem", "refund", "releases", "resources", "rewards", "s", "survey", "terms", "use-cases",
   "waitlist",
 ]);
 

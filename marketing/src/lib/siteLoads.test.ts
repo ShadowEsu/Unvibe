@@ -89,10 +89,10 @@ describe("which requests count as a page load", () => {
     }
     const cubot = "Mozilla/5.0 (Linux; Android 12; CUBOT X50) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36";
     assert.equal(isCountedLoad(doc({ headers: { "user-agent": cubot } })), true);
-    for (const p of ["/console", "/console/users", "/stats", "/stats.html", "/waitlist", "/waitlist-admin", "/s/k3y", "/activate", "/redeem", "/download/mac", "/download/mac-intel", "/download/windows"]) {
+    for (const p of ["/console", "/console/users", "/stats", "/stats.html", "/waitlist", "/waitlist-admin", "/s/k3y", "/activate", "/redeem", "/survey", "/download/mac", "/download/mac-intel", "/download/windows"]) {
       assert.equal(isCountedLoad(doc({ pathname: p })), false, p);
     }
-    for (const p of ["/statsig-alternatives", "/consoles", "/use-cases/s3", "/security", "/download/thanks", "/download/macos-guide"]) {
+    for (const p of ["/statsig-alternatives", "/consoles", "/use-cases/s3", "/security", "/surveys-guide", "/download/thanks", "/download/macos-guide"]) {
       assert.equal(isCountedLoad(doc({ pathname: p })), true, p);
     }
   });
