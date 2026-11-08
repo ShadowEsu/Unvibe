@@ -110,7 +110,7 @@ const INCIDENTS: Incident[] = [
   {
     when: "Mar 2025",
     who: "170 apps built with Lovable",
-    what: <>A scan of 1,645 apps found 170 whose database had no working row-level security, so anyone could read or write their tables with the public key every visitor gets (CVE-2025-48757). The researchers work at Replit, a competitor.<C s={["palmer", "cve"]} /></>,
+    what: <>A scan of 1,645 apps found 170 whose database had no working row-level security, so anyone could read or write their tables with the public key every visitor gets (CVE-2025-48757). The researchers work at Replit.<C s={["palmer", "cve"]} /></>,
     cost: <>303 exposed endpoints. Lovable disputes the CVE: each customer is responsible for protecting their app&apos;s data.<C s={["palmer", "cve"]} /></>,
   },
   {
@@ -123,7 +123,7 @@ const INCIDENTS: Incident[] = [
     when: "Jul 2025",
     who: "Tea",
     what: <>A legacy storage system was breached: about 72,000 images, including about 13,000 selfies and photo IDs. A second exposure held more than 1.1 million private messages.<C s={["tea-statement", "tea-dms"]} /></>,
-    cost: <>13 federal class actions, consolidated; the parties reached a settlement in principle in Jun 2026. The complaint alleges Tea &ldquo;likely used AI-generated code&rdquo;; that is an allegation, not a finding.<C s={["tea-docket", "tea-complaint", "tea-settle"]} /></>,
+    cost: <>A dozen federal lawsuits were consolidated into one case; the parties reached a settlement in principle in Jun 2026. The complaint alleges Tea &ldquo;likely used AI-generated code&rdquo;; that is an allegation, not a finding.<C s={["tea-docket", "tea-complaint", "tea-settle"]} /></>,
   },
   {
     when: "Jul 2025",
@@ -153,7 +153,7 @@ const INCIDENTS: Incident[] = [
     when: "Mar 2026",
     who: "Amazon retail",
     what: <>Four Sev-1 incidents in a week. An internal document listed &ldquo;GenAI-assisted changes&rdquo; as a factor in a trend of incidents; the line was deleted before the meeting. Amazon says only one incident involved an AI tool, an engineer following its inaccurate advice, and none involved AI-written code.<C s={["cnbc-amazon", "amazon-statement"]} /></>,
-    cost: <>That incident: nearly 120,000 lost orders. An internal review named Amazon&apos;s AI tool Q as a primary contributor; Amazon says the cause was a user error, not AI.<C s={["bi-amazon", "amazon-statement"]} /></>,
+    cost: <>The 2 Mar incident: nearly 120,000 lost orders. An internal review named Amazon&apos;s AI tool Q as a primary contributor; Amazon says the cause was a user error, not AI.<C s={["bi-amazon", "amazon-statement"]} /></>,
   },
   {
     when: "Mar 2026",
@@ -170,14 +170,14 @@ const INCIDENTS: Incident[] = [
   {
     when: "Apr 2026",
     who: "PocketOS",
-    what: <>A Cursor agent deleted the production database and its backups in one API call, in 9 seconds, with a broadly scoped token it found in the codebase. Its rules said never to run destructive git commands unless asked.<C s="crane" /></>,
+    what: <>A Cursor agent deleted the production database and its backups in one API call, in 9 seconds, with a broadly scoped token it found in an unrelated file. Its rules said never to run destructive git commands unless asked.<C s="crane" /></>,
     cost: <>The company ran for a weekend on a backup 3 months old until its host recovered the data.<C s={["crane", "reg-pocketos"]} /></>,
   },
   {
     when: "Jul and Sep 2026",
     who: "Grok Build, ZCode",
     what: <>Two AI coding tools uploaded whole repositories, git history included, to their vendors&apos; cloud storage, and their privacy settings didn&apos;t stop it.<C s={["cereblab", "thn-grok", "ferstar"]} /></>,
-    cost: <>At least 5.1 GiB from one test repository (Grok Build). xAI switched the upload off; Z.ai says it removed the upload and destroyed the data.<C s={["cereblab", "thn-grok", "ferstar"]} /></>,
+    cost: <>At least 5.1 GiB from one test repository (Grok Build). Researchers saw xAI switch the upload off; Z.ai says it removed the upload and destroyed the data.<C s={["cereblab", "thn-grok", "ferstar"]} /></>,
   },
   {
     when: "Oct 2026",
@@ -209,7 +209,7 @@ const LIMITS: { finding: string; number: string; source: ReactNode }[] = [
   { finding: "Issues per pull request, AI co-authored vs human only (470 open-source PRs)", number: "10.83 vs 6.45, about 1.7x", source: <>CodeRabbit, Dec 2025, which sells AI code review<C s="coderabbit" /></> },
   { finding: "Time to finish an issue with early-2025 AI tools, 16 experienced open-source developers on their own repositories", number: "19% longer", source: <>METR, Jul 2025; METR now calls these results out of date<C s="metr-study" /></> },
   { finding: "Developers who distrust AI accuracy vs trust it", number: "46% vs 33%", source: <>Stack Overflow, 2025 survey<C s="so-2025" /></> },
-  { finding: "Developers whose biggest frustration is AI answers that are \u201calmost right, but not quite\u201d", number: "66%", source: <>Stack Overflow, 2025 survey<C s="so-2025" /></> },
+  { finding: "Developers who cite AI answers that are \u201calmost right, but not quite\u201d as a frustration (the most-cited one)", number: "66%", source: <>Stack Overflow, 2025 survey<C s="so-2025" /></> },
 ];
 
 export default function WhyPage() {
@@ -293,17 +293,18 @@ export default function WhyPage() {
         <h2 id="why-law">Lawsuits and money</h2>
         <p>
           We know of no court that has ruled on &ldquo;vibe coding&rdquo; as a legal theory. The lawsuits are about what leaks. In
-          Tea&apos;s case, 13 federal class actions were consolidated in California, and separate suits in Illinois are filed under
-          its biometric privacy law.<C s={["tea-docket", "tea-illinois"]} /> Under California&apos;s consumer privacy law, a breach
+          Tea&apos;s case, a dozen federal lawsuits were consolidated into one case in California, and separate suits in Illinois
+          are filed under its biometric privacy law.<C s={["tea-docket", "tea-illinois"]} /> Under California&apos;s consumer privacy law, a breach
           caused by poor security can cost $107 to $799 per consumer per incident, or actual damages if higher.<C s="cppa" />
         </p>
         <p>
           The platforms are worth a lot and put security on the builder. Lovable raised money at a $13.3B valuation in Aug 2026,
           with teams at Zendesk and Deutsche Telekom among its users.<C s="lovable-c" /> In May 2026 the security firm RedAccess
           told WIRED it had found more than 5,000 apps built with Lovable, Replit, Base44 and Netlify with virtually no
-          authentication. WIRED couldn&apos;t confirm the data was real, and the platforms pushed back. Lovable and Base44 told WIRED
-          that how an app is configured is the creator&apos;s responsibility, and Replit&apos;s CEO said public apps being reachable is
-          expected behavior.<C s="wired" /> If the platform won&apos;t own your app&apos;s security, you have to understand it yourself.
+          authentication. WIRED couldn&apos;t confirm the data was real, and the platforms pushed back. Lovable told WIRED that how
+          an app is configured is the creator&apos;s responsibility, Base44 said it gives users the tools to configure their own
+          apps&apos; security, and Replit&apos;s CEO said public apps being reachable is expected behavior.<C s="wired" /> If the
+          platform won&apos;t own your app&apos;s security, you have to understand it yourself.
         </p>
       </section>
 
