@@ -35,11 +35,21 @@
 .dg-log .paper-log article { padding: 28px; border: 0; border-radius: 16px; background: rgb(255 255 255 / 0.94); box-shadow: 0 0 0 1px rgb(24 23 28 / 0.08); }
 .dg-log .paper-log article:first-child { border-top: 0; }
 .dg-log .paper-log article:hover { background: #fff; }
-.dg-log .paper-log .paper-lead { font-size: 17px; line-height: 1.6; color: var(--d-ink-2); }
+.dg-log .paper-log .paper-lead { font-size: 16.5px !important; line-height: 1.65; color: var(--d-ink-2); }
 .dg-log .paper-log-group__title { width: fit-content; margin: 8px 0 0; padding: 6px 12px; border-radius: 999px; background: rgb(255 255 255 / 0.94); box-shadow: 0 0 0 1px rgb(24 23 28 / 0.08); }
 .dg-log .paper-log-archive { display: grid; gap: 16px; margin-top: 16px; }
 .dg-log .paper-log-archive details { padding: 4px 28px; border-radius: 16px; background: rgb(255 255 255 / 0.94); box-shadow: 0 0 0 1px rgb(24 23 28 / 0.08); }
 .dg-log .paper-log-archive .paper-log article { padding: 20px 0; border-radius: 0; box-shadow: none; border-top: 1px solid rgb(24 23 28 / 0.08); background: none; }
+/* The changelog's type (Preston, 8 Nov: easier to read): the page's own pairing instead of Inter everywhere. Titles in
+   the display serif at a reading size, the category, date and version in mono like the page's eyebrow, the summary in
+   Inter at 16.5 px. The !important beats vibe.css's sitewide .paper-meta and .paper-lead sizes. */
+.dg-log .paper-log :is(h2, h3, h4) { font-family: var(--font-display); font-size: clamp(22px, 2.2vw, 27px); font-weight: 400; line-height: 1.22; letter-spacing: -0.012em; color: var(--d-ink); text-wrap: balance; }
+.dg-log .paper-log .paper-meta { margin-bottom: 8px; font: 500 11.5px/1.4 var(--d-mono) !important; letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-violet) !important; }
+.dg-log .paper-log time { font: 500 11.5px/1.4 var(--d-mono); letter-spacing: 0.06em; color: var(--d-ink-3); }
+.dg-log .paper-log aside strong { font: 500 15px/1.2 var(--d-mono); letter-spacing: 0; }
+.dg-log .paper-log__links { margin-top: 12px; font-size: 14.5px; }
+.dg-log .paper-log-group__title { font: 500 11.5px/1.4 var(--d-mono); letter-spacing: 0.08em; color: var(--d-ink-2); }
+.dg-log .paper-log-archive__month { font-family: var(--font-display); font-size: clamp(20px, 2vw, 24px); font-weight: 400; letter-spacing: -0.01em; }
 
 /* /faq: one card per group, a disclosure list inside (question Playfair 22, answer Inter 16, hairlines, +/− in ink) */
 .dg-faq__item { border-top: 1px solid rgb(24 23 28 / 0.08); }

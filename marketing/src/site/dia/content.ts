@@ -12,15 +12,28 @@ import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 export type Title = { before: string; em: string; after?: string };
 export type OsText = string | { readonly mac: string; readonly windows: string };
 
-/** The glass header (mock 19). Investors takes FAQ's place (Preston 6 Nov, ledger 562); /faq stays, linked from the
- *  footer's Resources. */
+/** The header's links. Investors takes FAQ's place (Preston 6 Nov, ledger 562); /faq stays, linked from the footer's
+ *  Resources. `wideOnly`: the bar drops the link between 821 and 1080 px, where five would crowd the Download button
+ *  (the phone menu keeps it). */
 export const D_NAV = [
   { label: "Product", href: "/" },
+  { label: "Why Unvibe", href: "/why" },
   { label: "Pricing", href: "/pricing" },
   { label: "Changelog", href: "/releases" },
-  { label: "Investors", href: "/investors" },
+  { label: "Investors", href: "/investors", wideOnly: true },
 ] as const;
 export const D_NAV_CTA = "Download free";
+
+/** Home's problem section (from the founder's note, 7 Nov; every figure and source lives in src/data/problem.ts). */
+export const D_PROBLEM = {
+  label: "Why it matters",
+  title: "Nobody read the code.",
+  lead: "Vibe coding didn't fail because AI writes bad code. It failed because people shipped code they never read.",
+  ledgerTitle: "Fourteen incidents, one pattern",
+  ledgerLead: "Would understanding the code have stopped it? Every publicly documented incident in the note, scored honestly, including the ones Unvibe can't help with.",
+  cta: "Read the founder's note",
+  ctaNote: "Every incident, every source, and what Unvibe won't do.",
+} as const;
 
 export const D_HERO = {
   h1: "Understand the code your AI writes.",
