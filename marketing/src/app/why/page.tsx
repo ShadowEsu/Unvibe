@@ -257,7 +257,7 @@ export default function WhyPage() {
         </ul>
       </section>
 
-      <section className="verify" aria-labelledby="why-ledger">
+      <section className="verify why-wide" aria-labelledby="why-ledger">
         <h2 id="why-ledger">14 incidents, one pattern</h2>
         <p>Every one of these is publicly documented. Where a company disputes the account, its position is in the same row.</p>
         <table className="why-table" role="table">
@@ -307,7 +307,7 @@ export default function WhyPage() {
         </p>
       </section>
 
-      <section className="verify" aria-labelledby="why-limits">
+      <section className="verify why-wide" aria-labelledby="why-limits">
         <h2 id="why-limits">The limits, measured</h2>
         <table className="why-table" role="table">
           <thead>
