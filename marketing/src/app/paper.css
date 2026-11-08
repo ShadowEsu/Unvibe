@@ -1041,6 +1041,9 @@ h2 {
   left: 1rem;
   top: -4rem;
   z-index: 85; /* above the full-screen /activate card (80) */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0.5rem 0.8rem;
   background: var(--ink);
   color: var(--paper);

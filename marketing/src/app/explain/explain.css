@@ -147,6 +147,7 @@
 }
 
 .explain-langs li {
+  position: relative;
   display: grid;
   gap: 0.3rem;
   padding: 1rem 1.1rem;
@@ -156,6 +157,14 @@
 
 .explain-langs a {
   font: 700 1.15rem / 1.3 var(--font-sans);
+}
+
+/* The whole card is the tap target, not only the 25 px name line. */
+.explain-langs a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 .explain-card .explain-langs span {

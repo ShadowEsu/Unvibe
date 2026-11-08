@@ -360,6 +360,13 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .consent-bar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .consent-bar__actions a, .consent-bar__privacy--inline { margin-right: 0.35rem; color: var(--u-text); text-decoration: underline; text-underline-offset: 2px; }
 .consent-bar__privacy--inline { display: none; }
+/* Phones: the bar covered about a quarter of the screen; tighter type and padding, same text and buttons. */
+@media (max-width: 600px) {
+  .consent-bar { gap: 0.4rem 0.75rem; padding: 0.7rem 0.85rem; }
+  .consent-bar p { font-size: 0.88rem; line-height: 1.4; }
+  .consent-bar .consent-bar__now { font-size: 0.8rem; }
+  .consent-bar__actions a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+}
 /* Under 360px: Privacy ends the text and the two choices share one row at half width each (Design, 320px pass). */
 @media (max-width: 359px) {
   .consent-bar__privacy--inline { display: inline; margin-right: 0; }
