@@ -33,7 +33,8 @@ jobs:
     timeout-minutes: 30
     env:
       INSTALL_ID: qa-setup-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.kind }}
-      OLD: "0.1.49"
+      # upgrade: over the current release's per-user setup; machine: only 0.1.49's assisted setup can install for all users.
+      OLD: ${{ matrix.kind == 'machine' && '0.1.49' || '0.1.50' }}
       MSG: ${{ github.event.head_commit.message }}
     steps:
       - name: Check inputs, flag this id as QA before anything installs
