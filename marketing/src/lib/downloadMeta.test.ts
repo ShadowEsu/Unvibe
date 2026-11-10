@@ -3,23 +3,35 @@ import { describe, it } from "node:test";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import BetaDownloadsPage from "@/app/beta/page";
-import { BETA_INSTALL_ASSET, BETA_INSTALL_TAG, BETA_WINDOWS_ASSET } from "./betaInstallScript";
+import { BETA_INSTALL_ASSET, BETA_INSTALL_TAG, BETA_WINDOWS_ASSET, BETA_WINDOWS_SETUP_ASSET } from "./betaInstallScript";
 import { DOWNLOAD_SIZES, MAC_INTEL_META, MAC_META, MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "./downloadMeta";
 
 Object.assign(globalThis, { React });
 
+const VERSION = BETA_INSTALL_TAG.replace(/^v/, "");
+
+/** The "about N MB" figure in a meta line, checked to round up: never under the real size, never a whole MB over. */
+function assertAboutMb(line: string, bytes: number) {
+  const mb = Number(/about (\d+) MB\.$/.exec(line)?.[1]);
+  assert.ok(mb * 1_000_000 >= bytes && (mb - 1) * 1_000_000 < bytes, `${line} for ${bytes} bytes`);
+}
+
 describe("download meta lines", () => {
-  it("describe the release the site links", () => {
+  it("name the files of the one release the site links", () => {
     assert.equal(DOWNLOAD_SIZES.tag, BETA_INSTALL_TAG, "update the sizes when the tag moves");
-    assert.equal(BETA_INSTALL_ASSET, "Unvibe-0.1.50-mac-arm64.dmg");
-    // The Windows link is the portable .exe, so the meta line says "Portable app".
-    assert.equal(BETA_WINDOWS_ASSET, "Unvibe-0.1.50-win-x64-portable.exe");
+    assert.equal(BETA_INSTALL_ASSET, `Unvibe-${VERSION}-mac-arm64.dmg`);
+    // The Windows link is the portable .exe, so the meta line says "Portable app"; install.ps1 runs the setup.
+    assert.equal(BETA_WINDOWS_ASSET, `Unvibe-${VERSION}-win-x64-portable.exe`);
+    assert.equal(BETA_WINDOWS_SETUP_ASSET, `Unvibe-${VERSION}-win-x64-setup.exe`);
   });
 
-  it("say version and size in words", () => {
-    assert.equal(WINDOWS_META, "Windows 10 or 11, x64. Portable app, version 0.1.50, about 88 MB.");
-    assert.equal(MAC_META, "Apple silicon. Version 0.1.50, about 109 MB.");
-    assert.equal(MAC_INTEL_META, "Intel Mac. Version 0.1.50, about 116 MB.");
+  it("say the version and a size that rounds up", () => {
+    assert.match(WINDOWS_META, new RegExp(`^Windows 10 or 11, x64\\. Portable app, version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
+    assert.match(MAC_META, new RegExp(`^Apple silicon\\. Version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
+    assert.match(MAC_INTEL_META, new RegExp(`^Intel Mac\\. Version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
+    assertAboutMb(WINDOWS_META, DOWNLOAD_SIZES.windowsPortableExeBytes);
+    assertAboutMb(MAC_META, DOWNLOAD_SIZES.macArm64DmgBytes);
+    assertAboutMb(MAC_INTEL_META, DOWNLOAD_SIZES.macX64DmgBytes);
   });
 
   it("/beta gives Windows its meta line, the two steps after the click and the SHA-256 for each file", () => {
@@ -27,6 +39,6 @@ describe("download meta lines", () => {
     assert.ok(page.includes(`On Windows: ${WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.`));
     assert.ok(page.includes(`href="${MAC_SHA256_URL}"`));
     assert.ok(page.includes(`href="${WINDOWS_SHA256_URL}"`));
-    assert.equal(WINDOWS_SHA256_URL, "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.50/SHA256SUMS-windows.txt");
+    assert.equal(WINDOWS_SHA256_URL, `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-windows.txt`);
   });
 });

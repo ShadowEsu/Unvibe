@@ -32,12 +32,12 @@ test("phones and iPads get no file; ?os= forces one", () => {
   assert.equal(pickDownload(WINDOWS, 0, {}, "mac"), "mac-arm");
 });
 
-test("every file is a counted link that redirects to a v0.1.50 release asset", () => {
-  assert.equal(BETA_INSTALL_TAG, "v0.1.50");
+test("every file is a counted link that redirects to an asset of the release the site serves", () => {
+  const release = `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/`;
   const counted = { "mac-arm": "mac", "mac-intel": "mac-intel", windows: "windows" } as const;
   for (const [pick, file] of Object.entries(counted) as [keyof typeof counted, (typeof counted)[keyof typeof counted]][]) {
     assert.equal(DOWNLOAD_FILES[pick].url, `/download/${file}`);
-    assert.match(COUNTED_FILES[file].url, /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\/v0\.1\.50\//);
+    assert.ok(COUNTED_FILES[file].url.startsWith(release), COUNTED_FILES[file].url);
   }
   assert.match(COUNTED_FILES.mac.url, /mac-arm64\.dmg$/);
   assert.match(COUNTED_FILES["mac-intel"].url, /mac-x64\.dmg$/);
