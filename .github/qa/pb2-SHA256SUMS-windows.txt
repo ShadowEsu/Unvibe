@@ -1,2 +1,2 @@
-1566351993f3cf3c932fce70f3a22d9f2d1d2cdc73ed996bb0a414dc3869c37f  Unvibe-0.1.50-win-x64-portable.exe
-162f4bd8d77cb8a42daaa40285884faa4b479fd748f0a42934e2cdf7bdb26dc2  Unvibe-0.1.50-win-x64-setup.exe
+3d3964b0ebcfb0bf90e86e2b626ae1013505361d417e192f3d47c606090a8a97  Unvibe-0.1.50-win-x64-portable.exe
+f8164e78ab3cb567757d23ba5d224eda5ee280c41d6698771372e7e5a6ac73f5  Unvibe-0.1.50-win-x64-setup.exe
