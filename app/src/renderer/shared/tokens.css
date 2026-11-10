@@ -47,12 +47,12 @@
 :root {
   --u-ink: #15141a; /* 17.6:1 on white */
   --u-ink-2: #4a4757; /* 8.6 */
-  --u-ink-3: #6e6b7b; /* 5.1 on the glass: meta, placeholders */
+  --u-ink-3: #504d63; /* 8.6 on white, ≥ 4.5 on the veiled aurora (#cac0f4): meta, placeholders */
   --u-paper: #f3f0fb; /* the ground's flat fallback (prefers-reduced-transparency) */
-  --u-veil: rgb(250 248 252 / 0.59); /* over the aurora */
+  --u-veil: rgb(250 248 252 / 0.7); /* over the aurora; .7 keeps ink-2 and ink-3 at AA on the ground's darkest band */
   --u-accent: #5a3fe0; /* every action: filled buttons, the active segment, toggles, focus, links */
   --u-accent-on: #ffffff; /* 6.5:1 */
-  --u-accent-text: #5a3fe0; /* violet as text; lilac in dark, where violet on dark glass is only 2.6:1 */
+  --u-accent-text: #4330c4; /* violet as text (4.9 on the veiled aurora); lilac in dark, where violet on dark glass is only 2.6:1 */
   --u-mist: #eeeafd; /* violet tint: the active rail item, code-word chips, the Pro badge, the chosen answer */
   --u-lilac: #b8a6ff; /* Vibe */
   --u-blush: #fde7e4;
@@ -95,7 +95,7 @@
 :root[data-theme="dark"] {
   --u-ink: #f3f1fa; /* 15.4:1 on #221d36 */
   --u-ink-2: #c4bfd6; /* 9.6 */
-  --u-ink-3: #9a95ae; /* 5.6: meta */
+  --u-ink-3: #aeaac3; /* 6.3 on #221d36, ≥ 4.5 on the lightest aurora ground (#34344c): meta */
   --u-paper: #16122a;
   --u-veil: rgb(16 12 34 / 0.8);
   --u-accent: #6a50f5;

@@ -302,7 +302,7 @@
 }
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:hover { color: var(--u-ink); background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
-:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: var(--u-ink-3); opacity: 1; }
+:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 1; }
 :root[data-ui="v3"][data-v7] .layout .mix-start { flex: none; white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .mix-start span { margin-left: 4px; opacity: 0.8; }
 :root[data-ui="v3"][data-v7] .layout .history-continue {
@@ -1116,10 +1116,10 @@
 }
 :root[data-r2="g3"][data-ui="v3"][data-v7] .layout {
   background:
-    radial-gradient(900px 520px at 8% 0%, rgb(255 214 196 / 0.75), transparent 60%),
-    radial-gradient(800px 520px at 92% 12%, rgb(196 220 255 / 0.75), transparent 60%),
-    radial-gradient(900px 600px at 50% 100%, rgb(214 200 255 / 0.7), transparent 60%),
-    linear-gradient(rgb(250 248 252 / 0.6), rgb(250 248 252 / 0.6)), url("./aurora.webp") center / cover no-repeat, #f6f3fb;
+    radial-gradient(1000px 600px at 6% 0%, rgb(255 206 184 / 0.95), transparent 62%),
+    radial-gradient(900px 600px at 96% 10%, rgb(184 214 255 / 0.95), transparent 62%),
+    radial-gradient(1000px 640px at 50% 104%, rgb(214 198 255 / 0.9), transparent 62%),
+    linear-gradient(rgb(250 248 252 / 0.8), rgb(250 248 252 / 0.8)), url("./aurora.webp") center / cover no-repeat, #f6f3fb;
 }
 :root[data-r2="g3"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
   background:

@@ -89,7 +89,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-head__vibe { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
 .ob-head__text { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .ob-head__title { overflow: hidden; font: 700 14px/18px var(--u-font); letter-spacing: -0.015em; white-space: nowrap; text-overflow: ellipsis; }
-.ob-meta { display: block; overflow: hidden; color: var(--u-ink-3); font-size: 10.5px; line-height: 14px; font-weight: var(--u-w-label); white-space: nowrap; text-overflow: ellipsis; }
+.ob-meta { display: block; overflow: hidden; color: var(--u-ink-2); font-size: 10.5px; line-height: 14px; font-weight: var(--u-w-label); white-space: nowrap; text-overflow: ellipsis; }
 .ob-head__close {
   flex: none;
   display: grid;
@@ -186,8 +186,8 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   gap: 2px;
   padding: 1px 5px;
   border-radius: var(--u-radius-chip);
-  background: var(--u-accent);
-  color: var(--u-accent-on);
+  background: var(--u-mist);
+  color: var(--u-accent-text);
   font-size: 9px;
   line-height: 12px;
   font-weight: 620;
@@ -219,7 +219,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   padding: 0;
   border: 0;
   background: none;
-  color: var(--u-accent);
+  color: var(--u-accent-text);
   font-size: 11px;
   font-weight: var(--u-w-label);
   -webkit-app-region: no-drag;

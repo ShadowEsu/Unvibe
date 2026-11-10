@@ -481,8 +481,11 @@ export function companionLoading(win: BrowserWindow): boolean {
 }
 
 /**
- * The companion's own chrome in the Spectral ground colours (Design S-1, 6 Nov 23:3x): the window background behind
- * the first paint and, on Windows and Linux, the min/max/close overlay. "system" follows the OS appearance.
+ * The companion's own chrome (round 2 glass): the window background behind the first paint (the veil's flat colour),
+ * and on Windows and Linux the min/max/close overlay. The overlay takes the ground's colour at the window's top-right
+ * corner at 1180 × 780 (sampled from the renders), not a translucent one: Electron 36 ignores the overlay colour's
+ * alpha on Linux (it painted black) and Windows is unverified, so a flat match is the safe choice (BOSS
+ * 20261110-1331's white box). "system" follows the OS appearance.
  */
 export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors): {
   background: string;
@@ -490,8 +493,8 @@ export function companionChrome(theme: ThemePreference, osDark = nativeTheme.sho
 } {
   const dark = theme === 'dark' || (theme === 'system' && osDark);
   return dark
-    ? { background: '#17151f', overlay: { color: '#17151f', symbolColor: '#f3f1fa', height: 40 } }
-    : { background: '#f7f6fb', overlay: { color: '#f7f6fb', symbolColor: '#15141a', height: 40 } };
+    ? { background: '#16122a', overlay: { color: '#1f1643', symbolColor: '#f3f1fa', height: 40 } }
+    : { background: '#f3f0fb', overlay: { color: '#cac0ec', symbolColor: '#15141a', height: 40 } };
 }
 
 /** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
