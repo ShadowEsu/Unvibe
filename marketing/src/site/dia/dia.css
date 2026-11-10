@@ -351,7 +351,7 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
    ≥ 880 px (the text left; the box, email and button right), stacked below; "No thanks" folds it away */
 .dt .remind--inline { position: relative; inset: auto; z-index: auto; width: auto; max-width: 760px; margin: 24px 0 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--d-line); border-radius: 0; background: none; color: var(--d-ink); animation: none; font: 400 15px/1.45 var(--d-sans); }
 .dt .remind--inline p { margin: 0; font-size: 15px; }
-.dt .remind--inline .remind__form { display: grid; gap: 10px 28px; grid-template-areas: "text" "check" "row" "err" "fine"; }
+.dt .remind--inline .remind__form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 28px; grid-template-areas: "text" "check" "row" "err" "fine"; }
 .dt .remind--inline .remind__text { grid-area: text; }
 .dt .remind--inline .remind__check { grid-area: check; margin: 0; }
 .dt .remind--inline .remind__row { grid-area: row; }
