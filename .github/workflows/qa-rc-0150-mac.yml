@@ -95,6 +95,12 @@ jobs:
           - { item: r51-arm64-26, runner: macos-26 }
           - { item: r51-m-intel-1, runner: macos-15-intel }
           - { item: r51-m-intel-2, runner: macos-15-intel }
+          # 0.1.51 SIGNED DRAFT, before the flip (the lead + Security, Mon 9 Nov): the DMG from the signed publish run
+          # ("[rc:<app-release run id>]"), which must MATCH the draft's own SHA256SUMS-mac.txt (committed by QA as
+          # .github/qa/rc0150/pb2-SHA256SUMS-mac-0.1.51.txt from the draft); mic-row.sh PHASE2=finish, sounds on (no AI
+          # call); asar vs 971292ed. Row M (the microphone question on Intel) and Intel T-1, twice, each pushed alone.
+          - { item: d51-m-intel-1, runner: macos-15-intel }
+          - { item: d51-m-intel-2, runner: macos-15-intel }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -102,8 +108,8 @@ jobs:
       INSTALL_ID: qa-rc0150-${{ matrix.item }}-${{ matrix.runner }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       # Default deny (591): an item runs only when "[only:<item>,…]" names it exactly; a message with no [only:] runs
-      # nothing. While QA_AI_OK is "0", only the items audited as making no hosted-AI call run (pub-*, r51-*: mic-row.sh
-      # with PHASE2=finish, setup finished by clicks with no explanation); every other item can make one and is skipped.
+      # nothing. While QA_AI_OK is "0", only the items audited as making no hosted-AI call run (pub-*, r51-*, d51-*:
+      # mic-row.sh with PHASE2=finish, setup finished by clicks with no explanation); every other item can make one and is skipped.
       - name: Pick this item
         env:
           MSG: ${{ github.event.head_commit.message }}
@@ -113,7 +119,7 @@ jobs:
           list=$(printf '%s\n' "$MSG" | { grep -o '\[only:[^]]*\]' || true; } | sed 's/^\[only://; s/\]$//' | paste -sd, -)
           if [[ ",$list," != *",$ITEM,"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item not named by [only:…]: skipped"; exit 0; fi
           case "$ITEM" in
-            pub-*|r51-*) echo "named; audited: no hosted-AI call" ;;
+            pub-*|r51-*|d51-*) echo "named; audited: no hosted-AI call" ;;
             *) if [ "$QA_AI_OK" != 1 ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "::warning::$ITEM can make a hosted-AI call and QA_AI_OK is $QA_AI_OK (591): skipped"; fi ;;
           esac
 
@@ -138,7 +144,7 @@ jobs:
             app/e2e
 
       - name: Get the RC build (${{ env.RC_OVERRIDE || matrix.rc || env.RC_RUN }})
-        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-')
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
@@ -147,7 +153,7 @@ jobs:
           path: ${{ runner.temp }}/build
 
       - name: Check the RC DMGs
-        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-')
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-')
         env:
           RC: ${{ env.RC_OVERRIDE || matrix.rc }}
         run: |
@@ -311,6 +317,32 @@ jobs:
           ls -la "$RUNNER_TEMP/build51" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
           [ -f "$f" ] || { echo "::error::no $(basename "$f") in the RC-1 artifact"; exit 1; }
           echo "RC-1 $(basename "$f") sha256 $(shasum -a 256 "$f" | cut -d' ' -f1)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$f" "$ITEM" default none
+
+      - name: Get the signed 0.1.51 draft build (the app-release run named by [rc:<run id>])
+        if: env.SKIP != '1' && startsWith(matrix.item, 'd51-') && env.RC_OVERRIDE != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-macos-latest
+          run-id: ${{ env.RC_OVERRIDE }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build51d
+
+      - name: "0.1.51 signed draft: row M (Intel microphone) + T-1 (System Events timing), setup finished with no explanation, asar"
+        if: env.SKIP != '1' && startsWith(matrix.item, 'd51-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          ITEM: ${{ matrix.item }}
+          PHASE2: finish
+          WANT_ASAR_PREFIX: 971292ed
+        run: |
+          [ -n "${RC_OVERRIDE:-}" ] || { echo "::error::d51 rows need [rc:<signed app-release run id>] in the commit message"; exit 1; }
+          arch=$([ "$(uname -m)" = x86_64 ] && echo x64 || echo arm64)
+          f="$RUNNER_TEMP/build51d/Unvibe-0.1.51-mac-$arch.dmg"; sums=.github/qa/rc0150/pb2-SHA256SUMS-mac-0.1.51.txt
+          [ -f "$f" ] || { echo "::error::no $(basename "$f") in app-release run $RC_OVERRIDE"; exit 1; }
+          want=$(awk -v a="$(basename "$f")" '$NF==a {print $1}' "$sums" 2>/dev/null); got=$(shasum -a 256 "$f" | cut -d' ' -f1)
+          echo "draft build $(basename "$f") (app-release run $RC_OVERRIDE) sha256 $got; the draft's SHA256SUMS-mac.txt (sha256 $(shasum -a 256 "$sums" 2>/dev/null | cut -d' ' -f1)) says ${want:-nothing}: $([ -n "$want" ] && [ "$got" = "$want" ] && echo MATCH || echo MISMATCH)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          [ -n "$want" ] && [ "$got" = "$want" ] || exit 1
           bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$f" "$ITEM" default none
 
       - name: Flag the install as QA (again, whatever happened)
