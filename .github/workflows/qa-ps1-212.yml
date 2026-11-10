@@ -57,6 +57,8 @@ jobs:
           # "[pb2]": the run id is the publish run, and the draft's own SHA256SUMS-windows.txt (committed next to
           # ps1-row.ps1 as pb2-SHA256SUMS-windows.txt) is served instead of a generated line (Security PB-2).
           if [[ "$MSG" == *"[pb2]"* ]]; then echo "PB2_SUMS=pb2-SHA256SUMS-windows.txt" >> "$GITHUB_ENV"; echo "PB-2: serving the draft's SHA256SUMS"; fi
+          # "[no-explain]": install, launch and asar only, no hosted-AI call (release rows whose asar proves the bundle).
+          if [[ "$MSG" == *"[no-explain]"* ]]; then echo "NO_EXPLAIN=1" >> "$GITHUB_ENV"; fi
 
       - name: Flag this id as QA before anything installs
         if: env.SKIP != '1'

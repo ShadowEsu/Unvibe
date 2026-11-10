@@ -199,7 +199,8 @@ WatchResult $watch $(if ($Kind -eq 'silent') { 'reopen-while-loading' } else { '
 
 # First explanation on the same profile.
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
-if ($exe -and (Test-Path $exe)) {
+if ($env:NO_EXPLAIN -eq '1') { Note 'NOTE  first explanation skipped (NO_EXPLAIN=1: no hosted-AI call; the installed app.asar hash proves the bundle)' }
+elseif ($exe -and (Test-Path $exe)) {
   $env:UNVIBE_EXE = $exe; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
   $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru; $null = $j.Handle
   if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation: no result in 7 min' }

@@ -41,7 +41,12 @@ jobs:
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          KIND: ${{ matrix.kind }}
         run: |
+          # "[setupbuild-kind:silent]" runs only that kind (no install, no flag in the other rows).
+          if [[ "$MSG" == *"[setupbuild-kind:"* && "$MSG" != *"[setupbuild-kind:$KIND]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped"; exit 0; fi
+          # "[no-explain]": install, launch and asar only, no hosted-AI call (release rows whose asar proves the bundle).
+          if [[ "$MSG" == *"[no-explain]"* ]]; then echo "NO_EXPLAIN=1" >> "$GITHUB_ENV"; fi
           BUILD_RUN=$(printf '%s' "$MSG" | sed -n 's/.*\[setupbuild:\([0-9]*\)\].*/\1/p' | head -1)
           [[ "$BUILD_RUN" =~ ^[0-9]+$ ]] || { echo "::error::no [setupbuild:<run id>] in the commit message"; exit 1; }
           echo "build_run=$BUILD_RUN" >> "$GITHUB_OUTPUT"; echo "testing build run $BUILD_RUN"
@@ -51,12 +56,14 @@ jobs:
           echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.SKIP != '1'
         with:
           sparse-checkout: |
             .github
             app/e2e
 
       - name: Get the build's setup.exe
+        if: env.SKIP != '1'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-windows-latest
@@ -65,6 +72,7 @@ jobs:
           path: ${{ runner.temp }}/build
 
       - name: Playwright for the first explanation
+        if: env.SKIP != '1'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
@@ -72,11 +80,12 @@ jobs:
           cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
 
       - name: Install, check, first explanation, uninstall
+        if: env.SKIP != '1'
         shell: powershell
         run: .github\qa\setup-row.ps1 -Kind "${{ matrix.kind }}" -Out "$env:RUNNER_TEMP\m"
 
       - name: Flag again (whatever happened)
-        if: always()
+        if: always() && env.SKIP != '1'
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -90,7 +99,7 @@ jobs:
           done
 
       - name: Upload
-        if: always()
+        if: always() && env.SKIP != '1'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: setup-${{ matrix.runner }}-${{ matrix.kind }}

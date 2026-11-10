@@ -1,0 +1,65 @@
+name: QA PB-3 Mac asar
+
+# QA only (Security PB-3, ledger 591): a publish (or build-only) run's Mac DMGs, read-only: each DMG's sha256 (to match
+# the draft's SHA256SUMS-mac.txt), the app.asar sha256 inside (PB-3 baseline: RC-3 = 77100f96…), the bundle version and
+# the code signature (codesign -dv, designated requirement). Nothing is installed or launched, so no install id and no
+# hosted-AI call. Runs on a push to qa/install-matrix whose commit message holds "[pb3-mac:<run id>]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  asar:
+    if: contains(github.event.head_commit.message, '[pb3-mac:')
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      MSG: ${{ github.event.head_commit.message }}
+    steps:
+      - name: Pick the run
+        id: pick
+        shell: bash
+        run: |
+          r=$(printf '%s' "$MSG" | sed -n 's/.*\[pb3-mac:\([0-9]*\)\].*/\1/p' | head -1)
+          [[ "$r" =~ ^[0-9]+$ ]] || { echo "::error::no [pb3-mac:<run id>] in the commit message"; exit 1; }
+          echo "run=$r" >> "$GITHUB_OUTPUT"; echo "build run $r"
+
+      - name: Get the run's Mac files
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-macos-latest
+          run-id: ${{ steps.pick.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/build
+
+      - name: Hash every DMG and the app.asar inside, read the signature
+        shell: bash
+        run: |
+          out="$RUNNER_TEMP/pb3"; mkdir -p "$out"; r="$out/report.txt"
+          echo "PB-3 Mac, build run ${{ steps.pick.outputs.run }}, $(sw_vers -productVersion) $(uname -m)" | tee "$r"
+          for dmg in "$RUNNER_TEMP"/build/*.dmg; do
+            name=$(basename "$dmg"); mnt="$RUNNER_TEMP/mnt-$name"
+            echo "== $name" | tee -a "$r"
+            echo "dmg sha256 $(shasum -a 256 "$dmg" | cut -d' ' -f1)  $(stat -f %z "$dmg") B" | tee -a "$r"
+            hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" > /dev/null
+            app="$mnt/Unvibe.app"
+            echo "asar sha256 $(shasum -a 256 "$app/Contents/Resources/app.asar" | cut -d' ' -f1)" | tee -a "$r"
+            echo "version $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist") build $(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Contents/Info.plist")" | tee -a "$r"
+            echo "binary arch: $(lipo -archs "$app/Contents/MacOS/Unvibe")" | tee -a "$r"
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -E "^(Identifier|Format|CodeDirectory|Signature|Authority|TeamIdentifier|Runtime|Sealed Resources)" | sed 's/^/  /' | tee -a "$r"
+            echo "  designated requirement: $(codesign -d -r- "$app" 2>&1 | sed -n 's/^designated => //p')" | tee -a "$r"
+            codesign --verify --deep --strict "$app" > /dev/null 2>&1 && echo "  codesign --verify --deep --strict: ok" | tee -a "$r" || echo "  codesign --verify --deep --strict: FAILED" | tee -a "$r"
+            hdiutil detach "$mnt" -force > /dev/null
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pb3-mac
+          path: ${{ runner.temp }}/pb3
+          retention-days: 14

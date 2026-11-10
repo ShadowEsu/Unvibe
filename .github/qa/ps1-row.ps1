@@ -270,12 +270,15 @@ switch ($Kind) {
   }
 }
 
-# First explanation with the installed copy, on the same profile.
+# First explanation with the installed copy, on the same profile (skipped with NO_EXPLAIN=1: the asar hash proves the bundle).
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
-$env:UNVIBE_EXE = $perUser; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
-$j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru; $null = $j.Handle
-if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation: no result in 7 min' }
-Get-Content "$Out\explain-report.txt" -ErrorAction SilentlyContinue | ForEach-Object { Note "  $_" }
+if ($env:NO_EXPLAIN -eq '1') { Note 'NOTE  first explanation skipped (NO_EXPLAIN=1: no hosted-AI call; the installed app.asar hash proves the bundle)' }
+else {
+  $env:UNVIBE_EXE = $perUser; $env:USER_DATA = $storeDir; $env:OUT = $Out; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+  $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\explain.log" -RedirectStandardError "$Out\explain.err" -PassThru; $null = $j.Handle
+  if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force; Note 'FAIL  first explanation: no result in 7 min' }
+  Get-Content "$Out\explain-report.txt" -ErrorAction SilentlyContinue | ForEach-Object { Note "  $_" }
+}
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
 
 foreach ($e in @(Entries)) {
