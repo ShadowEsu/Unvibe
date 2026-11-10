@@ -23,6 +23,18 @@ export const milestones: Milestone[] = [
   {
     date: "9 NOV 2026",
     category: "PRODUCT",
+    title: "No interface sounds until you use Unvibe; pasted TypeScript labelled TypeScript",
+    summary: "Unvibe 0.1.51 plays no interface sound until you first click or press a key in one of its windows, so the start-up sound no longer plays when Unvibe opens. On a Mac, if macOS ever asks about the microphone, its message now says Unvibe never records or listens. Pasted TypeScript is labelled TypeScript, not JavaScript, when it has a generic function, a Promise<...> return type, or a type such as unknown or void. Known issue on Windows, unchanged from 0.1.50: the first window can show an empty page for a moment before it fills in.",
+    figure: "v0.1.51",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.51", label: "Release v0.1.51" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/222", label: "PR #222" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/195", label: "PR #195" },
+    ],
+  },
+  {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
     title: "Windows gets a one-click installer; Island notices you can read",
     summary: "Unvibe 0.1.50 installs on Windows with a one-click installer for your user. It needs no administrator rights and opens Unvibe when it finishes, and the install command from the download page now uses it. The first window opens in front of your other apps. On a Mac, Unvibe no longer asks for System Events access when it first opens. Island notices show their message under the Island, its card shows how much of your AI allowance you have used, and the count no longer hides under the code button. Explaining your clipboard, a pasted snippet or a file never uses one of the beta's selected-code prompts. Settings and Report feedback write to support@unvibe.site. Known issue on Windows: the first window can show an empty page for a moment before it fills in.",
     figure: "v0.1.50",
