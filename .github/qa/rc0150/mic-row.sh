@@ -28,6 +28,9 @@ hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg" > /dev/null
 ditto "$mnt/Unvibe.app" /Applications/Unvibe.app; hdiutil detach "$mnt" -force > /dev/null
 xattr -cr /Applications/Unvibe.app
 r "installed $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString) from $(basename "$dmg") (sha256 $(shasum -a 256 "$dmg" | cut -d' ' -f1)); quarantine removed (the Gatekeeper path is RC-1/RC-2 row 3's)"
+asar=$(shasum -a 256 /Applications/Unvibe.app/Contents/Resources/app.asar | cut -d' ' -f1)
+if [ -n "${WANT_ASAR_PREFIX:-}" ]; then r "$([[ "$asar" == "$WANT_ASAR_PREFIX"* ]] && echo PASS || echo FAIL)  installed app.asar sha256 $asar (Security's baseline $WANT_ASAR_PREFIX…)"
+else r "installed app.asar sha256 $asar"; fi
 sig() { # <tag>: the signature as it stands, into files and the report
   codesign -dv --verbose=4 /Applications/Unvibe.app > "$out/codesign-$1.txt" 2>&1
   codesign -d --entitlements :- /Applications/Unvibe.app > "$out/entitlements-$1.plist" 2> "$out/entitlements-$1.err"
