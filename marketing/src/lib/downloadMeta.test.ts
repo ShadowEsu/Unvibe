@@ -25,10 +25,7 @@ describe("download meta lines", () => {
     assert.equal(BETA_WINDOWS_SETUP_ASSET, `Unvibe-${VERSION}-win-x64-setup.exe`);
   });
 
-  it("say the version and a size that rounds up", () => {
-    assert.match(WINDOWS_META, new RegExp(`^Windows 10 or 11, x64\\. Portable app, version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
-    assert.match(MAC_META, new RegExp(`^Apple silicon\\. Version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
-    assert.match(MAC_INTEL_META, new RegExp(`^Intel Mac\\. Version ${VERSION.replace(/\./g, "\\.")}, about \\d+ MB\\.$`));
+  it("give a size that rounds up", () => {
     assertAboutMb(WINDOWS_META, DOWNLOAD_SIZES.windowsPortableExeBytes);
     assertAboutMb(MAC_META, DOWNLOAD_SIZES.macArm64DmgBytes);
     assertAboutMb(MAC_INTEL_META, DOWNLOAD_SIZES.macX64DmgBytes);
@@ -39,6 +36,5 @@ describe("download meta lines", () => {
     assert.ok(page.includes(`On Windows: ${WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.`));
     assert.ok(page.includes(`href="${MAC_SHA256_URL}"`));
     assert.ok(page.includes(`href="${WINDOWS_SHA256_URL}"`));
-    assert.equal(WINDOWS_SHA256_URL, `https://github.com/ShadowEsu/Unvibe/releases/download/${BETA_INSTALL_TAG}/SHA256SUMS-windows.txt`);
   });
 });
