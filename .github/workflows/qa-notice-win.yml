@@ -15,6 +15,12 @@ concurrency:
   group: qa-notice-win
   cancel-in-progress: false
 
+# 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. These rows need real explanations, so the job stops at its
+# first step while QA_AI_OK is "0" (a constant, never read from the commit message; first-explain.mjs refuses too).
+env:
+  QA_AI_OK: "0"
+  NO_EXPLAIN: "1"
+
 jobs:
   row:
     if: contains(github.event.head_commit.message, '[notice-win]') && contains(github.event.head_commit.message, '[rc:')
@@ -28,6 +34,11 @@ jobs:
       INSTALL_ID: qa-notice-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
       MSG: ${{ github.event.head_commit.message }}
     steps:
+      - name: "591: these rows need hosted-AI calls; stop unless QA_AI_OK is 1"
+        shell: bash
+        run: |
+          if [ "$QA_AI_OK" != 1 ]; then echo "::error::notice rows need real explanations; QA_AI_OK is $QA_AI_OK (591: no hosted-AI call). Nothing installed or started."; exit 1; fi
+
       - name: RC build id, flag this id as QA before anything installs
         id: rc
         shell: bash

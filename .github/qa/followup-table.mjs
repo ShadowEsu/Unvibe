@@ -13,6 +13,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const QUESTION = 'What happens if I call it five times quickly?';
 const result = { question: QUESTION, depth: 'advanced', error: null, answer: '', table: false, separatorRows: [], answerPipes: 0 };
 const done = (code) => { writeFileSync(path.join(out, 'followup.json'), JSON.stringify(result, null, 2)); console.log(JSON.stringify({ ...result, answer: `${result.answer.slice(0, 160)}…` })); process.exit(code); };
+// 591 (BOSS, 10 Nov): no hosted-AI call from any QA run; refuses before the app starts unless the workflow sets
+// QA_AI_OK=1 (every QA workflow fixes it to "0" in its env; a commit-message marker can't change it).
+if (process.env.QA_AI_OK !== '1') { result.error = 'REFUSED hosted-AI step blocked: QA_AI_OK is not 1 (591)'; done(3); }
 
 const app = await launchApp({ exe, userData, timeout: 120000 }).catch((e) => { result.error = `launch: ${e.message}`; done(1); });
 const errors = [];

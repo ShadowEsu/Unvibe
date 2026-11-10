@@ -21,6 +21,13 @@ concurrency:
   group: qa-setup-build
   cancel-in-progress: false
 
+# 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. Constants, never read from the commit message: setup-row.ps1
+# skips the new build's explanation and gives the upgrade's old copy its send agreement through consent-fixture.mjs with
+# NO_EXPLAIN=1; first-explain.mjs refuses unless QA_AI_OK is "1". Turning either on takes a reviewed change to this file.
+env:
+  QA_AI_OK: "0"
+  NO_EXPLAIN: "1"
+
 jobs:
   row:
     if: contains(github.event.head_commit.message, '[setupbuild:')
@@ -78,7 +85,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
           npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
-          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" .
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/first-explain.mjs" "$GITHUB_WORKSPACE/.github/qa/consent-fixture.mjs" .
 
       - name: Install, check, first explanation, uninstall
         if: env.SKIP != '1'

@@ -198,12 +198,16 @@ switch ($Kind) {
     [void](Install $prod 'install-prod')
     $env:UNVIBE_BETA_ASSET = $asset
     Start-Sleep 5; Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
-    # A real first use on the portable copy: onboarding, an explanation, a follow-up so the send agreement is made.
-    $env:UNVIBE_EXE = $portable; $env:USER_DATA = $storeDir; $env:OUT = "$Out\portable"; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"; $env:AGREE = '1'
-    $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\portable-explain.log" -RedirectStandardError "$Out\portable-explain.err" -PassThru; $null = $j.Handle
+    # A real first use on the portable copy, so the profile holds an install id and a consent record to migrate.
+    # NO_EXPLAIN=1 (591): the send agreement through the app's own IPC, no explanation (consent-fixture.mjs).
+    $env:UNVIBE_EXE = $portable; $env:USER_DATA = $storeDir; $env:OUT = "$Out\portable"; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+    if ($env:NO_EXPLAIN -eq '1') { $oldScript = 'consent-fixture.mjs'; $oldReport = "$Out\portable\fixture-report.txt" }
+    else { $oldScript = 'first-explain.mjs'; $oldReport = "$Out\portable\explain-report.txt"; $env:AGREE = '1' }
+    Note "  portable run: $oldScript"
+    $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\$oldScript" -RedirectStandardOutput "$Out\portable-explain.log" -RedirectStandardError "$Out\portable-explain.err" -PassThru; $null = $j.Handle
     if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force }
-    Remove-Item Env:AGREE
-    Get-Content "$Out\portable\explain-report.txt" -ErrorAction SilentlyContinue | ForEach-Object { Note "  portable run: $_" }
+    Remove-Item Env:AGREE -ErrorAction SilentlyContinue
+    Get-Content $oldReport -ErrorAction SilentlyContinue | ForEach-Object { Note "  portable run: $_" }
     Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
     # Launch at login on (as after "Yes" on the app's question), then one start so the app registers its login item.
     $sf = Join-Path $storeDir 'unvibe-settings.json'

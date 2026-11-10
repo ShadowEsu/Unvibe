@@ -128,14 +128,18 @@ switch ($Kind) {
   'upgrade' {
     [void](OldInstall '/S')
     State "after v$env:OLD /S"
-    # I-2 (Security): the old app runs once for real (onboarding, then a follow-up so the send agreement is ticked),
-    # so the store has an install id and a consent record to keep.
+    # I-2 (Security): the old app runs once for real, so the store has an install id and a consent record to keep.
+    # NO_EXPLAIN=1 (591): the send agreement through the app's own IPC, no explanation (consent-fixture.mjs); run
+    # 42750840361 made 2 hosted-AI calls here with first-explain.mjs AGREE=1 while NO_EXPLAIN was set.
     $oldExe = "$env:LOCALAPPDATA\Programs\Unvibe\Unvibe.exe"
-    $env:UNVIBE_EXE = $oldExe; $env:USER_DATA = $storeDir; $env:OUT = "$Out\old"; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"; $env:AGREE = '1'
-    $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\first-explain.mjs" -RedirectStandardOutput "$Out\old-explain.log" -RedirectStandardError "$Out\old-explain.err" -PassThru; $null = $j.Handle
+    $env:UNVIBE_EXE = $oldExe; $env:USER_DATA = $storeDir; $env:OUT = "$Out\old"; $env:UNVIBE_OS = 'windows'; $env:NODE_PATH = "$env:RUNNER_TEMP\pw\node_modules"
+    if ($env:NO_EXPLAIN -eq '1') { $oldScript = 'consent-fixture.mjs'; $oldReport = "$Out\old\fixture-report.txt" }
+    else { $oldScript = 'first-explain.mjs'; $oldReport = "$Out\old\explain-report.txt"; $env:AGREE = '1' }
+    Note "v$env:OLD run: $oldScript"
+    $j = Start-Process node -ArgumentList "$env:RUNNER_TEMP\pw\$oldScript" -RedirectStandardOutput "$Out\old-explain.log" -RedirectStandardError "$Out\old-explain.err" -PassThru; $null = $j.Handle
     if (-not $j.WaitForExit(420000)) { $j | Stop-Process -Force }
-    Remove-Item Env:AGREE
-    Get-Content "$Out\old\explain-report.txt" -ErrorAction SilentlyContinue | ForEach-Object { Note "  v$env:OLD run: $_" }
+    Remove-Item Env:AGREE -ErrorAction SilentlyContinue
+    Get-Content $oldReport -ErrorAction SilentlyContinue | ForEach-Object { Note "  v$env:OLD run: $_" }
     Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 2
     $beforeId = (Get-Content (Join-Path $storeDir 'unvibe-store.json') -Raw | ConvertFrom-Json).installId
     $consentFile = Join-Path $storeDir 'unvibe-consent.json'
