@@ -11,8 +11,10 @@ const PAPER = "#faf8f5";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/explain",
-    name: "Unvibe",
-    short_name: "Unvibe",
+    // Not plain "Unvibe": the installed window sits next to the desktop app in Spotlight and the Dock, and only the
+    // desktop app has the Control+U shortcut.
+    name: "Unvibe Web",
+    short_name: "Unvibe Web",
     description: "Paste code and get a short explanation in plain English.",
     start_url: "/explain?utm_source=webapp",
     scope: "/",

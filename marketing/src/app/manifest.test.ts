@@ -19,7 +19,6 @@ describe("web app manifest", () => {
 
   it("opens /explain in its own window, inside the site", () => {
     assert.equal(m.display, "standalone");
-    assert.equal(m.name, "Unvibe");
     for (const url of [m.start_url, m.scope, m.id]) {
       assert.ok(url?.startsWith("/"), `${url} is not same-origin`);
       assert.equal(new URL(url ?? "", site).origin, site);

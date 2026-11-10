@@ -83,7 +83,9 @@ export default function BetaDownloadsPage() {
       </section>
 
       {/* The no-warning option for Mac: /explain in the browser, installable as a web app (src/app/manifest.ts).
-          Menu labels from Google's, Microsoft's and Apple's help pages (Chrome 9658361, Edge, Apple 104996). */}
+          Menu labels from Google's, Microsoft's and Apple's help pages (Chrome 9658361, Edge, Apple 104996).
+          Hidden while AI is paused, like every other pointer to the Try box (lib/aiMaintenance). */}
+      {AI_MAINTENANCE ? null : (
       <section className="paper-section" id="browser" aria-labelledby="browser-h">
         <div className="paper-wrap">
           <div className="beta-page__steps">
@@ -95,7 +97,8 @@ export default function BetaDownloadsPage() {
                   <p>
                     Open unvibe.site/explain in Chrome or Safari, paste code and get a short explanation in plain English.
                     Nothing to download, so macOS shows no warning.{" "}
-                    <a className="paper-text-link" href="/explain?utm_source=webapp">Open it in your browser</a>
+                    {/* In running text, like the sign-in link below: inline, underlined, the paragraph's size. */}
+                    <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="/explain">Open it in your browser</a>
                   </p>
                 </div>
               </li>
@@ -114,7 +117,7 @@ export default function BetaDownloadsPage() {
                   <strong>What it can’t do</strong>
                   <p>
                     It works on code you paste, up to 1,500 characters (about 60 lines). It can’t read code in other apps or use
-                    the {mac.anywhere} shortcut, and it explains up to 6 snippets an hour.
+                    the {mac.anywhere} shortcut, and it explains up to 6 snippets an hour on each network, fewer when it’s busy.
                   </p>
                 </div>
               </li>
@@ -122,6 +125,7 @@ export default function BetaDownloadsPage() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="paper-section" id="help">
         <div className="paper-wrap paper-center">
