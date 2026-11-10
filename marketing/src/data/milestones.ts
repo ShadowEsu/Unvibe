@@ -21,6 +21,18 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
+    title: "Windows gets a one-click installer; Island notices you can read",
+    summary: "Unvibe 0.1.50 installs on Windows with a one-click installer for your user. It needs no administrator rights and opens Unvibe when it finishes, and the install command from the download page now uses it. The first window opens in front of your other apps. On a Mac, Unvibe no longer asks for System Events access when it first opens. Island notices show their message under the Island, its card shows how much of your AI allowance you have used, and the count no longer hides under the code button. Explaining your clipboard, a pasted snippet or a file never uses one of the beta's selected-code prompts. Settings and Report feedback write to support@unvibe.site. Known issue on Windows: the first window can show an empty page for a moment before it fills in.",
+    figure: "v0.1.50",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.50", label: "Release v0.1.50" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/209", label: "PR #209" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/212", label: "PR #212" },
+    ],
+  },
+  {
     date: "7 NOV 2026",
     category: "PRODUCT",
     title: "The home page demo's caption stays clear of the download button",
