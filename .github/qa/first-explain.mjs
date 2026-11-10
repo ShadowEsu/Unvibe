@@ -21,6 +21,13 @@ const log = (ok, step, detail = '') => { if (!ok) fails++; report.push(`${ok ? '
 const note = (s) => { report.push(`NOTE  ${s}`); console.log(report.at(-1)); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const finish = () => { writeFileSync(path.join(out, 'explain-report.txt'), `${report.join('\n')}\n`); process.exit(fails ? 1 : 0); };
+// 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. This script exists to make one, so it refuses before the app
+// starts unless the workflow sets QA_AI_OK=1. qa-rc-0150-mac.yml fixes QA_AI_OK: "0" in its env, not from the commit
+// message: turning it on takes a reviewed workflow change, never a marker.
+if (process.env.QA_AI_OK !== '1') {
+  report.push('REFUSED  hosted-AI step blocked: QA_AI_OK is not 1 (591: no hosted-AI call from QA runs)'); console.log(report.at(-1));
+  writeFileSync(path.join(out, 'explain-report.txt'), `${report.join('\n')}\n`); process.exit(3);
+}
 
 function desktop(label) {
   const file = path.join(out, `explain-desktop-${label}.png`);

@@ -19,6 +19,12 @@ import path from 'node:path';
 import os from 'node:os';
 
 const [mode, out, label] = process.argv.slice(2);
+// 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. sample, onboard (the sample explanation) and design (a real
+// brief) make one, so they refuse before connecting unless the workflow sets QA_AI_OK=1 (qa-rc-0150-mac.yml fixes it to
+// "0" in its env; a commit-message marker can't change it).
+if (['sample', 'onboard', 'design'].includes(mode) && process.env.QA_AI_OK !== '1') {
+  console.log(`ERROR REFUSED ${mode}: hosted-AI step blocked, QA_AI_OK is not 1 (591)`); process.exit(3);
+}
 const userData = process.env.USER_DATA || path.join(os.homedir(), 'Library/Application Support/Unvibe');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const say = (k, v) => console.log(`${k} ${typeof v === 'string' ? v : JSON.stringify(v)}`);

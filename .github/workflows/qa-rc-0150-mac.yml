@@ -27,7 +27,12 @@ concurrency:
   group: qa-rc-0150-mac
   cancel-in-progress: false
 
+# 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. QA_AI_OK and NO_EXPLAIN are constants, never read from the
+# commit message: first-explain.mjs and cdp.mjs sample/onboard/design refuse unless QA_AI_OK is "1", and "Pick this item"
+# runs only the items audited as making no hosted-AI call while it is "0". Turning it on takes a reviewed change here.
 env:
+  QA_AI_OK: "0"
+  NO_EXPLAIN: "1"
   V: "0.1.50"
   RC_RUN: "42194700935"
   SHA_ARM64: c5500dfeb9da76c07a93aad7a23dc59c14f21fa9b1ad16d47897a6750635e7bf
@@ -96,14 +101,21 @@ jobs:
     env:
       INSTALL_ID: qa-rc0150-${{ matrix.item }}-${{ matrix.runner }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      # A commit message holding "[only:<item>,…]" runs just those items; the others skip every step.
+      # Default deny (591): an item runs only when "[only:<item>,…]" names it exactly; a message with no [only:] runs
+      # nothing. While QA_AI_OK is "0", only the items audited as making no hosted-AI call run (pub-*, r51-*: mic-row.sh
+      # with PHASE2=finish, setup finished by clicks with no explanation); every other item can make one and is skipped.
       - name: Pick this item
         env:
           MSG: ${{ github.event.head_commit.message }}
           ITEM: ${{ matrix.item }}
         run: |
-          if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:"*"$ITEM"*"]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item skipped by [only:]"; fi
           if [[ "$MSG" =~ \[rc:([0-9]+)\] ]]; then echo "RC_OVERRIDE=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"; echo "build: app-release run ${BASH_REMATCH[1]}"; fi
+          list=$(printf '%s\n' "$MSG" | { grep -o '\[only:[^]]*\]' || true; } | sed 's/^\[only://; s/\]$//' | paste -sd, -)
+          if [[ ",$list," != *",$ITEM,"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item not named by [only:…]: skipped"; exit 0; fi
+          case "$ITEM" in
+            pub-*|r51-*) echo "named; audited: no hosted-AI call" ;;
+            *) if [ "$QA_AI_OK" != 1 ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "::warning::$ITEM can make a hosted-AI call and QA_AI_OK is $QA_AI_OK (591): skipped"; fi ;;
+          esac
 
       - name: Flag the install id as QA before anything installs
         if: env.SKIP != '1'
