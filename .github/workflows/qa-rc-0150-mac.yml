@@ -308,7 +308,8 @@ jobs:
         run: |
           pkill -x Unvibe 2>/dev/null || true
           store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
-          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          # No store yet (a row that stopped before seeding it, run 42750961315) must not skip the flag below.
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null || true)
           echo "store install id: ${id:-none} (seeded $INSTALL_ID)" | tee -a "$RUNNER_TEMP/m/flags.txt"
           for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | grep . | sort -u); do
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
