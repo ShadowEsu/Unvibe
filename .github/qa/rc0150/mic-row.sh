@@ -3,8 +3,9 @@
 # only the qa- install id; with `soundoff`, unvibe-settings.json also holds {"soundEffects":false}), then:
 #   phase 1  `open /Applications/Unvibe.app` (as the RC-2 Intel row launched it) and nothing pressed for 75 s on
 #            onboarding step 1;
-#   phase 2  quit, start again through LaunchServices with a debug port, onboarding step 1 → 2 → the sample's
-#            explanation (driven like first-explain.mjs), then 30 s more.
+#   phase 2  quit, start again through LaunchServices with a debug port, then PHASE2 (env, cdp.mjs mode): `onboard`
+#            (default) = onboarding step 1 → 2 → the sample's explanation (driven like first-explain.mjs); `finish` =
+#            setup finished by clicks with no explanation (no hosted-AI call; T-1, MUST-H1); then 30 s more.
 # A watcher records every UserNotificationCenter window throughout: seconds after the launch, its words, pictures.
 # The microphone question is never answered. A System Events question (0.1.49 asks at launch, F-02) is answered
 # Allow, as most people do, so it can't hold the microphone question back.
@@ -51,7 +52,7 @@ rm -rf "$ud"; mkdir -p "$ud"
 printf '{"installId":"%s"}' "$INSTALL_ID" > "$ud/unvibe-store.json"
 [ "$sounds" = soundoff ] && printf '{"soundEffects":false}' > "$ud/unvibe-settings.json"
 r "fresh profile: store $(cat "$ud/unvibe-store.json"); settings $(cat "$ud/unvibe-settings.json" 2>/dev/null || echo '(none)')"
-tccrows() { sqlite3 -readonly "$udb" "SELECT service||' auth_value='||auth_value||' auth_reason='||auth_reason||' at '||datetime(last_modified,'unixepoch') FROM access WHERE client='com.unvibe.app';" 2>/dev/null || sudo sqlite3 -readonly "$udb" "SELECT service||' auth_value='||auth_value||' auth_reason='||auth_reason||' at '||datetime(last_modified,'unixepoch') FROM access WHERE client='com.unvibe.app';"; }
+tccrows() { sqlite3 -readonly "$udb" "SELECT service||COALESCE(' -> '||indirect_object_identifier,'')||' auth_value='||auth_value||' auth_reason='||auth_reason||' at '||datetime(last_modified,'unixepoch') FROM access WHERE client='com.unvibe.app';" 2>/dev/null || sudo sqlite3 -readonly "$udb" "SELECT service||COALESCE(' -> '||indirect_object_identifier,'')||' auth_value='||auth_value||' auth_reason='||auth_reason||' at '||datetime(last_modified,'unixepoch') FROM access WHERE client='com.unvibe.app';"; }
 r "TCC rows for com.unvibe.app before launch: $(tccrows | tr '\n' ';')"
 
 # The watcher. Launch times (epoch ms) are appended to $out/launches as "<ms> <phase>".
@@ -95,7 +96,7 @@ pkill -x Unvibe; sleep 3
 echo "$(ms) phase-2" >> "$out/launches"
 open -a /Applications/Unvibe.app --args --remote-debugging-port=0
 r "phase 2: open -a … --args --remote-debugging-port=0 at $(date +%H:%M:%S)"
-t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" onboard "$out" "$label-onboard" > "$out/onboard.txt" 2>&1
+t 300 node "$RUNNER_TEMP/pw/rc0150-cdp.mjs" "${PHASE2:-onboard}" "$out" "$label-${PHASE2:-onboard}" > "$out/onboard.txt" 2>&1
 sed 's/^/  cdp: /' "$out/onboard.txt" | tee -a "$out/report.txt"
 screencapture -x "$out/$label-phase2-explanation-full.png"
 sleep 30
@@ -112,3 +113,13 @@ mic=$(grep -c 'access the microphone' "$out/dialog-watch.txt" 2>/dev/null); mic=
 r "MIC question: $([ "$mic" -gt 0 ] && echo "YES ($mic)" || echo no)"
 r "TCC rows for com.unvibe.app at the end (user TCC.db, read-only): $(tccrows | tr '\n' ';')"
 r "version: $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString); $(grep -E '^(VERSION|EXPLANATION|ERROR) ' "$out/onboard.txt" | tr '\n' ' ')"
+# T-1 (MUST-H1): when the System Events question came, by phase; in phase 2 also against the setup-finished press.
+fin=$(sed -n 's/^SCREEN \([0-9]*\) setup finished.*/\1/p' "$out/onboard.txt" | head -1)
+se=0
+while read -r at _; do
+  se=$((se + 1))
+  if [ "$at" -lt "${p2:-0}" ]; then r "T-1 System Events question #$se: phase 1 (first open, nothing pressed)"
+  elif [ -n "$fin" ]; then d=$(( at - fin )); r "T-1 System Events question #$se: phase 2, $( (( d < 0 )) && echo "$(( -d )) ms BEFORE" || echo "$d ms after") the setup-finished press"
+  else r "T-1 System Events question #$se: phase 2 (no setup-finished mark)"; fi
+done < <(grep -E '^[0-9]+ dialog #' "$out/dialog-watch.txt" 2>/dev/null | grep 'System Events')
+r "T-1 System Events questions in all: $se"

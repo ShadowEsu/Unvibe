@@ -9,6 +9,8 @@
 //                                         window.unvibe.explainSample), waits for the complete AI explanation
 //   node cdp.mjs onboard <out> <label>   onboarding step 1 → "Let's go" → step 2 → "Explain this code" (first-explain.mjs's
 //                                         steps, on the already running app), epoch-ms timestamps of each screen
+//   node cdp.mjs finish <out> <label>    setup finished by clicks with NO explanation (no hosted-AI call): 1/4 "Let's go" →
+//                                         2/4 "Skip for now" → 3/4 "Skip for now" (Mac: finishes setup), epoch-ms marks
 // Prints "KEY value" lines for the shell and writes <out>/cdp-<label>.json; element stills go to <out>/<label>-*.png.
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -259,6 +261,32 @@ try {
     mark('explanation complete');
     say('EXPLANATION', `${result.explanation.length} characters, ${Math.round((Date.now() - clicked) / 100) / 10} s after the click`);
     writeFileSync(path.join(out, `${label}-explanation.txt`), `${result.explanation}\n`);
+  } else if (mode === 'finish') {
+    const mark = (what) => { say('SCREEN', `${Date.now()} ${what}`); };
+    const companion = await page(browser, 'companion.html', 60000);
+    if (!companion) throw new Error('no companion window');
+    await companion.waitForLoadState('domcontentloaded');
+    const info = await companion.evaluate(() => window.unvibe?.appInfo?.()).catch(() => null);
+    say('VERSION', String(info?.version ?? 'unknown'));
+    const count = (n) => companion.locator('.ob2__count').filter({ hasText: `${n} / 4` });
+    await count(1).waitFor({ timeout: 30000 });
+    mark('onboarding 1/4');
+    await companion.getByPlaceholder('Your name').fill('QA T1');
+    await companion.getByRole('button', { name: "Let's go", exact: true }).click({ timeout: 8000 });
+    await count(2).waitFor({ timeout: 8000 });
+    mark('onboarding 2/4 (after "Let\'s go")');
+    await sleep(1500);
+    await companion.getByRole('button', { name: 'Skip for now', exact: true }).click({ timeout: 8000 });
+    await count(3).waitFor({ timeout: 8000 });
+    mark('onboarding 3/4 (after "Skip for now"; no explanation)');
+    await sleep(1500);
+    await companion.screenshot({ path: path.join(out, `${label}-3of4.png`) }).catch(() => {});
+    await companion.getByRole('button', { name: 'Skip for now', exact: true }).click({ timeout: 8000 });
+    mark('setup finished (pressed "Skip for now" on 3/4)');
+    await companion.locator('.ob2__count').waitFor({ state: 'detached', timeout: 20000 });
+    mark('setup screens gone');
+    await sleep(2000);
+    await companion.screenshot({ path: path.join(out, `${label}-after-setup.png`) }).catch(() => {});
   } else if (mode === 'design') {
     // Design package stills: Briefs with one real brief, then Settings → Privacy & Data. Clicks go through the page's
     // own buttons (as first-explain.mjs does); the folder comes from the app's own folder dialog (PICK_PATH, typed into

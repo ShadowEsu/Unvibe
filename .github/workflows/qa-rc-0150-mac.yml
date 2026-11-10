@@ -76,6 +76,14 @@ jobs:
           - { item: r3-island, runner: macos-15, rc: "42218741651" }
           # RC-3 notice rows again on arm64 with first-explain @4c9dd3f (N-2c control timing fixed for #223's gate).
           - { item: n3c-arm64, runner: macos-15, rc: "42218741651" }
+          # PUBLISHED 0.1.50 (pre-release 439897827, 03:23:26Z 10 Nov), DMGs from the release, checked against its
+          # SHA256SUMS-mac.txt; mic-row.sh with PHASE2=finish (setup finished by clicks, NO explanation, no AI call):
+          # row M = the microphone question on Intel (hardened runtime now), twice; T-1 (MUST-H1) = when the System
+          # Events question comes (expected: not at first open, once setup is finished), on every row.
+          - { item: pub-m-intel-1, runner: macos-15-intel }
+          - { item: pub-m-intel-2, runner: macos-15-intel }
+          - { item: pub-t1-arm64, runner: macos-15 }
+          - { item: pub-t1-arm64-26, runner: macos-26 }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -112,7 +120,7 @@ jobs:
             app/e2e
 
       - name: Get the RC build (${{ env.RC_OVERRIDE || matrix.rc || env.RC_RUN }})
-        if: env.SKIP != '1'
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
@@ -121,7 +129,7 @@ jobs:
           path: ${{ runner.temp }}/build
 
       - name: Check the RC DMGs
-        if: env.SKIP != '1'
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-')
         env:
           RC: ${{ env.RC_OVERRIDE || matrix.rc }}
         run: |
@@ -246,6 +254,22 @@ jobs:
           else
             bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$RUNNER_TEMP/build/Unvibe-0.1.50-mac-x64.dmg" "$ITEM" "$([[ "$ITEM" == *soundoff* ]] && echo soundoff || echo default)" "$resign"
           fi
+
+      - name: "Published 0.1.50: row M (Intel microphone) / T-1 (System Events timing), setup finished with no explanation"
+        if: env.SKIP != '1' && startsWith(matrix.item, 'pub-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          ITEM: ${{ matrix.item }}
+          PHASE2: finish
+        run: |
+          arch=$([ "$(uname -m)" = x86_64 ] && echo x64 || echo arm64)
+          d="$RUNNER_TEMP/v0150"; mkdir -p "$d"; f="Unvibe-0.1.50-mac-$arch.dmg"
+          curl -fsSL -o "$d/$f" "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.50/$f"
+          curl -fsSL -o "$d/SHA256SUMS-mac.txt" https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.50/SHA256SUMS-mac.txt
+          want=$(awk -v a="$f" '$NF==a {print $1}' "$d/SHA256SUMS-mac.txt"); got=$(shasum -a 256 "$d/$f" | cut -d' ' -f1)
+          echo "published $f sha256 $got; v0.1.50 SHA256SUMS-mac.txt (sha256 $(shasum -a 256 "$d/SHA256SUMS-mac.txt" | cut -d' ' -f1)) says ${want:-nothing}: $([ "$got" = "$want" ] && echo MATCH || echo MISMATCH)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          [ "$got" = "$want" ] || exit 1
+          bash .github/qa/rc0150/mic-row.sh "$RUNNER_TEMP/m" "$d/$f" "$ITEM" default none
 
       - name: Flag the install as QA (again, whatever happened)
         if: always() && env.SKIP != '1'
