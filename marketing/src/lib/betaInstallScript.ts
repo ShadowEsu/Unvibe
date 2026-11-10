@@ -1,6 +1,15 @@
 export const BETA_INSTALL_TAG = "v0.1.49";
 export const BETA_INSTALL_ASSET = "Unvibe-0.1.49-mac-arm64.dmg";
+/** The direct Windows download on the site: one portable exe, nothing installed. */
 export const BETA_WINDOWS_ASSET = "Unvibe-0.1.49-win-x64-portable.exe";
+/** What install.ps1 installs: the per-user NSIS setup, run silently (Start menu, Apps entry, uninstaller). */
+export const BETA_WINDOWS_SETUP_ASSET = "Unvibe-0.1.49-win-x64-setup.exe";
+/**
+ * The Windows installer's app GUID, which names its Apps & features (Uninstall) registry key:
+ * electron-builder's UUID v5 of app/package.json's appId "com.unvibe.app" in its namespace
+ * 50e065bc-3134-11e6-9bab-38c9862bdaf3 (a test recomputes it from the appId).
+ */
+export const BETA_WINDOWS_APP_GUID = "f5687918-a052-548a-a713-e4a84dbef267";
 export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
@@ -170,7 +179,7 @@ export const BETA_MAC_DOWNLOAD_URL =
 /** Older Intel Macs need the x64 build; the Apple silicon one cannot run there. */
 export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-arm64.dmg", "mac-x64.dmg");
 
-/** Private beta installer. Downloads the portable Windows exe, which uses the free plan. */
+/** Private beta installer. Installs the Windows setup exe for the current user, which uses the free plan. */
 export function betaWindowsInstallScript(): string {
   return `# Unvibe private beta installer for Windows. Free AI explanations: 30 days without an account, monthly with one. Unsigned.
 # Source: ${BETA_INSTALL_SCRIPT_SOURCE_URL}
@@ -186,10 +195,11 @@ try {
 }
 
 \$tag = if (\$env:UNVIBE_BETA_TAG) { \$env:UNVIBE_BETA_TAG } else { "${BETA_INSTALL_TAG}" }
-\$asset = if (\$env:UNVIBE_BETA_ASSET) { \$env:UNVIBE_BETA_ASSET } else { "${BETA_WINDOWS_ASSET}" }
+# UNVIBE_BETA_ASSET (for testing) must name a setup exe: it is run with /S.
+\$asset = if (\$env:UNVIBE_BETA_ASSET) { \$env:UNVIBE_BETA_ASSET } else { "${BETA_WINDOWS_SETUP_ASSET}" }
 \$url = "https://github.com/ShadowEsu/Unvibe/releases/download/\$tag/\$asset"
-\$destDir = Join-Path \$env:LOCALAPPDATA "Unvibe"
-\$dest = Join-Path \$destDir "Unvibe.exe"
+\$work = Join-Path ([IO.Path]::GetTempPath()) ("unvibe-install-" + [guid]::NewGuid().ToString("N"))
+\$download = Join-Path \$work \$asset
 \$track = "${BETA_INSTALL_TRACK_URL}"
 \$ua = "UnvibeBetaInstaller/${BETA_INSTALL_TAG.replace(/^v/, "")}"
 
@@ -207,14 +217,10 @@ if (\$env:PROCESSOR_ARCHITECTURE -and \$env:PROCESSOR_ARCHITECTURE -ne "AMD64" -
   Write-Warning "This beta ships an x64 Windows build. On ARM PCs, Windows may run it under emulation."
 }
 
-New-Item -ItemType Directory -Force -Path \$destDir | Out-Null
-# Download next to the app and only replace it once the download is verified, so a failed
-# update leaves the working copy in place.
-\$download = "\$dest.download"
-if (Test-Path \$download) { Remove-Item -Force \$download }
+New-Item -ItemType Directory -Force -Path \$work | Out-Null
 # throw, not exit: under irm | iex, exit closes the window before the message can be read.
 function Stop-UnvibeInstall(\$message) {
-  Remove-Item -Force \$download -ErrorAction SilentlyContinue
+  Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
   throw "\$message Nothing was installed. For help, see ${BETA_INSTALL_HELP_URL}"
 }
 
@@ -266,39 +272,78 @@ Write-Host "Checksum verified."
 Write-Host "Closing any running Unvibe..."
 Get-Process -Name Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
-try {
-  Move-Item -Force -Path \$download -Destination \$dest
-} catch {
-  Stop-UnvibeInstall "Could not replace \$dest. Quit Unvibe from the tray, then run the install command again. Details: \$_"
-}
-try { Unblock-File -Path \$dest -ErrorAction Stop } catch {}
 
-\$shortcutPath = Join-Path \$env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Unvibe.lnk"
-\$inStartMenu = \$false
-try {
-  \$shell = New-Object -ComObject WScript.Shell
-  \$shortcut = \$shell.CreateShortcut(\$shortcutPath)
-  \$shortcut.TargetPath = \$dest
-  \$shortcut.WorkingDirectory = \$destDir
-  \$shortcut.IconLocation = "\$dest,0"
-  \$shortcut.Description = "Unvibe"
-  \$shortcut.Save()
-  \$inStartMenu = \$true
-} catch {
-  Write-Warning "Could not add Unvibe to the Start menu. Details: \$_"
+# Unvibe's Apps & features entry for this user (HKCU) or for everyone (HKLM). The key is the installer's
+# app GUID (electron-builder: UUID v5 of the appId), so no other app's entry can match.
+function Get-UnvibeUninstallEntry(\$root) {
+  Get-ItemProperty -Path "\$root\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${BETA_WINDOWS_APP_GUID}" -ErrorAction SilentlyContinue
+}
+if (Get-UnvibeUninstallEntry "HKLM:") {
+  Write-Warning "An Unvibe installed for all users is also on this PC. This installs a separate copy for your user; you can remove the other one in Settings > Apps > Installed apps."
+}
+
+Write-Host "Installing Unvibe for your Windows user (no administrator rights needed)..."
+# Plain /S: the setup is one-click per-user, so it never asks for administrator rights, even next to an
+# all-users copy. The older assisted setup's per-user switch means nothing to it.
+# Wait for the installer process only: Start-Process -Wait would also wait for anything it starts.
+function Invoke-UnvibeSetup {
+  try {
+    \$setup = Start-Process -FilePath \$download -ArgumentList "/S" -PassThru
+  } catch {
+    Stop-UnvibeInstall "Could not start the Unvibe installer. Details: \$_"
+  }
+  # Windows PowerShell 5.1 leaves ExitCode empty unless the process handle was read before it ended.
+  \$null = \$setup.Handle
+  if (-not \$setup.WaitForExit(300000)) {
+    Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
+    throw "The Unvibe installer did not finish within 5 minutes. Restart your PC, then run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
+  }
+  return \$setup.ExitCode
+}
+\$setupExit = Invoke-UnvibeSetup
+# -1073741819 (0xC0000005): on a fresh Windows Server 2025 the setup sometimes crashed right after the
+# download (QA, 6 Nov; cause not pinned). Once only: wait, check the same file again, run it again.
+if (\$setupExit -eq -1073741819) {
+  Write-Host "The installer stopped unexpectedly (code \$setupExit). Trying once more in 5 seconds..."
+  Start-Sleep -Seconds 5
+  if ((Get-FileHash -Path \$download -Algorithm SHA256).Hash.ToLower() -ne \$expected) { Stop-UnvibeInstall "The download does not match the published checksum." }
+  \$setupExit = Invoke-UnvibeSetup
+}
+if (\$setupExit -ne 0) {
+  Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
+  throw "The Unvibe installer stopped with code \$setupExit. Run the install command again. For help, see ${BETA_INSTALL_HELP_URL}"
+}
+
+# Where this user's Unvibe is: its Apps & features entry names the exe (an earlier install may sit in a
+# folder its owner chose); otherwise the installer's per-user default.
+\$installed = \$null
+for (\$i = 0; \$i -lt 30 -and -not \$installed; \$i++) {
+  \$fromEntry = Get-UnvibeUninstallEntry "HKCU:" | Where-Object { \$_.DisplayIcon } |
+    ForEach-Object { ((\$_.DisplayIcon -split ',')[0]).Trim('"') }
+  \$installed = @(\$fromEntry) + @(
+    (Join-Path \$env:LOCALAPPDATA "Programs\\Unvibe\\Unvibe.exe"),
+    (Join-Path \$env:LOCALAPPDATA "Programs\\unvibe-app\\Unvibe.exe")
+  ) | Where-Object { \$_ -and (Test-Path \$_) } | Select-Object -First 1
+  if (-not \$installed) { Start-Sleep -Seconds 1 }
+}
+Remove-Item -Recurse -Force \$work -ErrorAction SilentlyContinue
+if (-not \$installed) {
+  throw "The installer finished, but Unvibe.exe is not in its Apps & features entry or under \$env:LOCALAPPDATA\\Programs. For help, see ${BETA_INSTALL_HELP_URL}"
+}
+
+# Earlier versions of this script kept a portable copy in LOCALAPPDATA\\Unvibe. The installed app takes
+# its place, and on its first start points an existing login item at itself.
+foreach (\$old in @("Unvibe.exe", "Unvibe.exe.download", "Unvibe.exe.old")) {
+  Remove-Item -Force -Path (Join-Path (Join-Path \$env:LOCALAPPDATA "Unvibe") \$old) -ErrorAction SilentlyContinue
 }
 
 Write-Host "Opening Unvibe..."
-Start-Process \$dest
+Start-Process \$installed
 try {
   Invoke-RestMethod -Method Post -Uri \$track -ContentType "application/json" -Body '{"event":"installed"}' -TimeoutSec 4 | Out-Null
 } catch {}
 Write-Host "Windows may warn that Unvibe is unsigned. That is expected during beta. If SmartScreen appears, choose More info, then Run anyway."
-if (\$inStartMenu) {
-  Write-Host "Done. Unvibe is in your Start menu and tray."
-} else {
-  Write-Host "Done. Unvibe is in your tray. To open it again later, run \$dest"
-}
+Write-Host "Done. Unvibe is installed for your Windows user: in your Start menu, on your desktop and in your tray. To remove it, use Settings > Apps > Installed apps."
 `;
 }
 
