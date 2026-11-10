@@ -770,6 +770,17 @@ h2 {
   max-width: 68ch;
 }
 
+/* An entry's public links (its PR, release, listing or program page): one wrapping row under the summary. */
+.paper-log__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
 /* Phones: the side column took most of the width and left the text 2-3 words a line. Version and date go on one
    line above the entry, and the text runs full width. */
 @media (max-width: 640px) {
@@ -1018,38 +1029,6 @@ h2 {
 @media (min-width: 768px) {
   html { scroll-padding-bottom: 5rem; }
   .paper-footer__legal { padding-bottom: 5rem !important; }
-}
-
-.paper-footer__social {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-top: 1.25rem;
-}
-
-.paper-footer__social a {
-  display: grid;
-  place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  color: var(--ink);
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius-pill);
-  background: var(--glass);
-  box-shadow: var(--shadow-glass);
-  transition: transform 200ms var(--ease-calm), color 200ms var(--ease-calm);
-}
-
-.paper-footer__social a:hover {
-  color: var(--brand);
-  transform: translateY(-2px);
-}
-
-.paper-footer__social svg {
-  display: block;
-  width: 1.05rem;
-  height: 1.05rem;
-  overflow: visible;
 }
 
 .paper-text-link {
@@ -1391,13 +1370,13 @@ h2 {
 
 .console-page .console-analytics__eyebrow,
 .console-page .console-analytics article > span,
-.console-page .console-analytics article header > span {
+.console-page .console-analytics article .ca-head > span {
   color: var(--ink);
 }
 
 .console-page .console-analytics__header p,
 .console-page .console-analytics__grid small,
-.console-page .console-analytics__panels header small,
+.console-page .console-analytics__panels .ca-head small,
 .console-page .console-analytics__bar-value,
 .console-page .console-analytics__bars small,
 .console-page .console-analytics__sources li,
@@ -1445,7 +1424,7 @@ h2 {
   transform: translateY(-1px);
 }
 
-.console-page .console-analytics__people > header {
+.console-page .console-analytics__people > .ca-head {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -1618,8 +1597,8 @@ h2 {
   box-shadow: var(--shadow-card);
 }
 
-.console-page .console-analytics__visits header,
-.console-page .console-analytics__people header {
+.console-page .console-analytics__visits .ca-head,
+.console-page .console-analytics__people .ca-head {
   margin-bottom: 1rem;
 }
 

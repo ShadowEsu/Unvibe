@@ -18,7 +18,7 @@ export const metadata: Metadata = pageMetadata({
 export default function BuildPage() {
   return (
     <article className="build-page">
-      <header className="paper-photo-band">
+      <div className="paper-photo-band">
         <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
         <div className="paper-hero__veil" />
         <div className="paper-photo-band__copy">
@@ -33,9 +33,9 @@ export default function BuildPage() {
             </div>
             <strong>100%</strong>
           </div>
-          <DownloadRow href="/beta" surface="build" />
+          <DownloadRow surface="build" />
         </div>
-      </header>
+      </div>
 
       <section className="paper-section" id="growth">
         <Reveal className="paper-wrap">

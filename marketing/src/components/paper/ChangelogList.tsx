@@ -38,6 +38,15 @@ function Entry({ item, id, Heading = "h3" }: { item: Milestone; id?: string; Hea
           {item.title}
         </Heading>
         <p className="paper-lead">{item.summary}</p>
+        {item.links?.length ? (
+          <ul className="paper-log__links">
+            {item.links.map((link) => (
+              <li key={link.href}>
+                <a className="paper-text-link" href={link.href} aria-label={`${item.title}: ${link.label}`}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       <aside>
         {item.figure ? <strong>{item.figure}</strong> : null}

@@ -20,6 +20,8 @@ export interface ExplainPage {
   id: string;
   /** File name in the Try it editor's title bar. */
   fileName: string;
+  /** Up to 4 other explain page ids that a reader of this page is likely to want next, shown before the full list. */
+  related?: readonly string[];
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -38,6 +40,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
+    related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
     description:
       "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
@@ -195,6 +198,7 @@ tzdata; sys_platform == "win32"`,
   {
     id: "javascript",
     fileName: "profiles.js",
+    related: ["react-useeffect", "cors-error", "typescript", "json"],
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
       "Get any JavaScript snippet explained in plain English online, free. The sample loads several users at once with fetch and Promise.allSettled.",
@@ -302,6 +306,7 @@ $(function () {
   {
     id: "typescript",
     fileName: "users.ts",
+    related: ["javascript", "react-useeffect", "tsconfig"],
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
       "Paste TypeScript and see what the code and its types mean, free online. The sample loads a user with a generic Result type, narrowing and async/await.",
@@ -518,6 +523,7 @@ export default [
   {
     id: "sql",
     fileName: "report.sql",
+    related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
       "Paste a SQL query and read what it returns, explained in plain English, free. The sample ranks customers by spend with a LEFT JOIN, GROUP BY and RANK().",
@@ -616,6 +622,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
       "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
@@ -932,6 +939,7 @@ ls -l bin config`,
   {
     id: "find",
     fileName: "clean-project.sh",
+    related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
       "Paste find commands and get them explained in plain English, free online. The sample looks through a project for logs, big files, recent changes and empty folders, and counts lines in its code.",
@@ -985,6 +993,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
+    related: ["cpp", "make", "assembly"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -1212,6 +1221,7 @@ puts members.sort.map(&:name).inspect`,
   {
     id: "sqlite",
     fileName: "shop.sql",
+    related: ["sql", "sql-joins", "prisma-schema"],
     lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
     description:
       "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index, inserts rows and runs a report.",
@@ -1323,6 +1333,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
+    related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
       "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
@@ -1370,6 +1381,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
+    related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
       "Paste CSS and get a plain English explanation, free online. The sample lays out product cards with grid, flexbox and a custom property for the accent color.",
@@ -1775,6 +1787,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
   {
     id: "cron",
     fileName: "crontab",
+    related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
       "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup, weekday reports and a monthly job.",
@@ -1992,6 +2005,7 @@ end`,
   {
     id: "yaml",
     fileName: "ci.yml",
+    related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
       "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
@@ -2100,6 +2114,7 @@ subject = Your invoice from Acme`,
   {
     id: "json",
     fileName: "package.json",
+    related: ["package-lock", "npm-scripts", "javascript"],
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
     description:
       "Paste JSON and get a plain English explanation, free online. The sample is a package.json for a small Node tool: its scripts, dependencies and version ranges.",
@@ -2425,6 +2440,7 @@ clean:
   {
     id: "gitignore",
     fileName: ".gitignore",
+    related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
       "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with a few exceptions kept in.",
@@ -2703,6 +2719,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    related: ["git-log", "git-rebase", "gitignore", "bash"],
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
       "Paste git diff output and get a plain English explanation, free online. The sample is a staged change: a cart total gets tax, and a file moves into lib/.",
@@ -2762,6 +2779,7 @@ rename to lib/money.js`,
   {
     id: "react-useeffect",
     fileName: "Profile.jsx",
+    related: ["javascript", "typescript", "tailwind", "npm-scripts"],
     lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
     description:
       "Paste React code with useEffect and get it explained in plain English, free online. The sample loads a user when userId changes and cancels the old request.",
@@ -2820,6 +2838,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
       "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
@@ -2864,6 +2883,795 @@ KeyError: 'qty'`,
     watchOut:
       "A quick fix can hide the problem instead of solving it. `item.get(\"qty\")` only moved the crash, to `TypeError: unsupported operand type(s) for *: 'int' and 'NoneType'`. `item.get(\"qty\", 1)` stopped the error but printed `A2 4`, counting 3 items as 1 without a word. Reading `quantity` when `qty` is missing printed the right `A2 12`.",
   },
+  {
+    id: "package-lock",
+    fileName: "package-lock.json",
+    related: ["json", "npm-scripts", "gitignore"],
+    lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
+    description:
+      "Paste a package-lock.json and get it explained in plain English, free online. The sample is 3 packages from a small project's lock file, one of them nested inside another.",
+    sampleSummary: "Lines 15 to 35 of the package-lock.json npm 11.10.1 wrote for a project whose package.json asks for `debug` `^2.6.9` and `ms` `^2.1.1`, after `npm install ms@2.1.1`.",
+    sample: `$ sed -n '15,35p' package-lock.json
+    "node_modules/debug": {
+      "version": "2.6.9",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz",
+      "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "2.0.0"
+      }
+    },
+    "node_modules/debug/node_modules/ms": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==",
+      "license": "MIT"
+    },
+    "node_modules/ms": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.1.tgz",
+      "integrity": "sha512-tgp+dl5cGk28utYktBsrFqA7HKgrhgPsg6Z/EfhWI4gl1Hwq8B/GmY/0oXZ6nF8hDVesS/FpnYaD/kOWhYQvyg==",
+      "license": "MIT"
+    }`,
+    shows: [
+      {
+        concept: "version and resolved",
+        text: "Each key is a folder npm creates, and `version` is the exact version that goes in it. package.json asks for a range, `^2.1.1`, meaning 2.1.1 or any newer 2.x. The lock pins one answer, `2.1.1`, so every `npm ci` installs that same version. `resolved` is the address the file was downloaded from.",
+      },
+      {
+        concept: "integrity",
+        text: "`integrity` is a fingerprint of the downloaded file: its SHA-512 hash, written in base64. Downloading each of the 3 `resolved` files and hashing it gave exactly these values. With one character of the `ms` hash changed and an empty npm cache, `npm ci` stopped with `EINTEGRITY` and `integrity checksum failed`.",
+      },
+      {
+        concept: "nested packages",
+        text: "`debug` 2.6.9 needs `ms` `2.0.0` exactly, but the project asked for `^2.1.1`. Both can't sit in `node_modules/ms`, so npm gave debug its own copy at `node_modules/debug/node_modules/ms`. After `npm ci`, `ms` looked up from the project resolved to 2.1.1, and from debug's folder to 2.0.0.",
+      },
+      {
+        concept: "npm ci and npm install",
+        text: "`npm ci` installs exactly what the lock says, or nothing. After `is-odd` was added to package.json but not to the lock, it stopped with `EUSAGE`, `Missing: is-odd@3.0.1 from lock file` and exit code 1. `npm install` with the same change worked out the new versions and added `node_modules/is-odd` and `node_modules/is-number` to the lock.",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 on Node 25.7.0, against the public npm registry. `lockfileVersion` 3, at the top of the full file, is the format npm 9 and later write.",
+      "The sample leaves out the first 14 lines, which hold the project's own name and version, `lockfileVersion` and the ranges copied from package.json, and the 2 closing lines.",
+    ],
+    watchOut:
+      "Deleting the lock to make an error go away quietly changes your versions. With the lock gone, `npm install` picked `ms` 2.1.3, the newest version in the `^2.1.1` range, not the 2.1.1 the project had been running. Commit package-lock.json, and use `npm ci` on servers and in CI so they install what you tested.",
+  },
+  {
+    id: "prisma-schema",
+    fileName: "prisma/schema.prisma",
+    related: ["sql", "sqlite", "sql-joins", "env"],
+    lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
+    description:
+      "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts, with a relation between them.",
+    sampleSummary: "A schema.prisma for a small blog, of the kind an AI assistant writes when asked for users and posts: a generator, a SQLite datasource and 2 models joined by a relation.",
+    sample: `generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  published Boolean @default(false)
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  Int
+}`,
+    shows: [
+      {
+        concept: "models and fields",
+        text: "Each `model` becomes a table and each field a column, written as name, type, then attributes, except relation fields like `author` and `posts`, which link tables instead of storing a value. `prisma migrate diff` turned `model User` into `CREATE TABLE \"User\"`. `name String?` became `\"name\" TEXT` and a new user with no name stored `NULL`; without the `?` it became `\"name\" TEXT NOT NULL`.",
+      },
+      {
+        concept: "attributes",
+        text: "`@id` marks the primary key and `@default(autoincrement())` gives each new row the next number: the first user got id 1. `@unique` on `email` became a unique index: adding a second `ana@example.com` failed with `UNIQUE constraint failed: User.email`. `@default(now())` became `DEFAULT CURRENT_TIMESTAMP`, which filled `createdAt`, and `@default(false)` left a new post unpublished.",
+      },
+      {
+        concept: "relations",
+        text: "`author User @relation(...)` says `authorId` holds a `User`'s `id`, and became a foreign key: a post for user 99, who doesn't exist, failed with `FOREIGN KEY constraint failed`. `posts Post[]` is the other side, a list with no column of its own. Without it, `prisma validate` stopped: the relation field `author` `is missing an opposite relation field on the model User`.",
+      },
+      {
+        concept: "the generator and datasource",
+        text: "`generator client` tells `prisma generate` to write the code your app uses to query the database: it wrote client.ts and the files next to it into src/generated/prisma, the `output` folder. `datasource db` names the database type, here SQLite. In Prisma 7 the address the command line tool uses lives in prisma.config.ts, and your app passes its own connection to `new PrismaClient()`: with `url = env(\"DATABASE_URL\")` added here, `prisma validate` stopped, saying the datasource property `url` is no longer supported in schema files.",
+      },
+    ],
+    notes: [
+      "Run with Prisma 7.10.1 and SQLite 3.53.4: `prisma validate` passed, `prisma migrate diff --from-empty` printed the SQL, and that SQL was run against an empty SQLite file with foreign keys switched on.",
+      "`onDelete: Cascade` made the foreign key `ON DELETE CASCADE`: deleting a user with 2 posts left 0 posts. With it taken out, Prisma wrote `ON DELETE RESTRICT` instead, and deleting a user who still had a post failed and left the user in place.",
+    ],
+    watchOut:
+      "Changing this file doesn't change your database. The tables only change when you run a command such as `prisma migrate dev` or `prisma db push`, and your app's query code only changes when `prisma generate` runs. Before applying a migration, read the SQL it will run: making `name` required became `\"name\" TEXT NOT NULL`, which a table that already has users without a name can't hold.",
+  },
+  {
+    id: "tailwind",
+    fileName: "PlanCard.jsx",
+    related: ["css", "html", "react-useeffect"],
+    lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
+    description:
+      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with up to 12 utility classes on one element, the way AI assistants write them.",
+    sampleSummary: "A React component of the kind an AI assistant writes with Tailwind CSS: a pricing card whose layout, colors and button states all come from class names.",
+    sample: `export function PlanCard({ plan }) {
+  return (
+    <div className="mx-auto max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:flex md:max-w-2xl md:gap-6 dark:bg-gray-900">
+      <img className="size-24 rounded-full object-cover md:size-32" src={plan.image} alt="" />
+      <div className="mt-4 md:mt-0">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h2>
+        <p className="mt-1 line-clamp-2 text-sm text-gray-500">{plan.blurb}</p>
+        <button className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500 disabled:opacity-50 sm:w-auto">
+          Choose {plan.name}
+        </button>
+      </div>
+    </div>
+  );
+}`,
+    shows: [
+      {
+        concept: "utility classes",
+        text: "Most classes set 1 or 2 CSS properties; `line-clamp-2` sets 4. Sizes count in steps of `--spacing`, 0.25rem: `p-6` became `padding: calc(var(--spacing) * 6)`, 1.5rem, and `size-24` set both width and height to 6rem. `max-w-sm` is 24rem, `rounded-2xl` 1rem, and `line-clamp-2` cuts the blurb off after 2 lines.",
+      },
+      {
+        concept: "breakpoints",
+        text: "A prefix like `md:` applies the class only from a screen width up: `md:flex` became `display: flex` inside `@media (width >= 48rem)`, 768px, and `sm:` used `40rem`. Without a prefix a class applies at every width, so the card is a column on a phone and a row on a wider screen.",
+      },
+      {
+        concept: "states and dark mode",
+        text: "`hover:bg-indigo-500` only applies under `@media (hover: hover)`, so on a touch screen that can't hover the button keeps its normal color. `disabled:opacity-50` matches `:disabled`. `dark:` followed the system setting, `prefers-color-scheme: dark`. With `@custom-variant dark (&:where(.dark, .dark *))` in the CSS, it followed a `dark` class instead.",
+      },
+      {
+        concept: "how classes are found",
+        text: "Tailwind reads your files as plain text and writes CSS only for the class names it finds. This file has 35 different classes and the build had 35 rules, one for each. A class built from a variable, `bg-${color}-500`, got no rule, because the full name `bg-red-500` never appears in the file. A typo, `md:flx`, got no rule and no warning either.",
+      },
+    ],
+    notes: [
+      "Run with Tailwind CSS 4.3.4 and its command line tool, building CSS from this one file, with `source(none)` so no other file in the folder was read.",
+      "With `p-2 p-4` and with `p-4 p-2` in the same `className`, the CSS had `.p-2` first and `.p-4` after it, so `p-4` wins either way: the order classes are written in doesn't decide which one applies.",
+    ],
+    watchOut:
+      "Classes put together from pieces silently do nothing. `bg-${color}-500` looks fine in the code and produced no CSS at all, so the element just had no background. Write the full class name for every option, for example a map from `red` to `bg-red-500`, so Tailwind can find each one.",
+  },
+  {
+    id: "sql-joins",
+    fileName: "joins.sql",
+    related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
+    lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
+    description:
+      "Paste SQL joins and get them explained in plain English, free online. The sample is 4 queries over customers, orders and refunds, including one whose totals come out doubled.",
+    sampleSummary: "4 queries of the kind an AI assistant writes for a small shop's report, over 3 tables: customers, orders and refunds. Run in SQLite 3.53.4 with 3 customers, 3 orders and 2 refunds.",
+    sample: `-- Tables: customers(id, name), orders(id, customer_id, total),
+-- refunds(id, customer_id, amount)
+
+-- 1. Customers with their orders
+SELECT c.name, o.total
+FROM customers c
+JOIN orders o ON o.customer_id = c.id;
+
+-- 2. Every customer, with or without orders
+SELECT c.name, o.total
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id;
+
+-- 3. Customers who never ordered
+SELECT c.name
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id
+WHERE o.id IS NULL;
+
+-- 4. What each customer spent, and what was refunded
+SELECT c.name, SUM(o.total) AS spent, SUM(r.amount) AS refunded
+FROM customers c
+JOIN orders o ON o.customer_id = c.id
+LEFT JOIN refunds r ON r.customer_id = c.id
+GROUP BY c.id;`,
+    shows: [
+      {
+        concept: "JOIN and LEFT JOIN",
+        text: "`JOIN` keeps only the rows that match on both sides: query 1 returned 3 rows, Ana twice and Ben once. `LEFT JOIN` keeps every row of the left table and fills the right side with NULL where nothing matches: query 2 returned 4 rows, the same 3 plus Cy with an empty total.",
+      },
+      {
+        concept: "rows with no match",
+        text: "Query 3 is a `LEFT JOIN` that keeps only the rows where the right side came back empty, `WHERE o.id IS NULL`, and it returned `Cy`, the one customer with no orders. The same question written with `NOT EXISTS` and a subquery also returned `Cy`.",
+      },
+      {
+        concept: "the doubled total",
+        text: "Query 4 joins orders and refunds to the same customer at once. Ana has 2 orders and 2 refunds, so the join made 4 rows for her, each order paired with each refund, and both sums counted everything twice: `spent` came out as 100.0 and `refunded` as 20.0, against 50 and 10. Ben has no refunds, so his `refunded` came back empty, NULL, not 0.",
+      },
+      {
+        concept: "WHERE after a LEFT JOIN",
+        text: "A condition like `o.total > 25` on the right-hand table in `WHERE` throws away the rows where that side came back NULL, so the `LEFT JOIN` acts like a plain `JOIN`. With `WHERE o.total > 25` added to query 2, only Ana's 30.0 came back. Moved into the join itself, `ON o.customer_id = c.id AND o.total > 25`, Ana's 30.0 came back with Ben and Cy, both with an empty total.",
+      },
+    ],
+    notes: [
+      "Run with SQLite 3.53.4 on a fresh database built from the 3 tables in the comment. `JOIN` and `LEFT JOIN` work the same way in PostgreSQL and MySQL. SQLite has accepted `FULL JOIN` since version 3.39, and here a `FULL JOIN` of orders and customers returned 4 rows; MySQL has no `FULL JOIN`.",
+      "Query 2 has no `ORDER BY`, so the database can return its rows in any order: it listed Ana's 20.0 before her 30.0, the other way round from query 1.",
+    ],
+    watchOut:
+      "A total that is too big, with no error, can come from the join, not the data. Add up each table on its own first, then join the results: with orders and refunds each summed per customer in a subquery, Ana came back as 50.0 spent and 10.0 refunded. Running the joined rows without `SUM` and `GROUP BY` shows the repeats: 4 rows for Ana.",
+  },
+  {
+    id: "supabase-rls",
+    fileName: "todos.sql",
+    related: ["sql", "sql-joins", "prisma-schema", "env"],
+    lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
+    description:
+      "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each signed-in user reads, adds and updates only their own rows.",
+    sampleSummary: "SQL of the kind an AI app builder writes for a Supabase todos table: the table, row level security switched on, and 3 policies that tie each row to the signed-in user.",
+    sample: `-- todos: each signed-in user sees and changes only their own rows
+create table todos (
+  id bigint generated always as identity primary key,
+  user_id uuid not null default auth.uid() references auth.users,
+  task text not null,
+  done boolean not null default false
+);
+
+alter table todos enable row level security;
+
+create policy "read own todos" on todos
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "add own todos" on todos
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create policy "update own todos" on todos
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);`,
+    shows: [
+      {
+        concept: "enabling RLS",
+        text: "`enable row level security` makes every query from the `anon` and `authenticated` roles see only the rows a policy allows. Without that line the policies did nothing: Ana and a signed-out visitor both read every todo, hers and Sam's. With it on and no policies at all, Ana read 0 rows, and adding a todo failed with `new row violates row-level security policy`.",
+      },
+      {
+        concept: "using and with check",
+        text: "`using` decides which existing rows a query can see or touch, and `with check` decides what a new or changed row may look like. Ana read her 2 todos and Sam read his 1. Ana adding a todo with Sam's `user_id` failed the `with check` test. Her update to Sam's todo changed 0 rows, with no error, because `using` hid it from her.",
+      },
+      {
+        concept: "auth.uid() and roles",
+        text: "`auth.uid()` returns the id of the signed-in user making the request, read from their login token. `to authenticated` limits a policy to signed-in requests, so a signed-out visitor, the `anon` role, read 0 rows and couldn't add one. Supabase's docs recommend `(select auth.uid())` over a bare `auth.uid()` so Postgres works it out once per query, not once per row.",
+      },
+      {
+        concept: "missing policies",
+        text: "There is no `delete` policy, so nobody signed in can delete: Ana deleting her own todo changed 0 rows. The update policy also leans on the select policy: with the select policy taken out, Ana could still add a todo with a plain insert but read 0 rows, and marking it done changed 0 rows.",
+      },
+    ],
+    notes: [
+      "Run on PostgreSQL 18.6 through PGlite 0.5.15, with a small stand-in for Supabase's `auth` schema and its `anon` and `authenticated` roles, and `auth.uid()` copied from Supabase's own source. Each request set the role and the login token's claims in a transaction, the way Supabase's Data API does.",
+      "The table's owner skips these policies, and in this run `postgres`, which owns the table and is a superuser, read all 3 todos. Supabase's `service_role` key skips them too, so it belongs on a server, never in the browser.",
+      "Taking out the update policy's `with check` line didn't open a hole: Postgres then tests the changed row with `using`, so Ana giving all her todos to Sam failed. With `with check (true)` instead, the same update went through and the todo became Sam's.",
+    ],
+    watchOut:
+      "A view can quietly skip every policy. A view over todos, created by the table owner and granted to signed-in users, showed Sam his own todo and Ana's. After `alter view ... set (security_invoker = true)`, which needs Postgres 15 or later, the view applied the policies and Sam saw only his own.",
+  },
+  {
+    id: "cors-error",
+    fileName: "cors-error.txt",
+    related: ["javascript", "curl", "json"],
+    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
+    description:
+      "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
+    sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: a common setup, with the front end and the API on different ports.",
+    sample: `// Browser console on http://localhost:5173
+Access to fetch at 'http://localhost:3000/api/todos' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+Failed to load resource: net::ERR_FAILED
+
+// api/server.js: the API the front end calls
+const http = require("node:http");
+
+const server = http.createServer((req, res) => {
+  if (req.url === "/api/todos" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify([{ id: 1, task: "Buy milk" }]));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+server.listen(3000);`,
+    shows: [
+      {
+        concept: "origins",
+        text: "An origin is the scheme, host and port together. `http://localhost:5173` and `http://localhost:3000` differ only in the port, and that is enough to make them different origins, so the browser treats the API as another origin and applies CORS.",
+      },
+      {
+        concept: "the missing header",
+        text: "The request did reach the API: the server logged `GET /api/todos` and answered 200. The browser then kept the reply from the page because it had no `Access-Control-Allow-Origin` header, and `fetch` threw `TypeError: Failed to fetch`. A request sent from outside the browser, with the same `Origin` header, got the JSON back.",
+      },
+      {
+        concept: "the fix",
+        text: "Adding `\"Access-Control-Allow-Origin\": \"http://localhost:5173\"` to the reply's headers made the same fetch work. `*` worked too, but it lets pages from any origin read the reply. A value naming another origin, `http://localhost:3000`, failed with `has a value 'http://localhost:3000' that is not equal to the supplied origin`.",
+      },
+      {
+        concept: "preflight",
+        text: "An `Authorization` header made the browser ask first: it sent `OPTIONS /api/todos`, which this server answered with 404 and no Allow-Origin, and stopped with `Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present`, without sending the GET. Answering `OPTIONS` with 204, Allow-Origin and `Access-Control-Allow-Headers: Authorization` let the GET through, and the todos came back.",
+      },
+    ],
+    notes: [
+      "Run with Node 25.7.0 and Chromium 156, driven by Playwright. The 2 console lines in the sample are what Chromium logged; the page's own `catch` printed `TypeError Failed to fetch`.",
+      "`mode: 'no-cors'` doesn't fix it. The request went out and the server answered 200, but the page got an empty response with status 0, and `res.json()` failed with `Unexpected end of input`.",
+    ],
+    watchOut:
+      "CORS doesn't protect your API. It decides what pages from other origins, in a browser, can do with a reply: the plain GET reached the server and got its 200 even when the page couldn't read the answer, and a request from outside a browser read the todos although the reply had no `Access-Control-Allow-Origin` header. Keep real checks, such as who is signed in, on the server.",
+  },
+  {
+    id: "asyncio",
+    fileName: "fetch_all.py",
+    related: ["python", "python-traceback", "javascript"],
+    lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
+    description:
+      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample starts 3 stand-in page loads at once with asyncio.gather and gives up on one after 3 seconds.",
+    sampleSummary: "A Python script that starts 3 slow loads at once with `asyncio.gather`, each one a stand-in that sleeps, and gives the slowest a 3 second timeout.",
+    sample: `# fetch_all.py: start 3 stand-in page loads at once, give up on any that take too long
+import asyncio
+import time
+
+async def fetch(name, seconds):
+    print(f"{time.perf_counter() - START:.1f}s start {name}")
+    await asyncio.sleep(seconds)  # stands in for a network call
+    print(f"{time.perf_counter() - START:.1f}s done {name}")
+    return f"{name}: {seconds}s"
+
+async def main():
+    results = await asyncio.gather(
+        fetch("users", 1.0),
+        fetch("orders", 2.0),
+        asyncio.wait_for(fetch("reports", 5.0), timeout=3.0),
+        return_exceptions=True,
+    )
+    for r in results:
+        print(repr(r))
+
+START = time.perf_counter()
+asyncio.run(main())
+print(f"total {time.perf_counter() - START:.1f}s")`,
+    shows: [
+      {
+        concept: "async def and await",
+        text: "`async def` makes `fetch` a coroutine function: calling it only creates a coroutine object, and nothing inside runs until something awaits it. Called without `await`, `fetch(\"users\", 1.0)` printed nothing, and Python warned `coroutine 'fetch' was never awaited`. `await asyncio.sleep(...)` pauses this one fetch and lets the others run in the meantime.",
+      },
+      {
+        concept: "gather",
+        text: "`asyncio.gather` started all 3 at once: users, orders and reports each printed `0.0s start`. Users finished at 1.0s and orders at 2.0s, and the whole script took 3.0s. Awaiting the same 3 one after another took 6.0s, because each one started only when the one before had finished.",
+      },
+      {
+        concept: "timeouts",
+        text: "`asyncio.wait_for(..., timeout=3.0)` canceled reports at 3.0s, 2 seconds before its 5 second sleep would have ended, and its result came back as `TimeoutError()`. `return_exceptions=True` is why the other 2 results survived. Without it, `gather` raised the `TimeoutError` at 3.0s and `main` never got the users and orders results.",
+      },
+      {
+        concept: "blocking calls",
+        text: "When users used `time.sleep(1.0)` instead of `await asyncio.sleep(1.0)`, orders and reports didn't start until 1.0s, and the script took 4.0s instead of 3.0s. `time.sleep` holds the whole program, so nothing else can run until it returns. A 4 second `time.sleep` in one task held back the other task, so its 3 second timeout started at 4.0s and fired at 7.0s.",
+      },
+    ],
+    notes: [
+      "Run with Python 3.14.7. The script printed users and orders done at 1.0s and 2.0s, then `'users: 1.0s'`, `'orders: 2.0s'`, `TimeoutError()` and `total 3.0s`. Every timing above is from the same script or a variant of it, rounded to 0.1s.",
+      "`asyncio.TaskGroup`, the newer way to run tasks together, stops the rest when one fails: with reports timing out at 0.5s, it canceled orders at 0.5s too and raised an `ExceptionGroup`. `gather` without `return_exceptions` did not: `main` got the error at 0.5s, and orders still finished at 2.0s.",
+    ],
+    watchOut:
+      "One ordinary blocking call inside async code slows every task, with no error. `time.sleep`, `requests.get` or a heavy loop in an `async def` holds the program the same way `time.sleep(1.0)` held users here: the other loads waited, and a timeout couldn't fire until the call returned. In async code, use the awaitable version, such as `await asyncio.sleep` or an async HTTP client, or hand the blocking call to `asyncio.to_thread`.",
+  },
+  {
+    id: "tar",
+    fileName: "backup-site.sh",
+    related: ["rsync", "find", "chmod"],
+    lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
+    description:
+      "Paste a tar command and get its flags explained in plain English, free online. The sample packs a project into a .tar.gz without node_modules, lists it and unpacks a copy.",
+    sampleSummary: "A shell script that packs a small website folder into a .tar.gz without node_modules and log files, lists what's inside, unpacks a copy into another folder, then pulls out one file.",
+    sample: `# backup-site.sh: pack the site into one file, check it, unpack a copy
+cd ~/projects
+
+# c = create, z = gzip it, v = list each file, f = the archive's name
+tar -czvf site-backup.tar.gz --exclude='node_modules' --exclude='*.log' my-site
+
+# t = list what's inside without unpacking
+tar -tzf site-backup.tar.gz
+
+# x = extract; -C = into this folder (it must already exist)
+mkdir -p ~/restore
+tar -xzvf site-backup.tar.gz -C ~/restore
+
+# pull out one file only
+tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
+    shows: [
+      {
+        concept: "c, t and x",
+        text: "The first letter says what tar does: `c` creates an archive, `t` lists what's in one and `x` extracts it. On a folder holding package.json, src/index.html, src/app.js, node_modules and server.log, `-tzf` listed 5 entries: `my-site/`, `my-site/package.json`, `my-site/src/`, and the 2 files in src. The listing wrote no files.",
+      },
+      {
+        concept: "z, v and f",
+        text: "`z` runs the archive through gzip, `v` prints each file as tar works, and `f` names the archive file, so the name must come straight after it. Written `tar -cfz x.tar.gz my-site`, tar took `z` as the archive's name: it made a file called `z` and failed on `x.tar.gz: Cannot stat: No such file or directory`.",
+      },
+      {
+        concept: "-C and --exclude",
+        text: "`--exclude` patterns kept node_modules and server.log out of the archive. GNU tar only applies them when they come before the folder: put after `my-site`, it said `--exclude ‘node_modules’ has no effect`, exited with code 2 and still packed node_modules. `-C ~/restore` unpacked into ~/restore, so the files landed in ~/restore/my-site. With a folder that didn't exist, GNU tar stopped with `Cannot open: No such file or directory`.",
+      },
+      {
+        concept: "one file out",
+        text: "A name after the archive extracts only that member, written exactly as `-t` lists it: `my-site/package.json`, not `package.json`. A name that wasn't in the archive gave `Not found in archive`. A pattern like `'my-site/src/*.js'` found nothing in GNU tar until `--wildcards` was added. bsdtar extracted app.js without it, and refused `--wildcards` as an option it doesn't support.",
+      },
+    ],
+    notes: [
+      "Run with GNU tar 1.35, and with bsdtar 3.8.9 from libarchive. The tar in macOS is Apple's own, older build of bsdtar (github.com/apple-oss-distributions/libarchive). Both packed the same 5 entries from the sample. GNU tar's `v` printed plain names, and bsdtar's put `a` before each file it added and `x` before each file it extracted.",
+      "Where they differ: `-xzf` on a plain .tar stopped GNU tar with `gzip: stdin: not in gzip format`, while bsdtar unpacked it. Both unpacked the .tar.gz with `-xf` and no `z`, because each works out the compression itself when reading.",
+    ],
+    watchOut:
+      "Extracting overwrites files with the same name, without asking. After package.json in ~/restore was changed, extracting the archive into ~/restore again put the archived version back, with no warning and exit code 0. Add `-k` to keep files that already exist: GNU tar then refused each one with `Cannot open: File exists`, and bsdtar skipped them silently. Unpack into an empty folder when you aren't sure what's in an archive.",
+  },
+  {
+    id: "rsync",
+    fileName: "backup.sh",
+    related: ["tar", "ssh-config", "bash"],
+    lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
+    description:
+      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, a yes to go on, --delete and --exclude.",
+    sampleSummary: "A backup script that mirrors a project folder into a backup drive: a dry run first, a prompt that stops unless you type yes, then the real run with `--delete` and `--exclude`.",
+    sample: `# backup.sh: dry run first, then mirror the project into the backup drive
+SRC=~/projects/my-site/      # trailing slash: copy what's inside my-site
+DEST=/mnt/backup/my-site     # so the files land directly in here
+
+# -n = dry run: list what would change, touch nothing
+rsync -avhn --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
+read -rp "Check every line above. Type yes to run it for real: " ok
+[ "$ok" = yes ] || exit 1
+
+# the real run: -a keeps times and permissions, -v lists files, -h sizes in K/M
+# --delete removes files from DEST that are gone from SRC
+rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
+
+# without the trailing slash, rsync would copy the folder itself
+# and make /mnt/backup/my-site/my-site:
+# rsync -avh ~/projects/my-site "$DEST"`,
+    shows: [
+      {
+        concept: "-a, -v and -h",
+        text: "`-a` copies folders inside folders and keeps each file's times and permissions, `-v` lists every file it copies and `-h` writes sizes like `150.03K`. The first real run listed package.json, src/index.html and src/logo.png. Run again with nothing changed, it listed no files at all: rsync skips a file whose size and time already match.",
+      },
+      {
+        concept: "the trailing slash",
+        text: "`~/projects/my-site/` with the slash means what's inside my-site, so package.json landed at /mnt/backup/my-site/package.json. The commented-out last line, run on its own without the slash, copied the folder itself and made /mnt/backup/my-site/my-site, a second full copy one level down. That line has no `--exclude`, so node_modules and server.log came along too.",
+      },
+      {
+        concept: "-n dry run",
+        text: "`-n` printed the same file list as the real run and ended with `(DRY RUN)`. It even printed `created directory`, but the backup folder was still empty afterwards. The `read` line then waits: with SRC pointed at an empty folder, the dry run listed 3 `deleting` lines, and pressing Enter without typing yes stopped the script with both backup entries still there.",
+      },
+      {
+        concept: "--delete and --exclude",
+        text: "After src/index.html was deleted from the project, the next run printed `deleting src/index.html` and removed it from the backup. Without `--delete`, a file deleted from the project stayed in the backup. Excluded files are protected: a node_modules folder already in the backup survived `--delete`, and only `--delete-excluded` removed it.",
+      },
+    ],
+    notes: [
+      "Run with rsync 3.5.0 on Linux, with /mnt/backup as a local folder and a small project of package.json, src/index.html, a 150 KB src/logo.png, node_modules and server.log. The rsync in macOS is Apple's own build, which includes openrsync, a separate program (github.com/apple-oss-distributions/rsync), so its messages and options can differ from these.",
+      "With a typo in the source path, `my-sit/`, rsync printed `change_dir` for that path, then `failed: No such file or directory`, exited with code 23 and deleted nothing.",
+    ],
+    watchOut:
+      "`--delete` makes the backup match the source, even when the source is wrong. With an empty folder as the source, a `--delete` run removed every file in the backup and exited with code 0, as if all went well. Check SRC before a `--delete` run, keep the dry run and the yes prompt, and keep a second copy that the mirror never deletes from.",
+  },
+  {
+    id: "git-rebase",
+    fileName: "git-rebase-todo",
+    related: ["git-log", "git-diff", "gitignore"],
+    lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
+    description:
+      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into the first, rewords one and drops one before a pull request.",
+    sampleSummary: "The todo list `git rebase -i main` opened for a branch of 5 commits, edited to fold 2 fix-up commits into the first, reword one and drop one, with part of git's own help text kept below it.",
+    sample: `pick 7b4c146 # Add discount codes
+fixup c6d63af # wip
+fixup 998ecaf # fix typo
+reword 0c79299 # Use discount in checkout
+drop 803b36d # Add gitignore
+
+# Rebase 94f964d..803b36d onto 94f964d (5 commands)
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
+# d, drop <commit> = remove commit
+# These lines can be re-ordered; they are executed from top to bottom.
+# If you remove a line here THAT COMMIT WILL BE LOST.
+# However, if you remove everything, the rebase will be aborted.`,
+    shows: [
+      {
+        concept: "pick, fixup and squash",
+        text: "Each line is one commit, oldest first, and git runs them from the top. `pick` keeps a commit as it is. The 2 `fixup` lines folded wip and fix typo into Add discount codes and kept only that commit's message, so the debug lines wip added and fix typo took out left no trace. With `squash` for wip and the other lines left as `pick`, git opened the message editor with both messages, Add discount codes and wip, for you to combine.",
+      },
+      {
+        concept: "reword and drop",
+        text: "`reword` kept the change and stopped for a new message: Use discount in checkout became Apply discount codes at checkout. `drop` removed the Add gitignore commit, and its .gitignore file with it. The branch went from 5 commits to 2, and git printed `Successfully rebased and updated refs/heads/feature/discounts`.",
+      },
+      {
+        concept: "new hashes and the push",
+        text: "A rebase writes new commits: the 2 left were 0076ae5 and 1279aa9, and none of the old hashes was on the branch any more. The copy on the remote still pointed at the old tip, 803b36d, so a plain `git push` was rejected as `non-fast-forward`. `git push --force-with-lease` replaced it, and printed `forced update`.",
+      },
+      {
+        concept: "reordering",
+        text: "Lines can be moved, and git applies them in the new order. With fix typo moved above wip, the rebase stopped at fix typo with `The previous cherry-pick is now empty`, because the debug lines it takes out weren't there yet, and exited with code 1. `git rebase --abort` put the branch back to all 5 commits.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 on Linux in a test repo: main with one commit, and a feature/discounts branch of 5 commits by a test author. `GIT_SEQUENCE_EDITOR` supplied the edited todo list and `GIT_EDITOR` the new message, in place of an editor window. The todo list above is the one git wrote, with the 5 commands edited and 17 of its 30 help lines left out.",
+      "Deleting every line stopped the rebase with `error: nothing to do` and left all 5 commits as they were.",
+    ],
+    watchOut:
+      "Deleting a line drops that commit, and git doesn't ask. With the Add gitignore line deleted instead of marked `drop`, the rebase printed `Successfully rebased`, exited with code 0, and .gitignore was gone from the branch. The old commits stay in the repo for a while, and git kept the old tip in ORIG_HEAD, 803b36d here. Because the dropped commit was that tip, `git cherry-pick 803b36d` brought it back.",
+  },
+  {
+    id: "xargs",
+    fileName: "shrink-logs.sh",
+    related: ["find", "grep", "sed"],
+    lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
+    description:
+      "Paste an xargs command and get it explained in plain English, free online. The sample gzips logs at least 8 days old, 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
+    sampleSummary: "A shell script that compresses log files at least 8 days old (`-mtime +7`), 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
+    sample: `# shrink-logs.sh: compress old log files, one gzip per file, 4 at a time
+cd ~/app/logs || exit 1
+
+# -print0 / -0: names end in a NUL byte, so spaces in names are safe
+find . -name '*.log' -mtime +7 -print0 | xargs -0 -P 4 -n 1 gzip -v
+
+# -I {}: put each name where {} is, one command per name
+find . -maxdepth 1 -name '*.log.gz' -print0 | xargs -0 -I {} mv {} archive/
+
+# -r: run nothing if find found nothing (without it, GNU xargs runs once)
+find . -name '*.tmp' -print0 | xargs -0 -r rm -v
+
+# the one that breaks: plain find | xargs splits "error log.log" in two
+find . -name '*.log' | xargs ls -l`,
+    shows: [
+      {
+        concept: "-print0 and -0",
+        text: "xargs reads names from its input and adds them to the end of the command. `-print0` ends each name with a NUL byte and `-0` splits only there, so `jobs 2.log` stayed one name. The last line has neither, and xargs split on the space: ls got `./error` and `log.log`, printed `cannot access` for each, and xargs exited with code 123. A file named it's.log stopped plain xargs with `unmatched single quote`.",
+      },
+      {
+        concept: "-n and -P",
+        text: "`-n 1` gives each command one name, so the 5 old logs ran gzip 5 times. Without `-n`, xargs ran one gzip with all 5 names. `-P 4` runs up to 4 commands at once: 5 jobs that each sleep 1 second took 2.0 seconds with `-P 4` and 5.0 with `-P 1`. Output can mix: the `-v` lines of 4 gzips came out tangled on one line.",
+      },
+      {
+        concept: "-I {}",
+        text: "`-I {}` runs one command per name and puts the name where `{}` is, here in the middle, because `mv` needs the folder last. All 5 .log.gz files ended up in archive/, `jobs 2.log.gz` included, while the 2 newer logs stayed where they were.",
+      },
+      {
+        concept: "-r on empty input",
+        text: "With no .tmp files, find printed nothing, and GNU xargs still ran `rm -v` once with no names: rm printed `missing operand` and xargs exited with code 123. With `-r`, nothing ran and the exit code was 0, which matters in a script that stops on the first error.",
+      },
+    ],
+    notes: [
+      "Run with GNU findutils 4.11.0 (find and xargs) and gzip 1.14 on Linux, in a test logs folder of 7 files: 5 last changed 10 days ago, `jobs 2.log` among them, and 2 new ones, `error log.log` and today.log.",
+      "The xargs in macOS is a BSD version. Its manual in Apple's source (github.com/apple-oss-distributions/shell_cmds, shell_cmds-329) says it doesn't run the command on empty input, and that `-r` is accepted there but does nothing.",
+    ],
+    watchOut:
+      "Plain `find | xargs rm` can delete the wrong file. In a folder with a file named keep and a file named `keep me.tmp`, `find . -name '*.tmp' | xargs rm -v` printed `removed './keep'`, then `cannot remove 'me.tmp'`. The .tmp file was still there and keep was gone. Use `-print0` with `-0` every time a command deletes or moves files.",
+  },
+  {
+    id: "ps-aux",
+    fileName: "ps-aux.txt",
+    related: ["bash", "grep", "awk"],
+    lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
+    description:
+      "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a big Python list, a stopped job and a zombie.",
+    sampleSummary: "`ps aux` output trimmed to the header, PID 1 and 2, and a test session: a Node server, a Python loop using a full CPU core, a Python list of 60 million items, a sleeping job, a stopped job and a zombie.",
+    sample: `$ ps aux   # Linux, procps-ng 4.0.7: the header, PID 1 and 2, then a test session
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.0  21516  4780 ?        Ss   Nov05   0:41 /usr/lib/systemd/systemd --switched-root --system --deserialize=56 splash
+root           2  0.0  0.0      0     0 ?        S    Nov05   0:00 [kthreadd]
+devuser   880085  0.1  0.3 1276360 53804 ?       SNl  21:54   0:00 node -e require("http").createServer((q,r)=>r.end("ok")).listen(4321)
+devuser   880086 99.2  0.0  17632  9512 ?        R<   21:54   0:06 python3 -c while True: pass
+devuser   880087  2.1  2.9 486384 478368 ?       S<   21:54   0:00 python3 -c import time; x = [0] * 60_000_000; time.sleep(600)
+devuser   880088  0.0  0.0   6252  2528 ?        S<   21:54   0:00 sleep 600
+devuser   880089  0.0  0.0  17632  9808 ?        S<   21:54   0:00 python3 -c import os, time if os.fork() == 0: os._exit(0) time.sleep(600)
+devuser   880090  0.0  0.0   6252  2524 ?        T<   21:54   0:00 sleep 600
+devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <defunct>`,
+    shows: [
+      {
+        concept: "USER, PID and COMMAND",
+        text: "Each row is one process: the account that owns it, its ID and the full command line, so `python3 -c while True: pass` tells 3 Python processes apart. PID 1 is systemd, which starts everything else. Names in square brackets like `[kthreadd]` are usually kernel threads, with 0 for VSZ and RSS; the zombie, `[python3] <defunct>`, gets brackets too. START is a clock time for recent processes and a date, `Nov05`, for older ones. TTY is `?` for a process with no terminal.",
+      },
+      {
+        concept: "%CPU and TIME",
+        text: "`99.2` means the loop kept one CPU core busy. In procps, %CPU is CPU time divided by how long the process has existed, not what it is doing right now: a process that was busy for its first 3 seconds and then slept showed 49.8 at 6 seconds and 24.9 at 12. TIME, `0:06` for the loop, is its total CPU time so far.",
+      },
+      {
+        concept: "VSZ and RSS",
+        text: "Both are in KiB. RSS is memory actually in RAM: the list of 60 million items had 478368, about 467 MiB, and %MEM showed 2.9, its share of this machine's 16 GB. VSZ is address space the process has reserved, often far bigger: the Node server's VSZ was 1276360, about 1.2 GiB, with an RSS of only 53804. When something uses too much memory, look at RSS.",
+      },
+      {
+        concept: "STAT letters",
+        text: "The first letter is the state: `R` running, `S` asleep until something happens, `T` stopped (that sleep got `kill -STOP`), `Z` a zombie, a process that has exited but whose parent hasn't collected it yet. Letters after it add detail: `s` leads a session, `l` has more than one thread, `N` runs at low priority and `<` at raised priority.",
+      },
+    ],
+    notes: [
+      "Run with ps from procps-ng 4.0.7 on Linux, on a machine with 12 logical CPUs and 16 GB of RAM. The account name in the sample is a placeholder, devuser, the same length as the real one, so the columns line up as ps printed them.",
+      "`ps aux | grep` lists the grep as well, because its own command line contains the pattern: with 2 test processes running, `grep 'psgreptest'` returned 3 rows, one of them the grep. `grep '[p]sgreptest'` can't match itself, and returned only the 2.",
+      "In Apple's ps manual (github.com/apple-oss-distributions/adv_cmds, adv_cmds-237), `-u` shows user, pid, %cpu, %mem, vsz, rss, tt, state, start, time and command, the same columns. There `I` marks a process asleep for more than about 20 seconds, while procps uses `I` for an idle kernel thread.",
+    ],
+    watchOut:
+      "A zombie can't be killed: it has already exited. `kill -9` on the zombie's PID left it in state `Z`, and it went away only when its parent, the Python process that forked it, was killed. If zombies pile up, the fix is in the parent, which has to wait for its children.",
+  },
+  {
+    id: "systemd",
+    fileName: "notes-api.service",
+    related: ["bash", "env", "cron"],
+    lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
+    description:
+      "Paste a systemd service file and get each line explained in plain English, free online. The sample keeps a small Python API running as a user service and restarts it 2 seconds after a crash.",
+    sampleSummary: "A user service file for a small Python API: the folder it runs in, its settings from `Environment=` and an optional .env file, and a restart 2 seconds after it crashes.",
+    sample: `# notes-api.service: keep a small Python API running, restart it if it crashes
+# install: systemctl --user link ./notes-api.service, then start notes-api
+[Unit]
+Description=Notes API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/apps/notes-api
+Environment=APP_ENV=production PORT=8040
+EnvironmentFile=-%h/apps/notes-api/.env
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target`,
+    shows: [
+      {
+        concept: "[Unit], [Service] and [Install]",
+        text: "`[Unit]` names the service and sets its order, `[Service]` says what to run and how, and `[Install]` is ignored while the service runs: `systemctl --user enable` and `disable` read it (systemd.unit). Enabling it created a link to the file in default.target.wants, the list of what your user session starts. `systemd-analyze --user verify` printed nothing for this file and exited with code 0.",
+      },
+      {
+        concept: "WorkingDirectory= and ExecStart=",
+        text: "`ExecStart=` is the command, with the full path to the program. `%h` is your home folder, so python3 started in ~/apps/notes-api and found app.py there. With that folder missing, systemd printed `Changing to the requested working directory failed` and `Failed at step CHDIR`, then scheduled a restart because of `Restart=on-failure`, which failed the same way.",
+      },
+      {
+        concept: "Environment= and EnvironmentFile=",
+        text: "`Environment=` set APP_ENV=production and PORT=8040, and the app reported both. A .env file with `PORT=8041` won over that line: the app moved to 8041 and 8040 stopped answering. The `-` before the path makes the file optional. Without it, a missing .env stopped the start with `Failed to load environment files: No such file or directory`.",
+      },
+      {
+        concept: "Restart= and RestartSec=",
+        text: "`Restart=on-failure` brings the service back when it exits with an error. When the app exited with code 1, systemd logged `status=1/FAILURE`, then `Scheduled restart job, restart counter is at 1`, and after the 2-second `RestartSec=` wait a new process, with a new PID, answered. When the app exited with code 0, it stayed stopped, because a clean exit isn't a failure.",
+      },
+    ],
+    notes: [
+      "Run with systemd 261 and Python 3.14.7 on Linux as a user service, with no root: `systemctl --user link` pointed systemd at the file and `systemctl --user start notes-api` started it. app.py is a short test server that reports its settings and exits with code 1 or 0 on request.",
+      "After an edit to the file, `systemctl --user status` warned that the unit file `changed on disk` and said to run `systemctl --user daemon-reload` to load the new version.",
+      "`After=network.target` does nothing in a user service. `After=` only sets the order and doesn't start anything by itself (systemd.unit), and network.target belongs to the system service manager: it isn't in the user manager's list of units (systemd.special), and `systemctl --user show network.target` printed `LoadState=not-found`. default.target is the main target of the user service manager (systemd.special).",
+    ],
+    watchOut:
+      "`Restart=on-failure` gives up on a service that keeps crashing. With `RestartSec=0` and the app crashing each time it came back, systemd restarted it 4 times, refused the 5th with `Start request repeated too quickly` and left it failed, with nothing on port 8040. This file doesn't set a limit, so systemd's defaults applied: 5 starts in 10 seconds (`StartLimitBurst=` and `StartLimitIntervalSec=`). After fixing the cause, `systemctl --user reset-failed notes-api` clears that state so you can start it right away.",
+  },
+  {
+    id: "terraform",
+    fileName: "main.tf",
+    related: ["yaml", "json", "ini"],
+    lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
+    description:
+      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only the local and random providers, so it runs without a cloud account.",
+    sampleSummary: "A main.tf that pins 2 providers, takes an `env` variable, makes a random name and writes it into a JSON file, then prints the name as an output.",
+    sample: `# main.tf: write a small config file with a random name, no cloud account needed
+terraform {
+  required_providers {
+    local  = { source = "hashicorp/local", version = "2.9.1" }
+    random = { source = "hashicorp/random", version = "3.9.1" }
+  }
+}
+
+variable "env" {
+  type    = string
+  default = "staging"
+}
+
+resource "random_pet" "name" {
+  keepers = { env = var.env }
+}
+
+resource "local_file" "config" {
+  filename = "\${path.module}/out/\${var.env}.json"
+  content  = jsonencode({ env = var.env, name = random_pet.name.id })
+}
+
+output "app_name" {
+  value = random_pet.name.id
+}`,
+    shows: [
+      {
+        concept: "providers and init",
+        text: "`required_providers` says which plugins the code needs and pins their versions. `terraform init` downloaded hashicorp/local v2.9.1 and hashicorp/random v3.9.1, printed `signed by HashiCorp` for each, and wrote .terraform.lock.hcl with those versions. Terraform's own message says to commit that lock file so later `terraform init` runs pick the same versions.",
+      },
+      {
+        concept: "resources and references",
+        text: "Each `resource` block is one thing Terraform manages. `random_pet.name.id` points at the name the first resource makes, so Terraform created random_pet first and the file second, and wrote out/staging.json with `{\"env\":\"staging\",\"name\":\"immense-dassie\"}`. A typo, `random_pet.nme.id`, stopped `terraform validate` with `Reference to undeclared resource`.",
+      },
+      {
+        concept: "plan and apply",
+        text: "`terraform plan` lists what would change and changes nothing: `Plan: 2 to add, 0 to change, 0 to destroy`. `apply` does it, but asks first: `Only 'yes' will be accepted to approve.` Answering no printed `Apply cancelled.` and created nothing, and `-auto-approve` skips the question. Run again with nothing changed, apply printed `No changes. Your infrastructure matches the configuration.`",
+      },
+      {
+        concept: "variables and outputs",
+        text: "`env` defaults to staging, and `-var env=production` changes it for one run. The `output` printed `app_name = \"immense-dassie\"` after the first apply, and `terraform output` prints it again any time. Because the name's `keepers` include `env`, changing env made a new name, powerful-giraffe, instead of keeping the old one.",
+      },
+    ],
+    notes: [
+      "Run with Terraform 1.17.1 on Linux, downloaded from releases.hashicorp.com and checked against HashiCorp's signed checksums, in a new folder holding only main.tf, with no backend, so the state stayed in a local terraform.tfstate. No cloud account or credentials were used.",
+      "When out/production.json was deleted by hand, the next plan noticed and planned to write it again: `local_file.config will be created`, `Plan: 1 to add`.",
+    ],
+    watchOut:
+      "Changing one value can destroy things, not just edit them. With `-var env=production`, the plan said `must be replaced` for both resources and ended `Plan: 2 to add, 0 to change, 2 to destroy`. Apply deleted out/staging.json and replaced the name. Read the destroy count in every plan before you type yes. The state file also keeps a copy of what it wrote: terraform.tfstate held the JSON file's full content in plain text, so never commit it.",
+  },
+  {
+    id: "assembly",
+    fileName: "sum.s",
+    related: ["c", "cpp", "make"],
+    lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
+    description:
+      "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64 for a Mac, with its registers and loop.",
+    sampleSummary: "A 7-line C function that adds up an array of ints, and the arm64 assembly clang 22.1.8 made from it at `-O1` for macOS: 13 instructions, with the C on top as comments.",
+    sample: `; sum.c (clang 22.1.8, -O1, arm64-apple-macos)
+; int sum(const int *nums, int count) {
+;     int total = 0;
+;     for (int i = 0; i < count; i++) {
+;         total += nums[i];
+;     }
+;     return total;
+; }
+	.globl	_sum                            ; -- Begin function sum
+_sum:                                   ; @sum
+	cmp	w1, #1
+	b.lt	LBB0_4
+	mov	w8, #0                          ; =0x0
+	mov	w9, w1
+LBB0_2:                                 ; =>This Inner Loop Header: Depth=1
+	ldr	w10, [x0], #4
+	add	w8, w10, w8
+	subs	x9, x9, #1
+	b.ne	LBB0_2
+	mov	x0, x8
+	ret
+LBB0_4:
+	mov	w8, #0                          ; =0x0
+	mov	x0, x8
+	ret`,
+    shows: [
+      {
+        concept: "registers and arguments",
+        text: "The C names are gone, and registers hold the values. Arm's calling convention, the AAPCS64, passes the first 8 integer and pointer arguments in `x0` to `x7` and returns the result in `x0`, so `nums` arrives in `x0`, `count` in `w1`, and `mov x0, x8` hands back the total. `w1` is the low 32 bits of `x1`, the size of an `int`. A caller built the same way put the array's address in `x0` and 4 in `w1`, then jumped to `_sum`.",
+      },
+      {
+        concept: "compare and branch",
+        text: "`cmp w1, #1` and `b.lt LBB0_4` skip the loop when `count` is less than 1, and LBB0_4 returns 0. The loop is the 4 instructions after LBB0_2: `ldr w10, [x0], #4` loads one int and moves `x0` 4 bytes on to the next one, `add` adds it to the total in `w8`, `subs` takes 1 off a copy of `count` in `x9`, and `b.ne` jumps back until that copy reaches 0. No register counts `i` up: the compiler counts down instead.",
+      },
+      {
+        concept: "-O0 and -O1",
+        text: "At `-O0` the same function was 25 instructions, with a loop of 16. It kept `nums`, `count`, `total` and `i` in memory on the stack and loaded them again on every pass: 13 of its instructions read or write `[sp, ...]`. At `-O1` it was 13 instructions with a loop of 4, and none of them touched the stack.",
+      },
+      {
+        concept: "arm64 and x86-64",
+        text: "The same C built for x86-64 Linux is a different instruction set: `testl` and `jle` instead of `cmp` and `b.lt`, `nums` in `rdi` and `count` in `esi`, and a loop that adds straight from memory with one `addl (%rdi,%rdx,4), %eax`. Every arm64 instruction took 4 bytes, and the x86-64 ones took 1 to 6. Linked with a test `main` and run, it returned 16 for 3, 5, -2 and 10, 0 for a count of 0 or -3, and 703 for the numbers 1 to 37.",
+      },
+    ],
+    notes: [
+      "Built with clang 22.1.8 on Linux. `clang --target=arm64-apple-macos -O1 -S` writes assembly text instead of building a program, so no Mac was needed. The sample is the `_sum` function from that output with the C added as `;` comments. Left out: `.p2align 2`, `.cfi_startproc`, `.cfi_endproc`, 3 `; %bb.N:` block comments and the output's first 2 and last 2 lines. The trimmed text still assembled to the same 13 instructions, byte for byte. The arm64 code wasn't run: the results come from x86-64 builds of the same C, run on Linux.",
+      "At `-O2` the function grew to 62 instructions and 3 loops. The main loop loads 4 128-bit `q` registers per pass, adds them with `add.4s` and counts down by 16, so it takes 16 ints at a time. A second loop takes 4 at a time, and the `-O1` loop is left for the last few. The x86-64 `-O2` build still returned the same 4 results.",
+      "Apple's guide Writing ARM64 code for Apple platforms (developer.apple.com) says macOS follows the 64-bit Arm standard apart from a few listed differences, such as `x18` being reserved. None of them changes the registers used here.",
+    ],
+    watchOut:
+      "The function you're looking for may not be in the assembly at all. With `sum` and a `main` that calls it in one file, `-O1` turned `main` into 2 instructions, `mov w0, #16` and `ret`: the compiler worked out the total of 3, 5, -2 and 10 itself, and nothing calls `sum`, though it is still in the file. In the x86-64 build, a gdb breakpoint on `sum` never stopped, and the program exited with 16. At `-O0`, `main` calls `sum`.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
@@ -2871,6 +3679,14 @@ export function explainLanguage(page: ExplainPage): Language {
   const language = languages.find((entry) => entry.id === page.id);
   if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
   return language;
+}
+
+/** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
+export function explainLinks(page: ExplainPage): { related: ExplainPage[]; others: ExplainPage[] } {
+  const relatedIds = page.related ?? [];
+  const related = relatedIds.flatMap((id) => explainPages.filter((other) => other.id === id));
+  const others = explainPages.filter(({ id }) => id !== page.id && !relatedIds.includes(id));
+  return { related, others };
 }
 
 /** Every /explain URL path, index first. */

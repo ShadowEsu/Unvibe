@@ -20,7 +20,7 @@ export function GetUnvibe({ surface }: { surface: DownloadSurface }) {
   if (device === "phone") {
     return (
       <div className="get-unvibe">
-        <a className="paper-join paper-join--mac" href="/#email-link" onClick={() => track("email_link_cta_clicked", { surface })}>
+        <a className="paper-join paper-join--mac" href="/beta#email-link" onClick={() => track("email_link_cta_clicked", { surface })}>
           <span className="paper-join__label">Email me the link</span>
         </a>
       </div>

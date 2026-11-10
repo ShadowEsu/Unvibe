@@ -46,7 +46,7 @@ export const STEPS: readonly HowStep[] = [
     id: "test",
     label: "Test me",
     title: "Check that it stuck.",
-    body: "Test me writes a question about this exact code.",
+    body: "Test me writes a question about this exact code, and up to 3 if you want more.",
     image: shot0149("panel-test-me", "A multiple-choice Test me question about the debounce sample"),
     caption: SHOT_CAPTION,
   },

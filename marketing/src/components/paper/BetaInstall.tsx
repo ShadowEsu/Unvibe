@@ -54,7 +54,7 @@ export function BetaInstall({
         <>
           <a
             className="paper-beta__download-btn"
-            href="/#email-link"
+            href="/beta#email-link"
             onClick={() => track("email_link_cta_clicked", { surface: `install_${tone}` })}
           >
             <span>Email me the link</span>

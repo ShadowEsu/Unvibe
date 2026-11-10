@@ -3,10 +3,9 @@ import {
   compensationCreditsUsd,
   compensationProgramCount,
   compensationTotalLabel,
-  creditSourcesLabel,
   formatUsd,
   PROGRAM_NOTICES,
-  programsWithoutAmountCount,
+  programsOutsideTotalCount,
   startupProgramsLine,
   supportRows,
 } from "@/data/compensation";
@@ -49,7 +48,7 @@ export const KIT_ASSETS: KitAsset[] = [
   { name: "Vibe icon 1024 (PNG)", path: "/brand/vibe-icon-1024.png", use: "Avatars, socials, directory listings", kind: "image" },
   { name: "App icon 1024", path: "/brand/icon-1024.png", use: "The Mac and Windows app icon, app store style", kind: "image" },
   { name: "Outreach email banner", path: "/email/outreach-banner.png", use: "Top of cold outreach emails", kind: "image" },
-  { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Top of waitlist and download emails", kind: "image" },
+  { name: "Welcome email banner", path: "/email/welcome-banner.png", use: "Older welcome emails (file kept for sent mail)", kind: "image" },
   { name: "Social preview", path: OG_CARDS.home.file, use: "Link previews, social posts", kind: "image" },
   { name: "Product demo video", path: "/videos/unvibe-real-demo.mp4", use: "A real recorded session: explain, depth, follow-up, Test me", kind: "video" },
   { name: "Screenshot: home", path: "/product/v3/home-today.jpg", use: "What the app looks like", kind: "image" },
@@ -90,12 +89,12 @@ export function kitSections(): KitSection[] {
         `Desktop app for Mac and Windows. Latest version ${BETA_INSTALL_VERSION}. ${releases}+ releases shipped.`,
         "Works beside Cursor, VS Code, Claude Code and Terminal. It does not replace your editor.",
         "Five explanation depths: New, Beginner, Intermediate and Advanced are free. Expert is Pro.",
-        "Test me: one quick question to check you understood. Lessons are saved to a library.",
+        "Test me: a question about the exact code, and up to 3 if you want more, to check you understood. Lessons are saved to a library.",
         "After-Agent Review (in Briefs, free): when an agent changes many files, Unvibe ranks the real diff by what deserves a human look. Pro adds the AI explanation of the diff.",
         "Privacy: the code you select and a Brief's git changes are scanned for keys and tokens on your computer before they are sent; from app 0.1.44, typed questions and Chat are scanned too. There is no file exclusion list. Unvibe does not build a training dataset from your code.",
         `Pro: $${PRICING.proMonthly}/month or $${PRICING.proAnnual}/year. Teams: $${PRICING.teamsSeatMonthly} per seat per month, not on sale yet (early access by email). ${proSentence()}`,
         `Invite a friend: ${GIFT_OFFER} Months stack, up to 12 months ahead, and are never applied to an active paid subscription. ${GIFT_LINK_NOTE}`,
-        "Unvibe is in Claude for Startups, Anthropic's startup program (API credits, Claude Team for 12 months, perks from other tools worth about $21.5K to $23K).",
+        "Unvibe is in Claude for Startups, Anthropic's startup program.",
       ],
     },
     {
@@ -111,13 +110,13 @@ export function kitSections(): KitSection[] {
         "Objection: \"Is it really free?\" Answer: yes. Change Briefs are free too. Pro adds Expert depth, the AI explanation of a Brief and nearby-file context, and signing in to the app gives you a free month of Pro.",
         AI_MAINTENANCE
           ? `Call to action: ${SITE} (download).`
-          : `Call to action: ${SITE} (download), or try it online on the homepage (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
+          : `Call to action: ${SITE} (download), or try it online at ${SITE}/explain (the pasted code goes to Unvibe and Anthropic's Claude API) with no install.`,
       ],
     },
     {
       id: "investors",
       title: "Persuading investors",
-      intro: `Unvibe is live, free, and shipping fast. Support secured with an amount on record: ${total}, of which ${formatUsd(compensationCreditsUsd())} is ${creditSourcesLabel()} credits and ${formatUsd(compensationCashUsd())} is committed cash. Unvibe is in ${compensationProgramCount()} startup programs; ${programsWithoutAmountCount()} of them are listed with their terms and no amount, so never add a figure for them. Credits are not cash, and this is not a priced round. Never say it is.`,
+      intro: `Unvibe is live, free, and shipping fast. Support secured with an amount on record: ${total}, of which ${formatUsd(compensationCreditsUsd())} is startup-program credits and plan value and ${formatUsd(compensationCashUsd())} is committed cash. Unvibe is in ${compensationProgramCount()} startup programs${programsOutsideTotalCount() > 0 ? `; ${programsOutsideTotalCount()} of them have no figure, so never add one for them` : ", each with an amount on record"}. Credits are not cash, and this is not a priced round. Never say it is.`,
       bullets: [
         "Problem: developers ship AI-generated code faster than they can confidently explain or maintain it. Knowledge rots the moment code changes.",
         "Product: select code, press one key, get an in-place explanation at five depths, a quiz, a saved lesson, and a review of what the agent changed.",
@@ -156,8 +155,8 @@ export function kitSections(): KitSection[] {
       title: "Links",
       bullets: [
         `Site and download: ${SITE}`,
-        `Mac direct download: ${BETA_MAC_DIRECT_DOWNLOAD}`,
-        `Windows direct download: ${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
+        `Mac direct download: ${SITE}${BETA_MAC_DIRECT_DOWNLOAD}`,
+        `Windows direct download: ${SITE}${BETA_WINDOWS_DIRECT_DOWNLOAD}`,
         `Pricing: ${SITE}/pricing`,
         `Investors: ${SITE}/investors`,
         `About: ${SITE}/about`,

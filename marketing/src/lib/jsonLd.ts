@@ -23,12 +23,16 @@ export function breadcrumbJsonLd(crumbs: readonly { name: string; path: string }
   };
 }
 
-/** The site itself, for the homepage. No SearchAction: the site has no search results URL. */
+/**
+ * The site itself, for the homepage. No SearchAction: the site has no search results URL. `alternateName` gives
+ * Google other names it may show for the site (its site-name guidance).
+ */
 export const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "@id": `${SITE_URL}/#website`,
   name: "Unvibe",
+  alternateName: ["Unvibe app", "Unvibe.site"],
   url: SITE_URL,
   inLanguage: "en",
   publisher: { "@id": `${SITE_URL}/#org` },

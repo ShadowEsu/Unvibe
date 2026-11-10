@@ -51,11 +51,14 @@ describe("site load source (Security E1-2: utm_source only, closed list)", () =>
     }
   });
 
-  it("matches the allowlist migration 0013 seeds, so no counted source is refused by the foreign key", () => {
-    const sql = readFileSync(path.join(process.cwd(), "supabase/migrations/0013_site_load_days.sql"), "utf8");
-    const insert = sql.slice(sql.indexOf("insert into public.site_load_sources"), sql.indexOf("on conflict (source)"));
-    const seeded = Array.from(insert.matchAll(/\('([a-z0-9]+)'\)/g), (m) => m[1]).sort();
-    assert.deepEqual(seeded, [...SITE_LOAD_SOURCES, "none", "other"].sort());
+  it("matches the allowlist migrations 0013 and 0014 seed, so no counted source is refused by the foreign key", () => {
+    const seeded = ["0013_site_load_days.sql", "0014_download_days.sql"].flatMap((file) => {
+      const sql = readFileSync(path.join(process.cwd(), "supabase/migrations", file), "utf8");
+      const insert = sql.slice(sql.indexOf("insert into public.site_load_sources"), sql.indexOf("on conflict (source)"));
+      return Array.from(insert.matchAll(/\('([a-z0-9]+)'\)/g), (m) => m[1]);
+    });
+    assert.equal(new Set(seeded).size, seeded.length, "no source is seeded twice");
+    assert.deepEqual(seeded.sort(), [...SITE_LOAD_SOURCES, "none", "other"].sort());
   });
 });
 
@@ -86,10 +89,10 @@ describe("which requests count as a page load", () => {
     }
     const cubot = "Mozilla/5.0 (Linux; Android 12; CUBOT X50) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36";
     assert.equal(isCountedLoad(doc({ headers: { "user-agent": cubot } })), true);
-    for (const p of ["/console", "/console/users", "/stats", "/stats.html", "/waitlist", "/waitlist-admin", "/s/k3y", "/activate", "/redeem"]) {
+    for (const p of ["/console", "/console/users", "/stats", "/stats.html", "/waitlist", "/waitlist-admin", "/s/k3y", "/activate", "/redeem", "/survey", "/download/mac", "/download/mac-intel", "/download/windows"]) {
       assert.equal(isCountedLoad(doc({ pathname: p })), false, p);
     }
-    for (const p of ["/statsig-alternatives", "/consoles", "/use-cases/s3", "/security"]) {
+    for (const p of ["/statsig-alternatives", "/consoles", "/use-cases/s3", "/security", "/surveys-guide", "/download/thanks", "/download/macos-guide"]) {
       assert.equal(isCountedLoad(doc({ pathname: p })), true, p);
     }
   });

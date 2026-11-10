@@ -47,6 +47,12 @@
   text-wrap: pretty;
 }
 
+/* A flag or name in the lead never splits across lines ("--" / "delete" read as 2 commands; Design S-1 on #244).
+   The longest inline code in any lead is 14 characters, so it fits at 320 px. Copying keeps the plain hyphens. */
+.explain-head p code {
+  white-space: nowrap;
+}
+
 .explain-crumb {
   color: var(--explain-muted);
   font-size: 0.95rem;
@@ -187,4 +193,11 @@
 
 .explain-more a:hover {
   background: color-mix(in srgb, var(--v-ink) 6%, var(--v-card));
+}
+
+/* Between the Related row and the full list in the same card. */
+.explain-more__rule {
+  margin: 1.4rem 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--v-ink) 18%, transparent);
 }

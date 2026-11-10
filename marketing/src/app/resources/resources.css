@@ -71,6 +71,24 @@
   line-height: 1.55;
 }
 
+/* One plain line under a section's cards, on the same sheet as the section lead (pages.css) so the code art behind
+   never runs through it; its link keeps the sentence's size. */
+.resources-section__more {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: var(--u-sheet);
+  color: var(--u-text);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.resources-section__more .paper-text-link {
+  font-size: inherit;
+}
+
 .resources-grid {
   display: grid;
   gap: 1.25rem;

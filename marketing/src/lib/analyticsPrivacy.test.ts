@@ -182,11 +182,11 @@ describe("analytics privacy config", () => {
     assert.deepEqual(none, [], "nothing loaded: nothing to sync or flush");
   });
 
-  it("admin and capability pages load no analytics SDK", () => {
-    for (const path of ["/console", "/waitlist", "/waitlist-admin", `/s/${STATS_KEY}`]) {
+  it("admin, capability and survey pages load no analytics SDK", () => {
+    for (const path of ["/console", "/waitlist", "/waitlist-admin", `/s/${STATS_KEY}`, "/survey"]) {
       assert.equal(analyticsAllowedOnPath(path), false, path);
     }
-    for (const path of ["/", "/pricing", "/activated-not-a-page", "/redeemed-not-a-page", "/app", "/waitlisted-not-a-page", "/support"]) {
+    for (const path of ["/", "/pricing", "/activated-not-a-page", "/redeemed-not-a-page", "/app", "/waitlisted-not-a-page", "/support", "/surveys-guide"]) {
       assert.equal(analyticsAllowedOnPath(path), true, path);
     }
   });

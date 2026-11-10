@@ -34,18 +34,14 @@ describe("unvibe.site sends the C3 policies on every page (Security C3)", () => 
     assert.doesNotMatch(reportOnlyCsp({ api: "not a url", supabase: "" }), /not a url/);
   });
 
-  it("every badge is served from unvibe.site, and img-src allows exactly the after-Allow badge origins", () => {
+  it("every badge is served from unvibe.site, and img-src names no third-party host (Security B1)", () => {
     const imgSrc = reportOnlyCsp().split("; ").find((d) => d.startsWith("img-src ")) ?? "";
-    const hosts = new Set<string>();
     for (const badge of listingBadges) {
       assert.ok(badge.src.startsWith("/badges/"), `${badge.name}: ${badge.src} is not self-hosted`);
       assert.ok(existsSync(path.join("public", badge.src)), `${badge.name}: public${badge.src} is missing`);
-      if (!("remoteSrc" in badge)) continue;
-      const host = new URL(badge.remoteSrc).origin;
-      hosts.add(host);
-      assert.ok(imgSrc.includes(` ${host}`), badge.name);
     }
-    assert.deepEqual([...LISTING_IMAGE_HOSTS].sort(), Array.from(hosts).sort());
+    assert.deepEqual(LISTING_IMAGE_HOSTS, []);
+    assert.equal(imgSrc, "img-src 'self' data: blob:");
   });
 
   it("no form on either site posts to another origin (form-action 'self' would block it)", () => {

@@ -16,15 +16,15 @@ The site sends one kind of email automatically, in the Unvibe team's voice.
 
 | Asset | URL | Use |
 | --- | --- | --- |
-| Welcome banner | https://unvibe.site/email/welcome-banner.png | Waitlist and download emails |
+| Welcome banner | https://unvibe.site/email/welcome-banner.png | Older welcome emails (file kept for sent mail) |
 | Site | https://unvibe.site | Main link |
 | Pro | https://unvibe.site/pricing | "Want Pro?" link |
 | Pro months / referrals | https://unvibe.site/rewards?ref=CODE | Person's own progress |
 
 ## 1. Waitlist / download email (automatic)
 
-Template: `marketing/src/emails/welcome.ts`. The site sends it once to every new waitlist signup and every download with an email. Sections: banner, "Congrats, you're in early!", get the app, Want Pro?, their invite link, feedback for another month, thanks from the Unvibe team.
+Template: `marketing/src/emails/welcome.ts`. The site sends it once to every new waitlist signup and every download with an email. Copy: unvibe-support's onboarding email 1 (Security S-2 0002): the one-line install commands for Mac and Windows, a "Get Unvibe" button to /beta, the install-help link for the first-open warning, and a footer that says whether the one setup tip follows. It has no invite link and no Pro-month offer.
 
-- **Invite link:** `https://unvibe.site/?ref=CODE`. CODE is the first 8 hex characters of sha256(lowercased email) and is in `waitlist_entries.referral_code`. When a new person joins with it, both get a month of Pro (max five friends, stacks).
-- **Feedback link:** signed per email by the site (`REWARD_LINK_SECRET`). Stars plus at least 8 words earns one more month, once per email. Agents cannot make these links by hand; the site generates them.
+- **Setup tip (email 2):** `marketing/src/lib/sendBetaDownloadEmail.ts`, scheduled by Resend for 1 day later, only for people who ticked "Also email me one setup tip tomorrow". It is the last scheduled mail for that address; adding any other lifecycle email means changing its footer in the same PR (Security O-3).
+- **Feedback links** in older welcome emails still work: they are signed per email by the site (`REWARD_LINK_SECRET`) and checked by `/feedback`.
 - **Do not** send it twice to the same person. `waitlist_entries.beta_email_status = 'sent'` means they already have it.
