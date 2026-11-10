@@ -1,0 +1,44 @@
+name: QA web app on a Mac (Chrome policy install)
+
+# QA only (ledger 591 C, the lead's ask; Security GO 20261109-1910 L53): the Unvibe web app (unvibe.site's manifest,
+# #274) installed by Chrome's WebAppInstallForceList policy on a clean GitHub macos-latest runner, then opened from the
+# app shim Chrome made, with Chrome open and with Chrome closed (webapp-mac.sh). No Try request, no desktop-app install,
+# no hosted-AI call. Runs only when the commit message holds "[webapp-mac]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-webapp-mac
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    if: contains(github.event.head_commit.message, '[webapp-mac]')
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: Chrome policy install, the shim, launch with Chrome open and closed, dialogs, net log
+        run: bash .github/qa/webapp-mac.sh "$RUNNER_TEMP/m"
+
+      - name: Close Chrome (whatever happened)
+        if: always()
+        run: pkill -x "Google Chrome" 2>/dev/null || true
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: webapp-mac
+          path: ${{ runner.temp }}/m
+          retention-days: 14
