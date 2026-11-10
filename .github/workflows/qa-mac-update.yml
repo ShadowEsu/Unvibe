@@ -1,6 +1,6 @@
 name: QA Mac update
 
-# QA only (PB-4 U-1, ledger 591): the released 0.1.49 on a clean Mac updates itself to the published 0.1.50 through the
+# QA only (PB-4 U-1, ledger 591): the released FROM (0.1.50) on a clean Mac updates itself to the published TO (0.1.51) through the
 # app's own check and install (mac-update.sh): offered, downloaded, SHA256SUMS + codesign -R pin + version checked by
 # the app's helper, swapped in, reopened; the installed app passes codesign -R=<release pin>, its app.asar is the
 # release's, the profile is kept. No hosted-AI call. Runs only when the commit message holds "[mac-update]".
@@ -35,9 +35,9 @@ jobs:
     timeout-minutes: 60
     env:
       INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
-      FROM: "0.1.49"
-      TO: "0.1.50"
-      WANT_ASAR: 77100f96caa2181866f4b0f470acf9fbaca83fcc6cf2c83ef1e0157dfc05f5a6
+      FROM: "0.1.50"
+      TO: "0.1.51"
+      WANT_ASAR: 971292ed004438fb6b5b15904623d9f33d589b3ebaeaabefb74234becfc47f2b
       ARCH: ${{ matrix.arch }}
     steps:
       - name: Require the QA flag token
@@ -59,7 +59,7 @@ jobs:
       - name: Set up (screenshot permission, window helper)
         run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
 
-      - name: 0.1.49 installed, the app's own update to 0.1.50, then the installed app checked
+      - name: FROM installed, the app's own update to TO, then the installed app checked
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/mac-update.sh "$RUNNER_TEMP/m"

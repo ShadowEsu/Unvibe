@@ -1,10 +1,10 @@
 #!/bin/bash
-# QA PB-4 U-1 (ledger 591): a released 0.1.49 install on a clean Mac updates itself to the published 0.1.50 the way a
+# QA PB-4 U-1 (ledger 591): a released FROM install on a clean Mac updates itself to the published TO the way a
 # user's does: the app's own update check (GitHub releases API, drafts skipped) must offer TO, and the app's own
 # install (download, SHA256SUMS check, helper script: codesign -R with the release pin + version, swap, reopen) must
 # leave TO at /Applications, signed with the pin, its app.asar = WANT_ASAR, the profile (install id) kept, running.
 # No hosted-AI call. Usage: mac-update.sh <out dir>
-# Env: FROM (0.1.49), TO (0.1.50), WANT_ASAR, ARCH (arm64|x64), INSTALL_ID (qa-…), UNVIBE_QA_FLAG_TOKEN, RUNNER_TEMP
+# Env: FROM (e.g. 0.1.50), TO (e.g. 0.1.51), WANT_ASAR, ARCH (arm64|x64), INSTALL_ID (qa-…), UNVIBE_QA_FLAG_TOKEN, RUNNER_TEMP
 set +e -uo pipefail
 out="$1"; mkdir -p "$out"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -30,7 +30,7 @@ flag() { # <label>
   done
   r "QA flag ($1): $code matched=${matched:-none} after 60 s"; return 1
 }
-# Any macOS question for Unvibe (System Events, from 0.1.49's launch or the updated app's): pictured, answered Allow
+# Any macOS question for Unvibe (System Events, from FROM's launch or the updated app's): pictured, answered Allow
 # as most people do, so it can't hold anything else up. By position: Don't Allow left, Allow right, 30 points up.
 answer_question() { # <label>
   local q wid px py pw ph
