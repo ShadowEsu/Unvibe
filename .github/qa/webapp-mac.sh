@@ -14,6 +14,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 W="$RUNNER_TEMP/gkwin"
 r() { echo "$*" | tee -a "$out/report.txt"; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+t() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; } # `open` waits while a first-open dialog is up (run 42749006494)
 CH="/Applications/Google Chrome.app"
 UD="$HOME/Library/Application Support/Google/Chrome"
 APPS="$HOME/Applications/Chrome Apps.localized"
@@ -42,7 +43,7 @@ echo setup > "$out/.phase"; : > "$out/dialogs.txt"; : > "$out/.seen"
 ) & watcher=$!
 
 start_chrome() { # <net log file> <url>: Chrome as a user starts it, plus a net log
-  open -a "$CH" --args --no-first-run --no-default-browser-check --log-net-log="$out/$1" --net-log-capture-mode=Default "$2"
+  t 30 open -a "$CH" --args --no-first-run --no-default-browser-check --log-net-log="$out/$1" --net-log-capture-mode=Default "$2"
   local i; for i in $(seq 1 30); do pgrep -x "Google Chrome" > /dev/null && return 0; sleep 1; done; return 1
 }
 quit_chrome() { # SIGTERM is Chrome's clean exit (the net log is closed)
@@ -72,6 +73,11 @@ back=$(defaults export com.google.Chrome - | python3 -c 'import plistlib,sys; pr
 r "policy (user defaults com.google.Chrome WebAppInstallForceList): $(defaults read com.google.Chrome WebAppInstallForceList | tr -s ' \n' ' ')"
 r "$([ "$back" = "$URL" ] && echo PASS || echo FAIL)  the policy's url reads back as $back"
 
+# The runner's Chrome is quarantined (Homebrew Cask), so with Gatekeeper on its own first open asks "“Google Chrome” is
+# an app downloaded from the Internet" (run 42749006494, which hung there). Someone who uses Chrome answered that once
+# long ago, so it is cleared here as that stand-in; it is about Chrome, not the web app.
+r "Chrome's quarantine before: $(xattr -p com.apple.quarantine "$CH" 2>/dev/null || echo none)"
+sudo xattr -dr com.apple.quarantine "$CH" 2>/dev/null; r "Chrome's quarantine now: $(xattr -p com.apple.quarantine "$CH" 2>/dev/null || echo none) (stand-in for a Chrome the user already opened)"
 mkdir -p "$UD"; touch "$UD/First Run"
 echo install > "$out/.phase"
 route=user
@@ -123,7 +129,7 @@ r "$([ -z "$q" ] && echo PASS || echo NOTE)  com.apple.quarantine on the shim: $
 
 # 3 Launch 1, Chrome open: the shim opened as a user opens it from ~/Applications or the Dock.
 echo launch-1-warm > "$out/.phase"
-t_l1=$(now); open -a "$shim"; rc=$?
+t_l1=$(now); t 30 open -a "$shim"; rc=$?
 r "LAUNCH 1 (Chrome open): open -a \"$shim\" at $t_l1, exit $rc"
 sleep 12
 shoot 2-launch1
@@ -133,7 +139,7 @@ sleep 3
 
 # 4 Launch 2, Chrome closed: the shim starts Chrome (no net log; nothing pressed).
 echo launch-2-cold > "$out/.phase"
-t_l2=$(now); open -a "$shim"; rc=$?
+t_l2=$(now); t 30 open -a "$shim"; rc=$?
 r "LAUNCH 2 (Chrome closed): open -a \"$shim\" at $t_l2, exit $rc"
 sleep 20
 shoot 3-launch2
@@ -148,8 +154,8 @@ for l in 2-launch1 3-launch2; do
 done
 
 # 6 Dialogs and the net log.
-gk=$(grep -c CoreServicesUIAgent "$out/dialogs.txt")
-r "$([ "$gk" = 0 ] && echo PASS || echo FAIL)  Gatekeeper (CoreServicesUIAgent) dialogs: $gk"
+gk=$(grep -E 'phase launch-' "$out/dialogs.txt" | grep -c CoreServicesUIAgent)
+r "$([ "$gk" = 0 ] && echo PASS || echo FAIL)  Gatekeeper (CoreServicesUIAgent) windows while the web app opened (launches 1 and 2): $gk"
 r "every system dialog seen: $([ -s "$out/dialogs.txt" ] && tr '\n' ';' < "$out/dialogs.txt" || echo none)"
 tries=0
 for f in "$out"/netlog-*.json; do
