@@ -60,6 +60,17 @@ rm -rf "$ud"; mkdir -p "$ud"; printf '{"installId":"%s"}' "$INSTALL_ID" > "$ud/u
 printf '{"onboarded":true,"theme":"light"}' > "$ud/unvibe-settings.json"
 flag pre || { r "FAIL  QA pre-flag: not 200, so nothing is launched"; exit 1; }
 
+# The app's update check is GitHub's unauthenticated API (60 an hour per IP; a runner shares its IP). The run needs
+# about 3 calls, so with fewer than 6 left it waits for the reset (at most 30 min) before the app starts.
+rl() { curl -s -m 15 https://api.github.com/rate_limit | python3 -c 'import json,sys; c=json.load(sys.stdin)["resources"]["core"]; print(c["remaining"], c["reset"])' 2>/dev/null; }
+read -r left reset <<< "$(rl)"
+r "GitHub API from this runner (unauthenticated): ${left:-?} calls left this hour, reset $(date -u -r "${reset:-0}" +%H:%M:%SZ 2>/dev/null)"
+if [ -n "${left:-}" ] && [ "$left" -lt 6 ]; then
+  wait_s=$(( reset - $(date +%s) + 5 )); (( wait_s > 1800 )) && wait_s=1800
+  r "NOTE  waiting $wait_s s for the runner's GitHub API reset"; (( wait_s > 0 )) && sleep "$wait_s"
+  read -r left reset <<< "$(rl)"; r "GitHub API now: ${left:-?} calls left"
+fi
+
 # 2 FROM, opened through LaunchServices with the debug port (the update path is the app's own, pressed through it).
 open -a "$APP" --args --remote-debugging-port=9229
 for i in $(seq 1 30); do answer_question "1-from-launch" && break; sleep 1; done
@@ -69,7 +80,7 @@ flag first-contact || r "FAIL  QA flag after first contact"
 # 3 The app's own check, then its own install (mac-update.mjs prints "KEY value" lines).
 cp "$here/mac-update.mjs" "$RUNNER_TEMP/pw/"
 t0=$(date +%s)
-t 400 node "$RUNNER_TEMP/pw/mac-update.mjs" "$out" "$TO" "$ARCH" > "$out/mac-update.log" 2>&1
+t 900 node "$RUNNER_TEMP/pw/mac-update.mjs" "$out" "$TO" "$ARCH" > "$out/mac-update.log" 2>&1
 cat "$out/mac-update.log" | tee -a "$out/report.txt"
 grep -q '^PASS  update offered' "$out/mac-update.log" || { r "FAIL  $FROM did not offer $TO (see above)"; exit 1; }
 

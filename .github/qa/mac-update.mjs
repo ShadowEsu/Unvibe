@@ -15,8 +15,15 @@ if (!page) { console.log("FAIL  no companion window on the debug port"); process
 const current = await page.evaluate(() => window.unvibe.appInfo?.().then((i) => i?.version).catch(() => null) ?? null).catch(() => null);
 console.log(`NOTE  companion ${page.url().split("/").pop()}, app version ${current ?? "?"}`);
 
-const check = await page.evaluate(() => window.unvibe.updateCheck());
-console.log(`NOTE  updateCheck: ${JSON.stringify(check)}`);
+// GitHub's unauthenticated API answers 403 when a shared runner IP is over its hourly limit (run 42748178623, macos-26):
+// a runner problem, not the app's, so a failed check is asked again (8 tries, 45 s apart).
+let check = null;
+for (let i = 1; i <= 8; i++) {
+  check = await page.evaluate(() => window.unvibe.updateCheck());
+  console.log(`NOTE  updateCheck ${i}: ${JSON.stringify(check)}`);
+  if (check?.ok) break;
+  await page.waitForTimeout(45000);
+}
 const wantUrl = `https://github.com/ShadowEsu/Unvibe/releases/download/v${to}/Unvibe-${to}-mac-${arch}.dmg`;
 const offered = check?.ok && check.available && check.latest === to && check.url === wantUrl;
 console.log(`${offered ? "PASS" : "FAIL"}  update offered: available ${check?.available}, latest ${check?.latest}, url ${check?.url === wantUrl ? "= the " + arch + " DMG of v" + to : check?.url}`);
@@ -25,7 +32,13 @@ await page.screenshot({ path: join(out, "2-from-home-update-offered.png") }).cat
 if (!offered) process.exit(1);
 
 // The install downloads the DMG, checks it against SHA256SUMS-mac.txt, then the app quits and its helper swaps it in.
-const started = Date.now();
-const res = await page.evaluate(() => window.unvibe.updateInstall()).catch((e) => ({ disconnected: String(e).split("\n")[0] }));
-console.log(`${res?.ok || res?.disconnected ? "PASS" : "FAIL"}  updateInstall answered after ${Math.round((Date.now() - started) / 1000)} s: ${JSON.stringify(res).slice(0, 200)}`);
+let res = null;
+for (let i = 1; i <= 4; i++) {
+  const started = Date.now();
+  res = await page.evaluate(() => window.unvibe.updateInstall()).catch((e) => ({ disconnected: String(e).split("\n")[0] }));
+  console.log(`NOTE  updateInstall ${i} answered after ${Math.round((Date.now() - started) / 1000)} s: ${JSON.stringify(res).slice(0, 200)}`);
+  if (res?.ok || res?.disconnected || !/\(403\)|\(429\)/.test(res?.error ?? "")) break;
+  await page.waitForTimeout(60000);
+}
+console.log(`${res?.ok || res?.disconnected ? "PASS" : "FAIL"}  updateInstall: ${JSON.stringify(res).slice(0, 200)}`);
 await browser.close().catch(() => {});

@@ -27,7 +27,7 @@ jobs:
           - { runner: macos-26, arch: arm64 }
           - { runner: macos-15-intel, arch: x64 }
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 60
     env:
       INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
       FROM: "0.1.49"
