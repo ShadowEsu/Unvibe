@@ -8,7 +8,18 @@ type ToneStyle = 'soft' | 'pixel';
 
 let context: AudioContext | null = null;
 
+/**
+ * No AudioContext before this window's first click or key press. Created earlier (0.1.50 RC: a tone
+ * while onboarding types, in a window that now opens focused), it made macOS on an Intel Mac ask
+ * for the microphone with nothing pressed (QA run 42203353164; not with sounds off).
+ */
+function userHasInteracted(): boolean {
+  const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
+  return activation ? activation.hasBeenActive : false;
+}
+
 function audio(): AudioContext | null {
+  if (!context && !userHasInteracted()) return null;
   try {
     if (!context) context = new AudioContext();
     if (context.state === 'suspended') void context.resume();
