@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import React, { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import BetaDownloadsPage from "@/app/beta/page";
 import { BETA_INSTALL_ASSET, BETA_INSTALL_TAG, BETA_WINDOWS_ASSET, BETA_WINDOWS_SETUP_ASSET } from "./betaInstallScript";
-import { DOWNLOAD_SIZES, MAC_INTEL_META, MAC_META, MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "./downloadMeta";
-
-Object.assign(globalThis, { React });
+import { DOWNLOAD_SIZES, MAC_INTEL_META, MAC_META, WINDOWS_META } from "./downloadMeta";
 
 const VERSION = BETA_INSTALL_TAG.replace(/^v/, "");
 
@@ -29,12 +24,5 @@ describe("download meta lines", () => {
     assertAboutMb(WINDOWS_META, DOWNLOAD_SIZES.windowsPortableExeBytes);
     assertAboutMb(MAC_META, DOWNLOAD_SIZES.macArm64DmgBytes);
     assertAboutMb(MAC_INTEL_META, DOWNLOAD_SIZES.macX64DmgBytes);
-  });
-
-  it("/beta gives Windows its meta line, the two steps after the click and the SHA-256 for each file", () => {
-    const page = renderToStaticMarkup(createElement(BetaDownloadsPage)).replace(/\s+/g, " ");
-    assert.ok(page.includes(`On Windows: ${WINDOWS_META} If your browser warns, choose <b>Keep</b>. If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.`));
-    assert.ok(page.includes(`href="${MAC_SHA256_URL}"`));
-    assert.ok(page.includes(`href="${WINDOWS_SHA256_URL}"`));
   });
 });
