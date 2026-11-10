@@ -67,6 +67,20 @@ curl)
   [ $rc = 0 ] || r "FAIL  install: install.sh exit $rc"
   q=$(xattr -lr /Applications/Unvibe.app 2>/dev/null | grep -c com.apple.quarantine)
   r "quarantine attributes in /Applications/Unvibe.app: $q (a Terminal download has none, so Gatekeeper doesn't ask)"
+  r "install.sh pins: $(grep -E '^(TAG|ASSET)=' "$out/install.sh.live" | tr '\n' ' ')"
+  iv=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /Applications/Unvibe.app/Contents/Info.plist 2>/dev/null)
+  r "$([ "$iv" = "$V" ] && echo PASS || echo FAIL)  installed version ${iv:-none} (want $V)"
+  codesign --verify --deep --strict -R='identifier "com.unvibe.app" and certificate leaf = H"c9da4f618adf98911a450e041b8f336574a99d0e"' /Applications/Unvibe.app > /dev/null 2>&1 \
+    && r "PASS  codesign --verify --deep --strict -R=<release pin c9da4f61> on the installed app" || r "FAIL  the installed app fails codesign -R=<release pin>"
+  a=$(shasum -a 256 /Applications/Unvibe.app/Contents/Resources/app.asar | cut -d' ' -f1)
+  if [ -n "${WANT_ASAR:-}" ]; then r "$([ "$a" = "$WANT_ASAR" ] && echo PASS || echo FAIL)  installed app.asar sha256 $a (want ${WANT_ASAR:0:8}…)"; else r "installed app.asar sha256 $a"; fi
+  # SHA-256: install.sh installs nothing unless its DMG matches SHA256SUMS-mac.txt; the same asset, fetched again here,
+  # checked against the same file.
+  ca="Unvibe-$V-mac-$([ "$arch" = arm64 ] && echo arm64 || echo x64).dmg"
+  curl -fsSL -o "$RUNNER_TEMP/check.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$ca"
+  cw=$(curl -fsSL "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/SHA256SUMS-mac.txt" | awk -v f="$ca" '$NF==f {print $1}')
+  cg=$(shasum -a 256 "$RUNNER_TEMP/check.dmg" | cut -d' ' -f1); rm -f "$RUNNER_TEMP/check.dmg"
+  r "$([ -n "$cw" ] && [ "$cg" = "$cw" ] && echo PASS || echo FAIL)  $ca sha256 $cg; v$V SHA256SUMS-mac.txt says ${cw:-nothing}"
   ;;
 dmg)
   asset="Unvibe-$V-mac-$([ "$arch" = arm64 ] && echo arm64 || echo x64).dmg"

@@ -90,6 +90,10 @@ if ($Kind -eq 'ps1') {
   Note "install.ps1 exit $($p.ExitCode) after $([int]((Get-Date) - $t0).TotalSeconds) s; output: $((Get-Content "$Out\install.log" -Tail 4) -join ' / ') $((Get-Content "$Out\install.err" -Tail 4) -join ' / ')"
   if ($p.ExitCode -ne 0) { Note "FAIL  install: install.ps1 exit $($p.ExitCode)" }
   $exe = Join-Path $env:LOCALAPPDATA 'Unvibe\Unvibe.exe'
+  # #212 (live since #275): install.ps1 runs the one-click per-user setup, which installs under Programs with an Apps
+  # entry, so the setup checks (Start menu, Apps entry, first window in front, uninstall) apply to it as well.
+  $viaSetup = Join-Path $env:LOCALAPPDATA 'Programs\Unvibe\Unvibe.exe'
+  if (-not (Test-Path $exe) -and (Test-Path $viaSetup)) { $exe = $viaSetup; $isSetup = $true; Note 'install.ps1 installed through the per-user setup (#212)' }
   $z = Get-Content $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue
   Note "installed exe: $(if (Test-Path $exe) { "$((Get-Item $exe).Length) bytes" } else { 'MISSING' }); Mark of the Web: $(if ($z) { $z -join ' ' } else { 'none (so SmartScreen does not ask)' })"
   Note "Start menu shortcut: $(Test-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Unvibe.lnk'))"
@@ -189,6 +193,12 @@ if ($isSetup) {
   $running = Get-Process | Where-Object { $_.ProcessName -eq 'Unvibe' }
   if ($running) { Note 'the installer opened Unvibe itself (its last page)' }
   elseif ($exe) { Note 'opening the installed Unvibe (as install.ps1 will, or the Start menu entry)'; Start-Process -FilePath $exe }
+}
+if ($isSetup -and $exe -and (Test-Path $exe)) {
+  $asar = Join-Path (Split-Path $exe) 'resources\app.asar'
+  $a = if (Test-Path $asar) { (Get-FileHash $asar -Algorithm SHA256).Hash.ToLower() } else { 'MISSING' }
+  Note "installed version $((Get-Item $exe).VersionInfo.ProductVersion); resources\app.asar sha256 $a"
+  if ($env:WANT_ASAR) { Note "$(if ($a -eq $env:WANT_ASAR) { 'PASS' } else { 'FAIL' })  installed app.asar is the release's (want $($env:WANT_ASAR.Substring(0, 8))…)" }
 }
 
 # First launch: a window, still open 20 s later.

@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  V: "0.1.49"
+  V: "0.1.50"
 
 jobs:
   mac:
@@ -42,13 +42,17 @@ jobs:
     timeout-minutes: 35
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
+      WANT_ASAR: 77100f96caa2181866f4b0f470acf9fbaca83fcc6cf2c83ef1e0157dfc05f5a6
     steps:
-      # A commit message holding "[only:<path>]" runs just those rows; the others skip every step.
+      # A commit message holding "[only:<path>]" runs just those rows; the others skip every step. "[no-explain]" stops
+      # each row at first launch (no hosted-AI call).
       - name: Pick this row
         env:
           MSG: ${{ github.event.head_commit.message }}
           ROW: ${{ matrix.path }}
-        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+        run: |
+          if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+          if [[ "$MSG" == *"[no-explain]"* ]]; then echo "NO_EXPLAIN=1" >> "$GITHUB_ENV"; echo "no first explanation"; fi
 
       - name: Require the QA flag token
         if: env.SKIP != '1'
@@ -123,13 +127,16 @@ jobs:
     timeout-minutes: 30
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
+      WANT_ASAR: 0c4abb85d6655b47929426790a28e514c932314cc2cd6bd765c3588df36943bc
     steps:
       - name: Pick this row
         shell: bash
         env:
           MSG: ${{ github.event.head_commit.message }}
           ROW: ${{ matrix.path }}
-        run: if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+        run: |
+          if [[ "$MSG" == *"[only:"* && "$MSG" != *"[only:$ROW]"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "row skipped by [only:]"; fi
+          if [[ "$MSG" == *"[no-explain]"* ]]; then echo "NO_EXPLAIN=1" >> "$GITHUB_ENV"; echo "no first explanation"; fi
 
       # "[rc:<build-only run id>]" in the message: the exe rows use that build's files (not released yet).
       - name: RC build id
