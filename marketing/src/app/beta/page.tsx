@@ -82,6 +82,51 @@ export default function BetaDownloadsPage() {
         </div>
       </section>
 
+      {/* The no-warning option for Mac: /explain in the browser, installable as a web app (src/app/manifest.ts).
+          Menu labels from Google's, Microsoft's and Apple's help pages (Chrome 9658361, Edge, Apple 104996).
+          Hidden while AI is paused, like every other pointer to the Try box (lib/aiMaintenance). */}
+      {AI_MAINTENANCE ? null : (
+      <section className="paper-section" id="browser" aria-labelledby="browser-h">
+        <div className="paper-wrap">
+          <div className="beta-page__steps">
+            <h2 id="browser-h">No install warning: use Unvibe in your browser</h2>
+            <ul className="beta-page__steps-list">
+              <li>
+                <div>
+                  <strong>Paste code, get a short explanation</strong>
+                  <p>
+                    Open unvibe.site/explain in Chrome or Safari, paste code and get a short explanation in plain English.
+                    Nothing to download, so macOS shows no warning.{" "}
+                    {/* In running text, like the sign-in link below: inline, underlined, the paragraph's size. */}
+                    <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="/explain">Open it in your browser</a>
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Keep it in its own window</strong>
+                  <p>
+                    In Chrome, press <b>Install</b> at the right of the address bar, or open the menu and choose <b>Cast, save, and
+                    share</b>, then <b>Install page as app</b>. In Edge, open the menu and choose <b>More tools</b>, then <b>Apps</b>,
+                    then <b>Install this site as an app</b>. In Safari on macOS Sonoma or later, choose <b>File</b>, then <b>Add to Dock</b>.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>What it can’t do</strong>
+                  <p>
+                    It works on code you paste, up to 1,500 characters (about 60 lines). It can’t read code in other apps or use
+                    the {mac.anywhere} shortcut, and it explains up to 6 snippets an hour on each network, fewer when it’s busy.
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      )}
+
       <section className="paper-section" id="help">
         <div className="paper-wrap paper-center">
           <h2>Stuck? Quick fixes.</h2>

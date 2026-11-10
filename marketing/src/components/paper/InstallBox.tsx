@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import {
   BETA_INSTALL_COMMAND,
@@ -162,6 +163,12 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false, guided =
             <a className="paper-text-link" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
           </span>
         </p>
+        {/* The no-warning option (ledger 591, Design S-1 on #274): /beta#browser, the web app at /explain. */}
+        {os === "mac" && !AI_MAINTENANCE ? (
+          <p className="ninst__line">
+            No install warning? <a className="paper-text-link" href="/beta#browser">Use Unvibe in your browser</a>
+          </p>
+        ) : null}
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
           <ol>

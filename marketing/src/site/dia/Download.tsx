@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import { EmailMeLink } from "@/components/paper/EmailMeLink";
 import { INSTALL_COPY, InstallBox } from "@/components/paper/InstallBox";
 import { ReminderInline } from "@/components/paper/ReminderToast";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { track } from "@/lib/analytics";
 import { DOWNLOAD_FILES, isDownloadKey, type DownloadKey } from "@/lib/downloadPick";
 import { trackDownloadClick } from "@/lib/downloadTracking";
@@ -76,6 +77,8 @@ function Thanks() {
             <span key={k}>{label(k)} <a href={DOWNLOAD_FILES[k].url} onClick={get(k)}>{D_THANKS.here}</a></span>
           ))}
           <Link href="/install-help">{D_GET.help} <span aria-hidden="true">→</span></Link>
+          {/* the no-warning option right after a Mac download (ledger 591, BOSS on #274) */}
+          {file.os === "mac" && !AI_MAINTENANCE ? <Link href="/beta#browser">No install warning? Use Unvibe in your browser</Link> : null}
         </p>
         {/* the setup-guide ask in the flow, under the links (Design 2055 §9): the floating toast covered step 1 and
             "Intel Mac? Download here" at 1440 × 900 (QA run 42338399554), so it stays closed here */}
