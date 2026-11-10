@@ -180,6 +180,8 @@ switch ($Kind) {
     Note "$(if (@(Links).Count -ge 1) { 'PASS' } else { 'FAIL' })  Start menu entry"
   }
 }
+$asar = Join-Path (Split-Path $want) 'resources\app.asar'
+Note "NOTE  per-user resources\app.asar sha256 $(if (Test-Path $asar) { (Get-FileHash $asar -Algorithm SHA256).Hash.ToLower() } else { 'MISSING' })"
 
 # First window: the build opens itself after a double-click (runAfterFinish); /S needs a launch, as install.ps1 does.
 $win = Get-Process Unvibe -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
