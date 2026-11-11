@@ -393,37 +393,84 @@ if (explained) {
   // 420 px panel, the narrowest the panel allows, so the text is as large as it gets when a 9:16 reel crops the
   // still or the window video: each file's explanation, then the follow-up a viewer would type. Only on request
   // (MEDIA_SAMPLES=1, the workflow's media_samples input), because their explanations also show in the Library still.
+  // An entry with "depths" (e.g. ["new", "advanced", "beginner"]) is pasted at the first depth and then switched with
+  // the panel's own depth buttons, one still + answer per depth (sample-<name>-<depth>), and has no follow-up.
   if (process.env.MEDIA_SAMPLES === '1') {
     const dir = new URL('./media-samples/', import.meta.url);
     const list = JSON.parse(readFileSync(new URL('samples.json', dir), 'utf8'));
-    for (const { file, sha256, marker, followUp } of list) {
+    // The panel at <level> with a new, finished answer. One evaluate reads all of it together (finished: the done card's
+    // save note and no stream cursor; the active depth; the body text), because a depth click marks the button at once
+    // but the panel only switches to streaming when main's status event lands; separate reads could catch the new depth
+    // over the old card or an early stream. It must read the same twice 1 s apart, and differ from the answer before
+    // it. After a paste it fails fast (budget 30 s past the first finish) instead of polling for minutes.
+    const panelState = (page) => page.evaluate(() => ({
+      finished: !!document.querySelector('.card--done .local-save-note') && !document.querySelector('.body .cursor'),
+      failed: /Couldn't explain that/.test(document.body.innerText),
+      depth: (document.querySelector('.lvl.on')?.textContent ?? '').trim().toLowerCase(),
+      text: (document.querySelector('.body')?.innerText ?? '').trim(),
+    }));
+    const atDepth = async (level, before, budget) => {
+      const start = Date.now();
+      let last = null;
+      while (Date.now() - start < budget) {
+        const page = await windowWith('widget.html');
+        const s = await panelState(page).catch(() => null);
+        if (s?.failed) throw new Error(`the ${level} explanation failed`);
+        const ok = s && s.finished && s.depth === level && s.text && s.text !== before;
+        if (ok && last && last.text === s.text && last.depth === s.depth) return { done: page, text: s.text };
+        last = ok ? s : null;
+        await sleep(1000);
+      }
+      throw new Error(`no fresh, finished ${level} answer within ${budget / 1000} s (the panel still shows the answer before it, another depth, or a stream)`);
+    };
+    // Two samples in a row that fail at the paste mean the paste itself is broken: stop there rather than spend the
+    // job's time on the rest (each failed paste costs up to 90 s).
+    let failedPastes = 0;
+    for (const { file, sha256, marker, followUp, depths = ['beginner'] } of list) {
+      if (failedPastes >= 2) { console.log(`NOTE sample ${file}: skipped (the last 2 samples failed at the paste)`); continue; }
       const name = path.parse(file).name;
-      const explainedSample = await step(`sample ${file}`, async () => {
-        const bytes = readFileSync(new URL(file, dir));
-        const sum = createHash('sha256').update(bytes).digest('hex');
-        if (sum !== sha256) throw new Error(`${file} hashes to ${sum.slice(0, 16)}, samples.json says ${sha256.slice(0, 16)}`);
-        const panel = await windowWith('widget.html');
-        await resize(panel, 420, 720);
-        await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'beginner' }), [bytes.toString('utf8')]);
-        await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: marker }).first().waitFor({ timeout: 30000 });
-        await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
-        const done = await settledPanel();
-        await resize(done, 420, 720);
-        const depth = (await done.locator('.lvl.on').first().innerText().catch(() => '')).trim();
-        if (!/^beginner$/i.test(depth)) throw new Error(`the panel is at "${depth}", not Beginner`);
-        await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
-        await sleep(600);
-        await shot(done, `sample-${name}-beginner`);
-        await saveAnswer(done, `sample ${file}`);
-      });
-      if (explainedSample) await step(`sample ${file} follow-up`, async () => {
-        const done = await askFollowUp(followUp);
-        await resize(done, 420, 720);
-        await scrollToAnswer(done, followUp);
-        await sleep(600);
-        await shot(done, `sample-${name}-follow-up`);
-        await saveAnswer(done, `sample ${file} follow-up`);
-      });
+      let before = '';
+      for (const [i, level] of depths.entries()) {
+        const ok = await step(i === 0 ? `sample ${file}` : `sample ${file} ${level}`, async () => {
+          const panel = await windowWith('widget.html');
+          await resize(panel, 420, 720);
+          if (i === 0) {
+            const bytes = readFileSync(new URL(file, dir));
+            const sum = createHash('sha256').update(bytes).digest('hex');
+            if (sum !== sha256) throw new Error(`${file} hashes to ${sum.slice(0, 16)}, samples.json says ${sha256.slice(0, 16)}`);
+            // Whatever answer the panel shows now (the sample before) can't count as this file's.
+            before = (await panel.locator('.body').first().innerText().catch(() => '')).trim();
+            await panel.evaluate(([text, lvl]) => window.unvibe.usePaste({ text, level: lvl }), [bytes.toString('utf8'), level]);
+            await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: marker }).first().waitFor({ timeout: 30000 });
+            await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
+          } else {
+            await panel.locator(`.lvl[data-level="${level}"]`).click();
+            await sleep(1500);
+          }
+          // Budget: a fresh paste's answer is already streaming past the cursor wait above, so 60 s; a depth click
+          // starts a new explanation, so 90 s.
+          const { done, text } = await atDepth(level, before, i === 0 ? 60000 : 90000);
+          before = text;
+          await resize(done, 420, 720);
+          await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+          await sleep(600);
+          await shot(done, `sample-${name}-${level}`);
+          // The still and the saved text must be the answer that was checked: nothing restarted while it was taken.
+          const after = await panelState(done);
+          if (!after.finished || after.depth !== level || after.text !== text) throw new Error(`the ${level} panel changed while its still was taken`);
+          await saveAnswer(done, depths.length > 1 ? `sample ${file} ${level}` : `sample ${file}`);
+        });
+        if (i === 0) failedPastes = ok ? 0 : failedPastes + 1;
+        if (!ok) break;
+        if (i === depths.length - 1 && followUp) await step(`sample ${file} follow-up`, async () => {
+          const done = await askFollowUp(followUp);
+          await resize(done, 420, 720);
+          await scrollToAnswer(done, followUp);
+          await sleep(600);
+          await shot(done, `sample-${name}-follow-up`);
+          await saveAnswer(done, `sample ${file} follow-up`);
+        });
+      }
     }
     // Back to the size the other panel stills use.
     await step('sample panel size', async () => resize(await windowWith('widget.html'), 560, 720));

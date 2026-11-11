@@ -21,6 +21,67 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
+    title: "No interface sounds until you use Unvibe; pasted TypeScript labelled TypeScript",
+    summary: "Unvibe 0.1.51 plays no interface sound until you first click or press a key in one of its windows, so the start-up sound no longer plays when Unvibe opens. On a Mac, if macOS ever asks about the microphone, its message now says Unvibe never records or listens. Pasted TypeScript is labelled TypeScript, not JavaScript, when it has a generic function, a Promise<...> return type, or a type such as unknown or void. Known issue on Windows, unchanged from 0.1.50: the first window can show an empty page for a moment before it fills in.",
+    figure: "v0.1.51",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.51", label: "Release v0.1.51" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/222", label: "PR #222" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/195", label: "PR #195" },
+    ],
+  },
+  {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
+    title: "Windows gets a one-click installer; Island notices you can read",
+    summary: "Unvibe 0.1.50 installs on Windows with a one-click installer for your user. It needs no administrator rights and opens Unvibe when it finishes, and the install command from the download page now uses it. The first window opens in front of your other apps. On a Mac, Unvibe no longer asks for System Events access when it first opens. Island notices show their message under the Island, its card shows how much of your AI allowance you have used, and the count no longer hides under the code button. Explaining your clipboard, a pasted snippet or a file never uses one of the beta's selected-code prompts. Settings and Report feedback write to support@unvibe.site. Known issue on Windows: the first window can show an empty page for a moment before it fills in.",
+    figure: "v0.1.50",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.50", label: "Release v0.1.50" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/209", label: "PR #209" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/212", label: "PR #212" },
+    ],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "PRODUCT",
+    title: "The home page demo's caption stays clear of the download button",
+    summary: "On laptop-sized screens, the caption under the home page's step-by-step demo, \"Unvibe 0.1.49 panel, recreated in HTML · sample code\", could sit under the floating download button. The demo now gets smaller on shorter screens so it ends 16 px above the button, and the caption stays readable. Phones and larger screens look the same as before.",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/259", label: "PR #259" },
+    ],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "A new preview card for shared links",
+    summary: "When a link to unvibe.site is shared, the preview card now shows the home page's headline, \"Understand the code your AI writes.\", the Free for Mac and Windows pill and the shortcuts, Control+U on a Mac and Ctrl+Alt+U on Windows. All of it sits in the middle square of the card, so square crops keep it. Pages without a card of their own use it too.",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/257", label: "PR #257" },
+    ],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "PRODUCT",
+    title: "Friendlier welcome and setup tip emails",
+    summary: "The welcome email and the setup tip, which comes a day later if you tick its box, are rewritten in a more casual voice. The links, install commands, shortcuts, reply address and unsubscribe link are the same as before.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/255", label: "PR #255" }],
+  },
+  {
+    date: "7 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "Related pages on explain pages",
+    summary: "26 explain pages now start their list of other languages with a Related row of up to 4 close matches, then the rest. On the SQL page, the row is SQL joins, Supabase RLS, Prisma schema and SQLite.",
+    links: [
+      { href: "/explain/sql", label: "Explain SQL" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/253", label: "PR #253" },
+    ],
+  },
+  {
     date: "6 NOV 2026",
     category: "DISTRIBUTION",
     title: "Explain code is linked from Resources",

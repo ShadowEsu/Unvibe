@@ -27,6 +27,8 @@ export const D_HERO = {
   wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
+  /** The web try under the tagline (Unvibe lead, 6 Nov: home had no visible way to /explain; Security 2033 GO). */
+  tryIt: "Or try it in your browser first",
   caption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
 } as const;
 
@@ -164,7 +166,7 @@ export const D_THANKS = {
 export const D_FOOT = [
   { h: "Product", links: [["Download", "/beta"], ["Pricing", "/pricing"], ["Changelog", "/releases"], ["Explain code", "/explain"], ["Code explainer for Mac", "/code-explainer-mac"], ["Code explainer for Windows", "/code-explainer-windows"], ["Use cases", "/use-cases"]] },
   { h: "Resources", links: [["Help", "/help"], ["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"], ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refund"], ["Open-source notices", "/licenses"]] },
-  { h: "Company", links: [["Investors", "/investors"], ["About", "/about"], ["Building Unvibe", "/build"], ["Listed on", "/listed-on"], ["Contact", "mailto:support@unvibe.site"]] },
+  { h: "Company", links: [["Investors", "/investors"], ["About", "/about"], ["Why we built it", "/why"], ["Building Unvibe", "/build"], ["Listed on", "/listed-on"], ["Contact", "mailto:support@unvibe.site"]] },
 ] as const;
 
 export const D_ART_CREDITS = "Photo: Tim Marshall (Unsplash), CC0, recoloured · Paintings, public domain: Claude Monet, Lilacs in the Sun, 1873 · Claude Monet, Wisteria, c. 1925 · Vincent van Gogh, Irises, 1889";
