@@ -61,9 +61,9 @@ export class SharksStart {
     document.addEventListener('visibilitychange', this.onVisibility);
     window.addEventListener('blur', this.onHidden);
     window.addEventListener('pointermove', this.onPointerMove, { passive: true });
+    // The world spawns its sharks on its first non-empty resize, so the pre-steps run there (`resize()`), which may
+    // be now or at the ResizeObserver's first call when the canvas has no size yet (the window still hidden).
     this.resize();
-    for (let i = 0; i < PRESTEPS; i++) this.world.step(STEP);
-    this.draw(STEP);
     if (!opts.still) this.schedule();
   }
 
@@ -93,15 +93,20 @@ export class SharksStart {
     p.active = e.pointerType !== 'touch';
   };
 
+  private primed = false;
   private resize() {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.resize(rect.width, rect.height, dpr);
     this.world.resize(rect.width, rect.height, this.renderer.cellWidth, this.renderer.cellHeight);
+    if (!this.primed) {
+      this.primed = true;
+      for (let i = 0; i < PRESTEPS; i++) this.world.step(STEP);
+    }
     // Painted here, not on the next frame: a window that is not shown yet has its rafs paused, and the first frame
     // the user sees must already have the sharks (SPEC §2.4).
-    if (this.stats.frames) this.draw(STEP);
+    this.draw(STEP);
   }
 
   private schedule() {
