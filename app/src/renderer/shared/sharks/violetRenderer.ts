@@ -63,9 +63,14 @@ export const LIGHT_PALETTE: SharkPalette = {
   heat: "232,121,201",
 };
 
-/** The in-app palette on the dark theme: the stage's inks on the dark glass, without the stage's grid (a grid in a
- * band reads as a boxed frame on the page). */
-export const DARK_PALETTE: SharkPalette = { ...PALETTE, grid: "rgba(0,0,0,0)" };
+/** The in-app palette on the dark theme (Design: lilac ink): the stage's inks without its grid (a grid in a band reads
+ * as a boxed frame on the page), and a skin ramp that starts at a mid violet, not the stage's near-black, so the
+ * shadow side of a shark still reads on the dark glass. */
+export const DARK_PALETTE: SharkPalette = {
+  ...PALETTE,
+  grid: "rgba(0,0,0,0)",
+  skin: [[70, 54, 150], [112, 92, 222], [184, 166, 255], [236, 230, 255]],
+};
 
 function skinColor(stops: [number, number, number][], level: number, tr: number, tg: number, tb: number) {
   const p = clamp(level / 255, 0, 0.999) * (stops.length - 1);
