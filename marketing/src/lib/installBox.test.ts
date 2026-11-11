@@ -38,7 +38,7 @@ describe("install box: the Terminal line first, the file second", () => {
     assert.equal(INSTALL_COPY.mac.command, BETA_INSTALL_COMMAND);
     assert.equal(INSTALL_COPY.windows.command, BETA_WINDOWS_INSTALL_COMMAND);
     assert.equal(INSTALL_COPY.windows.fileHref, BETA_WINDOWS_DIRECT_DOWNLOAD);
-    assert.match(INSTALL_COPY.mac.steps.join(" "), /Click Done\..*Open Anyway/);
+    assert.match(INSTALL_COPY.mac.steps.join(" "), /Click Done\b.*Open Anyway/);
     assert.match(INSTALL_COPY.windows.steps.join(" "), /More info\..*Run anyway/);
   });
 
