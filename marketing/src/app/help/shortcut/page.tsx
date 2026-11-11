@@ -19,7 +19,8 @@ export const metadata: Metadata = pageMetadata({
 /**
  * Help for a shortcut that does nothing. Each symptom is what the shipped app shows (checked against the
  * v0.1.49 source: app/src/main/main.ts startReview and registerShortcut, app/src/renderer/widget/widget.tsx's
- * empty and paste states, app/src/renderer/shared/limitOffer.ts, companion.tsx Settings). Notices the app
+ * empty and paste states, app/src/renderer/shared/limitOffer.ts, companion.tsx Settings; the System Events timing
+ * against v0.1.51: main.ts onboarding:complete and selection.ts startFrontmostWatch). Notices the app
  * may also show come second: they can be skipped (notify.ts) and fade after a few seconds. Screenshots are
  * real macOS 15 captures (HelpShot.tsx).
  */
@@ -58,7 +59,8 @@ export default function ShortcutHelpPage() {
           </li>
           <li>
             <b>You pressed Don&apos;t Allow when macOS asked to let Unvibe control System Events.</b> macOS asks once, a few seconds
-            after you finish Unvibe&apos;s setup, or the first time you press {mac.anywhere} if that comes first. Unvibe uses System Events to copy your selection, so after a Don&apos;t Allow the panel opens without your code, and
+            after you finish Unvibe&apos;s setup, or the first time you press {mac.anywhere} if that comes first.
+            Unvibe uses System Events to copy your selection, so after a Don&apos;t Allow the panel opens without your code, and
             macOS doesn&apos;t ask again. Open <b>System Settings › Privacy &amp; Security › Automation</b>, find <b>Unvibe</b>, and
             switch on <b>System Events</b>. Then select the code and press {mac.anywhere} again.
             <div className="help-shots">
