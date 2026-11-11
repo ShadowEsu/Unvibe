@@ -120,8 +120,12 @@ dmg)
   done
   r "Gatekeeper dialog ${gw}x${gh} after about $(( i * 2 )) s"
   prompts gatekeeper-1-double-click
-  t 15 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1
+  dr=$(t 15 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' 2>&1)
   sleep 2
+  # unvibe-fix: prove the Done press landed (the lead's 7 Nov note: CI never checked it).
+  read -r _ _ _ dw dh <<< "$("$W" find CoreServicesUIAgent || echo '0 0 0 0 0')"
+  screencapture -x "$out/gatekeeper-1b-after-done.png"
+  r "after Done: osascript said [${dr:-ok}]; Gatekeeper dialog still on screen: $( (( ${dh:-0} > 150 )) && echo "YES ${dw}x${dh}, the Done click did not land" || echo no)"
   r "after Done: Unvibe running: $([ -n "$(pgrep -x Unvibe)" ] && [[ $(ps -o stat= -p "$(pgrep -x Unvibe | head -1)") != *T* ]] && echo yes || echo no)"
   # The site's next step: System Settings > Privacy & Security > Open Anyway (picture of the pane as the user sees it).
   open "x-apple.systempreferences:com.apple.preference.security"; sleep 8
@@ -147,6 +151,49 @@ dmg)
   pkill -x Unvibe 2>/dev/null; xattr -dr com.apple.quarantine /Applications/Unvibe.app
   r "NOTE  stand-in for Open Anyway + password: quarantine removed on CI; everything after is the user's path"
   open /Applications/Unvibe.app
+  ;;
+dmgdirect)
+  # unvibe-fix: the shortcut many people take: open Unvibe straight from the mounted disk image, no drag to Applications.
+  asset="Unvibe-$V-mac-$([ "$arch" = arm64 ] && echo arm64 || echo x64).dmg"
+  dmg="$HOME/Downloads/$asset"
+  if [ -n "${DL_FILE:-}" ]; then
+    asset=$(basename "$DL_FILE"); dmg="$HOME/Downloads/$asset"
+    [ "$DL_FILE" -ef "$dmg" ] || ditto "$DL_FILE" "$dmg"
+    q=$(xattr -p com.apple.quarantine "$dmg" 2>/dev/null)
+    if [ -n "$q" ]; then how="the browser's own quarantine mark ($q)"
+    else xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Google Chrome;$(uuidgen)" "$dmg"; how="a quarantine mark ADDED (the browser saved none)"; fi
+  else
+    curl -fsSL -o "$dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v$V/$asset"
+    xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$dmg"
+    how="a browser's quarantine mark"
+  fi
+  r "downloaded $asset ($(stat -f %z "$dmg") bytes) with $how"
+  open "$dmg"
+  vol=""; for i in $(seq 1 60); do vol=$(ls -d /Volumes/*/Unvibe.app 2>/dev/null | head -1); [ -n "$vol" ] && break; sleep 1; done
+  [ -n "$vol" ] || { r "FAIL  install: the DMG did not mount"; prompts dmg-mount; exit 1; }
+  r "quarantine on the app inside the mounted image: $(xattr -p com.apple.quarantine "$vol" 2>/dev/null || echo NONE)"
+  r "spctl on the app inside the image: $(spctl --assess --type execute -vv "$vol" 2>&1 | tr '\n' ' ')"
+  ( open "$vol" 2> "$out/open-direct.txt" ) &
+  for i in $(seq 1 45); do
+    read -r _ _ _ gw gh <<< "$("$W" find CoreServicesUIAgent || echo '0 0 0 0 0')"
+    (( gh > 150 )) && break; sleep 2
+  done
+  r "direct open: Gatekeeper dialog ${gw}x${gh} after about $(( i * 2 )) s"
+  prompts gatekeeper-direct
+  sleep 3
+  r "direct open: Unvibe running: $([ -n "$(pgrep -x Unvibe)" ] && echo "yes, from $(ps -o comm= -p "$(pgrep -x Unvibe | head -1)")" || echo no)"
+  # The same Privacy & Security pane as the drag path, to see whether it offers Open Anyway for a copy on a disk image.
+  t 15 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' > /dev/null 2>&1; sleep 2
+  open "x-apple.systempreferences:com.apple.preference.security"; sleep 8
+  S() { t 60 osascript "$here/settings.applescript" "$@" 2>&1 | tail -1; }
+  S grow > /dev/null; S anchor > /dev/null
+  read -r wid _ _ _ _ <<< "$("$W" find "System Settings" || echo '0 0 0 0 0')"
+  [ "$wid" != 0 ] && screencapture -x -o -l "$wid" "$out/gatekeeper-direct-privacy-security.png"
+  r "direct open, Privacy & Security text naming Unvibe: $(S texts | tr '\n' ' ')"
+  osascript -e 'tell application "System Settings" to quit' > /dev/null 2>&1
+  pkill -x Unvibe 2>/dev/null; hdiutil detach "$(dirname "$vol")" -force > /dev/null 2>&1
+  r "NOTE  direct-from-image leg stops here: no launch, nothing to flag beyond the pre-flag"
+  exit 0
   ;;
 esac
 

@@ -1,0 +1,106 @@
+name: QA unvibe-fix Mac first run
+
+# QA only, never merged (branch qa/fix-mac-first-run, unvibe-fix, 11 Nov; the lead's spec: why 0 of 37 Mac download
+# link clicks launch). It adds to QA's live first-open run 43089282800 (macOS 15 + 26 arm, 15 Intel) only what that run
+# doesn't cover:
+#   macos-14  the full first open from the LIVE site's Download button in the real Google Chrome (QA's site-download.mjs
+#             and mac-row.sh dmg), with a check that the Done press really closed "Unvibe Not Opened"
+#   macos-15  "dmgdirect": Unvibe opened straight from the mounted disk image (no drag to Applications), dialogs only
+# No hosted-AI call: NO_EXPLAIN=1 and QA_AI_OK=0. Each install id is qa- prefixed and flagged before anything installs.
+on:
+  push:
+    branches: [qa/fix-mac-first-run]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-fix-mac-first-run
+  cancel-in-progress: false
+
+env:
+  QA_AI_OK: "0"
+  NO_EXPLAIN: "1"
+  SITE: https://unvibe.site
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-14, kind: dmg, expect: mac-arm }
+          - { runner: macos-15, kind: dmgdirect, expect: mac-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      INSTALL_ID: qa-fixmac-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.kind }}
+    steps:
+      - name: Require the QA flag token
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; fi
+          echo "QA flag token present"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Playwright for the site's download button
+        run: |
+          mkdir -p "$RUNNER_TEMP/pws" && cd "$RUNNER_TEMP/pws"
+          npm init -y >/dev/null && npm install playwright@1.64.1 >/dev/null
+          cp "$GITHUB_WORKSPACE/.github/qa/site-download.mjs" .
+
+      - name: Set up (Gatekeeper on, screenshot permission, window helper)
+        run: bash .github/qa/gk-setup.sh "$RUNNER_TEMP/m"
+
+      - name: The site's download button, in Google Chrome
+        env:
+          OUT: ${{ runner.temp }}/m
+          EXPECT: ${{ matrix.expect }}
+        run: |
+          cd "$RUNNER_TEMP/pws"
+          node site-download.mjs || echo "SITE_FAIL=1" >> "$GITHUB_ENV"
+          if [ -s "$OUT/dl-file.txt" ]; then
+            echo "DL_FILE=$(cat "$OUT/dl-file.txt")" >> "$GITHUB_ENV"
+            echo "V=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$OUT/pick.json")" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open that file, first launch, QA flag
+        if: env.DL_FILE != ''
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: bash .github/qa/mac-row.sh ${{ matrix.kind }} "$RUNNER_TEMP/m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          pkill -x Unvibe 2>/dev/null || true
+          store="$HOME/Library/Application Support/Unvibe/unvibe-store.json"
+          id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("installId",""))' "$store" 2>/dev/null)
+          echo "store install id: ${id:-none} (seeded $INSTALL_ID)"
+          for x in $(printf '%s\n%s\n' "$INSTALL_ID" "$id" | sort -u); do
+            answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w '\n%{http_code}' \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' \
+              --data "{\"installId\":\"$x\"}") || answer=$'\ncurl failed'
+            echo "QA install flag $x: $(printf '%s' "$answer" | tail -n 1) $(printf '%s' "$answer" | head -n 1 | grep -o '"matched":[a-z]*')"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fixmac-${{ matrix.runner }}-${{ matrix.kind }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
+
+      - name: Site check result
+        if: env.SITE_FAIL == '1' || env.DL_FILE == ''
+        run: |
+          echo "::error::the site download check failed (see site-report.txt)"; exit 1
