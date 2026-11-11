@@ -35,6 +35,28 @@ export const milestones: Milestone[] = [
   {
     date: "9 NOV 2026",
     category: "PRODUCT",
+    title: "Phone and layout fixes: download thanks, Feedback tab, the report's tables",
+    summary: "On phones, the setup-guide ask on the download thanks page stays inside its card (its Send it button ran off the right edge at 390 px). With reduced motion on, the Feedback tab no longer shifts 1 px when you point at it or press it. On the report page, the incidents table and the limits table widen to 960 px on screens 1024 px and wider, and the 4 numbers at the top sit in a flat 2 by 2 grid instead of 4 cards.",
+    links: [
+      { href: "/why", label: "The report" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/278", label: "PR #278" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/263", label: "PR #263" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/273", label: "PR #273" },
+    ],
+  },
+  {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
+    title: "Privacy policy: the Google Fonts line covers 0.1.51",
+    summary: "The privacy policy's line on Google Fonts now says the desktop app loads its fonts from Google up to and including version 0.1.51, not 0.1.50. Nothing else in the policy changed.",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/277", label: "PR #277" },
+    ],
+  },
+  {
+    date: "9 NOV 2026",
+    category: "PRODUCT",
     title: "Windows gets a one-click installer; Island notices you can read",
     summary: "Unvibe 0.1.50 installs on Windows with a one-click installer for your user. It needs no administrator rights and opens Unvibe when it finishes, and the install command from the download page now uses it. The first window opens in front of your other apps. On a Mac, Unvibe no longer asks for System Events access when it first opens. Island notices show their message under the Island, its card shows how much of your AI allowance you have used, and the count no longer hides under the code button. Explaining your clipboard, a pasted snippet or a file never uses one of the beta's selected-code prompts. Settings and Report feedback write to support@unvibe.site. Known issue on Windows: the first window can show an empty page for a moment before it fills in.",
     figure: "v0.1.50",
@@ -48,7 +70,7 @@ export const milestones: Milestone[] = [
     date: "9 NOV 2026",
     category: "PRODUCT",
     title: "Use Unvibe in your browser, with no install warning",
-    summary: "On a Mac, the download shows an Apple dialog the first time it opens. The download page now has a block, \"No install warning: use Unvibe in your browser\", that points to the try box on the explain page, which you can keep in its own window as a web app from Chrome, Edge or Safari. It takes pasted code only, up to 1,500 characters (about 60 lines) and 6 snippets an hour on each network, and has no shortcut. The desktop app is unchanged.",
+    summary: "On a Mac, the download shows an Apple dialog the first time it opens. The download page now has a block, \"No install warning: use Unvibe in your browser\", that points to the Try it box on the explain page, which you can keep in its own window as a web app from Chrome, Edge or Safari on macOS Sonoma or later. It takes pasted code only, up to 1,500 characters (about 60 lines), and explains up to 6 snippets an hour on each network, fewer when it's busy. It has no shortcut. The Mac install box and the thanks page after a Mac download link to it. The desktop app is unchanged.",
     links: [
       { href: "/beta", label: "Download page" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/274", label: "PR #274" },
@@ -57,8 +79,8 @@ export const milestones: Milestone[] = [
   {
     date: "9 NOV 2026",
     category: "PRODUCT",
-    title: "Help pages for the two first-open dialogs",
-    summary: "Two new help pages answer the exact messages people search for. \"Apple could not verify\": press Done, then Open Anyway under System Settings › Privacy & Security, with real screens, and the one-line Terminal install for anyone who hasn't opened the download yet. \"Windows protected your PC\": More info, then Run anyway, what to do when that button is missing, and what Microsoft says about Smart App Control. The help hub links both.",
+    title: "Help for the Mac and Windows first-open dialogs",
+    summary: "2 new help pages answer the exact messages macOS and Windows show, with real screens. \"Apple could not verify\": press Done, then Open Anyway under System Settings › Privacy & Security, and the one-line Terminal install for anyone who hasn't opened the download yet. \"Windows protected your PC\": More info, then Run anyway, what to do when that button is missing, and what Microsoft says about Smart App Control. The help hub links both.",
     links: [
       { href: "/help/apple-could-not-verify", label: "Apple could not verify" },
       { href: "/help/windows-protected-your-pc", label: "Windows protected your PC" },
@@ -66,32 +88,10 @@ export const milestones: Milestone[] = [
     ],
   },
   {
-    date: "9 NOV 2026",
-    category: "PRODUCT",
-    title: "Phone and layout fixes: download thanks, Feedback tab, the report's tables",
-    summary: "On phones, the setup-guide ask on the download thanks page stays inside its card (its Send it button ran off the right edge at 390 px). The Feedback tab no longer moves 1 px when reduced motion is on. On the report page, the incidents and numbers tables widen to 960 px on screens 1024 px and up, and the numbers card is a flat 2 by 2 grid.",
-    links: [
-      { href: "/why", label: "The report" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/278", label: "PR #278" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/263", label: "PR #263" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/273", label: "PR #273" },
-    ],
-  },
-  {
-    date: "9 NOV 2026",
-    category: "COMPANY",
-    title: "Privacy policy: the Google Fonts line covers 0.1.51",
-    summary: "The privacy policy's line about the app loading fonts from Google now says it applies up to and including version 0.1.51, which still does. Nothing else in the policy changed.",
-    links: [
-      { href: "/privacy", label: "Privacy" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/277", label: "PR #277" },
-    ],
-  },
-  {
     date: "8 NOV 2026",
-    category: "DISTRIBUTION",
+    category: "COMPANY",
     title: "Nobody read the code: the report behind Unvibe",
-    summary: "A new page, linked from the footer and the about page, sets out why Unvibe exists: 4 numbers on AI-written code, 14 publicly documented incidents in one table with each company's own position where it disputes the account, what Unvibe does about it, and 53 sources in reading order.",
+    summary: "A new page, linked from the footer and the about page, sets out why Unvibe exists: 4 headline numbers, 14 publicly documented incidents in one table with each company's own position where it disputes the account, what Unvibe does about it, and 53 sources in reading order.",
     links: [
       { href: "/why", label: "Why we built it" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/266", label: "PR #266" },
@@ -100,35 +100,31 @@ export const milestones: Milestone[] = [
   {
     date: "8 NOV 2026",
     category: "PRODUCT",
-    title: "A one-question survey at /survey",
-    summary: "One question, \"How would you feel if you could no longer use Unvibe?\", 5 answers, an optional comment and one Send button. It is anonymous: the page asks for no name or email, the link carries nothing that identifies you, and nothing is stored until you press Send.",
-    links: [
-      { href: "/survey", label: "Survey" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/265", label: "PR #265" },
-    ],
-  },
-  {
-    date: "8 NOV 2026",
-    category: "DISTRIBUTION",
-    title: "Explain pages for systemd, Terraform and assembly",
-    summary: "3 more explain pages, each with a real Unvibe answer on a real sample: a systemd service file, a Terraform block and arm64 assembly. The C, cron and YAML pages link to them in their Related rows.",
-    links: [
-      { href: "/explain/systemd", label: "Explain systemd" },
-      { href: "/explain/terraform", label: "Explain Terraform" },
-      { href: "/explain/assembly", label: "Explain assembly" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/260", label: "PR #260" },
-    ],
+    title: "A one-question web survey",
+    summary: "The survey we email to people who use Unvibe can now be answered on a web page instead of by reply: one question, \"How would you feel if you could no longer use Unvibe?\", 5 answers, an optional comment and one Send button. It is anonymous: the page asks for no name or email, the link carries nothing that identifies you, and nothing is stored until you press Send. The page is linked from that email only.",
+    links: [{ href: "https://github.com/ShadowEsu/Unvibe/pull/265", label: "PR #265" }],
   },
   {
     date: "8 NOV 2026",
     category: "PRODUCT",
     title: "Sign-in email help, and the demo header on phones",
-    summary: "The download and help pages now say to check your Spam folder if the sign-in email doesn't arrive, and the setup tip email's preview says \"the shortcut\" instead of the Mac keys, so Windows readers aren't told Control+U. On phones 480 px and narrower, the home page demo's header puts the status chip on the meta line and Pause at the bottom right, and the Feedback tab stays fixed whatever order the styles load in.",
+    summary: "The download and help pages now say to check your Spam folder if the sign-in email doesn't arrive, and the setup tip email's preview says \"the shortcut\" instead of the Mac keys, so Windows readers aren't told Control+U. On phones 480 px and narrower, the home page demo's header no longer overlaps: the status chip sits at the right end of the meta line, the Saved pill and × are hidden, and Pause sits at the right end of the tab row.",
     links: [
       { href: "/help", label: "Help" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/258", label: "PR #258" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/262", label: "PR #262" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/261", label: "PR #261" },
+    ],
+  },
+  {
+    date: "8 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain systemd, Terraform and assembly",
+    summary: "3 new explain pages: a systemd service file that keeps a small Python API running and restarts it after a crash, a Terraform config that writes a local file and a random name, and arm64 assembly that clang made from a C sum function. Each has its own sample in a Try it box and notes on what that sample did when run with systemd 261 and Python 3.14.7, Terraform 1.17.1 and clang 22.1.8; the arm64 code itself wasn't run. The C, cron and YAML pages link to them in their Related rows.",
+    links: [
+      { href: "/explain/systemd", label: "Explain systemd" },
+      { href: "/explain/terraform", label: "Explain Terraform" },
+      { href: "/explain/assembly", label: "Explain assembly" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/260", label: "PR #260" },
     ],
   },
   {
