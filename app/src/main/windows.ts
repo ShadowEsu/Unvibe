@@ -487,14 +487,23 @@ export function companionLoading(win: BrowserWindow): boolean {
  * alpha on Linux (it painted black) and Windows is unverified, so a flat match is the safe choice (BOSS
  * 20261110-1331's white box). "system" follows the OS appearance.
  */
-export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors): {
+export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors, stage = false): {
   background: string;
   overlay: { color: string; symbolColor: string; height: number };
 } {
+  // While the start stage (the sharks, dark in both themes) is up, the window-button strip and the first paint take
+  // the stage's ground so a light theme never shows a lilac strip over the dark ocean (Design S-1 whole-app MUST 14).
+  if (stage) return { background: '#16122a', overlay: { color: '#17122f', symbolColor: '#f3f1fa', height: 40 } };
   const dark = theme === 'dark' || (theme === 'system' && osDark);
   return dark
     ? { background: '#16122a', overlay: { color: '#1f1643', symbolColor: '#f3f1fa', height: 40 } }
     : { background: '#f3f0fb', overlay: { color: '#cac0ec', symbolColor: '#15141a', height: 40 } };
+}
+
+/** The stage shows on a launch into the app proper (not the first run) with the Settings row on. */
+function stageAtLaunch(): boolean {
+  const all = settings().all();
+  return all.onboarded && all.startAnimation;
 }
 
 /** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
@@ -520,8 +529,8 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
     // them as an overlay in the theme's ground colour (the companion reserves 150 px for it).
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
-      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme).overlay }),
-    backgroundColor: companionChrome(settings().all().theme).background,
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme, undefined, stageAtLaunch()).overlay }),
+    backgroundColor: companionChrome(settings().all().theme, undefined, stageAtLaunch()).background,
     skipTaskbar: false,
     show: false,
     webPreferences: secureWebPrefs(),

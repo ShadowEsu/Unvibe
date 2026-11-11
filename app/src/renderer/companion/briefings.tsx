@@ -98,8 +98,8 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
     <div className="briefings">
       <div className="briefings__head">
         <div>
-          <div className="kicker">Change Brief</div>
-          <h1><InkTitle text="Briefings" /></h1>
+          <div className="kicker">Brief</div>
+          <h1><InkTitle text="Briefs" /></h1>
           <p>A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
         {needsRepo && !busy ? null : (
@@ -131,7 +131,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       {needsRepo && !busy && (
         <section className="briefings__empty">
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Understand Change and Explain the change send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Explain the brief and Understand the brief send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
           <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
@@ -141,7 +141,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           review={buildAgentReview(brief, knowledge)}
           repo={brief.repo}
           busy={busy}
-          explainLabel={briefsAiLabel('Explain the change', plan)}
+          explainLabel={briefsAiLabel('Explain the brief', plan)}
           onExplain={() => void understand('review')}
           proCard={needsPro === 'review' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
@@ -166,7 +166,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
             {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
           </ol>
           <p className="briefings__note">{brief.provenanceNote}</p>
-          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand Change', plan)}</button>
+          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand the brief', plan)}</button>
           {needsPro === 'brief' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           <h2>Files</h2>
           <ul className="briefings__files">
@@ -177,7 +177,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
                   <span>+{file.insertions} / -{file.deletions}</span>
                 </button>
                 {openFile === file.path ? (
-                  <p>Kind: {file.kind}. Open a Change Brief review to read the actual diff.</p>
+                  <p>Kind: {file.kind}. Explain the brief to read the actual diff.</p>
                 ) : null}
               </li>
             ))}
@@ -196,7 +196,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           </div>
         </div>
         {knowledge.length === 0 ? (
-          <div className="briefings__empty">No saved knowledge yet. Finish an explanation to create the first object.</div>
+          <div className="briefings__empty">No saved knowledge yet. Finish an explanation to save the first note.</div>
         ) : (
           <ul className="briefings__knowlist">
             {knowledge.slice(0, 20).map((item) => (
@@ -260,7 +260,7 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
       <header className="agent-review__head">
         <Buddy mood={done ? 'happy' : 'reading'} size={44} label="Vibe" />
         <div>
-          <p className="agent-review__eyebrow">after-agent review</p>
+          <p className="agent-review__eyebrow">What your agent changed</p>
           <h2>{review.headline}</h2>
           <p className="agent-review__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
         </div>

@@ -884,6 +884,8 @@ app.whenReady().then(() => {
     };
   });
   ipcMain.on('companion:review', () => void startReview());
+  // The start stage is gone: the window chrome goes back to the theme's (it was the stage's ground for the sharks).
+  ipcMain.on('companion:stage-done', () => { if (companion) applyCompanionChrome(companion); });
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());

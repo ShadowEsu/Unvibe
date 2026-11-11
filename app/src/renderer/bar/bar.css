@@ -205,3 +205,9 @@ button { font: inherit; }
    first word instead of hanging, like the target's toast. Still at most three lines in BAR_NOTICE_H. */
 .island__notice { text-align: left; text-wrap: pretty; }
 .island__notice::before { margin: 0 8px 1px 0; }
+
+/* G1 (Design S-1 whole-app MUST 9): the Island reads in Inter like the rest of the app; mono stays for the keycaps
+   and the allowance figures only. The status line keeps its case. */
+:root { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight: 450; }
+.island__status { text-transform: none; }
+.island kbd, .island__allowance b, .island__metrics b { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; }

@@ -16,7 +16,6 @@ import { Briefings } from './briefings';
 import type { KnowledgeObject } from '../../core/knowledge';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
-import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
@@ -778,7 +777,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
       <div className="login__island" aria-hidden="true"><LogoMark size={15} stroke={2} /><span>learning follows your workflow</span><i /><i /><i /></div>
       <FadeIn animKey="login" className="login__layout">
         <section className="login__story">
-          <div className="login__eyebrow">YOUR PRIVATE LEARNING LAYER</div>
+          <div className="login__eyebrow">Your private learning layer</div>
           <h1>Understand the work.<br />Keep the knowledge.</h1>
           <p>Unvibe turns the code you review into a learning history that stays useful across editors, terminals, and projects.</p>
           <div className="login__features">
@@ -790,7 +789,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
         <div className="login__actions">
           <aside className="login__card">
             <div className="login__mark"><Buddy mood="wave" size={56} follow label="Vibe" /></div>
-            <div className="login__brand">UNVIBE</div>
+            <div className="login__brand">Unvibe</div>
             <h2 className="login__tag">Carry your learning <em>forward.</em></h2>
             <DeletionNotice message={notice} />
             <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
@@ -992,7 +991,7 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
           </div>
         </div>
       )}
-      {compact && <div className="settings-section-label">PLAN & USAGE</div>}
+      {compact && <div className="settings-section-label">Plan & usage</div>}
       {message && <div className={`plan-message${message.startsWith('Sign in') || message.includes('Local limits') || message.includes('Checkout is disabled') ? ' quiet' : ''}`} role="status">{message}</div>}
 
       <div className="plan-pick">
@@ -1169,7 +1168,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
     return (
       <>
         <PlanUsageBoard compact signedIn={false} onSignedIn={onChange} />
-        <div className="settings-section-label">ACCOUNT</div>
+        <div className="settings-section-label">Account</div>
         <div className="setrow setrow--stack">
           <div className="sl">This {deviceName}</div>
           <div className="sd">You are using Unvibe locally right now. Sign in above to attach a cloud plan.</div>
@@ -1192,7 +1191,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
   return (
     <>
       <PlanUsageBoard compact signedIn onSignedIn={onChange} />
-      <div className="settings-section-label">ACCOUNT</div>
+      <div className="settings-section-label">Account</div>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
         <button className="act" onClick={async () => {
           const result = (await window.unvibe.signOut()) as { ok: boolean; error?: string; warning?: string };
@@ -1536,7 +1535,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Island' && (
             <>
-              <div className="settings-section-label">OVERLAY PREVIEW</div>
+              <div className="settings-section-label">Overlay preview</div>
               <OverlayPreview position={settings.barPosition} dimmed={settings.inactiveBehavior === 'hide' ? 0 : FADE_OPACITY} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
@@ -1552,7 +1551,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
-              <div className="settings-section-label">PANEL</div>
+              <div className="settings-section-label">Panel</div>
               <div className="setrow settings-location"><div><div className="sl">When I click away</div></div>
                 <div className="location-grid" role="group" aria-label="When I click away">
                   {([['fade', 'Fade'], ['hide', 'Hide']] as const).map(([behavior, label]) => <button key={behavior} type="button" className={settings.inactiveBehavior === behavior ? 'on' : ''} aria-pressed={settings.inactiveBehavior === behavior} onClick={() => void onSettings({ inactiveBehavior: behavior })}>{label}</button>)}
@@ -1563,11 +1562,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'Sound & alerts' && (
             <>
-              <div className="settings-section-label">LOCAL SOUND</div>
+              <div className="settings-section-label">Local sound</div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
-              <div className="settings-section-label">NOTIFICATIONS</div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}%, stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
+              <div className="settings-section-label">Notifications</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" aria-label="Quiet hours start" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" aria-label="Quiet hours end" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
@@ -1577,7 +1576,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Learning' && <>
             <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
             <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open Learn to search, revisit, or remove a lesson.</div></div></div>
-            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Change Brief" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
+            <div className="setrow"><div><div className="sl">Briefs</div><div className="sd">Build a brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Briefs" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
             <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
             <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle label="Teach it back" on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
             <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. {isWindows
@@ -1752,15 +1751,50 @@ function App() {
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
-  // Ask for a rating once, after the third explanation, when it means something.
+  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on from the first frame (before the settings
+  // arrive, so the first paint is never an empty field), unless the window starts hidden or the last-known setting
+  // (mirrored in localStorage) is off. When the settings land with the row off, the stage goes at once. The app
+  // renders under it, inert, and arrives as it leaves. Onboarding and sign-in never get a stage.
+  const [intro, setIntro] = useState<IntroPhase | 'off'>(() => {
+    let off = false;
+    try { off = window.localStorage.getItem(START_ANIMATION_KEY) === 'off'; } catch { off = false; }
+    return !off && document.visibilityState === 'visible' ? 'swim' : 'off';
+  });
+  const startAnimation = settings?.startAnimation;
   useEffect(() => {
-    if (gate !== 'app' || (profile?.reviews ?? 0) < 3) return;
+    if (startAnimation === undefined) return;
+    try { window.localStorage.setItem(START_ANIMATION_KEY, startAnimation ? 'on' : 'off'); } catch { /* private mode */ }
+    if (!startAnimation) setIntro('off');
+  }, [startAnimation]);
+  useEffect(() => {
+    // No stage over the first run, sign-in or the paste step: those screens are full-window moments of their own.
+    if (gate === 'onboarding' || gate === 'login' || ownCodeStep) setIntro('off');
+  }, [gate, ownCodeStep]);
+  // Main darkened the window chrome for the stage (MUST 14); as the stage leaves, or when there is none, it goes back.
+  useEffect(() => {
+    if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
+  }, [intro]);
+  const introOn = intro === 'swim' || intro === 'leaving';
+  // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
+  // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
+  // opened), never at launch and never while the start stage is up (Design S-1 whole-app MUST 15).
+  const countsAtOpen = useRef<{ reviews: number; understood: number } | null>(null);
+  useEffect(() => {
+    if (gate !== 'app' || !profile) return;
+    const reviews = profile.reviews ?? 0;
+    const understood = profile.understood ?? 0;
+    if (!countsAtOpen.current) {
+      countsAtOpen.current = { reviews, understood };
+      return;
+    }
+    if (reviews < 3 || (reviews <= countsAtOpen.current.reviews && understood <= countsAtOpen.current.understood)) return;
+    if (intro === 'swim' || intro === 'leaving') return;
     let asked = false;
     try { asked = window.localStorage.getItem(FEEDBACK_ASKED_KEY) === '1'; } catch { asked = true; }
     if (asked) return;
     const t = window.setTimeout(() => setFeedbackOpen(true), 2500);
     return () => window.clearTimeout(t);
-  }, [gate, profile?.reviews]);
+  }, [gate, profile, intro]);
   // Vibe says hi whenever you open a new page.
   const firstPage = useRef(true);
   useEffect(() => {
@@ -1870,26 +1904,6 @@ function App() {
     if (!(settings?.soundEffects ?? true)) return;
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
-  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on from the first frame (before the settings
-  // arrive, so the first paint is never an empty field), unless the window starts hidden or the last-known setting
-  // (mirrored in localStorage) is off. When the settings land with the row off, the stage goes at once. The app
-  // renders under it, inert, and arrives as it leaves. Onboarding and sign-in never get a stage.
-  const [intro, setIntro] = useState<IntroPhase | 'off'>(() => {
-    let off = false;
-    try { off = window.localStorage.getItem(START_ANIMATION_KEY) === 'off'; } catch { off = false; }
-    return !off && document.visibilityState === 'visible' ? 'swim' : 'off';
-  });
-  const startAnimation = settings?.startAnimation;
-  useEffect(() => {
-    if (startAnimation === undefined) return;
-    try { window.localStorage.setItem(START_ANIMATION_KEY, startAnimation ? 'on' : 'off'); } catch { /* private mode */ }
-    if (!startAnimation) setIntro('off');
-  }, [startAnimation]);
-  useEffect(() => {
-    // No stage over the first run, sign-in or the paste step: those screens are full-window moments of their own.
-    if (gate === 'onboarding' || gate === 'login' || ownCodeStep) setIntro('off');
-  }, [gate, ownCodeStep]);
-  const introOn = intro === 'swim' || intro === 'leaving';
 
   if (gate === 'checking') return <>{introOn ? <SharksIntro onPhase={setIntro} /> : null}<div className="titlebar" /></>;
   if (gate === 'onboarding') {
@@ -1922,12 +1936,15 @@ function App() {
             <span className="nav-label">Search</span>
             <kbd>{modKey}K</kbd>
           </button>
-          <nav className="nav nav--top"><SlidingPill />{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
-          <p className="side-spaces">Learn</p>
-          <nav className="nav nav--spaces">
+          {/* One sliding pill for both navs (motion row 2): it lives in the wrapper so Today → Library is one move. */}
+          <div className="side-navs">
             <SlidingPill />
-            {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
-          </nav>
+            <nav className="nav nav--top">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
+            <p className="side-spaces">Learn</p>
+            <nav className="nav nav--spaces">
+              {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
+            </nav>
+          </div>
           <div className="spacer" />
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
@@ -1981,9 +1998,6 @@ function App() {
             </button>
             <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
             <span className="topbar__spacer" />
-            <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-              <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
-            </button>
             <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
               <kbd>{shortcutLabel}</kbd><span>Explain</span>
             </button>
@@ -2036,11 +2050,6 @@ function App() {
           )}
         </main>
       </div>
-      <FloatingBuddy
-        userName={settings?.displayName?.trim() || info.user}
-        hidden={page === 'Chat' || settingsOpen}
-        onOpenChat={() => { setAskSeed(''); setPage('Chat'); }}
-      />
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}

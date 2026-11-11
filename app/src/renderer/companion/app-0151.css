@@ -128,6 +128,15 @@
   border: 0; background: var(--u-sheen), var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
   box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
 }
+/* Pop-ups you read are solid (Design S-1 whole-app MUST 1): the palette, the account menu and the feedback card on
+   --u-solid (.93) with no blur, so the page never shows through the text. The sidebar's stacking context sits above
+   the content column so the account menu (fixed, inside the sidebar) is never cut by a page card. */
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette, .fbk) { background: var(--u-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-ui="v3"][data-v7] .fbk { border: 0; border-radius: var(--u-radius-card); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow); animation: mPop var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .fbk__close { border: 0; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .fbk h2 { font: 700 20px/1.2 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .fbk h2 em { font: inherit; font-style: normal; }
+:root[data-ui="v3"][data-v7] .layout .side { z-index: 5; }
 :root[data-ui="v3"][data-v7] .layout .side {
   margin: 10px 0 10px 10px; padding: 44px 10px 10px; border-radius: var(--u-radius-pane); background: var(--u-sheen), var(--u-glass-1);
 }
@@ -164,14 +173,14 @@
 /* Windows and Linux draw min/max/close (titleBarOverlay, 138 px) over the top-right corner: keep Search and Explain
    clear of it. Only macOS puts its controls on the left (createCompanion in main/windows.ts). */
 :root[data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .topbar { padding-right: 150px; }
-:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain) {
+:root[data-ui="v3"][data-v7] .layout .topbar__explain {
   height: 34px; border: 0; border-radius: 999px; background: var(--u-glass); color: var(--u-ink-2); font: 600 13px var(--u-font);
   box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm); transform: none;
   transition: box-shadow 140ms ease, transform 160ms var(--u-press);
 }
 :root[data-ui="v3"][data-v7] .layout .topbar__explain { padding: 0 14px 0 6px; color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain):hover:not(:disabled) { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); transform: none; }
-:root[data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain):active:not(:disabled) { transform: scale(0.97); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .topbar__explain:hover:not(:disabled) { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .topbar__explain:active:not(:disabled) { transform: scale(0.97); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
 /* Keycaps: white caps with a 3 px ink-2 lip, mono (keys and code are the exception to "no mono UI"). */
 :root[data-ui="v3"][data-v7] .layout kbd,
 :root[data-ui="v3"][data-v7] .layout .topbar kbd,
@@ -254,8 +263,6 @@
 :root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text strong { font: 600 17px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text p { margin: 0; font: 400 13.5px/1.5 var(--u-font); color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .layout .home-card.limit-banner .limit-banner__actions { display: grid; gap: 10px; flex: none; margin-left: auto; }
-/* "Review what changed": a text button under the card, never a second filled button. */
-:root[data-ui="v3"][data-v7] .layout .home-brief { justify-self: start; margin: -12px 0 0 -6px; }
 
 /* Up next and Recently understood: two glass-2 cards side by side; rows inside sit on hairlines. */
 :root[data-ui="v3"][data-v7] .layout .home-cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; margin: 0; }
@@ -339,7 +346,7 @@
   background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm);
 }
 :root[data-ui="v3"][data-v7] .layout .history-continue__go svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
-:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) .lib-feed { margin: 0 0 110px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) .lib-feed { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .layout .lib-group { margin: 0; }
 :root[data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 18px; }
 :root[data-ui="v3"][data-v7] .layout .page h2.lib-group__label,
@@ -491,25 +498,14 @@
 :root[data-ui="v3"][data-v7] .onboard__quiet[aria-disabled="true"] { cursor: default; color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline, summary):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
 
-/* Sticks to the window's bottom edge when a step is taller than the window (the level question at 760 px, anything
-   at the 620 px minimum), so the forward button never scrolls away; in a short step it sits in place. Transparent so
-   the ground and its glows run under it, and the column's width, so Back and the forward action line up with the
-   step's content (Design S-1 23:25). */
+/* The footer row (Back, the forward action) sits in the flow on its own line under the step's content, at the column's
+   width so Back and the forward action line up with the content; margin-top auto puts it at the bottom when the step
+   is short. It no longer sticks over the content (Design S-1 whole-app MUST 4: Back sat under the level chips) and
+   has no veil above it (MUST 5: the blurred bar). A tall step scrolls, footer included. */
 :root[data-ui="v3"][data-v7] .onboard__foot {
-  position: sticky; bottom: 0; z-index: 1; display: flex; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
+  position: static; display: flex; flex: none; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
   width: min(560px, 100%); margin-top: auto; padding: 28px 0 36px; background: transparent;
 }
-/* Text scrolled under the sticky footer fades out in the 24 px just above Back and the forward button; the footer
-   itself stays transparent (Design S-1 07 Nov answer 1). The veil eases back out at its foot and at both sides, so
-   over the glows it leaves no hard paper-coloured edge. Decoration only: clicks pass through. */
-:root[data-ui="v3"][data-v7] .onboard__foot::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 24px; pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--u-paper) 75%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-}
-/* Back and the forward button paint above the veil, so their focus rings stay whole. */
-:root[data-ui="v3"][data-v7] .onboard__foot > * { position: relative; }
 :root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__foot { width: min(760px, 100%); }
 :root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
 /* Hello: one primary at the form's full width (420 px, centred), the Google disclosure under it on the column's left. */
@@ -638,7 +634,7 @@
 :root[data-ui="v3"][data-v7] .login__mark { justify-content: center; margin: 0 0 10px; }
 :root[data-ui="v3"][data-v7] .login .login__brand { margin: 0 0 8px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); font-style: normal; letter-spacing: 0.12em; }
 :root[data-ui="v3"][data-v7] .login .login__tag { margin: 0 0 14px; color: var(--u-ink); font: var(--u-w-title) 17px/1.3 var(--u-font); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .login .login__tag em { font-style: normal; }
+:root[data-ui="v3"][data-v7] .login .login__tag em { font: inherit; font-style: normal; letter-spacing: inherit; }
 :root[data-ui="v3"][data-v7] .login .login__card-copy { margin: 0 0 16px; color: var(--u-ink-2); font: var(--u-w-body) 12.5px/1.6 var(--u-font); }
 /* Google's own button, white with the standard G, wherever it shows: sign in, Settings › Account & Plan, Share
    (Design S-1 r3 SHOULD 1). The doubled class outranks Settings' outline-pill rule for .field-btn. */
@@ -837,20 +833,15 @@
 /* ── Lesson, Read and Restudy (c-lesson): back link, title, meta line with the mode segment; then a 2 × 2 grid of glass
    cards: Selected code (a numbered sheet) | Explanation, My note | Ask about this lesson. Check keeps its quiz bar. ── */
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson:not(.learn-page--survey) { align-self: stretch; width: 100%; }
-/* The lesson scrolls under the floating Ask bar (Design S-1 r2 SHOULD 1): the page drops its bottom band, the bar
-   overlaps the page's last 76 px (58 px bar + 18 px margin), the reading keeps bar + 24 px of padding so its end
-   clears the bar, and a 16 px fade marks the edge where it passes under: an overlay on the column that fades in over
-   16 px and then holds the ground down to the window's edge, so no text shows beside the bar or in its margin. Clicks
-   pass through and it stops short of the lesson's scrollbar (the page's right padding + 12 px). An overlay, not a
-   mask, so the cards keep their backdrop blur (Design 07 Nov answer 2).
-   The quiz (Check) gets the same band back: its card ends 16 px above the bar instead of 100 px. */
-:root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding-bottom: 0; }
-:root[data-ui="v3"][data-v7] .layout .content:has(.learn-page--lesson) > .ask-dock { position: relative; z-index: 2; margin-top: -76px; }
-:root[data-ui="v3"][data-v7] .layout .content:has(.learn-page--lesson:not(.learn-page--survey))::after {
-  content: ""; position: absolute; left: 0; right: calc(clamp(20px, 4vw, 48px) + 12px); bottom: 0; height: 92px; z-index: 1;
-  pointer-events: none; background: linear-gradient(to bottom, transparent, var(--u-paper) 16px);
-}
-:root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 92px; }
+/* The ask bar floats over the page's bottom on every page that has it (Design S-1 r2 SHOULD 1, whole-app S2): the
+   page is the scroller and keeps bar + 24 px (58 + 18 + 24 = 100 px) of bottom padding so its last row clears the
+   bar at the end of the scroll; rows passing under it show through the bar's glass. No band and no mask (the cards
+   keep their backdrop blur, Design 07 Nov answer 2). The lesson scrolls inside .lesson-doc, so its page drops the
+   side padding and the lesson's scrollbar sits at the window's edge. */
+:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .page { padding-bottom: 100px; }
+:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .ask-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; margin: 0 auto 18px; }
+:root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding: 12px 0 0; }
+:root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 100px; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-doc:not(.lesson-doc--survey) {
   box-sizing: border-box; width: 100%; padding: 22px clamp(20px, 3vw, 36px) 100px; border: 0; border-radius: 0; background: transparent; box-shadow: none;
   /* The lesson itself scrolls (companion.css .lesson-doc): a control reached with Tab stops clear of the bar (WCAG 2.4.11). */
@@ -986,7 +977,7 @@
    Vibe's head was cut off at 780 px tall); 24 px title, Vibe at 56, the saved conversations as a glass card. */
 :root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-stage { justify-content: flex-start; margin-top: 8px; gap: 18px; width: min(640px, calc(100% - 48px)); overflow: visible; }
 :root[data-ui="v3"][data-v7] .layout .chat-hello { animation: none; }
-:root[data-ui="v3"][data-v7] .layout .chat-hello__vibe .buddy { width: 56px !important; height: 56px !important; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello__vibe { display: block; height: 56px; margin: 0 0 12px; }
 :root[data-ui="v3"][data-v7] .layout .chat-hello h2 { margin: 6px 0 6px; font: 700 24px/1.2 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .layout .chat-hello p { font: 400 14px/1.5 var(--u-font); color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-dock { margin-bottom: 0; }
@@ -1151,7 +1142,7 @@ html[data-r2] {
 
 /* §3 row 2: the sidebar's active pill is one element (violet 12 %, M4) that slides to the current item with
    translateY over --m-fast; the buttons themselves keep no fill. Label and icon colour change over --m-instant. */
-:root[data-ui="v3"][data-v7] .layout .nav { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .side-navs { position: relative; }
 :root[data-ui="v3"][data-v7] .layout .nav-pill { position: absolute; left: 0; right: 0; top: 0; height: var(--pill-h, 36px); border-radius: var(--u-radius-field); background: rgb(90 63 224 / 0.12); pointer-events: none; transform: translateY(var(--pill-y, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), opacity var(--m-instant) linear; }
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav-pill { background: rgb(184 166 255 / 0.16); }
 :root[data-ui="v3"][data-v7] .layout .nav-pill[hidden] { display: block; opacity: 0; }
@@ -1163,8 +1154,8 @@ html[data-r2] {
 :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: translateY(-2px); background: linear-gradient(rgb(255 255 255 / 0.34), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(40 24 110 / 0.32); }
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: linear-gradient(rgb(255 255 255 / 0.14), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(0 0 0 / 0.5); }
 /* §3 row 5: press. Buttons, chips and nav rows to .95 in --m-instant, back over --m-fast; cards and rows to .98. */
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__search, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings) { transition-duration: var(--m-fast); transition-timing-function: var(--m-ease-sharp); }
-:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__search, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings) { transition-duration: var(--m-fast); transition-timing-function: var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
 :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-step, .home-row, .history-continue, .lib-row, .survey-pick, .briefings__card):active { transform: scale(var(--m-scale-card)); transition-duration: var(--m-instant); }
 /* §3 row 7: the plan meter grows from the left once per visit. */
 :root[data-ui="v3"][data-v7] .layout :is(.side-usage__bar i, .plan-usage-row > i > em) { transform-origin: left center; animation: mGrow var(--m-slow) var(--m-ease-smooth) both; }
@@ -1196,8 +1187,6 @@ html[data-r2] {
   transform: rotate(-45deg); clip-path: inset(0 100% 0 0); transition: clip-path var(--m-fast) var(--m-ease-sharp);
 }
 :root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { content: ""; clip-path: inset(0 0 0 0); }
-/* §1: nothing loops at rest except Vibe's blink; v5's 3.6 s bob on the floating Vibe button stops. */
-:root[data-ui="v3"][data-v7] .vibe-float__btn { animation: none; }
 /* §3 row 14: the contained celebration on a finished quiz: eight 8–10 px shapes (squares and rounds, violet and lilac)
    fly out from the card's centre over 900 ms and fade; clipped to the card; once per trigger per day (Burst). */
 :root[data-ui="v3"][data-v7] .layout .survey__end { position: relative; overflow: hidden; }
@@ -1222,6 +1211,33 @@ html[data-r2] {
   15% { opacity: 1; }
   100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(140deg) scale(0.8); }
 }
+
+/* ── Design S-1 whole-app fix loop (requests/boss/20261110-2234-design-r2-whole-app.md) ── */
+/* MUST 6: no caps labels anywhere; sentence case, Inter 600, no letter-spacing (Today and the overlay already do). */
+:root[data-ui="v3"][data-v7] :is(.chat-saved h3, .plan-pick__card span, .plan-pick__card > span:first-child, .mh, .settings-section-label, .integ__group h3, .learning-kicker, .lesson-code__bar, .status-pill, .pill, .survey__kicker, .quiz-result__eyebrow, .quiz-code summary, .chat-assistant__who, .search-palette section h2, .login__eyebrow, .login__brand, .lib-group__label, .usage-board__title, .kicker, .eyebrow, .d2, .brand .badge) {
+  text-transform: none; letter-spacing: 0; font-weight: 600; font-style: normal;
+}
+/* MUST 7: code in JetBrains Mono on the lesson and in Ask threads (the overlay already does). */
+:root[data-ui="v3"][data-v7] .layout :is(.lesson-code, .lesson-code pre, .lesson-code code, .lesson-card--code code, .lesson-explain code, .chat-assistant code, .chat-assistant pre, .chat-assistant pre code, .chat-user code, .rich-text code, .rich-text pre, .lesson-doc code, .lesson-doc pre) {
+  font-family: var(--u-font-mono); font-variant-ligatures: none;
+}
+/* MUST 10: violet as text goes through --u-accent-text (lilac in dark: 6a50f5 on the dark ground is 2.4–3.3:1); the
+   login step chips and "Included" as readable pills. */
+:root[data-ui="v3"][data-v7] :is(.layout .chat-assistant__who, .login__eyebrow, .login__feature .lf-icon, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { background: rgb(184 166 255 / 0.12); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .login__feature .lf-icon { background: rgb(184 166 255 / 0.14); }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card .soft-btn:disabled { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 12px/1 var(--u-font); opacity: 1; box-shadow: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .plan-pick__card .soft-btn:disabled { background: rgb(184 166 255 / 0.14); }
+/* MUST 11: no green or lime as a status colour; the Understood badge and the Allowed chip are violet tints. */
+:root[data-ui="v3"][data-v7] :is(.layout .pill.pill--understood, .onboard__ok) { border-color: transparent; background: var(--u-mist); color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .pill.pill--understood, .onboard__ok) { background: rgb(184 166 255 / 0.14); color: var(--u-lilac); }
+/* MUST 13: the empty-state action is the primary pill, one line. */
+:root[data-ui="v3"][data-v7] .layout .learning-empty .primary-btn { display: inline-flex; align-items: center; width: auto; height: 40px; padding: 0 18px; border-radius: 999px; white-space: nowrap; }
+/* MUST 12: a failed reply is one sentence beside an amber mark with Retry (the overlay's error pattern). */
+:root[data-ui="v3"][data-v7] .layout .chat-error { display: flex; align-items: center; gap: 12px; margin: 8px 0 0; padding: 12px 14px; border-radius: var(--u-radius-card); background: var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .chat-error__mark { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--u-amber-tint); color: var(--u-amber); font: 700 13px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-error p { flex: 1 1 auto; margin: 0; color: var(--u-ink); font: 500 13px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-error__retry { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: 600 13px/1 var(--u-font); cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__lockup, .m-burst i, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-usage-row > i > em)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }

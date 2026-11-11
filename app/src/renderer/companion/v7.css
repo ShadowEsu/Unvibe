@@ -154,14 +154,11 @@
   & .topbar .nav-toggle { display: none; }
   & .topbar__title { margin: 0; font: 750 17px var(--font-display); letter-spacing: -0.025em; color: var(--v-ink); }
   & .topbar__spacer { flex: 1; }
-  & .topbar__search,
   & .topbar__explain {
     display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 9px; border: 1.5px solid var(--v-line);
     border-radius: var(--v-radius-sm); background: var(--v-surface); color: var(--v-muted); font: 600 13px var(--font-sans); cursor: pointer;
     transition: transform 200ms var(--press), box-shadow 200ms var(--press), border-color 120ms ease;
   }
-  & .topbar__search svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-  & .topbar__search:hover { color: var(--v-ink); border-color: var(--v-edge-hi); }
   & .topbar kbd { padding: 0 5px; border: 1px solid var(--v-line); border-radius: 5px; background: var(--v-sunken); color: var(--v-muted); font: 600 11px/18px var(--font-sans); }
   & .topbar__explain { padding: 0 12px 0 5px; border-color: var(--v-edge-hi); background: var(--lime); color: var(--v-ink); box-shadow: var(--hard-sm); }
   & .topbar__explain kbd { border-color: var(--v-edge-hi); background: var(--v-surface); color: var(--v-ink); }
@@ -348,18 +345,6 @@
   & .chat-starters button:hover, & .chat-suggestions button:hover { border-color: var(--v-edge-hi); color: var(--v-ink); background: var(--lime); transform: rotate(-1deg); }
   & .chat-context span { border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-sunken); color: var(--v-muted); }
   & .chat-meter { color: var(--v-muted); }
-
-  /* ── Vibe in the corner ────────────────────────────────────────────────── */
-  & .vibe-float { right: 22px; bottom: 82px; }
-  & .vibe-float__btn {
-    width: 60px; height: 60px; border: 1.5px solid var(--v-edge); border-radius: 50%; background: var(--v-surface);
-    box-shadow: var(--hard); animation: vibeBob 3.6s ease-in-out infinite;
-  }
-  & .vibe-float__btn:hover { animation-play-state: paused; transform: rotate(-6deg) scale(1.06); }
-  & .vibe-float__bubble {
-    border: 1.5px solid var(--v-edge); border-radius: 14px 14px 4px 14px; background: var(--v-surface); color: var(--v-ink);
-    font: var(--v-hand-style) 400 20px/1.1 var(--font-hand); box-shadow: var(--hard-sm);
-  }
 
   /* ── Palette, settings, toast ──────────────────────────────────────────── */
   & .search-overlay { background: rgb(20 20 20 / 0.3); backdrop-filter: blur(2px); }

@@ -56,6 +56,17 @@ function greetName(name?: string): string {
   return `Hey ${clean.split(/\s+/)[0]}, what are we figuring out?`;
 }
 
+/** A failed reply: one sentence beside an amber mark and Retry, the overlay's pattern (Design S-1 whole-app MUST 12). */
+function ChatError({ error, onRetry }: { error: string; onRetry?: () => void }) {
+  return (
+    <div className="chat-error" role="alert">
+      <span className="chat-error__mark" aria-hidden="true">!</span>
+      <p>{error}</p>
+      {onRetry ? <button type="button" className="chat-error__retry" onClick={onRetry}>Retry</button> : null}
+    </div>
+  );
+}
+
 function usageTone(pct: number): 'ok' | 'warn' | 'hot' {
   if (pct >= 85) return 'hot';
   if (pct >= 60) return 'warn';
@@ -153,6 +164,8 @@ export function Chat({
   const [draft, setDraft] = useState(initialDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // The question a failed reply can be retried with (Design S-1 whole-app MUST 12).
+  const [retry, setRetry] = useState('');
   const [left, setLeft] = useState(usage?.remaining ?? null);
   const [copied, setCopied] = useState<number | null>(null);
   const [modelName, setModelName] = useState('');
@@ -268,6 +281,7 @@ export function Chat({
     if (!question || busy) return;
     setDraft('');
     setError('');
+    setRetry('');
     setBusy(true);
     // Vibe reads the question first, then thinks until the answer arrives.
     setBuddyMood('reading');
@@ -294,7 +308,12 @@ export function Chat({
       return;
     }
     if (!result.ok || !result.answer || result.wipeGeneration === undefined) {
-      setError(result.error ?? 'Chat could not reply.');
+      // Nothing answered: the question comes back out of the log (Retry sends it again) and the transport's own
+      // words ("fetch failed", a socket error) become one sentence; a server's sentence stays.
+      setMessages(messages);
+      const raw = result.error ?? '';
+      setError(!raw || /fetch failed|network|ECONN|ENOTFOUND|ETIMEDOUT|socket|offline/i.test(raw) ? "Couldn't reach Unvibe. Check your connection and try again." : raw);
+      setRetry(question);
       setBuddyMood('confused');
       window.setTimeout(() => setBuddyMood('idle'), 3200);
       return;
@@ -334,7 +353,7 @@ export function Chat({
       <div className="chat-stage">
         {empty ? (
           <div className="chat-hello">
-            <span className="chat-hello__vibe"><Buddy mood={vibeMood} size={88} follow label="Vibe" /></span>
+            <span className="chat-hello__vibe"><Buddy mood={vibeMood} size={56} follow label="Vibe" /></span>
             <h2>{greetName(userName)}</h2>
             <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
             <div className="chat-context">
@@ -394,7 +413,7 @@ export function Chat({
                 <ThinkingStatus label={providerLabel} />
               </div>
             ) : null}
-            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            {error ? <ChatError error={error} onRetry={retry ? () => { setError(''); void send(retry); } : undefined} /> : null}
             <div ref={endRef} />
           </div>
         )}
@@ -438,7 +457,7 @@ export function Chat({
               </button>
             </div>
           </div>
-          {empty && error ? <p className="form-error" role="alert">{error}</p> : null}
+          {empty && error ? <ChatError error={error} onRetry={retry ? () => { setError(''); void send(retry); } : undefined} /> : null}
           {usage ? (
             <button
               type="button"

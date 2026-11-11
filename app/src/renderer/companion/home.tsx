@@ -290,17 +290,22 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
           <span className="home-cta__keys">{shortcutKeys.map((key, index) => <kbd key={`${index}:${key}`}>{key}</kbd>)}</span>
         </button>
       )}
-      {brief ? (
-        <button type="button" className="link-btn home-brief" onClick={onBriefs}>
-          {`Review what changed: ${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'}`}
-        </button>
-      ) : null}
       {today ? <TodayGoalLine goal={today} /> : null}
-      <div className={`home-cols${upNext.length ? '' : ' home-cols--one'}`}>
-        {upNext.length ? (
+      <div className={`home-cols${upNext.length || brief ? '' : ' home-cols--one'}`}>
+        {upNext.length || brief ? (
           <section className="home-list home-list--next" aria-labelledby="home-next">
             <header><h2 id="home-next">Up next</h2><span className="home-list__count"><CountUp value={stepsDone} /> of {steps.length} done</span></header>
             <ol>
+              {/* The working tree's brief leads the list when there is one (Design S-1 whole-app S4). */}
+              {brief ? (
+                <li key="brief"><button type="button" className="home-step" onClick={onBriefs}>
+                  <LineIcon className="home-step__icon" d={IC.briefings} />
+                  <span className="home-row__text">
+                    <span className="home-row__title">Review what changed</span>
+                    <span className="home-row__source">{`${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'} in the working tree`}</span>
+                  </span>
+                </button></li>
+              ) : null}
               {upNext.map((step) => (
                 <li key={step.id}><button type="button" className="home-step" onClick={runStep[step.id]}>
                   <LineIcon className="home-step__icon" d={step.icon} />

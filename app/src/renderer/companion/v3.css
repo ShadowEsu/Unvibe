@@ -256,18 +256,6 @@
 /* ── Home: the limit banner (the 0.1.51 Home is in app-0151.css) ──────────── */
 :root[data-ui="v3"] .limit-banner { border: 1px solid var(--v-line); border-radius: var(--v-radius); background: var(--v-sunken); box-shadow: none; margin: 0 0 22px; }
 
-/* ── Floating Vibe ─────────────────────────────────────────────────────────── */
-:root[data-ui="v3"] .vibe-float { right: 22px; bottom: 22px; }
-:root[data-ui="v3"] .vibe-float__btn {
-  width: 56px; height: 56px; border: 1px solid var(--v-line); border-radius: 18px; background: var(--v-surface);
-  box-shadow: 0 10px 30px -12px rgb(27 26 23 / 0.35); backdrop-filter: none;
-}
-:root[data-ui="v3"] .vibe-float__btn:hover { transform: translateY(-1px); }
-:root[data-ui="v3"] .vibe-float__bubble {
-  border: 1px solid var(--v-line); border-radius: 12px; background: var(--v-surface); color: var(--v-ink);
-  box-shadow: 0 10px 30px -14px rgb(27 26 23 / 0.3); font: 500 13px var(--font-sans); backdrop-filter: none;
-}
-
 /* ── Search palette ────────────────────────────────────────────────────────── */
 :root[data-ui="v3"] .search-overlay { background: rgb(20 19 17 / 0.28); backdrop-filter: none; }
 :root[data-ui="v3"] .search-palette {

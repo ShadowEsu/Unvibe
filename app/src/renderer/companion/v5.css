@@ -184,16 +184,6 @@
 :root[data-ui="v3"] .mbody h2 { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.03em; }
 :root[data-ui="v3"] .search-palette__row.on, :root[data-ui="v3"] .search-palette__row[aria-selected="true"] { background: rgb(124 92 255 / 0.1); }
 
-/* ── Vibe is always with you ─────────────────────────────────────────────── */
-:root[data-ui="v3"] .vibe-float__btn {
-  width: 62px; height: 62px; border-radius: 50%; border: 0;
-  background: radial-gradient(circle at 30% 25%, #ffffff, #f1ecff 70%);
-  box-shadow: 0 0 0 2px rgb(124 92 255 / 0.25), 0 14px 32px -10px rgb(91 60 220 / 0.55);
-  animation: vibeBob 3.6s ease-in-out infinite;
-}
-:root[data-ui="v3"] .vibe-float__btn:hover { animation-play-state: paused; transform: scale(1.06); }
-:root[data-ui="v3"] .vibe-float__bubble { border-color: rgb(124 92 255 / 0.25); border-radius: 14px 14px 4px 14px; animation: bubbleIn 360ms var(--ease-emphatic) both; }
-
 /* ── Motion: pages, cards and lists ease in ──────────────────────────────── */
 :root[data-ui="v3"] .fade-in { animation: v5PageIn 460ms var(--ease-emphatic) both; }
 :root[data-ui="v3"] .fade-stagger > * { animation: v5RiseIn 520ms var(--ease-emphatic) both; }
@@ -212,11 +202,9 @@
 @keyframes v5PageIn { from { opacity: 0; transform: translateY(10px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 @keyframes v5RiseIn { from { opacity: 0; transform: translateY(12px) scale(0.985); } to { opacity: 1; transform: none; } }
 @keyframes v5Pop { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
-@keyframes vibeBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes bubbleIn { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  :root[data-ui="v3"] .fade-in, :root[data-ui="v3"] .fade-stagger > *, :root[data-ui="v3"] .lib-row, :root[data-ui="v3"] .modal, :root[data-ui="v3"] .search-palette, :root[data-ui="v3"] .acct-menu, :root[data-ui="v3"] .vibe-float__btn, :root[data-ui="v3"] .vibe-float__bubble { animation: none; }
+  :root[data-ui="v3"] .fade-in, :root[data-ui="v3"] .fade-stagger > *, :root[data-ui="v3"] .lib-row, :root[data-ui="v3"] .modal, :root[data-ui="v3"] .search-palette, :root[data-ui="v3"] .acct-menu { animation: none; }
 }
 
 /* ── Layout fixes: no white strip, roomy scrolling lists, card grid ──────── */
