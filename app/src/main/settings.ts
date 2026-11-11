@@ -96,6 +96,8 @@ export interface Settings {
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
   soundEffects: boolean;
+  /** The ascii-sharks ocean on a cold launch of the companion (Design r2-motion SPEC §2.1). Local canvas only. */
+  startAnimation: boolean;
   /** Local UI-sound gain (0–1). */
   soundVolume: number;
   /** A restrained synthesized voice; no remote audio is used. */
@@ -165,6 +167,7 @@ const DEFAULTS: Settings = {
   barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,
+  startAnimation: true,
   soundVolume: 0.3,
   soundStyle: 'soft',
   inactiveBehavior: 'fade',

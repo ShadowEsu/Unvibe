@@ -8,6 +8,7 @@ import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
 import { InkTitle } from './inkTitle';
+import { SegThumb } from '../shared/slidingThumb';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -109,7 +110,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
         )}
       </div>
 
-      <div className="briefings__scopes" role="tablist" aria-label="Git scope">
+      <div className="briefings__scopes" role="tablist" aria-label="Git scope"><SegThumb />
         {SCOPES.map((item) => (
           <button
             key={item.id}

@@ -542,24 +542,45 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
   .ob-chip:is(:hover, :active), .ob-btn:is(:hover, :active), .pmf-card .btn:is(:hover, :active), .ob-tab.is-on { transform: none; }
 }
 
-/* ── Round 2 options G2 and G3 (Design 1939), shown by <html data-r2="g2|g3">; G1 is everything above. Whichever is
-   picked folds into the rules above and this block goes. ── */
-/* G2 "Studio": the pane is one solid plate with a hairline; the header carries no aurora; the code card is the only
-   glass; the primary is an ink fill. */
-:root[data-r2="g2"] {
-  --u-paper: #ffffff; --u-veil: rgb(255 255 255 / 0.96); --u-accent: #15141a; --u-accent-on: #f3f1fa; --u-accent-text: #5a3fe0; --u-mist: #efeef5;
-  --u-glass-1: #ffffff; --u-glass: #ffffff; --u-solid: #ffffff; --u-chip: #ffffff; --u-blur: none; --u-rim-line: transparent; --u-sheen: linear-gradient(transparent, transparent);
-  --u-hair: rgb(21 20 26 / 0.1); --u-line: rgb(21 20 26 / 0.1); --u-fill: rgb(21 20 26 / 0.05); --u-shadow-sm: 0 1px 2px rgb(21 20 26 / 0.08);
+/* ── Motion (Design agents/design/r2-motion/SPEC.md §1, §3; ledger 601). Transform and opacity only. The pinned
+   behaviour (heldFollowUp, askFollowUp, consent) is untouched; these rules change timing and nothing else. ── */
+html[data-r2] {
+  --m-instant: 80ms; --m-fast: 180ms; --m-exit: 150ms; --m-normal: 350ms; --m-slow: 600ms; --m-stagger: 70ms;
+  --m-ease-smooth: cubic-bezier(.22, 1, .36, 1); --m-ease-sharp: cubic-bezier(.4, 0, .2, 1); --m-ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --m-dist-sm: 8px; --m-dist-md: 16px; --m-scale-press: .95; --m-scale-card: .98; --m-scale-pop: 1.04;
 }
-:root[data-r2="g2"][data-theme="dark"] {
-  --u-paper: #1c1927; --u-veil: rgb(28 25 39 / 0.96); --u-accent: #f3f1fa; --u-accent-on: #15141a; --u-accent-text: #b8a6ff; --u-mist: #262236;
-  --u-glass-1: #1c1927; --u-glass: #1c1927; --u-solid: #1c1927; --u-chip: #1c1927;
-  --u-hair: rgb(243 241 250 / 0.12); --u-line: rgb(243 241 250 / 0.12); --u-fill: rgb(243 241 250 / 0.06); --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+/* Row 10: open over --m-fast (opacity, scale .98, 8 px up); close by click over --m-exit. */
+html[data-r2] .ob { animation: obIn var(--m-fast) var(--m-ease-smooth) both; }
+html[data-r2] .ob.is-leaving { animation: obOut var(--m-exit) var(--m-ease-sharp) both; }
+@keyframes obIn { from { opacity: 0; transform: translateY(var(--m-dist-sm)) scale(var(--m-scale-card)); } }
+@keyframes obOut { to { opacity: 0; } }
+html[data-r2] .ob-body { animation-duration: var(--m-fast); animation-timing-function: var(--m-ease-smooth); }
+/* Row 9: the tabs' and the depth control's selected thumb is one element sliding with translateX. */
+html[data-r2] .ob-tabs, html[data-r2] .ob-depth { position: relative; }
+html[data-r2] .seg-thumb { position: absolute; top: 6px; left: 0; height: 42px; width: var(--thumb-w, 0px); border-radius: var(--u-radius-field); background: var(--u-mist); pointer-events: none; transform: translateX(var(--thumb-x, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), width var(--m-fast) var(--m-ease-smooth); }
+html[data-r2] .ob-depth .seg-thumb { top: 2px; height: 20px; border-radius: var(--u-radius-chip); background: var(--u-accent); }
+html[data-r2] .seg-thumb[hidden] { display: block; opacity: 0; }
+html[data-r2] .ob-tab, html[data-r2] .ob-depth__item { position: relative; z-index: 1; transition: color var(--m-instant) linear, transform var(--m-fast) var(--m-ease-sharp); }
+html[data-r2] .ob-tabs:has(.seg-thumb) .ob-tab.is-on, html[data-r2] .ob-depth:has(.seg-thumb) .ob-depth__item.is-on { background: transparent; }
+/* Row 5: press to .95 in --m-instant, back over --m-fast. */
+html[data-r2] :is(.ob-chip, .ob-btn, .pmf-card .btn, .ob-tab, .ob-depth__item, .ob-link, .ob-ask__send) { transition-duration: var(--m-fast); transition-timing-function: var(--m-ease-sharp); }
+html[data-r2] :is(.ob-chip, .ob-btn, .pmf-card .btn, .ob-tab, .ob-depth__item, .ob-ask__send):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
+/* Rows 12 and 13: a right answer fills over --m-fast and its check pops once; a wrong one shakes once over
+   --m-normal while its outline fades in over --m-fast. */
+html[data-r2] .ob-opt { transition: border-color var(--m-fast) var(--m-ease-sharp), background var(--m-fast) var(--m-ease-sharp); }
+html[data-r2] .ob-opt.is-right { animation: obPop var(--m-fast) var(--m-ease-pop) both; }
+@keyframes obPop { 50% { transform: scale(var(--m-scale-pop)); } to { transform: scale(1); } }
+html[data-r2] .ob-opt__mark--right svg { stroke-dasharray: 24; animation: obDraw var(--m-fast) var(--m-ease-sharp) both; }
+@keyframes obDraw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+html[data-r2] .ob-opt.is-wrong { animation: obShake var(--m-normal) var(--m-ease-sharp) both; }
+@keyframes obShake { 0% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); } }
+html[data-r2] .ob-quiz { animation-duration: var(--m-fast); animation-timing-function: var(--m-ease-smooth); }
+/* Row 15: toasts in from the bottom over --m-normal, out over --m-exit. */
+html[data-r2] .ob-toast { animation: obToastIn var(--m-normal) var(--m-ease-smooth) both; }
+html[data-r2] .ob-toast.is-leaving { animation: obToastOut var(--m-exit) var(--m-ease-sharp) both; }
+@keyframes obToastIn { from { opacity: 0; transform: translateY(var(--m-dist-md)); } }
+@keyframes obToastOut { to { opacity: 0; transform: translateY(var(--m-dist-sm)); } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-r2] :is(.ob, .ob.is-leaving, .ob-opt.is-right, .ob-opt.is-wrong, .ob-opt__mark--right svg, .ob-toast, .ob-toast.is-leaving) { animation: none; }
+  html[data-r2] :is(.seg-thumb, .ob-tab, .ob-depth__item, .ob-opt) { transition: none; }
 }
-:root[data-r2="g2"] .ob-code { background: var(--u-raised); }
-:root[data-r2="g2"] .ob-tab.is-on { background: var(--u-fill); color: var(--u-ink); }
-/* G3 "Soft": glass-2 at r18; the active tab is a violet pill. */
-:root[data-r2="g3"] { --u-radius-pane: 18px; --u-radius-field: 12px; --u-veil: rgb(250 248 252 / 0.5); }
-:root[data-r2="g3"][data-theme="dark"] { --u-veil: rgb(16 12 34 / 0.72); }
-:root[data-r2="g3"] .ob-tab.is-on { background: var(--u-accent); color: var(--u-accent-on); }
-:root[data-r2="g3"] .ob-tab { border-radius: 12px; }

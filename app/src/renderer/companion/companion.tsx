@@ -36,6 +36,9 @@ import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { SettingsIcon } from './settingsIcons';
+import { SharksIntro, type IntroPhase } from '../shared/sharks/SharksIntro';
+import { CountUp } from '../shared/countUp';
+import { SlidingPill } from '../shared/slidingThumb';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -72,7 +75,7 @@ interface Settings {
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
   barHoverDelayMs: number;
   barSize: 'small' | 'medium' | 'large';
-  followActiveDisplay: boolean; soundEffects: boolean;
+  followActiveDisplay: boolean; soundEffects: boolean; startAnimation?: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
   inactiveBehavior: 'fade' | 'hide';
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
@@ -1522,6 +1525,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">Start animation</div><div className="sd">The sharks that swim in when Unvibe opens. Drawn on this {deviceName}; nothing is downloaded.</div></div><Toggle label="Start animation" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow />
             </>
@@ -1726,6 +1730,8 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.ui = 'v3';
     document.documentElement.dataset.v7 = '';
+    // Round 2 glass (G1): the motion tokens key off it (app-0151.css `html[data-r2]`).
+    document.documentElement.dataset.r2 = 'g1';
     // Windows draws its caption buttons over the top-right corner; CSS reserves room for them.
     document.documentElement.dataset.platform = platformAttr;
   }, []);
@@ -1773,7 +1779,14 @@ function App() {
     return r.shortcutError;
   };
 
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
+  const [toastLeaving, setToastLeaving] = useState(false);
+  const toastTimers = useRef<number[]>([]);
+  const flash = (m: string) => {
+    for (const t of toastTimers.current) window.clearTimeout(t);
+    setToastLeaving(false);
+    setToast(m);
+    toastTimers.current = [window.setTimeout(() => setToastLeaving(true), 1650), window.setTimeout(() => { setToast(''); setToastLeaving(false); }, 1800)];
+  };
   const shortcutLabel = prettyAccel(info.shortcut);
   const shortcutKeys = shortcutCaps(info.shortcut);
   const isLearnPage = page === 'Learn' || page === 'Study' || page === 'History' || page === 'Quiz';
@@ -1854,6 +1867,14 @@ function App() {
     if (!(settings?.soundEffects ?? true)) return;
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
+  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): decided once, when the app first shows; off by
+  // the Settings row or when the window starts hidden. The app renders under it, inert, and arrives as it leaves.
+  const [intro, setIntro] = useState<IntroPhase | 'pending' | 'off'>('pending');
+  useEffect(() => {
+    if (gate !== 'app' || intro !== 'pending') return;
+    setIntro((settings?.startAnimation ?? true) && document.visibilityState === 'visible' ? 'swim' : 'off');
+  }, [gate]);
+  const introOn = intro === 'swim' || intro === 'leaving';
 
   if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
@@ -1874,7 +1895,7 @@ function App() {
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
       <div className="titlebar" />
-      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}${intro === 'leaving' || intro === 'gone' ? ' layout--arrive' : ''}`} inert={intro === 'swim'}>
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
         <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
           <div className="brand"><Buddy size={26} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
@@ -1883,16 +1904,17 @@ function App() {
             <span className="nav-label">Search</span>
             <kbd>{modKey}K</kbd>
           </button>
-          <nav className="nav nav--top">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
+          <nav className="nav nav--top"><SlidingPill />{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
           <p className="side-spaces">Learn</p>
           <nav className="nav nav--spaces">
+            <SlidingPill />
             {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
           </nav>
           <div className="spacer" />
           {usageLine ? (
             <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
               {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
-              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
+              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b><CountUp value={usageLine.remaining} /> left</b></span>
               <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
             </button>
           ) : null}
@@ -2011,7 +2033,8 @@ function App() {
       )}
       <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {toast && <div className={`toast${toastLeaving ? ' is-leaving' : ''}`} role="status">{toast}</div>}
+      {introOn ? <SharksIntro onPhase={setIntro} /> : null}
     </>
   );
 }

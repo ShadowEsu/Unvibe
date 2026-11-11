@@ -1076,99 +1076,114 @@
   :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .home-cta, .home-step, .home-row, .history-continue, .lib-line, .survey-line, .topbar__explain, .nav button):is(:hover, :active, .on) { transform: none; }
 }
 
-/* ── Round 2 options G2 and G3 (Design requests/unvibe-app/20261107-1939-design-r2-options-glass.md), shown by
-   <html data-r2="g2|g3"> for the renders Preston picks from; G1 "Violet glass" is everything above. Whichever is
-   picked folds into the rules above and this block goes. ── */
+/* ─────────────────────────────────────────────────
+   Motion (Design agents/design/r2-motion/SPEC.md, ledger 601). One token set under html[data-r2]; transform and
+   opacity only; every new or changed rule below uses these names. Vibe's buddy.css keyframes and the overlay's
+   pinned behaviour keep their own values.
+   ───────────────────────────────────────────────── */
+html[data-r2] {
+  --m-instant: 80ms; --m-fast: 180ms; --m-exit: 150ms;
+  --m-normal: 350ms; --m-slow: 600ms; --m-stagger: 70ms;
+  --m-ease-smooth: cubic-bezier(.22, 1, .36, 1);
+  --m-ease-sharp: cubic-bezier(.4, 0, .2, 1);
+  --m-ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --m-dist-sm: 8px; --m-dist-md: 16px;
+  --m-scale-press: .95; --m-scale-card: .98; --m-scale-pop: 1.04;
+}
+@keyframes mArrive { from { opacity: 0; transform: translateY(var(--m-dist-sm)); } }
+@keyframes mArriveMd { from { opacity: 0; transform: translateY(var(--m-dist-md)); } }
+@keyframes mPop { from { opacity: 0; transform: scale(.98); } }
+@keyframes mGrow { from { transform: scaleX(0); } }
+@keyframes mShake { 0% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); } }
 
-/* G2 "Studio" (ElevenLabs): a near-neutral ground with the aurora only as a faint glow at the top edge; a flat
-   sidebar column with a hairline divider; solid hairline cards, r12, no rim sheen; the primary is an ink fill;
-   Inter 600 24 px display; Vibe's voice in Inter; the most compact density (13 px body, 8 px gaps). */
-:root[data-r2="g2"] {
-  --u-paper: #f7f6fb; --u-accent: #15141a; --u-accent-on: #f3f1fa; --u-accent-text: #5a3fe0; --u-mist: #efeef5;
-  --u-glass-1: #f7f6fb; --u-glass: #ffffff; --u-solid: #ffffff; --u-chip: #ffffff; --u-blur: none;
-  --u-rim-line: transparent; --u-sheen: linear-gradient(transparent, transparent); --u-hair: rgb(21 20 26 / 0.1); --u-line: rgb(21 20 26 / 0.1); --u-fill: rgb(21 20 26 / 0.05);
-  --u-shadow: 0 1px 2px rgb(21 20 26 / 0.06); --u-shadow-sm: 0 1px 2px rgb(21 20 26 / 0.08);
-  --u-radius-card: 12px; --u-radius-field: 10px; --u-w-title: 600;
+/* §2 The start stage: the G1 dark ground in both themes, the violet sharks on a canvas (shared/sharks, our palette
+   copy of the vendored renderer), the lockup on a dark glass-2 pill. In: canvas over --m-fast; lockup 250–600 ms.
+   Out: --m-normal (timeout) or --m-exit (skip), --m-ease-sharp; the app arrives under it (.layout--arrive). */
+.sharks-intro {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; overflow: hidden; cursor: default;
+  background: linear-gradient(rgb(16 12 34 / 0.8), rgb(16 12 34 / 0.8)), url("./aurora.webp") center 30% / 170% auto no-repeat, #16122a;
 }
-:root[data-r2="g2"][data-theme="dark"] {
-  --u-paper: #15131f; --u-accent: #f3f1fa; --u-accent-on: #15141a; --u-accent-text: #b8a6ff; --u-mist: #262236;
-  --u-glass-1: #15131f; --u-glass: #1c1927; --u-solid: #1c1927; --u-chip: #1c1927;
-  --u-hair: rgb(243 241 250 / 0.12); --u-line: rgb(243 241 250 / 0.12); --u-fill: rgb(243 241 250 / 0.06);
-  --u-shadow: 0 1px 2px rgb(0 0 0 / 0.3); --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+.sharks-intro__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); animation: mFade var(--m-fast) var(--m-ease-smooth) both; }
+@keyframes mFade { from { opacity: 0; } }
+.sharks-intro__lockup {
+  position: relative; display: inline-flex; align-items: center; gap: 12px; padding: 12px 20px 12px 14px; border-radius: 999px;
+  background: linear-gradient(rgb(255 255 255 / 0.08), transparent 35%), rgb(40 35 62 / 0.75); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.3), 0 16px 36px -12px rgb(0 0 0 / 0.5);
+  color: #f3f1fa; font: 700 22px/1 var(--u-font); letter-spacing: -0.01em;
+  animation: mArrive var(--m-normal) var(--m-ease-smooth) 250ms both;
 }
-/* The glow fades to paper between 120 and 420 px (Design M5: no hard edge where the image ends). */
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout {
-  background: linear-gradient(transparent 0, transparent 120px, var(--u-paper) 420px), linear-gradient(rgb(247 246 251 / 0.88), rgb(247 246 251 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
-}
-:root[data-r2="g2"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
-  background: linear-gradient(transparent 0, transparent 120px, var(--u-paper) 420px), linear-gradient(rgb(21 19 31 / 0.88), rgb(21 19 31 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
-}
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .side { margin: 0; border-radius: 0; background: var(--u-glass-1); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 1px 0 0 var(--u-hair); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .ask-dock),
-:root[data-r2="g2"][data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.topbar__search, .topbar__explain, .side-search, .side-usage, .history-search input, .soft-btn, .act, .field-btn) { box-shadow: 0 0 0 1px var(--u-hair); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .nav button.on { background: var(--u-fill); color: var(--u-ink); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-hero h1, .topline h1, .page-head h1, .briefings__head h1) { font: 600 24px/1.2 var(--u-font); letter-spacing: -0.015em; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-hero__note { font: 400 14px/1.4 var(--u-font); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home { gap: 16px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner) { padding: 16px 18px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-cols { gap: 12px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-list { padding: 14px 16px 10px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) { min-height: 38px; padding: 6px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-row__title, .lib-row__body strong, .history-continue__lesson strong) { font-size: 13px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-line .lib-row { padding: 9px 10px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 12px; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .lib-row__icon { background: var(--u-fill); stroke: var(--u-ink-2); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-accent); stroke: var(--u-accent-on); }
-:root[data-r2="g2"][data-ui="v3"][data-v7] .layout .history-continue__go { border-radius: 10px; }
+.sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
+.sharks-intro--out-skip { animation-duration: var(--m-exit); }
+@keyframes mOut { to { opacity: 0; } }
+/* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
+   stage leaves; without the stage (setting off, reopened from the tray) the app is simply there. */
+:root[data-ui="v3"][data-v7] .layout--arrive .side { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .topbar { animation: mArrive var(--m-normal) var(--m-ease-smooth) var(--m-stagger) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .page { animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--m-stagger) * 2) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .ask-dock { animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--m-stagger) * 3) both; }
 
-/* G3 "Soft" (Dia): a pastel aurora (lilac, peach, sky) under glass; Bricolage 700 28 px display; the primary violet
-   at r14; glass-2 cards at r18; the sidebar as floating glass tabs on top (Today, Ask Vibe) with the list under them;
-   airy density (14 px body, 12 px gaps). */
-:root[data-r2="g3"] {
-  --u-font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --u-radius-card: 18px; --u-radius-field: 14px; --u-radius-pane: 18px;
+/* §3 row 1: a new screen's content arrives over --m-fast (v7's 720 ms fadeInUp goes). */
+:root[data-ui="v3"][data-v7] .layout .fade-in { animation: mArrive var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .layout .fade-in--side { animation: none; }
+/* §3 row 3 and 17: the first eight rows or cards of a screen (and an empty state's message and button) arrive
+   --m-stagger apart over --m-normal; the rest, and anything re-rendered by a filter or search, appear at once. */
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *) { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; animation-delay: calc(var(--m-stagger) * var(--m-i, 0)); }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(2) { --m-i: 1; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(3) { --m-i: 2; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(4) { --m-i: 3; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(5) { --m-i: 4; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(6) { --m-i: 5; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(7) { --m-i: 6; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(8) { --m-i: 7; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(n+9) { animation: none; }
+/* A list re-rendered in place (filter, search): no arrival. learn.tsx and briefings.tsx set data-m-settled after the
+   first paint. */
+:root[data-ui="v3"][data-v7] .layout .fade-in [data-m-settled] :is(.lib-line, .survey-line, .briefings__card) { animation: none; }
+
+/* §3 row 2: the sidebar's active pill is one element (violet 12 %, M4) that slides to the current item with
+   translateY over --m-fast; the buttons themselves keep no fill. Label and icon colour change over --m-instant. */
+:root[data-ui="v3"][data-v7] .layout .nav { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .nav-pill { position: absolute; left: 0; right: 0; top: 0; height: var(--pill-h, 36px); border-radius: var(--u-radius-field); background: rgb(90 63 224 / 0.12); pointer-events: none; transform: translateY(var(--pill-y, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), opacity var(--m-instant) linear; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav-pill { background: rgb(184 166 255 / 0.16); }
+:root[data-ui="v3"][data-v7] .layout .nav-pill[hidden] { display: block; opacity: 0; }
+:root[data-ui="v3"][data-v7] .layout .nav button { position: relative; z-index: 1; transition: color var(--m-instant) linear, transform var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout .nav button.on, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: transparent; }
+
+/* §3 row 4: clickable cards lift 2 px with a deeper shadow and a brighter top sheen over --m-fast; no sweep. */
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue, .briefings__card, .plan-pick__card, .tile) { transition: transform var(--m-fast) var(--m-ease-sharp), box-shadow var(--m-fast) var(--m-ease-sharp), background var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: translateY(-2px); background: linear-gradient(rgb(255 255 255 / 0.34), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(40 24 110 / 0.32); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: linear-gradient(rgb(255 255 255 / 0.14), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(0 0 0 / 0.5); }
+/* §3 row 5: press. Buttons, chips and nav rows to .95 in --m-instant, back over --m-fast; cards and rows to .98. */
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__search, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings) { transition-duration: var(--m-fast); transition-timing-function: var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__search, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-step, .home-row, .history-continue, .lib-row, .survey-pick, .briefings__card):active { transform: scale(var(--m-scale-card)); transition-duration: var(--m-instant); }
+/* §3 row 7: the plan meter grows from the left once per visit. */
+:root[data-ui="v3"][data-v7] .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i) { transform-origin: left center; animation: mGrow var(--m-slow) var(--m-ease-smooth) both; }
+/* §3 row 8: menus and the palette open from the trigger's corner over --m-fast; closing is the owner's unmount. */
+:root[data-ui="v3"][data-v7] .acct-menu { transform-origin: top left; animation: mPop var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .search-palette { transform-origin: top center; animation: mPop var(--m-instant) linear both; }
+/* §3 row 9: the segmented thumb (Library filters, Briefs scopes) is one element sliding with translateX. */
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .seg-thumb { position: absolute; top: 3px; left: 0; height: calc(100% - 6px); width: var(--thumb-w, 0px); border-radius: 999px; background: var(--u-solid); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); pointer-events: none; transform: translateX(var(--thumb-x, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), width var(--m-fast) var(--m-ease-smooth); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .seg-thumb { background: rgb(184 166 255 / 0.18); }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button { position: relative; z-index: 1; }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes):has(.seg-thumb) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: transparent; box-shadow: none; }
+/* §3 row 12 and 13: a right answer fills over --m-fast and pops once; a wrong one shakes once over --m-normal while
+   the amber outline fades in over --m-fast. */
+:root[data-ui="v3"][data-v7] .layout .quiz-options button { transition: background var(--m-fast) var(--m-ease-sharp), box-shadow var(--m-fast) var(--m-ease-sharp), transform var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout .quiz-options button.correct { animation: mPopOnce var(--m-fast) var(--m-ease-pop) both; }
+@keyframes mPopOnce { 50% { transform: scale(var(--m-scale-pop)); } to { transform: scale(1); } }
+:root[data-ui="v3"][data-v7] .layout .quiz-options button.wrong { animation: mShake var(--m-normal) var(--m-ease-sharp) both; }
+/* §3 row 15: toasts in from the bottom over --m-normal; out over --m-exit. */
+:root[data-ui="v3"][data-v7] .toast { animation: mArriveMd var(--m-normal) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .toast.is-leaving { animation: mToastOut var(--m-exit) var(--m-ease-sharp) forwards; }
+@keyframes mToastOut { to { opacity: 0; transform: translate(-50%, var(--m-dist-sm)); } }
+/* §3 row 16: a reviewed item's text goes to ink-3 over --m-fast. */
+:root[data-ui="v3"][data-v7] .layout .agent-review label span { transition: color var(--m-fast) var(--m-ease-sharp); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__canvas, .sharks-intro__lockup, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .sharks-intro--out { animation-duration: 200ms; }
+  :root[data-ui="v3"][data-v7] .layout :is(.nav-pill, .seg-thumb, .nav button, .home-cta, .history-continue) { transition: none; }
+  :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: none; }
 }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout {
-  background:
-    radial-gradient(1000px 600px at 6% 0%, rgb(255 206 184 / 0.95), transparent 62%),
-    radial-gradient(900px 600px at 96% 10%, rgb(184 214 255 / 0.95), transparent 62%),
-    radial-gradient(1000px 640px at 50% 104%, rgb(214 198 255 / 0.9), transparent 62%),
-    linear-gradient(rgb(250 248 252 / 0.8), rgb(250 248 252 / 0.8)), url("./aurora.webp") center / cover no-repeat, #f6f3fb;
-}
-:root[data-r2="g3"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
-  background:
-    radial-gradient(900px 520px at 8% 0%, rgb(120 70 60 / 0.5), transparent 60%),
-    radial-gradient(800px 520px at 92% 12%, rgb(50 80 140 / 0.5), transparent 60%),
-    radial-gradient(900px 600px at 50% 100%, rgb(90 70 150 / 0.5), transparent 60%),
-    linear-gradient(rgb(16 12 34 / 0.8), rgb(16 12 34 / 0.8)), url("./aurora.webp") center / cover no-repeat, #16122a;
-}
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .side { margin: 12px 0 12px 12px; padding-top: 40px; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
-:root[data-r2="g3"][data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .side { padding-top: 10px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .brand { margin-bottom: 14px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin: 10px 0 14px; padding: 4px; border-radius: 16px;
-  background: var(--u-sheen), var(--u-glass-1); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
-  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
-}
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top button { flex-direction: column; justify-content: center; gap: 4px; height: 54px; border-radius: 12px; font-size: 12px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--top button.on { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--spaces {
-  padding: 6px; border-radius: 16px; background: var(--u-sheen), var(--u-glass-1); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
-  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
-}
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .nav--spaces button { border-radius: 11px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .side-spaces { margin: 0 0 6px; padding: 0 10px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-hero h1, .topline h1, .page-head h1, .briefings__head h1) { font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home { gap: 28px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home-cols { gap: 24px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .home-list { padding: 20px 22px 16px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) { min-height: 48px; padding: 10px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.home-row__title, .lib-row__body strong) { font-size: 14px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-line .lib-row { padding: 13px 14px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-group__rows { padding: 6px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 22px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button, .soft-btn, .act, .field-btn) { border-radius: 14px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout .ask-dock { border-radius: 22px; }
-:root[data-r2="g3"][data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm); }

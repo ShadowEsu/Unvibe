@@ -31,6 +31,7 @@ import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
 import { freshState, heldFollowUp, reduceEvent, type PanelState, type Phase } from './panelState';
 import '../shared/tokens.css';
+import { SegThumb } from '../shared/slidingThumb';
 
 /** The four bottom tabs (SPEC Tabs). */
 type View = 'explain' | 'test' | 'ask' | 'saved';
@@ -256,6 +257,8 @@ function applyTheme(preference: ThemePreference) {
   const dark = preference === 'dark'
     || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  // Round 2 glass (G1): the motion tokens key off it (widget.css `html[data-r2]`).
+  document.documentElement.dataset.r2 = 'g1';
 }
 
 /** Main passes Settings › Theme in the page URL, so the first paint already has it (no light flash in dark mode). */
@@ -985,6 +988,7 @@ function Widget() {
           tabs[to]?.focus();
         }}
       >
+        <SegThumb />
         {TABS.map((tab) => {
           const on = view === tab.id;
           const enabled = tabEnabled(tab.id);

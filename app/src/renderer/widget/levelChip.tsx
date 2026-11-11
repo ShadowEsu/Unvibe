@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent } from 'react';
 import type { ExplanationLevel } from '../../core/protocol';
 import { isProPlan } from '../../core/plan';
 import { Icon } from './icons';
+import { SegThumb } from '../shared/slidingThumb';
 
 export const LEVELS: Array<{ id: ExplanationLevel; label: string }> = [
   { id: 'new', label: 'New' },
@@ -40,7 +41,7 @@ export function DepthControl({ level, plan, disabled, onPick }: {
     refs.current[LEVELS.findIndex((l) => l.id === next.id)]?.focus();
   };
   return (
-    <div className="ob-depth" role="radiogroup" aria-label="Explanation depth" onKeyDown={onKey}>
+    <div className="ob-depth" role="radiogroup" aria-label="Explanation depth" onKeyDown={onKey}><SegThumb />
       {LEVELS.map((l, i) => {
         const locked = l.id === 'expert' && expertLocked(plan);
         const on = l.id === level;

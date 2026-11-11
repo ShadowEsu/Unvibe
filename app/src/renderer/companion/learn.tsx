@@ -10,6 +10,8 @@ import { linesLabel } from '../../core/linesLabel';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
 import { InkTitle } from './inkTitle';
+import { SegThumb } from '../shared/slidingThumb';
+import { useSettled } from '../shared/useSettled';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -130,6 +132,8 @@ export function Learn({
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
   const feedRef = useRef<HTMLDivElement>(null);
+  // The list's arrival (app-0151.css §3 row 3) plays once; a filter or search re-render shows rows at once.
+  const settled = useSettled();
   const scrollRef = useRef(0);
   const [mode, setMode] = useState<LessonMode>('read');
   const [level, setLevel] = useState('intermediate');
@@ -667,7 +671,7 @@ export function Learn({
             </button>
           ) : null}
           {intent !== 'quiz' ? (
-            <div className="learn-filters" role="group" aria-label="Filter lessons">
+            <div className="learn-filters" role="group" aria-label="Filter lessons"><SegThumb />
               {([
                 ['all', 'All', counts.all],
                 ['understood', 'Understood', counts.understood],
@@ -721,7 +725,7 @@ export function Learn({
           <p className="muted" role="status">Nothing in this filter.</p>
         )
       ) : intent === 'quiz' ? (
-        <div className="lib-feed" ref={feedRef}>
+        <div className="lib-feed" ref={feedRef} data-m-settled={settled || undefined}>
           <div className="lib-group__rows">
             {filtered.map((item) => (
               <div key={item.id} className="survey-line">
@@ -740,7 +744,7 @@ export function Learn({
           </div>
         </div>
       ) : (
-        <div className="lib-feed" ref={feedRef}>
+        <div className="lib-feed" ref={feedRef} data-m-settled={settled || undefined}>
           {groups.map(([label, items]) => (
             <section key={label} className="lib-group">
               <h2 className="lib-group__label">{label}</h2>

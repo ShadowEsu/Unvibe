@@ -6,6 +6,7 @@ import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
+import { CountUp } from '../shared/countUp';
 import { InkTitle } from './inkTitle';
 
 /** The daily goal from `learning:today`, derived from saved lessons on this computer. */
@@ -298,7 +299,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
       <div className={`home-cols${upNext.length ? '' : ' home-cols--one'}`}>
         {upNext.length ? (
           <section className="home-list home-list--next" aria-labelledby="home-next">
-            <header><h2 id="home-next">Up next</h2><span className="home-list__count">{stepsDone} of {steps.length} done</span></header>
+            <header><h2 id="home-next">Up next</h2><span className="home-list__count"><CountUp value={stepsDone} /> of {steps.length} done</span></header>
             <ol>
               {upNext.map((step) => (
                 <li key={step.id}><button type="button" className="home-step" onClick={runStep[step.id]}>
