@@ -9,6 +9,7 @@ import { Faq, Os, PixelVibe, PixelWipe, Pixels, Ribbon, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
 import { DiaMotion } from "./motion/DiaMotion";
 import { UnvibeDemo } from "./UnvibeDemo";
+import { NumbersN1, NumbersN2, NumbersN3, type NumbersVariant } from "./NumbersR1";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
@@ -364,14 +365,14 @@ function Dock() {
  * page drives the scroll-linked parts; the rest is CSS (dia-motion.css). The H1, wordmark and demo window are painted
  * from the first frame and only rise.
  */
-export function Home({ copy, faq }: { copy: PricingCopy; faq: ReadonlyArray<{ id: string; question: string; answer: string }> }) {
+export function Home({ copy, faq, numbers }: { copy: PricingCopy; faq: ReadonlyArray<{ id: string; question: string; answer: string }>; numbers?: NumbersVariant }) {
   return (
     <div className="d d-page d-home">
       <DiaMotion />
       <div data-d-dock-scope="">
         <Hero />
         <Ribbon />
-        <Numbers />
+        {numbers === "n1" ? <NumbersN1 /> : numbers === "n2" ? <NumbersN2 /> : numbers === "n3" ? <NumbersN3 /> : <Numbers />}
         <Statement labelledBy="d-stmt-h">
           <p className="d-stmt__entity">{D_STATEMENT.entity}</p>
           <p className="d-label d-mono">{D_STATEMENT.label}</p>

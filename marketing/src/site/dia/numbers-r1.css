@@ -1,0 +1,130 @@
+/* Ledger 598: the three "Unvibe in numbers" candidates (NumbersR1.tsx), Design's file 20261111-1137. Own file so the
+   live section's rules (dia.css 1b) are untouched until Preston picks. Tokens from dia.css: --d-ink, --d-ink-2,
+   --d-violet, --d-line, --d-sans, --d-mono, --font-display, --d-ease. The glass recipe is Design's; its colours are
+   tokens here (hallmark sloplint, Floor 1). */
+
+.d-home {
+  --d-glass-fill: rgb(255 255 255 / 0.64);
+  --d-glass-rim: rgb(90 63 224 / 0.14);
+  --d-glass-shadow: rgb(40 24 110 / 0.35);
+  --d-violet-wash: rgb(90 63 224 / 0.05);
+  --d-leader-dot: rgb(23 19 31 / 0.22);
+}
+.d-glass { background: var(--d-glass-fill); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); box-shadow: inset 0 0 0 1px var(--d-glass-rim), 0 24px 60px -28px var(--d-glass-shadow); }
+
+/* The ocean canvas: fills its section, under everything, fading 64 px at the top and bottom edges (the mask's colour
+   is any opaque value; it is alpha that counts). */
+.d-ocean { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 64px, var(--d-ink) calc(100% - 64px), transparent); mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 64px, var(--d-ink) calc(100% - 64px), transparent); }
+
+/* ── Shared ── */
+.d-nr { position: relative; padding: 96px 30px 120px; isolation: isolate; }
+.d-nr__keys kbd { min-width: 44px; height: 44px; padding: 0 12px; margin-right: 6px; border-radius: 10px; font-size: 15px; }
+.d-nr__keys .lx-win kbd:last-child, .d-nr__keys .lx-mac kbd:last-child { margin-right: 0; }
+
+/* ── N1 "Ocean" ── */
+.d-nr__panel { position: relative; z-index: 1; display: grid; grid-template-columns: 7fr 5fr; gap: 48px 64px; max-width: 1160px; margin: 0 auto; padding: 56px 64px; border-radius: 28px; }
+.d-nr__label { margin-bottom: 28px; text-align: left; }
+.d-nr__money { display: grid; align-content: start; }
+.d-nr__figure { display: block; font-family: var(--font-display); font-weight: 400; font-size: 148px; line-height: 0.95; letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; color: var(--d-ink); white-space: nowrap; }
+.d-nr__phrase { max-width: 30ch; margin: 22px 0 0; font: 500 20px/1.4 var(--d-sans); color: var(--d-ink); }
+.d-nr__small { margin: 10px 0 0; font: 400 14.5px/1.45 var(--d-sans); color: var(--d-ink-2); }
+.d-nr__where { margin: 18px 0 0; font: 600 15px/1.3 var(--d-sans); }
+.d-nr__where a { position: relative; color: var(--d-violet); text-decoration: none; }
+.d-nr__where a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 180ms var(--d-ease); }
+.d-nr__where a:hover::after, .d-nr__where a:focus-visible::after { transform: scaleX(1); }
+.d-nr__facts { list-style: none; margin: 0; padding: 0; align-self: center; }
+.d-nr__facts li { display: grid; gap: 4px; padding: 18px 0; border-top: 1px solid var(--d-line); }
+.d-nr__facts li:first-child { border-top: 0; padding-top: 0; }
+.d-nr__facts li:last-child { padding-bottom: 0; }
+.d-nr__lead { font: 600 18px/1.3 var(--d-sans); color: var(--d-ink); }
+.d-nr__fact { font: 400 14.5px/1.45 var(--d-sans); color: var(--d-ink-2); }
+/* The keycaps press once as their row lands (scale .95 down 80 ms, back 180 ms). */
+.d-nr__facts li[data-in] .d-nr__keys kbd { animation: dNrPress 260ms var(--d-ease) both; animation-delay: calc(var(--d, 0ms) + 500ms); }
+@keyframes dNrPress { 0% { transform: none; } 31% { transform: scale(0.95); } 100% { transform: none; } }
+
+@media (max-width: 1023px) {
+  .d-nr__panel { grid-template-columns: 1fr; gap: 40px; padding: 40px 36px; }
+  .d-nr__figure { font-size: 112px; }
+}
+@media (max-width: 600px) {
+  .d-nr { padding: 56px 16px 72px; }
+  .d-nr__panel { gap: 28px; padding: 28px 22px; border-radius: 22px; }
+  .d-nr__label { margin-bottom: 18px; }
+  .d-nr__figure { font-size: 64px; letter-spacing: -0.01em; }
+  .d-nr__phrase { margin-top: 14px; font-size: 17px; }
+  .d-nr__facts li { padding: 14px 0; }
+  .d-nr__lead { font-size: 17px; }
+}
+@media (max-width: 374px) { .d-nr__figure { font-size: 56px; } }
+
+/* ── N2 "Ledger" ── */
+.d-nr--n2 { padding-top: 80px; }
+.d-nl { max-width: 880px; margin: 0 auto; padding: 16px 40px; border-radius: 24px; }
+.d-nl__rows { list-style: none; margin: 0; padding: 0; }
+.d-nl__row { display: flex; align-items: center; gap: 18px; min-height: 68px; border-top: 1px solid var(--d-line); }
+.d-nl__row:first-child { border-top: 0; }
+.d-nl__row--money { min-height: 112px; }
+.d-nl__link { display: flex; flex: 1; align-items: center; gap: 18px; min-height: inherit; margin: 0 -16px; padding: 0 16px; border-radius: 12px; color: inherit; text-decoration: none; transition: background 180ms var(--d-ease); }
+.d-nl__link:hover, .d-nl__link:focus-visible { background: var(--d-violet-wash); }
+.d-nl__arrow { color: var(--d-violet); transition: transform 180ms var(--d-ease); }
+.d-nl__link:hover .d-nl__arrow { transform: translateX(3px); }
+.d-nl__name { display: grid; gap: 4px; font: 500 17px/1.3 var(--d-sans); color: var(--d-ink); }
+.d-nl__under { font: 400 14.5px/1.45 var(--d-sans); color: var(--d-ink-2); }
+.d-nl__where { color: var(--d-violet); font-weight: 600; }
+.d-nl__leader { flex: 1; align-self: center; height: 1px; min-width: 24px; background-image: radial-gradient(circle, var(--d-leader-dot) 0.6px, transparent 0.8px); background-size: 5px 1px; transform-origin: left; }
+.d-nl__value { font-variant-numeric: lining-nums tabular-nums; text-align: right; white-space: nowrap; color: var(--d-ink); }
+.d-nl__figure { font-family: var(--font-display); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em; }
+.d-nl__num { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1; }
+.d-nl__text { font: 600 18px/1.3 var(--d-sans); }
+/* Rows arrive top to bottom (data-d-enter, 70 ms apart): the leader draws from the left, then the value fades in. */
+.js .d-nl__row:not([data-in]) .d-nl__leader { transform: scaleX(0); }
+.js .d-nl__row:not([data-in]) .d-nl__value { opacity: 0; }
+.d-nl__row[data-in] .d-nl__leader { animation: dNlLeader 350ms var(--d-ease) both; animation-delay: var(--d, 0ms); }
+.d-nl__row[data-in] .d-nl__value { animation: dNlValue 350ms var(--d-ease) both; animation-delay: calc(var(--d, 0ms) + 250ms); }
+@keyframes dNlLeader { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes dNlValue { from { opacity: 0; } to { opacity: 1; } }
+.d-nl__row:nth-child(1) { --d: 0ms; } .d-nl__row:nth-child(2) { --d: 70ms; } .d-nl__row:nth-child(3) { --d: 140ms; }
+.d-nl__row:nth-child(4) { --d: 210ms; } .d-nl__row:nth-child(5) { --d: 280ms; } .d-nl__row:nth-child(6) { --d: 350ms; }
+
+@media (max-width: 600px) {
+  .d-nl { padding: 8px 20px; border-radius: 22px; }
+  .d-nl__row { flex-wrap: wrap; gap: 6px 12px; padding: 14px 0; min-height: 0; }
+  .d-nl__row--money { min-height: 0; }
+  .d-nl__row--money .d-nl__name { flex-basis: 100%; }
+  .d-nl__link { flex-wrap: wrap; gap: 6px 12px; }
+  .d-nl__name { flex: 1 1 auto; }
+  .d-nl__value { margin-left: auto; }
+  .d-nl__figure { font-size: 44px; }
+}
+@media (max-width: 479px) { .d-nl__leader { display: none; } }
+
+/* ── N3 "Fact bar" ── */
+/* The lime ribbon (site.css) reaches 100 px below the hero, so the bar starts under it. */
+.d-nb-wrap { padding: 120px 30px 96px; }
+.d-nb { display: flex; align-items: center; justify-content: space-between; max-width: 1160px; min-height: 72px; margin: 0 auto; padding: 0 12px; border-radius: 999px; list-style: none; }
+.d-nb li { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-left: 1px solid var(--d-line); font: 400 16px/1.3 var(--d-sans); color: var(--d-ink-2); white-space: nowrap; }
+.d-nb li:first-child { border-left: 0; }
+.d-nb li strong { font-weight: 600; color: var(--d-ink); }
+.d-nb .d-nr__keys kbd { min-width: 32px; height: 32px; padding: 0 8px; margin-right: 4px; border-radius: 8px; font-size: 13px; box-shadow: inset 0 0 0 1.5px var(--d-ink), 0 2px 0 var(--d-ink); }
+/* Items fade in left to right, 70 ms apart, after the bar; the keycaps press once. */
+.js .d-nb:not([data-in]) li { opacity: 0; }
+.d-nb[data-in] li { animation: dNbItem 350ms var(--d-ease) both; animation-delay: calc(var(--d, 0ms) + 150ms); }
+.d-nb[data-in] .d-nr__keys kbd { animation: dNrPress 260ms var(--d-ease) both; animation-delay: 600ms; }
+@keyframes dNbItem { from { opacity: 0; } to { opacity: 1; } }
+.d-nb__tail { color: var(--d-ink-2); }
+
+@media (max-width: 820px) {
+  .d-nb-wrap { padding: 112px 16px 56px; }
+  .d-nb { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 16px; border-radius: 22px; }
+  .d-nb li { display: block; padding: 10px 12px; border-left: 0; white-space: normal; line-height: 1.35; }
+  .d-nb__tail { display: block; }
+  .d-nb__comma { display: none; }
+  .d-nb .d-nr__keys { display: block; margin-bottom: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d-nr__facts li[data-in] .d-nr__keys kbd, .d-nb[data-in] .d-nr__keys kbd, .d-nl__row[data-in] .d-nl__leader, .d-nl__row[data-in] .d-nl__value, .d-nb[data-in] li { animation: none; }
+  .js .d-nl__row:not([data-in]) .d-nl__leader { transform: none; }
+  .js .d-nl__row:not([data-in]) .d-nl__value, .js .d-nb:not([data-in]) li { opacity: 1; }
+  .d-nr__where a::after, .d-nl__link, .d-nl__arrow { transition: none; }
+}

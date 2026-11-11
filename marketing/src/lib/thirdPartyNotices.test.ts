@@ -16,8 +16,15 @@ const sitePackage = JSON.parse(readFileSync(path.resolve("package.json"), "utf8"
 describe("open-source notices (/licenses)", () => {
   it("match the pinned version and the licence file each installed package ships", () => {
     for (const notice of THIRD_PARTY_NOTICES) {
-      assert.equal(sitePackage.dependencies[notice.name], notice.version, `${notice.name}: bump the notice with the pin`);
-      const root = path.dirname(require.resolve(`${notice.name}/package.json`));
+      let root: string;
+      if (notice.vendored) {
+        root = path.resolve("src/vendor", notice.vendored);
+        const vendor = readFileSync(path.join(root, "VENDOR.md"), "utf8");
+        assert.ok(vendor.includes(`${notice.url} at commit ${notice.version}`), `${notice.name}: VENDOR.md records a different source or commit`);
+      } else {
+        assert.equal(sitePackage.dependencies[notice.name], notice.version, `${notice.name}: bump the notice with the pin`);
+        root = path.dirname(require.resolve(`${notice.name}/package.json`));
+      }
       assert.equal(notice.license, readFileSync(path.join(root, "LICENSE"), "utf8").trim(), `${notice.name}: licence text changed`);
     }
   });
