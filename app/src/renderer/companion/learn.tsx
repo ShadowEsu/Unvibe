@@ -13,6 +13,7 @@ import { InkTitle } from './inkTitle';
 import { SegThumb } from '../shared/slidingThumb';
 import { useSettled } from '../shared/useSettled';
 import { Burst } from '../shared/burst';
+import { SharksBand } from '../shared/sharks/SharksBand';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -89,9 +90,10 @@ function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
+function LearningEmpty({ title, detail, sharks, onReview }: { title: string; detail: string; sharks: boolean; onReview: () => void }) {
   return (
     <div className="learning-empty">
+      {sharks ? <SharksBand height={200} /> : null}
       <h2>{title}</h2>
       <p>{detail}</p>
       <button className="primary-btn" onClick={onReview}>Explain some code</button>
@@ -108,6 +110,7 @@ export function Learn({
   onRestudy,
   onRefresh,
   initialOpenId,
+  sharks = false,
 }: {
   history: LearningItem[];
   queue: LearningItem[];
@@ -117,6 +120,8 @@ export function Learn({
   onRestudy: (item: LearningItem, level: string) => void | Promise<void>;
   onRefresh: () => void | Promise<void>;
   initialOpenId?: string | null;
+  /** The Sharks setting: an ocean band on the empty state and a short pass on the done card. */
+  sharks?: boolean;
 }) {
   const catalog = useMemo(() => {
     const seen = new Set<string>();
@@ -570,6 +575,7 @@ export function Learn({
               ) : result?.correct && card ? (
                 <div className="survey__end" key={`end-${card.key}`}>
                   <Burst trigger="quiz" />
+                  {sharks ? <SharksBand key={`sharks-${card.key}`} height={96} visit={1.4} fish={12} label="A shark passes" /> : null}
                   <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
                   <p className="survey__kicker">Nice work</p>
                   <h2>You got it.</h2>
@@ -717,6 +723,7 @@ export function Learn({
           title={intent === 'quiz' ? 'Nothing to check yet.' : 'Nothing saved yet.'}
           detail={`Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
           onReview={onReview}
+          sharks={sharks}
         />
       ) : filtered.length === 0 ? (
         query.trim() ? (

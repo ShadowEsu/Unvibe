@@ -3,6 +3,7 @@ import type { ChangeBrief } from '../../core/changeBrief';
 import { localDayKey } from '../../core/learning';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
+import { SharksBand, SharksPoolSlot } from '../shared/sharks/SharksBand';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
@@ -165,11 +166,15 @@ export interface HomeProps {
   onBriefs: () => void;
   onQuiz: () => void;
   onAsk: () => void;
+  /** The Sharks setting: a band above the empty Recently understood copy. */
+  sharks?: boolean;
+  /** Today's pool (the free area under the cards): only on the first Today after the window opened without a stage. */
+  pool?: boolean;
 }
 
 /** Today (Design's glass c-today): Vibe and the greeting, one action card, the daily goal, then Up next (main's learning
  *  steps, while any are left) beside Recently understood. */
-export function Home({ shortcutKeys, shortcut, userName, reviews, understood, stats, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk }: HomeProps) {
+export function Home({ shortcutKeys, shortcut, userName, reviews, understood, stats, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk, sharks = false, pool = false }: HomeProps) {
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [proOpen, setProOpen] = useState(false);
@@ -334,9 +339,10 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
                 </button></li>
               ))}
             </ul>
-          ) : <p className="home-list__empty">Nothing yet. Your first explanation lands here!</p>}
+          ) : <>{sharks ? <SharksBand height={160} className="home-list__empty-band" /> : null}<p className="home-list__empty">Nothing yet. Your first explanation lands here!</p></>}
         </section>
       </div>
+      <SharksPoolSlot enabled={sharks && pool} />
     </div>
   );
 }

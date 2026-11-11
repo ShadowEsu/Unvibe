@@ -14,24 +14,56 @@
 import { clamp, hash3, smoothstep } from "../../vendor/ascii-sharks/math";
 import { SHARK_NODES, type Shark, type SharkKind, type World } from "../../vendor/ascii-sharks/world";
 
-/** The G1 palette: the stage is always the dark ground (SPEC §2.2), so one set: violet #5a3fe0 / lilac #b8a6ff /
- * pink #e879c9 / blue #60a5fa; inks from tokens.css. */
-export const PALETTE = {
+export interface SharkPalette {
+  grid: string;
+  dots: [number, number, number][];
+  accents: string[];
+  fish: string;
+  /** Skin ramp, shadow → lit. */
+  skin: [number, number, number][];
+  glyphDark: string;
+  glyphDarker: string;
+  glyphLight: string;
+  eye: string;
+  edge: [number, number, number];
+  heat: string;
+}
+
+/** The stage palette: the start stage is always the dark ground (SPEC §2.2): violet #5a3fe0 / lilac #b8a6ff /
+ * pink #e879c9 / blue #60a5fa; inks from tokens.css. Also the in-app palette on the dark theme (lilac on the dark
+ * glass). */
+export const PALETTE: SharkPalette = {
   grid: "rgba(184,166,255,0.07)",
-  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [196, 181, 253], [216, 206, 255]] as [number, number, number][],
+  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [196, 181, 253], [216, 206, 255]],
   accents: ["#b8a6ff", "#e879c9", "#60a5fa", "#d6f45a", "#8f7bff", "#f0abfc", "#ffffff"],
   fish: "196,181,253",
-  /** Skin ramp, shadow → lit: deep violet to lilac-white. */
-  skin: [[27, 21, 56], [75, 58, 158], [143, 123, 255], [226, 219, 255]] as [number, number, number][],
+  skin: [[27, 21, 56], [75, 58, 158], [143, 123, 255], [226, 219, 255]],
   glyphDark: "#16122a",
   glyphDarker: "#0e0b1c",
   glyphLight: "#f3f1fa",
   eye: "#f3f1fa",
-  edge: [120, 100, 220] as [number, number, number],
+  edge: [120, 100, 220],
   heat: "255,120,200",
 };
-function skinColor(level: number, tr: number, tg: number, tb: number) {
-  const stops = PALETTE.skin;
+
+/** The in-app palette on the light theme (Design IN-APP-SHARKS: transparent ground, violet ink): the skin ramp runs
+ * from pale lilac in shadow to the brand violet when lit, so a shark reads as violet ink on the paper, not a dark
+ * block; glyphs are the dark violet ink, the light glyph is the paper. No grid. */
+export const LIGHT_PALETTE: SharkPalette = {
+  grid: "rgba(90,63,224,0)",
+  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [143, 123, 255], [90, 63, 224]],
+  accents: ["#5a3fe0", "#e879c9", "#3b82f6", "#8f7bff", "#7c3aed", "#5a3fe0", "#2a1f6e"],
+  fish: "90,63,224",
+  skin: [[226, 219, 255], [184, 166, 255], [124, 100, 240], [90, 63, 224]],
+  glyphDark: "#2a1f6e",
+  glyphDarker: "#16122a",
+  glyphLight: "#f6f4ff",
+  eye: "#f6f4ff",
+  edge: [90, 63, 224],
+  heat: "232,121,201",
+};
+
+function skinColor(stops: [number, number, number][], level: number, tr: number, tg: number, tb: number) {
   const p = clamp(level / 255, 0, 0.999) * (stops.length - 1);
   const i = p | 0;
   const f = p - i;
@@ -342,12 +374,12 @@ export class VioletRenderer {
   private fishStyles: string[];
   private accents: string[];
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = PALETTE) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw new Error("2D canvas unavailable");
     this.ctx = ctx;
     this.bg = document.createElement("canvas");
-    const T = PALETTE;
+    const T = palette;
     this.fishStyles = FISH_ALPHAS.map((a) => `rgba(${T.fish},${a})`);
     this.accents = T.accents;
 
@@ -424,7 +456,7 @@ export class VioletRenderer {
     const { width: W, height: H, dpr, cw, ch } = this;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, this.bg.width, this.bg.height);
-    paintGrid(g, W, H, cw, ch, dpr, PALETTE.grid);
+    paintGrid(g, W, H, cw, ch, dpr, this.palette.grid);
   }
 
   render(world: World, dt: number) {
@@ -801,7 +833,7 @@ export class VioletRenderer {
         // Soft, anti-aliased silhouette: no block, just a light glyph.
         const set = shade >= 0.5 ? EDGE_HEAVY : EDGE_LIGHT;
         const g = (0.45 + shade * 0.45) * dim;
-        const [er, eg, eb] = PALETTE.edge;
+        const [er, eg, eb] = this.palette.edge;
         ctx.fillStyle = roll < 0.07 ? this.accents[key % this.accents.length] : `rgba(${er},${eg},${eb},${g.toFixed(2)})`;
         ctx.fillText(set[(key >>> 8) % set.length], x + cw / 2, y + ch / 2 + 1);
         continue;
@@ -828,11 +860,11 @@ export class VioletRenderer {
       }
       level *= dim;
       // Tinted per species; the classic tint is a cool blue-grey, like a back seen through deep water.
-      ctx.fillStyle = skinColor(level, tr, tg, tb);
+      ctx.fillStyle = skinColor(this.palette.skin, level, tr, tg, tb);
       ctx.fillRect(x + 1, y + 1, cw - 1, ch - 1);
 
       let color: string;
-      const T = PALETTE;
+      const T = this.palette;
       if (flag === FLAG_EYE) color = T.eye;
       else if (flag === FLAG_MARK) color = T.glyphDarker;
       else if (roll < 0.09) color = this.accents[key % this.accents.length];
@@ -886,7 +918,7 @@ export class VioletRenderer {
       if (h < 0.08) continue;
       const col = i % cols;
       const row = (i / cols) | 0;
-      ctx.fillStyle = `rgba(${PALETTE.heat},${(h > 0.5 ? h : h * 1.6).toFixed(2)})`;
+      ctx.fillStyle = `rgba(${this.palette.heat},${(h > 0.5 ? h : h * 1.6).toFixed(2)})`;
       ctx.fillText(h > 0.6 ? "*" : "·", col * cw + cw / 2, row * ch + ch / 2 + 1);
     }
   }

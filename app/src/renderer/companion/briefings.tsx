@@ -6,6 +6,7 @@ import { Buddy, setBuddyMood } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
+import { SharksBand } from '../shared/sharks/SharksBand';
 import { renderSummary } from '../shared/richText';
 import { InkTitle } from './inkTitle';
 import { SegThumb } from '../shared/slidingThumb';
@@ -18,7 +19,7 @@ const SCOPES: Array<{ id: BriefScope; label: string }> = [
 ];
 
 /** `plan` is the account's plan once usage has loaded (null before); `onPlan` opens Plan & usage. */
-export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () => void }) {
+export function Briefings({ plan, sharks = false, onPlan }: { plan: string | null; sharks?: boolean; onPlan: () => void }) {
   const [scope, setScope] = useState<BriefScope>('working');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -130,6 +131,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
       {needsRepo && !busy && (
         <section className="briefings__empty">
+          {sharks ? <SharksBand height={200} /> : null}
           <h2>Your next change, made clear.</h2>
           <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Explain the brief and Understand the brief send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
           <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>

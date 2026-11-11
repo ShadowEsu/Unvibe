@@ -1122,6 +1122,23 @@ html[data-r2] {
 .sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
 .sharks-intro--out-skip { animation-duration: var(--m-exit); }
 @keyframes mOut { to { opacity: 0; } }
+/* In-app oceans (Design IN-APP-SHARKS): a band on the page's ground, transparent, the ink at one of two strengths
+   (quiet 0.55 / present 0.9; Design picks from stills). The edges fade in over 24 px so the band has no hard frame;
+   the pool also fades at its top and bottom. After a visit the band fades out over --m-normal and the loop stops. */
+.sharks-band { position: relative; width: 100%; overflow: hidden; pointer-events: auto;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.9; transition: opacity var(--m-normal) var(--m-ease-smooth); }
+.sharks-band--quiet .sharks-band__canvas { opacity: 0.55; }
+.sharks-band.is-resting .sharks-band__canvas { opacity: 0; }
+.sharks-band--pool { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
+/* The empty states: the band sits above the copy, inside the empty block's width; the survey's done card gets a
+   short band above its heading. Today's pool takes whatever height is left under the cards (none when the page is
+   full: the slot measures itself and mounts the band only at 140 px or more). */
+:root[data-ui="v3"][data-v7] .layout .learning-empty .sharks-band, :root[data-ui="v3"][data-v7] .layout .briefings__empty .sharks-band { margin: -12px 0 8px; }
+:root[data-ui="v3"][data-v7] .layout .home-list__empty-band { margin: 4px 0 0; }
+:root[data-ui="v3"][data-v7] .layout .survey__done .sharks-band { margin: -8px 0 10px; }
+:root[data-ui="v3"][data-v7] .layout .home-pool { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .sharks-band__canvas { transition: none; } }
 /* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
    stage leaves; without the stage (setting off, reopened from the tray) the app is simply there. */
 :root[data-ui="v3"][data-v7] .layout--arrive .side { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; }
