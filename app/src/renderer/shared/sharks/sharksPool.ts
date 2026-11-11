@@ -113,7 +113,7 @@ export class SharksPool {
     for (const shark of this.world.sharks) {
       const n = shark.nodes;
       for (let i = 0; i < n.length; i += 2) {
-        if (n[i] < 0 || n[i] > width || n[i + 1] < 0 || n[i + 1] > height) return false;
+        if (n[i] < 32 || n[i] > width - 32 || n[i + 1] < 24 || n[i + 1] > height - 24) return false;
       }
     }
     return this.world.sharks.length > 0;

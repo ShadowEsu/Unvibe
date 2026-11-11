@@ -124,7 +124,8 @@ export class SharksStart {
         minX = Math.min(minX, n[i]); maxX = Math.max(maxX, n[i]);
         minY = Math.min(minY, n[i + 1]); maxY = Math.max(maxY, n[i + 1]);
       }
-      if (minX < 0 || maxX > width || minY < 0 || maxY > height) return false;
+      // The spine, plus the body the renderer draws around it (fins, up to about 3 cells): 48 px in from each edge.
+      if (minX < 48 || maxX > width - 48 || minY < 48 || maxY > height - 48) return false;
       const mid = (minX + maxX) / 2;
       if (mid < width * 0.42) left = true;
       else if (mid > width * 0.58) right = true;
