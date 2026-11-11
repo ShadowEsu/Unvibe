@@ -11,7 +11,7 @@ const { mac, windows } = SHORTCUTS;
 
 export const metadata: Metadata = pageMetadata({
   path: "/help/shortcut",
-  title: `${mac.anywhere} does nothing? Fix the Unvibe shortcut on Mac and Windows`,
+  title: `${mac.anywhere} does nothing? Fix the Unvibe shortcut`,
   absolute: true,
   description: `Pressed ${mac.anywhere} (${windows.anywhere} on Windows) and nothing happened, or the panel opened without your code? Every cause we know of, and its fix, for Mac and Windows.`,
 });
