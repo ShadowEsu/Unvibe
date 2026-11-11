@@ -35,12 +35,21 @@ const FRAMING_TOKENS = 64;
 export const DAY_CAP_NANO_USD = 10_000_000_000; // $10 per UTC day
 export const MONTH_CAP_NANO_USD = 35_000_000_000; // $35 per UTC calendar month
 export const ACCOUNT_DAY_CAP_NANO_USD = 1_000_000_000; // $1 per account per UTC day
+/**
+ * Quick look (the D5 previews; Security 2026-11-11, "PR 1: preview allowance"): a preview reserves and
+ * settles inside the caps above like any call, and must also pass these two, counted apart
+ * (`SpendStore.reserveKind`). Explanations never touch them, so they never draw on the preview budget.
+ */
+export const PREVIEW_DAY_CAP_NANO_USD = 2_000_000_000; // $2 of previews per UTC day, everyone together
+export const PREVIEW_ACCOUNT_DAY_LIMIT = 20; // previews per account per UTC day
 
 export const AI_LIMIT_TODAY = "AI limit reached for today. Explanations come back after midnight UTC.";
 export const AI_LIMIT_MONTH = "AI limit reached for this month. Explanations come back on the 1st (UTC).";
 export const AI_LIMIT_ACCOUNT = "Daily AI limit reached for your account. Explanations come back after midnight UTC.";
 export const AI_PAUSED = 'AI is paused for now. Explanations will be back soon.';
 export const AI_MAINTENANCE = 'AI features are paused for maintenance. Back soon.';
+export const PREVIEW_LIMIT_TODAY = 'Quick looks are used up for today. Open the full explanation instead; quick looks come back after midnight UTC.';
+export const PREVIEW_LIMIT_ACCOUNT = `You've used today's ${PREVIEW_ACCOUNT_DAY_LIMIT} quick looks. Open the full explanation instead; quick looks come back after midnight UTC.`;
 
 /**
  * The outage switch (BOSS 31 Oct): AI_MAINTENANCE=1 on the API pauses every hosted AI call before
@@ -62,6 +71,26 @@ export class AiPausedError extends Error {
               : AI_PAUSED,
     );
     this.name = 'AiPausedError';
+  }
+}
+
+/** A kind of call with its own allowance inside the caps. Explanations have none. */
+export type SpendKind = 'ai_preview';
+/** A kind's own stops: its day budget for everyone, or the account's daily count. */
+export type KindStop = 'kind_day_cap' | 'kind_account_calls';
+
+const KIND_LIMITS: Readonly<Record<SpendKind, { dayCapNanoUsd: number; accountDayCalls: number }>> = {
+  ai_preview: { dayCapNanoUsd: PREVIEW_DAY_CAP_NANO_USD, accountDayCalls: PREVIEW_ACCOUNT_DAY_LIMIT },
+};
+
+/**
+ * Thrown before any request leaves, and before the caps above are reserved: a preview's own allowance
+ * is spent. Nothing is counted anywhere, so it never refuses or uses up an explanation.
+ */
+export class PreviewLimitError extends Error {
+  constructor(readonly reason: KindStop) {
+    super(reason === 'kind_day_cap' ? PREVIEW_LIMIT_TODAY : PREVIEW_LIMIT_ACCOUNT);
+    this.name = 'PreviewLimitError';
   }
 }
 
@@ -96,6 +125,8 @@ export function costNanoUsd(prices: ModelPrices, usage: TokenUsage): number {
 
 /** `account` is set when the call was counted against an account's daily share too. */
 export type Reservation = { day: string; nanoUsd: number; account?: string };
+/** A call counted against its kind's own allowance (`reserveKind`), always for an account. */
+export type KindReservation = { kind: SpendKind; day: string; nanoUsd: number; account: string };
 
 export type SpendStop = 'day_cap' | 'month_cap' | 'account_day_cap';
 
@@ -107,6 +138,14 @@ export interface SpendStore {
   reserve(nanoUsd: number, account?: string): Promise<Reservation | SpendStop>;
   /** Adds `deltaNanoUsd` (negative when the measured cost came in under the reservation) to the reservation's day and account. */
   settle(reservation: Reservation, deltaNanoUsd: number): Promise<void>;
+  /**
+   * Counts one call and `nanoUsd` against `kind`'s own day budget and the account's daily count of
+   * that kind, or refuses when either would be passed. Checks none of the caps above: the same call
+   * reserves through `reserve` right after.
+   */
+  reserveKind(kind: SpendKind, nanoUsd: number, account: string): Promise<KindReservation | KindStop>;
+  /** Adds `deltaNanoUsd` to the kind's day; with `release` (nothing was billed) also gives the call back to both counts. */
+  settleKind(reservation: KindReservation, deltaNanoUsd: number, release: boolean): Promise<void>;
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -115,7 +154,8 @@ const ACCOUNT = /^[0-9a-f]{64}$/;
 /**
  * One RPC per reservation, which checks every stop and counts under one advisory lock:
  * `reserve_ai_spend_account` for an account (migration 20261102120000), `reserve_ai_spend_month`
- * for the website's Try box, which has no account (migration 20261102090000).
+ * for the website's Try box, which has no account (migration 20261102090000). A kind's own allowance
+ * (previews) is one more RPC before that, `reserve_ai_spend_kind` (migration 20261111210000).
  */
 export class SupabaseSpendStore implements SpendStore {
   private client: SupabaseClient | undefined;
@@ -153,6 +193,37 @@ export class SupabaseSpendStore implements SpendStore {
       : { p_meter: SPEND_METER, p_day: day, p_account_hash: account, p_delta_nano_usd: deltaNanoUsd });
     if (error) throw new Error(`${fn} failed: ${error.code ?? 'unknown'}`);
   }
+
+  async reserveKind(kind: SpendKind, nanoUsd: number, account: string): Promise<KindReservation | KindStop> {
+    if (!ACCOUNT.test(account)) throw new Error('invalid spend account');
+    const limits = KIND_LIMITS[kind];
+    const { data, error } = await this.db.rpc('reserve_ai_spend_kind', {
+      p_meter: SPEND_METER,
+      p_kind: kind,
+      p_account_hash: account,
+      p_nano_usd: nanoUsd,
+      p_kind_day_cap: limits.dayCapNanoUsd,
+      p_account_day_calls: limits.accountDayCalls,
+    });
+    if (error) throw new Error(`reserve_ai_spend_kind failed: ${error.code ?? 'unknown'}`);
+    const row = (Array.isArray(data) ? data[0] : data) as { status?: unknown; day?: unknown } | null;
+    if (row?.status === 'kind_day_cap' || row?.status === 'kind_account_calls') return row.status;
+    if (row?.status === 'ok' && typeof row.day === 'string' && DAY.test(row.day)) return { kind, day: row.day, nanoUsd, account };
+    throw new Error('reserve_ai_spend_kind returned an unexpected answer');
+  }
+
+  async settleKind(reservation: KindReservation, deltaNanoUsd: number, release: boolean): Promise<void> {
+    const { kind, day, account } = reservation;
+    const { error } = await this.db.rpc('settle_ai_spend_kind', {
+      p_meter: SPEND_METER,
+      p_kind: kind,
+      p_day: day,
+      p_account_hash: account,
+      p_delta_nano_usd: deltaNanoUsd,
+      p_release: release,
+    });
+    if (error) throw new Error(`settle_ai_spend_kind failed: ${error.code ?? 'unknown'}`);
+  }
 }
 
 /** Development and tests only: the same stops in process memory. Production never uses it. */
@@ -160,6 +231,10 @@ export class MemorySpendStore implements SpendStore {
   readonly days = new Map<string, number>();
   /** Per account per day, keyed `${day} ${account}`. */
   readonly accounts = new Map<string, number>();
+  /** A kind's spend per day, keyed `${kind} ${day}`. */
+  readonly kindDays = new Map<string, number>();
+  /** A kind's calls per account per day, keyed `${kind} ${day} ${account}`. */
+  readonly kindAccounts = new Map<string, number>();
 
   constructor(private readonly now: () => Date = () => new Date()) {}
 
@@ -186,6 +261,29 @@ export class MemorySpendStore implements SpendStore {
     const key = `${day} ${account}`;
     this.accounts.set(key, Math.max(0, (this.accounts.get(key) ?? 0) + deltaNanoUsd));
   }
+
+  async reserveKind(kind: SpendKind, nanoUsd: number, account: string): Promise<KindReservation | KindStop> {
+    const day = this.now().toISOString().slice(0, 10);
+    const limits = KIND_LIMITS[kind];
+    const dayKey = `${kind} ${day}`;
+    const accountKey = `${kind} ${day} ${account}`;
+    const today = this.kindDays.get(dayKey) ?? 0;
+    const calls = this.kindAccounts.get(accountKey) ?? 0;
+    if (today + nanoUsd > limits.dayCapNanoUsd) return 'kind_day_cap';
+    if (calls + 1 > limits.accountDayCalls) return 'kind_account_calls';
+    this.kindDays.set(dayKey, today + nanoUsd);
+    this.kindAccounts.set(accountKey, calls + 1);
+    return { kind, day, nanoUsd, account };
+  }
+
+  async settleKind(reservation: KindReservation, deltaNanoUsd: number, release: boolean): Promise<void> {
+    const { kind, day, account } = reservation;
+    const dayKey = `${kind} ${day}`;
+    this.kindDays.set(dayKey, Math.max(0, (this.kindDays.get(dayKey) ?? 0) + deltaNanoUsd));
+    if (!release) return;
+    const accountKey = `${kind} ${day} ${account}`;
+    this.kindAccounts.set(accountKey, Math.max(0, (this.kindAccounts.get(accountKey) ?? 0) - 1));
+  }
 }
 
 /** The store for this environment, or null in production without one (every call is then refused). */
@@ -210,13 +308,20 @@ export interface MeterableProvider extends Provider {
  * Wraps the real provider so no call starts without a reservation. Past a stop, when the store
  * can't answer, or for a model without prices, it throws `AiPausedError` and the provider is never
  * called (no fallback provider). With `account` (from `spendAccount`), each call also counts
- * against that account's daily share.
+ * against that account's daily share. With `kind` (previews), each call must first pass that kind's
+ * own allowance (`PreviewLimitError` when it is spent, before the caps are touched), then reserves
+ * through the caps exactly like any other call; both settle together.
  */
 export class MeteredProvider implements Provider {
   readonly name: string;
   readonly mock = false;
 
-  constructor(private readonly inner: MeterableProvider, private readonly store: SpendStore | null, private readonly account?: string) {
+  constructor(
+    private readonly inner: MeterableProvider,
+    private readonly store: SpendStore | null,
+    private readonly account?: string,
+    private readonly kind?: SpendKind,
+  ) {
     this.name = inner.name;
   }
 
@@ -243,28 +348,56 @@ export class MeteredProvider implements Provider {
     }
     if (!this.store) throw new AiPausedError('unavailable');
     const worst = worstCaseNanoUsd(prices, system, user, this.inner.maxOutputTokens);
+    const hold = this.kind === undefined ? undefined : await this.reserveKind(this.kind, worst);
     let reservation: Reservation | SpendStop;
     try {
       reservation = await this.store.reserve(worst, this.account);
     } catch (error) {
       console.error('ai spend reserve failed', error instanceof Error ? error.message : 'unknown');
+      if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
       throw new AiPausedError('unavailable');
     }
-    if (typeof reservation === 'string') throw new AiPausedError(reservation);
+    if (typeof reservation === 'string') {
+      // Nothing is sent, so the kind's allowance gets the call back.
+      if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
+      throw new AiPausedError(reservation);
+    }
 
     // From here the request may be billed. Only usage Anthropic measured replaces the worst case,
     // and only an error status it answered with (not billed) releases it. A dropped connection or a
-    // cut stream keeps the whole worst case.
+    // cut stream keeps the whole worst case. A kind's hold moves with it.
     let outcome: { result: T; usage: TokenUsage | undefined };
     try {
       outcome = await call();
     } catch (error) {
-      if (error instanceof ProviderRejectedError) await this.adjust(reservation, -reservation.nanoUsd);
+      if (error instanceof ProviderRejectedError) {
+        await this.adjust(reservation, -reservation.nanoUsd);
+        if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
+      }
       throw error;
     }
     const { result, usage } = outcome;
-    if (usage && !usage.estimated) await this.adjust(reservation, costNanoUsd(prices, usage) - reservation.nanoUsd);
+    if (usage && !usage.estimated) {
+      const delta = costNanoUsd(prices, usage) - reservation.nanoUsd;
+      await this.adjust(reservation, delta);
+      if (hold) await this.adjustKind(hold, delta, false);
+    }
     return result;
+  }
+
+  /** The kind's own allowance, before the caps: refused means nothing is counted anywhere and nothing is sent. */
+  private async reserveKind(kind: SpendKind, worst: number): Promise<KindReservation> {
+    // A kind's allowance is per account; a call without one has nothing to count against.
+    if (this.account === undefined || !this.store) throw new AiPausedError('unavailable');
+    let hold: KindReservation | KindStop;
+    try {
+      hold = await this.store.reserveKind(kind, worst, this.account);
+    } catch (error) {
+      console.error('ai spend kind reserve failed', error instanceof Error ? error.message : 'unknown');
+      throw new AiPausedError('unavailable');
+    }
+    if (typeof hold === 'string') throw new PreviewLimitError(hold);
+    return hold;
   }
 
   private async adjust(reservation: Reservation, deltaNanoUsd: number): Promise<void> {
@@ -272,6 +405,14 @@ export class MeteredProvider implements Provider {
     await this.store.settle(reservation, deltaNanoUsd).catch((error: unknown) => {
       // The worst case stays counted, which is the safe side.
       console.error('ai spend settle failed', error instanceof Error ? error.message : 'unknown');
+    });
+  }
+
+  private async adjustKind(reservation: KindReservation, deltaNanoUsd: number, release: boolean): Promise<void> {
+    if (!this.store) return;
+    await this.store.settleKind(reservation, deltaNanoUsd, release).catch((error: unknown) => {
+      // The hold (and the call) stays counted, which is the safe side.
+      console.error('ai spend kind settle failed', error instanceof Error ? error.message : 'unknown');
     });
   }
 }

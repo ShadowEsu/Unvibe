@@ -482,7 +482,7 @@ export async function reserveTrialAction(
     const used = await readUsed(installKey, kind);
     return { denied: Response.json({
       error: 'plan_limit_reached',
-      message: `Your 30-day public-beta access ended on ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`,
+      message: trialEndedMessage(expiresAt),
       usage: { kind, used, limit, remaining: 0, resetsAt: expiresAt }, upgradePath: '/plan',
     }, { status: 429 }) };
   }
@@ -539,6 +539,23 @@ export async function reserveTrialAction(
     return { denied: Response.json({ error: refusal.error, message: refusal.message }, { status: refusal.status }) };
   }
   return { denied: null, release: () => releaseUnits([{ key: installKey, kind }]), startedAt: record.startedAt };
+}
+
+function trialEndedMessage(expiresAt: string): string {
+  return `Your 30-day public-beta access ended on ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.`;
+}
+
+/**
+ * Quick look's trial check: once the install's 30-day window has ended, previews are refused like
+ * explanations (429). Takes no trial unit and touches no trial counter: a preview never uses the
+ * install's explanations, and its own daily count lives in the spend meter (`reserveKind`). The install
+ * record (the trial clock) is created on first use, as for an explanation.
+ */
+export async function trialPreviewDenied(installKey: string, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<Response | null> {
+  const record = await readInstall(installKey, now, meta);
+  const { expiresAt, expired } = trialWindow(record.startedAt, now);
+  if (!expired) return null;
+  return Response.json({ error: 'plan_limit_reached', message: trialEndedMessage(expiresAt), upgradePath: '/plan' }, { status: 429 });
 }
 
 /**
