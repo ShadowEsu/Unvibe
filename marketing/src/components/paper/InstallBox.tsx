@@ -47,7 +47,7 @@ export const INSTALL_COPY: Record<InstallOs, {
     steps: [
       "Open the .dmg and drag Unvibe to Applications.",
       "Open it once; macOS says it can't verify it. Click Done, not the blue Move to Trash.",
-      "System Settings › Privacy & Security, scroll down to Security, then Open Anyway. Confirm, then enter your Mac password. The button shows for about an hour after you try to open Unvibe.",
+      "System Settings › Privacy & Security, scroll down to Security, then press Open Anyway. Confirm, then enter your Mac password. The button shows for about an hour after you try to open Unvibe.",
     ],
     stepShots: [
       null,
