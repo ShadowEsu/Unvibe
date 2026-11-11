@@ -727,6 +727,36 @@ export const languages: Language[] = [
     learningPath: ["Registers", "Loads and stores", "Compares and branches", "Optimization levels"],
     sample: `ldr w10, [x0], #4`,
   },
+  {
+    id: "git-merge-conflict",
+    name: "git merge conflict",
+    categories: ["systems", "scripting"],
+    blurb: "The `<<<<<<<`, `=======` and `>>>>>>>` blocks git leaves in a file when 2 branches changed the same lines, and how to settle them.",
+    concepts: ["conflict markers", "what merged by itself", "--ours and --theirs", "resolving and committing"],
+    frameworks: ["git", "GitHub", "VS Code", "git mergetool"],
+    learningPath: ["Reading the markers", "Both sides and the base", "Picking a side", "Finishing the merge"],
+    sample: `git diff --check`,
+  },
+  {
+    id: "npm-error",
+    name: "npm error",
+    categories: ["web", "scripting"],
+    blurb: "The `npm error` block npm prints when an install or script fails: the code, the package and command, and the log file.",
+    concepts: ["code, path and command", "the line with the cause", "code 127 and ENOENT", "the debug log"],
+    frameworks: ["npm", "Node.js", "node-gyp", "package.json"],
+    learningPath: ["Reading the code", "Finding the failing package", "Exit codes", "The debug log"],
+    sample: `npm error code 1`,
+  },
+  {
+    id: "lsof",
+    name: "lsof",
+    categories: ["systems", "scripting"],
+    blurb: "The list of open files and network sockets per process, and the quick way to find what is holding a port.",
+    concepts: ["COMMAND, PID, USER and FD", "LISTEN and ESTABLISHED", "-n and -P", "-t and -sTCP:LISTEN"],
+    frameworks: ["lsof", "ss", "kill", "ps"],
+    learningPath: ["Reading a row", "Ports and connections", "Names and numbers", "Stopping the right process"],
+    sample: `lsof -i :3000`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
