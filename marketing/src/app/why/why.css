@@ -16,10 +16,16 @@
 .why-shot img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid rgba(20, 20, 20, 0.14); }
 .why-shot figcaption { margin-top: 8px; color: var(--u-text-2); font: 500 12px/16px var(--font-mono); text-align: center; }
 
-.why-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0 4px; padding: 0; list-style: none; }
-.why-figures li { padding: 14px 16px; border: 1.5px solid var(--v-ink); border-radius: 14px; }
+.why-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin: 14px 0 4px; padding: 0; list-style: none; }
+.why-figures li { padding: 14px 0; border-top: 1px solid rgba(20, 20, 20, 0.14); }
 .why-figures b { display: block; font: 800 28px/1.1 var(--font-sans); letter-spacing: -0.02em; color: var(--u-text); }
 .why-figures li > span { display: block; margin-top: 4px; color: var(--u-text); line-height: 1.4; }
+
+/* The incidents and limits tables get more room on wide screens (Design S-1 SHOULD on #266). */
+@media (min-width: 1024px) {
+  .why-page .verify.why-wide { width: 960px; max-width: none; margin-left: calc(50% - 480px); margin-right: 0; }
+}
+.why-page .verify .why-sources a { font-weight: 500; text-decoration-color: currentColor; text-decoration-thickness: 1px; }
 
 .why-table { width: 100%; margin: 12px 0 4px; border-collapse: collapse; font-size: 15px; line-height: 1.5; }
 .why-table th, .why-table td { padding: 10px 10px 10px 0; border-bottom: 1px solid rgba(20, 20, 20, 0.14); text-align: left; vertical-align: top; color: var(--u-text-2); }

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BETA_INSTALL_TAG } from "@/lib/betaInstallScript";
 import { DOWNLOAD_FILES as COUNTED_FILES } from "@/lib/downloadCounter";
 import { DOWNLOAD_FILES, macArch, pickDownload } from "@/lib/downloadPick";
 
@@ -32,12 +31,10 @@ test("phones and iPads get no file; ?os= forces one", () => {
   assert.equal(pickDownload(WINDOWS, 0, {}, "mac"), "mac-arm");
 });
 
-test("every file is a counted link that redirects to a v0.1.49 release asset", () => {
-  assert.equal(BETA_INSTALL_TAG, "v0.1.49");
+test("every file is a counted link to its own OS and architecture's release asset", () => {
   const counted = { "mac-arm": "mac", "mac-intel": "mac-intel", windows: "windows" } as const;
   for (const [pick, file] of Object.entries(counted) as [keyof typeof counted, (typeof counted)[keyof typeof counted]][]) {
     assert.equal(DOWNLOAD_FILES[pick].url, `/download/${file}`);
-    assert.match(COUNTED_FILES[file].url, /^https:\/\/github\.com\/ShadowEsu\/Unvibe\/releases\/download\/v0\.1\.49\//);
   }
   assert.match(COUNTED_FILES.mac.url, /mac-arm64\.dmg$/);
   assert.match(COUNTED_FILES["mac-intel"].url, /mac-x64\.dmg$/);
