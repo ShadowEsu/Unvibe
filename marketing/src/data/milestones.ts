@@ -21,6 +21,18 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "10 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain git merge conflicts, npm errors and lsof",
+    summary: "3 new explain pages: a JavaScript file in the middle of a merge, where 2 branches changed the same line and git left its markers; the error block npm prints when a dependency's native addon fails to build; and lsof output that finds which process holds port 3000 when a second server fails with EADDRINUSE. Each has its own sample in a Try it box and notes on what that sample did when run with git 2.55.0, npm 11.10.1 and Node.js 25.7.0, and lsof 4.99.7. The git rebase, npm scripts and ps aux pages link to them in their Related rows.",
+    links: [
+      { href: "/explain/git-merge-conflict", label: "Explain git merge conflicts" },
+      { href: "/explain/npm-error", label: "Explain npm errors" },
+      { href: "/explain/lsof", label: "Explain lsof" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/280", label: "PR #280" },
+    ],
+  },
+  {
     date: "9 NOV 2026",
     category: "PRODUCT",
     title: "No interface sounds until you use Unvibe; pasted TypeScript labelled TypeScript",
