@@ -546,6 +546,11 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
     revealer.reveal();
   });
   win.once('closed', () => clearTimeout(fallback));
+  // A show after a hide (tray, Dock, Cmd-H; not the first reveal) is a window open without a stage: the renderer
+  // gives Today's pool one visit (in-app sharks).
+  let hiddenOnce = false;
+  win.on('hide', () => { hiddenOnce = true; });
+  win.on('show', () => { if (hiddenOnce && !win.isDestroyed()) win.webContents.send('companion:shown'); });
   void win.loadFile(page('companion'));
   return win;
 }

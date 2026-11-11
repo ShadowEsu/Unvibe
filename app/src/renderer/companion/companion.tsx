@@ -1783,11 +1783,7 @@ function App() {
   useEffect(() => {
     if (gate === 'app' && page !== 'Home') setPoolArmed(false);
   }, [gate, page]);
-  useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') setPoolArmed(true); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  useEffect(() => window.unvibe.onCompanionShown(() => setPoolArmed(true)), []);
   // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
   // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
   // opened), never at launch and never while the start stage is up (Design S-1 whole-app MUST 15).

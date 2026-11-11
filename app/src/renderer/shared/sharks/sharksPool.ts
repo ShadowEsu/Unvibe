@@ -1,13 +1,13 @@
 /**
  * An in-app ocean (Design r2-motion, in-app sharks): the same world and renderer as the start stage, in a band on a
  * companion page. Differences from `SharksStart`: a 15 fps cap (SPEC §4 for in-app oceans), no fixed run time unless
- * a `visit` is given (Today's pool: about 8 s, then `onRest()` and the loop stops; `wake()` starts another visit),
+ * a `visit` is given (Today's pool: about 8 s, then `onRest()` and the loop stops; the band mounts a new pool to wake),
  * it pauses while the window is hidden or blurred and resumes when it is back, a small school, and a palette per
  * theme (violet ink on the light paper, lilac on the dark glass). Reduced motion: `still` draws one pre-stepped frame
  * and runs no loop.
  */
 import { World, type SharkSpec } from '../../vendor/ascii-sharks/world';
-import { LIGHT_PALETTE, PALETTE, VioletRenderer } from './violetRenderer';
+import { DARK_PALETTE, LIGHT_PALETTE, VioletRenderer } from './violetRenderer';
 
 const STEP = 1 / 60;
 const MAX_STEPS = 4;
@@ -52,7 +52,7 @@ export class SharksPool {
 
   constructor(private canvas: HTMLCanvasElement, private opts: SharksPoolOptions) {
     this.world = new World(opts.sharks ?? POOL_SHARKS, opts.fish ?? 28);
-    this.renderer = new VioletRenderer(canvas, opts.theme === 'light' ? LIGHT_PALETTE : PALETTE);
+    this.renderer = new VioletRenderer(canvas, opts.theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE, 64);
     this.renderer.setFontFamily(opts.fontFamily ?? getComputedStyle(canvas).fontFamily);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -63,18 +63,6 @@ export class SharksPool {
     window.addEventListener('focus', this.onFocus);
     this.resize();
     if (!opts.still) this.schedule();
-  }
-
-  /** Another visit after `onRest` (the pointer entered the pool). */
-  wake() {
-    if (this.disposed || this.opts.still || !this.resting) return;
-    this.resting = false;
-    this.swum = 0;
-    this.schedule();
-  }
-
-  get isResting() {
-    return this.resting;
   }
 
   destroy() {
@@ -114,8 +102,21 @@ export class SharksPool {
     if (!this.primed) {
       this.primed = true;
       for (let i = 0; i < PRESTEPS; i++) this.world.step(STEP);
+      // The first frame shows the sharks: keep stepping, up to 4 more seconds, until every shark is inside the band.
+      for (let i = 0; i < 240 && !this.sharksInside(); i++) this.world.step(STEP);
     }
     this.draw(STEP);
+  }
+
+  private sharksInside(): boolean {
+    const { width, height } = this.world;
+    for (const shark of this.world.sharks) {
+      const n = shark.nodes;
+      for (let i = 0; i < n.length; i += 2) {
+        if (n[i] < 0 || n[i] > width || n[i + 1] < 0 || n[i + 1] > height) return false;
+      }
+    }
+    return this.world.sharks.length > 0;
   }
 
   private schedule() {

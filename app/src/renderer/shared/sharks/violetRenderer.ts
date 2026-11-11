@@ -63,6 +63,10 @@ export const LIGHT_PALETTE: SharkPalette = {
   heat: "232,121,201",
 };
 
+/** The in-app palette on the dark theme: the stage's inks on the dark glass, without the stage's grid (a grid in a
+ * band reads as a boxed frame on the page). */
+export const DARK_PALETTE: SharkPalette = { ...PALETTE, grid: "rgba(0,0,0,0)" };
+
 function skinColor(stops: [number, number, number][], level: number, tr: number, tg: number, tb: number) {
   const p = clamp(level / 255, 0, 0.999) * (stops.length - 1);
   const i = p | 0;
@@ -374,7 +378,9 @@ export class VioletRenderer {
   private fishStyles: string[];
   private accents: string[];
 
-  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = PALETTE) {
+  /** Cells per canvas width: the stage uses 124 across the window; a band in a page uses fewer, so its sharks are not
+   * 8 px specks (the cell stays within 8–13 px). */
+  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = PALETTE, private readonly cellsAcross = 124) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw new Error("2D canvas unavailable");
     this.ctx = ctx;
@@ -410,7 +416,7 @@ export class VioletRenderer {
     this.width = width;
     this.height = height;
     this.dpr = dpr;
-    this.cw = clamp(Math.round(width / 124), 8, 13);
+    this.cw = clamp(Math.round(width / this.cellsAcross), 8, 13);
     this.ch = Math.round(this.cw * 1.45);
     this.cols = Math.ceil(width / this.cw);
     this.rows = Math.ceil(height / this.ch);

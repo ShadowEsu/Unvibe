@@ -19,8 +19,10 @@ export function SharksBand({ height, strength = 'present', visit, wakeOnHover = 
   label?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const poolRef = useRef<SharksPool | null>(null);
-  const [resting, setResting] = useState(false);
+  // 'swim' → 'resting' (the canvas fades over --m-normal) → 'gone' (no canvas, no loop; SPEC §4: canvas count 0 after
+  // a visit). A wake mounts a fresh canvas and pool.
+  const [phase, setPhase] = useState<'swim' | 'resting' | 'gone'>('swim');
+  const [run, setRun] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'));
 
   useEffect(() => {
@@ -34,30 +36,35 @@ export function SharksBand({ height, strength = 'present', visit, wakeOnHover = 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setResting(false);
-    const pool = new SharksPool(canvas, { theme, visit, fish, still: reduced, onRest: () => setResting(true) });
-    poolRef.current = pool;
+    let timer = 0;
+    const pool = new SharksPool(canvas, {
+      theme, visit, fish, still: reduced,
+      onRest: () => {
+        setPhase('resting');
+        timer = window.setTimeout(() => setPhase('gone'), reduced ? 0 : 400);
+      },
+    });
     return () => {
+      window.clearTimeout(timer);
       pool.destroy();
-      poolRef.current = null;
     };
-  }, [theme, visit, fish]);
+  }, [theme, visit, fish, run]);
 
   const wake = () => {
-    if (!wakeOnHover || !poolRef.current?.isResting) return;
-    setResting(false);
-    poolRef.current.wake();
+    if (!wakeOnHover || phase === 'swim') return;
+    setPhase('swim');
+    setRun((n) => n + 1);
   };
 
   return (
     <div
-      className={`sharks-band sharks-band--${strength}${resting ? ' is-resting' : ''}${className ? ` ${className}` : ''}`}
+      className={`sharks-band sharks-band--${strength}${phase === 'resting' ? ' is-resting' : ''}${className ? ` ${className}` : ''}`}
       style={{ height }}
       role="img"
       aria-label={label}
       onPointerEnter={wake}
     >
-      <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />
+      {phase === 'gone' ? null : <canvas key={run} ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />}
     </div>
   );
 }

@@ -91,6 +91,12 @@ const api = {
     ipcRenderer.on('companion:showPage', listener);
     return () => ipcRenderer.removeListener('companion:showPage', listener);
   },
+  /** Main showed the companion window again after it was hidden (tray, Dock, Cmd-H): a window open without a stage. */
+  onCompanionShown: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('companion:shown', listener);
+    return () => { ipcRenderer.removeListener('companion:shown', listener); };
+  },
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
   /** Fade: main says the panel lost (true) or got back (false) focus; the page animates its own opacity. */
   onPanelAway: (cb: (away: boolean) => void) => ipcRenderer.on('panel:away', (_e, away: unknown) => cb(away === true)),
