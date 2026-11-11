@@ -843,15 +843,25 @@
 /* The ask bar floats over the page's bottom on every page that has it (Design S-1 r2 SHOULD 1, whole-app S2): the
    page is the scroller and keeps bar + 24 px (58 + 18 + 24 = 100 px) of bottom padding so its last row clears the
    bar at the end of the scroll. Rows passing under the bar fade out first: a 140 px overlay on the column, edge to
-   edge (over the scrollbar too), transparent at its top and the ground at the bar: a long gradient, not a band (the
-   earlier 16 px-then-solid band read as a block). An overlay, not a mask, so the cards keep their backdrop blur
-   (Design 07 Nov answer 2). The lesson scrolls inside .lesson-doc, so its page drops the side padding and the
-   lesson's scrollbar sits at the window's edge. */
+   edge (over the scrollbar too), painted with the ground itself (the same veil + aurora stack as .layout,
+   background-attachment: fixed so it lines up with the window's ground) and masked from transparent at its top to
+   opaque at 94 px: rows fade into the real ground, no flat band (Design code read 11 Nov a). An overlay, not a mask
+   on the page, so the cards keep their backdrop blur (Design 07 Nov answer 2). The lesson scrolls inside
+   .lesson-doc, so its page drops the side padding and the lesson's scrollbar sits at the window's edge. */
 :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .page { padding-bottom: 100px; }
 :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .ask-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; margin: 0 auto 18px; }
 :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 140px; z-index: 1; pointer-events: none;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--u-paper) 80%, transparent) 60%, var(--u-paper) 94px);
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
+  background-attachment: fixed;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 94px); mask-image: linear-gradient(to bottom, transparent, #000 94px);
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after {
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center 30% / 170% auto no-repeat, var(--u-paper);
+  background-attachment: fixed;
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after { background: var(--u-paper); }
 }
 :root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding: 12px 0 0; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 100px; }
@@ -1128,23 +1138,38 @@ html[data-r2] {
 .sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
 .sharks-intro--out-skip { animation-duration: var(--m-exit); }
 @keyframes mOut { to { opacity: 0; } }
-/* In-app oceans (Design IN-APP-SHARKS): a band on the page's ground, transparent, the ink at one of two strengths
-   (quiet 0.55 / present 0.9; Design picks from stills). The edges fade in over 24 px so the band has no hard frame;
-   the pool also fades at its top and bottom. After a visit the band fades out over --m-normal and the loop stops. */
-.sharks-band { position: relative; width: 100%; overflow: hidden; pointer-events: auto;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
-.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.9; transition: opacity var(--m-normal) var(--m-ease-smooth); }
-.sharks-band--quiet .sharks-band__canvas { opacity: 0.55; }
-.sharks-band.is-resting .sharks-band__canvas { opacity: 0; }
-.sharks-band--pool { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
-/* The empty states: the band sits above the copy, inside the empty block's width; the survey's done card gets a
-   short band above its heading. Today's pool takes whatever height is left under the cards (none when the page is
-   full: the slot measures itself and mounts the band only at 140 px or more). */
-:root[data-ui="v3"][data-v7] .layout .learning-empty .sharks-band, :root[data-ui="v3"][data-v7] .layout .briefings__empty .sharks-band { margin: -12px 0 8px; }
-:root[data-ui="v3"][data-v7] .layout .home-list__empty-band { margin: 4px 0 0; }
-:root[data-ui="v3"][data-v7] .layout .survey__done .sharks-band { margin: -8px 0 10px; }
-:root[data-ui="v3"][data-v7] .layout .home-pool { margin: 0; }
-@media (prefers-reduced-motion: reduce) { .sharks-band__canvas { transition: none; } }
+/* In-app oceans (Design r2-motion SPEC §6). Transparent canvas, no grid; a 32 px CSS mask on every side so no shark
+   is cut by a hard edge (§6.2). Two strengths for Design to pick from stills: "present" (the brightest skin cell at
+   about 50 % alpha) and "quiet" (about 30 %). */
+.sharks-band, .sharks-visit {
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+  mask-composite: intersect;
+}
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.5; }
+.sharks-band--quiet .sharks-band__canvas { opacity: 0.3; }
+/* A (empty states): a block above the copy, the column's width, 240 px tall. */
+.sharks-band { position: relative; width: 100%; overflow: hidden; }
+:root[data-ui="v3"][data-v7] .layout .learning-empty .sharks-band { margin: -24px 0 4px; }
+/* B and C (visits): the ground layer under the glass cards (z-index 0; the cards are positioned above). In over
+   --m-normal (B) / --m-fast (C), out over --m-slow (B) / --m-normal (C) with `is-leaving`; the owner removes the
+   element when the fade ends. */
+.sharks-visit { position: absolute; left: 0; right: 0; z-index: 0; overflow: hidden; animation: mFade var(--m-normal) var(--m-ease-smooth) both; }
+.sharks-visit--quiz { animation-duration: var(--m-fast); }
+.sharks-visit.is-leaving { opacity: 0; transition: opacity var(--m-slow) var(--m-ease-smooth); animation: none; }
+.sharks-visit--quiz.is-leaving { transition-duration: var(--m-normal); }
+/* Today: from the cards row's top to 16 px above the ask bar; the cards float over it (they carry their own blur).
+   The row is the positioning box; the water's height is measured by Home (page bottom − 92 px − row top). */
+:root[data-ui="v3"][data-v7] .layout .home-cols { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .home-cols > .home-list { position: relative; z-index: 1; }
+:root[data-ui="v3"][data-v7] .layout .home-water { top: 0; height: var(--water, 100%); }
+/* The quiz: behind the result card, the survey area's size. */
+:root[data-ui="v3"][data-v7] .layout .survey { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .survey > :not(.sharks-visit) { position: relative; z-index: 1; }
+:root[data-ui="v3"][data-v7] .layout .survey__water { top: 0; bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .sharks-visit { animation: none; transition: none; } }
 /* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
    stage leaves; without the stage (setting off, reopened from the tray) the app is simply there. */
 :root[data-ui="v3"][data-v7] .layout--arrive .side { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; }

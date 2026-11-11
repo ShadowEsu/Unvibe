@@ -1,37 +1,42 @@
 /**
- * An in-app ocean (Design r2-motion, in-app sharks): the same world and renderer as the start stage, in a band on a
- * companion page. Differences from `SharksStart`: a 15 fps cap (SPEC §4 for in-app oceans), no fixed run time unless
- * a `visit` is given (Today's pool: about 8 s, then `onRest()` and the loop stops; the band mounts a new pool to wake),
- * it pauses while the window is hidden or blurred and resumes when it is back, a small school, and a palette per
- * theme (violet ink on the light paper, lilac on the dark glass). Reduced motion: `still` draws one pre-stepped frame
- * and runs no loop.
+ * An in-app ocean (Design r2-motion SPEC §6): the same world and renderer as the start stage, in a band or ground
+ * layer of a companion page. Differences from `SharksStart`: a 20 fps cap (§6.3; the world still steps at 60 Hz
+ * between draws), two forms of run time: a `visit` of N seconds (Today and the quiz: then `onEnd()` and the loop
+ * stops) or an open run that rests on a still after `idleRest` seconds without pointer or key input (the empty
+ * states; the next input wakes it), pausing at once while the window is hidden or blurred (a paused visit ends
+ * instead of restarting), a two-shark roster and a palette per theme (violet ink on the light paper, lilac on the dark
+ * glass). Reduced motion: `still` draws one pre-stepped frame and runs no loop.
  */
 import { World, type SharkSpec } from '../../vendor/ascii-sharks/world';
 import { DARK_PALETTE, LIGHT_PALETTE, VioletRenderer } from './violetRenderer';
 
 const STEP = 1 / 60;
 const MAX_STEPS = 4;
-/** Frames per second drawn (the world still steps at 60 Hz between draws). */
-const FPS = 15;
+/** Frames per second drawn (§6.3: 20, three fixed steps a frame). */
+const FPS = 20;
 /** Simulation seconds before the first frame: the sharks mid-cruise, the school formed. */
 const PRESTEPS = 180;
 
+/** §6.2: `{ classic, 1 }` and `{ mako, 0.85 }`, nothing smaller. */
 export const POOL_SHARKS: SharkSpec[] = [
-  { kind: 'classic', size: 0.78 },
-  { kind: 'mako', size: 0.6 },
+  { kind: 'classic', size: 1 },
+  { kind: 'mako', size: 0.85 },
 ];
 
 export interface SharksPoolOptions {
   theme: 'light' | 'dark';
-  /** Seconds of swimming before `onRest`; omitted = swims while mounted and visible. */
+  /** Seconds of swimming before `onEnd`; omitted = an open run. */
   visit?: number;
+  /** Open run: seconds without pointer or key input before it rests on a still (the next input wakes it). */
+  idleRest?: number;
   /** One pre-stepped frame, no loop (prefers-reduced-motion). */
   still?: boolean;
   sharks?: SharkSpec[];
   /** Fish in the band (the world's own count is sized for a full screen). */
   fish?: number;
   fontFamily?: string;
-  onRest?: () => void;
+  /** The visit is over (its time, or a pause during it): the owner fades the canvas out and removes it. */
+  onEnd?: () => void;
 }
 
 export class SharksPool {
@@ -42,6 +47,8 @@ export class SharksPool {
   private acc = 0;
   private sinceDraw = 0;
   private swum = 0;
+  private sinceInput = 0;
+  private ended = false;
   private resting = false;
   private paused = false;
   private disposed = false;
@@ -61,6 +68,11 @@ export class SharksPool {
     document.addEventListener('visibilitychange', this.onVisibility);
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('focus', this.onFocus);
+    if (opts.idleRest !== undefined) {
+      window.addEventListener('pointermove', this.onInput, { passive: true });
+      window.addEventListener('pointerdown', this.onInput, { passive: true });
+      window.addEventListener('keydown', this.onInput, { passive: true });
+    }
     this.resize();
     if (!opts.still) this.schedule();
   }
@@ -72,6 +84,9 @@ export class SharksPool {
     document.removeEventListener('visibilitychange', this.onVisibility);
     window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('focus', this.onFocus);
+    window.removeEventListener('pointermove', this.onInput);
+    window.removeEventListener('pointerdown', this.onInput);
+    window.removeEventListener('keydown', this.onInput);
   }
 
   private onVisibility = () => {
@@ -80,17 +95,27 @@ export class SharksPool {
   };
   private onBlur = () => this.pause();
   private onFocus = () => this.resume();
+  private onInput = () => {
+    this.sinceInput = 0;
+    if (this.resting && !this.paused && !this.disposed) {
+      this.resting = false;
+      this.schedule();
+    }
+  };
 
   private pause() {
+    if (this.paused || this.disposed) return;
     this.paused = true;
     cancelAnimationFrame(this.raf);
     this.raf = 0;
+    // §6.3: a visit that was paused does not restart.
+    if (this.opts.visit !== undefined) this.finish();
   }
 
   private resume() {
     if (!this.paused || this.disposed) return;
     this.paused = false;
-    if (!this.resting && !this.opts.still && !document.hidden) this.schedule();
+    if (!this.ended && !this.resting && !this.opts.still && !document.hidden) this.schedule();
   }
 
   private resize() {
@@ -121,7 +146,7 @@ export class SharksPool {
 
   private schedule() {
     cancelAnimationFrame(this.raf);
-    if (this.disposed || this.resting || this.paused) return;
+    if (this.disposed || this.ended || this.resting || this.paused) return;
     this.last = performance.now();
     this.sinceDraw = 0;
     this.raf = requestAnimationFrame(this.frame);
@@ -133,6 +158,7 @@ export class SharksPool {
     this.acc += dt;
     this.sinceDraw += dt;
     this.swum += dt;
+    this.sinceInput += dt;
     let steps = 0;
     while (this.acc >= STEP && steps < MAX_STEPS) {
       this.world.step(STEP);
@@ -146,13 +172,24 @@ export class SharksPool {
       this.sinceDraw = 0;
     }
     if (this.opts.visit !== undefined && this.swum >= this.opts.visit) {
+      this.finish();
+      return;
+    }
+    if (this.opts.idleRest !== undefined && this.sinceInput >= this.opts.idleRest) {
       this.resting = true;
       this.raf = 0;
-      this.opts.onRest?.();
       return;
     }
     this.raf = requestAnimationFrame(this.frame);
   };
+
+  private finish() {
+    if (this.ended) return;
+    this.ended = true;
+    cancelAnimationFrame(this.raf);
+    this.raf = 0;
+    this.opts.onEnd?.();
+  }
 
   private draw(dt: number) {
     const started = performance.now();

@@ -3,7 +3,7 @@ import type { ChangeBrief } from '../../core/changeBrief';
 import { localDayKey } from '../../core/learning';
 import type { KnowledgeObject } from '../../core/knowledge';
 import { Buddy, REACTION_HOLD_MS, type BuddyMood } from '../shared/buddy';
-import { SharksBand, SharksPoolSlot } from '../shared/sharks/SharksBand';
+import { SharksVisit } from '../shared/sharks/SharksBand';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
@@ -166,19 +166,39 @@ export interface HomeProps {
   onBriefs: () => void;
   onQuiz: () => void;
   onAsk: () => void;
-  /** The Sharks setting: a band above the empty Recently understood copy. */
-  sharks?: boolean;
-  /** Today's pool (the free area under the cards): only on the first Today after the window opened without a stage. */
-  pool?: boolean;
+  /** SPEC §6.1 B: a visit is due (the window was shown, or Today is back after 10 min); `onVisitDone` when it ends. */
+  sharksVisit?: boolean;
+  onVisitDone?: () => void;
 }
 
 /** Today (Design's glass c-today): Vibe and the greeting, one action card, the daily goal, then Up next (main's learning
  *  steps, while any are left) beside Recently understood. */
-export function Home({ shortcutKeys, shortcut, userName, reviews, understood, stats, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk, sharks = false, pool = false }: HomeProps) {
+export function Home({ shortcutKeys, shortcut, userName, reviews, understood, stats, today, history, usage, onPlan, onLibrary, onBriefs, onQuiz, onAsk, sharksVisit = false, onVisitDone }: HomeProps) {
   const [brief, setBrief] = useState<ChangeBrief | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
   const [proOpen, setProOpen] = useState(false);
   const explainDisabled = !!usage && usage.remaining <= 0;
+  // §6.1 B: the water under the cards runs from the cards row's top to 16 px above the ask bar (the page's bottom
+  // padding is bar 58 + margin 18 + 24, so 92 px above the scroller's content edge). Measured, not styled: the row's
+  // height depends on the lists. None if that is under 200 px.
+  const colsRef = useRef<HTMLDivElement>(null);
+  const [water, setWater] = useState(0);
+  useLayoutEffect(() => {
+    const cols = colsRef.current;
+    const page = cols?.closest<HTMLElement>('.page');
+    if (!cols || !page || !sharksVisit) return;
+    const measure = () => {
+      const free = Math.floor(page.getBoundingClientRect().bottom - 92 - cols.getBoundingClientRect().top);
+      setWater(free);
+      // Too shallow (§6.1 B: none under 200 px): the visit is spent without a canvas.
+      if (free < 200) onVisitDone?.();
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(page);
+    watch.observe(cols);
+    return () => watch.disconnect();
+  }, [sharksVisit]);
   // Read once when Home opens; today is recorded once Home has been on screen a moment, so Vibe waves on the first real
   // visit of a day only.
   const [wave] = useState(() => {
@@ -296,7 +316,10 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
         </button>
       )}
       {today ? <TodayGoalLine goal={today} /> : null}
-      <div className={`home-cols${upNext.length || brief ? '' : ' home-cols--one'}`}>
+      {/* §6.1 B: the ocean in the ground layer under the glass cards, from the cards row's top to 16 px above the
+          ask bar (home-cols is position: relative; the visit is absolute inside it at the measured height). */}
+      <div ref={colsRef} className={`home-cols${upNext.length || brief ? '' : ' home-cols--one'}`}>
+        {sharksVisit && onVisitDone && water >= 200 ? <SharksVisit kind="today" seconds={8} strength="quiet" className="home-water" height={water} onDone={onVisitDone} label="Sharks swimming under the cards" /> : null}
         {upNext.length || brief ? (
           <section className="home-list home-list--next" aria-labelledby="home-next">
             <header><h2 id="home-next">Up next</h2><span className="home-list__count"><CountUp value={stepsDone} /> of {steps.length} done</span></header>
@@ -339,10 +362,9 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
                 </button></li>
               ))}
             </ul>
-          ) : <>{sharks ? <SharksBand height={160} className="home-list__empty-band" /> : null}<p className="home-list__empty">Nothing yet. Your first explanation lands here!</p></>}
+          ) : <p className="home-list__empty">Nothing yet. Your first explanation lands here!</p>}
         </section>
       </div>
-      <SharksPoolSlot enabled={sharks && pool} />
     </div>
   );
 }

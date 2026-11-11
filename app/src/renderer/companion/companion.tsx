@@ -1775,15 +1775,18 @@ function App() {
     if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
   }, [intro]);
   const introOn = intro === 'swim' || intro === 'leaving';
-  // In-app sharks (Design r2-motion, in-app sharks) follow the same switch as the stage. Today's pool visits once per
-  // window open (a launch with the stage off, or the window shown again after being hidden: the tray, the Dock), on
-  // the first Today; with the start stage, the stage is that visit. Leaving Today ends it.
+  // In-app sharks (Design r2-motion SPEC §6) follow the same switch as the stage. Today's visit (§6.1 B) is due when
+  // the window is shown (a launch with the stage off, or the window shown again after being hidden: the tray, the
+  // Dock; after the start stage, the stage was the visit) and on returning to Today when the last visit ended over
+  // 10 minutes ago. Not on every tab change; absent under reduced motion.
   const sharks = startAnimation !== false;
-  const [poolArmed, setPoolArmed] = useState(() => intro === 'off');
+  const [visitDue, setVisitDue] = useState(() => intro === 'off' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const lastVisitEnd = useRef(0);
+  useEffect(() => window.unvibe.onCompanionShown(() => { if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setVisitDue(true); }), []);
   useEffect(() => {
-    if (gate === 'app' && page !== 'Home') setPoolArmed(false);
+    if (gate === 'app' && page === 'Home' && lastVisitEnd.current && Date.now() - lastVisitEnd.current > 10 * 60_000) setVisitDue(true);
   }, [gate, page]);
-  useEffect(() => window.unvibe.onCompanionShown(() => setPoolArmed(true)), []);
+  const endVisit = () => { lastVisitEnd.current = Date.now(); setVisitDue(false); };
   // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
   // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
   // opened), never at launch and never while the start stage is up (Design S-1 whole-app MUST 15).
@@ -1801,7 +1804,12 @@ function App() {
     let asked = false;
     try { asked = window.localStorage.getItem(FEEDBACK_ASKED_KEY) === '1'; } catch { asked = true; }
     if (asked) return;
-    const t = window.setTimeout(() => setFeedbackOpen(true), 2500);
+    // Only on a window the person is looking at: hidden or unfocused (an explanation finished in the overlay while
+    // the companion sat behind the editor), the card waits for the next finished explanation instead of lying in
+    // wait for the next open (Design code read 11 Nov c).
+    const t = window.setTimeout(() => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) setFeedbackOpen(true);
+    }, 2500);
     return () => window.clearTimeout(t);
   }, [gate, profile, intro]);
   // Vibe says hi whenever you open a new page.
@@ -2013,7 +2021,7 @@ function App() {
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} sharks={sharks} pool={poolArmed && !introOn} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} sharksVisit={sharks && visitDue && !introOn && gate === 'app'} onVisitDone={endVisit} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -2042,7 +2050,7 @@ function App() {
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
                 : page === 'Gift' ? <Gift />
-                : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} sharks={sharks} onPlan={() => setPage('Plan')} />
+                : page === 'Briefings' ? <Briefings plan={usageLine?.plan ?? null} onPlan={() => setPage('Plan')} />
                 : <Explainer page={PAGES[page]} shortcut={shortcutLabel} />}
             </FadeIn>
           </div>

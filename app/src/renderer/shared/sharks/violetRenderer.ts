@@ -29,13 +29,12 @@ export interface SharkPalette {
   heat: string;
 }
 
-/** The stage palette: the start stage is always the dark ground (SPEC §2.2): violet #5a3fe0 / lilac #b8a6ff /
- * pink #e879c9 / blue #60a5fa; inks from tokens.css. Also the in-app palette on the dark theme (lilac on the dark
- * glass). */
+/** The stage palette: the start stage is always the dark ground (SPEC §2.2): violet #5a3fe0 / lilac #b8a6ff / white
+ * only (§6.3 SHOULD: the earlier pink, blue and lime accents are gone); inks from tokens.css. */
 export const PALETTE: SharkPalette = {
   grid: "rgba(184,166,255,0.07)",
-  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [196, 181, 253], [216, 206, 255]],
-  accents: ["#b8a6ff", "#e879c9", "#60a5fa", "#d6f45a", "#8f7bff", "#f0abfc", "#ffffff"],
+  dots: [[106, 80, 245], [143, 123, 255], [184, 166, 255], [196, 181, 253], [216, 206, 255]],
+  accents: ["#b8a6ff", "#8f7bff", "#d6ceff", "#ffffff", "#b8a6ff", "#8f7bff", "#ffffff"],
   fish: "196,181,253",
   skin: [[27, 21, 56], [75, 58, 158], [143, 123, 255], [226, 219, 255]],
   glyphDark: "#16122a",
@@ -43,16 +42,16 @@ export const PALETTE: SharkPalette = {
   glyphLight: "#f3f1fa",
   eye: "#f3f1fa",
   edge: [120, 100, 220],
-  heat: "255,120,200",
+  heat: "184,166,255",
 };
 
-/** The in-app palette on the light theme (Design IN-APP-SHARKS: transparent ground, violet ink): the skin ramp runs
+/** The in-app palette on the light theme (SPEC §6.2: transparent ground, violet ink #5a3fe0): the skin ramp runs
  * from pale lilac in shadow to the brand violet when lit, so a shark reads as violet ink on the paper, not a dark
  * block; glyphs are the dark violet ink, the light glyph is the paper. No grid. */
 export const LIGHT_PALETTE: SharkPalette = {
-  grid: "rgba(90,63,224,0)",
-  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [143, 123, 255], [90, 63, 224]],
-  accents: ["#5a3fe0", "#e879c9", "#3b82f6", "#8f7bff", "#7c3aed", "#5a3fe0", "#2a1f6e"],
+  grid: "rgba(0,0,0,0)",
+  dots: [[106, 80, 245], [143, 123, 255], [124, 100, 240], [143, 123, 255], [90, 63, 224]],
+  accents: ["#5a3fe0", "#8f7bff", "#7c3aed", "#5a3fe0", "#2a1f6e", "#5a3fe0", "#8f7bff"],
   fish: "90,63,224",
   skin: [[226, 219, 255], [184, 166, 255], [124, 100, 240], [90, 63, 224]],
   glyphDark: "#2a1f6e",
@@ -60,11 +59,11 @@ export const LIGHT_PALETTE: SharkPalette = {
   glyphLight: "#f6f4ff",
   eye: "#f6f4ff",
   edge: [90, 63, 224],
-  heat: "232,121,201",
+  heat: "143,123,255",
 };
 
-/** The in-app palette on the dark theme (Design: lilac ink): the stage's inks without its grid (a grid in a band reads
- * as a boxed frame on the page), and a skin ramp that starts at a mid violet, not the stage's near-black, so the
+/** The in-app palette on the dark theme (SPEC §6.2: lilac ink #b8a6ff): the stage's inks without its grid (a grid
+ * would draw the canvas's rectangle), and a skin ramp that starts at a mid violet, not the stage's near-black, so the
  * shadow side of a shark still reads on the dark glass. */
 export const DARK_PALETTE: SharkPalette = {
   ...PALETTE,

@@ -1,103 +1,98 @@
 import { useEffect, useRef, useState } from 'react';
 import { SharksPool } from './sharksPool';
 
-/**
- * A band of ocean on a companion page (Design r2-motion, in-app sharks): empty states (above the copy, never behind
- * it), the quiz's done card (one short visit above the heading) and Today's pool (the free area under the last card,
- * an 8 s visit, the pointer wakes it). The palette follows `html[data-theme]`; prefers-reduced-motion draws one still
- * frame; the loop pauses while the window is hidden or blurred (sharksPool.ts). `strength` sets the ink's opacity:
- * Design picks between the two from stills. After a visit the canvas fades out over --m-normal (`is-resting`), and
- * with `wakeOnHover` a pointer entering the band starts another.
- */
-export function SharksBand({ height, strength = 'present', visit, wakeOnHover = false, className = '', fish, label = 'Sharks swimming' }: {
-  height: number;
-  strength?: 'quiet' | 'present';
-  visit?: number;
-  wakeOnHover?: boolean;
-  className?: string;
-  fish?: number;
-  label?: string;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // 'swim' → 'resting' (the canvas fades over --m-normal) → 'gone' (no canvas, no loop; SPEC §4: canvas count 0 after
-  // a visit). A wake mounts a fresh canvas and pool.
-  const [phase, setPhase] = useState<'swim' | 'resting' | 'gone'>('swim');
-  const [run, setRun] = useState(0);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'));
+function themeNow(): 'light' | 'dark' {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
 
+/** The palette follows `html[data-theme]`, live. */
+function useTheme() {
+  const [theme, setTheme] = useState<'light' | 'dark'>(themeNow);
   useEffect(() => {
     const root = document.documentElement;
-    const watch = new MutationObserver(() => setTheme(root.dataset.theme === 'dark' ? 'dark' : 'light'));
+    const watch = new MutationObserver(() => setTheme(themeNow()));
     watch.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => watch.disconnect();
   }, []);
+  return theme;
+}
 
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * §6.1 A: a band of ocean above an empty state's copy (Library empty, Quiz empty), the column's width and `height`
+ * tall; not mounted at all when that is under 200 px. Runs while shown and the window is focused; rests on a still
+ * after 30 s without input (sharksPool.ts). Reduced motion: one still frame. `strength` sets the ink's opacity (CSS);
+ * Design picks between the two from stills.
+ */
+export function SharksBand({ height = 240, strength = 'present', label = 'Sharks swimming' }: {
+  height?: number;
+  strength?: 'quiet' | 'present';
+  label?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useTheme();
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pool = new SharksPool(canvas, { theme, idleRest: 30, still: reducedMotion() });
+    return () => pool.destroy();
+  }, [theme]);
+  if (height < 200) return null;
+  return (
+    <div className={`sharks-band sharks-band--${strength}`} style={{ height }} role="img" aria-label={label}>
+      <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />
+    </div>
+  );
+}
+
+/**
+ * §6.1 B and C: a visit in a page's ground layer (under the glass cards). Mounted by its owner for one visit of
+ * `seconds`: in over --m-normal (B) or --m-fast (C), swim, out over --m-slow (B) or --m-normal (C), then `onDone()`
+ * and the owner unmounts it: no canvas, no loop. A pause (window hidden or blurred) ends the visit. Reduced motion:
+ * the owner never mounts it (the visit is absent). The element is positioned by its owner's CSS (`className`).
+ */
+export function SharksVisit({ seconds, kind, strength = 'present', className = '', height, onDone, label = 'Sharks passing' }: {
+  seconds: number;
+  kind: 'today' | 'quiz';
+  strength?: 'quiet' | 'present';
+  className?: string;
+  /** Today: the measured water height (the owner's CSS fills the box when omitted). */
+  height?: number;
+  onDone: () => void;
+  label?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useTheme();
+  const [leaving, setLeaving] = useState(false);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  // The out fade starts before the visit's end so the canvas is gone at `seconds` (C: out over --m-normal from
+  // 1,650 ms of 2,000; B: out over --m-slow at the end of the 8 s).
+  const outMs = kind === 'quiz' ? 350 : 600;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     let timer = 0;
     const pool = new SharksPool(canvas, {
-      theme, visit, fish, still: reduced,
-      onRest: () => {
-        setPhase('resting');
-        timer = window.setTimeout(() => setPhase('gone'), reduced ? 0 : 400);
+      theme, visit: Math.max(0.1, seconds - outMs / 1000), fish: kind === 'quiz' ? 16 : 40,
+      onEnd: () => {
+        setLeaving(true);
+        timer = window.setTimeout(() => doneRef.current(), outMs);
       },
     });
     return () => {
       window.clearTimeout(timer);
       pool.destroy();
     };
-  }, [theme, visit, fish, run]);
-
-  const wake = () => {
-    if (!wakeOnHover || phase === 'swim') return;
-    setPhase('swim');
-    setRun((n) => n + 1);
-  };
-
+    // One visit per mount: a theme change mid-visit keeps the pool it started with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
-    <div
-      className={`sharks-band sharks-band--${strength}${phase === 'resting' ? ' is-resting' : ''}${className ? ` ${className}` : ''}`}
-      style={{ height }}
-      role="img"
-      aria-label={label}
-      onPointerEnter={wake}
-    >
-      {phase === 'gone' ? null : <canvas key={run} ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />}
+    <div className={`sharks-visit sharks-visit--${kind} sharks-band--${strength}${leaving ? ' is-leaving' : ''}${className ? ` ${className}` : ''}`} style={height ? { height } : undefined} role="img" aria-label={label}>
+      <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />
     </div>
   );
 }
 
-/**
- * Today's pool: the free area between the last card and the ask bar. The slot is the page's last block; its height
- * is what is left of the scroller's content box below it (the page's bottom padding already clears the ask bar), so
- * the page never grows a scrollbar for it. Mounted only when that is at least `minHeight` tall (no pool on a full
- * page), with an 8 s visit, the pointer waking it.
- */
-export function SharksPoolSlot({ enabled, minHeight = 140 }: { enabled: boolean; minHeight?: number }) {
-  const slotRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(0);
-  useEffect(() => {
-    const slot = slotRef.current;
-    if (!slot || !enabled) return;
-    const page = slot.closest<HTMLElement>('.page') ?? slot.parentElement;
-    if (!page) return;
-    const measure = () => {
-      const padBottom = parseFloat(getComputedStyle(page).paddingBottom) || 0;
-      const free = page.getBoundingClientRect().bottom - padBottom - (slot.getBoundingClientRect().top + page.scrollTop);
-      setHeight(Math.max(0, Math.floor(free)));
-    };
-    measure();
-    const watch = new ResizeObserver(measure);
-    watch.observe(page);
-    if (slot.parentElement) watch.observe(slot.parentElement);
-    return () => watch.disconnect();
-  }, [enabled]);
-  if (!enabled) return null;
-  return (
-    <div ref={slotRef} className="home-pool" style={{ height: height >= minHeight ? height : 0 }} aria-hidden={height < minHeight ? true : undefined}>
-      {height >= minHeight ? <SharksBand height={height} visit={8} wakeOnHover strength="quiet" fish={40} className="sharks-band--pool" label="Sharks swimming in the pool" /> : null}
-    </div>
-  );
-}
+export { reducedMotion as sharksReducedMotion };

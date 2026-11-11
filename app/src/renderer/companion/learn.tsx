@@ -13,7 +13,7 @@ import { InkTitle } from './inkTitle';
 import { SegThumb } from '../shared/slidingThumb';
 import { useSettled } from '../shared/useSettled';
 import { Burst } from '../shared/burst';
-import { SharksBand } from '../shared/sharks/SharksBand';
+import { SharksBand, SharksVisit, sharksReducedMotion } from '../shared/sharks/SharksBand';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -93,7 +93,7 @@ function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
 function LearningEmpty({ title, detail, sharks, onReview }: { title: string; detail: string; sharks: boolean; onReview: () => void }) {
   return (
     <div className="learning-empty">
-      {sharks ? <SharksBand height={200} /> : null}
+      {sharks ? <SharksBand height={240} /> : null}
       <h2>{title}</h2>
       <p>{detail}</p>
       <button className="primary-btn" onClick={onReview}>Explain some code</button>
@@ -160,6 +160,9 @@ export function Learn({
   const [cleared, setCleared] = useState(0);
   // Mixed review: one run across many lessons, revisit ones first, scored on first tries.
   const [mix, setMix] = useState<{ ids: string[]; index: number; firstTry: number; done: boolean } | null>(null);
+  // SPEC §6.1 C: one ocean visit behind the result card on the first correct answer of a sitting, and when a mixed
+  // sitting ends with everything cleared. Not on every answer; absent under reduced motion.
+  const [quizVisit, setQuizVisit] = useState(0);
   const [noteDraft, setNoteDraft] = useState('');
   const [savedNote, setSavedNote] = useState('');
   const [noteStatus, setNoteStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -349,6 +352,7 @@ export function Learn({
       setMix({ ...mix, done: true });
       playTone('celebrate');
       setBuddyMood('celebrate');
+      if (mix.firstTry === mix.ids.length && !sharksReducedMotion()) setQuizVisit((n) => n + 1);
       return;
     }
     setMix({ ...mix, index });
@@ -375,6 +379,7 @@ export function Learn({
     if (mix && wrongPicks.length === 0) setMix((m) => (m ? { ...m, firstTry: m.firstTry + 1 } : m));
     setResult({ correct: true, rationale: r.rationale ?? 'You got it.', answerIndex: r.answerIndex ?? choice });
     setCleared((count) => count + 1);
+    if (cleared === 0 && !sharksReducedMotion()) setQuizVisit((n) => n + 1);
     void onRefresh();
   };
 
@@ -554,6 +559,7 @@ export function Learn({
 
           {survey ? (
             <div className="survey">
+              {sharks && quizVisit > 0 ? <SharksVisit key={`visit-${quizVisit}`} kind="quiz" seconds={2} className="survey__water" onDone={() => setQuizVisit(0)} label="Sharks passing behind the card" /> : null}
               <div className="survey__progress" aria-hidden="true">
                 <i style={{ transform: `scaleX(${Math.max(0.08, ticks / 5)})` }} />
               </div>
@@ -575,7 +581,6 @@ export function Learn({
               ) : result?.correct && card ? (
                 <div className="survey__end" key={`end-${card.key}`}>
                   <Burst trigger="quiz" />
-                  {sharks ? <SharksBand key={`sharks-${card.key}`} height={96} visit={1.4} fish={12} label="A shark passes" /> : null}
                   <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
                   <p className="survey__kicker">Nice work</p>
                   <h2>You got it.</h2>
