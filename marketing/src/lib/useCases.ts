@@ -17,7 +17,7 @@ export const USE_CASES_INDEX = {
   path: "/use-cases",
   title: "Unvibe use cases: AI code, learning, inherited code",
   description:
-    "Four times you need to understand code you did not write: an AI agent's change, the code Cursor wrote, code AI wrote while you learn, and a codebase you inherited.",
+    "Four times you need to understand code you did not write: an AI agent's change, Cursor's code, code AI wrote while you learn, and a codebase you inherited.",
 } as const;
 
 export const useCases: readonly UseCase[] = [
