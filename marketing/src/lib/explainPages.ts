@@ -28,6 +28,13 @@ export interface ExplainPage {
    * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
    */
   heading?: string;
+  /**
+   * The <title> and link-preview title without the " · Unvibe" suffix, for pages whose target query is a command,
+   * error or pattern: it starts with the words people type ("ps aux output explained, column by column"), at most
+   * 51 characters so the whole title stays under 60. Without it the title is "Explain {heading} in plain English".
+   * The H1 keeps "Explain {heading}" (Design); the two say the same thing in a different order.
+   */
+  title?: string;
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -2728,6 +2735,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
     id: "git-diff",
     fileName: "changes.diff",
     heading: "git diff output",
+    title: "git diff output explained, line by line",
     related: ["git-log", "git-rebase", "gitignore", "bash"],
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
@@ -2788,6 +2796,7 @@ rename to lib/money.js`,
   {
     id: "react-useeffect",
     fileName: "Profile.jsx",
+    title: "useEffect explained: the dependency array",
     related: ["javascript", "typescript", "tailwind", "npm-scripts"],
     lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
     description:
@@ -2848,6 +2857,7 @@ export function Profile({ userId }) {
     id: "python-traceback",
     fileName: "traceback.txt",
     heading: "Python tracebacks",
+    title: "Python traceback explained: read the error",
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
@@ -2896,6 +2906,7 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
     description:
@@ -2951,6 +2962,7 @@ KeyError: 'qty'`,
   {
     id: "prisma-schema",
     fileName: "prisma/schema.prisma",
+    title: "What is a Prisma schema? Explained with a sample",
     related: ["sql", "sqlite", "sql-joins", "env"],
     lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
     description:
@@ -3008,6 +3020,7 @@ model Post {
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
+    title: "Tailwind CSS classes explained, one by one",
     related: ["css", "html", "react-useeffect"],
     lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
     description:
@@ -3055,6 +3068,7 @@ model Post {
   {
     id: "sql-joins",
     fileName: "joins.sql",
+    title: "SQL joins explained with examples",
     related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
     description:
@@ -3113,6 +3127,7 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
+    title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
     description:
@@ -3170,6 +3185,7 @@ create policy "update own todos" on todos
     id: "cors-error",
     fileName: "cors-error.txt",
     heading: "CORS errors",
+    title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
@@ -3221,6 +3237,7 @@ server.listen(3000);`,
   {
     id: "asyncio",
     fileName: "fetch_all.py",
+    title: "Python async and await explained (asyncio)",
     related: ["python", "python-traceback", "javascript"],
     lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
     description:
@@ -3277,6 +3294,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
   {
     id: "tar",
     fileName: "backup-site.sh",
+    title: "tar command explained: every flag",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
     description:
@@ -3325,6 +3343,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
   {
     id: "rsync",
     fileName: "backup.sh",
+    title: "rsync command explained: flags and the slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
     description:
@@ -3374,6 +3393,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
+    title: "git rebase -i explained: the todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
@@ -3426,6 +3446,7 @@ drop 803b36d # Add gitignore
   {
     id: "xargs",
     fileName: "shrink-logs.sh",
+    title: "xargs explained: how it works, with find",
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
     description:
@@ -3474,6 +3495,7 @@ find . -name '*.log' | xargs ls -l`,
     id: "ps-aux",
     fileName: "ps-aux.txt",
     heading: "ps aux output",
+    title: "ps aux output explained, column by column",
     related: ["bash", "grep", "awk", "lsof"],
     lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
     description:
@@ -3519,6 +3541,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
   {
     id: "systemd",
     fileName: "notes-api.service",
+    title: "systemd service file explained, line by line",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
     description:
@@ -3570,6 +3593,7 @@ WantedBy=default.target`,
   {
     id: "terraform",
     fileName: "main.tf",
+    title: "Terraform code explained, block by block",
     related: ["yaml", "json", "ini"],
     lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
     description:
@@ -3628,6 +3652,7 @@ output "app_name" {
   {
     id: "assembly",
     fileName: "sum.s",
+    title: "Assembly code explained: arm64 from a C function",
     related: ["c", "cpp", "make"],
     lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
     description:
@@ -3688,6 +3713,7 @@ LBB0_4:
     id: "git-merge-conflict",
     fileName: "shipping.js",
     heading: "git merge conflicts",
+    title: "git merge conflict explained: the markers",
     related: ["git-diff", "git-rebase", "git-log"],
     lead: "Paste a file with `<<<<<<<`, `=======` and `>>>>>>>` lines in it and Vibe explains which version came from which branch, what git already merged on its own, and what the fixed code should keep.",
     description:
@@ -3737,6 +3763,7 @@ export function deliveryDays(country) {
     id: "npm-error",
     fileName: "npm-install.txt",
     heading: "npm errors",
+    title: "npm error explained: code 1, ENOENT, node-gyp",
     related: ["npm-scripts", "package-lock", "json", "python-traceback"],
     lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
     description:
@@ -3790,6 +3817,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
     id: "lsof",
     fileName: "lsof.txt",
     heading: "lsof output",
+    title: "lsof explained: find what holds a port",
     related: ["ps-aux", "curl", "bash"],
     lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
     description:

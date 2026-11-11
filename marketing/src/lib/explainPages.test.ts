@@ -88,6 +88,16 @@ describe("explain pages", () => {
     }
   });
 
+  it("search titles stay under 60 characters with the site suffix and are unique", () => {
+    const seen = new Set<string>();
+    for (const { id, title } of explainPages) {
+      if (!title) continue;
+      assert.ok(`${title} · Unvibe`.length <= 60, `${id}: title "${title}" runs past 60 with " · Unvibe"`);
+      assert.ok(!seen.has(title.toLowerCase()), `${id}: title "${title}" is used twice`);
+      seen.add(title.toLowerCase());
+    }
+  });
+
   it("link every other page exactly once: related first, then the rest", () => {
     for (const page of explainPages) {
       const { related, others } = explainLinks(page);
