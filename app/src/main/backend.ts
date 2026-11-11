@@ -43,7 +43,7 @@ function loadDevEnv(): void {
 
 if (!app.isPackaged) loadDevEnv();
 
-export const BACKEND = resolveBackendUrl(process.env, undefined, app.isPackaged);
+export const BACKEND = resolveBackendUrl(app.isPackaged);
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /**
