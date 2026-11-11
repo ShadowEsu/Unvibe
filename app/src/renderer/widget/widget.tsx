@@ -39,10 +39,13 @@ type View = 'explain' | 'test' | 'ask' | 'saved';
 /** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
 function ThinkingCard({ hasCode }: { hasCode: boolean }) {
   const [step, setStep] = useState(0);
+  // Blocks shaped like the answer appear only once loading has lasted 200 ms (Design r2 motion row 11).
+  const [skeleton, setSkeleton] = useState(false);
   useEffect(() => {
     const a = window.setTimeout(() => setStep(1), 700);
     const b = window.setTimeout(() => setStep(2), 1700);
-    return () => { window.clearTimeout(a); window.clearTimeout(b); };
+    const c = window.setTimeout(() => setSkeleton(true), 200);
+    return () => { window.clearTimeout(a); window.clearTimeout(b); window.clearTimeout(c); };
   }, []);
   const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
   const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
@@ -59,6 +62,11 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
           ))}
         </ol>
       </div>
+      {skeleton ? (
+        <div className="ob-skeleton" aria-hidden="true">
+          <i style={{ width: '38%' }} /><i /><i style={{ width: '82%' }} /><i className="ob-skeleton__code" /><i style={{ width: '64%' }} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1167,7 +1167,7 @@ html[data-r2] {
 :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__search, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
 :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-step, .home-row, .history-continue, .lib-row, .survey-pick, .briefings__card):active { transform: scale(var(--m-scale-card)); transition-duration: var(--m-instant); }
 /* §3 row 7: the plan meter grows from the left once per visit. */
-:root[data-ui="v3"][data-v7] .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i) { transform-origin: left center; animation: mGrow var(--m-slow) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .layout :is(.side-usage__bar i, .plan-usage-row > i > em) { transform-origin: left center; animation: mGrow var(--m-slow) var(--m-ease-smooth) both; }
 /* §3 row 8: menus and the palette open from the trigger's corner over --m-fast; closing is the owner's unmount. */
 :root[data-ui="v3"][data-v7] .acct-menu { transform-origin: top left; animation: mPop var(--m-fast) var(--m-ease-smooth) both; }
 :root[data-ui="v3"][data-v7] .search-palette { transform-origin: top center; animation: mPop var(--m-instant) linear both; }
@@ -1189,12 +1189,43 @@ html[data-r2] {
 @keyframes mToastOut { to { opacity: 0; transform: translate(-50%, var(--m-dist-sm)); } }
 /* §3 row 16: a reviewed item's text goes to ink-3 over --m-fast. */
 :root[data-ui="v3"][data-v7] .layout .agent-review label span { transition: color var(--m-fast) var(--m-ease-sharp); }
+/* The check is a 10×6 L-stroke (border on a rotated box) revealed left to right by clip-path over --m-fast. */
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input { transition: background var(--m-fast) var(--m-ease-sharp), border-color var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input::after {
+  content: ""; display: block; width: 10px; height: 5px; margin-top: -2px; border: 0 solid var(--u-accent-on); border-width: 0 0 2px 2px;
+  transform: rotate(-45deg); clip-path: inset(0 100% 0 0); transition: clip-path var(--m-fast) var(--m-ease-sharp);
+}
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { content: ""; clip-path: inset(0 0 0 0); }
 /* §1: nothing loops at rest except Vibe's blink; v5's 3.6 s bob on the floating Vibe button stops. */
 :root[data-ui="v3"][data-v7] .vibe-float__btn { animation: none; }
+/* §3 row 14: the contained celebration on a finished quiz: eight 8–10 px shapes (squares and rounds, violet and lilac)
+   fly out from the card's centre over 900 ms and fade; clipped to the card; once per trigger per day (Burst). */
+:root[data-ui="v3"][data-v7] .layout .survey__end { position: relative; overflow: hidden; }
+.m-burst { position: absolute; inset: 0; pointer-events: none; }
+.m-burst i {
+  position: absolute; left: 50%; top: 42%; width: 9px; height: 9px; border-radius: 2px; background: var(--u-accent);
+  transform: translate(-50%, -50%); opacity: 0;
+  animation: mBurst 900ms var(--m-ease-smooth) both; animation-delay: calc(var(--i) * 20ms);
+}
+.m-burst i:nth-child(2n) { border-radius: 50%; background: var(--u-lilac); width: 8px; height: 8px; }
+.m-burst i:nth-child(3n) { width: 10px; height: 10px; }
+.m-burst i:nth-child(1) { --dx: -120px; --dy: -70px; }
+.m-burst i:nth-child(2) { --dx: 110px; --dy: -80px; }
+.m-burst i:nth-child(3) { --dx: -150px; --dy: 10px; }
+.m-burst i:nth-child(4) { --dx: 140px; --dy: 20px; }
+.m-burst i:nth-child(5) { --dx: -80px; --dy: 90px; }
+.m-burst i:nth-child(6) { --dx: 90px; --dy: 100px; }
+.m-burst i:nth-child(7) { --dx: -30px; --dy: -110px; }
+.m-burst i:nth-child(8) { --dx: 40px; --dy: 120px; }
+@keyframes mBurst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(140deg) scale(0.8); }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__lockup, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__lockup, .m-burst i, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-usage-row > i > em)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .sharks-intro--out { animation-duration: 200ms; }
-  :root[data-ui="v3"][data-v7] .layout :is(.nav-pill, .seg-thumb, .nav button, .home-cta, .history-continue) { transition: none; }
+  :root[data-ui="v3"][data-v7] .layout :is(.nav-pill, .seg-thumb, .nav button, .home-cta, .history-continue, .agent-review__checks input, .agent-review__checks input::after) { transition: none; }
   :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: none; }
 }

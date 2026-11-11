@@ -580,7 +580,15 @@ html[data-r2] .ob-toast { animation: obToastIn var(--m-normal) var(--m-ease-smoo
 html[data-r2] .ob-toast.is-leaving { animation: obToastOut var(--m-exit) var(--m-ease-sharp) both; }
 @keyframes obToastIn { from { opacity: 0; transform: translateY(var(--m-dist-md)); } }
 @keyframes obToastOut { to { opacity: 0; transform: translateY(var(--m-dist-sm)); } }
+/* Row 11: blocks shaped like the answer under the thinking card once loading has lasted 200 ms; one highlight sweeps
+   left to right over 1.4 s linear (transform only) for as long as the answer is pending; the card fades in --m-fast. */
+.ob-skeleton { grid-column: 1 / -1; display: grid; gap: 10px; margin-top: 4px; animation: obFade var(--m-fast) var(--m-ease-smooth) both; }
+.ob-skeleton i { display: block; position: relative; height: 12px; border-radius: 6px; background: var(--u-fill); overflow: hidden; }
+.ob-skeleton i.ob-skeleton__code { height: 64px; border-radius: 10px; }
+.ob-skeleton i::after { content: ""; position: absolute; inset: 0; width: 45%; background: linear-gradient(90deg, transparent, var(--u-line), transparent); transform: translateX(-120%); animation: obSweep 1.4s linear infinite; }
+@keyframes obSweep { to { transform: translateX(260%); } }
+@keyframes obFade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  html[data-r2] :is(.ob, .ob.is-leaving, .ob-opt.is-right, .ob-opt.is-wrong, .ob-opt__mark--right svg, .ob-toast, .ob-toast.is-leaving) { animation: none; }
+  html[data-r2] :is(.ob, .ob.is-leaving, .ob-opt.is-right, .ob-opt.is-wrong, .ob-opt__mark--right svg, .ob-toast, .ob-toast.is-leaving, .ob-skeleton, .ob-skeleton i::after) { animation: none; }
   html[data-r2] :is(.seg-thumb, .ob-tab, .ob-depth__item, .ob-opt) { transition: none; }
 }

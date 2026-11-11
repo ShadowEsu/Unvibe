@@ -12,6 +12,7 @@ import { LineIcon } from './lineIcon';
 import { InkTitle } from './inkTitle';
 import { SegThumb } from '../shared/slidingThumb';
 import { useSettled } from '../shared/useSettled';
+import { Burst } from '../shared/burst';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -559,6 +560,7 @@ export function Learn({
 
               {mix?.done ? (
                 <div className="survey__end">
+                  <Burst trigger="mix" />
                   <span className="survey__vibe"><Buddy mood={mix.firstTry >= mix.ids.length * 0.7 ? 'celebrate' : 'happy'} size={72} label="Vibe" /></span>
                   <p className="survey__kicker">Mixed review done</p>
                   <h2>{mix.firstTry} of {mix.ids.length} on the first try.</h2>
@@ -567,6 +569,7 @@ export function Learn({
                 </div>
               ) : result?.correct && card ? (
                 <div className="survey__end" key={`end-${card.key}`}>
+                  <Burst trigger="quiz" />
                   <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
                   <p className="survey__kicker">Nice work</p>
                   <h2>You got it.</h2>
