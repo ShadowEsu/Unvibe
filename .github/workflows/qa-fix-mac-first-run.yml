@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: macos-14, kind: dmg, expect: mac-arm }
-          - { runner: macos-15, kind: dmgdirect, expect: mac-arm }
+          # macos-14 is gone from GitHub's hosted runners ("macos-14-arm64-us-default is not supported", run 43090279817)
+          - { runner: macos-26, kind: dmg, expect: mac-arm }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     env:
