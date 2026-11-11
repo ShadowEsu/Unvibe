@@ -846,7 +846,7 @@ function Progress({ profile }: { profile: Profile | null }) {
               <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
             ))}
           </div>
-          <p className="soft-note">Unvibe notes which app you were in when you asked — never what you typed.</p>
+          <p className="soft-note">Unvibe notes which app you were in when you asked, never what you typed.</p>
         </div>
         <div className="panel-card" style={{ marginBottom: 0 }}>
           <div className="ph"><span className="t">Understanding over time</span></div>
@@ -1602,7 +1602,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div><div className="setrow"><div><div className="sl">Credits</div><div className="sd">JetBrains Mono, © 2020 The JetBrains Mono Project Authors, SIL Open Font License 1.1. ascii-sharks, © 2026 drewdi, MIT License.</div></div></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div><div className="setrow"><div><div className="sl">Credits</div><div className="sd">Inter, © 2016 The Inter Project Authors; Instrument Serif, © 2022 The Instrument Serif Project Authors; Bricolage Grotesque, © 2022 The Bricolage Grotesque Project Authors; JetBrains Mono, © 2020 The JetBrains Mono Project Authors: all SIL Open Font License 1.1. ascii-sharks, © 2026 drewdi, MIT License. Background photo: Tim Marshall (Unsplash), CC0, recoloured.</div></div></div></>}
         </div>
       </div>
     </div>

@@ -103,10 +103,33 @@ export class SharksStart {
     if (!this.primed) {
       this.primed = true;
       for (let i = 0; i < PRESTEPS; i++) this.world.step(STEP);
+      // The first frame frames the name (Design S-1 whole-app, Start): keep stepping, up to 4 more seconds, until a
+      // shark swims on each side of the centre and none is cut by an edge. The world is random; a seed would only
+      // fix one window size.
+      for (let i = 0; i < PRESTEPS && !this.framesLockup(); i++) this.world.step(STEP);
     }
     // Painted here, not on the next frame: a window that is not shown yet has its rafs paused, and the first frame
     // the user sees must already have the sharks (SPEC §2.4).
     this.draw(STEP);
+  }
+
+  private framesLockup(): boolean {
+    const { width, height } = this.world;
+    let left = false;
+    let right = false;
+    for (const shark of this.world.sharks) {
+      const n = shark.nodes;
+      let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+      for (let i = 0; i < n.length; i += 2) {
+        minX = Math.min(minX, n[i]); maxX = Math.max(maxX, n[i]);
+        minY = Math.min(minY, n[i + 1]); maxY = Math.max(maxY, n[i + 1]);
+      }
+      if (minX < 0 || maxX > width || minY < 0 || maxY > height) return false;
+      const mid = (minX + maxX) / 2;
+      if (mid < width * 0.42) left = true;
+      else if (mid > width * 0.58) right = true;
+    }
+    return left && right;
   }
 
   private schedule() {

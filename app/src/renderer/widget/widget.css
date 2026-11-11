@@ -115,9 +115,10 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-scroll:hover::-webkit-scrollbar-thumb { background: rgb(90 63 224 / 0.32); }
 :root[data-theme="dark"] .ob-scroll::-webkit-scrollbar-thumb, :root[data-theme="dark"] .ob-code__all::-webkit-scrollbar-thumb, :root[data-theme="dark"] .rich-table::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
 :root[data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.4); }
-/* A line cut at the scroll edge reads as "more below" (Design S-1 SHOULD 1). Not while the agreement shows: its
-   actions are pinned at that edge and stay crisp. */
-.ob-scroll:not(:has(.consent-form)) { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); }
+/* A line cut at the scroll edge reads as "more below" (Design S-1 SHOULD 1): a 16 px fade to the reading surface
+   painted just above the tab bar (an overlay, not a mask: a mask showed the aurora through as a lilac streak, Design
+   S-1 whole-app). Not while the agreement shows: its actions are pinned at that edge and stay crisp. */
+.ob:not(:has(.consent-form)) .ob-tabs::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 16px; pointer-events: none; background: linear-gradient(to bottom, transparent, var(--u-solid)); }
 .ob-scroll:focus { outline: none; }
 /* 20 px at the bottom: the last chip and its focus ring sit above the 16 px fade. */
 .ob-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 20px; animation: viewIn 150ms var(--u-ease) both; }
@@ -130,6 +131,7 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 /* Tabs, 54 pt, pinned on glass-1: a 16 pt icon over a 10.5 label, 80 × 42 targets; the active one on the violet tint
    in violet. */
 .ob-tabs {
+  position: relative;
   flex: none;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -435,7 +437,9 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob .consent-form__lead, .ob .consent-form__note { color: var(--u-ink-2); font-size: 12px; line-height: 19px; }
 .ob .consent-form__row { gap: 10px; padding: 9px 12px; border-color: var(--u-line); border-radius: var(--u-radius-field); background: var(--u-chip); font-size: 12px; line-height: 18px; }
 .ob .consent-form__row:has(input:checked) { border-color: var(--u-accent); }
-.ob .consent-form__row input { accent-color: var(--u-accent); }
+.ob .consent-form__row input { border-color: var(--u-ink-3); }
+.ob .consent-form__row input:checked { border-color: var(--u-accent); background: var(--u-accent); }
+.ob .consent-form__row input::after { border-color: var(--u-accent-on); }
 .ob .consent-form__row a { color: var(--u-accent); }
 /* The agreement's actions stay in sight above the tabs however long the form is (Design S-1 MUST 2): pinned to the
    scroll area's bottom edge with a hairline on top; the form scrolls under them. The sheet, not the pane's glass: a

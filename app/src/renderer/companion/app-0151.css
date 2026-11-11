@@ -402,6 +402,12 @@
 :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 24px 0 22px; }
 @container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 :root[data-ui="v3"][data-v7] .layout .metric-card { padding: 20px 22px; }
+/* The six months fill the card's width (26 weeks as fluid columns, square cells) instead of a 390 px block at the
+   left; the "Where you learn" bar gets a visible track (Design S-1 whole-app, Momentum). */
+:root[data-ui="v3"][data-v7] .layout .heat { grid-template-columns: repeat(26, minmax(0, 1fr)); grid-template-rows: repeat(7, auto); grid-auto-columns: auto; gap: 4px; overflow: hidden; padding-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .heat i { aspect-ratio: 1; width: 100%; background: color-mix(in srgb, var(--u-ink) 7%, transparent); border-radius: 4px; }
+:root[data-ui="v3"][data-v7] .layout .bar-track { height: 9px; background: color-mix(in srgb, var(--u-ink) 10%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .bar-track i { background: var(--u-accent); min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .heat .a1, :root[data-ui="v3"][data-v7] .layout .heat-legend .a1 { background: color-mix(in srgb, var(--u-accent) 16%, transparent); }
 :root[data-ui="v3"][data-v7] .layout .heat .a2, :root[data-ui="v3"][data-v7] .layout .heat-legend .a2 { background: color-mix(in srgb, var(--u-accent) 34%, transparent); }
 :root[data-ui="v3"][data-v7] .layout .heat .a3, :root[data-ui="v3"][data-v7] .layout .heat-legend .a3 { background: color-mix(in srgb, var(--u-accent) 55%, transparent); }
@@ -759,9 +765,10 @@
 :root[data-ui="v3"][data-v7] .modal .perm-fix p { margin: 0 0 10px; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
 :root[data-ui="v3"][data-v7] .modal .perm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Island: the preview on a fill, the choices as a segmented control with the accent on the chosen one. */
-:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 0; border-radius: 16px; background: var(--u-fill); box-shadow: none; }
-:root[data-ui="v3"][data-v7] .modal .settings-preview__window span { background: var(--u-line); }
+/* Island: the preview is a small desktop on the brand aurora (unveiled, so it reads in light too: Design S-1 whole-app,
+   Settings); the choices as a segmented control with the accent on the chosen one. */
+:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 1px solid var(--u-hair); border-radius: 16px; background: url("./aurora.webp") center 40% / cover no-repeat, var(--u-accent); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .settings-preview__window span { background: rgb(255 255 255 / 0.55); }
 :root[data-ui="v3"][data-v7] .modal .location-grid { display: inline-flex; width: auto; gap: 2px; padding: 3px; border-radius: 999px; background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .modal .location-grid button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); font: var(--u-w-label) 12.5px/1 var(--u-font); box-shadow: none; }
 :root[data-ui="v3"][data-v7] .modal .location-grid button:hover { color: var(--u-ink); }

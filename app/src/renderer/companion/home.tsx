@@ -319,7 +319,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
           </section>
         ) : null}
         <section className="home-list" aria-labelledby="home-recent">
-          <header><h2 id="home-recent">Recently understood</h2><button type="button" className="link-btn" onClick={onLibrary}>See all</button></header>
+          <header><h2 id="home-recent">Recently understood</h2>{rows.length ? <button type="button" className="link-btn" onClick={onLibrary}>See all</button> : null}</header>
           {rows.length ? (
             <ul>
               {rows.map((row) => (
