@@ -414,6 +414,7 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "npm-scripts",
     fileName: "shop/package.json",
+    related: ["package-lock", "json", "npm-error"],
     lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
     description:
       "Paste npm scripts and get a plain English explanation of npm run dev, build, test and lint, free online. The sample is a small shop's package.json with eight scripts.",
@@ -3363,7 +3364,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
-    related: ["git-log", "git-diff", "gitignore"],
+    related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
       "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into the first, rewords one and drops one before a pull request.",
@@ -3462,7 +3463,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
-    related: ["bash", "grep", "awk"],
+    related: ["bash", "grep", "awk", "lsof"],
     lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
     description:
       "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a big Python list, a stopped job and a zombie.",
@@ -3671,6 +3672,156 @@ LBB0_4:
     ],
     watchOut:
       "The function you're looking for may not be in the assembly at all. With `sum` and a `main` that calls it in one file, `-O1` turned `main` into 2 instructions, `mov w0, #16` and `ret`: the compiler worked out the total of 3, 5, -2 and 10 itself, and nothing calls `sum`, though it is still in the file. In the x86-64 build, a gdb breakpoint on `sum` never stopped, and the program exited with 16. At `-O0`, `main` calls `sum`.",
+  },
+  {
+    id: "git-merge-conflict",
+    fileName: "shipping.js",
+    related: ["git-diff", "git-rebase", "git-log"],
+    lead: "Paste a file with `<<<<<<<`, `=======` and `>>>>>>>` lines in it and Vibe explains which version came from which branch, what git already merged on its own, and what the fixed code should keep.",
+    description:
+      "Paste a git merge conflict and get the markers explained in plain English, free online. The sample is a JavaScript file where 2 branches changed the same shipping rule.",
+    sampleSummary: "A JavaScript file in the middle of a merge: main raised the free shipping limit to 75, the free-for-members branch added free shipping for members, and git couldn't pick between the 2 versions of that line.",
+    sample: `// shipping.js: the checkout's shipping rules
+export function shippingCost(order) {
+<<<<<<< HEAD
+  if (order.total >= 75) {
+=======
+  if (order.total >= 50 || order.member) {
+>>>>>>> free-for-members
+    return 0;
+  }
+  return 5.99;
+}
+
+export function deliveryDays(country) {
+  return country === "US" ? 3 : 5;
+}`,
+    shows: [
+      {
+        concept: "conflict markers",
+        text: "`<<<<<<< HEAD` starts your side, from the branch you're on (main here), `=======` divides the 2 sides, and `>>>>>>> free-for-members` ends the side from the branch being merged in. git stopped with `CONFLICT (content): Merge conflict in src/shipping.js` and exit code 1, and `git status` listed the file under `both modified`.",
+      },
+      {
+        concept: "what merged by itself",
+        text: "Only the line both branches changed is marked. main's new fee, `return 5.99`, and the branch's delivery change, `? 3 : 5`, each touched a line the other branch left alone, so git merged them in without asking. Run as it is, the file fails: Node.js stopped at line 3 with `SyntaxError: Unexpected token '<<'`.",
+      },
+      {
+        concept: "--ours and --theirs",
+        text: "`git checkout --ours` and `--theirs` take one side's whole file, not just the marked line. `--theirs` brought back the branch's `return 4.99` and undid main's fee change, and `--ours` kept 7 delivery days and undid the branch's 5. During a rebase the names swap: `--ours` gave main's line and `--theirs` the line from the commit being replayed.",
+      },
+      {
+        concept: "resolving and committing",
+        text: "The fix keeps both changes: `if (order.total >= 75 || order.member)`. With the markers gone, `git diff --check` printed nothing, `git add` marked the file resolved (`All conflicts fixed but you are still merging.`) and `git commit --no-edit` made the merge commit. The fixed file returned 5.99 for a 60 order, 0 for a member's 60 order and 0 for an 80 order.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 and Node.js 25.7.0 in a test repo with 2 branches. `git merge --abort` put main back as it was, with nothing in `git status --short`.",
+      "With `merge.conflictStyle=zdiff3`, git adds a third part between `|||||||` and `=======`: the line as it was before either branch changed it, `if (order.total >= 50) {`. That shows what each side changed, not just where they ended up.",
+    ],
+    watchOut:
+      "git doesn't stop you from committing the markers. `git add` on the file with `<<<<<<<` still in it marked the conflict resolved, and `git commit` made the merge with exit code 0. `git diff --check HEAD~1 HEAD` on that merge caught it: it printed `leftover conflict marker` for lines 3, 5 and 7 and exited with code 2. Search the file for `<<<<<<<` before you add it.",
+  },
+  {
+    id: "npm-error",
+    fileName: "npm-install.txt",
+    related: ["npm-scripts", "package-lock", "json", "python-traceback"],
+    lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
+    description:
+      "Paste npm error output and get it explained in plain English, free online. The sample is an npm install that fails while a dependency builds a native addon with node-gyp.",
+    sampleSummary: "`npm install` in a test project whose dependency, native-thing, compiles a C++ addon when it installs. Its source file is missing, so the build stops and npm prints its error block. 33 lines of node-gyp detail and a 2-line Node.js deprecation warning are left out.",
+    sample: `$ npm install
+npm error code 1
+npm error path ~/notes-app/node_modules/native-thing
+npm error command failed
+npm error command sh -c node-gyp rebuild
+npm error make: Entering directory '~/notes-app/node_modules/native-thing/build'
+npm error make: Leaving directory '~/notes-app/node_modules/native-thing/build'
+npm error gyp info it worked if it ends with ok
+npm error gyp info using node-gyp@12.2.0
+npm error gyp info using node@25.7.0 | linux | x64
+npm error make: *** No rule to make target 'Release/obj.target/addon/src/addon.o', needed by 'Release/obj.target/addon.node'.  Stop.
+npm error gyp ERR! build error 
+npm error gyp ERR! stack Error: \`make\` failed with exit code: 2
+npm error gyp ERR! cwd ~/notes-app/node_modules/native-thing
+npm error gyp ERR! node -v v25.7.0
+npm error gyp ERR! node-gyp -v v12.2.0
+npm error gyp ERR! not ok
+npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09_21_02_432Z-debug-0.log`,
+    shows: [
+      {
+        concept: "code, path and command",
+        text: "`npm error code 1` comes with `command failed`: the dependency's install command exited with an error, and npm itself then exited with code 1. It isn't make's code, which was 2. `path` and `command` say where and what: the install step of native-thing inside node_modules, `sh -c node-gyp rebuild`. So the failure is in a dependency's build, not in your own files.",
+      },
+      {
+        concept: "the line with the cause",
+        text: "Most of the block is node-gyp reporting on itself. The cause is the `make: *** No rule to make target` line: make had no way to build addon.o because src/addon.cc, the addon's source file, isn't there. `gyp ERR! build error` and the `make` exit code 2 after it report that same failure.",
+      },
+      {
+        concept: "code 127 and ENOENT",
+        text: "`npm run build` with vite not installed printed `sh: line 1: vite: command not found` and exited with code 127, the shell's code for a command it can't find. `npm --prefix web run dev` with no web folder printed `npm error code ENOENT` and `Could not read package.json`, and exited with code 254.",
+      },
+      {
+        concept: "the debug log",
+        text: "The last line names a debug log in ~/.npm/_logs, a new one for each run. This one had 96 lines, including `error code 1` and `verbose exit 1`. It's the file to attach when you ask for help, after checking it for anything private.",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 and Node.js 25.7.0 on Linux, in a test project. native-thing is a local test package whose `install` script runs node-gyp on a binding.gyp that lists a missing src/addon.cc. It was installed with `npm install --install-links`, so the local package was copied into node_modules the way a registry package is; the sample shows the command as `npm install`. Paths are shortened to ~, and node-gyp used the headers from the local Node.js install, so nothing was downloaded.",
+      "When a script itself fails, npm 11.10.1 adds no `npm error` lines: `npm run dev` with server.js throwing `Error: ENOENT: no such file or directory, open './config.json'` printed npm's `> node server.js` header, then only the Node.js error, and exited with code 1. A script that doesn't exist gives `npm error Missing script: \"test\"`.",
+      "`npm uninstall native-thing` and a config.json fixed both: `npm run dev` then printed `listening on 3000`.",
+    ],
+    watchOut:
+      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is line 40 of the 52 lines in the full output, after 28 lines of node-gyp detail and a 2-line Node.js deprecation warning. Search for that line, the first error from the tool that failed, not for the last line.",
+  },
+  {
+    id: "lsof",
+    fileName: "lsof.txt",
+    related: ["ps-aux", "curl", "bash"],
+    lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
+    description:
+      "Paste lsof output and get it explained in plain English, free online. The sample finds what is holding port 3000 when a dev server won't start.",
+    sampleSummary: "A second Node.js server fails with `EADDRINUSE` on port 3000, and lsof finds the first one: its listening row, its connection to a client, and the one PID to stop. The Node.js error is cut to its `Error:` line.",
+    sample: `$ node server.mjs
+Error: listen EADDRINUSE: address already in use :::3000
+$ lsof -i :3000
+COMMAND       PID    USER FD   TYPE   DEVICE SIZE/OFF NODE NAME
+node-Main 1643167 devuser 23u  IPv6 66205412      0t0  TCP *:hbci (LISTEN)
+node-Main 1643167 devuser 24u  IPv6 66204636      0t0  TCP localhost:hbci->localhost:49166 (ESTABLISHED)
+python3   1643207 devuser  3u  IPv4 66209556      0t0  TCP localhost:49166->localhost:hbci (ESTABLISHED)
+$ lsof -nP -i :3000 -sTCP:LISTEN
+COMMAND       PID    USER FD   TYPE   DEVICE SIZE/OFF NODE NAME
+node-Main 1643167 devuser 23u  IPv6 66205412      0t0  TCP *:3000 (LISTEN)
+$ lsof -t -i :3000
+1643167
+1643207
+$ lsof -t -i :3000 -sTCP:LISTEN
+1643167
+$ kill 1643167`,
+    shows: [
+      {
+        concept: "COMMAND, PID, USER and FD",
+        text: "Each row is one open file or network socket of one process. The Node.js server showed up as `node-Main` with PID 1643167, and USER is the account running it, shown here as devuser. FD is the file's number inside that process: `23u` is file 23, open for reading and writing.",
+      },
+      {
+        concept: "LISTEN and ESTABLISHED",
+        text: "`TCP *:hbci (LISTEN)` is the server waiting for connections on every address. The 2 ESTABLISHED rows are 1 connection seen from both ends: the server's side, `localhost:hbci->localhost:49166`, and the python3 client's side, `localhost:49166->localhost:hbci`.",
+      },
+      {
+        concept: "-n and -P",
+        text: "`hbci` is port 3000: lsof swapped the number for the name /etc/services gives it. `-P` keeps port numbers and `-n` keeps addresses as numbers, so `lsof -nP` showed `*:3000` and `127.0.0.1:3000` instead.",
+      },
+      {
+        concept: "-t and -sTCP:LISTEN",
+        text: "`-t` prints only PIDs, for use with kill. `-sTCP:LISTEN` keeps only listening sockets, so with both it printed the server's PID alone. After `kill 1643167`, a new server started on port 3000 and printed `listening on 3000`.",
+      },
+    ],
+    notes: [
+      "Run with lsof 4.99.7, Node.js 25.7.0 and Python 3.14.7 on Linux. The server is a 3-line Node.js HTTP server, and the client is a Python script that keeps 1 connection open, like a browser tab. The account name is replaced with devuser, which has the same length, so the columns stay aligned.",
+      "After the server was stopped, the client's row stayed, now in state `CLOSE_WAIT`: the server's end had closed and the client hadn't closed its own yet.",
+      "What `-n`, `-P`, `-t` and `u` mean is from the lsof manual. lsof also ships with macOS, where Apple publishes its source (github.com/apple-oss-distributions/lsof); this page didn't run it on a Mac.",
+    ],
+    watchOut:
+      "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
   },
 ];
 
