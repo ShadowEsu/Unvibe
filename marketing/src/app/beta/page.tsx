@@ -43,7 +43,7 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Download and open Unvibe</strong>
                   <p>
-                    On Mac, move Unvibe to Applications and open it. macOS blocks the first open: press <b>Done</b>,
+                    On Mac, move Unvibe to Applications and open it. macOS blocks the first open: press <b>Done</b>, not the blue Move to Trash,
                     then go to System Settings → Privacy &amp; Security, scroll down to Security, press <b>Open Anyway</b>, confirm, and enter
                     your Mac password.
                   </p>
@@ -158,7 +158,7 @@ export default function BetaDownloadsPage() {
                 Unvibe is not verified by Apple yet, so macOS blocks the first open. Do this once:
               </p>
               <ol>
-                <li>Press <strong>Done</strong> on the warning.</li>
+                <li>Press <strong>Done</strong> on the warning, not the blue Move to Trash.</li>
                 <li>Open System Settings, click Privacy &amp; Security, and scroll down to Security.</li>
                 <li>Press <strong>Open Anyway</strong>, then confirm when macOS asks again.</li>
                 <li>Enter your Mac password, then press <strong>OK</strong>.</li>
