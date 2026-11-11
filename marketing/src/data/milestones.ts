@@ -48,9 +48,9 @@ export const milestones: Milestone[] = [
     date: "9 NOV 2026",
     category: "PRODUCT",
     title: "Use Unvibe in your browser, with no install warning",
-    summary: "On a Mac, the download shows an Apple dialog the first time it opens. The download page now has a block, \"No install warning: use Unvibe in your browser\", that points to the try box on the explain page, which you can keep in its own window as a web app from Chrome, Edge or Safari. It takes pasted code only, up to 1,500 characters or 60 lines and 6 snippets an hour, and has no shortcut. The desktop app is unchanged.",
+    summary: "On a Mac, the download shows an Apple dialog the first time it opens. The download page now has a block, \"No install warning: use Unvibe in your browser\", that points to the try box on the explain page, which you can keep in its own window as a web app from Chrome, Edge or Safari. It takes pasted code only, up to 1,500 characters (about 60 lines) and 6 snippets an hour on each network, and has no shortcut. The desktop app is unchanged.",
     links: [
-      { href: "/beta#browser", label: "Download page" },
+      { href: "/beta", label: "Download page" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/274", label: "PR #274" },
     ],
   },
