@@ -58,7 +58,7 @@ export default function ShortcutHelpPage() {
           </li>
           <li>
             <b>You pressed Don&apos;t Allow when macOS asked to let Unvibe control System Events.</b> macOS asks once, a few seconds
-            after Unvibe first opens. Unvibe uses System Events to copy your selection, so after a Don&apos;t Allow the panel opens without your code, and
+            after you finish Unvibe&apos;s setup, or the first time you press {mac.anywhere} if that comes first. Unvibe uses System Events to copy your selection, so after a Don&apos;t Allow the panel opens without your code, and
             macOS doesn&apos;t ask again. Open <b>System Settings › Privacy &amp; Security › Automation</b>, find <b>Unvibe</b>, and
             switch on <b>System Events</b>. Then select the code and press {mac.anywhere} again.
             <div className="help-shots">
