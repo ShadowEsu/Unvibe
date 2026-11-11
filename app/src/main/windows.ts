@@ -33,6 +33,13 @@ export async function whilePanelDialog<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
+/** The panel's guide opened System Settings for Accessibility: losing focus to it is not a click away. Cleared when
+ * the grant arrives (or the panel closes). */
+let grantFlowOpen = false;
+export function setGrantFlowOpen(open: boolean): void {
+  grantFlowOpen = open;
+}
+
 const secureWebPrefs = () => ({
   preload: preload(),
   contextIsolation: true,
@@ -365,7 +372,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
-    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0);
+    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0 || grantFlowOpen);
     if (action === 'hide') win.hide();
     else if (action === 'fade') sendAway(win, true);
   });
@@ -382,6 +389,8 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 export function getOrCreateWidget(): BrowserWindow {
   if (panelWin && !panelWin.isDestroyed()) {
     if (panelWin.isMinimized()) panelWin.restore();
+    // A faded panel comes back before it is focused: the shortcut always shows a full panel.
+    sendAway(panelWin, false);
     panelWin.showInactive();
     panelWin.focus();
     return panelWin;

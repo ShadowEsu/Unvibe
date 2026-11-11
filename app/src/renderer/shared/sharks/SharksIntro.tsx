@@ -38,7 +38,9 @@ export function SharksIntro({ onPhase }: { onPhase: (phase: IntroPhase) => void 
     if (reduced) timer = window.setTimeout(() => end('timeout'), 400);
     const ocean = new SharksStart(canvas, { still: reduced, onEnd: end });
     const skip = (event: Event) => {
-      // The click lands on the stage and nowhere else; a key is consumed here, not replayed.
+      // While the stage is up, the click lands on it and nowhere else and a key is consumed here, not replayed.
+      // Once it is leaving (150–350 ms), input belongs to the app underneath.
+      if (ended) return;
       event.preventDefault();
       event.stopPropagation();
       ocean.skip();

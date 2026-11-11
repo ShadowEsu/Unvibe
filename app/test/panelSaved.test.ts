@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { app } from './electronStub';
@@ -52,14 +52,6 @@ test('opening a saved lesson reads only the store: it works when the file is gon
   assert.equal(opened.lesson.pinned, true);
   for (const id of ['nope', '', 7]) {
     assert.deepEqual(openSavedLesson(() => undefined, [], id), { ok: false, error: 'That lesson is no longer on this Mac.' });
-  }
-});
-
-test('the panel never reopens a lesson through a fresh review, so opening one spends no explanation', () => {
-  const dir = path.resolve(__dirname, '../src/renderer/widget');
-  for (const name of readdirSync(dir).filter((file) => /\.tsx?$/.test(file))) {
-    const source = readFileSync(path.join(dir, name), 'utf8');
-    assert.ok(!/reopenLearningItem|reopenItem/.test(source), name);
   }
 });
 

@@ -30,9 +30,12 @@ export function CountUp({ value, className }: { value: number; className?: strin
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [value]);
+  // A screen reader hears the final value (an aria-label on a generic span is not announced); the counting digits
+  // are hidden from it.
   return (
-    <span className={className} aria-label={String(value)} style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <span className={className} style={{ fontVariantNumeric: 'tabular-nums' }}>
       <span aria-hidden="true">{shown}</span>
+      <span className="sr-only">{value}</span>
     </span>
   );
 }

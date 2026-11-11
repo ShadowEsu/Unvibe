@@ -460,7 +460,7 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
       // The first code of the person's own (0.1.46+): the send agreement comes first. Continue does
       // nothing until all three boxes are ticked; nothing may stream before it.
       const consent = panel.locator('.consent-form');
-      await consent.or(panel.locator('#confirm-title')).or(panel.locator('.code-context code').filter({ hasText: expectedCode })).first().waitFor({ timeout: 30000 });
+      await consent.or(panel.locator('#confirm-title')).or(panel.locator('.ob-code__all code').filter({ hasText: expectedCode })).first().waitFor({ timeout: 30000 });
       if (await consent.count()) {
         const boxes = consent.locator('input[type="checkbox"]');
         assert.equal(await boxes.count(), 3, 'the send agreement has three boxes');
@@ -469,7 +469,7 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
         assert.equal(await agreeButton.getAttribute('aria-disabled'), 'true', 'Continue is off before the boxes are ticked');
         await shot(panel, `${label}-consent`);
         for (let i = 0; i < 3; i++) await boxes.nth(i).check();
-        assert.equal(await panel.locator('.stage').count(), 0, 'nothing streams before the agreement');
+        assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams before the agreement');
         await agreeButton.click();
         report.push(`NOTE  first own code (${label}): send agreement shown, all three boxes ticked, Continue`);
       }
@@ -478,20 +478,19 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
       // A link-started review waits for Explain (Security LOW #8): nothing may stream before the click.
       await panel.locator('#confirm-title').waitFor({ timeout: 30000 });
       await sleep(1500);
-      assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
+      assert.equal(await panel.locator('.ob-answer').count(), 0, 'a link-started review must not start before Explain');
       await shot(panel, `${label}-confirm`);
       // The confirm sheet's own Explain; the panel's ⋯ menu has an Explain item as well.
       await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
     }
-    const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
+    const preview = panel.locator('.ob-code__all code').filter({ hasText: expectedCode });
     await preview.waitFor({ timeout: 30000 });
     assert.equal((await preview.innerText()).trim(), expectedCode.trim());
-    // The selected-code preview alone is not an AI explanation.
-    await panel.locator('.card--done .local-save-note').waitFor({ timeout: 90000 });
-    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 });
-    const bodyText = await panel.locator('.body').innerText();
-    const codeContext = await panel.locator('.code-context').innerText();
-    const text = bodyText.replace(codeContext, '').trim();
+    // The selected-code preview alone is not an AI explanation: the panel reaches its done phase and the typing
+    // cursor is gone before the answer is read.
+    await panel.locator('.ob.ob--done').waitFor({ timeout: 90000 });
+    await panel.locator('.ob-answer .cursor').waitFor({ state: 'detached', timeout: 30000 });
+    const text = (await panel.locator('.ob-answer').innerText()).trim();
     assert.ok(text.length > 80, 'a completed review must contain an explanation beyond the code preview');
     await shot(panel, label);
     desktopShot(label);

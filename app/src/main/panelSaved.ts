@@ -55,10 +55,10 @@ export function savedLessons(events: LocalEvent[], pinnedIds: string[], recentLi
 }
 
 /** The saved lesson as it is stored, or an error. Reads only the store: no file, no request, no explanation spent. */
-export function openSavedLesson(lookup: (id: string) => LocalEvent | undefined, pinnedIds: string[], id: unknown): { ok: true; lesson: SavedLesson } | { ok: false; error: string } {
+export function openSavedLesson(lookup: (id: string) => LocalEvent | undefined, pinnedIds: string[], id: unknown, gone = 'That lesson is no longer on this Mac.'): { ok: true; lesson: SavedLesson } | { ok: false; error: string } {
   const event = typeof id === 'string' && id ? lookup(id) : undefined;
   const explanation = event?.explanation?.trim();
-  if (!event || !explanation) return { ok: false, error: 'That lesson is no longer on this Mac.' };
+  if (!event || !explanation) return { ok: false, error: gone };
   return {
     ok: true,
     lesson: {

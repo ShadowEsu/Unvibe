@@ -41,6 +41,7 @@ import {
   raiseLimitPause,
   resizeBar,
   setBarNotice,
+  setGrantFlowOpen,
   showBar,
   whilePanelDialog,
 } from './windows';
@@ -944,14 +945,15 @@ app.whenReady().then(() => {
   // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a). Only the panel
   // reads them (review NIT: any window could list or open saved lessons).
   const fromPanel = (e: Electron.IpcMainInvokeEvent) => { const win = widgetOf(e); return Boolean(win) && win === currentWidget(); };
+  const goneHere = `That lesson is no longer on this ${isMac ? 'Mac' : 'PC'}.`;
   ipcMain.handle('widget:savedLessons', (e) => (fromPanel(e) ? savedLessons(store().events(), store().pinnedIds()) : { pinned: [], recent: [] }));
   ipcMain.handle('widget:savedLesson', (e, id: unknown) => (fromPanel(e)
-    ? openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id)
-    : { ok: false as const, error: 'That lesson is no longer on this Mac.' }));
+    ? openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id, goneHere)
+    : { ok: false as const, error: goneHere }));
   ipcMain.handle('widget:saveLesson', (e, pinned: unknown) => {
     const win = widgetOf(e);
     const session = panelSession;
-    if (!win || !session || typeof pinned !== 'boolean') return { ok: false as const };
+    if (!fromPanel(e) || !win || !session || typeof pinned !== 'boolean') return { ok: false as const };
     return pinLesson(win, session, pinned) ? { ok: true as const, pinned } : { ok: false as const };
   });
   // Save/unsave a lesson opened from the Saved tab, by id: the panel's current selection may be another one (review
@@ -1098,7 +1100,7 @@ app.whenReady().then(() => {
     if (typeof input?.note !== 'string') return { ok: false, error: 'Note must be text.' };
     try {
       const saved = store().updateLesson(input.id, { note: input.note });
-      return saved ? { ok: true } : { ok: false, error: 'That lesson is no longer on this Mac.' };
+      return saved ? { ok: true } : { ok: false, error: goneHere };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Could not save this note.' };
     }
@@ -1503,9 +1505,19 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('app:restart', () => { quitting = true; app.relaunch(); app.exit(0); });
   ipcMain.handle('perms:promptAccessibility', () => ({ granted: accessibilityGranted(true) }));
-  ipcMain.handle('perms:openAccessibility', () => {
-    if (isMac)
+  ipcMain.handle('perms:openAccessibility', (event) => {
+    if (isMac) {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+      // Opened from the panel's guide: System Settings takes focus, and that is not a click away (the panel would
+      // fade or hide under the person following the guide). Held until the grant lands or the panel closes.
+      const panel = currentWidget();
+      if (panel && event.sender === panel.webContents) {
+        setGrantFlowOpen(true);
+        const poll = setInterval(() => {
+          if (accessibilityGranted(false) || !currentWidget()) { setGrantFlowOpen(false); clearInterval(poll); }
+        }, 2000);
+      }
+    }
     return { ok: true };
   });
   ipcMain.handle('perms:captureBlock', () => captureBlock);

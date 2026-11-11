@@ -957,7 +957,7 @@ function Widget() {
           <Icon name="x" size={16} />
         </button>
       </header>
-      <div className="ob-scroll" ref={scrollRef} tabIndex={-1}>
+      <div className="ob-scroll" ref={scrollRef} tabIndex={0} role="region" aria-label="Explanation">
         <div className="ob-body" ref={innerRef} key={view} id="ob-tabpanel" role="tabpanel" aria-labelledby={`ob-tab-${view}`}>
           {view === 'explain' ? explainBody() : null}
           {view === 'test' ? (
