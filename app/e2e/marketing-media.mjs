@@ -104,9 +104,13 @@ app.onWindow((page) => { void record(page); });
  * Window size (and optionally centre) without the main process: Electron applies a page's
  * window.resizeTo/moveTo to its BrowserWindow ('content-bounds-updated'; the app doesn't block it).
  * CDP's Browser.setWindowBounds is not available in Electron. macOS keeps a window inside the screen,
- * so on a smaller display (GitHub's macOS runners: 1024x768) the page's viewport is emulated at the
+ * so on a smaller display (GitHub's macOS runners: 1024x679 available) the page's viewport is emulated at the
  * size the wanted window would give it, and screenshots and the screencast render at that size.
+ * Once a page's viewport is emulated, Chromium reports screen.avail* and innerWidth/innerHeight at the emulated
+ * size (outerWidth/outerHeight stay real), so the real screen and window frame are kept from the first emulation:
+ * run 43088701806 resized an emulated 420x720 panel again, read a 420x720 "screen" and threw on its real 420x679.
  */
+const emulated = new WeakMap();
 async function resize(page, width, height, { center = false } = {}) {
   await page.evaluate(([w, h, c]) => {
     window.resizeTo(w, h);
@@ -114,15 +118,21 @@ async function resize(page, width, height, { center = false } = {}) {
   }, [width, height, center]);
   await sleep(400);
   const m = await page.evaluate(() => ({ outer: [window.outerWidth, window.outerHeight], inner: [window.innerWidth, window.innerHeight], avail: [screen.availWidth, screen.availHeight] }));
-  if (Math.abs(m.outer[0] - width) <= 2 && Math.abs(m.outer[1] - height) <= 2) return;
-  if (m.avail[0] >= width && m.avail[1] >= height) throw new Error(`window is ${m.outer.join('x')}, wanted ${width}x${height}`);
   // The window frame (title bar); 0 for frameless windows, which can report inner > outer mid-resize.
-  const viewport = { width: width - Math.max(0, m.outer[0] - m.inner[0]), height: height - Math.max(0, m.outer[1] - m.inner[1]) };
+  const real = emulated.get(page) ?? { avail: m.avail, frame: [Math.max(0, m.outer[0] - m.inner[0]), Math.max(0, m.outer[1] - m.inner[1])] };
+  if (Math.abs(m.outer[0] - width) <= 2 && Math.abs(m.outer[1] - height) <= 2) {
+    // The real window fits now: an earlier emulation must not leave the page at another size.
+    if (emulated.has(page)) await page.setViewportSize({ width: m.outer[0] - real.frame[0], height: m.outer[1] - real.frame[1] });
+    return;
+  }
+  if (real.avail[0] >= width && real.avail[1] >= height) throw new Error(`window is ${m.outer.join('x')}, wanted ${width}x${height}`);
+  const viewport = { width: width - real.frame[0], height: height - real.frame[1] };
   await page.setViewportSize(viewport);
+  emulated.set(page, real);
   await sleep(300);
   const inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
   if (inner[0] !== viewport.width || inner[1] !== viewport.height) throw new Error(`viewport is ${inner.join('x')}, wanted ${viewport.width}x${viewport.height}`);
-  console.log(`NOTE screen ${m.avail.join('x')} is smaller than a ${width}x${height} window: page viewport emulated at ${viewport.width}x${viewport.height}`);
+  console.log(`NOTE screen ${real.avail.join('x')} is smaller than a ${width}x${height} window: page viewport emulated at ${viewport.width}x${viewport.height}`);
 }
 
 /**
