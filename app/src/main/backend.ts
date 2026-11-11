@@ -1,7 +1,6 @@
 /** Thin HTTP client for the Unvibe backend. Main process only. */
 import { readFileSync, existsSync } from 'node:fs';
 import { app, net } from 'electron';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { forSync, type LocalEvent } from '../core/learning';
 import type { ComprehensionQuestion, ReviewRequestPayload } from '../core/protocol';
@@ -14,13 +13,14 @@ import { resolveBackendUrl } from './backendUrl';
 
 export { resolveBackendUrl } from './backendUrl';
 
-/** Load .env into process.env when present (dev + packaged convenience). Never overrides existing vars. */
-function loadAppEnv(): void {
+/**
+ * Development only: load .env into process.env when present. Never overrides existing vars. A packaged app reads no
+ * .env file, so nothing on disk can change where it sends its tokens (Security 5o).
+ */
+function loadDevEnv(): void {
   const candidates = [
     join(process.cwd(), '.env'),
     join(__dirname, '..', '..', '.env'),
-    // Packaged app: ~/Library/Application Support/Unvibe/.env
-    join(homedir(), 'Library', 'Application Support', 'Unvibe', '.env'),
   ];
   for (const file of candidates) {
     if (!existsSync(file)) continue;
@@ -37,13 +37,13 @@ function loadAppEnv(): void {
     } catch {
       // ignore unreadable env files
     }
-    // Keep scanning so userData .env can fill gaps left by an earlier file.
+    // Keep scanning so a later file can fill gaps left by an earlier one.
   }
 }
 
-loadAppEnv();
+if (!app.isPackaged) loadDevEnv();
 
-export const BACKEND = resolveBackendUrl();
+export const BACKEND = resolveBackendUrl(process.env, undefined, app.isPackaged);
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /**
