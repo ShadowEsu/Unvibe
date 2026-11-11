@@ -35,6 +35,12 @@ export interface ExplainPage {
    * The H1 keeps "Explain {heading}" (Design); the two say the same thing in a different order.
    */
   title?: string;
+  /**
+   * The day the page went live on unvibe.site (Pacific, YYYY-MM-DD): the merge day of the PR that added it. The
+   * sitemap's lastModified reads it, so bump it only when the page's content changes, never on a template or
+   * metadata change; search engines re-read the sitemap on their own when these dates are honest.
+   */
+  published: string;
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -53,6 +59,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
+    published: "2026-10-26",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
     description:
@@ -107,6 +114,7 @@ def total_by_city(path):
   {
     id: "pyproject-toml",
     fileName: "pyproject.toml",
+    published: "2026-11-05",
     lead: "Paste a pyproject.toml and Vibe explains what each table does: how the package is built, what it depends on, which commands it installs and where tools like pytest read their settings.",
     description:
       "Paste a pyproject.toml and get it explained in plain English, free online. The sample builds a small Python package with setuptools, one dependency, a dev extra and a command line script.",
@@ -163,6 +171,7 @@ testpaths = ["tests"]`,
   {
     id: "requirements-txt",
     fileName: "requirements.txt",
+    published: "2026-11-05",
     lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
     description:
       "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range for another, uses ~= for a third and installs a fourth only on Windows.",
@@ -211,6 +220,7 @@ tzdata; sys_platform == "win32"`,
   {
     id: "javascript",
     fileName: "profiles.js",
+    published: "2026-10-26",
     related: ["react-useeffect", "cors-error", "typescript", "json"],
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
@@ -266,6 +276,7 @@ console.log("after");`,
   {
     id: "jquery",
     fileName: "products.js",
+    published: "2026-11-05",
     lead: "Paste jQuery and Vibe explains what each `$()` selects, which element a handler runs on, and what `this` and `.closest()` point to.",
     description:
       "Paste jQuery code and get a plain English explanation, free online. The sample filters a product list as you type and removes items with a fade.",
@@ -319,6 +330,7 @@ $(function () {
   {
     id: "typescript",
     fileName: "users.ts",
+    published: "2026-10-26",
     related: ["javascript", "react-useeffect", "tsconfig"],
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
@@ -377,6 +389,7 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "tsconfig",
     fileName: "tsconfig.json",
+    published: "2026-11-05",
     lead: "Paste a tsconfig.json and Vibe explains what each compiler option changes, which files TypeScript checks and why `strict` suddenly finds errors.",
     description:
       "Paste a tsconfig.json and get a plain English explanation, free online. The sample builds a Node project from src/ to dist/ with strict checks on.",
@@ -427,6 +440,7 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "npm-scripts",
     fileName: "shop/package.json",
+    published: "2026-11-05",
     related: ["package-lock", "json", "npm-error"],
     lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
     description:
@@ -480,6 +494,7 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "eslint-config",
     fileName: "eslint.config.js",
+    published: "2026-11-05",
     lead: "Paste an eslint.config.js and Vibe explains which files each block covers, which rules it turns on and which block wins when two of them disagree.",
     description:
       "Paste an ESLint config and get it explained in plain English, free online. The sample ignores a build folder, starts from the recommended rules and sets different globals and rules for browser code and Node scripts.",
@@ -537,6 +552,7 @@ export default [
   {
     id: "sql",
     fileName: "report.sql",
+    published: "2026-10-26",
     related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
@@ -580,6 +596,7 @@ ORDER BY spend_rank, c.name;`,
   {
     id: "graphql",
     fileName: "query.graphql",
+    published: "2026-11-05",
     lead: "Paste a GraphQL query and Vibe explains what it asks the server for: which fields come back, what each variable and argument does and how a fragment fits in.",
     description:
       "Paste a GraphQL query and get it explained in plain English, free online. The sample asks an orders API for open orders with their customer and items, using variables, a default value and a fragment.",
@@ -636,6 +653,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    published: "2026-11-05",
     heading: "git log output",
     related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
@@ -693,6 +711,7 @@ $ git log --oneline --graph --decorate --all
   {
     id: "bash",
     fileName: "top-errors.sh",
+    published: "2026-10-26",
     lead: "Paste a shell script or a one-liner and Vibe explains what it does before you run it.",
     description:
       "Find out what a shell script does before you run it: paste it here, free. The sample finds the most common errors in a folder of logs with one pipeline.",
@@ -745,6 +764,7 @@ echo "Top errors written to $report"`,
   {
     id: "powershell",
     fileName: "Clear-OldLogs.ps1",
+    published: "2026-11-05",
     lead: "Paste a PowerShell script and Vibe explains what each cmdlet in the pipeline passes along, what `$_` holds and what `-WhatIf` would change before anything runs.",
     description:
       "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and reports their size.",
@@ -801,6 +821,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
   {
     id: "curl",
     fileName: "check-orders.sh",
+    published: "2026-11-05",
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -852,6 +873,7 @@ curl -si -X DELETE "$API/api/orders/42"`,
   {
     id: "bashrc",
     fileName: ".bashrc",
+    published: "2026-11-05",
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
     description:
       "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a small function and a prompt with the git branch.",
@@ -907,6 +929,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
   {
     id: "chmod",
     fileName: "set-permissions.sh",
+    published: "2026-11-05",
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
     description:
       "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
@@ -954,6 +977,7 @@ ls -l bin config`,
   {
     id: "find",
     fileName: "clean-project.sh",
+    published: "2026-11-05",
     related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
@@ -1008,6 +1032,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
+    published: "2026-10-26",
     related: ["cpp", "make", "assembly"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
@@ -1067,6 +1092,7 @@ int main(void) {
   {
     id: "cpp",
     fileName: "documents.cpp",
+    published: "2026-10-26",
     lead: "Paste modern C++ and Vibe explains the templates, smart pointers and object lifetimes in it.",
     description:
       "Get C++ explained in plain English online, free. The sample shows a function template, RAII with a destructor and moving a unique_ptr.",
@@ -1125,6 +1151,7 @@ int main() {
   {
     id: "swift",
     fileName: "Todos.swift",
+    published: "2026-10-26",
     lead: "Paste Swift from an app or a playground and Vibe explains what it does, optionals included.",
     description:
       "Paste Swift and get a plain English explanation, free online. The sample filters a to-do list with a protocol, an optional due date and closures.",
@@ -1179,6 +1206,7 @@ print(quick)`,
   {
     id: "ruby",
     fileName: "member.rb",
+    published: "2026-10-26",
     lead: "Paste Ruby and Vibe explains the blocks, symbols and mixins that keep it so short.",
     description:
       "Paste Ruby and get blocks, symbols and mixins explained in plain English, free. The sample mixes modules into a class and sorts members with the <=> operator.",
@@ -1236,6 +1264,7 @@ puts members.sort.map(&:name).inspect`,
   {
     id: "sqlite",
     fileName: "shop.sql",
+    published: "2026-11-05",
     related: ["sql", "sql-joins", "prisma-schema"],
     lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
     description:
@@ -1295,6 +1324,7 @@ ORDER BY spent DESC;`,
   {
     id: "java",
     fileName: "Reports.java",
+    published: "2026-10-26",
     lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",
     description:
       "Paste Java code and get a plain English explanation, free online. The sample totals paid orders with a record, a stream and Collectors.groupingBy.",
@@ -1348,6 +1378,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
+    published: "2026-10-26",
     related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
@@ -1396,6 +1427,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
+    published: "2026-10-26",
     related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
@@ -1456,6 +1488,7 @@ class Reports {
   {
     id: "xml",
     fileName: "catalog.xml",
+    published: "2026-11-05",
     lead: "Paste XML and Vibe explains its structure: which elements hold which, what each attribute adds, and what `&amp;` and `<![CDATA[` are doing there.",
     description:
       "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and a CDATA block.",
@@ -1508,6 +1541,7 @@ class Reports {
   {
     id: "markdown",
     fileName: "README.md",
+    published: "2026-11-05",
     lead: "Paste Markdown and Vibe explains what each mark turns into: headings, lists, links, code blocks and tables, and why a line sometimes doesn't break where you expect.",
     description:
       "Paste a Markdown file and get it explained in plain English, free online. The sample is a project README with headings, a numbered list, a code block, a quote and a table.",
@@ -1566,6 +1600,7 @@ invoicer hours.csv --client "Acme Ltd" --out march.pdf
   {
     id: "go",
     fileName: "counts.go",
+    published: "2026-10-26",
     lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
     description:
       "Paste Go code and get a plain English explanation, free online. The sample parses lines in goroutines and collects their errors over a buffered channel.",
@@ -1619,6 +1654,7 @@ func parseCounts(raw []string) ([]int, error) {
   {
     id: "rust",
     fileName: "stock.rs",
+    published: "2026-10-26",
     lead: "Paste Rust and Vibe explains what each borrow allows, what a lifetime ties together and why the compiler accepts or rejects it.",
     description:
       "Paste Rust code and get a plain English explanation, free online. The sample picks and reserves stock with a trait, a lifetime and shared and mutable borrows.",
@@ -1670,6 +1706,7 @@ pub fn reserve(stock: &mut Stock) -> bool {
   {
     id: "csharp",
     fileName: "Batches.cs",
+    published: "2026-10-26",
     lead: "Paste C#, LINQ queries and records included, and Vibe explains what each line returns and when the query actually runs.",
     description:
       "Paste C# code and get a plain English explanation, free online. The sample filters task batches with LINQ and copies a record with a with expression.",
@@ -1711,6 +1748,7 @@ static class Batches
   {
     id: "kotlin",
     fileName: "Parcel.kt",
+    published: "2026-10-26",
     lead: "Paste Kotlin and Vibe explains where null can turn up, what a data class writes for you and where an extension function comes from.",
     description:
       "Paste Kotlin code and get a plain English explanation, free online. The sample labels parcels with a data class, two extension functions and safe calls.",
@@ -1752,6 +1790,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
   {
     id: "regex",
     fileName: "access_log.py",
+    published: "2026-11-04",
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
     description:
       "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
@@ -1802,6 +1841,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
   {
     id: "cron",
     fileName: "crontab",
+    published: "2026-11-05",
     related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
@@ -1854,6 +1894,7 @@ MAILTO=ops@example.com
   {
     id: "dart",
     fileName: "track.dart",
+    published: "2026-11-05",
     lead: "Paste Dart, Flutter app code included, and Vibe explains where null is allowed, what a constructor does with its arguments and what each type cast checks.",
     description:
       "Paste Dart code and get a plain English explanation, free online. The sample reads a JSON list of music tracks into a model class with null safety.",
@@ -1910,6 +1951,7 @@ List<Track> parseTracks(String body) {
   {
     id: "zshrc",
     fileName: ".zshrc",
+    published: "2026-11-05",
     lead: "Paste a .zshrc and Vibe explains what each line sets up in a new terminal: history options, `path`, completion, aliases, functions and what the `%` codes in `PROMPT` show.",
     description:
       "Paste a .zshrc and get a plain English explanation, free online. The sample sets up shared history, PATH, tab completion, two aliases, a function and a colored prompt.",
@@ -1968,6 +2010,7 @@ PROMPT='%F{blue}%~%f %# '`,
   {
     id: "lua",
     fileName: "Leaderboard.lua",
+    published: "2026-11-05",
     lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
     description:
       "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use too.",
@@ -2020,6 +2063,7 @@ end`,
   {
     id: "yaml",
     fileName: "ci.yml",
+    published: "2026-11-05",
     related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
@@ -2076,6 +2120,7 @@ jobs:
   {
     id: "ini",
     fileName: "settings.ini",
+    published: "2026-11-05",
     lead: "Paste an .ini file and Vibe explains what each section and setting is for, which defaults every section shares and how a value like `%(log_dir)s` gets filled in.",
     description:
       "Paste an INI file and get it explained in plain English, free online. The sample is an app's settings with shared defaults, a server, a database and an email section.",
@@ -2129,6 +2174,7 @@ subject = Your invoice from Acme`,
   {
     id: "json",
     fileName: "package.json",
+    published: "2026-11-05",
     related: ["package-lock", "npm-scripts", "javascript"],
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
     description:
@@ -2187,6 +2233,7 @@ subject = Your invoice from Acme`,
   {
     id: "csv",
     fileName: "orders.csv",
+    published: "2026-11-05",
     lead: "Paste a CSV file and Vibe explains what each column holds and how the quoting works: why some values sit in quotes, what a doubled quote means and why one row can run over two lines.",
     description:
       "Paste a CSV file and get it explained in plain English, free online. The sample is an orders export with a header row, commas inside quoted values, a doubled quote and a note that runs over two lines.",
@@ -2229,6 +2276,7 @@ back door"
   {
     id: "env",
     fileName: ".env",
+    published: "2026-11-05",
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
     description:
       "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
@@ -2282,6 +2330,7 @@ APP_URL=http://localhost:\${PORT}`,
   {
     id: "awk",
     fileName: "totals.awk",
+    published: "2026-11-05",
     lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",
     description:
       "Paste awk code and get a plain English explanation, free online. The sample totals sales per region from a CSV file, skips the header and sorts the result.",
@@ -2340,6 +2389,7 @@ END {
   {
     id: "fish",
     fileName: "config.fish",
+    published: "2026-11-05",
     lead: "Paste a fish config or script and Vibe explains what each line does: `set -gx`, `fish_add_path`, abbreviations, functions and where fish differs from bash.",
     description:
       "Paste fish shell code and get a plain English explanation, free online. The sample is a config.fish with PATH, an exported variable, an abbreviation, an alias and a function.",
@@ -2394,6 +2444,7 @@ end`,
   {
     id: "make",
     fileName: "Makefile",
+    published: "2026-11-05",
     lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",
     description:
       "Paste a Makefile and get a plain English explanation, free online. The sample builds a small C program, rebuilds only the files that changed and runs a test.",
@@ -2455,6 +2506,7 @@ clean:
   {
     id: "gitignore",
     fileName: ".gitignore",
+    published: "2026-11-05",
     related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
@@ -2510,6 +2562,7 @@ uploads/*
   {
     id: "ssh-config",
     fileName: "config",
+    published: "2026-11-05",
     lead: "Paste an ~/.ssh/config and Vibe explains what each `Host` block sets, which key goes to which server and what ssh actually uses when several blocks match.",
     description:
       "Paste an SSH config file and get a plain English explanation, free online. The sample sets keys for two GitHub accounts, a server behind a jump host and defaults for every host.",
@@ -2568,6 +2621,7 @@ Host *
   {
     id: "perl",
     fileName: "slow_pages.pl",
+    published: "2026-11-05",
     lead: "Paste Perl and Vibe explains what each regular expression captures, whether a sigil means one value, a list or a hash, and what a `sort` block compares.",
     description:
       "Paste Perl code and get a plain English explanation, free online. The sample reads a web server log, averages response times per page and counts server errors.",
@@ -2626,6 +2680,7 @@ print "$errors server errors\\n";`,
   {
     id: "sed",
     fileName: "tidy.sed",
+    published: "2026-11-05",
     lead: "Paste a sed command or script and Vibe explains which lines each address picks, what a `s///` swaps in and what `\\1` and `\\2` hold.",
     description:
       "Paste a sed command or script and get a plain English explanation, free online. The sample cleans up a settings file, rewrites dates and hides secret values.",
@@ -2681,6 +2736,7 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
   {
     id: "grep",
     fileName: "find-problems.sh",
+    published: "2026-11-05",
     lead: "Paste grep commands and Vibe explains what each one finds: what the flags change, what the pattern matches and what the command prints back.",
     description:
       "Paste grep commands and get every flag explained in plain English, free online. The sample searches an app's logs and code with -i, -n, -c, -w, -v, -r, -l, -o and -E.",
@@ -2734,6 +2790,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    published: "2026-11-06",
     heading: "git diff output",
     title: "git diff output explained, line by line",
     related: ["git-log", "git-rebase", "gitignore", "bash"],
@@ -2796,6 +2853,7 @@ rename to lib/money.js`,
   {
     id: "react-useeffect",
     fileName: "Profile.jsx",
+    published: "2026-11-06",
     title: "useEffect explained: the dependency array",
     related: ["javascript", "typescript", "tailwind", "npm-scripts"],
     lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
@@ -2856,6 +2914,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    published: "2026-11-06",
     heading: "Python tracebacks",
     title: "Python traceback explained: read the error",
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
@@ -2906,6 +2965,7 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    published: "2026-11-06",
     title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
@@ -2962,6 +3022,7 @@ KeyError: 'qty'`,
   {
     id: "prisma-schema",
     fileName: "prisma/schema.prisma",
+    published: "2026-11-06",
     title: "What is a Prisma schema? Explained with a sample",
     related: ["sql", "sqlite", "sql-joins", "env"],
     lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
@@ -3020,6 +3081,7 @@ model Post {
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
+    published: "2026-11-06",
     title: "Tailwind CSS classes explained: md:, hover:, dark:",
     related: ["css", "html", "react-useeffect"],
     lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
@@ -3068,6 +3130,7 @@ model Post {
   {
     id: "sql-joins",
     fileName: "joins.sql",
+    published: "2026-11-06",
     title: "SQL joins explained with examples",
     related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
@@ -3127,6 +3190,7 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
+    published: "2026-11-06",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
@@ -3184,6 +3248,7 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    published: "2026-11-06",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json"],
@@ -3237,6 +3302,7 @@ server.listen(3000);`,
   {
     id: "asyncio",
     fileName: "fetch_all.py",
+    published: "2026-11-06",
     title: "Python async and await explained (asyncio)",
     related: ["python", "python-traceback", "javascript"],
     lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
@@ -3294,6 +3360,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
   {
     id: "tar",
     fileName: "backup-site.sh",
+    published: "2026-11-06",
     title: "tar command explained: what each letter does",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
@@ -3343,6 +3410,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
   {
     id: "rsync",
     fileName: "backup.sh",
+    published: "2026-11-06",
     title: "rsync command explained: flags and trailing slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
@@ -3393,6 +3461,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
+    published: "2026-11-06",
     title: "git rebase -i explained: the interactive todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
@@ -3446,6 +3515,7 @@ drop 803b36d # Add gitignore
   {
     id: "xargs",
     fileName: "shrink-logs.sh",
+    published: "2026-11-06",
     title: "xargs explained: how it works, with find",
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
@@ -3494,6 +3564,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
+    published: "2026-11-06",
     heading: "ps aux output",
     title: "ps aux output explained, column by column",
     related: ["bash", "grep", "awk", "lsof"],
@@ -3541,6 +3612,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
   {
     id: "systemd",
     fileName: "notes-api.service",
+    published: "2026-11-08",
     title: "systemd service file explained, section by section",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
@@ -3593,6 +3665,7 @@ WantedBy=default.target`,
   {
     id: "terraform",
     fileName: "main.tf",
+    published: "2026-11-08",
     title: "Terraform code explained, block by block",
     related: ["yaml", "json", "ini"],
     lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
@@ -3652,6 +3725,7 @@ output "app_name" {
   {
     id: "assembly",
     fileName: "sum.s",
+    published: "2026-11-08",
     title: "Assembly code explained: arm64 from a C function",
     related: ["c", "cpp", "make"],
     lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
@@ -3712,6 +3786,7 @@ LBB0_4:
   {
     id: "git-merge-conflict",
     fileName: "shipping.js",
+    published: "2026-11-10",
     heading: "git merge conflicts",
     title: "git merge conflict explained: the markers",
     related: ["git-diff", "git-rebase", "git-log"],
@@ -3762,6 +3837,7 @@ export function deliveryDays(country) {
   {
     id: "npm-error",
     fileName: "npm-install.txt",
+    published: "2026-11-10",
     heading: "npm errors",
     title: "npm error code 1, ENOENT and node-gyp explained",
     related: ["npm-scripts", "package-lock", "json", "python-traceback"],
@@ -3816,6 +3892,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
   {
     id: "lsof",
     fileName: "lsof.txt",
+    published: "2026-11-10",
     heading: "lsof output",
     title: "lsof command explained: find what holds a port",
     related: ["ps-aux", "curl", "bash"],
