@@ -96,15 +96,16 @@
 /* ── Ground and shell: the aurora under a veil fills the window; the sidebar floats as glass-1 (inset 10 px, radius 14,
    rim, hairline, shadow); the content sits straight on the ground with a transparent top bar; the ask dock floats at
    the bottom as glass-2. v7's dusk wash, white working card and ink edges go. ── */
-:root[data-ui="v3"][data-v7] .layout {
+:root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout {
   background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
 }
-/* Dark: the aurora at 170 % so its features are ≥ 240 px wide and read as light, not blotches (Design S5). */
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout {
+/* Dark: the aurora at 170 % so its features are ≥ 240 px wide and read as light, not blotches (Design S5). The body
+   carries the same ground for the screens without a .layout: the first run, sign-in and the paste step. */
+:root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout {
   background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center 30% / 170% auto no-repeat, var(--u-paper);
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-ui="v3"][data-v7] .layout, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
+  :root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout, :root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
   :root[data-ui="v3"][data-v7] { --u-glass-1: var(--u-paper); --u-glass: var(--u-sheet); --u-solid: var(--u-sheet); --u-blur: none; }
 }
 /* Scrollbars (Design M1): an 8 px rounded thumb on a transparent track, no arrow buttons, stronger while the pane is
@@ -981,6 +982,14 @@
 }
 :root[data-ui="v3"][data-v7] .layout .chat-top .ghost-link:hover { background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .layout .chat-page:not(.chat-page--empty) .chat-stage { width: min(820px, calc(100% - 48px)); }
+/* Ask Vibe before the first question: the greeting sits in the flow under the top bar (v7 centred it in the column and
+   Vibe's head was cut off at 780 px tall); 24 px title, Vibe at 56, the saved conversations as a glass card. */
+:root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-stage { justify-content: flex-start; margin-top: 8px; gap: 18px; width: min(640px, calc(100% - 48px)); overflow: visible; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello { animation: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello__vibe .buddy { width: 56px !important; height: 56px !important; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello h2 { margin: 6px 0 6px; font: 700 24px/1.2 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .chat-hello p { font: 400 14px/1.5 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-dock { margin-bottom: 0; }
 /* Soft edges where the thread scrolls: 12 px under the title, 16 px above the composer (Design S-1 r2 SHOULD 3). */
 :root[data-ui="v3"][data-v7] .layout .chat-log {
   gap: 22px; padding: 16px 2px 24px;

@@ -40,6 +40,9 @@ import { SharksIntro, type IntroPhase } from '../shared/sharks/SharksIntro';
 import { CountUp } from '../shared/countUp';
 import { SlidingPill } from '../shared/slidingThumb';
 
+/** The last-known "Start animation" setting, read before the settings arrive so the stage is on from the first frame. */
+const START_ANIMATION_KEY = 'unvibe.startAnimation';
+
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
 
@@ -1867,16 +1870,27 @@ function App() {
     if (!(settings?.soundEffects ?? true)) return;
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
-  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): decided once, when the app first shows; off by
-  // the Settings row or when the window starts hidden. The app renders under it, inert, and arrives as it leaves.
-  const [intro, setIntro] = useState<IntroPhase | 'pending' | 'off'>('pending');
+  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on from the first frame (before the settings
+  // arrive, so the first paint is never an empty field), unless the window starts hidden or the last-known setting
+  // (mirrored in localStorage) is off. When the settings land with the row off, the stage goes at once. The app
+  // renders under it, inert, and arrives as it leaves. Onboarding and sign-in never get a stage.
+  const [intro, setIntro] = useState<IntroPhase | 'off'>(() => {
+    let off = false;
+    try { off = window.localStorage.getItem(START_ANIMATION_KEY) === 'off'; } catch { off = false; }
+    return !off && document.visibilityState === 'visible' ? 'swim' : 'off';
+  });
+  const startAnimation = settings?.startAnimation;
   useEffect(() => {
-    if (gate !== 'app' || intro !== 'pending') return;
-    setIntro((settings?.startAnimation ?? true) && document.visibilityState === 'visible' ? 'swim' : 'off');
+    if (startAnimation === undefined) return;
+    try { window.localStorage.setItem(START_ANIMATION_KEY, startAnimation ? 'on' : 'off'); } catch { /* private mode */ }
+    if (!startAnimation) setIntro('off');
+  }, [startAnimation]);
+  useEffect(() => {
+    if (gate === 'onboarding' || gate === 'login') setIntro('off');
   }, [gate]);
   const introOn = intro === 'swim' || intro === 'leaving';
 
-  if (gate === 'checking') return <div className="titlebar" />;
+  if (gate === 'checking') return <>{introOn ? <SharksIntro onPhase={setIntro} /> : null}<div className="titlebar" /></>;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
