@@ -24,7 +24,7 @@ export const START_SHARKS: SharkSpec[] = [
 ];
 
 export interface SharksStartOptions {
-  /** Seconds the ocean swims before `onEnd('timeout')`. Default 1.55 (the stage then fades over 350 ms: 1.9 s in all). */
+  /** Seconds from construction to `onEnd('timeout')`, the pre-steps included. Default 1.55 (the stage then fades over 350 ms: 1.9 s in all). */
   duration?: number;
   /** One pre-stepped frame, no loop (prefers-reduced-motion). */
   still?: boolean;
@@ -40,6 +40,7 @@ export class SharksStart {
   private raf = 0;
   private last = 0;
   private acc = 0;
+  private readonly startedAt = performance.now();
   private elapsed = 0;
   private ended = false;
   private disposed = false;
@@ -111,7 +112,7 @@ export class SharksStart {
   private frame = (now: number) => {
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
-    this.elapsed += dt;
+    this.elapsed = (now - this.startedAt) / 1000;
     this.acc += dt;
     let steps = 0;
     while (this.acc >= STEP && steps < MAX_STEPS) {
