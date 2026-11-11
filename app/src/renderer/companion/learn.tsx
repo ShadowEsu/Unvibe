@@ -687,7 +687,7 @@ export function Learn({
           ) : null}
           <label className="history-search">
             <span className="sr-only">Search your explanations</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search explanations, files, concepts…" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your library" />
           </label>
         </div>
       ) : null}

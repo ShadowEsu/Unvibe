@@ -105,7 +105,16 @@ button:disabled, [aria-disabled="true"] { cursor: default; }
 .ob-head__close:hover { background: var(--u-fill); color: var(--u-ink); }
 
 /* The reading plate: solid (≥ .88 alpha) under everything you read; the footer sits on it too. */
-.ob-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; background: var(--u-solid); }
+.ob-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--u-solid); }
+/* The scrollbar (Design M1): an 8 px rounded thumb on a transparent track, no arrow buttons. No `scrollbar-width`:
+   set, it turns the ::-webkit styling off in Chromium. */
+.ob-scroll::-webkit-scrollbar, .ob-code__all::-webkit-scrollbar, .rich-table::-webkit-scrollbar { width: 8px; height: 8px; }
+.ob-scroll::-webkit-scrollbar-button, .ob-code__all::-webkit-scrollbar-button, .rich-table::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.ob-scroll::-webkit-scrollbar-track, .ob-code__all::-webkit-scrollbar-track, .rich-table::-webkit-scrollbar-track { background: transparent; }
+.ob-scroll::-webkit-scrollbar-thumb, .ob-code__all::-webkit-scrollbar-thumb, .rich-table::-webkit-scrollbar-thumb { border: 0; border-radius: 999px; background: rgb(90 63 224 / 0.18); }
+.ob-scroll:hover::-webkit-scrollbar-thumb { background: rgb(90 63 224 / 0.32); }
+:root[data-theme="dark"] .ob-scroll::-webkit-scrollbar-thumb, :root[data-theme="dark"] .ob-code__all::-webkit-scrollbar-thumb, :root[data-theme="dark"] .rich-table::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
+:root[data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.4); }
 /* A line cut at the scroll edge reads as "more below" (Design S-1 SHOULD 1). Not while the agreement shows: its
    actions are pinned at that edge and stay crisp. */
 .ob-scroll:not(:has(.consent-form)) { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent); }

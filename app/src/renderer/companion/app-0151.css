@@ -99,11 +99,25 @@
 :root[data-ui="v3"][data-v7] .layout {
   background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
 }
+/* Dark: the aurora at 170 % so its features are ≥ 240 px wide and read as light, not blotches (Design S5). */
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout {
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center 30% / 170% auto no-repeat, var(--u-paper);
+}
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-ui="v3"][data-v7] .layout { background: var(--u-paper); }
+  :root[data-ui="v3"][data-v7] .layout, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
   :root[data-ui="v3"][data-v7] { --u-glass-1: var(--u-paper); --u-glass: var(--u-sheet); --u-solid: var(--u-sheet); --u-blur: none; }
 }
+/* Scrollbars (Design M1): an 8 px rounded thumb on a transparent track, no arrow buttons, stronger while the pane is
+   hovered. `scrollbar-width`/`scrollbar-color` are reset to auto because either one set turns the ::-webkit styling off
+   in Chromium (the classic arrow bar in the first r2 stills). */
+:root[data-ui="v3"][data-v7] :is(.content, .side, .mbody, .lib-list, .study-pane, .search-palette__body, .lesson-doc) { scrollbar-width: auto; scrollbar-color: auto; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar { width: 8px; height: 8px; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-track, :root[data-ui="v3"][data-v7] ::-webkit-scrollbar-corner { background: transparent; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-thumb { border: 0; border-radius: 999px; background: rgb(90 63 224 / 0.18); background-clip: padding-box; }
+:root[data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(90 63 224 / 0.32); }
 :root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.4); }
 :root[data-ui="v3"][data-v7] .layout .sync-state { color: var(--u-ink-3); }
 /* The glass recipe, once: tint, blur, the 1 px inner rim, the hairline outside, the top sheen and the soft shadow. */
 :root[data-ui="v3"][data-v7] .layout .side,
@@ -131,8 +145,9 @@
 :root[data-ui="v3"][data-v7] .layout .nav button:hover,
 :root[data-ui="v3"][data-v7] .layout .side-settings:hover { background: var(--u-fill); color: var(--u-ink); transform: none; }
 :root[data-ui="v3"][data-v7] .layout .nav button:hover svg { transform: none; }
-/* The current page: the violet tint with violet text and icon; no tile, no lift. */
-:root[data-ui="v3"][data-v7] .layout .nav button.on { background: var(--u-mist); color: var(--u-accent-text); font-weight: 600; box-shadow: none; transform: none; }
+/* The active item: violet at 12 % (Design M4: the mist tint vanished on the light glass; dark keeps the lifted fill). */
+:root[data-ui="v3"][data-v7] .layout .nav button.on { background: rgb(90 63 224 / 0.12); color: var(--u-accent-text); font-weight: 600; box-shadow: none; transform: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: rgb(184 166 255 / 0.16); }
 :root[data-ui="v3"][data-v7] .layout .nav button svg,
 :root[data-ui="v3"][data-v7] .layout .nav button:nth-child(n) svg,
 :root[data-ui="v3"][data-v7] .layout .nav button.on svg,
@@ -267,8 +282,6 @@
 :root[data-ui="v3"][data-v7] .layout .home-row__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .home-row__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink); font: 500 13.5px/1.3 var(--u-font); }
 :root[data-ui="v3"][data-v7] .layout .home-row__source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink-3); font: 400 12.5px/1.3 var(--u-font); }
-/* The file name in a recent row is code: mono. */
-:root[data-ui="v3"][data-v7] .layout .home-row .home-row__source { font: 400 12px/1.3 var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .home-row__pill { flex: none; margin-left: auto; color: var(--u-ink-3); font: 500 12px/1 var(--u-font); background: none; }
 :root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="review"] { padding: 3px 8px; border: 0; border-radius: 999px; background: var(--u-amber-tint); color: var(--u-amber); font-weight: 600; }
 :root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 6px 8px 10px; color: var(--u-ink-3); font: 400 13.5px/1.5 var(--u-font); }
@@ -303,6 +316,8 @@
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:hover { color: var(--u-ink); background: var(--u-fill); }
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
 :root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 1; }
+/* Dark: the selected segment on the lighter glass fill, not the dark plate (Design S6). */
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: rgb(184 166 255 / 0.18); }
 :root[data-ui="v3"][data-v7] .layout .mix-start { flex: none; white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .mix-start span { margin-left: 4px; opacity: 0.8; }
 :root[data-ui="v3"][data-v7] .layout .history-continue {
@@ -1081,11 +1096,12 @@
   --u-hair: rgb(243 241 250 / 0.12); --u-line: rgb(243 241 250 / 0.12); --u-fill: rgb(243 241 250 / 0.06);
   --u-shadow: 0 1px 2px rgb(0 0 0 / 0.3); --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
 }
+/* The glow fades to paper between 120 and 420 px (Design M5: no hard edge where the image ends). */
 :root[data-r2="g2"][data-ui="v3"][data-v7] .layout {
-  background: linear-gradient(var(--u-paper) 0%, transparent 100%), linear-gradient(rgb(247 246 251 / 0.88), rgb(247 246 251 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
+  background: linear-gradient(transparent 0, transparent 120px, var(--u-paper) 420px), linear-gradient(rgb(247 246 251 / 0.88), rgb(247 246 251 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
 }
 :root[data-r2="g2"][data-ui="v3"][data-v7][data-theme="dark"] .layout {
-  background: linear-gradient(var(--u-paper) 0%, transparent 100%), linear-gradient(rgb(21 19 31 / 0.88), rgb(21 19 31 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
+  background: linear-gradient(transparent 0, transparent 120px, var(--u-paper) 420px), linear-gradient(rgb(21 19 31 / 0.88), rgb(21 19 31 / 0.88)), url("./aurora.webp") center top / 100% 420px no-repeat, var(--u-paper);
 }
 :root[data-r2="g2"][data-ui="v3"][data-v7] .layout .side { margin: 0; border-radius: 0; background: var(--u-glass-1); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 1px 0 0 var(--u-hair); }
 :root[data-r2="g2"][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .ask-dock),
