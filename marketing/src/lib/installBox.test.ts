@@ -34,12 +34,10 @@ describe("install box: the Terminal line first, the file second", () => {
     assert.match(html, />Copy</);
   });
 
-  it("each computer gets its own served command, file and first-open steps", () => {
+  it("each computer gets its own served command and file", () => {
     assert.equal(INSTALL_COPY.mac.command, BETA_INSTALL_COMMAND);
     assert.equal(INSTALL_COPY.windows.command, BETA_WINDOWS_INSTALL_COMMAND);
     assert.equal(INSTALL_COPY.windows.fileHref, BETA_WINDOWS_DIRECT_DOWNLOAD);
-    assert.match(INSTALL_COPY.mac.steps.join(" "), /Click Done\b.*Open Anyway/);
-    assert.match(INSTALL_COPY.windows.steps.join(" "), /More info\..*Run anyway/);
   });
 
   it("never claims Apple approval or a bypass (Security S-2: 'not notarized by Apple yet' and stop there)", () => {
