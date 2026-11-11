@@ -99,7 +99,9 @@ export class SharksStart {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.resize(rect.width, rect.height, dpr);
     this.world.resize(rect.width, rect.height, this.renderer.cellWidth, this.renderer.cellHeight);
-    if (this.opts.still && this.stats.frames) this.draw(STEP);
+    // Painted here, not on the next frame: a window that is not shown yet has its rafs paused, and the first frame
+    // the user sees must already have the sharks (SPEC §2.4).
+    if (this.stats.frames) this.draw(STEP);
   }
 
   private schedule() {
