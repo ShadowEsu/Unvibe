@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { explainLanguage, type ExplainPage } from "@/lib/explainPages";
 
 /**
- * Link-preview cards: static 1200x630 PNGs in public/og, drawn by Design (option B "Flow", picked
- * 27 Oct; source and alt text in boss-handoff agents/design/unvibe-link-preview-2026-10-27/final-b).
+ * Link-preview cards: static 1200x630 PNGs in public/og. The home card (also every page's default) is the live
+ * hero's look, ledger 570 option B: bubbles, the H1, the free pill and the shortcuts inside a 600x600 centre box so
+ * square and 2:1 crops keep them; the real debounce sample and the real 0.1.49 panel explaining it bleed off the
+ * edges (render script and checks: boss-handoff agents/unvibe-site/og-570). The other
+ * product cards are Design's option B "Flow" (27 Oct; agents/design/unvibe-link-preview-2026-10-27/final-b).
  * Names carry the first 8 hex of the file's sha256, so a new card never hides behind a cached one.
  * A card shows a panel only next to the exact code it explains: language cards show only their
  * page's own sample.
@@ -15,7 +18,7 @@ export type OgCard = { file: string; alt: string };
 const FREE = "Free for Mac and Windows.";
 
 export const OG_CARDS = {
-  home: { file: "/og/og-home-5d097d09.png", alt: `Understand the code your AI just wrote. ${FREE}` },
+  home: { file: "/og/og-home-14aee211.png", alt: `Understand the code your AI writes. ${FREE}` },
   beta: { file: "/og/og-beta-7d194b93.png", alt: `Download Unvibe. ${FREE}` },
   pricing: { file: "/og/og-pricing-9f940be2.png", alt: `Start free. No card needed. ${FREE}` },
   mac: { file: "/og/og-mac-c241a9bf.png", alt: `A code explainer for your Mac. ${FREE}` },
@@ -78,6 +81,21 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "git-diff": "/og/og-explain-git-diff-cbe86ac3.png",
   "react-useeffect": "/og/og-explain-react-useeffect-7ff74901.png",
   "python-traceback": "/og/og-explain-python-traceback-6de7a848.png",
+  "package-lock": "/og/og-explain-package-lock-4f8f420b.png",
+  "prisma-schema": "/og/og-explain-prisma-schema-43ac14a3.png",
+  tailwind: "/og/og-explain-tailwind-ee327891.png",
+  "sql-joins": "/og/og-explain-sql-joins-43a0484a.png",
+  "supabase-rls": "/og/og-explain-supabase-rls-264a5997.png",
+  "cors-error": "/og/og-explain-cors-error-eae48712.png",
+  asyncio: "/og/og-explain-asyncio-fb6e0e21.png",
+  tar: "/og/og-explain-tar-e922b08f.png",
+  rsync: "/og/og-explain-rsync-bf6fe9bd.png",
+  "git-rebase": "/og/og-explain-git-rebase-61755953.png",
+  xargs: "/og/og-explain-xargs-f6d7bed7.png",
+  "ps-aux": "/og/og-explain-ps-aux-440a0365.png",
+  systemd: "/og/og-explain-systemd-84c56c8b.png",
+  terraform: "/og/og-explain-terraform-65e898b5.png",
+  assembly: "/og/og-explain-assembly-c80056c7.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */

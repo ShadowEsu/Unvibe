@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="5 November 2026"
+      updated="9 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -61,6 +61,16 @@ export default function PrivacyPage() {
             your answers, the app version and your random install ID. Kept 12 months. The team reads
             them and may use AI tools that don&apos;t train on your data to summarise them. To have
             them deleted, email support@unvibe.site with the install ID the app shows after Send.
+          </li>
+          <li>
+            <strong>Survey answers on the web:</strong> if you answer the one-question survey at
+            unvibe.site/survey and press Send, your answer, your comment if you write one, and the
+            time. No name, email, install ID or account goes with it, and opening the page stores
+            nothing. To limit repeated sends, a keyed hash of your network address is counted per
+            hour, stored apart from your answer, and removed once it is more than a day old, at the
+            counter&apos;s next clean-up. Kept 12 months, read the same way as the in-app answers.
+            Because the answers are anonymous, we can&apos;t tell which one is yours to delete it on
+            request.
           </li>
         </ul>
       </LegalSection>
@@ -172,9 +182,10 @@ export default function PrivacyPage() {
           Until you press Allow, and if you press No thanks, ignore the bar, or your browser sends
           Global Privacy Control, Mixpanel does not load. unvibe.site still keeps daily totals: how
           many times visitors pressed Allow or No thanks, how many pages were loaded and which campaign
-          label (utm_source) the link that brought them carried, and how many times the install scripts
-          were downloaded and finished installing. Each total is just a day, a number and, for page
-          loads, that campaign label, with no ID, IP address, cookie, time or page address, so it
+          label (utm_source) the link that brought them carried, how many times the install scripts
+          were downloaded and finished installing, and how many times each download link (Mac, Intel
+          Mac or Windows) was used. Each total is just a day, a number and, for page loads and download
+          links, that campaign label, with no ID, IP address, cookie, time or page address, so it
           can&apos;t be linked to you.
           The Analytics settings link at the bottom of every page changes your answer, and No thanks
           stops recording at once. Mixpanel receives your IP address with each event and uses it to
@@ -244,10 +255,10 @@ export default function PrivacyPage() {
             only after you press Allow on the analytics bar.
           </li>
           <li>
-            <strong>Google Fonts.</strong> Desktop app versions 0.1.49 and earlier load their fonts from Google
-            (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion opens. That
-            request gives Google your IP address and your device&apos;s browser details, such as the operating
-            system and app version. From version 0.1.50 (coming soon), the fonts are built into the app, so it
+            <strong>Google Fonts.</strong> The desktop app, up to and including version 0.1.51, loads its fonts
+            from Google (fonts.googleapis.com and fonts.gstatic.com) when the explanation window or companion
+            opens. That request gives Google your IP address and your device&apos;s browser details, such as the
+            operating system and app version. From a later version, the fonts are built into the app, so it
             makes no request to Google.
           </li>
         </ul>

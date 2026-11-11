@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BetaFeedbackAsk } from "@/components/paper/BetaFeedbackAsk";
-import { BetaInstall } from "@/components/paper/BetaInstall";
+import { Download } from "@/site/dia/Download";
+import { DiaMotion } from "@/site/dia/motion/DiaMotion";
 import { FREE_MONTHLY_ALLOWANCE, TRIAL_ALLOWANCE } from "@/lib/allowance";
 import { MAC_SHA256_URL, WINDOWS_META, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 import { SHORTCUTS } from "@/lib/shortcuts";
@@ -21,20 +22,16 @@ export const metadata: Metadata = {
 
 const { mac, windows } = SHORTCUTS;
 
+/**
+ * Direction D's download page (plan mock 11) and the one-click download's thank-you state (?dl=). Below the fold,
+ * the live guide, quick fixes and trust lines, unchanged.
+ */
 export default function BetaDownloadsPage() {
   return (
-    <article className="beta-page">
-      {/* No photo band and no eyebrow (Design, ledger 443): the heading, then the download card on the backdrop. */}
-      <header className="beta-page__head paper-wrap paper-center">
-        <h1>Download Unvibe.</h1>
-        <p>Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
-      </header>
-
-      <section className="paper-section" id="install">
-        <div className="paper-wrap paper-center">
-          <BetaInstall tone="page" surface="beta" title={null} showFeedback={false} />
-        </div>
-      </section>
+    <article className="d d-page dd-page beta-page">
+      <DiaMotion />
+      <Download />
+      <p className="beta-page__lede paper-wrap paper-center">Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
 
       <section className="paper-section">
         <div className="paper-wrap">
@@ -85,6 +82,51 @@ export default function BetaDownloadsPage() {
         </div>
       </section>
 
+      {/* The no-warning option for Mac: /explain in the browser, installable as a web app (src/app/manifest.ts).
+          Menu labels from Google's, Microsoft's and Apple's help pages (Chrome 9658361, Edge, Apple 104996).
+          Hidden while AI is paused, like every other pointer to the Try box (lib/aiMaintenance). */}
+      {AI_MAINTENANCE ? null : (
+      <section className="paper-section" id="browser" aria-labelledby="browser-h">
+        <div className="paper-wrap">
+          <div className="beta-page__steps">
+            <h2 id="browser-h">No install warning: use Unvibe in your browser</h2>
+            <ul className="beta-page__steps-list">
+              <li>
+                <div>
+                  <strong>Paste code, get a short explanation</strong>
+                  <p>
+                    Open unvibe.site/explain in Chrome or Safari, paste code and get a short explanation in plain English.
+                    Nothing to download, so macOS shows no warning.{" "}
+                    {/* In running text, like the sign-in link below: inline, underlined, the paragraph's size. */}
+                    <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="/explain">Open it in your browser</a>
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Keep it in its own window</strong>
+                  <p>
+                    In Chrome, press <b>Install</b> at the right of the address bar, or open the menu and choose <b>Cast, save, and
+                    share</b>, then <b>Install page as app</b>. In Edge, open the menu and choose <b>More tools</b>, then <b>Apps</b>,
+                    then <b>Install this site as an app</b>. In Safari on macOS Sonoma or later, choose <b>File</b>, then <b>Add to Dock</b>.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>What it can’t do</strong>
+                  <p>
+                    It works on code you paste, up to 1,500 characters (about 60 lines). It can’t read code in other apps or use
+                    the {mac.anywhere} shortcut, and it explains up to 6 snippets an hour on each network, fewer when it’s busy.
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      )}
+
       <section className="paper-section" id="help">
         <div className="paper-wrap paper-center">
           <h2>Stuck? Quick fixes.</h2>
@@ -92,10 +134,21 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>The app says “Waiting for Google sign-in…”</summary>
               <p>
-                Unvibe opened a sign-in page in your browser. Sign in with Google there, then click
-                {" "}<strong>Connect this device</strong>. The app finishes a few seconds after that click, not after
-                the Google step alone. If no browser opened, go to{" "}
-                <a className="paper-text-link" href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
+                Unvibe opened a sign-in page in your browser (press <strong>Open browser</strong> in Unvibe if you closed it). If
+                Google sign-in didn’t finish there, use email on the same page:
+              </p>
+              <ol>
+                <li>Tick both boxes.</li>
+                <li>Type your email and press <strong>Email me a secure <span style={{ whiteSpace: "nowrap" }}>sign-in</span> link</strong>.</li>
+                {/* The sender lives in Supabase's SMTP settings, not this repo: re-check it here whenever SMTP changes. */}
+                <li>Open the email from Unvibe (no-reply@unvibe.site) and its link in that same browser on this computer. Check your Spam folder if the sign-in email doesn’t arrive.</li>
+                <li>Back on the page, check the code matches the one in the app (type it in if the box is empty).</li>
+                <li>Press <strong style={{ whiteSpace: "nowrap" }}>Approve sign-in</strong>. The app finishes a few seconds later.</li>
+              </ol>
+              <p>
+                A link opened on your phone or in another browser won’t sign you in. If no browser opened, go to{" "}
+                {/* In running text: not the section's inline-block, margin-topped .paper-text-link (paper.css .paper-center). */}
+                <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
                 sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
               </p>
             </details>
@@ -148,7 +201,7 @@ export default function BetaDownloadsPage() {
             <details>
               <summary>You can start without signing in</summary>
               <p>
-                Skip sign-in on the first screen and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices. {proSentence()}
+                Unvibe works without an account, and you get {TRIAL_ALLOWANCE}. Signing in gives you {FREE_MONTHLY_ALLOWANCE} on Free and syncs your history across devices: click your name (or initials) at the bottom of Unvibe’s sidebar, then <strong>Sign in to sync</strong> and <strong>Continue with Google</strong>. The page that opens in your browser also lets you sign in with email. {proSentence()}
               </p>
               {AI_MAINTENANCE ? <p role="status">{AI_MAINTENANCE_NOTE}</p> : null}
             </details>

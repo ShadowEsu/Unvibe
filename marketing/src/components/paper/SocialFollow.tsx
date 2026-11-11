@@ -1,72 +1,4 @@
-import {
-  INSTAGRAM_URL,
-  LINKEDIN_URL,
-  SUPPORT_EMAIL,
-  X_URL,
-  supportMailto,
-} from "@/lib/contact";
-
-function XMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M14.1 10.35 22.05 1.5h-1.88l-6.9 7.68L7.77 1.5H1.5l8.33 11.72L1.5 22.5h1.88l7.28-8.1 5.81 8.1H22.5L14.1 10.35Zm-2.58 2.86-.84-1.17L4.06 2.86h2.89l5.4 7.5.84 1.17 7.03 9.77h-2.89l-5.81-8.09Z"
-      />
-    </svg>
-  );
-}
-
-function LinkedInMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M5.41 3.75a1.78 1.78 0 1 0 0 3.56 1.78 1.78 0 0 0 0-3.56ZM7.12 20.25H3.7V8.9h3.42V20.25ZM12.2 8.9h3.28v1.55h.05c.46-.87 1.58-1.79 3.25-1.79 3.48 0 4.12 2.29 4.12 5.27v6.32h-3.42v-5.6c0-1.34-.03-3.06-1.87-3.06-1.86 0-2.15 1.45-2.15 2.95v5.71H12.2V8.9Z"
-      />
-    </svg>
-  );
-}
-
-function InstagramMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M8 3.75h8A4.25 4.25 0 0 1 20.25 8v8A4.25 4.25 0 0 1 16 20.25H8A4.25 4.25 0 0 1 3.75 16V8A4.25 4.25 0 0 1 8 3.75Z"
-      />
-      <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="17.2" cy="6.8" r="0.85" fill="currentColor" />
-    </svg>
-  );
-}
-
-function MailMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M4.5 6.75h15A1.75 1.75 0 0 1 21.25 8.5v9A1.75 1.75 0 0 1 19.5 19.25h-15A1.75 1.75 0 0 1 2.75 17.5v-9A1.75 1.75 0 0 1 4.5 6.75Z"
-      />
-      <path fill="none" stroke="currentColor" strokeWidth="1.5" d="m4 7.5 8 6.2 8-6.2" />
-    </svg>
-  );
-}
-
-function ColorXMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="var(--logo-x)"
-        d="M14.1 10.35 22.05 1.5h-1.88l-6.9 7.68L7.77 1.5H1.5l8.33 11.72L1.5 22.5h1.88l7.28-8.1 5.81 8.1H22.5L14.1 10.35Zm-2.58 2.86-.84-1.17L4.06 2.86h2.89l5.4 7.5.84 1.17 7.03 9.77h-2.89l-5.81-8.09Z"
-      />
-    </svg>
-  );
-}
+import { INSTAGRAM_URL, LINKEDIN_URL } from "@/lib/contact";
 
 function ColorLinkedInMark() {
   return (
@@ -96,39 +28,10 @@ function ColorInstagramMark() {
   );
 }
 
-const socialProfiles = [
-  // X and TikTok are hidden until their accounts exist (x.com/unvibe_app is a 404, and
-  // tiktok.com/@unvibe_app reports no such account).
-  { name: "LinkedIn", href: LINKEDIN_URL, Mark: LinkedInMark },
-  { name: "Instagram", href: INSTAGRAM_URL, Mark: InstagramMark },
-] as const;
-
 const followSum = [
   { name: "LinkedIn", href: LINKEDIN_URL, Mark: ColorLinkedInMark },
   { name: "Instagram", href: INSTAGRAM_URL, Mark: ColorInstagramMark },
 ] as const;
-
-interface SocialFollowLinksProps {
-  includeMail?: boolean;
-  className?: string;
-}
-
-export function SocialFollowLinks({ includeMail = false, className = "paper-footer__social" }: SocialFollowLinksProps) {
-  return (
-    <div className={className}>
-      {socialProfiles.map(({ name, href, Mark }) => (
-        <a key={name} href={href} target="_blank" rel="noopener noreferrer" aria-label={`Unvibe on ${name}`}>
-          <Mark />
-        </a>
-      ))}
-      {includeMail ? (
-        <a href={supportMailto} aria-label={`Email ${SUPPORT_EMAIL}`}>
-          <MailMark />
-        </a>
-      ) : null}
-    </div>
-  );
-}
 
 export function GrowthFollowLinks() {
   return (

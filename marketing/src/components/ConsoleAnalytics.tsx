@@ -219,7 +219,7 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <section className="console-analytics" aria-busy={loading}>
-      <header className="console-analytics__header">
+      <div className="console-analytics__header">
         <div>
           <span className="console-analytics__eyebrow">Analytics</span>
           <Title className="console-analytics__title">Unvibe, by the numbers.</Title>
@@ -231,7 +231,7 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
           </button>
           <Link href="/build">Build record</Link>
         </div>
-      </header>
+      </div>
 
       {error ? (
         <div className="console-analytics__error" role="alert">
@@ -345,13 +345,13 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
 
           {appUsers?.source === "supabase" ? (
             <article className="console-analytics__people console-analytics__activation">
-              <header>
+              <div className="ca-head">
                 <div>
                   <span>Activation, last 14 days</span>
                   <Subhead className="console-analytics__subhead">First completed explanations</Subhead>
                 </div>
                 <small>UTC · {appUsers.qaExcluded} CI installs excluded</small>
-              </header>
+              </div>
               <p>Anonymous trial installs only. Own code includes any selection, not only the shortcut. Downloads and email signups are separate counts, not a combined people total.</p>
               <div className="console-table-wrap">
                 <table>
@@ -373,13 +373,13 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
 
           <div className="console-analytics__panels">
             <article className="console-analytics__activity">
-              <header>
+              <div className="ca-head">
                 <div>
                   <span>Page views</span>
                   <Subhead className="console-analytics__subhead">Last 14 days</Subhead>
                 </div>
                 <small>Pacific time</small>
-              </header>
+              </div>
               <div className="console-analytics__bars" aria-label="Fourteen day page views">
                 {[...data.stats.recentDays].reverse().map((day) => {
                   const signups = data.waitlist.dailySignups.find((item) => item.date === day.date)?.signups ?? 0;
@@ -397,10 +397,10 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
             </article>
 
             <article className="console-analytics__sources">
-              <header>
+              <div className="ca-head">
                 <span>Sources</span>
                 <Subhead className="console-analytics__subhead">Where joins came from</Subhead>
-              </header>
+              </div>
               <ol>
                 {data.waitlist.sourceCounts.length ? data.waitlist.sourceCounts.map((source) => (
                   <li key={source.source}>
@@ -413,7 +413,7 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <article className="console-analytics__people">
-            <header>
+            <div className="ca-head">
               <div>
                 <span>Waitlist</span>
                 <Subhead className="console-analytics__subhead">Joined people only</Subhead>
@@ -428,7 +428,7 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
                   {clearingProbes ? "Clearing…" : `Clear ${probeCount} probes`}
                 </button>
               ) : null}
-            </header>
+            </div>
             {peopleError ? <p className="console-analytics__empty">{peopleError}</p> : null}
             {deleteError ? <p className="console-analytics__empty" role="alert">{deleteError}</p> : null}
             {!peopleError && people.length === 0 ? (

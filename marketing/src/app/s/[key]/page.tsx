@@ -32,11 +32,11 @@ export default async function PrivateStatsPage({ params }: { params: { key: stri
 
   return (
     <article className={`pstats ${REPLAY_BLOCK_CLASS}`}>
-      <header className="pstats__head">
+      <div className="pstats__head">
         <p className="pstats__eyebrow">Private · only you have this link</p>
         <h1>Unvibe, by the numbers.</h1>
         <p className="pstats__updated">Live as of {updated} Pacific. Refresh for new numbers.</p>
-      </header>
+      </div>
 
       {s.errors.length ? <div className="pstats__warn" role="status">{s.errors.map((e) => <p key={e}>{e}</p>)}</div> : null}
 

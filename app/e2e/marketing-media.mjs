@@ -1,5 +1,6 @@
 // Records the real app for the website: screenshots of each screen and raw window videos of one
-// genuine session (first explanation, depth switch, follow-up, Test me, companion pages).
+// genuine session (first explanation, depth switch, follow-up, Test me, companion pages), and on request
+// marketing's own sample files (media-samples/).
 // Everything shown is produced live by the installed app and the hosted AI; nothing is mocked.
 // A release build is needed (it carries the trial token); a plain local build cannot explain.
 // The app is driven through Chromium's debug port (cdp-launch.mjs): release builds turn off the
@@ -10,10 +11,12 @@
 // Env: UNVIBE_EXE (installed app executable), MEDIA_DIR (output folder), MEDIA_INSTALL_ID (qa-prefixed;
 //      CI gives every run a fresh id and flags it as QA; an id reused across runs runs out of free
 //      explanations), FFMPEG (optional ffmpeg path; default: ffmpeg on PATH, else Playwright's),
-//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog).
+//      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog),
+//      MEDIA_SAMPLES=1 (also explain each file in media-samples/samples.json; see that step).
 import { launchApp } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -34,6 +37,10 @@ const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-media-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-media-local-${Date.now()}`;
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId }));
 console.log(`install id ${installId}`);
+// Briefs reads the project last chosen (settings lastProjectRoot). The folder dialog can't be answered reliably on
+// GitHub's runner, so the run starts as if this sample project had been chosen before: a brief of its real change.
+const briefRepo = uploadRepo().repo;
+writeFileSync(path.join(userData, 'unvibe-settings.json'), JSON.stringify({ lastProjectRoot: briefRepo }));
 
 // Retina-sharp screenshots on runners whose display is 1x.
 const app = await launchApp({ exe, userData, args: ['--force-device-scale-factor=2'], timeout: 90000 });
@@ -119,10 +126,9 @@ async function resize(page, width, height, { center = false } = {}) {
 }
 
 /**
- * Answers the app's native "Choose a file to explain" dialog with `file` (macOS): waits for the
- * dialog, brings Unvibe forward, and types Go to Folder + path + Open only while Unvibe is the
- * frontmost app, so no keystroke can land in another app. The app opens it with a parent window,
- * so macOS shows it as a sheet on that window, not as a window of its own.
+ * Answers the app's native open dialog with `file` (macOS): "Choose a file to explain" (a sheet on its parent
+ * window) or a folder chooser (a window named Open). Waits for the dialog, brings Unvibe forward, and types Go to
+ * Folder + path + Open only while Unvibe is the frontmost app, so no keystroke can land in another app.
  */
 function answerOpenPanel(file) {
   // Async: the pickFile call that opens the dialog has to reach the app while this waits for it.
@@ -162,7 +168,22 @@ async function windowWith(part, timeout = 30000) {
   }
   throw new Error(`${part} did not open`);
 }
-const shot = (page, label) => page.screenshot({ path: path.join(shots, `${label}.png`), animations: 'disabled' });
+/**
+ * Stills at 2x (the site shows them at up to half their pixel width, ledger 530 spec §5). Chromium renders the
+ * capture itself at the clip's scale, so the text is sharp, not an upscaled image; the scale makes the file twice
+ * the page's CSS size whatever the window's own pixel ratio is (the app runs at 2x, but Playwright's viewport
+ * emulation in resize() can report 1x).
+ */
+async function shot(page, label) {
+  const [width, height, ratio] = await page.evaluate(() => [window.innerWidth, window.innerHeight, window.devicePixelRatio || 1]);
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 2 / ratio } });
+    writeFileSync(path.join(shots, `${label}.png`), Buffer.from(data, 'base64'));
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+}
 const button = (page, name) => page.getByRole('button', { name, exact: true }).first();
 /**
  * Puts `text` in a field and waits until the field holds exactly it. No key events: typing over CDP
@@ -229,6 +250,37 @@ async function agreeIfAsked(page, wait = 5000) {
   return true;
 }
 
+/** Asks `question` in the panel's follow-up row and returns the panel once the answer has finished. */
+async function askFollowUp(question) {
+  const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
+  await enterText((await askRow()).getByLabel('Follow-up question'), question);
+  await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+  // A question is the person's own text, so the agreement is asked here; then ask again.
+  if (await agreeIfAsked(await windowWith('widget.html'))) {
+    const again = (await askRow()).getByLabel('Follow-up question');
+    if ((await again.inputValue()).trim() !== question) await enterText(again, question);
+    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
+  }
+  await sleep(1500);
+  return settledPanel();
+}
+
+/**
+ * The answer goes under the explanation (0.1.49 opens it with a "Short answer" heading; earlier builds used the
+ * question as its heading, matched by `questionPart`): bring that start to the top of the panel, so the still shows
+ * the answer, not the end.
+ */
+async function scrollToAnswer(panel, questionPart) {
+  const found = await panel.locator('.body').evaluate((body, part) => {
+    const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
+    const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => (el.textContent ?? '').toLowerCase().includes(part));
+    if (!heading) return false;
+    body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
+    return true;
+  }, questionPart.toLowerCase());
+  if (!found) throw new Error('the follow-up question is not in the panel');
+}
+
 const companion = await windowWith('companion.html', 60000);
 await companion.waitForLoadState('domcontentloaded');
 await resize(companion, 1280, 800, { center: true });
@@ -250,6 +302,17 @@ const firstRun = await step('onboarding', async () => {
   await button(companion, 'Explain this code').click();
 });
 
+/**
+ * The website quotes short passages of real answers word for word (ledger 530), so each one it may
+ * quote is saved with the depth that produced it: the panel's own text, nothing rewritten.
+ */
+const snippets = [];
+async function saveAnswer(panel, label) {
+  const depth = (await panel.locator('.lvl.on').first().innerText().catch(() => '')).trim();
+  const text = (await panel.locator('.body').first().innerText()).trim();
+  snippets.push({ label, depth, text });
+}
+
 const explained = firstRun && await step('first explanation', async () => {
   const panel = await windowWith('widget.html', 20000);
   await resize(panel, 440, 740);
@@ -258,6 +321,7 @@ const explained = firstRun && await step('first explanation', async () => {
   await shot(panel, 'panel-streaming');
   const done = await settledPanel();
   await shot(done, 'panel-explained');
+  await saveAnswer(done, 'first explanation');
   // The panel follows the stream to the end; the site also needs the opening of the answer.
   await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
   await sleep(600);
@@ -270,21 +334,29 @@ if (explained) {
     await panel.locator('.depth-chip').click();
     await panel.locator('.pm-menu [data-level="beginner"]').click();
     await sleep(1500);
-    await shot(await settledPanel(), 'panel-beginner');
+    const done = await settledPanel();
+    await shot(done, 'panel-beginner');
+    await saveAnswer(done, 'beginner depth');
+  });
+  // The deepest depth a free install can open (Expert needs Pro), for the site's side-by-side.
+  await step('advanced depth', async () => {
+    await (await windowWith('widget.html')).locator('.lvl[data-level="advanced"]').click();
+    await sleep(1500);
+    const done = await settledPanel();
+    await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+    await sleep(600);
+    await shot(done, 'panel-advanced');
+    await saveAnswer(done, 'advanced depth');
   });
   await step('follow-up', async () => {
-    const question = 'What happens if I call it five times quickly?';
-    const askRow = async () => (await windowWith('widget.html')).locator('.askrow');
-    await enterText((await askRow()).getByLabel('Follow-up question'), question);
-    await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
-    // A question is the person's own text, so the agreement is asked here; then ask again.
-    if (await agreeIfAsked(await windowWith('widget.html'))) {
-      const again = (await askRow()).getByLabel('Follow-up question');
-      if ((await again.inputValue()).trim() !== question) await enterText(again, question);
-      await (await askRow()).getByRole('button', { name: 'Ask', exact: true }).click();
-    }
-    await sleep(1500);
-    await shot(await settledPanel(), 'panel-follow-up');
+    // A question with a prose answer: in 0.1.49 a markdown table in an answer shows as raw | rows (5 Nov run
+    // 42132166462, "five times quickly" got a timeline table), which the site must not show as the app's look.
+    const done = await askFollowUp('Why does it call clearTimeout before setTimeout?');
+    await scrollToAnswer(done, 'clearTimeout before');
+    if (/\|\s*-{3,}\s*\|/.test(await done.locator('.body').innerText())) console.log('NOTE follow-up: the answer holds a raw markdown table (shown as | rows)');
+    await sleep(600);
+    await shot(done, 'panel-follow-up');
+    await saveAnswer(done, 'follow-up');
   });
   await step('test me', async () => {
     const panel = await windowWith('widget.html');
@@ -293,12 +365,129 @@ if (explained) {
     await panel.locator('.quiz__q').waitFor({ timeout: 60000 });
     await sleep(1200);
     await shot(panel, 'panel-test-me');
+    const question = (await panel.locator('.quiz__q').first().innerText()).trim();
+    const options = await panel.locator('.quiz__opts .opt').allInnerTexts();
+    snippets.push({ label: 'test me', depth: '', text: [question, ...options.map((o) => o.trim())].join('\n') });
     await panel.locator('.quiz__opts .opt').first().click();
     await sleep(600);
     await button(panel, 'Check').click();
     await panel.locator('.verdict').waitFor({ timeout: 60000 });
     await sleep(1500);
     await shot(panel, 'panel-test-checked');
+  });
+  // More of the person's own code, entered through the panel's paste box (widget:usePaste, which
+  // takes the text from the page, never the OS clipboard), so the Library holds several real
+  // explanations. Neutral sample code only.
+  const samples = [
+    ['formatPrice', 'export function formatPrice(cents, currency = "USD") {\n  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);\n}'],
+    ['chunk', 'export function chunk(items, size) {\n  const out = [];\n  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));\n  return out;\n}'],
+    ['retry', 'export async function retry(task, times = 3) {\n  for (let attempt = 1; ; attempt++) {\n    try { return await task(); }\n    catch (error) { if (attempt >= times) throw error; }\n  }\n}'],
+  ];
+  for (const [name, code] of samples) {
+    await step(`paste ${name}`, async () => {
+      const panel = await windowWith('widget.html');
+      await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
+      await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: name }).first().waitFor({ timeout: 30000 });
+      await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
+      await settledPanel();
+    });
+  }
+  // Marketing's sample files (media-samples/, each checked against its sha256 in samples.json), at Beginner in a
+  // 420 px panel, the narrowest the panel allows, so the text is as large as it gets when a 9:16 reel crops the
+  // still or the window video: each file's explanation, then the follow-up a viewer would type. Only on request
+  // (MEDIA_SAMPLES=1, the workflow's media_samples input), because their explanations also show in the Library still.
+  // An entry with "depths" (e.g. ["new", "advanced", "beginner"]) is pasted at the first depth and then switched with
+  // the panel's own depth buttons, one still + answer per depth (sample-<name>-<depth>), and has no follow-up.
+  if (process.env.MEDIA_SAMPLES === '1') {
+    const dir = new URL('./media-samples/', import.meta.url);
+    const list = JSON.parse(readFileSync(new URL('samples.json', dir), 'utf8'));
+    // The panel at <level> with a new, finished answer. One evaluate reads all of it together (finished: the done card's
+    // save note and no stream cursor; the active depth; the body text), because a depth click marks the button at once
+    // but the panel only switches to streaming when main's status event lands; separate reads could catch the new depth
+    // over the old card or an early stream. It must read the same twice 1 s apart, and differ from the answer before
+    // it. After a paste it fails fast (budget 30 s past the first finish) instead of polling for minutes.
+    const panelState = (page) => page.evaluate(() => ({
+      finished: !!document.querySelector('.card--done .local-save-note') && !document.querySelector('.body .cursor'),
+      failed: /Couldn't explain that/.test(document.body.innerText),
+      depth: (document.querySelector('.lvl.on')?.textContent ?? '').trim().toLowerCase(),
+      text: (document.querySelector('.body')?.innerText ?? '').trim(),
+    }));
+    const atDepth = async (level, before, budget) => {
+      const start = Date.now();
+      let last = null;
+      while (Date.now() - start < budget) {
+        const page = await windowWith('widget.html');
+        const s = await panelState(page).catch(() => null);
+        if (s?.failed) throw new Error(`the ${level} explanation failed`);
+        const ok = s && s.finished && s.depth === level && s.text && s.text !== before;
+        if (ok && last && last.text === s.text && last.depth === s.depth) return { done: page, text: s.text };
+        last = ok ? s : null;
+        await sleep(1000);
+      }
+      throw new Error(`no fresh, finished ${level} answer within ${budget / 1000} s (the panel still shows the answer before it, another depth, or a stream)`);
+    };
+    // Two samples in a row that fail at the paste mean the paste itself is broken: stop there rather than spend the
+    // job's time on the rest (each failed paste costs up to 90 s).
+    let failedPastes = 0;
+    for (const { file, sha256, marker, followUp, depths = ['beginner'] } of list) {
+      if (failedPastes >= 2) { console.log(`NOTE sample ${file}: skipped (the last 2 samples failed at the paste)`); continue; }
+      const name = path.parse(file).name;
+      let before = '';
+      for (const [i, level] of depths.entries()) {
+        const ok = await step(i === 0 ? `sample ${file}` : `sample ${file} ${level}`, async () => {
+          const panel = await windowWith('widget.html');
+          await resize(panel, 420, 720);
+          if (i === 0) {
+            const bytes = readFileSync(new URL(file, dir));
+            const sum = createHash('sha256').update(bytes).digest('hex');
+            if (sum !== sha256) throw new Error(`${file} hashes to ${sum.slice(0, 16)}, samples.json says ${sha256.slice(0, 16)}`);
+            // Whatever answer the panel shows now (the sample before) can't count as this file's.
+            before = (await panel.locator('.body').first().innerText().catch(() => '')).trim();
+            await panel.evaluate(([text, lvl]) => window.unvibe.usePaste({ text, level: lvl }), [bytes.toString('utf8'), level]);
+            await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: marker }).first().waitFor({ timeout: 30000 });
+            await (await windowWith('widget.html')).locator('.body .cursor').waitFor({ timeout: 30000 }).catch(() => {});
+          } else {
+            await panel.locator(`.lvl[data-level="${level}"]`).click();
+            await sleep(1500);
+          }
+          // Budget: a fresh paste's answer is already streaming past the cursor wait above, so 60 s; a depth click
+          // starts a new explanation, so 90 s.
+          const { done, text } = await atDepth(level, before, i === 0 ? 60000 : 90000);
+          before = text;
+          await resize(done, 420, 720);
+          await done.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+          await sleep(600);
+          await shot(done, `sample-${name}-${level}`);
+          // The still and the saved text must be the answer that was checked: nothing restarted while it was taken.
+          const after = await panelState(done);
+          if (!after.finished || after.depth !== level || after.text !== text) throw new Error(`the ${level} panel changed while its still was taken`);
+          await saveAnswer(done, depths.length > 1 ? `sample ${file} ${level}` : `sample ${file}`);
+        });
+        if (i === 0) failedPastes = ok ? 0 : failedPastes + 1;
+        if (!ok) break;
+        if (i === depths.length - 1 && followUp) await step(`sample ${file} follow-up`, async () => {
+          const done = await askFollowUp(followUp);
+          await resize(done, 420, 720);
+          await scrollToAnswer(done, followUp);
+          await sleep(600);
+          await shot(done, `sample-${name}-follow-up`);
+          await saveAnswer(done, `sample ${file} follow-up`);
+        });
+      }
+    }
+    // Back to the size the other panel stills use.
+    await step('sample panel size', async () => resize(await windowWith('widget.html'), 560, 720));
+  }
+  // The key check: code holding a key-shaped string is refused on this computer before anything is
+  // sent. 'sk_test_' + 24 x's matches the stripe-key rule (core/secretFilter.ts) and is plainly fake.
+  await step('key check', async () => {
+    const code = `const stripe = new Stripe("sk_test_${'x'.repeat(24)}");\nexport const charge = (amount) => stripe.charges.create({ amount, currency: "usd" });`;
+    const panel = await windowWith('widget.html');
+    await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
+    const blocked = (await windowWith('widget.html')).locator('.state[role="alert"]').filter({ hasText: 'Blocked: credential detected' });
+    await blocked.waitFor({ timeout: 20000 });
+    await sleep(800);
+    await shot(await windowWith('widget.html'), 'panel-key-check');
   });
   // "Why does this exist?" reads git history, so it needs a file inside a repo. The repo is made
   // here with a neutral author, because the answer shows who last changed the lines.
@@ -307,45 +496,7 @@ if (explained) {
   // history), but every companion step after it then timed out, cause not found; skipped so the rest records.
   else if (process.env.CI === 'true') console.log('NOTE why exists: skipped on CI (after the native file pick the companion tour times out on the runner)');
   else await step('why exists', async () => {
-    // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
-    // repo root through the link, so a /var file path would sit "outside" its own repo.
-    const repo = realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-why-')));
-    const git = (...args) => execFileSync('git', args, {
-      cwd: repo,
-      env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
-    });
-    const file = path.join(repo, 'upload.js');
-    git('init', '-q');
-    writeFileSync(file, [
-      'export async function upload(file, send) {',
-      '  for (let attempt = 1; ; attempt++) {',
-      '    try {',
-      '      return await send(file);',
-      '    } catch (error) {',
-      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
-      '    }',
-      '  }',
-      '}',
-      '',
-    ].join('\n'));
-    git('add', '.');
-    git('commit', '-q', '-m', 'Retry uploads with backoff so a dropped connection does not lose the file');
-    writeFileSync(file, [
-      '// The storage API rate-limits after five quick failures, so stop there.',
-      'const MAX_ATTEMPTS = 5;',
-      '',
-      'export async function upload(file, send) {',
-      '  for (let attempt = 1; ; attempt++) {',
-      '    try {',
-      '      return await send(file);',
-      '    } catch (error) {',
-      '      if (attempt >= MAX_ATTEMPTS) throw error;',
-      '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
-      '    }',
-      '  }',
-      '}',
-      '',
-    ].join('\n'));
+    const { file, git } = uploadRepo();
     git('commit', '-q', '-am', 'Stop after 5 attempts: the storage API rate-limits after that');
     // The file dialog is native (the main process can't be stubbed on a release build), so macOS
     // answers it: Go to Folder with the file's path, then Open, typed only while Unvibe is in front.
@@ -366,28 +517,107 @@ if (explained) {
   });
 }
 
+/**
+ * A small git repo for the features that read history (Why does this exist?, Change Briefs): upload.js committed,
+ * then changed in the working tree. The author is neutral, because the answers show who changed the lines.
+ */
+function uploadRepo() {
+  // The real path: on macOS tmpdir() is under /var, a link to /private/var, and git reports the
+  // repo root through the link, so a /var file path would sit "outside" its own repo.
+  // A neutral project name, since Library and Briefs show it: <tmp>/<random>/sample-app.
+  const repo = path.join(realpathSync(mkdtempSync(path.join(tmpdir(), 'unvibe-media-repo-'))), 'sample-app');
+  mkdirSync(repo);
+  const git = (...args) => execFileSync('git', args, {
+    cwd: repo,
+    env: { ...process.env, GIT_AUTHOR_NAME: 'Sam', GIT_AUTHOR_EMAIL: 'sam@example.com', GIT_COMMITTER_NAME: 'Sam', GIT_COMMITTER_EMAIL: 'sam@example.com' },
+  });
+  const file = path.join(repo, 'upload.js');
+  git('init', '-q');
+  writeFileSync(file, [
+    'export async function upload(file, send) {',
+    '  for (let attempt = 1; ; attempt++) {',
+    '    try {',
+    '      return await send(file);',
+    '    } catch (error) {',
+    '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n'));
+  git('add', '.');
+  git('commit', '-q', '-m', 'Retry uploads with backoff so a dropped connection does not lose the file');
+  writeFileSync(file, [
+    '// The storage API rate-limits after five quick failures, so stop there.',
+    'const MAX_ATTEMPTS = 5;',
+    '',
+    'export async function upload(file, send) {',
+    '  for (let attempt = 1; ; attempt++) {',
+    '    try {',
+    '      return await send(file);',
+    '    } catch (error) {',
+    '      if (attempt >= MAX_ATTEMPTS) throw error;',
+    '      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n'));
+  return { repo, file, git };
+}
+
+/**
+ * After a few explanations the companion asks for feedback (a modal, feedback.tsx, 2.5 s after Today shows). Close
+ * it the way a person would, so the tour's clicks reach the page; `wait` ms for it to appear first.
+ */
+async function closeFeedback(wait) {
+  const overlay = companion.locator('.fbk-overlay');
+  try { await overlay.waitFor({ timeout: Math.max(wait, 1) }); } catch { return; }
+  await companion.getByRole('button', { name: 'Close feedback', exact: true }).click();
+  await overlay.waitFor({ state: 'detached', timeout: 5000 });
+  console.log('NOTE closed the feedback card');
+}
+
 // --- Finish onboarding and tour the companion ------------------------------------------------
 await step('today', async () => {
   await companion.bringToFront();
-  if (await companion.locator('.onboard__count').count()) {
-    await button(companion, 'Next').click();
-    await companion.locator('.onboard__count').filter({ hasText: `3 / ${steps}` }).waitFor();
-    await sleep(1000);
-    await shot(companion, 'onboarding-anywhere');
-    // Step 3 is the paste target on both systems; nothing is pasted here, so Skip for now finishes setup.
-    await button(companion, 'Skip for now').click();
+  // Walk the rest of setup by whatever the footer offers: step 2 says Next (or Skip for now before an explanation);
+  // on a Mac, step 3 says Next once own code was explained there (the pasted samples count) and step 4 offers the
+  // shortcut (Not now finishes), else step 3's Skip for now finishes; Windows ends with Start using Unvibe.
+  // The redesign's setup is `.onboard` (`.onboard__count` for the step), not 0.1.51's `.ob2`.
+  const labels = ['Not now', 'Do it later', 'Start using Unvibe', 'Skip for now', 'Next'];
+  // A step can be mid-transition (e.g. "Welcome!" while setup closes), so a step with no known button is looked at
+  // again a moment later; only a step that stays that way fails.
+  let stuck = 0;
+  for (let i = 0; i < 12 && await companion.locator('.onboard__count').count(); i++) {
+    if (await companion.locator('.onboard__count').filter({ hasText: `3 / ${steps}` }).count()) {
+      await sleep(1000);
+      await shot(companion, 'onboarding-anywhere');
+    }
+    let clicked = false;
+    for (const name of labels) {
+      const b = companion.locator('.onboard').getByRole('button', { name, exact: true });
+      if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
+    }
+    if (!clicked) {
+      if (!await companion.locator('.onboard__count').count()) break; // setup finished while this looked
+      if (++stuck >= 4) {
+        const names = await companion.locator('.onboard button:visible').allInnerTexts();
+        throw new Error(`setup step ${await companion.locator('.onboard__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
+      }
+    }
+    await sleep(1200);
   }
   await companion.locator('.topbar__title').filter({ hasText: 'Today' }).waitFor({ timeout: 15000 });
+  await closeFeedback(4000);
   await sleep(1800);
   await shot(companion, 'today');
 });
 
 for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
   await step(page, async () => {
-    // Momentum sits under "More" in the 0.1.51 sidebar.
-    const nav = companion.locator('.side').getByRole('button', { name: page, exact: true });
-    if (!(await nav.isVisible())) await companion.locator('.side').getByRole('button', { name: 'More', exact: true }).click();
-    await nav.click();
+    await closeFeedback(0);
+    await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     await sleep(1800);
     await shot(companion, page.toLowerCase().replace(/\s+/g, '-'));
@@ -396,6 +626,7 @@ for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
 
 // Ask Vibe answers a real question about what was just learned.
 await step('ask vibe answer', async () => {
+  await closeFeedback(0);
   const question = 'Explain debounce again in one sentence, like I am new to this.';
   const chat = companion.locator('#chatDraft');
   const send = companion.locator('.chat-dock').getByRole('button', { name: 'Send', exact: true });
@@ -415,6 +646,7 @@ await step('ask vibe answer', async () => {
 });
 
 await step('settings privacy', async () => {
+  await closeFeedback(0);
   await companion.locator('.side-settings').click();
   await companion.locator('.mside').getByRole('button', { name: 'Privacy & Data', exact: true }).click();
   await sleep(1200);
@@ -427,11 +659,31 @@ await step('island', async () => {
   await shot(bar, 'island');
 });
 
+// One Change Brief open: the sample project chosen before launch (briefRepo), its working-tree change to upload.js.
+// Reading a brief stays on the computer.
+await step('brief open', async () => {
+  await closeFeedback(0);
+  await companion.bringToFront();
+  await companion.locator('.side').getByRole('button', { name: 'Briefs', exact: true }).click();
+  await companion.locator('.topbar__title').filter({ hasText: 'Briefs' }).waitFor({ timeout: 10000 });
+  try {
+    await companion.locator('.briefings').getByText('upload.js').first().waitFor({ timeout: 45000 });
+  } catch (e) {
+    // What the page shows instead: a still and its text, for the next fix.
+    await shot(companion, 'briefs-failed');
+    console.log(`  briefs text: ${(await companion.locator('.briefings').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 600)}`);
+    throw e;
+  }
+  await sleep(1800);
+  await shot(companion, 'briefs-open');
+});
+
 for (const v of videos) v.stop();
 await app.close();
 // Every recording was ended above; wait for the encoders to write their files.
 await Promise.race([Promise.all(videos.map((v) => v.done)), sleep(30000)]);
 const files = videos.map((v) => ({ window: v.window, opened: v.opened, closed: v.closed, path: existsSync(v.path) ? v.path : null }));
 writeFileSync(path.join(out, 'timeline.json'), JSON.stringify({ version, marks, videos: files, failures }, null, 2));
+writeFileSync(path.join(out, 'snippets.json'), JSON.stringify({ version, snippets }, null, 2));
 console.log(JSON.stringify({ version, failures, videos: files }, null, 2));
 process.exit(failures.length ? 1 : 0);

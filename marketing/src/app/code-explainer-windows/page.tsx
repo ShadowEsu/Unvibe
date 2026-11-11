@@ -31,7 +31,7 @@ export default function CodeExplainerWindowsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Code explainer for Windows", path: PATH }])) }}
       />
-      <header className="explain-head">
+      <div className="explain-head">
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/">Home</Link> <span aria-hidden="true">/</span> Code explainer for Windows
         </nav>
@@ -43,7 +43,7 @@ export default function CodeExplainerWindowsPage() {
         <div className="os-get">
           <InstallBox os="windows" surface="seo_windows" />
         </div>
-      </header>
+      </div>
 
       <section className="explain-card os-how" aria-labelledby="win-how">
         <div>

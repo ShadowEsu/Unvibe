@@ -41,6 +41,7 @@ function pages(): string[] {
     `- [Use cases](${url(USE_CASES_INDEX.path)}): ${USE_CASES_INDEX.description}`,
     ...useCases.map((useCase) => `- [${useCase.title}](${url(pathForUseCase(useCase))}): ${useCase.description}`),
     `- [Explain code in your browser](${url("/explain")}): paste code and get a real explanation online, no download`,
+    `- [Help](${url("/help")}): install, shortcut, Accessibility and sign-in fixes`,
     `- [Install help](${url("/install-help")})`,
     `- [Changelog](${url("/releases")})`,
     `- [Privacy](${url("/privacy")})`,

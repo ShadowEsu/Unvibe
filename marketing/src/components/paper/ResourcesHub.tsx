@@ -166,6 +166,14 @@ export function ResourcesHub() {
               </div>
             </div>
           </div>
+
+          <p className="resources-section__more">
+            Want to see it first? Paste a snippet on{" "}
+            <Link href="/explain" className="paper-text-link">
+              Explain code
+            </Link>
+            , pick a depth and Vibe tells you what the code does. Free, no account.
+          </p>
         </section>
       )}
 
@@ -433,7 +441,7 @@ export function ResourcesHub() {
           <p>Download Unvibe for Mac or Windows (x64) and explain your first selection.</p>
         </div>
         <div className="resources-cta-actions">
-          <DownloadRow href="/beta" surface="resources" />
+          <DownloadRow surface="resources" />
           <Link href="/pricing" className="paper-text-link">
             See pricing
           </Link>

@@ -336,7 +336,7 @@
   to { transform: none; }
 }
 
-.sel-card header {
+.sel-card__head {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -357,7 +357,7 @@
   font-weight: 600;
 }
 
-.sel-card header kbd { margin-left: auto; }
+.sel-card__head kbd { margin-left: auto; }
 
 /* The flat Vibe mark: no gradient, no glow. */
 .sel-card__logo {

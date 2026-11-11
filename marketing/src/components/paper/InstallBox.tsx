@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
+import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
 import {
   BETA_INSTALL_COMMAND,
@@ -85,9 +86,11 @@ const COPIED_MS = 1600;
  * curl and PowerShell downloads carry no quarantine mark, so Gatekeeper never asks. The file is the second choice,
  * with its first-open steps shown right under it, open by default.
  *
- * `os` is the visitor's computer as the caller detected it; the text button switches to the other one.
+ * `os` is the visitor's computer as the caller detected it; the text button switches to the other one. `guided`
+ * (direction D's /download, Security 18:51Z GO) adds the "picked for you" line and numbers the two ways: "(1) The
+ * smooth path" over the command and "(2)" before the file link; the order and every other string stay the same.
  */
-export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: InstallOs; surface: DownloadSurface; intelMac?: boolean }) {
+export function InstallBox({ os: detectedOs, surface, intelMac = false, guided = false }: { os: InstallOs; surface: DownloadSurface; intelMac?: boolean; guided?: boolean }) {
   const [os, setOs] = useState<InstallOs>(detectedOs);
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -99,7 +102,8 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
   }, [copied]);
 
   const copy = INSTALL_COPY[os];
-  const titleId = `ninst-${surface}-title`;
+  // Unique per box: a page can carry both computers' boxes for the same surface (the home's Get Unvibe).
+  const titleId = useId();
   const fileHref = os === "mac" && intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : copy.fileHref;
 
   const copyCommand = async () => {
@@ -117,6 +121,8 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
   return (
     <div className="ninst" data-os={os}>
       <p className="ninst__title" id={titleId}>{copy.title}</p>
+      {guided ? <p className="ninst__picked">We picked the file for your computer. Not right? Switch below.</p> : null}
+      {guided ? <p className="ninst__k">(1) The smooth path</p> : null}
       <div className="ninst__box">
         {/* Scrolls sideways on narrow screens instead of wrapping, so the command is always one line to select. */}
         <div className="ninst__cmd" role="group" aria-labelledby={titleId} tabIndex={0}>
@@ -134,6 +140,7 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
       </button>
       <div className="ninst__file">
         <p className="ninst__file-links">
+          {guided ? <span className="ninst__k">(2) </span> : null}
           <a className="paper-text-link" href={fileHref} onClick={() => trackDownloadClick(surface, os)}>{copy.fileLink}</a>
           {os === "mac" ? (
             <>
@@ -156,6 +163,12 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false }: { os: 
             <a className="paper-text-link" href={os === "mac" ? MAC_SHA256_URL : WINDOWS_SHA256_URL}>SHA-256 checksums</a>
           </span>
         </p>
+        {/* The no-warning option (ledger 591, Design S-1 on #274): /beta#browser, the web app at /explain. */}
+        {os === "mac" && !AI_MAINTENANCE ? (
+          <p className="ninst__line">
+            No install warning? <a className="paper-text-link" href="/beta#browser">Use Unvibe in your browser</a>
+          </p>
+        ) : null}
         <details className="ninst__steps" open>
           <summary>{copy.stepsTitle}</summary>
           <ol>

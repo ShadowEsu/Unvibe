@@ -15,6 +15,16 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      media_samples:
+        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media"
+        type: boolean
+        required: false
+        default: false
+      desktop_recording:
+        description: "Also record the whole screen around the global-shortcut step (demo video; Mac .mov, Windows JPEG frames)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -189,6 +199,9 @@ jobs:
           UNVIBE_E2E_PROFILE: ${{ runner.temp }}/walkthrough-profile
           # Seeded into the profile, so this run's install is known and flagged as QA below.
           E2E_INSTALL_ID: qa-walkthrough-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          # Off unless asked for: the recording is for the demo video, not a check.
+          DESKTOP_RECORDING: ${{ inputs.desktop_recording && '1' || '' }}
+          DESKTOP_RECORDING_DIR: ${{ runner.temp }}/desktop-recording
         run: |
           cp app/e2e/real-device.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
@@ -285,6 +298,15 @@ jobs:
           path: ${{ runner.temp }}/shots
           retention-days: 14
 
+      - name: Upload the desktop recording
+        if: always() && inputs.desktop_recording
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unvibe-${{ matrix.label }}-desktop-recording
+          path: ${{ runner.temp }}/desktop-recording
+          if-no-files-found: ignore
+          retention-days: 14
+
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
@@ -297,8 +319,10 @@ jobs:
           # A fresh install per run: one reused id spends its 50 free explanations and then every
           # capture shows the limit instead of an answer. The next step flags it as QA.
           MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
+          MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
         run: |
           cp app/e2e/marketing-media.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          cp -R app/e2e/media-samples "$RUNNER_TEMP/pw/"
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)

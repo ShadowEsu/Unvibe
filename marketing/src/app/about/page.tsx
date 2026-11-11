@@ -20,7 +20,7 @@ export default function AboutPage() {
   const releases = changelogEntries().filter((m) => m.category === "PRODUCT" && m.figure?.startsWith("v")).length;
   return (
     <article className="about-page">
-      <header className="about-page__hero paper-wrap">
+      <div className="about-page__hero paper-wrap">
         <div className="about-page__avatar" aria-hidden="true">
           <Vibe size={84} />
         </div>
@@ -36,7 +36,7 @@ export default function AboutPage() {
             <a className="about-page__btn" href="mailto:support@unvibe.site">Email us</a>
           </div>
         </div>
-      </header>
+      </div>
 
       <section className="paper-wrap" aria-labelledby="about-who">
         <h2 className="about-page__h2" id="about-who">Who it&apos;s for</h2>
@@ -46,7 +46,7 @@ export default function AboutPage() {
       <section className="paper-wrap about-page__grid">
         <article className="about-page__card">
           <h2>Why we started</h2>
-          <p>AI made writing code cheap and understanding it rare. Students copy code they can&apos;t explain, builders merge changes nobody read, and the first time anyone looks closely is when it breaks. We think the fix isn&apos;t to stop using AI. It&apos;s to make reading what it wrote take one shortcut instead of an afternoon.</p>
+          <p>AI made writing code cheap and understanding it rare. Students copy code they can&apos;t explain, builders merge changes nobody read, and the first time anyone looks closely is when it breaks. We think the fix isn&apos;t to stop using AI. It&apos;s to make reading what it wrote take one shortcut instead of an afternoon. <Link href="/why">Why we built Unvibe</Link></p>
         </article>
         <article className="about-page__card">
           <h2>What we believe</h2>

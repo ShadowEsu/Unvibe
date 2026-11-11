@@ -1,5 +1,5 @@
 import { WELCOME_SUBJECT, welcomeHtml, welcomeText } from "@/emails/welcome";
-import { feedbackRewardUrl, siteOrigin } from "@/lib/rewardLink";
+import { siteOrigin } from "@/lib/rewardLink";
 import { unsubscribeHeaders, unsubscribeUrl } from "@/lib/unsubscribe";
 import { isEmailUnsubscribed } from "@/lib/waitlistStore";
 
@@ -27,9 +27,7 @@ export async function sendWelcomeEmail(input: {
   }
   const content = {
     email: input.email,
-    referralCode: input.referralCode,
     downloadUrl: input.downloadUrl,
-    feedbackUrl: feedbackRewardUrl(input.email),
     unsubscribeUrl: unsubscribeUrl(input.email),
     setupTipFollows: input.setupTipFollows,
     siteUrl: siteOrigin(),

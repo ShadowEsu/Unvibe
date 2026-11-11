@@ -47,8 +47,11 @@ const SECRET_PARAMS: Record<string, true> = {
 /** Property names that hold a URL or part of one (Mixpanel `$current_url`, `current_url_search`, …). */
 const URL_PROPERTY = /(url|referrer|href|pathname|path|search)$/i;
 
-/** Pages that render private data, whose URL is a secret, or that hold a sign-in session. No analytics SDK starts on them. */
-const PRIVATE_PATH = /^\/(console|waitlist|waitlist-admin|s|activate|redeem)(\/|$)/;
+/**
+ * Pages that render private data, whose URL is a secret, or that hold a sign-in session, plus the PMF
+ * survey page, which promises no tracking beyond the answer. No analytics SDK starts on them.
+ */
+const PRIVATE_PATH = /^\/(console|waitlist|waitlist-admin|s|activate|redeem|survey)(\/|$)/;
 
 function cleanSearch(search: string): string {
   if (!search || search === "?") return search;
