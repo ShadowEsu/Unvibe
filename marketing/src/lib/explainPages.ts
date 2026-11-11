@@ -31,7 +31,7 @@ export interface ExplainPage {
   /**
    * The <title> and link-preview title without the " · Unvibe" suffix, for pages whose target query is a command,
    * error or pattern: it starts with the words people type ("ps aux output explained, column by column"), at most
-   * 51 characters so the whole title stays under 60. Without it the title is "Explain {heading} in plain English".
+   * 51 characters so the whole title is at most 60. Without it the title is "Explain {heading} in plain English".
    * The H1 keeps "Explain {heading}" (Design); the two say the same thing in a different order.
    */
   title?: string;
@@ -3020,7 +3020,7 @@ model Post {
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
-    title: "Tailwind CSS classes explained, one by one",
+    title: "Tailwind CSS classes explained: md:, hover:, dark:",
     related: ["css", "html", "react-useeffect"],
     lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
     description:
@@ -3294,7 +3294,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
   {
     id: "tar",
     fileName: "backup-site.sh",
-    title: "tar command explained: every flag",
+    title: "tar command explained: what each letter does",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
     description:
@@ -3343,7 +3343,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
   {
     id: "rsync",
     fileName: "backup.sh",
-    title: "rsync command explained: flags and the slash",
+    title: "rsync command explained: flags and trailing slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
     description:
@@ -3393,7 +3393,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
-    title: "git rebase -i explained: the todo list",
+    title: "git rebase -i explained: the interactive todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
@@ -3541,7 +3541,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
   {
     id: "systemd",
     fileName: "notes-api.service",
-    title: "systemd service file explained, line by line",
+    title: "systemd service file explained, section by section",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
     description:
@@ -3763,7 +3763,7 @@ export function deliveryDays(country) {
     id: "npm-error",
     fileName: "npm-install.txt",
     heading: "npm errors",
-    title: "npm error explained: code 1, ENOENT, node-gyp",
+    title: "npm error code 1, ENOENT and node-gyp explained",
     related: ["npm-scripts", "package-lock", "json", "python-traceback"],
     lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
     description:
@@ -3817,7 +3817,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
     id: "lsof",
     fileName: "lsof.txt",
     heading: "lsof output",
-    title: "lsof explained: find what holds a port",
+    title: "lsof command explained: find what holds a port",
     related: ["ps-aux", "curl", "bash"],
     lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
     description:

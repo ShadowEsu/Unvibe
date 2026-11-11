@@ -88,7 +88,7 @@ describe("explain pages", () => {
     }
   });
 
-  it("search titles stay under 60 characters with the site suffix and are unique", () => {
+  it("search titles are at most 60 characters with the site suffix and are unique", () => {
     const seen = new Set<string>();
     for (const { id, title } of explainPages) {
       if (!title) continue;
