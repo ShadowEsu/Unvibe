@@ -404,7 +404,7 @@
 :root[data-ui="v3"][data-v7] .layout .metric-card { padding: 20px 22px; }
 /* The six months fill the card's width (26 weeks as fluid columns, square cells) instead of a 390 px block at the
    left; the "Where you learn" bar gets a visible track (Design S-1 whole-app, Momentum). */
-:root[data-ui="v3"][data-v7] .layout .heat { grid-template-columns: repeat(26, minmax(0, 1fr)); grid-template-rows: repeat(7, auto); grid-auto-columns: auto; gap: 4px; overflow: hidden; padding-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .heat { grid-template-columns: repeat(26, minmax(0, 1fr)); grid-template-rows: repeat(7, auto); grid-auto-columns: auto; gap: 4px; max-width: 568px; overflow: hidden; padding-bottom: 0; }
 :root[data-ui="v3"][data-v7] .layout .heat i { aspect-ratio: 1; width: 100%; background: color-mix(in srgb, var(--u-ink) 7%, transparent); border-radius: 4px; }
 :root[data-ui="v3"][data-v7] .layout .bar-track { height: 9px; background: color-mix(in srgb, var(--u-ink) 10%, transparent); }
 :root[data-ui="v3"][data-v7] .layout .bar-track i { background: var(--u-accent); min-width: 0; }
@@ -842,11 +842,17 @@
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson:not(.learn-page--survey) { align-self: stretch; width: 100%; }
 /* The ask bar floats over the page's bottom on every page that has it (Design S-1 r2 SHOULD 1, whole-app S2): the
    page is the scroller and keeps bar + 24 px (58 + 18 + 24 = 100 px) of bottom padding so its last row clears the
-   bar at the end of the scroll; rows passing under it show through the bar's glass. No band and no mask (the cards
-   keep their backdrop blur, Design 07 Nov answer 2). The lesson scrolls inside .lesson-doc, so its page drops the
-   side padding and the lesson's scrollbar sits at the window's edge. */
+   bar at the end of the scroll. Rows passing under the bar fade out first: a 140 px overlay on the column, edge to
+   edge (over the scrollbar too), transparent at its top and the ground at the bar: a long gradient, not a band (the
+   earlier 16 px-then-solid band read as a block). An overlay, not a mask, so the cards keep their backdrop blur
+   (Design 07 Nov answer 2). The lesson scrolls inside .lesson-doc, so its page drops the side padding and the
+   lesson's scrollbar sits at the window's edge. */
 :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .page { padding-bottom: 100px; }
 :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .ask-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; margin: 0 auto 18px; }
+:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 140px; z-index: 1; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--u-paper) 80%, transparent) 60%, var(--u-paper) 94px);
+}
 :root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding: 12px 0 0; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 100px; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-doc:not(.lesson-doc--survey) {
