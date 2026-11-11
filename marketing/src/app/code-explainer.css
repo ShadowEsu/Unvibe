@@ -160,3 +160,21 @@ ol.explain-notes {
   color: var(--explain-muted);
   font-size: 0.95rem;
 }
+
+/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays a reading measure (68ch), while the worked example's
+   code block and the "Doing it with Unvibe" steps widen to about 860 px so the 1440 page runs shorter (Design SHOULD
+   on #269). The list keeps its marker inside the same 860 px. Under 1024 nothing changes. */
+@media (min-width: 1024px) {
+  .explain-page--uc .explain-card p,
+  .explain-page--uc .explain-card li,
+  .explain-page--uc .explain-card dd {
+    max-width: 68ch;
+  }
+  .explain-page--uc .use-sample,
+  .explain-page--uc .explain-notes {
+    max-width: 860px;
+  }
+  .explain-page--uc .explain-notes li {
+    max-width: none;
+  }
+}

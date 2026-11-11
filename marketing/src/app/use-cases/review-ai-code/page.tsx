@@ -36,7 +36,7 @@ const DIFF = ` export async function fetchUser(id: string): Promise<User> {
 export default async function ReviewAiCodePage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <article className={`explain-page ${explainMono.variable}`}>
+    <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Understand an AI code change before you accept it">
         <p>
           Cursor, Claude Code and Copilot can change several files in the time it takes you to read one. The

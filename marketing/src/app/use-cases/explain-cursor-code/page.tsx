@@ -56,7 +56,7 @@ const HOOK = `export function useSearch(query: string) {
 export default async function ExplainCursorCodePage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <article className={`explain-page ${explainMono.variable}`}>
+    <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Explain the code Cursor wrote">
         <div className="uc-fold">
           <div className="uc-fold__text">

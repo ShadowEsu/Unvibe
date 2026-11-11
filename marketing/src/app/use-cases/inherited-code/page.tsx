@@ -28,7 +28,7 @@ const FUNCTION = `export function normalizeEmail(raw) {
 export default async function InheritedCodePage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <article className={`explain-page ${explainMono.variable}`}>
+    <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Understand code you didn't write before you change it">
         <p>
           A teammate&apos;s service, your own project from two years ago, an open-source repo you want to fix. The code
