@@ -1,0 +1,64 @@
+name: IndexNow
+
+# After Vercel reports a successful Production deployment of the site, submit the new and changed unvibe.site URLs
+# to IndexNow (Bing, Yandex, Seznam, Naver). The previous run's sitemap list and deployed commit come from the
+# Actions cache; with no cache (first run) every sitemap URL is submitted once. Read-only on the repo; the IndexNow
+# key is public by design (marketing/scripts/indexnow.mjs).
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "Submit the whole live sitemap"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexnow
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Previous run
+        id: prev
+        uses: actions/cache/restore@v4
+        with:
+          path: marketing/.indexnow
+          key: indexnow-${{ github.run_id }}
+          restore-keys: indexnow-
+      - name: Wait for the deployment to serve
+        run: |
+          for i in $(seq 1 20); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' https://unvibe.site/sitemap.xml)" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "sitemap.xml never answered 200" >&2; exit 1
+      - name: Submit
+        working-directory: marketing
+        env:
+          SHA: ${{ github.event.deployment.sha || github.sha }}
+        run: |
+          if [ "${{ inputs.all }}" = "true" ] || [ ! -f .indexnow/submitted.txt ]; then
+            node scripts/indexnow.mjs --all
+          else
+            node scripts/indexnow.mjs --prev-urls .indexnow/submitted.txt --prev-sha "$(cat .indexnow/sha)" --sha "$SHA"
+          fi
+          echo "$SHA" > .indexnow/sha
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: marketing/.indexnow
+          key: indexnow-${{ github.run_id }}
