@@ -1112,7 +1112,7 @@ html[data-r2] {
   position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; overflow: hidden; cursor: default;
   background: linear-gradient(rgb(16 12 34 / 0.8), rgb(16 12 34 / 0.8)), url("./aurora.webp") center 30% / 170% auto no-repeat, #16122a;
 }
-.sharks-intro__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); animation: mFade var(--m-fast) var(--m-ease-smooth) both; }
+.sharks-intro__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); }
 @keyframes mFade { from { opacity: 0; } }
 .sharks-intro__lockup {
   position: relative; display: inline-flex; align-items: center; gap: 12px; padding: 12px 20px 12px 14px; border-radius: 999px;
@@ -1193,7 +1193,7 @@ html[data-r2] {
 :root[data-ui="v3"][data-v7] .vibe-float__btn { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__canvas, .sharks-intro__lockup, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__lockup, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .sharks-intro--out { animation-duration: 200ms; }
   :root[data-ui="v3"][data-v7] .layout :is(.nav-pill, .seg-thumb, .nav button, .home-cta, .history-continue) { transition: none; }
   :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: none; }
