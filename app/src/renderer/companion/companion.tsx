@@ -1886,8 +1886,9 @@ function App() {
     if (!startAnimation) setIntro('off');
   }, [startAnimation]);
   useEffect(() => {
-    if (gate === 'onboarding' || gate === 'login') setIntro('off');
-  }, [gate]);
+    // No stage over the first run, sign-in or the paste step: those screens are full-window moments of their own.
+    if (gate === 'onboarding' || gate === 'login' || ownCodeStep) setIntro('off');
+  }, [gate, ownCodeStep]);
   const introOn = intro === 'swim' || intro === 'leaving';
 
   if (gate === 'checking') return <>{introOn ? <SharksIntro onPhase={setIntro} /> : null}<div className="titlebar" /></>;
