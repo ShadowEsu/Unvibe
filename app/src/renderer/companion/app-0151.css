@@ -1190,7 +1190,7 @@ html[data-r2] {
 /* §3 row 16: a reviewed item's text goes to ink-3 over --m-fast. */
 :root[data-ui="v3"][data-v7] .layout .agent-review label span { transition: color var(--m-fast) var(--m-ease-sharp); }
 /* §1: nothing loops at rest except Vibe's blink; v5's 3.6 s bob on the floating Vibe button stops. */
-:root[data-ui="v3"][data-v7] .layout .vibe-float__btn { animation: none; }
+:root[data-ui="v3"][data-v7] .vibe-float__btn { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__canvas, .sharks-intro__lockup, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-meter__fill, .usage-bar i)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }

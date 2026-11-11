@@ -1903,8 +1903,11 @@ function App() {
     return (<><div className="titlebar" /><OwnCodeWelcome soundEffects={settings?.soundEffects ?? true} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onNotNow={notNow} /></>);
   }
 
+  // The stage is the first child here and in the `checking` fragment above, so React keeps the same instance (and
+  // the same swimming sharks) when the gate opens instead of remounting it with a blank frame between.
   return (
     <>
+      {introOn ? <SharksIntro onPhase={setIntro} /> : null}
       <ConsentDialog buttonClass="field-btn" />
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
@@ -2048,7 +2051,6 @@ function App() {
       <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
       {toast && <div className={`toast${toastLeaving ? ' is-leaving' : ''}`} role="status">{toast}</div>}
-      {introOn ? <SharksIntro onPhase={setIntro} /> : null}
     </>
   );
 }
