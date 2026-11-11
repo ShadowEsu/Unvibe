@@ -3851,6 +3851,15 @@ export function explainHeading(page: ExplainPage): string {
   return page.heading ?? `${explainLanguage(page).name} code`;
 }
 
+/**
+ * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
+ */
+export function explainHeadingText(page: ExplainPage): string {
+  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
+}
+
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
 export function explainLinks(page: ExplainPage): { related: ExplainPage[]; others: ExplainPage[] } {
   const relatedIds = page.related ?? [];
