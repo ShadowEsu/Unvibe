@@ -40,10 +40,10 @@ export default function WaitingForGoogleSignInPage() {
       <section className="verify" aria-labelledby="says-title">
         <h2 id="says-title">What Unvibe shows</h2>
         <p>Under the sign-in button, Unvibe 0.1.51 shows one of these lines, with the code below it:</p>
-        <pre style={{ wordBreak: "normal" }}>
-          {"Finish in your browser. Check this code matches, then press Connect this device:\n"}
-          {"Your browser did not open. Press Open browser, then check this code matches:"}
-        </pre>
+        <ul className="help-list">
+          <li>&ldquo;Finish in your browser. Check this code matches, then press Connect this device:&rdquo;</li>
+          <li>&ldquo;Your browser did not open. Press Open browser, then check this code matches:&rdquo;</li>
+        </ul>
         <p>
           There is no Connect this device button: on the web page, press <b>Approve sign-in</b>. Find the case that matches yours below.
         </p>
@@ -79,7 +79,7 @@ export default function WaitingForGoogleSignInPage() {
             Press <b>Approve sign-in</b>.
           </li>
         </ol>
-        <p>
+        <p style={{ marginTop: 12 }}>
           You can use <b>Continue with Google</b> instead. If the page then says &ldquo;Sign-in did not finish.&rdquo;, use the email
           steps above.
         </p>
@@ -88,10 +88,10 @@ export default function WaitingForGoogleSignInPage() {
       <section className="verify" aria-labelledby="expired-title">
         <h2 id="expired-title">It&apos;s been more than 10 minutes</h2>
         <p>A sign-in code lasts 10 minutes. After that Unvibe says one of these:</p>
-        <pre style={{ wordBreak: "normal" }}>
-          {"Sign-in timed out. Use Retry to create a new secure link.\n"}
-          {"This sign-in link is no longer valid. Use Retry to create a new one."}
-        </pre>
+        <ul className="help-list">
+          <li>&ldquo;Sign-in timed out. Use Retry to create a new secure link.&rdquo;</li>
+          <li>&ldquo;This sign-in link is no longer valid. Use Retry to create a new one.&rdquo;</li>
+        </ul>
         <p>
           Press <b>Retry</b> in Unvibe. It opens a new browser tab with the new code already filled in (if it doesn&apos;t, use Copy link
           as above). Use that tab and close the old
