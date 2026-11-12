@@ -44,8 +44,14 @@ async function liveSitemap() {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
 }
 
+/** Only full commit SHAs reach git: the args come from a workflow env and a cached file, never from a user. */
+const isSha = (s) => /^[0-9a-f]{40}$/.test(s ?? "");
+
 function changedFiles(prevSha, sha) {
-  if (!prevSha || !sha) return [];
+  if (!isSha(prevSha) || !isSha(sha)) {
+    if (prevSha || sha) console.warn(`not two full commit SHAs (${prevSha} / ${sha}); submitting new sitemap URLs only`);
+    return [];
+  }
   try {
     return execFileSync("git", ["diff", "--name-only", `${prevSha}..${sha}`], { encoding: "utf8" }).split("\n").filter(Boolean);
   } catch (error) {
