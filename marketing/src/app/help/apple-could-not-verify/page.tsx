@@ -36,7 +36,7 @@ export default function AppleCouldNotVerifyPage() {
           </p>
           <p className="fos__note">
             Applies to every Unvibe download so far: none is notarized by Apple yet. The pictures are from 0.1.49 on macOS 15; macOS 26
-            shows the same text.
+            shows the same text, with Move to Trash above Done.
           </p>
         </div>
       </header>
