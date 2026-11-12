@@ -1,15 +1,15 @@
 /**
- * Unvibe's fork of ascii-sharks' renderer.ts (vendor/ascii-sharks, MIT © 2026 drewdi, commit a0074c16): the same
- * rasteriser, re-coloured for the G1 violet glass. Every change from the original is a palette: the ground is
- * transparent (the stage's dark ground shows through), the grid, dots, fish, shark skin and glyph inks come from PALETTE
- * below, and the canvas is created with alpha. Geometry, shading and the field code are untouched.
+ * Unvibe's fork of ascii-sharks' renderer.ts (vendor/ascii-sharks, MIT © 2026 drewdi, commit a0074c16), copied from
+ * the app's shared/sharks/violetRenderer.ts on app/redesign-0151 with the site's own palette: the same rasteriser,
+ * the ground transparent, no grid, and every dot, fish, skin and glyph ink from LIGHT_PALETTE below (violet and
+ * lilac only on the site); the canvas is created with alpha. Geometry, shading and the field code are untouched.
  *
  * Draws the World as a grid of ASCII cells:
- *   1. a pure black cell grid
- *   2. a wake field that diffuses where things swim, lighting the dots cyan
+ *   1. a cell grid (transparent here)
+ *   2. a wake field that diffuses where things swim, lighting the dots
  *   3. fish as minimal ASCII dashes, one per cell, glinting on hard turns
- *   4. sharks rasterised cell-by-cell with supersampled edges: grey blocks
- *      shaded by the light, dense glyphs, and shimmering accent colours
+ *   4. sharks rasterised cell-by-cell with supersampled edges: blocks shaded by the light, dense glyphs, and
+ *      shimmering accent colours
  */
 import { clamp, hash3, smoothstep } from "@/vendor/ascii-sharks/math";
 import { SHARK_NODES, type Shark, type SharkKind, type World } from "@/vendor/ascii-sharks/world";
@@ -29,30 +29,15 @@ export interface SharkPalette {
   heat: string;
 }
 
-/** The stage palette: the start stage is always the dark ground (SPEC §2.2): violet #5a3fe0 / lilac #b8a6ff /
- * pink #e879c9 / blue #60a5fa; inks from tokens.css. Also the in-app palette on the dark theme (lilac on the dark
- * glass). */
-export const PALETTE: SharkPalette = {
-  grid: "rgba(184,166,255,0.07)",
-  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [196, 181, 253], [216, 206, 255]],
-  accents: ["#b8a6ff", "#e879c9", "#60a5fa", "#d6f45a", "#8f7bff", "#f0abfc", "#ffffff"],
-  fish: "196,181,253",
-  skin: [[27, 21, 56], [75, 58, 158], [143, 123, 255], [226, 219, 255]],
-  glyphDark: "#16122a",
-  glyphDarker: "#0e0b1c",
-  glyphLight: "#f3f1fa",
-  eye: "#f3f1fa",
-  edge: [120, 100, 220],
-  heat: "255,120,200",
-};
-
-/** The in-app palette on the light theme (Design IN-APP-SHARKS: transparent ground, violet ink): the skin ramp runs
- * from pale lilac in shadow to the brand violet when lit, so a shark reads as violet ink on the paper, not a dark
- * block; glyphs are the dark violet ink, the light glyph is the paper. No grid. */
+/** The site's palette (Design 598 N1 + 12:4x addition): transparent ground, no grid, violet ink #5a3fe0 to lilac
+ * #cfc2ff and nothing else. The app's stage and dark palettes carry pink, blue and lime accents; the site never does
+ * (lime is the site's "selected code" highlight), so every dot, accent, wake and heat colour here is a violet or lilac.
+ * The skin ramp runs from pale lilac in shadow to the brand violet when lit, so a shark reads as violet ink on the
+ * paper; glyphs are the dark violet ink, the light glyph is the paper. */
 export const LIGHT_PALETTE: SharkPalette = {
   grid: "rgba(90,63,224,0)",
-  dots: [[106, 80, 245], [232, 121, 201], [96, 165, 250], [143, 123, 255], [90, 63, 224]],
-  accents: ["#5a3fe0", "#e879c9", "#3b82f6", "#8f7bff", "#7c3aed", "#5a3fe0", "#2a1f6e"],
+  dots: [[106, 80, 245], [143, 123, 255], [184, 166, 255], [207, 194, 255], [90, 63, 224]],
+  accents: ["#5a3fe0", "#8f7bff", "#b8a6ff", "#cfc2ff", "#7c5cf0", "#5a3fe0", "#2a1f6e"],
   fish: "90,63,224",
   skin: [[226, 219, 255], [184, 166, 255], [124, 100, 240], [90, 63, 224]],
   glyphDark: "#2a1f6e",
@@ -60,16 +45,7 @@ export const LIGHT_PALETTE: SharkPalette = {
   glyphLight: "#f6f4ff",
   eye: "#f6f4ff",
   edge: [90, 63, 224],
-  heat: "232,121,201",
-};
-
-/** The in-app palette on the dark theme (Design: lilac ink): the stage's inks without its grid (a grid in a band reads
- * as a boxed frame on the page), and a skin ramp that starts at a mid violet, not the stage's near-black, so the
- * shadow side of a shark still reads on the dark glass. */
-export const DARK_PALETTE: SharkPalette = {
-  ...PALETTE,
-  grid: "rgba(0,0,0,0)",
-  skin: [[70, 54, 150], [112, 92, 222], [184, 166, 255], [236, 230, 255]],
+  heat: "143,123,255",
 };
 
 function skinColor(stops: [number, number, number][], level: number, tr: number, tg: number, tb: number) {
@@ -85,7 +61,7 @@ function skinColor(stops: [number, number, number][], level: number, tr: number,
 const ALPHA_LEVELS = 6;
 const FISH_ALPHAS = [0.28, 0.42, 0.58, 0.74, 0.9];
 
-// Five dot colour classes (violet, pink, blue, lilac; the last is the wake); the colours come from PALETTE.
+// Five dot colour classes (violets and lilacs; the last is the wake); the colours come from the palette.
 const DOT_CLASSES = 5;
 const DOT_BASE_ALPHA = [1, 1, 1, 1, 1];
 const WAKE = DOT_CLASSES - 1;
@@ -385,7 +361,7 @@ export class VioletRenderer {
 
   /** Cells per canvas width: the stage uses 124 across the window; a band in a page uses fewer, so its sharks are not
    * 8 px specks (the cell stays within 8–13 px). */
-  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = PALETTE, private readonly cellsAcross = 124) {
+  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = LIGHT_PALETTE, private readonly cellsAcross = 124) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw new Error("2D canvas unavailable");
     this.ctx = ctx;
