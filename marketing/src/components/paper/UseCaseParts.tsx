@@ -13,7 +13,6 @@ import { USE_CASES_INDEX, pathForUseCase, useCases, type UseCase } from "@/lib/u
  * are /pricing's plan cards (pricingCopy), so a change there changes these pages too.
  */
 
-const accuracyAnswer = faqItems.find((item) => item.id === "accuracy")?.answer ?? "";
 const sentAnswer = faqItems.find((item) => item.id === "sent")?.answer ?? "";
 
 /** Breadcrumb (with its JSON-LD), H1 and the page's opening paragraph. */
@@ -84,7 +83,7 @@ export function UseCaseSteps({ select, ask, children }: { select: ReactNode; ask
         </li>
       </ol>
       {children}
-      <p>{accuracyAnswer}</p>
+      <p>AI can be wrong, even when it sounds sure. Each explanation sits next to its code so you can check it.</p>
     </section>
   );
 }
