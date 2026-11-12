@@ -461,7 +461,7 @@ function openCompanion(): void {
   openCompanionWindow(false);
 }
 
-/** `front`: a new companion window is brought in front of other apps once painted (first-run launch only). */
+/** `front`: a new companion window is brought in front of other apps once its first real screen is drawn (first-run launch only). */
 function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();

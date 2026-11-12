@@ -28,7 +28,7 @@ test('a first-run window the user opened on Windows is maximized before it shows
   assert.equal(revealed(), true);
 });
 
-test('the paint and the 5 s fallback both calling reveal show the window once', () => {
+test('the first-screen signal and the 5 s fallback both calling reveal show the window once', () => {
   const { win, calls } = fakeWindow();
   const { reveal } = companionRevealer(win, { maximize: true, front: true, platform: 'darwin' });
   reveal();

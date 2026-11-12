@@ -1646,15 +1646,13 @@ function App() {
 
   const refresh = async () => {
     // The usage line can wait on the network (a trial build asks the API for its count, up to 20 s offline); all
-    // the rest is on this computer. The first window used to stay empty for that whole round trip (#208), so the
-    // caller waits at most USAGE_WAIT_MS for it: a quick answer still opens on the right state (a used-up plan shows
-    // its banner from the first frame), and a slow one follows on the screen that is already there.
-    const usageSet = (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((usage) => {
-      setUsageLine(usage.ok && usage.data
-        ? usage.data
+    // the rest is on this computer, so nothing here waits for it: the first window used to stay empty for that
+    // whole round trip (#208). `usage` settles once the line is set, for the first screen's short wait below.
+    const usage = (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((reply) => {
+      setUsageLine(reply.ok && reply.data
+        ? reply.data
         : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
     }, () => undefined);
-    const usageOrTimeout = Promise.race([usageSet, new Promise<void>((resolve) => { window.setTimeout(resolve, USAGE_WAIT_MS); })]);
     try {
       const [acct, prof, hist, st, syncState, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
@@ -1674,12 +1672,11 @@ function App() {
         setSideWidth(st.sidebarWidth);
         sideLive.current = st.sidebarWidth;
       }
-      await usageOrTimeout;
-      return { acct, st };
+      return { acct, st, usage };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
       setSettings(st);
-      return { acct: null, st };
+      return { acct: null, st, usage };
     }
   };
 
@@ -1687,7 +1684,10 @@ function App() {
     void window.unvibe.appInfo().then((i) => setInfo(i as typeof info));
     void (async () => {
       try {
-        const { st } = await refresh();
+        const { st, usage } = await refresh();
+        // The first screen waits at most USAGE_WAIT_MS for the usage count: a quick answer opens on the right
+        // state (a used-up plan shows its banner from the first frame), a slow one follows on the screen.
+        await Promise.race([usage, new Promise<void>((resolve) => { window.setTimeout(resolve, USAGE_WAIT_MS); })]);
         // Local mode is a full product: no sign-in wall on every launch. Sign in stays in the
         // sidebar account menu for people who want sync.
         setGate(!st.onboarded ? 'onboarding' : 'app');
@@ -1937,7 +1937,7 @@ function App() {
   // The window stays hidden while the gate is checking (#208). This frame is still the one on screen for a moment
   // after the reveal (a hidden window gets no frames), so on a launch with the stage it is the stage's empty ground,
   // which the sharks then swim into; otherwise the app's ground. No stage starts here: a first run never gets one.
-  if (gate === 'checking') return FIRST_FRAME_STAGE ? <div className="sharks-intro" aria-hidden="true" /> : <div className="titlebar" />;
+  if (gate === 'checking') return FIRST_FRAME_STAGE ? <><div className="sharks-intro" aria-hidden="true" /><div className="titlebar" /></> : <div className="titlebar" />;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
