@@ -633,7 +633,7 @@ fragment UserBits on User {
     related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
-      "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
+      "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph.",
     sampleSummary: "The output of `git log -2` and `git log --oneline --graph --decorate --all` for a small repo: two people's commits, a branch merged back into main and a release tag.",
     sample: `$ git log -2
 commit 6dd93ddd5276a4e1a8ee3c3af46db31f8057a267
@@ -740,7 +740,7 @@ echo "Top errors written to $report"`,
     fileName: "Clear-OldLogs.ps1",
     lead: "Paste a PowerShell script and Vibe explains what each cmdlet in the pipeline passes along, what `$_` holds and what `-WhatIf` would change before anything runs.",
     description:
-      "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and reports their size.",
+      "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and sizes them.",
     sampleSummary: "A PowerShell script that finds .log files older than a number of days, deletes them with WhatIf support and prints a size report.",
     sample: `# Delete .log files older than -Days in a folder and its subfolders.
 # Run: ./Clear-OldLogs.ps1 -Path ./logs -Days 30 -WhatIf
@@ -847,7 +847,7 @@ curl -si -X DELETE "$API/api/orders/42"`,
     fileName: ".bashrc",
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
     description:
-      "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a small function and a prompt with the git branch.",
+      "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a function and a prompt with the git branch.",
     sampleSummary: "A personal .bashrc: an interactive-only guard, history settings, your own folder first on PATH, two aliases, a make-and-enter folder function and a prompt that shows the git branch.",
     sample: `# ~/.bashrc: read by every new interactive bash shell.
 # Scripts and other non-interactive shells stop here.
@@ -1451,7 +1451,7 @@ class Reports {
     fileName: "catalog.xml",
     lead: "Paste XML and Vibe explains its structure: which elements hold which, what each attribute adds, and what `&amp;` and `<![CDATA[` are doing there.",
     description:
-      "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and a CDATA block.",
+      "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and CDATA.",
     sampleSummary: "An XML product catalog: a root element with a schema reference, two products with attributes, nested tags, an escaped ampersand and a CDATA description.",
     sample: `<?xml version="1.0" encoding="UTF-8"?>
 <!-- A shop's product list, checked against catalog.xsd -->
@@ -1963,7 +1963,7 @@ PROMPT='%F{blue}%~%f %# '`,
     fileName: "Leaderboard.lua",
     lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
     description:
-      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use too.",
+      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use.",
     sampleSummary: "A game leaderboard built from a table and a metatable, with a method that adds points and one that lists the top players.",
     sample: `local Leaderboard = {}
 Leaderboard.__index = Leaderboard
@@ -2016,7 +2016,7 @@ end`,
     related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
-      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
+      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow testing a Python app on pushes to main and pull requests.",
     sampleSummary: "A GitHub Actions workflow that installs a Python app's dependencies with a pip cache and runs its tests, with a secret passed in as an environment variable.",
     sample: `name: CI
 
