@@ -1,10 +1,12 @@
 name: IndexNow
 
 # After Vercel reports a successful Production deployment of the site, submit the new and changed unvibe.site URLs
-# to IndexNow (Bing, Yandex, Seznam, Naver). The previous deployed commit comes from the Deployments API (the newest
-# successful Production deployment of another commit); nothing is kept between runs. Vercel's deployments carry a
-# commit SHA as `ref`, so actions/cache would never restore or save here (GITHUB_REF is empty on these runs).
-# Read-only on the repo; the IndexNow key is public by design (marketing/scripts/indexnow.mjs).
+# to IndexNow (Bing, Yandex, Seznam, Naver). The previous deployed commit comes from the Deployments API: the newest
+# successful Production deployment created before this one. Nothing is kept between runs, and runs are not queued or
+# cancelled against each other: a batch of merges gives a batch of deploys, and each run diffs its own deploy against
+# the one before it, so every change is submitted once (a cancelled or newest-only scheme would drop the middle ones).
+# Vercel's deployments carry a commit SHA as `ref`, so actions/cache would never restore or save here (GITHUB_REF is
+# empty on these runs). Read-only on the repo; the IndexNow key is public by design (marketing/scripts/indexnow.mjs).
 on:
   deployment_status:
   workflow_dispatch:
@@ -17,10 +19,6 @@ on:
 permissions:
   contents: read
   deployments: read
-
-concurrency:
-  group: indexnow
-  cancel-in-progress: false
 
 jobs:
   submit:
@@ -40,16 +38,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.deployment.sha || github.sha }}
+          # The deployment that triggered this run; empty on workflow_dispatch (then every deployment counts).
+          THIS_ID: ${{ github.event.deployment.id }}
         run: |
+          set -euo pipefail
+          # Deployments come newest first. Only those created before this one count, so parallel runs for a batch of
+          # deploys each diff against their own predecessor. A failed API call fails the step: nothing is submitted.
+          list=$(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=Production&per_page=30" \
+            --jq "[.[] | select(.sha != \"$SHA\") | select(.id < ${THIS_ID:-0} or ${THIS_ID:-0} == 0)] | .[] | \"\(.id):\(.sha)\"")
           prev=""
-          for id_sha in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=Production&per_page=30" --jq '.[] | "\(.id):\(.sha)"'); do
+          for id_sha in $list; do
             id=${id_sha%%:*}; sha=${id_sha#*:}
-            [ "$sha" = "$SHA" ] && continue
             state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses?per_page=1" --jq '.[0].state')
             if [ "$state" = "success" ]; then prev=$sha; break; fi
           done
           echo "sha=$prev" >> "$GITHUB_OUTPUT"
-          echo "this $SHA, previous successful ${prev:-none}"
+          echo "this $SHA (deployment ${THIS_ID:-none}), previous successful ${prev:-none}"
       - name: Submit
         working-directory: marketing
         env:
