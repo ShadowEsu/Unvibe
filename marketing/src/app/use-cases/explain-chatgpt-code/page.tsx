@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { findUseCase, pathForUseCase } from "@/lib/useCases";
-import { D_NAV_CTA } from "@/site/dia/content";
+import { D_NAV_CTA, D_STATEMENT } from "@/site/dia/content";
 import { DownloadCta } from "@/site/dia/DownloadCta";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
@@ -57,10 +57,9 @@ export default async function ExplainChatgptCodePage() {
         <div className="uc-fold uc-fold--panel">
           <div className="uc-fold__text">
             <p>
-              The answer around the code says what it is for; the code is what will run. Select the code ChatGPT wrote,
-              in your browser or after you paste it into your editor, press {SHORTCUTS.mac.anywhere} (
-              {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English in a panel beside it, at
-              the depth you pick. Free for Mac and Windows.
+              {D_STATEMENT.entity} The answer around the code says what it is for; the code is what will run. Select the
+              code ChatGPT wrote, in your browser or after you paste it into your editor, press {SHORTCUTS.mac.anywhere} (
+              {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in a panel beside it, at the depth you pick.
             </p>
             <p className="uc-fold__cta">
               <DownloadCta surface="use_cases" className="d-cta d-btn d-btn--lg">{D_NAV_CTA}</DownloadCta>
