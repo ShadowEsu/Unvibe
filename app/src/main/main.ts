@@ -466,7 +466,7 @@ function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
-    // Still loading (hidden until painted): its own reveal shows it, so don't show a blank window now.
+    // Still loading (hidden until its first real screen): its own reveal shows it, so don't show a blank window now.
     if (companionLoading(companion)) return;
     if (companion.isMinimized()) companion.restore();
     companion.show();

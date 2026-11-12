@@ -38,9 +38,14 @@ import { SettingsIcon } from './settingsIcons';
 import { SharksIntro, type IntroPhase } from '../shared/sharks/SharksIntro';
 import { CountUp } from '../shared/countUp';
 import { SlidingPill } from '../shared/slidingThumb';
+import { signalFirstScreen } from './firstScreen';
 
-/** The last-known "Start animation" setting, read before the settings arrive so the stage is on from the first frame. */
+/** The last-known "Start animation" setting, read before the settings arrive so the stage starts with the first screen. */
 const START_ANIMATION_KEY = 'unvibe.startAnimation';
+/** How long the first screen waits for the usage count (#208): long enough for a quick API answer, short enough to never read as a blank window. */
+const USAGE_WAIT_MS = 300;
+/** Main says whether this launch opens on the start stage (windows.ts createCompanion), for the loading frame. */
+const FIRST_FRAME_STAGE = new URLSearchParams(window.location.search).get('first') === 'stage';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -1641,13 +1646,15 @@ function App() {
 
   const refresh = async () => {
     // The usage line can wait on the network (a trial build asks the API for its count, up to 20 s offline); all
-    // the rest is on this computer. So the screen fills from the rest at once and the usage line follows: the first
-    // window used to stay empty for that round trip (#208).
-    void (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((usage) => {
+    // the rest is on this computer. The first window used to stay empty for that whole round trip (#208), so the
+    // caller waits at most USAGE_WAIT_MS for it: a quick answer still opens on the right state (a used-up plan shows
+    // its banner from the first frame), and a slow one follows on the screen that is already there.
+    const usageSet = (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((usage) => {
       setUsageLine(usage.ok && usage.data
         ? usage.data
         : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
     }, () => undefined);
+    const usageOrTimeout = Promise.race([usageSet, new Promise<void>((resolve) => { window.setTimeout(resolve, USAGE_WAIT_MS); })]);
     try {
       const [acct, prof, hist, st, syncState, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
@@ -1667,6 +1674,7 @@ function App() {
         setSideWidth(st.sidebarWidth);
         sideLive.current = st.sidebarWidth;
       }
+      await usageOrTimeout;
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1779,17 +1787,12 @@ function App() {
     if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
   }, [intro]);
   // The window stays hidden until this page has drawn a real screen (setup, sign-in or the app), not the empty
-  // frame it shows while it reads its settings (#208). Two animation frames: the screen is committed and composited.
-  // The timer is for a page that gets no frames while hidden; main also shows the window after 5 s regardless.
+  // frame it shows while it reads its settings (#208); main also shows the window after 5 s regardless.
   const paintedSent = useRef(false);
   useEffect(() => {
     if (gate === 'checking' || paintedSent.current) return;
     paintedSent.current = true;
-    let sent = false;
-    const send = () => { if (!sent) { sent = true; window.unvibe.companionPainted(); } };
-    const raf = requestAnimationFrame(() => requestAnimationFrame(send));
-    const timer = window.setTimeout(send, 120);
-    return () => { cancelAnimationFrame(raf); window.clearTimeout(timer); send(); };
+    return signalFirstScreen(() => window.unvibe.companionPainted());
   }, [gate]);
   const introOn = intro === 'swim' || intro === 'leaving';
   // In-app sharks (Design r2-motion, in-app sharks) follow the same switch as the stage. Today's pool visits once per
@@ -1931,9 +1934,10 @@ function App() {
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
 
-  // The window stays hidden while the gate is checking (#208), so nothing is drawn here: a stage started now would
-  // show for a frame or two on a first run, whose setup screen never gets one.
-  if (gate === 'checking') return <div className="titlebar" />;
+  // The window stays hidden while the gate is checking (#208). This frame is still the one on screen for a moment
+  // after the reveal (a hidden window gets no frames), so on a launch with the stage it is the stage's empty ground,
+  // which the sharks then swim into; otherwise the app's ground. No stage starts here: a first run never gets one.
+  if (gate === 'checking') return FIRST_FRAME_STAGE ? <div className="sharks-intro" aria-hidden="true" /> : <div className="titlebar" />;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
