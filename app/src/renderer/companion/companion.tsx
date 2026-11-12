@@ -1640,14 +1640,21 @@ function App() {
   const [ownCodeStep, setOwnCodeStep] = useState(false);
 
   const refresh = async () => {
+    // The usage line can wait on the network (a trial build asks the API for its count, up to 20 s offline); all
+    // the rest is on this computer. So the screen fills from the rest at once and the usage line follows: the first
+    // window used to stay empty for that round trip (#208).
+    void (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((usage) => {
+      setUsageLine(usage.ok && usage.data
+        ? usage.data
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
+    }, () => undefined);
     try {
-      const [acct, prof, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
+      const [acct, prof, hist, st, syncState, q, goal, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
-        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
         window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
@@ -1660,9 +1667,6 @@ function App() {
         setSideWidth(st.sidebarWidth);
         sideLive.current = st.sidebarWidth;
       }
-      setUsageLine(usage.ok && usage.data
-        ? usage.data
-        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
       return { acct, st };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
@@ -1751,10 +1755,10 @@ function App() {
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
-  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on from the first frame (before the settings
-  // arrive, so the first paint is never an empty field), unless the window starts hidden or the last-known setting
-  // (mirrored in localStorage) is off. When the settings land with the row off, the stage goes at once. The app
-  // renders under it, inert, and arrives as it leaves. Onboarding and sign-in never get a stage.
+  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on unless the window starts hidden or the
+  // last-known setting (mirrored in localStorage) is off. It first draws with the first real screen, when the window
+  // shows (#208); a setting that lands with the row off ends it before then. The app renders under it, inert, and
+  // arrives as it leaves. Onboarding and sign-in never get a stage.
   const [intro, setIntro] = useState<IntroPhase | 'off'>(() => {
     let off = false;
     try { off = window.localStorage.getItem(START_ANIMATION_KEY) === 'off'; } catch { off = false; }
@@ -1774,6 +1778,19 @@ function App() {
   useEffect(() => {
     if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
   }, [intro]);
+  // The window stays hidden until this page has drawn a real screen (setup, sign-in or the app), not the empty
+  // frame it shows while it reads its settings (#208). Two animation frames: the screen is committed and composited.
+  // The timer is for a page that gets no frames while hidden; main also shows the window after 5 s regardless.
+  const paintedSent = useRef(false);
+  useEffect(() => {
+    if (gate === 'checking' || paintedSent.current) return;
+    paintedSent.current = true;
+    let sent = false;
+    const send = () => { if (!sent) { sent = true; window.unvibe.companionPainted(); } };
+    const raf = requestAnimationFrame(() => requestAnimationFrame(send));
+    const timer = window.setTimeout(send, 120);
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(timer); send(); };
+  }, [gate]);
   const introOn = intro === 'swim' || intro === 'leaving';
   // In-app sharks (Design r2-motion, in-app sharks) follow the same switch as the stage. Today's pool visits once per
   // window open (a launch with the stage off, or the window shown again after being hidden: the tray, the Dock), on
@@ -1914,7 +1931,9 @@ function App() {
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
 
-  if (gate === 'checking') return <>{introOn ? <SharksIntro onPhase={setIntro} /> : null}<div className="titlebar" /></>;
+  // The window stays hidden while the gate is checking (#208), so nothing is drawn here: a stage started now would
+  // show for a frame or two on a first run, whose setup screen never gets one.
+  if (gate === 'checking') return <div className="titlebar" />;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
@@ -1927,8 +1946,7 @@ function App() {
     return (<><div className="titlebar" /><OwnCodeWelcome soundEffects={settings?.soundEffects ?? true} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onNotNow={notNow} /></>);
   }
 
-  // The stage is the first child here and in the `checking` fragment above, so React keeps the same instance (and
-  // the same swimming sharks) when the gate opens instead of remounting it with a blank frame between.
+  // The stage starts with the first real screen: the window is still hidden before it (#208).
   return (
     <>
       {introOn ? <SharksIntro onPhase={setIntro} /> : null}

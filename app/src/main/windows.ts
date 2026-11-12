@@ -481,6 +481,15 @@ export function companionLoading(win: BrowserWindow): boolean {
 }
 
 /**
+ * The companion's page has drawn its first real screen (setup, sign-in or the app; not the empty frame it shows
+ * while it reads its settings): show it now. Chromium's ready-to-show fires on that empty frame, which is the blank
+ * first window QA measured on Windows (#208), so the reveal waits for the page instead.
+ */
+export function companionPainted(win: BrowserWindow): void {
+  companionReveals.get(win)?.reveal();
+}
+
+/**
  * The companion's own chrome (round 2 glass): the window background behind the first paint (the veil's flat colour),
  * and on Windows and Linux the min/max/close overlay. The overlay takes the ground's colour at the window's top-right
  * corner at 1180 × 780 (sampled from the renders), not a translucent one: Electron 36 ignores the overlay colour's
@@ -515,9 +524,9 @@ export function applyCompanionChrome(win: BrowserWindow): void {
 }
 
 /**
- * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
- * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
- * first-run launch the user started) then brings it above other apps.
+ * The home window. It stays hidden until its page has drawn its first real screen (companionPainted), so nobody
+ * sees a blank (on first run, maximized) window while it loads; if the page never says so, it shows anyway after
+ * 5 s. `front` (a first-run launch the user started) then brings it above other apps.
  */
 export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
   const win = new BrowserWindow({
@@ -541,10 +550,7 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
   const fallback = setTimeout(revealer.reveal, 5000);
-  win.once('ready-to-show', () => {
-    clearTimeout(fallback);
-    revealer.reveal();
-  });
+  win.once('show', () => clearTimeout(fallback));
   win.once('closed', () => clearTimeout(fallback));
   // A show after a hide (tray, Dock, Cmd-H; not the first reveal) is a window open without a stage: the renderer
   // gives Today's pool one visit (in-app sharks).

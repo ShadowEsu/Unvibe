@@ -31,6 +31,7 @@ import {
   applyCompanionChrome,
   createBar,
   companionLoading,
+  companionPainted,
   createCompanion,
   currentWidget,
   fitPanelHeight,
@@ -886,6 +887,8 @@ app.whenReady().then(() => {
   ipcMain.on('companion:review', () => void startReview());
   // The start stage is gone: the window chrome goes back to the theme's (it was the stage's ground for the sharks).
   ipcMain.on('companion:stage-done', () => { if (companion) applyCompanionChrome(companion); });
+  // The companion drew its first real screen: show it (#208). Only the companion's own page can say so.
+  ipcMain.on('companion:painted', (e) => { if (companion && e.sender === companion.webContents) companionPainted(companion); });
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());
