@@ -158,7 +158,7 @@ testpaths = ["tests"]`,
     fileName: "requirements.txt",
     lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
     description:
-      "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range and uses ~= for a third.",
+      "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range for another and uses ~= for a third.",
     sampleSummary: "A requirements.txt for a small Python app: requests pinned to one version, python-dotenv limited to 1.x, rich allowed any 15.x release, and tzdata only on Windows.",
     sample: `# requirements.txt: the packages this app needs, one per line.
 # Install them all with: pip install -r requirements.txt
@@ -3429,7 +3429,7 @@ drop 803b36d # Add gitignore
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
     description:
-      "Paste an xargs command and get it explained in plain English, free online. The sample gzips old logs 4 at a time and shows how a space in a name breaks it.",
+      "Paste an xargs command and get it explained in plain English, free online. The sample gzips old logs 4 at a time and shows how a space in a name breaks a pipe.",
     sampleSummary: "A shell script that compresses log files at least 8 days old (`-mtime +7`), 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
     sample: `# shrink-logs.sh: compress old log files, one gzip per file, 4 at a time
 cd ~/app/logs || exit 1

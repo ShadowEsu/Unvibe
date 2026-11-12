@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   title: "Apple could not verify Unvibe: how to open it on a Mac",
   absolute: true,
   description:
-    "macOS says Unvibe Not Opened, Apple could not verify it: press Done, then Open Anyway in Privacy & Security. Not opened the download yet? Use one Terminal line.",
+    "macOS says “Unvibe” Not Opened and Apple could not verify it. Press Done, then Open Anyway in Privacy & Security. Not opened the download yet? Use Terminal.",
 });
 
 /**
