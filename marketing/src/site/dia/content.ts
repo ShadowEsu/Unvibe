@@ -132,7 +132,7 @@ export const D_FAQ = {
 
 /** Explain links (growth's rank plan #5, Design S-1 11 Nov): 8 /explain pages in this order, then the index. */
 export const D_EXPLAIN = {
-  h2: "Explain code in your browser",
+  h2: "(Explain code in your browser)",
   ids: ["git-diff", "react-useeffect", "python-traceback", "package-lock", "git-rebase", "ps-aux", "cors-error", "bash"],
   all: { label: "All explain pages", href: "/explain" },
 } as const;
