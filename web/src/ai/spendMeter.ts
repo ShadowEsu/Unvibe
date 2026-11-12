@@ -48,7 +48,7 @@ export const AI_LIMIT_MONTH = "AI limit reached for this month. Explanations com
 export const AI_LIMIT_ACCOUNT = "Daily AI limit reached for your account. Explanations come back after midnight UTC.";
 export const AI_PAUSED = 'AI is paused for now. Explanations will be back soon.';
 export const AI_MAINTENANCE = 'AI features are paused for maintenance. Back soon.';
-export const PREVIEW_LIMIT_TODAY = 'Quick looks are used up for today. Open the full explanation instead; quick looks come back after midnight UTC.';
+export const PREVIEW_LIMIT_TODAY = 'Quick looks are busy or used up for now. Open the full explanation instead, or try a quick look again later.';
 export const PREVIEW_LIMIT_ACCOUNT = `You've used today's ${PREVIEW_ACCOUNT_DAY_LIMIT} quick looks. Open the full explanation instead; quick looks come back after midnight UTC.`;
 
 /**
@@ -326,20 +326,29 @@ export class MeteredProvider implements Provider {
   }
 
   stream(system: string, user: string, onToken: (text: string) => void, signal?: AbortSignal): Promise<TokenUsage | undefined> {
-    return this.metered(system, user, async () => {
-      const usage = await this.inner.stream(system, user, onToken, signal);
-      return { result: usage, usage };
+    return this.metered(system, user, signal, async () => {
+      let produced = false;
+      const usage = await this.inner.stream(system, user, (text) => {
+        if (text.trim()) produced = true;
+        onToken(text);
+      }, signal);
+      return { result: usage, usage, produced };
     });
   }
 
   complete(system: string, user: string, signal?: AbortSignal): Promise<Completion> {
-    return this.metered(system, user, async () => {
+    return this.metered(system, user, signal, async () => {
       const completion = await this.inner.complete(system, user, signal);
-      return { result: completion, usage: completion.usage };
+      return { result: completion, usage: completion.usage, produced: completion.text.trim() !== '' };
     });
   }
 
-  private async metered<T>(system: string, user: string, call: () => Promise<{ result: T; usage: TokenUsage | undefined }>): Promise<T> {
+  private async metered<T>(
+    system: string,
+    user: string,
+    signal: AbortSignal | undefined,
+    call: () => Promise<{ result: T; usage: TokenUsage | undefined; produced: boolean }>,
+  ): Promise<T> {
     if (aiMaintenance()) throw new AiPausedError('maintenance');
     const prices = pricesFor(this.inner.model);
     if (!prices) {
@@ -362,11 +371,19 @@ export class MeteredProvider implements Provider {
       if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
       throw new AiPausedError(reservation);
     }
+    if (signal?.aborted) {
+      // The caller left while the meter was counting: nothing is sent, so nothing stays counted.
+      await this.adjust(reservation, -reservation.nanoUsd);
+      if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
+      signal.throwIfAborted();
+    }
 
     // From here the request may be billed. Only usage Anthropic measured replaces the worst case,
     // and only an error status it answered with (not billed) releases it. A dropped connection or a
-    // cut stream keeps the whole worst case. A kind's hold moves with it.
-    let outcome: { result: T; usage: TokenUsage | undefined };
+    // cut stream keeps the whole worst case. A kind's hold moves with it, and an answer with no text
+    // gives the kind's call back (its measured cost stays counted), as an empty explanation gives back
+    // its plan unit.
+    let outcome: { result: T; usage: TokenUsage | undefined; produced: boolean };
     try {
       outcome = await call();
     } catch (error) {
@@ -376,12 +393,10 @@ export class MeteredProvider implements Provider {
       }
       throw error;
     }
-    const { result, usage } = outcome;
-    if (usage && !usage.estimated) {
-      const delta = costNanoUsd(prices, usage) - reservation.nanoUsd;
-      await this.adjust(reservation, delta);
-      if (hold) await this.adjustKind(hold, delta, false);
-    }
+    const { result, usage, produced } = outcome;
+    const delta = usage && !usage.estimated ? costNanoUsd(prices, usage) - reservation.nanoUsd : undefined;
+    if (delta !== undefined) await this.adjust(reservation, delta);
+    if (hold && (delta !== undefined || !produced)) await this.adjustKind(hold, delta ?? 0, !produced);
     return result;
   }
 

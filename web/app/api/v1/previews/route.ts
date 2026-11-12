@@ -6,7 +6,7 @@ import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { payloadSizeError } from '@/lib/reviewLimits';
 import { trialInstallFromRequest, trialInstallMeta, trialPreviewDenied } from '@/lib/trialAccess';
-import { looksSecret } from '@/lib/tryDemo';
+import { clientIp } from '@/lib/tryDemo';
 
 export const runtime = 'nodejs';
 
@@ -22,11 +22,16 @@ const LEVELS: readonly ExplanationLevel[] = ['new', 'beginner', 'intermediate', 
  * (question, variant, detail, model, any token count) is dropped, so a client can't change the prompt
  * or raise the 400-token output budget (`selectPreviewProvider`).
  *
- * Refusals before anything is reserved or sent: 400 (missing fields, or a key or password in the
- * code), 413 (the explanation's size cap), 401, 429 `plan_limit_reached` (a trial whose 30 days
- * ended), 503. A preview's own allowance (≤ $2 a UTC day for everyone, ≤ 20 a UTC day per account)
- * answers 429 `preview_limit_reached`. Past the shared caps ($10 day, $35 month, $1 per account day)
- * the stream says so, exactly as for an explanation.
+ * Refusals before anything is reserved or sent: 400 (missing fields), 413 (the explanation's size
+ * cap), 401, 429 `plan_limit_reached` (a trial whose 30 days ended), 429 `preview_limit_reached` with
+ * reason `network_daily_limit` (a network's trial previews for the day), 503. A preview's own
+ * allowance answers 429 `preview_limit_reached` too: reason `daily_budget` (≤ $2 a UTC day for
+ * everyone, which also counts previews still in flight, so it means "later", not "tomorrow") or
+ * `account_daily_limit` (≤ 20 a UTC day per account). Past the shared caps ($10 day, $35 month, $1
+ * per account day) the stream says so, exactly as for an explanation.
+ *
+ * Secrets: like an explanation, the app's secret scan runs before it sends; the server adds no
+ * filter of its own to either route.
  *
  * A preview never takes an explanation from the plan or the trial, and records no usage row: its
  * spend is counted by the meter alone.
@@ -53,15 +58,6 @@ export async function POST(req: Request): Promise<Response> {
   const payload: ReviewRequestPayload = { scope: 'selection', level, context };
   const tooLarge = payloadSizeError(payload);
   if (tooLarge) return tooLarge;
-  // The app scans for secrets before it sends; this is the server's own check on every text that
-  // reaches the prompt, with the detector the Try box and the PMF survey use.
-  const texts = [context.code, context.enclosing, context.primaryFile, context.imports.join('\n'), context.projectStructure.join('\n')];
-  if (texts.some((text) => text && looksSecret(text))) {
-    return Response.json({
-      error: 'secret_detected',
-      message: 'That looks like it has a key or password in it. Take it out and try again.',
-    }, { status: 400 });
-  }
 
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
@@ -70,7 +66,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) return unauthorized();
   if (!provider.mock && trialInstall) {
-    const denied = await trialPreviewDenied(trialInstall, new Date(), trialInstallMeta(req));
+    const denied = await trialPreviewDenied(trialInstall, clientIp(req), new Date(), trialInstallMeta(req));
     if (denied) return denied;
   }
 
@@ -122,14 +118,14 @@ export async function POST(req: Request): Promise<Response> {
 
   await decided;
   if (outcome.limit) {
+    const account = outcome.limit.reason === 'kind_account_calls';
     const tomorrow = new Date();
     tomorrow.setUTCHours(24, 0, 0, 0);
     return Response.json({
       error: 'preview_limit_reached',
-      reason: outcome.limit.reason === 'kind_day_cap' ? 'daily_budget' : 'account_daily_limit',
+      reason: account ? 'account_daily_limit' : 'daily_budget',
       message: outcome.limit.message,
-      ...(outcome.limit.reason === 'kind_account_calls' ? { limit: PREVIEW_ACCOUNT_DAY_LIMIT } : {}),
-      resetsAt: tomorrow.toISOString(),
+      ...(account ? { limit: PREVIEW_ACCOUNT_DAY_LIMIT, resetsAt: tomorrow.toISOString() } : {}),
     }, { status: 429 });
   }
   return new Response(stream, {

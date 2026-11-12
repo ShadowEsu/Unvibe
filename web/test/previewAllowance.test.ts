@@ -23,7 +23,7 @@ import {
 } from '../src/ai/spendMeter';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
-import { trialInstallFromRequest, trialUsageLine } from '../src/lib/trialAccess';
+import { TRIAL_PREVIEW_IP_DAILY_LIMIT, trialInstallFromRequest, trialUsageLine } from '../src/lib/trialAccess';
 import { ANTHROPIC_HOST, anthropicAnswer, anthropicError } from './anthropicStub';
 
 /** A provider double that records calls and answers with fixed usage, or fails. */
@@ -229,7 +229,10 @@ test('the Supabase store checks the preview allowance first, then the account ca
 const TOKEN = 'local-trial-token-abcdefghijklmnop';
 const BASE_ENV = { ...process.env };
 let anthropicBodies: Array<{ max_tokens: number; system: string; messages: Array<{ content: string }> }> = [];
-let upstream: 'answer' | 'fail' = 'answer';
+/** `empty` streams no text; `abort-after-send` is the client leaving once the request reached Anthropic. */
+let upstream: 'answer' | 'fail' | 'empty' | 'abort-after-send' = 'answer';
+/** The client side of the request under test, for the abort cases. */
+let client: AbortController | null = null;
 let meter: MemorySpendStore;
 
 beforeEach(() => {
@@ -238,9 +241,12 @@ beforeEach(() => {
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   delete process.env.ENABLE_MOCK_AI;
   delete process.env.AI_MAINTENANCE;
+  delete process.env.UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT;
   anthropicBodies = [];
   upstream = 'answer';
-  meter = new MemorySpendStore();
+  client = null;
+  // A fixed clock for the meter, so no test reads a different UTC day than the request counted on.
+  meter = new MemorySpendStore(() => new Date(`${DAY}T10:00:00Z`));
   const g = globalThis as unknown as TestGlobals; // the memory stores' globals (spendMeter.ts, trialAccess.ts)
   g.__unvibeSpendMemory = meter;
   g.__unvibeTrialUsage = new Map();
@@ -249,7 +255,12 @@ beforeEach(() => {
     const url = new URL(String(input));
     if (url.hostname !== ANTHROPIC_HOST) throw new Error(`Unexpected request: ${url}`);
     anthropicBodies.push(JSON.parse(String(init?.body)));
-    return upstream === 'fail' ? anthropicError() : anthropicAnswer(init, '- It returns its input.');
+    if (upstream === 'abort-after-send') {
+      client?.abort();
+      init?.signal?.throwIfAborted();
+    }
+    if (upstream === 'fail') return anthropicError();
+    return anthropicAnswer(init, upstream === 'empty' ? '' : '- It returns its input.');
   }) as typeof fetch;
 });
 
@@ -263,10 +274,9 @@ async function jsonRecord(response: Response): Promise<Record<string, unknown>> 
 }
 
 const context = { language: 'typescript', projectStructure: [], imports: [], code: 'const identity = (x: number) => x;' };
-const today = () => new Date().toISOString().slice(0, 10);
 
-function trialHeaders(installId: string): Record<string, string> {
-  return { authorization: `Bearer ${TOKEN}`, 'x-unvibe-install-id': installId, 'x-forwarded-for': '203.0.113.20' };
+function trialHeaders(installId: string, ip = '203.0.113.20'): Record<string, string> {
+  return { authorization: `Bearer ${TOKEN}`, 'x-unvibe-install-id': installId, 'x-forwarded-for': ip };
 }
 
 function previewRequest(headers: Record<string, string>, body: Record<string, unknown> = { level: 'beginner', context }): Request {
@@ -309,7 +319,7 @@ test('Security: a refused preview (its 20 a day used) leaves the next explanatio
 });
 
 test('past the $2 preview budget for everyone: 429 daily_budget, nothing sent, and explanations still go through', async () => {
-  meter.kindDays.set(`ai_preview ${today()}`, PREVIEW_DAY_CAP_NANO_USD);
+  meter.kindDays.set(`ai_preview ${DAY}`, PREVIEW_DAY_CAP_NANO_USD);
   const headers = trialHeaders('preview-install-2');
   const refused = await preview(previewRequest(headers));
   assert.equal(refused.status, 429);
@@ -317,7 +327,7 @@ test('past the $2 preview budget for everyone: 429 daily_budget, nothing sent, a
   assert.equal(body.error, 'preview_limit_reached');
   assert.equal(body.reason, 'daily_budget');
   assert.equal(anthropicBodies.length, 0);
-  assert.equal(meter.days.get(today()) ?? 0, 0, 'the shared caps were never reserved');
+  assert.equal(meter.days.get(DAY) ?? 0, 0, 'the shared caps were never reserved');
   assert.ok(await streamed(await review(explainRequest(headers))));
 });
 
@@ -350,26 +360,134 @@ test('a preview through the route settles on the shared day, the account and the
   assert.ok(install);
   assert.ok(await streamed(await preview(previewRequest(headers))));
   const account = spendAccount('install', install);
-  assert.equal(meter.kindAccounts.get(`ai_preview ${today()} ${account}`), 1);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 1);
   const measured = 120 * PRICES.input + 40 * PRICES.output; // STUB_USAGE
-  assert.equal(meter.days.get(today()), measured);
-  assert.equal(meter.accounts.get(`${today()} ${account}`), measured);
-  assert.equal(meter.kindDays.get(`ai_preview ${today()}`), measured);
+  assert.equal(meter.days.get(DAY), measured);
+  assert.equal(meter.accounts.get(`${DAY} ${account}`), measured);
+  assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), measured);
 });
 
-test('the secret filter applies to previews: 400 secret_detected, nothing reserved or sent', async () => {
-  // Fakes put together at run time (AWS's documented example key, and shapes split up) so no
-  // secret-shaped literal sits in the repo.
-  const keys = ['const key = "AKIAIOSFODNN7EXAMPLE";', `const stripe = "${'sk_'}${'live_'}${'a1B2'.repeat(6)}";`, `postgres://admin:${'hunter2'}pass@db.example.com/app`];
-  for (const code of keys) {
-    const response = await preview(previewRequest(trialHeaders('preview-install-6'), { level: 'beginner', context: { ...context, code } }));
-    assert.equal(response.status, 400, code);
-    assert.equal((await jsonRecord(response)).error, 'secret_detected', code);
+test('ordinary code that names keys, tokens or secrets goes through, in the selection and in nearby files (the app scans before sending, as for explanations)', async () => {
+  const lines = [
+    'const params = { grant_type: "refresh_token", token: "access_token" };',
+    'const client = new OpenAI({ apiKey: "YOUR_API_KEY" });',
+    'await signIn({ email: "a@b.co", password: "correct-horse" });',
+    '      secretName: postgres-creds2',
+    'tokenizer: bert-base-uncased-v2',
+    'const secret = "test-secret-123";',
+    'passportNumber: AB1234567',
+  ];
+  for (const line of lines) {
+    assert.ok(await streamed(await preview(previewRequest(trialHeaders('preview-install-6'), { level: 'beginner', context: { ...context, code: line } }))), line);
+    assert.ok(await streamed(await preview(previewRequest(trialHeaders('preview-install-6b'), { level: 'beginner', context: { ...context, enclosing: line } }))), `nearby: ${line}`);
   }
-  const nearby = await preview(previewRequest(trialHeaders('preview-install-6'), { level: 'beginner', context: { ...context, enclosing: `${'API'}_TOKEN=${'ab12cd34'.repeat(2)}` } }));
-  assert.equal(nearby.status, 400, 'nearby files are checked too');
+  assert.equal(anthropicBodies.length, lines.length * 2);
+});
+
+test('one network gets a capped number of trial previews a day; its explanations and signed-in previews are not affected', async () => {
+  process.env.UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT = '2';
+  assert.equal(TRIAL_PREVIEW_IP_DAILY_LIMIT, 60);
+  for (const id of ['preview-net-a', 'preview-net-b']) assert.ok(await streamed(await preview(previewRequest(trialHeaders(id, '198.51.100.7')))), id);
+  const sent = anthropicBodies.length;
+
+  const rotated = trialHeaders('preview-net-c', '198.51.100.7');
+  const refused = await preview(previewRequest(rotated));
+  assert.equal(refused.status, 429);
+  const body = await jsonRecord(refused);
+  assert.equal(body.error, 'preview_limit_reached');
+  assert.equal(body.reason, 'network_daily_limit');
+  assert.equal(anthropicBodies.length, sent, 'nothing sent');
+  assert.equal(meter.days.get(DAY), 2 * (120 * PRICES.input + 40 * PRICES.output), 'nothing reserved for the refused preview');
+
+  assert.ok(await streamed(await review(explainRequest(rotated))), 'an explanation from the same network still goes through');
+  assert.ok(await streamed(await preview(previewRequest(trialHeaders('preview-net-d', '198.51.100.8')))), 'another network still has previews');
+  const signed = await getStore().signIn(`preview-net-${crypto.randomUUID()}@preview.test`);
+  assert.ok(await streamed(await preview(previewRequest({ authorization: `Bearer ${signed.token}`, 'x-forwarded-for': '198.51.100.7' }))), 'signed-in previews have no network cap');
+});
+
+test('production without a secret for the per-network key refuses trial previews with 503, as for explanations', async () => {
+  Object.assign(process.env, { NODE_ENV: 'production' });
+  delete process.env.TRY_IP_SALT;
+  const response = await preview(previewRequest(trialHeaders('preview-install-salt')));
+  assert.equal(response.status, 503);
+  assert.equal((await jsonRecord(response)).error, 'trial_unavailable');
   assert.equal(anthropicBodies.length, 0);
-  assert.equal(meter.days.size + meter.kindDays.size, 0);
+});
+
+test('past a shared cap, a preview gets the same stream error as an explanation, and its preview count is given back', async () => {
+  const headers = trialHeaders('preview-install-cap');
+  const install = trialInstallFromRequest(previewRequest(headers));
+  assert.ok(install);
+  const account = spendAccount('install', install);
+  const fills: Array<[string, () => void]> = [
+    ['account_day_cap', () => meter.accounts.set(`${DAY} ${account}`, ACCOUNT_DAY_CAP_NANO_USD)],
+    ['day_cap', () => { meter.accounts.clear(); meter.days.set(DAY, DAY_CAP_NANO_USD); }],
+  ];
+  for (const [label, fill] of fills) {
+    fill();
+    const previewed = await preview(previewRequest(headers));
+    assert.equal(previewed.status, 200, label);
+    const previewEvents = await events(previewed);
+    const explained = await events(await review(explainRequest(headers)));
+    assert.equal(previewEvents.length, 1, label);
+    assert.equal(previewEvents[0].type, 'error', label);
+    assert.deepEqual(previewEvents, explained, label);
+    assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0, label);
+    assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), 0, label);
+  }
+  assert.equal(anthropicBodies.length, 0);
+});
+
+test('a client that leaves before the request is sent gets both holds back; one that leaves after it was sent keeps them', async () => {
+  // The client leaves while the meter is counting (before anything is sent).
+  class LeavingStore extends MemorySpendStore {
+    override async reserve(nanoUsd: number, account?: string) {
+      client?.abort();
+      return super.reserve(nanoUsd, account);
+    }
+  }
+  meter = new LeavingStore(() => new Date(`${DAY}T10:00:00Z`));
+  const g = globalThis as unknown as TestGlobals;
+  g.__unvibeSpendMemory = meter;
+  const headers = trialHeaders('preview-install-abort');
+  const install = trialInstallFromRequest(previewRequest(headers));
+  assert.ok(install);
+  const account = spendAccount('install', install);
+  const body = JSON.stringify({ level: 'beginner', context });
+  client = new AbortController();
+  await preview(new Request('http://localhost/api/v1/previews', { method: 'POST', headers, body, signal: client.signal }));
+  assert.equal(anthropicBodies.length, 0, 'nothing sent');
+  assert.equal(meter.days.get(DAY), 0);
+  assert.equal(meter.accounts.get(`${DAY} ${account}`), 0);
+  assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), 0);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0);
+
+  // The client leaves once Anthropic has the request: it may be billed, so both worst cases stay.
+  meter = new MemorySpendStore(() => new Date(`${DAY}T10:00:00Z`));
+  g.__unvibeSpendMemory = meter;
+  upstream = 'abort-after-send';
+  client = new AbortController();
+  await preview(new Request('http://localhost/api/v1/previews', { method: 'POST', headers, body, signal: client.signal }));
+  assert.equal(anthropicBodies.length, 1);
+  const held = meter.days.get(DAY) ?? 0;
+  assert.ok(held > 0);
+  assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), held);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 1);
+});
+
+// The test's own timeout is the hang check: a response that never resolves fails it.
+test('an answer with no text ends the response and gives the preview back; its measured cost stays counted', { timeout: 5_000 }, async () => {
+  upstream = 'empty';
+  const headers = trialHeaders('preview-install-empty');
+  const install = trialInstallFromRequest(previewRequest(headers));
+  assert.ok(install);
+  const response = await preview(previewRequest(headers));
+  assert.deepEqual((await events(response)).map((event) => event.type), ['done']);
+  const account = spendAccount('install', install);
+  const measured = 120 * PRICES.input + 40 * PRICES.output; // STUB_USAGE
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0, 'the preview count is given back');
+  assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), measured, 'the billed tokens stay on the preview budget');
+  assert.equal(meter.days.get(DAY), measured);
 });
 
 test('previews keep the explanation input rules: size cap 413, missing fields 400, no session 401', async () => {
@@ -391,7 +509,9 @@ test('a trial whose 30 days ended gets no previews', async () => {
   g.__unvibeTrialInstalls.set(install, { startedAt: new Date(Date.now() - 31 * 86_400_000).toISOString() });
   const response = await preview(previewRequest(headers));
   assert.equal(response.status, 429);
-  assert.equal((await jsonRecord(response)).error, 'plan_limit_reached');
+  const ended = await jsonRecord(response);
+  assert.equal(ended.error, 'plan_limit_reached');
+  assert.equal(typeof ended.resetsAt, 'string');
   assert.equal(anthropicBodies.length, 0);
 });
 
@@ -403,7 +523,7 @@ test('a provider failure gives the preview back and says so in the stream', asyn
   const response = await preview(previewRequest(headers));
   assert.equal(response.status, 200);
   assert.deepEqual((await events(response)).map((event) => event.type), ['error']);
-  assert.equal(meter.kindAccounts.get(`ai_preview ${today()} ${spendAccount('install', install)}`), 0);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${spendAccount('install', install)}`), 0);
 });
 
 test("a signed-in user's previews are keyed on the user and take nothing from the plan's explanations", async () => {
@@ -411,12 +531,12 @@ test("a signed-in user's previews are keyed on the user and take nothing from th
   await getBillingStore().ensurePersonalWorkspace(signed.userId);
   const headers = { authorization: `Bearer ${signed.token}` };
   for (let i = 0; i < 2; i += 1) assert.ok(await streamed(await preview(previewRequest(headers))));
-  assert.equal(meter.kindAccounts.get(`ai_preview ${today()} ${spendAccount('user', signed.userId)}`), 2);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${spendAccount('user', signed.userId)}`), 2);
   const line = (await getBillingStore().overview(signed.userId)).usage.find((entry) => entry.kind === 'ai_explanation');
   assert.equal(line?.used, 0);
   // A second sign-in of the same user shares the same 20.
   const again = await getStore().signIn(signed.email);
   assert.equal(again.userId, signed.userId);
   assert.ok(await streamed(await preview(previewRequest({ authorization: `Bearer ${again.token}` }))));
-  assert.equal(meter.kindAccounts.get(`ai_preview ${today()} ${spendAccount('user', signed.userId)}`), 3);
+  assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${spendAccount('user', signed.userId)}`), 3);
 });

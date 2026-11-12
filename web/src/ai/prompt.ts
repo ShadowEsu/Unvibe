@@ -104,6 +104,7 @@ export function buildPreviewSystemPrompt(payload: ReviewRequestPayload): string 
     '- No preamble, no headings, no bold, no code blocks, no links, no cite markers. Put names from the code (functions, variables, files) in single backticks, like `total`.',
     '- If part of it depends on code you cannot see, or you are inferring, start the third bullet with "Not sure:" and name what is uncertain.',
     '- Do not emit HTML, XML, curly-brace templates, or other raw markup.',
+    '- The audience level below sets your words, not the length: still exactly 3 short bullets.',
     '',
     `Audience level — ${payload.level}: ${LEVEL_GUIDANCE[payload.level]}`,
   ].join('\n');
