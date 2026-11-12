@@ -1325,7 +1325,7 @@ ORDER BY spent DESC;`,
   {
     id: "java",
     fileName: "Reports.java",
-    published: "2026-10-26",
+    published: "2026-10-28",
     lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",
     description:
       "Paste Java code and get a plain English explanation, free online. The sample totals paid orders with a record, a stream and Collectors.groupingBy.",
@@ -1379,7 +1379,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
-    published: "2026-10-26",
+    published: "2026-10-28",
     related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
@@ -1428,7 +1428,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
-    published: "2026-10-26",
+    published: "2026-10-28",
     related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
@@ -1601,7 +1601,7 @@ invoicer hours.csv --client "Acme Ltd" --out march.pdf
   {
     id: "go",
     fileName: "counts.go",
-    published: "2026-10-26",
+    published: "2026-10-28",
     lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
     description:
       "Paste Go code and get a plain English explanation, free online. The sample parses lines in goroutines and collects their errors over a buffered channel.",
@@ -1655,7 +1655,7 @@ func parseCounts(raw []string) ([]int, error) {
   {
     id: "rust",
     fileName: "stock.rs",
-    published: "2026-10-26",
+    published: "2026-10-28",
     lead: "Paste Rust and Vibe explains what each borrow allows, what a lifetime ties together and why the compiler accepts or rejects it.",
     description:
       "Paste Rust code and get a plain English explanation, free online. The sample picks and reserves stock with a trait, a lifetime and shared and mutable borrows.",
@@ -1707,7 +1707,7 @@ pub fn reserve(stock: &mut Stock) -> bool {
   {
     id: "csharp",
     fileName: "Batches.cs",
-    published: "2026-10-26",
+    published: "2026-10-28",
     lead: "Paste C#, LINQ queries and records included, and Vibe explains what each line returns and when the query actually runs.",
     description:
       "Paste C# code and get a plain English explanation, free online. The sample filters task batches with LINQ and copies a record with a with expression.",
@@ -1749,7 +1749,7 @@ static class Batches
   {
     id: "kotlin",
     fileName: "Parcel.kt",
-    published: "2026-10-26",
+    published: "2026-10-28",
     lead: "Paste Kotlin and Vibe explains where null can turn up, what a data class writes for you and where an extension function comes from.",
     description:
       "Paste Kotlin code and get a plain English explanation, free online. The sample labels parcels with a data class, two extension functions and safe calls.",
