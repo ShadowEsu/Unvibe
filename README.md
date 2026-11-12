@@ -8,6 +8,8 @@ Unvibe is a free desktop app for Mac and Windows that explains code in plain Eng
 
 Apple hasn't verified Unvibe yet, so the first open takes a few extra steps in System Settings. The [first-open help](https://unvibe.site/install-help?utm_source=github&utm_medium=readme&utm_campaign=repo-readme) walks through them for Mac and Windows.
 
+**Or try it in your browser first:** paste a snippet at [unvibe.site/explain](https://unvibe.site/explain?utm_source=github&utm_medium=readme&utm_campaign=repo-readme) and Vibe explains what it does in plain English, free, no account. There is a page per language and tool, each with its own sample: [Explain git rebase code](https://unvibe.site/explain/git-rebase?utm_source=github&utm_medium=readme&utm_campaign=repo-readme), [Explain Python tracebacks](https://unvibe.site/explain/python-traceback?utm_source=github&utm_medium=readme&utm_campaign=repo-readme), [Explain CORS errors](https://unvibe.site/explain/cors-error?utm_source=github&utm_medium=readme&utm_campaign=repo-readme) and [Explain Bash code](https://unvibe.site/explain/bash?utm_source=github&utm_medium=readme&utm_campaign=repo-readme).
+
 ## Develop
 
 ### Status
