@@ -17,6 +17,25 @@ import {
 import { BETA_INSTALL_VERSION } from "./betaOffer";
 
 const HELP_URL = "https://unvibe.site/install-help";
+const RELEASES = "https://github.com/ShadowEsu/Unvibe/releases/download/";
+
+/**
+ * Kaspersky read "fetch a script, run a download, then call the site back" as a botnet C&C (Security R4(a)): every web
+ * request a script makes reads a URL variable that is only ever a GitHub release address, and nothing is posted.
+ */
+function assertOnlyReleaseRequests(script: string): void {
+  assert.doesNotMatch(script, /-X POST|-Method Post|Invoke-RestMethod|\/api\//i, "no request posts anything");
+  const requests = script.split("\n").map((l) => l.trim())
+    .filter((l) => !/^(#|echo |Write-|throw )|Get-Command/.test(l) && /\bcurl(\.exe)?\s|Invoke-WebRequest/.test(l));
+  assert.ok(requests.length >= 2, `the download and its checksums: ${requests.join("\n")}`);
+  for (const line of requests) {
+    assert.doesNotMatch(line, /https?:\/\//, `requests use the URL variables: ${line}`);
+    const used = Array.from(line.matchAll(/\$\{?(URL|SUMS_URL|url|sumsUrl)\b/g), (m) => m[1]);
+    assert.equal(used.length, 1, `one URL per request: ${line}`);
+    const assigned = Array.from(script.matchAll(new RegExp(`^\\s*\\$?${used[0]}\\s*=\\s*"([^"]*)"`, "gm")), (m) => m[1]);
+    assert.ok(assigned.length > 0 && assigned.every((u) => u.startsWith(RELEASES)), `${used[0]} is only a GitHub release address: ${assigned.join(", ")}`);
+  }
+}
 /** The version install.sh installs by default: its tag without the "v". */
 const INSTALLED_VERSION = BETA_INSTALL_TAG.replace(/^v/, "");
 /**
@@ -315,6 +334,10 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
     assert.deepEqual(readdirSync(target), ["Unvibe.app"], "no .new or .old is left behind");
     assert.deepEqual(named(r.calls, "open"), [["open", DEST]], "opens the installed app");
+    // Kaspersky (Security R4(a)): a finished install must not call back to unvibe.site, only the GitHub release.
+    const urls = named(r.calls, "curl").map((c) => c.find((a) => /^https?:\/\//.test(a)));
+    assert.equal(urls.length, 2, `the dmg and its checksums: ${show(r.calls)}`);
+    for (const url of urls) assert.ok(url?.startsWith(RELEASES), `only the GitHub release is contacted: ${url}`);
   });
 
   it("installs when no Unvibe is installed yet, with nothing to move aside", () => {
@@ -458,11 +481,9 @@ describe("Mac install script text", () => {
     assert.doesNotMatch(script, /rm -rf "\$DEST"(?!\.)/, "the installed app is never deleted in place");
   });
 
-  it("discloses the installed count near the top and still sends it", () => {
-    const head = script.split("\n").slice(0, 12).join("\n");
-    assert.match(head, /# .*one anonymous 'installed' count to unvibe\.site/);
-    assert.match(head, /no code or personal data/i);
-    assert.match(script, /"event":"installed"/);
+  it("contacts only the GitHub release: nothing is sent back to unvibe.site", () => {
+    assertOnlyReleaseRequests(script);
+    assert.match(script.split("\n").slice(0, 12).join("\n"), /# Talks only to GitHub: it sends nothing to unvibe\.site\./);
   });
 
   it("ends by pointing at install help, then calls main on the very last line", () => {
@@ -477,11 +498,9 @@ describe("Windows install script text", () => {
   const script = betaWindowsInstallScript();
   const startAt = script.indexOf("Start-Process -FilePath $download");
 
-  it("discloses the installed count near the top and still sends it", () => {
-    const head = script.split("\n").slice(0, 8).join("\n");
-    assert.match(head, /# .*one anonymous 'installed' count to unvibe\.site/);
-    assert.match(head, /no code or personal data/i);
-    assert.match(script, /"event":"installed"/);
+  it("contacts only the GitHub release: nothing is sent back to unvibe.site", () => {
+    assertOnlyReleaseRequests(script);
+    assert.match(script.split("\n").slice(0, 8).join("\n"), /# Talks only to GitHub: it sends nothing to unvibe\.site\./);
   });
 
   it("stops before running anything when the checksum can't be confirmed", () => {

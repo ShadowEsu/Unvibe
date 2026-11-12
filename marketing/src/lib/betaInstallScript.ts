@@ -10,7 +10,6 @@ export const BETA_WINDOWS_SETUP_ASSET = "Unvibe-0.1.51-win-x64-setup.exe";
  * 50e065bc-3134-11e6-9bab-38c9862bdaf3 (a test recomputes it from the appId).
  */
 export const BETA_WINDOWS_APP_GUID = "f5687918-a052-548a-a713-e4a84dbef267";
-export const BETA_INSTALL_TRACK_URL = "https://unvibe.site/api/install/event";
 export const BETA_INSTALL_HELP_URL = "https://unvibe.site/install-help";
 /** Where both install scripts live, so people can read them before running them. */
 export const BETA_INSTALL_SCRIPT_SOURCE_URL =
@@ -32,7 +31,7 @@ export function betaInstallScript(): string {
 # Unvibe private beta installer for macOS. Source: ${BETA_INSTALL_SCRIPT_SOURCE_URL}
 # Downloads the app from GitHub releases with curl, stops unless it matches the published
 # SHA-256, and copies Unvibe.app into /Applications.
-# Sends one anonymous 'installed' count to unvibe.site when it finishes. No code or personal data.
+# Talks only to GitHub: it sends nothing to unvibe.site.
 set -euo pipefail
 
 # Everything is inside main, called on the very last line, so a curl | bash cut off mid-download runs nothing.
@@ -43,7 +42,6 @@ VERSION="\${TAG#v}"
 ASSET="\${UNVIBE_BETA_ASSET:-${BETA_INSTALL_ASSET}}"
 URL="https://github.com/ShadowEsu/Unvibe/releases/download/\${TAG}/\${ASSET}"
 DEST="/Applications/Unvibe.app"
-TRACK="${BETA_INSTALL_TRACK_URL}"
 HELP="${BETA_INSTALL_HELP_URL}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
@@ -164,7 +162,6 @@ rm -rf "$DEST.old" 2>/dev/null || true
 
 echo "Opening Unvibe…"
 open "$DEST"
-curl -fsS -m 4 -X POST "$TRACK" -H "Content-Type: application/json" -d '{"event":"installed"}' >/dev/null 2>&1 || true
 echo "Done. If macOS blocks it, see ${BETA_INSTALL_HELP_URL}"
 }
 
@@ -183,7 +180,7 @@ export const BETA_MAC_INTEL_DOWNLOAD_URL = BETA_MAC_DOWNLOAD_URL.replace("mac-ar
 export function betaWindowsInstallScript(): string {
   return `# Unvibe private beta installer for Windows. Free AI explanations: 30 days without an account, monthly with one. Unsigned.
 # Source: ${BETA_INSTALL_SCRIPT_SOURCE_URL}
-# Sends one anonymous 'installed' count to unvibe.site when it finishes. No code or personal data.
+# Talks only to GitHub: it sends nothing to unvibe.site.
 # Paste this in Windows PowerShell or pwsh (not Command Prompt, not Git Bash):
 # irm https://unvibe.site/install.ps1 | iex
 \$ErrorActionPreference = "Stop"
@@ -200,7 +197,6 @@ try {
 \$url = "https://github.com/ShadowEsu/Unvibe/releases/download/\$tag/\$asset"
 \$work = Join-Path ([IO.Path]::GetTempPath()) ("unvibe-install-" + [guid]::NewGuid().ToString("N"))
 \$download = Join-Path \$work \$asset
-\$track = "${BETA_INSTALL_TRACK_URL}"
 \$ua = "UnvibeBetaInstaller/${BETA_INSTALL_TAG.replace(/^v/, "")}"
 
 if (\$env:OS -notlike "*Windows*") {
@@ -339,9 +335,6 @@ foreach (\$old in @("Unvibe.exe", "Unvibe.exe.download", "Unvibe.exe.old")) {
 
 Write-Host "Opening Unvibe..."
 Start-Process \$installed
-try {
-  Invoke-RestMethod -Method Post -Uri \$track -ContentType "application/json" -Body '{"event":"installed"}' -TimeoutSec 4 | Out-Null
-} catch {}
 Write-Host "Windows may warn that Unvibe is unsigned. That is expected during beta. If SmartScreen appears, choose More info, then Run anyway."
 Write-Host "Done. Unvibe is installed for your Windows user: in your Start menu, on your desktop and in your tray. To remove it, use Settings > Apps > Installed apps."
 `;

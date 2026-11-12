@@ -17,7 +17,7 @@ describe("betaInstallStats", () => {
     assert.equal(parseBetaInstallEvent("hack"), null);
   });
 
-  it("counts copied and installed events on disk", async () => {
+  it("counts copied and survey events on disk", async () => {
     const previousBlob = process.env.BLOB_READ_WRITE_TOKEN;
     const previousUrl = process.env.SUPABASE_URL;
     const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,11 +28,9 @@ describe("betaInstallStats", () => {
     await fs.rm(tmpDataFile, { force: true }).catch(() => undefined);
     try {
       const afterCopy = await recordBetaInstallEvent("copied");
-      const afterInstall = await recordBetaInstallEvent("installed");
       const afterSurvey = await recordBetaInstallEvent("survey");
       assert.equal(afterCopy.copied, 1);
-      assert.equal(afterInstall.copied, 1);
-      assert.equal(afterInstall.installed, 1);
+      assert.equal(afterSurvey.copied, 1);
       assert.equal(afterSurvey.survey, 1);
     } finally {
       if (previousBlob === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
@@ -56,10 +54,10 @@ describe("install script day counts (migration 0012)", () => {
     };
     // 07:30 UTC on 6 Nov is 23:30 PST on 5 Nov.
     assert.equal(await recordInstallScriptDay("mac_fetched", rpc, new Date("2026-11-06T07:30:00Z")), true);
-    assert.equal(await recordInstallScriptDay("installed", rpc, new Date("2026-11-06T08:00:00Z")), true);
+    assert.equal(await recordInstallScriptDay("win_fetched", rpc, new Date("2026-11-06T08:00:00Z")), true);
     assert.deepEqual(calls, [
       ["2026-11-05", "mac_fetched"],
-      ["2026-11-06", "installed"],
+      ["2026-11-06", "win_fetched"],
     ]);
   });
 
