@@ -141,7 +141,16 @@ async function resize(page, width, height, { center = false } = {}) {
   await page.setViewportSize(viewport);
   emulated.set(page, real);
   await sleep(300);
-  const inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  let inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  if (inner[0] !== viewport.width || inner[1] !== viewport.height) {
+    // Playwright sends an override only when it differs from the last one it sent (crPage.js _updateViewport), so once
+    // something else has dropped Chromium's override, asking for the same size again does nothing (run 43174610564:
+    // the panel stayed 420x677 after a follow-up). One pixel off and back makes it send the override again.
+    await page.setViewportSize({ width: viewport.width, height: viewport.height + 1 });
+    await page.setViewportSize(viewport);
+    await sleep(300);
+    inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
+  }
   if (inner[0] !== viewport.width || inner[1] !== viewport.height) throw new Error(`viewport is ${inner.join('x')}, wanted ${viewport.width}x${viewport.height}`);
   console.log(`NOTE screen ${real.avail.join('x')} is smaller than a ${width}x${height} window: page viewport emulated at ${viewport.width}x${viewport.height}`);
 }
@@ -198,9 +207,26 @@ async function windowWith(part, timeout = 30000) {
 async function shot(page, label) {
   const [width, height, ratio] = await page.evaluate(() => [window.innerWidth, window.innerHeight, window.devicePixelRatio || 1]);
   const cdp = await page.context().newCDPSession(page);
+  // The PNG's own size, from its IHDR chunk.
+  const size = (png) => [png.readUInt32BE(16), png.readUInt32BE(20)];
   try {
-    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 2 / ratio } });
-    writeFileSync(path.join(shots, `${label}.png`), Buffer.from(data, 'base64'));
+    // The ratio a page reports can lag the one its capture renders at: in run 43174610564 the first still after each
+    // viewport emulation came out at 4x its CSS size (a 420x720 panel at 1680x2880), the next ones at 2x. So each capture
+    // is checked and taken again at the scale that gives exactly twice the CSS size (up to 3 tries). A still that never
+    // comes out right is kept and named in a NOTE, not thrown: a throw would end the step and its follow-up.
+    let scale = 2 / ratio;
+    let png;
+    let w = 0;
+    let h = 0;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      png = Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale } })).data, 'base64');
+      [w, h] = size(png);
+      if (w === 2 * width && h === 2 * height) break;
+      console.log(`NOTE ${label}: capture ${attempt} came out ${w}x${h} for a ${width}x${height} page (ratio ${ratio}, scale ${scale})`);
+      scale *= (2 * width) / w;
+    }
+    if (w !== 2 * width || h !== 2 * height) console.log(`NOTE ${label}: still kept at ${w}x${h}, not ${2 * width}x${2 * height}`);
+    writeFileSync(path.join(shots, `${label}.png`), png);
   } finally {
     await cdp.detach().catch(() => {});
   }
