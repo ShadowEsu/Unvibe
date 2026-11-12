@@ -162,7 +162,8 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Indie Hackers", status: "live", href: "https://www.indiehackers.com/product/unvibe" },
   { site: "DevHunt", status: "live", href: "https://devhunt.org/tool/unvibe" },
   { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
-  { site: "Startup Fame", status: "pending", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site", linkRequired: true, submitted: "2026-11-07" },
+  // Approved 12 Nov 04:39Z (first100, LIVE-LISTINGS); the listing links unvibe.site, so the href keeps its utm_source for their checker.
+  { site: "Startup Fame", status: "live", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site" },
   { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true, submitted: "2026-11-07" },
