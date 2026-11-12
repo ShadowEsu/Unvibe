@@ -16,7 +16,7 @@ export const metadata: Metadata = pageMetadata({
   description: USE_CASES_INDEX.description,
 });
 
-/** The four use-case pages, one line each, then the download. */
+/** The five use-case pages, one line each, then the download. */
 export default function UseCasesPage() {
   return (
     <article className={`explain-page ${explainMono.variable}`}>
@@ -32,7 +32,7 @@ export default function UseCasesPage() {
         </nav>
         <h1>Unvibe use cases</h1>
         <p>
-          Four times the code in front of you came from an AI tool or another person, and you need to understand it
+          Five times the code in front of you came from an AI tool or another person, and you need to understand it
           before you ship it. Each page has a worked example and advice you can use without installing anything.
         </p>
       </div>
