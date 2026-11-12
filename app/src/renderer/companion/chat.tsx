@@ -445,9 +445,10 @@ export function Chat({
             {showVoice ? <VoiceTip onClose={() => setShowVoice(false)} /> : null}
             <div className="chat-composer__bar">
               <AiPicker label={aiLabel} usingOwnAi={usingOwnAi} onOpenSettings={onOpenAiSettings} />
-              <span className="chat-composer__hint">{isWindows
-                ? (empty ? 'Enter to send' : 'Enter to send, Shift+Enter for a new line')
-                : (empty ? 'Return to send' : 'Return to send, Shift Return for a new line')}</span>
+              <span className="chat-composer__hint">
+                {isWindows ? 'Enter to send' : 'Return to send'}
+                {empty ? null : <span className="chat-composer__hint-more">{isWindows ? ', Shift+Enter for a new line' : ', Shift Return for a new line'}</span>}
+              </span>
               <button className="chat-mic" type="button" aria-pressed={showVoice} onClick={() => { setShowVoice(true); areaRef.current?.focus(); }}>
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 10 3z M5.5 9.5a4.5 4.5 0 0 0 9 0 M10 14v3 M7.5 17h5" /></svg>
                 Speak
