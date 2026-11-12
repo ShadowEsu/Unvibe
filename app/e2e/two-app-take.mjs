@@ -150,7 +150,10 @@ async function take(name, owner, bundle, select) {
     const sel = await select();
     entry.selection = sel.how;
     log(sel.ok, `${owner}: the selection is exactly the sample`, sel.how);
-    if (!sel.ok) return;
+    if (!sel.ok) {
+      try { grab(`s8-${name}-not-selected`); } catch {}
+      return;
+    }
     if (frontmost() !== owner) { log(false, `${owner} is in front before the grab`, `front: ${frontmost()}`); return; }
     grab(`s8-${name}-selected`);
     if (dry) { log(null, `${owner}: dry run, no Control+U`); return; }
@@ -191,21 +194,26 @@ await take('textedit', 'TextEdit', '/System/Applications/TextEdit.app', async ()
 // --- Terminal: a neutral prompt, cleared scrollback, `cat retry.ts`, a real drag over the 16 rows ----------------
 await take('terminal', 'Terminal', '/System/Applications/Utilities/Terminal.app', async () => {
   // Terminal is never scripted either (do script needs the same Apple Events): it opens this .command file itself.
-  // The script sizes, places and titles its window with Terminal's own escape sequences, clears the screen and the
-  // scrollback (the line Terminal typed to start it, and the login message), and becomes a bare bash with a '$ '
-  // prompt and no history file. `cat retry.ts` is then typed at that prompt. Terminal's copy of the file ends with the
-  // newline the original retry.ts has after line 26, so the next prompt starts on its own row, not after the closing }.
-  const term = path.join(dir, 'terminal');
+  // The script sizes, places and titles its window with Terminal's own escape sequences, tells Terminal its working
+  // directory (OSC 7: the title's directory part is then "auth", like the film's src/auth/retry.ts, not the login's
+  // home folder, which dry run 43208580782 showed as "runner"), clears the screen and the scrollback (the line
+  // Terminal typed to start it, and the login message), and becomes /bin/sh: an interactive POSIX shell reads only the
+  // file $ENV names, and ENV and PROMPT_COMMAND are unset, so no rc file or inherited hook can set a prompt or a title
+  // (a plain bash read /etc/bash.bashrc in the local smoke and titled the window user@host), and the title shows "sh"
+  // without the arguments dry run 43208580782 showed. '$ ' prompt, no history file. `cat retry.ts` is then typed at
+  // that prompt. Terminal's copy of the file ends with the newline the original retry.ts has after line 26, so the
+  // next prompt starts on its own row, not after the closing }.
+  const term = path.join(dir, 'auth');
   mkdirSync(term);
   writeFileSync(path.join(term, 'retry.ts'), Buffer.concat([sample, Buffer.from('\n')]));
-  const command = path.join(term, 's8.command');
+  const command = path.join(dir, 's8.command');
   writeFileSync(command, [
     '#!/bin/bash',
     `cd '${term}'`,
-    "printf '\\033[8;30;100t\\033[3;40;60t\\033]0;retry.ts\\007'",
+    "printf '\\033[8;30;100t\\033[3;40;60t\\033]0;retry.ts\\007\\033]7;file://%s\\007' \"$PWD\"",
     "clear; printf '\\033[3J'",
-    "export PS1='$ ' HISTFILE=/dev/null BASH_SILENCE_DEPRECATION_WARNING=1",
-    'exec /bin/bash --norc --noprofile -i',
+    "unset ENV PROMPT_COMMAND; export HOME=\"$PWD\" PS1='$ ' HISTFILE=/dev/null",
+    'exec /bin/sh',
     '',
   ].join('\n'), { mode: 0o755 });
   execFileSync('open', ['-a', 'Terminal', command]);
@@ -221,10 +229,12 @@ await take('terminal', 'Terminal', '/System/Applications/Utilities/Terminal.app'
   } catch (e) {
     log(null, 'Terminal window title: not read', String(e.message).split('\n')[0]);
   }
-  const [wx, wy, ww, wh] = pointer('frame', 'Terminal').split(' ').map(Number);
-  // Which row is where: triple-click (one whole row), copy, read. Every 5 points down from under the title bar.
+  const frame = pointer('frame', 'Terminal');
+  const [wx, wy, ww, wh] = frame.split(' ').map(Number);
+  // Which row is where: triple-click (one whole row), copy, read. Every 5 points down from below the title bar (about
+  // 28 points): a double-click on the title bar zooms the window (dry run 43208580782 lost its top rows that way).
   const rows = new Map();
-  for (let y = wy + 24; y < wy + Math.min(wh, 440); y += 5) {
+  for (let y = wy + 32; y < wy + Math.min(wh, 440); y += 5) {
     clearClipboard();
     pointer('click', wx + 60, y, 3);
     await sleep(150);
@@ -234,6 +244,8 @@ await take('terminal', 'Terminal', '/System/Applications/Utilities/Terminal.app'
     if (!rows.has(text)) rows.set(text, []);
     rows.get(text).push(y);
   }
+  const after = pointer('frame', 'Terminal');
+  if (after !== frame) return { ok: false, how: `the window moved or changed size during the row scan (${frame} → ${after})`, text: '' };
   const middle = (ys) => ys[Math.floor(ys.length / 2)];
   const cat = rows.get('$ cat retry.ts');
   const firstYs = rows.get(lines[0]);
