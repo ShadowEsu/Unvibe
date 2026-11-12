@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { macCaptureFailure, nextCaptureBlock } from '../src/main/selection';
+import { macCaptureFailure, nextCaptureBlock, parseWindowsForeground } from '../src/main/selection';
 
 test('a Mac copy refused by Automation (-1743) is told apart, so the person learns which switch to turn on', () => {
   // execFile's error message carries osascript's stderr.
@@ -46,4 +46,20 @@ test('other Mac copy failures, such as a missing Accessibility grant, stay plain
   );
   assert.equal(macCaptureFailure(noAccessibility), 'failed');
   assert.equal(macCaptureFailure(undefined), 'failed');
+});
+
+test('Windows: a foreground window that runs as administrator is told apart from an empty selection', () => {
+  // PowerShell prints the process name, then the elevation flag; UIPI drops the copy keystroke on the way to an
+  // elevated window and SendKeys still reports success, so the flag is the only signal.
+  assert.deepEqual(parseWindowsForeground('powershell\r\n1\r\n'), { name: 'powershell', elevated: true });
+  assert.deepEqual(parseWindowsForeground('Code\r\n0\r\n'), { name: 'Code', elevated: false });
+  // No name (the process could not be queried at all) is still an elevated answer; an older print without the flag
+  // is a plain name.
+  assert.deepEqual(parseWindowsForeground('\r\n1\r\n'), { name: null, elevated: true });
+  assert.deepEqual(parseWindowsForeground('notepad\r\n'), { name: 'notepad', elevated: false });
+  // The panel keeps the elevated note until the next press, like a System Events refusal; a press that copies clears it.
+  const elevated = nextCaptureBlock(null, {}, { code: null, error: 'elevated' });
+  assert.equal(elevated, 'elevated');
+  assert.equal(nextCaptureBlock(elevated, { preferClipboard: true }, { code: null, error: 'empty' }), 'elevated');
+  assert.equal(nextCaptureBlock(elevated, {}, { code: 'let x = 1;' }), null);
 });

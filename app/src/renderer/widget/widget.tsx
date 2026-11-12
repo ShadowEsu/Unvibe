@@ -100,7 +100,7 @@ function EmptyPicker({ accel, level }: { accel: string; level: ExplanationLevel 
   const [guideOpen, setGuideOpen] = useState(false);
   const [grantNote, setGrantNote] = useState('');
   // macOS refused (or is still asking about) System Events, so the shortcut's copy read nothing.
-  const [automation, setAutomation] = useState<'automation_denied' | 'automation_timeout' | null>(null);
+  const [automation, setAutomation] = useState<'automation_denied' | 'automation_timeout' | 'elevated' | null>(null);
   const shortcut = shortcutCaps(accel).join(isWindows || !accel ? '+' : '') || reviewKeyHint;
   useEffect(() => {
     let alive = true;
@@ -204,6 +204,8 @@ function EmptyPicker({ accel, level }: { accel: string; level: ExplanationLevel 
         </div>
       ) : automation === 'automation_timeout' ? (
         <div className="ob-note" role="status">If macOS asked to let Unvibe control System Events, choose Allow, then press {shortcut} again.</div>
+      ) : automation === 'elevated' ? (
+        <div className="ob-note" role="status">This window runs as administrator, so Unvibe can't copy from it. Copy the code yourself, then use Explain my clipboard.</div>
       ) : null}
       <div className="ob-actions">
         <button className="ob-btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
