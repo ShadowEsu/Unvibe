@@ -24,6 +24,10 @@ on:
         description: "Optional: only these media-samples files, comma-separated (one small AI run: Mac media only, no walkthrough, no Windows job)"
         required: false
         default: ""
+      two_app_take:
+        description: "Optional: dry or take. Studio's S8: the same sample selected in TextEdit and Terminal, Control+U in each (Mac only, no walkthrough; dry = selections and grabs only, the app isn't started)"
+        required: false
+        default: ""
       desktop_recording:
         description: "Also record the whole screen around the global-shortcut step (demo video; Mac .mov, Windows JPEG frames)"
         type: boolean
@@ -39,8 +43,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # samples_only: the Mac job alone (its install and the media step); the Windows job would ask the AI again.
-        include: ${{ fromJSON(inputs.samples_only != '' && '[{"os":"macos-latest","label":"mac"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        # samples_only / two_app_take: the Mac job alone (its install and the media step); the Windows job would ask the AI again.
+        include: ${{ fromJSON((inputs.samples_only != '' || inputs.two_app_take != '') && '[{"os":"macos-latest","label":"mac"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -192,7 +196,7 @@ jobs:
           "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Walk through the app
-        if: inputs.samples_only == ''
+        if: inputs.samples_only == '' && inputs.two_app_take == ''
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -323,11 +327,19 @@ jobs:
           MEDIA_INSTALL_ID: qa-media-${{ github.run_id }}-${{ github.run_attempt }}
           MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
           MEDIA_ONLY: ${{ inputs.samples_only }}
+          TWO_APP: ${{ inputs.two_app_take }}
         run: |
           if [ -n "$MEDIA_ONLY" ] && ! [[ "$MEDIA_ONLY" =~ ^[A-Za-z0-9._-]+(,[A-Za-z0-9._-]+)*$ ]]; then echo "samples_only must be file names separated by commas"; exit 1; fi
-          cp app/e2e/marketing-media.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          if [ -n "$TWO_APP" ] && [ "$TWO_APP" != dry ] && [ "$TWO_APP" != take ]; then echo "two_app_take must be dry or take"; exit 1; fi
+          if [ -n "$TWO_APP" ] && [ -n "$MEDIA_ONLY" ]; then echo "two_app_take and samples_only are separate runs"; exit 1; fi
+          cp app/e2e/marketing-media.mjs app/e2e/two-app-take.mjs app/e2e/media-window.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cp -R app/e2e/media-samples "$RUNNER_TEMP/pw/"
-          cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
+          if [ -n "$TWO_APP" ]; then
+            swiftc -O -o "$RUNNER_TEMP/pw/mouse" app/e2e/mouse.swift
+            cd "$RUNNER_TEMP/pw" && MOUSE="$RUNNER_TEMP/pw/mouse" node two-app-take.mjs
+          else
+            cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
+          fi
 
       - name: Flag the media install as QA (Mac)
         if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
