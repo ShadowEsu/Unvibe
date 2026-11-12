@@ -104,7 +104,8 @@
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-composer:focus-within { border-color: var(--u-focus); box-shadow: none; }
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-assistant__card { background: var(--u-surface); border: 1px solid var(--u-border); box-shadow: none; }
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-assistant__who { color: var(--u-accent-text); }
-:root[data-look][data-ui="v3"][data-v7] .layout .chat-composer__hint { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+:root[data-look][data-ui="v3"][data-v7] .layout .chat-composer__bar .chat-ai { flex: 0 0 auto; }
+:root[data-look][data-ui="v3"][data-v7] .layout .chat-composer__hint { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left; }
 @container pane (max-width: 840px) {
   :root[data-look][data-ui="v3"][data-v7] .layout .page > .sharks-backdrop { display: none; }
   :root[data-look][data-ui="v3"][data-v7] .layout :is(.page--home, .page:has(.chat-page)) > .fade-in { width: auto; min-width: 0; }
@@ -173,7 +174,8 @@
 :root[data-look="o3"][data-ui="v3"][data-v7] .layout :is(.home-list, .lib-group__rows, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .metric-card) { border: 0; border-top: 1px solid var(--u-border); border-radius: 0; box-shadow: none; background: transparent; }
 /* O3 keeps violet for the main button, toggles, focus and links only: badges, status pills, code chips, Library row
    icons and the "Vibe" name are text-2. */
-:root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .chat-assistant__who, .login__eyebrow, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-ink-2); background: var(--u-sunken); }
+:root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-ink-2); background: var(--u-sunken); }
+:root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .chat-assistant__who, .login__eyebrow) { color: var(--u-ink-2); }
 :root[data-look="o3"][data-ui="v3"][data-v7] .layout .lib-row__icon { background: var(--u-sunken); stroke: var(--u-ink-2); }
 /* O2 light: chip text on accent-soft is select-ink (#5f41e6, 5.1:1), not the link violet (4.17:1). */
 :root[data-look="o2"][data-ui="v3"][data-v7]:not([data-theme="dark"]) :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-select-ink); }
