@@ -553,6 +553,7 @@ export default [
     id: "sql",
     fileName: "report.sql",
     published: "2026-10-26",
+    title: "SQL query explained, clause by clause",
     related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
@@ -822,6 +823,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
     id: "curl",
     fileName: "check-orders.sh",
     published: "2026-11-05",
+    title: "curl command explained, flag by flag",
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -930,6 +932,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
     id: "chmod",
     fileName: "set-permissions.sh",
     published: "2026-11-05",
+    title: "chmod 755 explained, and the other numbers",
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
     description:
       "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
@@ -1791,6 +1794,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
     id: "regex",
     fileName: "access_log.py",
     published: "2026-11-04",
+    title: "Regex pattern explained, piece by piece",
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
     description:
       "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
@@ -2277,6 +2281,7 @@ back door"
     id: "env",
     fileName: ".env",
     published: "2026-11-05",
+    title: ".env file explained: what each line is for",
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
     description:
       "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
