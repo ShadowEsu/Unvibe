@@ -19,8 +19,7 @@ const emulated = new WeakMap();
  * The viewport is emulated from this module's own CDP session, kept attached for the page's life (detaching drops its
  * override), with deviceScaleFactor 0: the window keeps its own 2x. Playwright's setViewportSize forces 1, and then
  * the first 2x capture rendered at 4x and changed the override, which lost its height (run 43174610564's follow-up
- * throw, run 43205339271's white band under sample-sort-scores-beginner). This session sends every override itself,
- * so no cache can skip one.
+ * throw, run 43205339271's white band under sample-sort-scores-beginner).
  */
 const sessions = new WeakMap();
 async function override(page, size) {
@@ -29,8 +28,11 @@ async function override(page, size) {
     cdp = await page.context().newCDPSession(page);
     sessions.set(page, cdp);
   }
-  if (size) await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.width, height: size.height, deviceScaleFactor: 0, mobile: false });
-  else await cdp.send('Emulation.clearDeviceMetricsOverride');
+  if (!size) return cdp.send('Emulation.clearDeviceMetricsOverride');
+  // Chromium skips a session's override when it repeats that session's last one, even if another override has
+  // replaced it since; one pixel taller first makes it apply again.
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.width, height: size.height + 1, deviceScaleFactor: 0, mobile: false });
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.width, height: size.height, deviceScaleFactor: 0, mobile: false });
 }
 export async function resize(page, width, height, { center = false } = {}) {
   await page.evaluate(([w, h, c]) => {

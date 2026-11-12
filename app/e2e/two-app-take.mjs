@@ -146,71 +146,81 @@ let before = '';
 async function take(name, owner, bundle, select) {
   const entry = { app: owner, appVersion: appVersion(bundle) };
   takes.push(entry);
-  const sel = await select();
-  entry.selection = sel.how;
-  log(sel.ok, `${owner}: the selection is exactly the sample`, sel.how);
-  if (!sel.ok) return;
-  if (frontmost() !== owner) { log(false, `${owner} is in front before the grab`, `front: ${frontmost()}`); return; }
-  grab(`s8-${name}-selected`);
-  if (dry) { log(null, `${owner}: dry run, no Control+U`); return; }
-  keystroke('u', 'control down');
-  entry.sentAt = new Date().toISOString();
-  const done = await finishedPanel(before);
-  before = done.answer;
-  await resize(done.page, 420, 720);
-  await done.page.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
-  await sleep(600);
-  const [w, h] = await shot(done.page, path.join(shots, `s8-${name}-panel.png`));
-  grab(`s8-${name}-with-panel`);
-  Object.assign(entry, { depth: done.depth, received: done.code, receivedSha: sha(Buffer.from(done.code.replace(/\n$/, ''), 'utf8')), answer: done.answer });
-  log(entry.receivedSha === SHA, `${owner}: the panel received exactly the sample`, `sha ${entry.receivedSha.slice(0, 12)}`);
-  log(w === 840 && h === 1440, `${owner}: panel still 840x1440`, `${w}x${h}`);
-  // The next app's take opens a fresh panel, so this one can't cover the next window.
-  await done.page.evaluate(() => window.unvibe.closeWidget()).catch(() => {});
-  await sleep(1500);
+  try {
+    const sel = await select();
+    entry.selection = sel.how;
+    log(sel.ok, `${owner}: the selection is exactly the sample`, sel.how);
+    if (!sel.ok) return;
+    if (frontmost() !== owner) { log(false, `${owner} is in front before the grab`, `front: ${frontmost()}`); return; }
+    grab(`s8-${name}-selected`);
+    if (dry) { log(null, `${owner}: dry run, no Control+U`); return; }
+    keystroke('u', 'control down');
+    entry.sentAt = new Date().toISOString();
+    const done = await finishedPanel(before);
+    before = done.answer;
+    await resize(done.page, 420, 720);
+    await done.page.locator('.body').evaluate((el) => el.scrollTo({ top: 0 }));
+    await sleep(600);
+    const [w, h] = await shot(done.page, path.join(shots, `s8-${name}-panel.png`));
+    grab(`s8-${name}-with-panel`);
+    Object.assign(entry, { depth: done.depth, received: done.code, receivedSha: sha(Buffer.from(done.code.replace(/\n$/, ''), 'utf8')), answer: done.answer });
+    log(entry.receivedSha === SHA, `${owner}: the panel received exactly the sample`, `sha ${entry.receivedSha.slice(0, 12)}`);
+    log(w === 840 && h === 1440, `${owner}: panel still 840x1440`, `${w}x${h}`);
+    // The next app's take opens a fresh panel, so this one can't cover the next window.
+    await done.page.evaluate(() => window.unvibe.closeWidget()).catch(() => {});
+    await sleep(1500);
+  } catch (e) {
+    // One app's failure is logged and the other app still gets its take (the report says what happened in both).
+    entry.error = String(e.message).split('\n')[0];
+    log(false, `${owner}: the take stopped`, entry.error);
+    try { grab(`s8-${name}-error`); } catch {}
+  }
 }
 
 // --- TextEdit: the file holds only the sample; Command+A --------------------------------------------------------
 await take('textedit', 'TextEdit', '/System/Applications/TextEdit.app', async () => {
   execFileSync('open', ['-a', 'TextEdit', file]);
   await sleep(3000);
-  osa('tell application "TextEdit" to activate', 'delay 1', 'tell application "TextEdit" to set bounds of front window to {40, 60, 760, 620}', 'tell application "System Events" to keystroke "a" using command down');
+  // Only `activate` and System Events, as real-device.mjs does: an Apple Event that scripts TextEdit itself (set bounds)
+  // timed out on the runner (dry run 43206019385). The window keeps the place TextEdit gives it.
+  osa('tell application "TextEdit" to activate', 'delay 1', 'tell application "System Events" to keystroke "a" using command down');
   await sleep(800);
   return copiedSelection();
 });
 
 // --- Terminal: a neutral prompt, cleared scrollback, `cat retry.ts`, a real drag over the 16 rows ----------------
 await take('terminal', 'Terminal', '/System/Applications/Utilities/Terminal.app', async () => {
-  // The setup line is typed at the shell's own prompt and then cleared, with the scrollback, before anything is grabbed.
-  // Terminal's copy of the file ends with the newline the original retry.ts has after line 26: without it the shell's
-  // prompt (bash) or its end-of-line mark (zsh's %) would follow the closing } on the last row.
+  // Terminal is never scripted either (do script needs the same Apple Events): it opens this .command file itself.
+  // The script sizes, places and titles its window with Terminal's own escape sequences, clears the screen and the
+  // scrollback (the line Terminal typed to start it, and the login message), and becomes a bare bash with a '$ '
+  // prompt and no history file. `cat retry.ts` is then typed at that prompt. Terminal's copy of the file ends with the
+  // newline the original retry.ts has after line 26, so the next prompt starts on its own row, not after the closing }.
   const term = path.join(dir, 'terminal');
   mkdirSync(term);
   writeFileSync(path.join(term, 'retry.ts'), Buffer.concat([sample, Buffer.from('\n')]));
-  writeFileSync(path.join(term, 'neutral.sh'), "export PS1='$ '\nunset RPROMPT PROMPT_COMMAND\nclear\nprintf '\\033[3J'\n");
-  // `activate` opens a window when Terminal isn't running yet: the setup goes into that window, not a second one.
-  const setup = `cd ${term} && . ./neutral.sh`;
-  osa('tell application "Terminal"', 'activate', 'delay 1', 'if (count of windows) is 0 then', `do script ${JSON.stringify(setup)}`, 'else', `do script ${JSON.stringify(setup)} in front window`, 'end if', 'end tell');
-  await sleep(2500);
-  osa(
-    'tell application "Terminal"',
-    'set w to front window',
-    'set number of columns of w to 100',
-    'set number of rows of w to 30',
-    'set position of w to {40, 60}',
-    'set t to selected tab of w',
-    'set custom title of t to "retry.ts"',
-    'set title displays custom title of t to true',
-    'set title displays device name of t to false',
-    'set title displays shell path of t to false',
-    'set title displays window size of t to false',
-    'set title displays file name of t to false',
-    'do script "cat retry.ts" in w',
-    'end tell',
-  );
+  const command = path.join(term, 's8.command');
+  writeFileSync(command, [
+    '#!/bin/bash',
+    `cd '${term}'`,
+    "printf '\\033[8;30;100t\\033[3;40;60t\\033]0;retry.ts\\007'",
+    "clear; printf '\\033[3J'",
+    "export PS1='$ ' HISTFILE=/dev/null BASH_SILENCE_DEPRECATION_WARNING=1",
+    'exec /bin/bash --norc --noprofile -i',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  execFileSync('open', ['-a', 'Terminal', command]);
+  await sleep(4000);
+  if (frontmost() !== 'Terminal') {
+    execFileSync('open', ['-a', 'Terminal']);
+    await sleep(1000);
+  }
+  osa('tell application "System Events" to keystroke "cat retry.ts"', 'tell application "System Events" to key code 36');
   await sleep(2000);
-  osa('tell application "Terminal" to activate');
-  await sleep(800);
+  try {
+    log(null, `Terminal window title: ${osa('tell application "System Events" to get name of front window of process "Terminal"')}`);
+  } catch (e) {
+    log(null, 'Terminal window title: not read', String(e.message).split('\n')[0]);
+  }
   const [wx, wy, ww, wh] = pointer('frame', 'Terminal').split(' ').map(Number);
   // Which row is where: triple-click (one whole row), copy, read. Every 5 points down from under the title bar.
   const rows = new Map();
@@ -228,7 +238,10 @@ await take('terminal', 'Terminal', '/System/Applications/Utilities/Terminal.app'
   const cat = rows.get('$ cat retry.ts');
   const firstYs = rows.get(lines[0]);
   const lastYs = rows.get(lines[lines.length - 1]);
+  const order = [...rows.keys()];
+  const above = cat ? order.slice(0, order.indexOf('$ cat retry.ts')) : order.slice(0, 3);
   log(null, `Terminal rows found: '$ cat retry.ts' ${cat ? `at y ${middle(cat)}` : 'NOT seen'}; first sample line ${firstYs ? `at y ${middle(firstYs)}` : 'NOT seen'}; last ${lastYs ? `at y ${middle(lastYs)}` : 'NOT seen'}; window ${wx},${wy} ${ww}x${wh}; ${rows.size} distinct rows`);
+  log(null, `Terminal rows above '$ cat retry.ts': ${above.length ? above.map((t) => JSON.stringify(t)).join(', ') : 'none'}`);
   if (!firstYs || !lastYs) return { ok: false, how: 'the sample rows were not found', text: '' };
   // A drag from the left edge of the first row to past the end of the last row selects exactly those 16 rows.
   let sel = { ok: false, how: 'not tried' };
