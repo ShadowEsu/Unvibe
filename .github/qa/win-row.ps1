@@ -190,6 +190,10 @@ if ($Kind -eq 'ps1') {
   $fwLog = Join-Path $Out 'front-watch.log'
   for ($i = 0; $i -lt 60 -and -not (@(Get-Content $fwLog -ErrorAction SilentlyContinue) -match ' start '); $i++) { Start-Sleep -Milliseconds 500 }
   Note "front watch: $(if (Test-Path $fwLog) { "started after $($i * 0.5) s" } else { 'NOT started after 30 s (the summary below will say so)' })"
+  # #208's first frame (lead, 0.1.52: the window stays hidden until the real screen paints, fallback 5 s): first-paint.ps1
+  # pictures the first visible main window the moment it shows and times when content first appears.
+  $fp = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\first-paint.ps1", '-Out', $Out, '-Tag', 'first-launch', '-Seconds', '150' -PassThru -WindowStyle Hidden
+  $null = $fp.Handle
   (New-Object -ComObject Shell.Application).MinimizeAll(); Start-Sleep 2
   Start-Process explorer.exe -ArgumentList "/select,`"$exe`""
   $leaf = Split-Path $exe -Leaf; $base = [IO.Path]::GetFileNameWithoutExtension($leaf); $item = $null
@@ -316,6 +320,25 @@ if ($fw) {
   Note "front watch exit $($fw.ExitCode)"
   Shot 'front-watch-end'
   FrontReport (Join-Path $Out 'front-watch.log') $launchUtc
+}
+if ($fp) {
+  if (-not $fp.WaitForExit(60000)) { $fp | Stop-Process -Force; Note '#208 first frame: watcher still running, stopped' }
+  $lines = @(Get-Content (Join-Path $Out 'first-paint-first-launch.txt') -ErrorAction SilentlyContinue)
+  if (-not $lines.Count) { Note 'FAIL  #208 first frame: first-paint.ps1 wrote nothing' }
+  $lines | ForEach-Object { Note "  #208 first frame: $_" }
+  $first = $lines | Where-Object { $_ -like 'first visible*' } | Select-Object -First 1
+  if ($first) {
+    $pct = if ($first -match 'most common colour ([\d.]+)%') { [double]$Matches[1] } else { 100 }
+    $cols = if ($first -match '(\d+) colours') { [int]$Matches[1] } else { 0 }
+    $content = $pct -lt 97 -and $cols -ge 20
+    # The frame is a screen grab: if another window covered Unvibe then, the pixels are that window's, not Unvibe's.
+    if ($first -notmatch 'in front: True') { Note "NOTE  #208 first frame not judged: Unvibe was not in front when it first showed, so the grab ($pct%, $cols colours) may be another window's pixels (first-paint-first-launch-first.png)" }
+    else {
+      # An empty first window is the 0.1.51 behaviour #208's first-frame fix removes: a gate only on an RC build.
+      $verdict = if ($content) { 'PASS' } elseif ($env:RC_DIR) { 'FAIL' } else { 'NOTE' }
+      Note "$verdict  #208 first frame: the window $(if ($content) { 'had content' } else { 'was EMPTY' }) when it first showed (client area: most common colour $pct%, $cols colours; empty is ~100% / under 20); picture first-paint-first-launch-first.png"
+    }
+  }
 }
 $stores = Get-ChildItem $env:APPDATA, $env:LOCALAPPDATA -Recurse -Filter 'unvibe-store.json' -ErrorAction SilentlyContinue | ForEach-Object { "$($_.FullName): $((Get-Content $_.FullName -Raw | ConvertFrom-Json).installId)" }
 Note "store files: $($stores -join ' | ')"
