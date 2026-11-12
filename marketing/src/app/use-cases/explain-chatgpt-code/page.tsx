@@ -152,7 +152,7 @@ export default async function ExplainChatgptCodePage() {
         </p>
       </section>
 
-      <UseCaseMore current={page} explain={{ id: "javascript", name: "JavaScript" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }

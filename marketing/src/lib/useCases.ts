@@ -11,6 +11,8 @@ export interface UseCase {
   description: string;
   /** One line under the link on /use-cases. */
   summary: string;
+  /** The /explain/<id> page for this case's sample language: linked from the case's Read next, and back from that page. */
+  explainId: string;
 }
 
 export const USE_CASES_INDEX = {
@@ -28,6 +30,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "What to check in a diff from Cursor, Claude Code or Copilot before you accept or commit it, with a worked TypeScript example.",
     summary: "An agent just changed your code. What to check in the diff before you accept or commit it.",
+    explainId: "typescript",
   },
   {
     slug: "learn-to-code-with-ai",
@@ -36,6 +39,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "For students and beginners who build with AI: how to read what it wrote, a worked Python example, and explanations at the New or Beginner depth.",
     summary: "You build with AI and want to understand what it wrote, at your level.",
+    explainId: "python",
   },
   {
     slug: "inherited-code",
@@ -44,6 +48,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read an unfamiliar file top-down before you change it, with a worked JavaScript example, from callers and imports to tests and git history.",
     summary: "A teammate's code, an old project or an open-source repo. How to read a file before you change it.",
+    explainId: "javascript",
   },
   {
     slug: "explain-cursor-code",
@@ -52,6 +57,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read what Cursor's Agent or Tab wrote before you accept it, with a worked React hook in TypeScript, explained at the depth you pick.",
     summary: "Cursor wrote it and you accepted it. How to find out what it does, line by line, before you ship it.",
+    explainId: "typescript",
   },
   {
     slug: "explain-copilot-code",
@@ -60,6 +66,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read what GitHub Copilot suggested before you keep it, with a worked Python function checked by running it, explained at the depth you pick.",
     summary: "Copilot suggested it and you pressed Tab. How to find out what it does, and what it gets wrong, before you ship it.",
+    explainId: "python",
   },
   {
     slug: "explain-chatgpt-code",
@@ -68,6 +75,7 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read a script ChatGPT gave you before you run it, with a worked JavaScript example checked by running it, explained at the depth you pick.",
     summary: "You asked ChatGPT for a script and pasted it in. How to find out what it does, and where it breaks, before you rely on it.",
+    explainId: "javascript",
   },
 ];
 
