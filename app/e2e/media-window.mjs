@@ -15,6 +15,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * run 43088701806 resized an emulated 420x720 panel again, read a 420x720 "screen" and threw on its real 420x679.
  */
 const emulated = new WeakMap();
+/**
+ * The viewport is emulated from this module's own CDP session, kept attached for the page's life (detaching drops its
+ * override), with deviceScaleFactor 0: the window keeps its own 2x. Playwright's setViewportSize forces 1, and then
+ * the first 2x capture rendered at 4x and changed the override, which lost its height (run 43174610564's follow-up
+ * throw, run 43205339271's white band under sample-sort-scores-beginner). This session sends every override itself,
+ * so no cache can skip one.
+ */
+const sessions = new WeakMap();
+async function override(page, size) {
+  let cdp = sessions.get(page);
+  if (!cdp) {
+    cdp = await page.context().newCDPSession(page);
+    sessions.set(page, cdp);
+  }
+  if (size) await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.width, height: size.height, deviceScaleFactor: 0, mobile: false });
+  else await cdp.send('Emulation.clearDeviceMetricsOverride');
+}
 export async function resize(page, width, height, { center = false } = {}) {
   await page.evaluate(([w, h, c]) => {
     window.resizeTo(w, h);
@@ -26,24 +43,15 @@ export async function resize(page, width, height, { center = false } = {}) {
   const real = emulated.get(page) ?? { avail: m.avail, frame: [Math.max(0, m.outer[0] - m.inner[0]), Math.max(0, m.outer[1] - m.inner[1])] };
   if (Math.abs(m.outer[0] - width) <= 2 && Math.abs(m.outer[1] - height) <= 2) {
     // The real window fits now: an earlier emulation must not leave the page at another size.
-    if (emulated.has(page)) await page.setViewportSize({ width: m.outer[0] - real.frame[0], height: m.outer[1] - real.frame[1] });
+    if (emulated.has(page)) await override(page, null);
     return;
   }
   if (real.avail[0] >= width && real.avail[1] >= height) throw new Error(`window is ${m.outer.join('x')}, wanted ${width}x${height}`);
   const viewport = { width: width - real.frame[0], height: height - real.frame[1] };
-  await page.setViewportSize(viewport);
+  await override(page, viewport);
   emulated.set(page, real);
   await sleep(300);
-  let inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
-  if (inner[0] !== viewport.width || inner[1] !== viewport.height) {
-    // Playwright sends an override only when it differs from the last one it sent (crPage.js _updateViewport), so once
-    // something else has dropped Chromium's override, asking for the same size again does nothing (run 43174610564:
-    // the panel stayed 420x677 after a follow-up). One pixel off and back makes it send the override again.
-    await page.setViewportSize({ width: viewport.width, height: viewport.height + 1 });
-    await page.setViewportSize(viewport);
-    await sleep(300);
-    inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
-  }
+  const inner = await page.evaluate(() => [window.innerWidth, window.innerHeight]);
   if (inner[0] !== viewport.width || inner[1] !== viewport.height) throw new Error(`viewport is ${inner.join('x')}, wanted ${viewport.width}x${viewport.height}`);
   console.log(`NOTE screen ${real.avail.join('x')} is smaller than a ${width}x${height} window: page viewport emulated at ${viewport.width}x${viewport.height}`);
 }
@@ -51,8 +59,7 @@ export async function resize(page, width, height, { center = false } = {}) {
 /**
  * A still of the page at 2x into `file` (the site shows them at up to half their pixel width, ledger 530 spec §5).
  * Chromium renders the capture itself at the clip's scale, so the text is sharp, not an upscaled image; the scale
- * makes the file twice the page's CSS size whatever the window's own pixel ratio is (the app runs at 2x, but
- * Playwright's viewport emulation in resize() can report 1x).
+ * makes the file twice the page's CSS size whatever the window's own pixel ratio is. Returns the PNG's size.
  */
 export async function shot(page, file) {
   const [width, height, ratio] = await page.evaluate(() => [window.innerWidth, window.innerHeight, window.devicePixelRatio || 1]);
@@ -61,10 +68,10 @@ export async function shot(page, file) {
   const size = (png) => [png.readUInt32BE(16), png.readUInt32BE(20)];
   const label = file.split(/[\\/]/).pop();
   try {
-    // The ratio a page reports can lag the one its capture renders at: in run 43174610564 the first still after each
-    // viewport emulation came out at 4x its CSS size (a 420x720 panel at 1680x2880), the next ones at 2x. So each capture
-    // is checked and taken again at the scale that gives exactly twice the CSS size (up to 3 tries). A still that never
-    // comes out right is kept and named in a NOTE, not thrown: a throw would end the step and its follow-up.
+    // Each capture is checked: if it isn't exactly twice the CSS size (run 43174610564's 4x stills, before resize() kept
+    // the window's own scale), it is taken again at the corrected scale (up to 3 tries), with a NOTE: a retake is a
+    // later moment. A still that never comes out right is kept and named in a NOTE, not thrown: a throw would end the
+    // step and its follow-up.
     let scale = 2 / ratio;
     let png;
     let w = 0;
