@@ -3952,16 +3952,18 @@ $ kill 1643167`,
     lead: "Paste a `git stash` session and Vibe explains what each command saved, restored or refused: which changes went into the stash, why `pop` can stop on a conflict, and what the conflict markers mean.",
     description:
       "Paste git stash output and get it explained in plain English, free online. The sample stashes half-done work, commits something else and gets a conflict on pop.",
-    sampleSummary: "A developer stashes a half-done change to `rates.js` and a new `total.js`, commits a different value to the same line, then pops the stash: git reports a conflict and keeps the stash entry. The pop's 11-line `git status` block is cut down to its last line; the rest of the session is as git printed it.",
+    sampleSummary: "A developer stashes a half-done change to `rates.js` and a new `total.js`, edits that line to 60 and commits it, and pops the stash: git reports a conflict and keeps the stash entry. Not in the sample: the 11-line `git status` the pop prints and the commit's `1 file changed` line; the rest is as git printed it.",
     sample: `$ git status --short
  M rates.js
 ?? total.js
 $ git stash push -u -m "raise free shipping"
 Saved working directory and index state On main: raise free shipping
+$ git status --short
 $ git stash list
 stash@{0}: On main: raise free shipping
+$ sed -i "s/= 50/= 60/" rates.js
 $ git commit -am "Free shipping over 60"
-[main ea2ef6b] Free shipping over 60
+[main 11e3f4b] Free shipping over 60
 $ git stash pop
 Auto-merging rates.js
 CONFLICT (content): Merge conflict in rates.js
@@ -3995,7 +3997,7 @@ export const TAX_RATE = 0.08;`,
       },
     ],
     notes: [
-      "Run with git 2.55.0 on Linux in a repository made for this page. The session continued: `git checkout --theirs rates.js` took the stashed version (in a pop, theirs is the stash), `git add rates.js` marked it resolved, and `git stash drop` removed the entry git had kept.",
+      "Run with git 2.55.0 on Linux in a repository made for this page. The session continued: `git checkout --theirs rates.js` took the stashed version (in a pop, theirs is the stash), `git add rates.js` marked it resolved, and `git stash drop` removed the entry git had kept. The commit's hash changes with every run; the one in the sample came from this run.",
       "`git stash show -p stash@{0}` printed only the `rates.js` diff. The untracked `total.js` is stored separately, and `git stash show --include-untracked --stat` lists both files.",
       "Running `git stash pop` a second time with the conflict still open fails with `rates.js: needs merge` and keeps the entry; it does not apply the stash twice.",
     ],
@@ -4045,7 +4047,7 @@ export default function Signup() {
       },
       {
         concept: "{ ...form, [field]: value }",
-        text: "Because the setter replaces, `update` copies the old object with `...form` and then overwrites one field, named by the `[field]` computed key. Run without the spread, `setForm({ [field]: e.target.value })`, the sent object lost its name: the harness printed `sending {email, agreed}`, and React warned that a controlled input had become uncontrolled, because `form.name` was now `undefined`.",
+        text: "Because the setter replaces, `update` copies the old object with `...form` and then overwrites one field, named by the `[field]` computed key. Run without the spread, `setForm({ [field]: e.target.value })`, the sent object lost its name: the harness printed `sending {email, agreed}`, and React warned that a controlled input had become uncontrolled: each keystroke replaced the object and left the other fields `undefined`.",
       },
       {
         concept: "tries + 1, twice",
@@ -4058,7 +4060,7 @@ export default function Signup() {
     ],
     notes: [
       "Run with React 19.3.1 and jsdom 29.1.1 on Node.js 25.7.0. A script rendered the component, set each input's value and fired `input`, clicked the checkbox, and fired `submit` twice, capturing the console output. Every number above is from that run.",
-      "The first submit printed `sending` with `agreed: true` because the checkbox was clicked before it. Submitting with the box unchecked prints nothing: the `if` guards the log.",
+      "The first submit printed `sending` with `agreed: true` because the checkbox was clicked before it. With the box unchecked, the `if` skips the log.",
       "In the no-spread run the input on screen still showed `Ana`: an uncontrolled input keeps the text the user typed even though the state lost it. The screen looked right while the data sent was wrong.",
     ],
     watchOut:
@@ -4073,8 +4075,8 @@ export default function Signup() {
     related: ["yaml", "env", "systemd", "json"],
     lead: "Paste a `compose.yaml` and Vibe explains what each service, port, volume and `depends_on` line does: which container talks to which, what survives `docker compose down`, and why a healthcheck is what makes `depends_on` wait.",
     description:
-      "Paste a docker compose file and get it explained in plain English, free online. The sample runs a web app beside Postgres with a healthcheck, a bind mount and a named volume.",
-    sampleSummary: "A 2-service file: a web app built from the current folder, published on port 3000, that waits for a Postgres 17 container to pass its healthcheck. The file was checked against the Compose Specification schema; Docker is not installed on the machine that made this page, so it was not started.",
+      "Paste a docker compose file and get it explained in plain English, free online. The sample runs a web app and Postgres with a healthcheck and a named volume.",
+    sampleSummary: "A 2-service file: a web app built from the folder that holds the file, published on port 3000, that waits for a Postgres 17 container to pass its healthcheck. The file was checked against the Compose Specification schema; Docker is not installed on the machine that made this page, so it was not started.",
     sample: `services:
   web:
     build: .
@@ -4102,11 +4104,11 @@ volumes:
     shows: [
       {
         concept: "services, build and image",
-        text: "Each key under `services` is one container. `web` is built from the Dockerfile in the current folder (`build: .`); `db` pulls the published `postgres:17` image. Inside the Compose network each service is reachable by its name, which is why `DATABASE_URL` points at the host `db`, not `localhost`.",
+        text: "Each key under `services` is one container. `web` is built from the Dockerfile in the folder that holds `compose.yaml` (`build: .`); `db` pulls the published `postgres:17` image. Inside the Compose network each service is reachable by its name, which is why `DATABASE_URL` points at the host `db`, not `localhost`.",
       },
       {
         concept: "ports",
-        text: "`\"3000:3000\"` publishes the container's port 3000 on the host's port 3000, host side first. The Compose file reference says to quote port mappings: a value like `80:80` without quotes can be read as a base-60 number by a YAML parser. `db` publishes nothing, so Postgres is reachable from `web` but not from the host.",
+        text: "`\"3000:3000\"` publishes the container's port 3000 on the host's port 3000, host side first. The Compose file reference says to write `HOST:CONTAINER` as a quoted string, because YAML can read it as a base-60 number: unquoted, PyYAML read `22:22` as 1342 but left `3000:3000` as text. `db` publishes nothing, so Postgres is reachable from `web` but not from the host.",
       },
       {
         concept: "depends_on with condition: service_healthy",
@@ -4114,13 +4116,13 @@ volumes:
       },
       {
         concept: "Bind mount and named volume",
-        text: "`./src:/app/src` is a bind mount: the folder on the host appears inside the container, so an edit on the host is seen by the app without a rebuild. `pgdata:/var/lib/postgresql/data` is a named volume, declared under top-level `volumes`: Docker owns it, and the database files in it survive `docker compose down` and a new `up`.",
+        text: "`./src:/app/src` is a bind mount: the folder on the host appears inside the container, so an edit on the host is in the container right away, without a rebuild. `pgdata:/var/lib/postgresql/data` is a named volume, declared under top-level `volumes`: Docker owns it, and the database files in it survive `docker compose down` and a new `up`.",
       },
     ],
     notes: [
-      "Checked on 11 Nov 2026 against the Compose Specification JSON schema from github.com/compose-spec/compose-spec with jsonschema 4.26.0 in Python 3.14: valid. The 3 `condition` values and the port quoting advice are from the Compose file reference (docs.docker.com/reference/compose-file).",
-      "`POSTGRES_PASSWORD` is the one variable the postgres image requires; `password` is a placeholder for a local database that publishes no port. The same value appears in `DATABASE_URL` because `web` connects as the default `postgres` user.",
-      "Compose reads `compose.yaml` first and falls back to `docker-compose.yml`. Both names hold the same format.",
+      "Checked on Nov 11, 2026 against the Compose Specification JSON schema from github.com/compose-spec/compose-spec with jsonschema 4.26.0 in Python 3.14.7: valid. The 3 `condition` values and the port quoting advice are from the Compose file reference (docs.docker.com/reference/compose-file/services).",
+      "`POSTGRES_PASSWORD` is the only variable the postgres image requires (hub.docker.com/_/postgres); `password` is a placeholder for a local database that publishes no port. The same value appears in `DATABASE_URL` because `web` connects as the default `postgres` user.",
+      "Compose looks for `compose.yaml` or `compose.yml` and still reads `docker-compose.yaml` and `docker-compose.yml`; with both present it uses `compose.yaml` (docs.docker.com/compose/intro/compose-application-model). What `depends_on`, the healthcheck and `down -v` do is from the Compose file reference and the `docker compose down` reference; none of it was run for this page.",
     ],
     watchOut:
       "`docker compose down -v` deletes named volumes, `pgdata` included, and every row in the database with it. Plain `down` keeps them. The bind mount is different again: nothing under `./src` is ever deleted by Compose, because the files belong to the host.",

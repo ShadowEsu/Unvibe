@@ -99,7 +99,7 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "git-merge-conflict": "/og/og-explain-git-merge-conflict-ef5769f1.png",
   "npm-error": "/og/og-explain-npm-error-c9a33fdc.png",
   lsof: "/og/og-explain-lsof-0d8347e2.png",
-  "git-stash": "/og/og-explain-git-stash-99aa57cb.png",
+  "git-stash": "/og/og-explain-git-stash-0ca33c65.png",
   "react-usestate": "/og/og-explain-react-usestate-73199a9b.png",
   "docker-compose": "/og/og-explain-docker-compose-18fd5356.png",
 };
