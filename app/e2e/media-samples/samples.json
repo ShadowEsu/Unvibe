@@ -7,5 +7,8 @@
   { "file": "debounce.js", "sha256": "d9493d9cb869bf39dccad2700b357f250fb9edf2364cf31901cc918497999ea3", "marker": "debounce(fn, wait)", "followUp": "Why does it call clearTimeout before setTimeout?" },
   { "file": "login-callback.diff", "sha256": "282e4674ef88f9ff550aa8c259430cf0dc490995c7e4925e22ab34214a70c6b1", "marker": "exchangeCode(code)", "followUp": "Could this change break login?" },
   { "file": "login.js", "sha256": "03ab1dee165c9d4b47a316d8e84c289b281c0a8785f24eebb336573e1d361555", "marker": "bcrypt.compare", "followUp": "What do httpOnly, secure and sameSite do on this cookie?" },
-  { "file": "deadline.js", "sha256": "edaf3a243d1fcde321399e9f28bddd29c1f50ed93ec78f1ac6be762a74c5a4ae", "marker": "new Date(2026, 11, 25)", "depths": ["new", "advanced", "beginner"] }
+  { "file": "deadline.js", "sha256": "edaf3a243d1fcde321399e9f28bddd29c1f50ed93ec78f1ac6be762a74c5a4ae", "marker": "new Date(2026, 11, 25)", "depths": ["new", "advanced", "beginner"] },
+  { "file": "sort-scores.js", "sha256": "4c8090191740ef2d07a642fcc16a6851cc8e50b8bc671ab51c80189c6c449996", "marker": "topThree", "followUp": "What does topThree([5, 100, 25, 9]) return?" },
+  { "file": "tags.py", "sha256": "9552223ff27fe0bbcef377d5bbc970506d384be1ba9e7caf4a07234f95396a29", "marker": "add_tag", "followUp": "What does the second call print?" },
+  { "file": "save-all.js", "sha256": "e3770769e3ca296995086b97b4e52fbeff925dee07b835113ebdfce98b343700", "marker": "saveAll", "followUp": "When \"all saved\" prints, are the items saved?" }
 ]

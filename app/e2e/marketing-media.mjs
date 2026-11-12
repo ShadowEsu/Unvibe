@@ -12,7 +12,9 @@
 //      CI gives every run a fresh id and flags it as QA; an id reused across runs runs out of free
 //      explanations), FFMPEG (optional ffmpeg path; default: ffmpeg on PATH, else Playwright's),
 //      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into the native file dialog),
-//      MEDIA_SAMPLES=1 (also explain each file in media-samples/samples.json; see that step).
+//      MEDIA_SAMPLES=1 (also explain each file in media-samples/samples.json; see that step),
+//      MEDIA_ONLY=a.js,b.py (only these samples.json files, and nothing else that asks the AI: the onboarding's
+//      own sample is still explained, because the panel only opens with it; no depths, Test me, pastes, Ask Vibe).
 import { launchApp } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -37,6 +39,15 @@ const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-media-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-media-local-${Date.now()}`;
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId }));
 console.log(`install id ${installId}`);
+// Samples only (one small AI run for named samples): every file named must be in samples.json, checked before launch.
+const only = (process.env.MEDIA_ONLY ?? '').split(',').map((f) => f.trim()).filter(Boolean);
+const tour = only.length === 0;
+if (!tour) {
+  const known = JSON.parse(readFileSync(new URL('./media-samples/samples.json', import.meta.url), 'utf8')).map((s) => s.file);
+  const unknown = only.filter((f) => !known.includes(f));
+  if (unknown.length) throw new Error(`MEDIA_ONLY names files not in samples.json: ${unknown.join(', ')}`);
+  console.log(`samples only: ${only.join(', ')}`);
+}
 // Briefs reads the project last chosen (settings lastProjectRoot). The folder dialog can't be answered reliably on
 // GitHub's runner, so the run starts as if this sample project had been chosen before: a brief of its real change.
 const briefRepo = uploadRepo().repo;
@@ -276,19 +287,23 @@ async function askFollowUp(question) {
 }
 
 /**
- * The answer goes under the explanation (0.1.49 opens it with a "Short answer" heading; earlier builds used the
- * question as its heading, matched by `questionPart`): bring that start to the top of the panel, so the still shows
- * the answer, not the end.
+ * A follow-up's answer replaces the explanation under the selected code (0.1.51: the "Selected code" block, then the
+ * answer; it may open with a "Short answer" heading, the question, or straight with its first paragraph). Bring the
+ * answer's first line to the top of the panel, so the still shows the start of the answer, not its end. Returns the
+ * start's first 80 characters for the log.
  */
-async function scrollToAnswer(panel, questionPart) {
-  const found = await panel.locator('.body').evaluate((body, part) => {
-    const blocks = [...body.querySelectorAll('h1, h2, h3, h4, strong, p')];
-    const heading = blocks.find((el) => /^short answer$/i.test((el.textContent ?? '').trim())) ?? blocks.find((el) => (el.textContent ?? '').toLowerCase().includes(part));
-    if (!heading) return false;
-    body.scrollTo({ top: Math.max(0, heading.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
-    return true;
-  }, questionPart.toLowerCase());
-  if (!found) throw new Error('the follow-up question is not in the panel');
+async function scrollToAnswer(panel) {
+  const start = await panel.locator('.body').evaluate((body) => {
+    const code = body.querySelector(':scope > .code-context');
+    const first = code ? code.nextElementSibling : body.firstElementChild;
+    const text = (first?.textContent ?? '').trim();
+    if (!first || !text) return null;
+    body.scrollTo({ top: Math.max(0, first.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 14) });
+    return text.replace(/\s+/g, ' ').slice(0, 80);
+  });
+  if (!start) throw new Error('no answer under the selected code in the panel');
+  console.log(`NOTE answer starts: ${start}`);
+  return start;
 }
 
 const companion = await windowWith('companion.html', 60000);
@@ -339,7 +354,7 @@ const explained = firstRun && await step('first explanation', async () => {
 });
 
 if (explained) {
-  await step('beginner depth', async () => {
+  if (tour) await step('beginner depth', async () => {
     await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
     await sleep(1500);
     const done = await settledPanel();
@@ -347,7 +362,7 @@ if (explained) {
     await saveAnswer(done, 'beginner depth');
   });
   // The deepest depth a free install can open (Expert needs Pro), for the site's side-by-side.
-  await step('advanced depth', async () => {
+  if (tour) await step('advanced depth', async () => {
     await (await windowWith('widget.html')).locator('.lvl[data-level="advanced"]').click();
     await sleep(1500);
     const done = await settledPanel();
@@ -356,17 +371,17 @@ if (explained) {
     await shot(done, 'panel-advanced');
     await saveAnswer(done, 'advanced depth');
   });
-  await step('follow-up', async () => {
+  if (tour) await step('follow-up', async () => {
     // A question with a prose answer: in 0.1.49 a markdown table in an answer shows as raw | rows (5 Nov run
     // 42132166462, "five times quickly" got a timeline table), which the site must not show as the app's look.
     const done = await askFollowUp('Why does it call clearTimeout before setTimeout?');
-    await scrollToAnswer(done, 'clearTimeout before');
+    await scrollToAnswer(done);
     if (/\|\s*-{3,}\s*\|/.test(await done.locator('.body').innerText())) console.log('NOTE follow-up: the answer holds a raw markdown table (shown as | rows)');
     await sleep(600);
     await shot(done, 'panel-follow-up');
     await saveAnswer(done, 'follow-up');
   });
-  await step('test me', async () => {
+  if (tour) await step('test me', async () => {
     const panel = await windowWith('widget.html');
     await panel.locator('.tool--quiz').first().click();
     await panel.locator('.quiz__q').waitFor({ timeout: 60000 });
@@ -390,7 +405,7 @@ if (explained) {
     ['chunk', 'export function chunk(items, size) {\n  const out = [];\n  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));\n  return out;\n}'],
     ['retry', 'export async function retry(task, times = 3) {\n  for (let attempt = 1; ; attempt++) {\n    try { return await task(); }\n    catch (error) { if (attempt >= times) throw error; }\n  }\n}'],
   ];
-  for (const [name, code] of samples) {
+  for (const [name, code] of tour ? samples : []) {
     await step(`paste ${name}`, async () => {
       const panel = await windowWith('widget.html');
       await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
@@ -405,9 +420,19 @@ if (explained) {
   // (MEDIA_SAMPLES=1, the workflow's media_samples input), because their explanations also show in the Library still.
   // An entry with "depths" (e.g. ["new", "advanced", "beginner"]) is pasted at the first depth and then switched with
   // the panel's own depth buttons, one still + answer per depth (sample-<name>-<depth>), and has no follow-up.
-  if (process.env.MEDIA_SAMPLES === '1') {
+  if (process.env.MEDIA_SAMPLES === '1' || !tour) {
     const dir = new URL('./media-samples/', import.meta.url);
-    const list = JSON.parse(readFileSync(new URL('samples.json', dir), 'utf8'));
+    const list = JSON.parse(readFileSync(new URL('samples.json', dir), 'utf8')).filter((s) => tour || only.includes(s.file));
+    // Samples only: no follow-up came first, so the send agreement wasn't asked yet, and a paste over the onboarding's
+    // answer returns to that answer after the form. Give it as the panel's own form does (consentAgree with all three
+    // boxes and the provider the app names, as consent-fixture.mjs), before the first paste; it sends nothing.
+    if (!tour) await step('send agreement', async () => {
+      const status = await companion.evaluate(() => window.unvibe.consentStatus());
+      if (status.allowed) { console.log('NOTE send agreement: already given'); return; }
+      const answer = await companion.evaluate((provider) => window.unvibe.consentAgree({ aiSend: true, terms: true, age18: true, provider }), status.provider);
+      if (answer?.ok !== true) throw new Error(`consentAgree: ${answer?.error ?? 'no answer'}`);
+      console.log(`NOTE send agreement: given through the app (provider ${status.provider})`);
+    });
     // The panel at <level> with a new, finished answer. One evaluate reads all of it together (finished: the done card's
     // save note and no stream cursor; the active depth; the body text), because a depth click marks the button at once
     // but the panel only switches to streaming when main's status event lands; separate reads could catch the new depth
@@ -475,7 +500,7 @@ if (explained) {
         if (i === depths.length - 1 && followUp) await step(`sample ${file} follow-up`, async () => {
           const done = await askFollowUp(followUp);
           await resize(done, 420, 720);
-          await scrollToAnswer(done, followUp);
+          await scrollToAnswer(done);
           await sleep(600);
           await shot(done, `sample-${name}-follow-up`);
           await saveAnswer(done, `sample ${file} follow-up`);
@@ -487,7 +512,7 @@ if (explained) {
   }
   // The key check: code holding a key-shaped string is refused on this computer before anything is
   // sent. 'sk_test_' + 24 x's matches the stripe-key rule (core/secretFilter.ts) and is plainly fake.
-  await step('key check', async () => {
+  if (tour) await step('key check', async () => {
     const code = `const stripe = new Stripe("sk_test_${'x'.repeat(24)}");\nexport const charge = (amount) => stripe.charges.create({ amount, currency: "usd" });`;
     const panel = await windowWith('widget.html');
     await panel.evaluate(([text]) => window.unvibe.usePaste({ text, level: 'intermediate' }), [code]);
@@ -498,7 +523,8 @@ if (explained) {
   });
   // "Why does this exist?" reads git history, so it needs a file inside a repo. The repo is made
   // here with a neutral author, because the answer shows who last changed the lines.
-  if (process.env.E2E_LOCAL === '1') console.log('NOTE why exists: skipped (E2E_LOCAL: no keystrokes into a native dialog on someone\'s own Mac)');
+  if (!tour) console.log('NOTE why exists: skipped (samples only)');
+  else if (process.env.E2E_LOCAL === '1') console.log('NOTE why exists: skipped (E2E_LOCAL: no keystrokes into a native dialog on someone\'s own Mac)');
   // On GitHub's macOS runner the pick itself works (31 Oct runs 41236582897 and later showed the real
   // history), but every companion step after it then timed out, cause not found; skipped so the rest records.
   else if (process.env.CI === 'true') console.log('NOTE why exists: skipped on CI (after the native file pick the companion tour times out on the runner)');
@@ -585,7 +611,8 @@ async function closeFeedback(wait) {
 }
 
 // --- Finish onboarding and tour the companion ------------------------------------------------
-await step('today', async () => {
+// Samples only (MEDIA_ONLY) stops before the tour: Marketing's stills are taken, and Ask Vibe would ask the AI.
+if (tour) await step('today', async () => {
   await companion.bringToFront();
   // Walk the rest of setup by whatever the footer offers: step 2 says Next (or Skip for now before an explanation);
   // on a Mac, step 3 says Next once own code was explained there (the pasted samples count) and step 4 offers the
@@ -619,7 +646,7 @@ await step('today', async () => {
   await shot(companion, 'today');
 });
 
-for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
+for (const page of tour ? ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe'] : []) {
   await step(page, async () => {
     await closeFeedback(0);
     await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
@@ -630,7 +657,7 @@ for (const page of ['Library', 'Quiz', 'Briefs', 'Momentum', 'Ask Vibe']) {
 }
 
 // Ask Vibe answers a real question about what was just learned.
-await step('ask vibe answer', async () => {
+if (tour) await step('ask vibe answer', async () => {
   await closeFeedback(0);
   const question = 'Explain debounce again in one sentence, like I am new to this.';
   const chat = companion.locator('#chatDraft');
@@ -650,7 +677,7 @@ await step('ask vibe answer', async () => {
   await shot(companion, 'ask-vibe-answer');
 });
 
-await step('settings privacy', async () => {
+if (tour) await step('settings privacy', async () => {
   await closeFeedback(0);
   await companion.locator('.side-settings').click();
   await companion.locator('.mside').getByRole('button', { name: 'Privacy & Data', exact: true }).click();
@@ -659,14 +686,14 @@ await step('settings privacy', async () => {
   await companion.getByRole('button', { name: 'Close settings', exact: true }).click();
 });
 
-await step('island', async () => {
+if (tour) await step('island', async () => {
   const bar = await windowWith('bar.html', 5000);
   await shot(bar, 'island');
 });
 
 // One Change Brief open: the sample project chosen before launch (briefRepo), its working-tree change to upload.js.
 // Reading a brief stays on the computer.
-await step('brief open', async () => {
+if (tour) await step('brief open', async () => {
   await closeFeedback(0);
   await companion.bringToFront();
   await companion.locator('.side').getByRole('button', { name: 'Briefs', exact: true }).click();
