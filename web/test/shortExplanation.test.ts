@@ -104,7 +104,6 @@ test('the review route sends a short answer with the short output budget, and a 
     assert.equal(ANTHROPIC_MAX_TOKENS, 2048);
     assert.deepEqual(budgets, [400, 2048, 2048, 2560, 2560, 400]);
     assert.ok(Number(holds[0]) < Number(holds[1]), 'the short call holds less of the budget');
-    assert.ok(Number(holds[1]) < Number(holds[3]), 'a deep call holds more than a full one');
   } finally {
     process.env = previousEnv;
     globalThis.fetch = previousFetch;

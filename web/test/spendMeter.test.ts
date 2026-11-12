@@ -29,7 +29,7 @@ import { POST as tryRoute } from '../app/api/v1/try/route';
 import { TRY_CONSENT_VERSION } from '../src/lib/tryDemo';
 import { selectProvider } from '../src/ai';
 import { trialInstallFromRequest } from '../src/lib/trialAccess';
-import { ANTHROPIC_MODEL } from '../src/ai/anthropic';
+import { ANTHROPIC_MAX_TOKENS, ANTHROPIC_MODEL, DEEP_MAX_TOKENS } from '../src/ai/anthropic';
 import { buildComprehensionPrompt, buildSystemPrompt, buildUserPrompt } from '../src/ai/prompt';
 import { MAX_CONTEXT_BYTES, MAX_CONTEXT_CHARS, MAX_QUESTION_CHARS, payloadSizeError } from '../src/lib/reviewLimits';
 import type { ReviewRequestPayload } from '../src/ai/protocol';
@@ -248,9 +248,10 @@ test('every payload the size check lets through is held under one account\'s dai
     for (const extra of extras) {
       const payload: ReviewRequestPayload = { scope: 'selection', level: 'expert', variant: 'different', context: context(code), ...extra };
       assert.equal(payloadSizeError(payload), null, `${unit} is accepted at its largest`);
+      // Expert reviews get the deep output budget (reviews route); comprehension keeps the provider default.
       const held = Math.max(
-        worstCaseNanoUsd(PRICES, buildSystemPrompt(payload), buildUserPrompt(payload), 2048),
-        worstCaseNanoUsd(PRICES, buildComprehensionPrompt(payload).system, buildComprehensionPrompt(payload).user, 2048),
+        worstCaseNanoUsd(PRICES, buildSystemPrompt(payload), buildUserPrompt(payload), DEEP_MAX_TOKENS),
+        worstCaseNanoUsd(PRICES, buildComprehensionPrompt(payload).system, buildComprehensionPrompt(payload).user, ANTHROPIC_MAX_TOKENS),
       );
       assert.ok(held <= ACCOUNT_DAY_CAP_NANO_USD, `${unit} with ${JSON.stringify(Object.keys(extra))} holds $${held / 1e9}`);
     }

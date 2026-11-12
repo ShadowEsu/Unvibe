@@ -3,7 +3,7 @@ import type { MeterableProvider } from './spendMeter';
 
 /** The one hosted model (owner 2026-11-02: Opus only). It keys the meter's MODEL_PRICES; a model without a row there is never called. */
 export const ANTHROPIC_MODEL = 'claude-opus-5-5';
-/** Output budget per call for full-depth answers; the meter reserves all of it before each call. */
+/** Default output budget per call (full-depth answers below advanced, comprehension); the meter reserves all of it before each call. */
 export const ANTHROPIC_MAX_TOKENS = 2048;
 /** Output budget for a short answer (2 to 4 sentences, owner 2026-11-02): roomy for that, a fifth of the full budget. */
 export const SHORT_MAX_TOKENS = 400;

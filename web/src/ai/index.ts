@@ -12,7 +12,7 @@ export type { SpeechToTextProvider, TextToSpeechProvider, EmbeddingProvider } fr
  * provider, even when other API keys or a payload model are present: past a spend stop the call
  * is refused (AiPausedError), not sent elsewhere. `account` (from `spendAccount`) makes each call
  * count against that account's daily share too; the website's Try box has none. `maxOutputTokens`
- * lowers the output budget (and so the meter's hold) for short answers.
+ * sets the output budget (and so the meter's hold): lower for short answers, higher for advanced/expert full answers.
  * The labelled mock is an explicit development-only opt-in.
  */
 export function selectProvider(account?: string, maxOutputTokens?: number): Provider | null {
