@@ -272,20 +272,30 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dp .plan-badge { align-self: flex-start; padding: 5px 10px; border-radius: 999px; background: #f4f1fa; font: 500 10.5px/1 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-ink); }
 .dp .marketing-plan-card h3 { margin: 14px 0 0; font: 500 19px/1.2 var(--d-sans); letter-spacing: -0.01em; }
 .dp .plan-kicker { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--d-ink-2); }
-.dp .marketing-plan-price { display: block; margin-top: 18px; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; color: var(--d-ink); }
-.dp .marketing-plan-per { font: 400 14px/1.4 var(--d-sans); letter-spacing: 0; color: var(--d-ink-2); }
+/* flex + wrap + baseline: when the price line is too narrow, "a seat a month, or $72 a year" drops under the figure
+   as one block, right under it, instead of leaving "a year" alone 44 px down (F-25, 821-900 px). pre-wrap keeps the
+   per text's own leading space (" a month, …"), which a flex item would otherwise drop; "/month" has none. */
+.dp .marketing-plan-price { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: 18px; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; color: var(--d-ink); }
+.dp .marketing-plan-per { white-space: pre-wrap; font: 400 14px/1.4 var(--d-sans); letter-spacing: 0; color: var(--d-ink-2); }
 .dp .plan-note { margin: 6px 0 0; font-family: var(--font-display); font-style: italic; font-size: 22px; color: var(--d-violet); }
 .dp .marketing-plan-card small { display: block; margin-top: 8px; font-size: 13.5px; line-height: 1.45; color: var(--d-ink-2); }
 .dp .marketing-plan-card ul { display: grid; gap: 10px; margin: 20px 0 0; padding: 20px 0 0; border-top: 1px solid var(--d-line); list-style: none; }
 .dp .marketing-plan-card li { position: relative; padding-left: 24px; font-size: 15px; line-height: 1.4; color: var(--d-ink-2); }
 .dp .marketing-plan-card li::before { content: ""; position: absolute; left: 2px; top: 6px; width: 10px; height: 5px; border-left: 1.5px solid var(--d-violet); border-bottom: 1.5px solid var(--d-violet); transform: rotate(-45deg); }
 .dp .plan-after { margin: 14px 0 0; font-size: 13.5px; color: var(--d-ink-2); }
-.dp .pricing-button { display: flex; align-items: center; width: 100%; height: 48px; margin-top: 22px; padding: 0 46px 0 20px; border-radius: 999px; background: var(--d-violet); color: #fff; font: 450 16px/1 var(--d-sans); text-decoration: none; }
+.dp .pricing-button { display: flex; align-items: center; width: 100%; height: 48px; margin-top: 22px; padding: 0 46px 0 20px; border-radius: 999px; background: var(--d-violet); color: #fff; font: 450 16px/1 var(--d-sans); text-decoration: none; white-space: nowrap; }
 .dp .pricing-button:hover { background: var(--d-violet-2); }
 .dp .pricing-button--quiet { background: #fff; color: var(--d-violet); box-shadow: inset 0 0 0 1.5px var(--d-violet); }
 .dp .pricing-button--quiet:hover { background: var(--d-tint); }
 .dp .pricing-disclosure { margin: 40px auto 0; max-width: 760px; padding: 10px 16px; border-radius: 12px; text-align: center; font: 500 11px/1.6 var(--d-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--d-ink-2); transition: background-color 300ms; }
 .dp .pricing-toggle { margin: 28px auto 0; }
+/* Three columns from 821 px: below ~880 a card is about 240 px wide, and "Email about Teams" broke onto two lines
+   inside its 48 px pill (F-25). Narrower card sides and button start give the label room; the button's right
+   padding stays 46 px for the dot (dia-motion.css). */
+@media (min-width: 821px) and (max-width: 900px) {
+  .dp .marketing-plan-card { padding-left: 18px; padding-right: 18px; }
+  .dp .pricing-button { padding-left: 16px; font-size: 15px; }
+}
 
 /* ---------- /beta (mock 11): the bubbles panel and the cream column with the live InstallBox ---------- */
 .dd-page { background: var(--d-paper); padding-bottom: 40px; }
