@@ -15,6 +15,8 @@ const api = {
   companionReview: () => ipcRenderer.send('companion:review'),
   // The start stage left (or never showed): main restores the window chrome it darkened for it (Windows/Linux).
   companionStageDone: () => ipcRenderer.send('companion:stage-done'),
+  // The companion drew its first real screen; main shows the window then (#208).
+  companionPainted: () => ipcRenderer.send('companion:painted'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean }> => ipcRenderer.invoke('app:info'),
   onBarNotify: (cb: (notice: { text: string; problem: boolean }) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, notice: { text: string; problem: boolean }) =>

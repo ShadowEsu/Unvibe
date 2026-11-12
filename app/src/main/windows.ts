@@ -1,6 +1,7 @@
 import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
+import { ownCodeStepDueNow } from './ownCodeStep';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
@@ -454,9 +455,9 @@ export interface CompanionRevealer {
 }
 
 /**
- * The companion's one reveal, once its page has painted: maximized first on a first run, then shown,
- * and with `front` (a first-run launch the user started) brought above other apps. Later calls do
- * nothing, so the paint and the 5 s fallback can both call it.
+ * The companion's one reveal, once its page has drawn its first real screen (companionPainted): maximized first
+ * on a first run, then shown, and with `front` (a first-run launch the user started) brought above other apps.
+ * Later calls do nothing, so that signal and the 5 s fallback can both call it.
  */
 export function companionRevealer(win: RevealTarget, { maximize, front, platform }: { maximize: boolean; front: boolean; platform: NodeJS.Platform }): CompanionRevealer {
   let shown = false;
@@ -478,15 +479,38 @@ export function companionRevealer(win: RevealTarget, { maximize, front, platform
   return { reveal, revealed: () => shown };
 }
 
-/** Companions whose reveal hasn't run yet: their page is still loading. */
+/** Companions whose reveal hasn't run yet: their page hasn't drawn its first real screen. */
 const companionReveals = new WeakMap<BrowserWindow, CompanionRevealer>();
 
 /**
- * Whether this companion is still loading, hidden until its page paints. Reopening it then must not
- * show it early (blank) or out of turn: its reveal shows it once painted.
+ * Whether this companion is still loading, hidden until its first real screen (companionPainted). Reopening it
+ * then must not show it early (blank) or out of turn: its reveal shows it.
  */
 export function companionLoading(win: BrowserWindow): boolean {
   return companionReveals.get(win)?.revealed() === false;
+}
+
+/** The window events armCompanionReveal listens to (a BrowserWindow, or a stand-in in tests). */
+export interface RevealWiring { once(event: 'show' | 'closed', listener: () => void): unknown }
+
+/**
+ * The hidden companion's fallback: it shows after `fallbackMs` unless it showed or closed first. Nothing else here
+ * reveals it; in particular not ready-to-show, which fires on the empty 'checking' frame (#208). The page's own
+ * signal (companionPainted) is the normal reveal.
+ */
+export function armCompanionReveal(win: RevealWiring, reveal: () => void, fallbackMs = 5000): void {
+  const fallback = setTimeout(reveal, fallbackMs);
+  win.once('show', () => clearTimeout(fallback));
+  win.once('closed', () => clearTimeout(fallback));
+}
+
+/**
+ * The companion's page has drawn its first real screen (setup, sign-in or the app; not the empty frame it shows
+ * while it reads its settings): show it now. Chromium's ready-to-show fires on that empty frame, which is the blank
+ * first window QA measured on Windows (#208), so the reveal waits for the page instead.
+ */
+export function companionPainted(win: BrowserWindow): void {
+  companionReveals.get(win)?.reveal();
 }
 
 /**
@@ -509,10 +533,13 @@ export function companionChrome(theme: ThemePreference, osDark = nativeTheme.sho
     : { background: '#f3f0fb', overlay: { color: '#cac0ec', symbolColor: '#15141a', height: 40 } };
 }
 
-/** The stage shows on a launch into the app proper (not the first run) with the Settings row on. */
+/**
+ * The stage shows on a launch into the app proper with the Settings row on: not the first run, and not an open
+ * that leads with the own-code step (the renderer ends the stage for both).
+ */
 function stageAtLaunch(): boolean {
   const all = settings().all();
-  return all.onboarded && all.startAnimation;
+  return all.onboarded && all.startAnimation && !ownCodeStepDueNow();
 }
 
 /** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
@@ -524,11 +551,12 @@ export function applyCompanionChrome(win: BrowserWindow): void {
 }
 
 /**
- * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
- * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
- * first-run launch the user started) then brings it above other apps.
+ * The home window. It stays hidden until its page has drawn its first real screen (companionPainted), so nobody
+ * sees a blank (on first run, maximized) window while it loads; if the page never says so, it shows anyway after
+ * 5 s. `front` (a first-run launch the user started) then brings it above other apps.
  */
 export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
+  const stage = stageAtLaunch();
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
@@ -538,8 +566,8 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
     // them as an overlay in the theme's ground colour (the companion reserves 150 px for it).
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
-      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme, undefined, stageAtLaunch()).overlay }),
-    backgroundColor: companionChrome(settings().all().theme, undefined, stageAtLaunch()).background,
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme, undefined, stage).overlay }),
+    backgroundColor: companionChrome(settings().all().theme, undefined, stage).background,
     skipTaskbar: false,
     show: false,
     webPreferences: secureWebPrefs(),
@@ -549,12 +577,9 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
   // launches retain the normal companion size so the app stays out of the way.
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
-  const fallback = setTimeout(revealer.reveal, 5000);
-  win.once('ready-to-show', () => {
-    clearTimeout(fallback);
-    revealer.reveal();
-  });
-  win.once('closed', () => clearTimeout(fallback));
-  void win.loadFile(page('companion'));
+  armCompanionReveal(win, revealer.reveal);
+  // The page draws its loading frame on the ground of the screen to come (the stage's, or the app's). A window
+  // hidden at creation gets no frames, so that frame is the one on screen for the moment after the reveal (#208).
+  void win.loadFile(page('companion'), { query: { first: stage ? 'stage' : 'app' } });
   return win;
 }

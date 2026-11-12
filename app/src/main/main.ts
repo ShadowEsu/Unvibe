@@ -31,6 +31,7 @@ import {
   applyCompanionChrome,
   createBar,
   companionLoading,
+  companionPainted,
   createCompanion,
   currentWidget,
   fitPanelHeight,
@@ -461,12 +462,12 @@ function openCompanion(): void {
   openCompanionWindow(false);
 }
 
-/** `front`: a new companion window is brought in front of other apps once painted (first-run launch only). */
+/** `front`: a new companion window is brought in front of other apps once its first real screen is drawn (first-run launch only). */
 function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
-    // Still loading (hidden until painted): its own reveal shows it, so don't show a blank window now.
+    // Still loading (hidden until its first real screen): its own reveal shows it, so don't show a blank window now.
     if (companionLoading(companion)) return;
     if (companion.isMinimized()) companion.restore();
     companion.show();
@@ -887,6 +888,8 @@ app.whenReady().then(() => {
   ipcMain.on('companion:review', () => void startReview());
   // The start stage is gone: the window chrome goes back to the theme's (it was the stage's ground for the sharks).
   ipcMain.on('companion:stage-done', () => { if (companion) applyCompanionChrome(companion); });
+  // The companion drew its first real screen: show it (#208). Only the companion's own page can say so.
+  ipcMain.on('companion:painted', (e) => { if (companion && e.sender === companion.webContents) companionPainted(companion); });
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());
