@@ -81,8 +81,9 @@ export default function CodeExplainerWindowsPage() {
 
         <h2 id="win-first-open">The first run</h2>
         <p>
-          Unvibe is not signed with a paid certificate yet, so when you first run the .exe Windows may show a blue
-          &ldquo;Windows protected your PC&rdquo; box. Press More info, then Run anyway. You only do this once.
+          Unvibe is not signed with a paid certificate yet, so when you first run the .exe Windows may show a blue{" "}
+          <Link className="paper-text-link" href="/help/windows-protected-your-pc">&ldquo;Windows protected your PC&rdquo;</Link>{" "}
+          box. Press More info, then Run anyway. You only do this once.
         </p>
         <p>
           Work and school PCs can hide the Run anyway button. If Smart App Control is on (Windows 11), it blocks unsigned
