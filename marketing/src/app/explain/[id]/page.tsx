@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
-import { explainHeading, explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
+import { explainHeading, explainHeadingText, explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainCard, pageMetadata } from "@/lib/pageMeta";
 import { explainMono } from "../mono";
@@ -24,7 +24,7 @@ export function generateMetadata({ params }: Params): Metadata {
   if (!page) return {};
   return pageMetadata({
     path: `/explain/${page.id}`,
-    title: `Explain ${explainHeading(page)} in plain English`,
+    title: page.title ?? `Explain ${explainHeading(page)} in plain English`,
     description: page.description,
     // The page's own sample with the shortcut and Vibe; no panel, since none explains these exact lines.
     card: explainCard(page),
@@ -50,7 +50,7 @@ export default function ExplainLanguagePage({ params }: Params) {
         <nav aria-label="Breadcrumb" className="explain-crumb">
           <Link href="/explain">Explain code</Link> <span aria-hidden="true">/</span> {name}
         </nav>
-        <h1>Explain {explainHeading(page)}</h1>
+        <h1>Explain {explainHeadingText(page)}</h1>
         <p>
           <Prose text={page.lead} />
         </p>
@@ -83,7 +83,7 @@ export default function ExplainLanguagePage({ params }: Params) {
         <p className="explain-watch"><b>Watch out:</b> <Prose text={page.watchOut} /></p>
       </section>
 
-      <ExplainDownload subject={explainHeading(page)} />
+      <ExplainDownload subject={explainHeadingText(page)} />
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
         {related.length > 0 && (
