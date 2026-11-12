@@ -93,6 +93,12 @@ export const EXPLAIN_CARD_FILES: Readonly<Record<string, string>> = {
   "git-rebase": "/og/og-explain-git-rebase-61755953.png",
   xargs: "/og/og-explain-xargs-f6d7bed7.png",
   "ps-aux": "/og/og-explain-ps-aux-440a0365.png",
+  systemd: "/og/og-explain-systemd-84c56c8b.png",
+  terraform: "/og/og-explain-terraform-65e898b5.png",
+  assembly: "/og/og-explain-assembly-c80056c7.png",
+  "git-merge-conflict": "/og/og-explain-git-merge-conflict-0069f0db.png",
+  "npm-error": "/og/og-explain-npm-error-8f09ac10.png",
+  lsof: "/og/og-explain-lsof-b14d7132.png",
 };
 
 /** The card for /explain/<id>: that language's own sample, or the generic /explain card if it has none yet. */

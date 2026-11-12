@@ -32,8 +32,15 @@ export default function HelpIndexPage() {
         <h2 id="install-title">Installing and opening it</h2>
         <ul className="help-list">
           <li>
-            <Link href="/install-help">Mac says &ldquo;Unvibe Not Opened&rdquo;, or Windows says &ldquo;Windows protected your PC&rdquo;</Link>.
-            What to press the first time, and how to read the install scripts before you run them.
+            <Link href="/help/apple-could-not-verify">Mac says &ldquo;Unvibe Not Opened&rdquo; and Apple could not verify it</Link>. Press
+            Done, then Open Anyway in Privacy &amp; Security.
+          </li>
+          <li>
+            <Link href="/help/windows-protected-your-pc">Windows says &ldquo;Windows protected your PC&rdquo;</Link>. More info, then Run
+            anyway, and what to do when that button is missing.
+          </li>
+          <li>
+            <Link href="/install-help">All install steps</Link>, and how to read the install scripts before you run them.
           </li>
           <li>
             <Link href="/beta">Download Unvibe</Link> for Mac or Windows.
@@ -59,7 +66,8 @@ export default function HelpIndexPage() {
         <h2 id="account-title">Account and plans</h2>
         <ul className="help-list">
           <li>
-            <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. You can start without an account.
+            <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. Check your Spam folder if the
+            sign-in email doesn&apos;t arrive. You can start without an account.
           </li>
           <li>
             <Link href="/faq">Free explanations, plans, privacy and your data</Link>.

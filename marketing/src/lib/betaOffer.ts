@@ -19,5 +19,5 @@ export const BETA_WINDOWS_INSTALL_COMMAND = `irm ${BETA_INSTALL_HOST}/install.ps
 export const BETA_MAC_DIRECT_DOWNLOAD = downloadPath("mac");
 export const BETA_MAC_INTEL_DIRECT_DOWNLOAD = downloadPath("mac-intel");
 export const BETA_WINDOWS_DIRECT_DOWNLOAD = downloadPath("windows");
-export const BETA_INSTALL_VERSION = "v0.1.49";
+export const BETA_INSTALL_VERSION = "v0.1.51";
 export const BETA_INSTALL_LABEL = "Free for Mac and Windows";

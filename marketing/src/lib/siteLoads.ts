@@ -149,10 +149,11 @@ export function siteLoadSource(search: URLSearchParams): SiteLoadSource {
 
 /**
  * Pages that are never counted: the same private pages that start no analytics (PRIVATE_PATH in
- * analyticsPrivacy.ts: admin, waitlist admin, private stats links /s/<key>, sign-in and redeem), plus /stats
- * and the download redirects (/download/mac etc., counted as downloads instead: downloadCounter.ts).
+ * analyticsPrivacy.ts: admin, waitlist admin, private stats links /s/<key>, sign-in, redeem and the
+ * survey, whose GET must store nothing), plus /stats and the download redirects (/download/mac etc.,
+ * counted as downloads instead: downloadCounter.ts).
  */
-const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|redeem|download\/(?:mac|mac-intel|windows))(?:[/.]|$)/i;
+const SKIPPED_PATH = /^\/(?:console|stats|waitlist|waitlist-admin|s|activate|redeem|survey|download\/(?:mac|mac-intel|windows))(?:[/.]|$)/i;
 
 /**
  * Crawlers, link unfurlers, monitors and headless browsers, checked in memory only and never stored.
