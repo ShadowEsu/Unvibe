@@ -146,13 +146,18 @@ export const D_GET = {
 
 /**
  * The thank-you state after a one-click download (Preston, 6 Nov). NEW strings for Security: the heading, the lede
- * and the two links. The steps under them are InstallBox's live first-open steps.
+ * and the two links. The steps under them are InstallBox's live first-open steps. On a Mac the card leads with the
+ * Terminal line (Design 11 Nov: 37 Mac download clicks, 0 launches; the lead: say what it runs and what it does), then
+ * the same three steps for anyone who opens the download instead.
  */
 export const D_THANKS = {
   h1: "Your download has started.",
   // the release every download link serves (Security D16): never a second hard-coded version
   file: (label: string) => `Unvibe ${BETA_INSTALL_VERSION.replace(/^v/, "")} for ${label}.`,
-  lede: "Unvibe isn't notarized by Apple yet, so open it the first time with these steps.",
+  fastest: "Fastest: paste this in Terminal",
+  // what install.sh does (lib/betaInstallScript.ts): curl from the release, SHA-256 and signature checks, ditto, open
+  fastLine: "Unvibe isn't notarized by Apple yet, so this is the smooth path. It downloads the same release from GitHub, stops unless its SHA-256 checksum and signature match, then copies Unvibe to Applications and opens it.",
+  orFile: "Or open the download:",
   ledeWindows: "The Windows build isn't code-signed yet, so open it the first time with these steps.",
   again: "Didn't start? Download again",
   intel: "Intel Mac?",

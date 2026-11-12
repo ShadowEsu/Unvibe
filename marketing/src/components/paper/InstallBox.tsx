@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { recordBetaSiteEvent, track } from "@/lib/analytics";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { trackDownloadClick, type DownloadSurface } from "@/lib/downloadTracking";
@@ -28,9 +28,10 @@ export const INSTALL_COPY: Record<InstallOs, {
   stepsTitle: string;
   steps: readonly string[];
   /**
-   * A real screenshot under a step, by the step's place (null for none): QA's fresh runners with the published 0.1.49
-   * files (macOS 15.8.2, run 42149346752; Windows Server 2025, run 42146227741), native size, cropped only, no
-   * overlays (Security C-4 GO, file 1824).
+   * A real screenshot under a step, by the step's place (null for none): QA's fresh runners with the published files,
+   * native size, cropped only, no overlays (Security C-4 GO, file 1824). Mac step 2: macOS 26.7.2, 0.1.51, run 43089282800
+   * (Design 11 Nov: the current macOS, and its Move to Trash is the full-width top button). Mac step 3: macOS 15.8.2,
+   * 0.1.49, run 42149346752 (the macOS 26 row looks the same). Windows: Server 2025, 0.1.49, run 42146227741.
    */
   stepShots: readonly (StepShot | null)[];
   /** One line under the steps. */
@@ -51,7 +52,7 @@ export const INSTALL_COPY: Record<InstallOs, {
     ],
     stepShots: [
       null,
-      { src: "/unvibe/install/macos15-not-opened.webp", width: 260, height: 232, alt: "macOS dialog: Unvibe Not Opened, with Done and Move to Trash", caption: "Real screen, macOS 15" },
+      { src: "/unvibe/install/macos26-not-opened.webp", width: 260, height: 268, alt: "macOS dialog: “Unvibe” Not Opened, with a blue Move to Trash button on top and Done under it", caption: "Real screen, macOS 26. On macOS 15 the two buttons sit side by side." },
       { src: "/unvibe/install/macos15-open-anyway.webp", width: 476, height: 174, alt: "macOS Privacy & Security, Security section: Unvibe was blocked to protect your Mac, with the Open Anyway button", caption: "Real screen, macOS 15" },
     ],
     note: "The Terminal line checks the download against the published SHA-256 and Unvibe's self-signed signature before it installs anything.",
@@ -81,6 +82,51 @@ export const INSTALL_COPY: Record<InstallOs, {
 const COPIED_MS = 1600;
 
 /**
+ * The install line in its box with a Copy button, as InstallBox and the post-download card (dia/Download.tsx) show it.
+ * `line` sits under the box, above the note a failed copy shows. A copy counts as `beta_install_copied` for `os` and
+ * `surface`.
+ */
+export function InstallCommand({ os, surface, labelledBy, line }: { os: InstallOs; surface: DownloadSurface; labelledBy: string; line: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const command = INSTALL_COPY[os].command;
+
+  const copyCommand = async () => {
+    setFailed(false);
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      track("beta_install_copied", { os, surface });
+      recordBetaSiteEvent("copied");
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  return (
+    <>
+      <div className="ninst__box">
+        {/* Scrolls sideways on narrow screens instead of wrapping, so the command is always one line to select. */}
+        <div className="ninst__cmd" role="group" aria-labelledby={labelledBy} tabIndex={0}>
+          <code>{command}</code>
+        </div>
+        <button type="button" className={copied ? "ninst__copy is-copied" : "ninst__copy"} onClick={() => void copyCommand()}>
+          {copied ? "Copied" : "Copy"}
+        </button>
+        <span className="sr-only" aria-live="polite">{copied ? "Copied the install command" : ""}</span>
+      </div>
+      {line}
+      {failed ? <p className="ninst__error" role="alert">Copy didn&apos;t work here. Select the line above and copy it yourself.</p> : null}
+    </>
+  );
+}
+
+/**
  * The one way the site offers Unvibe on a computer (BOSS P0, 5 Nov: the .dmg is not notarized, so on macOS 15 a
  * downloaded copy opens to "cannot be verified" with no Open button). The Terminal / PowerShell line comes first:
  * curl and PowerShell downloads carry no quarantine mark, so Gatekeeper never asks. The file is the second choice,
@@ -92,49 +138,19 @@ const COPIED_MS = 1600;
  */
 export function InstallBox({ os: detectedOs, surface, intelMac = false, guided = false }: { os: InstallOs; surface: DownloadSurface; intelMac?: boolean; guided?: boolean }) {
   const [os, setOs] = useState<InstallOs>(detectedOs);
-  const [copied, setCopied] = useState(false);
-  const [failed, setFailed] = useState(false);
   useEffect(() => setOs(detectedOs), [detectedOs]);
-  useEffect(() => {
-    if (!copied) return undefined;
-    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
 
   const copy = INSTALL_COPY[os];
   // Unique per box: a page can carry both computers' boxes for the same surface (the home's Get Unvibe).
   const titleId = useId();
   const fileHref = os === "mac" && intelMac ? BETA_MAC_INTEL_DIRECT_DOWNLOAD : copy.fileHref;
 
-  const copyCommand = async () => {
-    setFailed(false);
-    try {
-      await navigator.clipboard.writeText(copy.command);
-      setCopied(true);
-      track("beta_install_copied", { os, surface });
-      recordBetaSiteEvent("copied");
-    } catch {
-      setFailed(true);
-    }
-  };
-
   return (
     <div className="ninst" data-os={os}>
       <p className="ninst__title" id={titleId}>{copy.title}</p>
       {guided ? <p className="ninst__picked">We picked the file for your computer. Not right? Switch below.</p> : null}
       {guided ? <p className="ninst__k">(1) The smooth path</p> : null}
-      <div className="ninst__box">
-        {/* Scrolls sideways on narrow screens instead of wrapping, so the command is always one line to select. */}
-        <div className="ninst__cmd" role="group" aria-labelledby={titleId} tabIndex={0}>
-          <code>{copy.command}</code>
-        </div>
-        <button type="button" className={copied ? "ninst__copy is-copied" : "ninst__copy"} onClick={() => void copyCommand()}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-        <span className="sr-only" aria-live="polite">{copied ? "Copied the install command" : ""}</span>
-      </div>
-      <p className="ninst__line">{copy.line}</p>
-      {failed ? <p className="ninst__error" role="alert">Copy didn&apos;t work here. Select the line above and copy it yourself.</p> : null}
+      <InstallCommand os={os} surface={surface} labelledBy={titleId} line={<p className="ninst__line">{copy.line}</p>} />
       <button type="button" className="ninst__switch" onClick={() => setOs(os === "mac" ? "windows" : "mac")}>
         {copy.switchLabel}
       </button>
