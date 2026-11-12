@@ -23,18 +23,24 @@
 /* The ground: a flat colour, no aurora; no fade under the ask bar. */
 :root[data-look][data-ui="v3"][data-v7] body, :root[data-look][data-ui="v3"][data-v7] .layout,
 :root[data-look][data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-look][data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
-:root[data-look][data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after { display: none; }
-/* Cards, menus, the ask bar: one solid surface with a 1 px border; cards carry the card shadow (O1 light), floating
-   things the floating shadow. The sidebar is sunken. */
+/* Under the composer: a solid strip of ground across the content width (no fade), so nothing shows half-cut
+   behind the ask bar; the lists end above it (the page keeps its 150 px bottom padding). */
+:root[data-look][data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after,
+:root[data-look][data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after { height: 92px; background: var(--u-paper); border-top: 1px solid var(--u-border); -webkit-mask-image: none; mask-image: none; }
+/* Cards, menus, the ask bar: one solid surface with a 1 px border (a real border, so a look with no card shadow still
+   has its container); O1 light adds a 1 px card shadow; floating things carry the floating shadow. The sidebar is
+   sunken. */
 :root[data-look][data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .plan-pick__card, .metric-card) {
   background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: var(--u-radius-card);
-  box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-card);
+  border: 1px solid var(--u-border); box-shadow: var(--u-shadow-card);
 }
-:root[data-look][data-ui="v3"][data-v7] .layout .side { background: var(--u-sunken); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--u-border); }
+:root[data-look][data-ui="v3"][data-v7] .layout .side { background: var(--u-sunken); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: none; }
 :root[data-look][data-ui="v3"][data-v7] .layout .ask-dock,
-:root[data-look][data-ui="v3"][data-v7] :is(.acct-menu, .search-palette, .fbk) { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); }
+:root[data-look][data-ui="v3"][data-v7] :is(.acct-menu, .search-palette, .fbk) { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: var(--u-shadow-float); }
 :root[data-look][data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover,
-:root[data-look][data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: var(--u-sunken); box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-card); }
+:root[data-look][data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: var(--u-sunken); border-color: var(--u-border-control); box-shadow: var(--u-shadow-card); }
+/* The sharks stay clear of every control: they end above the composer strip. */
+:root[data-look][data-ui="v3"][data-v7] .layout .content:has(.ask-dock) .page > .sharks-backdrop { bottom: 92px; }
 :root[data-look][data-ui="v3"][data-v7] .modal .plan-pick__card.is-current,
 :root[data-look][data-ui="v3"][data-v7] .layout .plan-pick__card.is-current { background: var(--u-accent-soft); }
 /* The main button: action / on-action. Active nav and the selected filter: select / select-ink. Links: accent-text. */
@@ -70,7 +76,7 @@
 /* Settings: a neutral scrim (no blur), the modal a solid surface with a 1 px border and the floating shadow. */
 :root[data-look][data-ui="v3"][data-v7] .overlay { background: rgb(0 0 0 / 0.32); -webkit-backdrop-filter: none; backdrop-filter: none; }
 :root[data-look][data-ui="v3"][data-v7][data-theme="dark"] .overlay { background: rgb(0 0 0 / 0.6); }
-:root[data-look][data-ui="v3"][data-v7] .modal { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); border-radius: var(--u-radius-card); }
+:root[data-look][data-ui="v3"][data-v7] .modal { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: var(--u-shadow-float); border-radius: var(--u-radius-card); }
 :root[data-look][data-ui="v3"][data-v7] .modal .mbody { background: var(--u-surface); }
 /* Sharks (OPTIONS.md): a background layer on the right 44 % of the pane (at least 360 px) on Today and Ask Vibe; the
    text column stays left of it. Under 840 px of pane there is no room: no sharks, full width. */
@@ -140,7 +146,7 @@
   --u-lilac: #a394fb; --u-amber: #fbbf24;
   --u-shadow-float: 0 8px 24px rgb(0 0 0 / 0.6); --u-shadow-card: none;
 }
-/* O3's lists are hairline rows, not boxes: no border ring, a hairline above each section; menus, modals and the panel
+/* O3 keeps a clear container per group (a full 1 px border, no shadow), squarer corners; menus, modals and the panel
    keep their border (dark: #161616). */
-:root[data-look="o3"][data-ui="v3"][data-v7] .layout :is(.home-list, .lib-group__rows, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .metric-card) { box-shadow: none; border-radius: 0; border-top: 1px solid var(--u-border); }
+:root[data-look="o3"][data-ui="v3"][data-v7] .layout :is(.home-list, .lib-group__rows, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .metric-card) { box-shadow: none; }
 :root[data-look="o3"][data-theme="dark"] :is(.ob, .acct-menu, .search-palette, .fbk) { --u-surface: #161616; }
