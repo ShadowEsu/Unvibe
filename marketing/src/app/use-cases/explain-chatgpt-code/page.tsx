@@ -54,7 +54,7 @@ export default async function ExplainChatgptCodePage() {
   return (
     <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Explain the code ChatGPT wrote">
-        <div className="uc-fold">
+        <div className="uc-fold uc-fold--panel">
           <div className="uc-fold__text">
             <p>
               The answer around the code says what it is for; the code is what will run. Select the code ChatGPT wrote,
@@ -68,7 +68,7 @@ export default async function ExplainChatgptCodePage() {
             </p>
           </div>
           <figure className="os-shot">
-            <Image src={PANEL_SHOT.src} width={PANEL_SHOT.width} height={PANEL_SHOT.height} sizes="(min-width: 860px) 400px, 100vw" priority alt={PANEL_SHOT.alt} />
+            <Image src={PANEL_SHOT.src} width={PANEL_SHOT.width} height={PANEL_SHOT.height} sizes="(min-width: 400px) 352px, 100vw" priority alt={PANEL_SHOT.alt} />
             <figcaption>{PANEL_SHOT.caption}</figcaption>
           </figure>
         </div>
