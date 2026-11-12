@@ -79,7 +79,8 @@ function Thanks() {
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
                       <figcaption>
                         <span className="dt__shot-label d-mono">{shot.caption}</span>
-                        {shot.note ? <span className="dt__shot-note">{shot.note}</span> : null}
+                        {/* the space keeps the label and note apart in the text (screen readers, copy); between blocks it doesn't render */}
+                        {shot.note ? <>{" "}<span className="dt__shot-note">{shot.note}</span></> : null}
                       </figcaption>
                     </figure>
                   ) : null}

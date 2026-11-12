@@ -198,7 +198,7 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false, guided =
                     <figure className="ninst__shot">
                       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size real screenshot, shown at its native size */}
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} loading="lazy" decoding="async" />
-                      <figcaption>{shot.caption}{shot.note ? <span className="ninst__shot-note">{shot.note}</span> : null}</figcaption>
+                      <figcaption>{shot.caption}{shot.note ? <>{" "}<span className="ninst__shot-note">{shot.note}</span></> : null}</figcaption>
                     </figure>
                   ) : null}
                 </li>
