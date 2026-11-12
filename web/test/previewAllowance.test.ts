@@ -23,7 +23,7 @@ import {
 } from '../src/ai/spendMeter';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
-import { TRIAL_PREVIEW_IP_DAILY_LIMIT, trialInstallFromRequest, trialUsageLine } from '../src/lib/trialAccess';
+import { TRIAL_PREVIEW_IP_DAILY_LIMIT, trialCounterUsed, trialInstallFromRequest, trialIpKey, trialUsageLine } from '../src/lib/trialAccess';
 import { ANTHROPIC_HOST, anthropicAnswer, anthropicError } from './anthropicStub';
 
 /** A provider double that records calls and answers with fixed usage, or fails. */
@@ -396,6 +396,7 @@ test('one network gets a capped number of trial previews a day; its explanations
   const body = await jsonRecord(refused);
   assert.equal(body.error, 'preview_limit_reached');
   assert.equal(body.reason, 'network_daily_limit');
+  assert.equal(body.limit, 2);
   assert.equal(anthropicBodies.length, sent, 'nothing sent');
   assert.equal(meter.days.get(DAY), 2 * (120 * PRICES.input + 40 * PRICES.output), 'nothing reserved for the refused preview');
 
@@ -403,6 +404,33 @@ test('one network gets a capped number of trial previews a day; its explanations
   assert.ok(await streamed(await preview(previewRequest(trialHeaders('preview-net-d', '198.51.100.8')))), 'another network still has previews');
   const signed = await getStore().signIn(`preview-net-${crypto.randomUUID()}@preview.test`);
   assert.ok(await streamed(await preview(previewRequest({ authorization: `Bearer ${signed.token}`, 'x-forwarded-for': '198.51.100.7' }))), 'signed-in previews have no network cap');
+});
+
+/** The network's trial previews counted today (the route counts on the real clock's UTC day). */
+async function networkUsed(ip = '203.0.113.20'): Promise<number> {
+  const key = trialIpKey(ip);
+  assert.ok(key);
+  return trialCounterUsed(key.replace(/^__ip__:/, '__preview_ip__:'));
+}
+
+test('a trial preview the meter refuses gives its network unit back; one that was sent keeps it', async () => {
+  process.env.UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT = '2';
+  const ip = '198.51.100.30';
+  meter.kindDays.set(`ai_preview ${DAY}`, PREVIEW_DAY_CAP_NANO_USD);
+  for (const id of ['preview-rel-a', 'preview-rel-b', 'preview-rel-c']) {
+    const refused = await preview(previewRequest(trialHeaders(id, ip)));
+    assert.equal(refused.status, 429, id);
+    assert.equal((await jsonRecord(refused)).reason, 'daily_budget', id);
+  }
+  assert.equal(await networkUsed(ip), 0, 'three refusals used none of the network\'s two');
+
+  meter.kindDays.clear();
+  assert.ok(await streamed(await preview(previewRequest(trialHeaders('preview-rel-d', ip)))));
+  assert.equal(await networkUsed(ip), 1, 'a sent preview counts');
+  upstream = 'fail';
+  await events(await preview(previewRequest(trialHeaders('preview-rel-e', ip))));
+  assert.equal(await networkUsed(ip), 2, 'a preview that reached the provider counts even when it failed');
+  assert.equal(anthropicBodies.length, 2);
 });
 
 test('production without a secret for the per-network key refuses trial previews with 503, as for explanations', async () => {
@@ -434,6 +462,7 @@ test('past a shared cap, a preview gets the same stream error as an explanation,
     assert.deepEqual(previewEvents, explained, label);
     assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0, label);
     assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), 0, label);
+    assert.equal(await networkUsed(), 0, `${label}: the network unit is given back`);
   }
   assert.equal(anthropicBodies.length, 0);
 });
@@ -461,6 +490,7 @@ test('a client that leaves before the request is sent gets both holds back; one 
   assert.equal(meter.accounts.get(`${DAY} ${account}`), 0);
   assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), 0);
   assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0);
+  assert.equal(await networkUsed(), 0, 'the network unit is given back');
 
   // The client leaves once Anthropic has the request: it may be billed, so both worst cases stay.
   meter = new MemorySpendStore(() => new Date(`${DAY}T10:00:00Z`));
@@ -473,6 +503,7 @@ test('a client that leaves before the request is sent gets both holds back; one 
   assert.ok(held > 0);
   assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), held);
   assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 1);
+  assert.equal(await networkUsed(), 1, 'a preview that was sent keeps its network unit');
 });
 
 // The test's own timeout is the hang check: a response that never resolves fails it.

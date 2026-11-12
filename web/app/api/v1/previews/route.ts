@@ -1,11 +1,11 @@
 import { buildPreviewSystemPrompt, buildPreviewUserPrompt, selectPreviewProvider } from '@/ai';
 import type { ExplanationLevel, ReviewContext, ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { providerErrorSummary } from '@/ai/provider';
-import { AiPausedError, PREVIEW_ACCOUNT_DAY_LIMIT, PreviewLimitError, spendAccount } from '@/ai/spendMeter';
+import { AbortedBeforeSendError, AiPausedError, PREVIEW_ACCOUNT_DAY_LIMIT, PreviewLimitError, spendAccount } from '@/ai/spendMeter';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { payloadSizeError } from '@/lib/reviewLimits';
-import { trialInstallFromRequest, trialInstallMeta, trialPreviewDenied } from '@/lib/trialAccess';
+import { reserveTrialPreview, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { clientIp } from '@/lib/tryDemo';
 
 export const runtime = 'nodejs';
@@ -65,9 +65,13 @@ export async function POST(req: Request): Promise<Response> {
   const provider = selectPreviewProvider(account);
   if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) return unauthorized();
+  // A trial's network unit, given back when the meter refuses the preview or the caller leaves before
+  // anything is sent (as explanations give back their trial units); kept once the provider was called.
+  let releaseNetwork: (() => Promise<void>) | undefined;
   if (!provider.mock && trialInstall) {
-    const denied = await trialPreviewDenied(trialInstall, clientIp(req), new Date(), trialInstallMeta(req));
-    if (denied) return denied;
+    const trial = await reserveTrialPreview(trialInstall, clientIp(req), new Date(), trialInstallMeta(req));
+    if (trial.denied) return trial.denied;
+    releaseNetwork = trial.release;
   }
 
   const system = buildPreviewSystemPrompt(payload);
@@ -97,6 +101,10 @@ export async function POST(req: Request): Promise<Response> {
         }, req.signal);
         send({ type: 'done', model: provider.name, mock: provider.mock });
       } catch (err) {
+        if (err instanceof PreviewLimitError || err instanceof AiPausedError || err instanceof AbortedBeforeSendError) {
+          // The meter refused, or the caller left, before anything was sent.
+          await releaseNetwork?.();
+        }
         if (err instanceof PreviewLimitError) {
           outcome.limit = err;
         } else if (err instanceof AiPausedError) {

@@ -94,6 +94,14 @@ export class PreviewLimitError extends Error {
   }
 }
 
+/** Thrown when the caller left while the meter was counting: nothing was sent, and both holds were given back. */
+export class AbortedBeforeSendError extends Error {
+  constructor() {
+    super('The request was cancelled before it was sent.');
+    this.name = 'AbortedBeforeSendError';
+  }
+}
+
 /**
  * The meter's key for one account: a SHA-256 of a signed-in user id or a trial install key, so the
  * spend table never holds the id itself.
@@ -375,7 +383,7 @@ export class MeteredProvider implements Provider {
       // The caller left while the meter was counting: nothing is sent, so nothing stays counted.
       await this.adjust(reservation, -reservation.nanoUsd);
       if (hold) await this.adjustKind(hold, -hold.nanoUsd, true);
-      signal.throwIfAborted();
+      throw new AbortedBeforeSendError();
     }
 
     // From here the request may be billed. Only usage Anthropic measured replaces the worst case,

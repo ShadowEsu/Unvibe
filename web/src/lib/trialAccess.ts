@@ -557,32 +557,38 @@ export const TRIAL_PREVIEW_IP_DAILY_LIMIT = 60;
  *   is never stored), so rotating install ids can't take the $2 preview budget for everyone. Past it,
  *   429 `preview_limit_reached` with reason `network_daily_limit`; 503 when the counter can't be
  *   reserved or production has no secret for the per-IP key, as for explanations.
- * The unit is a request count and is not given back. No explanation counter (install, per-IP or
- * global) is touched: a preview never uses the install's explanations, and its per-account count
- * lives in the spend meter (`reserveKind`). The install record (the trial clock) is created on first
- * use, as for an explanation.
+ * As with `reserveTrialAction`, `release` gives the network unit back; the route calls it when the
+ * meter refused the preview or the caller left before anything was sent, and keeps it once the
+ * provider call started. No explanation counter (install, per-IP or global) is touched: a preview
+ * never uses the install's explanations, and its per-account count lives in the spend meter
+ * (`reserveKind`). The install record (the trial clock) is created on first use, as for an explanation.
  */
-export async function trialPreviewDenied(installKey: string, ip: string, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<Response | null> {
+export async function reserveTrialPreview(installKey: string, ip: string, now = new Date(), meta: TrialInstallMeta = NO_META): Promise<TrialReservation> {
   const record = await readInstall(installKey, now, meta);
   const { expiresAt, expired } = trialWindow(record.startedAt, now);
   if (expired) {
-    return Response.json({ error: 'plan_limit_reached', message: trialEndedMessage(expiresAt), upgradePath: '/plan', resetsAt: expiresAt }, { status: 429 });
+    return { denied: Response.json({ error: 'plan_limit_reached', message: trialEndedMessage(expiresAt), upgradePath: '/plan', resetsAt: expiresAt }, { status: 429 }) };
   }
   const ipKey = trialIpKey(ip, now);
   if (!ipKey) console.error('TRIAL_IP_KEY_UNCONFIGURED: set TRY_IP_SALT or SUPABASE_SERVICE_ROLE_KEY; trial requests answer 503');
-  const reserved = ipKey
-    ? await reserveUnit(ipKey.replace(/^__ip__:/, '__preview_ip__:'), SHARED_COUNTER_KIND, limitFromEnv('UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT', TRIAL_PREVIEW_IP_DAILY_LIMIT))
-    : null;
-  if (reserved === null) return Response.json({ error: STORE_UNAVAILABLE.error, message: STORE_UNAVAILABLE.message }, { status: STORE_UNAVAILABLE.status });
-  if (reserved !== -1) return null;
+  const key = ipKey?.replace(/^__ip__:/, '__preview_ip__:');
+  const limit = limitFromEnv('UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT', TRIAL_PREVIEW_IP_DAILY_LIMIT);
+  const reserved = key ? await reserveUnit(key, SHARED_COUNTER_KIND, limit) : null;
+  if (!key || reserved === null) {
+    return { denied: Response.json({ error: STORE_UNAVAILABLE.error, message: STORE_UNAVAILABLE.message }, { status: STORE_UNAVAILABLE.status }) };
+  }
+  if (reserved !== -1) {
+    return { denied: null, release: () => releaseUnits([{ key, kind: SHARED_COUNTER_KIND }]), startedAt: record.startedAt };
+  }
   const tomorrow = new Date(now);
   tomorrow.setUTCHours(24, 0, 0, 0);
-  return Response.json({
+  return { denied: Response.json({
     error: 'preview_limit_reached',
     reason: 'network_daily_limit',
     message: 'This network has used today\'s free quick looks. Open the full explanation instead; quick looks come back after midnight UTC.',
+    limit,
     resetsAt: tomorrow.toISOString(),
-  }, { status: 429 });
+  }, { status: 429 }) };
 }
 
 /**
