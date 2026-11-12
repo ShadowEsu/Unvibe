@@ -32,6 +32,7 @@ export class Ocean {
   private visible = true;
   private disposed = false;
   private primed = false;
+  private inset = 0;
   private ro: ResizeObserver | null = null;
   private io: IntersectionObserver | null = null;
   /** For the evidence harness: frames drawn and ms spent drawing. */
@@ -86,27 +87,35 @@ export class Ocean {
     this.paused = document.hidden;
     this.schedule();
   };
-  private onPointerMove = (e: PointerEvent) => {
+  /** Pointer in World coordinates (the World sits `inset` px inside the canvas) and whether it is over the canvas. */
+  private pointerAt(e: PointerEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    return { x: cx - this.inset, y: cy - this.inset, over: cx >= 0 && cy >= 0 && cx <= rect.width && cy <= rect.height };
+  }
+  private onPointerMove = (e: PointerEvent) => {
+    const { x, y, over } = this.pointerAt(e);
     this.world.pointer.x = x;
     this.world.pointer.y = y;
-    this.world.pointer.active = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    this.world.pointer.active = over;
   };
   private onPointerDown = (e: PointerEvent) => {
-    const rect = this.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) this.world.splash(x, y);
+    const { x, y, over } = this.pointerAt(e);
+    if (over) this.world.splash(x, y);
   };
 
   private resize() {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // The World is the box minus a margin on every side (11 % of the height, at most 48 px): the engine turns a shark
+    // back once its snout leaves the World, and the body that trails outside for a moment is drawn in the margin, so
+    // the sharks stay whole inside the canvas (Design S-1 r2).
+    this.inset = Math.min(48, Math.round(rect.height * 0.11));
     this.renderer.resize(rect.width, rect.height, dpr);
-    this.world.resize(rect.width, rect.height, this.renderer.cellWidth, this.renderer.cellHeight);
+    this.renderer.setInset(this.inset);
+    this.world.resize(rect.width - 2 * this.inset, rect.height - 2 * this.inset, this.renderer.cellWidth, this.renderer.cellHeight);
     if (!this.primed) {
       this.primed = true;
       for (let i = 0; i < PRESTEPS; i++) this.world.step(STEP);

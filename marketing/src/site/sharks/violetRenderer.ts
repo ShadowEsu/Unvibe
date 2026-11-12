@@ -2,7 +2,10 @@
  * Unvibe's fork of ascii-sharks' renderer.ts (vendor/ascii-sharks, MIT © 2026 drewdi, commit a0074c16), copied from
  * the app's shared/sharks/violetRenderer.ts on app/redesign-0151 with the site's own palette: the same rasteriser,
  * the ground transparent, no grid, and every dot, fish, skin and glyph ink from LIGHT_PALETTE below (violet and
- * lilac only on the site); the canvas is created with alpha. Geometry, shading and the field code are untouched.
+ * lilac only on the site); the canvas is created with alpha. Shading and the field code are untouched; the one
+ * geometry change is `inset`: the World can be smaller than the canvas and sit centred in it, so a body that dips past
+ * the World's edge (the engine turns a shark back once its snout leaves the frame, so the body trails outside for a
+ * moment) is still drawn, inside the canvas, instead of being cut. Ledger 598 N1 uses it for the open-water box.
  *
  * Draws the World as a grid of ASCII cells:
  *   1. a cell grid (transparent here)
@@ -315,6 +318,8 @@ export class VioletRenderer {
   private height = 0;
   private cw = 12;
   private ch = 18;
+  /** Canvas px between the canvas edge and the World's edge, all four sides (0 = the World is the canvas). */
+  private inset = 0;
   private cols = 0;
   private rows = 0;
   fontFamily = "ui-monospace, Menlo, monospace";
@@ -389,6 +394,10 @@ export class VioletRenderer {
 
   setFontFamily(family: string) {
     if (family) this.fontFamily = family;
+  }
+
+  setInset(px: number) {
+    this.inset = Math.max(0, px);
   }
 
   resize(width: number, height: number, dpr: number) {
@@ -476,15 +485,15 @@ export class VioletRenderer {
   // ── simulation → field ──────────────────────────────────────────────
 
   private cellIndex(x: number, y: number) {
-    const c = Math.floor(x / this.cw);
-    const r = Math.floor(y / this.ch);
+    const c = Math.floor((x + this.inset) / this.cw);
+    const r = Math.floor((y + this.inset) / this.ch);
     if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) return -1;
     return r * this.cols + c;
   }
 
   private stamp(field: Float32Array, x: number, y: number, radius: number, amount: number) {
-    const c0 = Math.floor(x / this.cw);
-    const r0 = Math.floor(y / this.ch);
+    const c0 = Math.floor((x + this.inset) / this.cw);
+    const r0 = Math.floor((y + this.inset) / this.ch);
     for (let r = r0 - radius; r <= r0 + radius; r++) {
       for (let c = c0 - radius; c <= c0 + radius; c++) {
         if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) continue;
@@ -717,8 +726,8 @@ export class VioletRenderer {
         ty /= tl;
         const amp = L * 0.05 * (0.1 + 0.9 * Math.pow(s, 1.8)) * swim;
         const off = amp * Math.sin(sh.phase - s * 5.2);
-        spine[k * 2] = n[k * 2] - ty * off;
-        spine[k * 2 + 1] = n[k * 2 + 1] + tx * off;
+        spine[k * 2] = n[k * 2] - ty * off + this.inset;
+        spine[k * 2 + 1] = n[k * 2 + 1] + tx * off + this.inset;
       }
       arc[0] = 0;
       for (let k = 1; k < N; k++) {

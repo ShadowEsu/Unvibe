@@ -11,8 +11,8 @@ import { D_STATS } from "./content";
  * Ledger 598: three candidates for the homepage "Unvibe in numbers" section (Design's file 20261111-1137), rendered
  * from the code on site/numbers-r1 for Preston's pick in Slack. Money comes from data/compensation.ts only (Security
  * M6); the server HTML holds the final figure, the count-up is a client embellishment that ends on that exact value
- * and never runs under reduced motion (M5); the label, "Not cash. Not a round." and the /investors link sit in the
- * same card (M1, M2; the total needs the long form, Security 1232). None of the M4 words appear.
+ * and never runs under reduced motion (M5); the label, "Credits are not cash. Not a round." (the long form, Security
+ * 1232) and the /investors link sit in the same card (M1, M2). None of the M4 words appear.
  */
 export type NumbersVariant = "n1" | "n2" | "n3";
 
@@ -94,13 +94,12 @@ function Figure({ value, className }: { value: string; className?: string }) {
   );
 }
 
-/* ───────────────────────── N1 "Ocean": the figure on glass, sharks behind ───────────────────────── */
+/* ───────────────────────── N1 "Ocean": the figure on a card, sharks in the open water beside it ───────────────────────── */
 export function NumbersN1() {
   const root = useRef<HTMLDivElement>(null);
   useCountUp(root, 1600);
   return (
     <section className="d-nr d-nr--n1" aria-labelledby="d-nr-h">
-      <OceanBand className="d-nr__ocean" />
       <div ref={root} className="d-nr__wrap">
         <div className="d-nr__card d-glass" data-d-enter="">
           <h2 id="d-nr-h" className="d-label d-mono d-nr__label">({D_STATS.label})</h2>
@@ -111,6 +110,7 @@ export function NumbersN1() {
             <Link href="/investors">{WHERE} <span aria-hidden="true">→</span></Link>
           </p>
         </div>
+        <OceanBand className="d-nr__ocean" />
         <FactBar className="d-nr__bar" />
       </div>
     </section>

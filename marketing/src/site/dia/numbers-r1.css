@@ -1,32 +1,36 @@
 /* Ledger 598: the three "Unvibe in numbers" candidates (NumbersR1.tsx), Design's file 20261111-1137. Own file so the
    live section's rules (dia.css 1b) are untouched until Preston picks. Tokens from dia.css: --d-ink, --d-ink-2,
-   --d-violet, --d-line, --d-sans, --d-mono, --font-display, --d-ease. The glass recipe is Design's; its colours are
-   tokens here (hallmark sloplint, Floor 1). */
+   --d-violet, --d-line, --d-sans, --d-mono, --font-display, --d-ease, --d-card. The card recipe is Design's; its
+   colours are tokens here (hallmark sloplint, Floor 1). */
 
 .d-home {
-  --d-glass-fill: rgb(255 255 255 / 0.64);
   --d-glass-rim: rgb(90 63 224 / 0.14);
   --d-glass-shadow: rgb(40 24 110 / 0.35);
   --d-violet-wash: rgb(90 63 224 / 0.05);
   --d-leader-dot: rgb(23 19 31 / 0.22);
 }
-.d-glass { background: var(--d-glass-fill); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); box-shadow: inset 0 0 0 1px var(--d-glass-rim), 0 24px 60px -28px var(--d-glass-shadow); }
+ /* Solid card, no glass (Design S-1 r2: nothing to blur over plain paper; Preston on the app's glass, 11 Nov): the
+   same hairline and shadow as before on a plain white fill. */
+.d-glass { background: var(--d-card); box-shadow: inset 0 0 0 1px var(--d-glass-rim), 0 24px 60px -28px var(--d-glass-shadow); }
 
-/* The ocean canvas: fills its section, under everything, fading 64 px at the top and bottom edges (the mask's colour
-   is any opaque value; it is alpha that counts). */
-.d-ocean { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 64px, var(--d-ink) calc(100% - 64px), transparent); mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 64px, var(--d-ink) calc(100% - 64px), transparent); }
+/* The ocean canvas: a box of its own (a grid item, never under text), fading 32 px on all four sides: two masks, one
+   per axis, intersected (the mask's colour is any opaque value; it is alpha that counts). */
+.d-ocean { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(to right, transparent, var(--d-ink) 32px, var(--d-ink) calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, var(--d-ink) 32px, var(--d-ink) calc(100% - 32px), transparent); mask-image: linear-gradient(to right, transparent, var(--d-ink) 32px, var(--d-ink) calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, var(--d-ink) 32px, var(--d-ink) calc(100% - 32px), transparent); -webkit-mask-composite: source-in; mask-composite: intersect; }
 
 /* ── Shared ── */
 .d-nr { position: relative; padding: 96px 30px 120px; isolation: isolate; }
 .d-nr__keys kbd { min-width: 44px; height: 44px; padding: 0 12px; margin-right: 6px; border-radius: 10px; font-size: 15px; }
 .d-nr__keys .lx-win kbd:last-child, .d-nr__keys .lx-mac kbd:last-child { margin-right: 0; }
 
-/* ── N1 "Ocean" (r2, Design S-1 r1): the money card on the left, 700 px; the right of the container is open water
-   where whole sharks are seen; the four facts are N3's bar under both. Under 1024 the canvas is a 252 px band at the
-   top and nothing swims behind text. The N1 glass is filled to 0.80 (text over moving ink must hold 4.5:1). ── */
-.d-nr--n1 { padding: 88px 30px 96px; --d-glass-fill: rgb(255 255 255 / 0.80); }
+/* ── N1 "Ocean" (r3, Design S-1 r2): the money card on the left, 700 px; the ocean is only the open water, a box to
+   the right of the card (32 px off it, to the container's right edge, the card's height: about 428 × 400 at 1440),
+   so the engine's world is that box and nothing is drawn under the card or the bar. The four facts are N3's bar under
+   both, 24 px (the row gap) below the box. Under 1024 the box is a full-width 220 px band at the top and the card
+   starts under it. ── */
+.d-nr--n1 { padding: 88px 30px 96px; }
 .d-nr__wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 700px 1fr; gap: 24px 0; max-width: 1160px; margin: 0 auto; }
-.d-nr__card { grid-column: 1; display: grid; align-content: start; padding: 48px 56px; border-radius: 28px; }
+.d-nr__card { grid-column: 1; grid-row: 1; display: grid; align-content: start; padding: 48px 56px; border-radius: 28px; }
+.d-nr__ocean { grid-column: 2; grid-row: 1; width: calc(100% - 32px); margin-left: 32px; }
 .d-nr__bar { grid-column: 1 / -1; }
 .d-nr__label { margin-bottom: 28px; text-align: left; }
 /* The figure's box is as wide as its final value from the first frame (tabular digits, the server-rendered final
@@ -42,13 +46,15 @@
 
 @media (max-width: 1023px) {
   .d-nr--n1 { padding: 0 30px 72px; }
-  .d-nr--n1 .d-ocean { height: 252px; -webkit-mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 48px, var(--d-ink) calc(100% - 48px), transparent); mask-image: linear-gradient(to bottom, transparent, var(--d-ink) 48px, var(--d-ink) calc(100% - 48px), transparent); }
-  .d-nr__wrap { grid-template-columns: 1fr; gap: 12px; padding-top: 220px; }
-  .d-nr__card { padding: 40px 36px; }
+  .d-nr__wrap { grid-template-columns: 1fr; gap: 12px; }
+  /* Full-bleed band: the column plus the section's side padding (a canvas is a replaced element; width must be set). */
+  .d-nr__ocean { grid-column: 1; grid-row: 1; width: calc(100% + 60px); height: 220px; margin: 0 -30px; }
+  .d-nr__card { grid-row: 2; padding: 40px 36px; }
   .d-nr__figure { font-size: 112px; }
 }
 @media (max-width: 600px) {
   .d-nr--n1 { padding: 0 16px 56px; }
+  .d-nr__ocean { width: calc(100% + 32px); margin: 0 -16px; }
   .d-nr__card { padding: 28px 22px; border-radius: 22px; }
   .d-nr__label { margin-bottom: 18px; }
   .d-nr__figure { font-size: 64px; letter-spacing: -0.01em; }
