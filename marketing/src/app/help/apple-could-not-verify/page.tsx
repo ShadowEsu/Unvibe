@@ -63,8 +63,8 @@ export default function AppleCouldNotVerifyPage() {
             from Applications again, then come back to Security.
           </li>
           <li>
-            Unvibe opens, and its icon appears in the menu bar at the top right. That is the sign it worked. Apple says macOS then
-            saves Unvibe as an exception, so you do this once. Later versions install from inside the app.
+            Unvibe opens: its icon appears in the Dock, and in the menu bar at the top right when there is room. That is the sign it
+            worked. Apple says macOS then saves Unvibe as an exception, so you do this once. Later versions install from inside the app.
           </li>
         </ol>
         <p>
