@@ -37,8 +37,8 @@ test('Up next lists the first three learning steps not done yet, with how many a
   const html = home({ reviews: 3, understood: 0, history: [] });
   const titles = [...html.matchAll(/class="home-step".*?class="home-row__title">(.*?)<\/span>/g)].map((m) => m[1]);
   assert.deepEqual(titles, ['Save the lesson', 'Take a quick quiz', 'Ask one more thing']);
-  // The done count is a count-up: its final value sits in aria-label, the digits in an aria-hidden span.
-  assert.match(html, /aria-label="1"[^>]*><span aria-hidden="true">1<\/span><\/span> of 5 done/);
+  // The done count is a count-up: the digits are aria-hidden and the final value is read from an sr-only span.
+  assert.match(html, /<span class="sr-only">1<\/span><\/span> of 5 done/);
 });
 
 test('learning steps: explained, understood and a saved lesson mark their steps done; quiz and ask never are', () => {
