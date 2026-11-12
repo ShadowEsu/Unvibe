@@ -16,9 +16,11 @@ import { useVisitor } from "./os";
 import { startDownload, takeQueuedDownload } from "./DownloadCta";
 
 /**
- * The thank-you state (Preston, 6 Nov): after a one-click download, /beta?dl=<file> opens on the file that started and
- * its first-open steps, InstallBox's live steps word for word (the .dmg isn't notarized, the .exe isn't signed), with
- * the other files one click away ("Intel Mac? / Windows? Download here") and the file again if it didn't start.
+ * The thank-you state (Preston, 6 Nov): after a one-click download, /beta?dl=<file> opens on the file that started.
+ * On a Mac it leads with the Terminal line and what it does (Design 11 Nov), then the .dmg's first-open steps; on
+ * Windows, the .exe's. The steps are InstallBox's live steps word for word (the .dmg isn't notarized, the .exe isn't
+ * signed), with the other files one click away ("Intel Mac? / Windows? Download here") and the file again if it didn't
+ * start.
  */
 function Thanks() {
   const params = useSearchParams();

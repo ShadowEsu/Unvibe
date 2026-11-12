@@ -155,8 +155,9 @@ export const D_THANKS = {
   // the release every download link serves (Security D16): never a second hard-coded version
   file: (label: string) => `Unvibe ${BETA_INSTALL_VERSION.replace(/^v/, "")} for ${label}.`,
   fastest: "Fastest: paste this in Terminal",
-  // what install.sh does (lib/betaInstallScript.ts): curl from the release, SHA-256 and signature checks, ditto, open
-  fastLine: "Unvibe isn't notarized by Apple yet, so this is the smooth path. It downloads the same release from GitHub, stops unless its SHA-256 checksum and signature match, then copies Unvibe to Applications and opens it.",
+  // what install.sh does (lib/betaInstallScript.ts): curl from the release, SHA-256 and signature checks, quits a running
+  // Unvibe, ditto over the old app, open, then one anonymous 'installed' POST
+  fastLine: "Unvibe isn't notarized by Apple yet, so this is the smooth path. It downloads the same release from GitHub, stops unless its SHA-256 checksum and signature match, then copies Unvibe to Applications (replacing an older copy), opens it and sends one anonymous install count.",
   orFile: "Or open the download:",
   ledeWindows: "The Windows build isn't code-signed yet, so open it the first time with these steps.",
   again: "Didn't start? Download again",
