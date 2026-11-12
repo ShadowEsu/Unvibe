@@ -1,11 +1,11 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { referralCodeFor } from "@/lib/referralCode";
 import { z } from "zod";
 import { findBetaDownload, saveBetaDownload, type BetaDownloadEntry } from "@/lib/betaDownloadStore";
 import { BETA_INSTALL_TAG, BETA_MAC_DOWNLOAD_URL } from "@/lib/betaInstallScript";
 import { scheduleSetupReminder } from "@/lib/sendBetaDownloadEmail";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
-import { recordWaitlistBetaEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
+import { recordWaitlistBetaEmail, referralCodeForEmail, saveWaitlistEntry } from "@/lib/waitlistStore";
 import { clientNetwork, DAILY_LIMIT_MESSAGE, emailCeilingRejection, rateLimitRejection, rejectCrossSitePost } from "@/lib/publicForm";
 import {
   consumeRateLimit,
@@ -37,10 +37,6 @@ const schema = z.object({
 const IP_LIMIT: RateLimitRule = { name: "beta-download-ip", windowSeconds: 60, max: 6 };
 const TOO_MANY = "Too many download requests. Try again shortly.";
 
-function referralCode(email: string): string {
-  return createHash("sha256").update(email).digest("hex").slice(0, 8).toUpperCase();
-}
-
 export async function POST(request: Request) {
   const crossSite = rejectCrossSitePost(request);
   if (crossSite) return crossSite;
@@ -60,7 +56,9 @@ export async function POST(request: Request) {
   const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
   if (ceiling) return ceiling;
   const existing = await findBetaDownload(email, release).catch(() => null);
-  const code = existing?.referralCode || referralCode(email);
+  // The code someone was already sent (a download record or a waitlist entry) stays theirs; otherwise the HMAC code
+  // (lib/referralCode.ts). Shown upper-case on the card, stored lower-case on the waitlist.
+  const code = existing?.referralCode || ((await referralCodeForEmail(email).catch(() => undefined)) ?? referralCodeFor(email)).toUpperCase();
   const setupTip = parsed.data.reminder;
   const delivery = existing?.emailSentAt
     ? { sent: true, messageId: existing.emailMessageId }

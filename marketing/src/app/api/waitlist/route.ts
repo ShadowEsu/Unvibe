@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { referralCodeFor } from "@/lib/referralCode";
 import { waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
@@ -31,10 +31,6 @@ export const dynamic = "force-dynamic";
 const IP_LIMIT: RateLimitRule = { name: "waitlist-ip", windowSeconds: 60, max: 8 };
 const TOO_MANY = "Too many requests. Please try again shortly.";
 
-function referralCodeFor(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 8);
-}
-
 export async function POST(req: Request) {
   const crossSite = rejectCrossSitePost(req);
   if (crossSite) return crossSite;
@@ -60,7 +56,9 @@ export async function POST(req: Request) {
   if (emailLimited) return emailLimited;
   const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
   if (ceiling) return ceiling;
-  const referralCode = referralCodeFor(email);
+  // A member who joins again keeps the code they were sent (their invite link must go on working); codes made
+  // before the HMAC change differ from what referralCodeFor would give today.
+  const referralCode = (await referralCodeForEmail(email).catch(() => undefined)) ?? referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
   // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
   // resolved to that waitlister's code when the list knows it.

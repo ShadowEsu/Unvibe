@@ -30,8 +30,9 @@ export async function GET(request: Request, { params }: { params: { code: string
   }
   try {
     const progress = await referralProgress(params.code);
-    // An unknown code gets the same 200 and zero count, so a code (sha256 of an email) cannot
-    // be used to check whether someone is on the list.
+    // An unknown code gets the same 200 and zero count. That alone is not the membership guard: one join with
+    // `referredBy` set to a member's code makes the count ≥ 1. The guard is that codes are HMACs of a server secret
+    // (lib/referralCode.ts), so nobody can compute someone else's code from their email.
     return NextResponse.json({ joinedReferrals: progress.joinedReferrals }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   } catch (error) {
     console.error("referral progress lookup failed", error);

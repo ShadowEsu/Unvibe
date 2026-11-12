@@ -369,6 +369,40 @@ describe("waitlist responses do not reveal membership", () => {
     assert.deepEqual(await unknown.json(), await known.json());
   });
 
+  /** The referral code a signup route answered with, read as the unknown JSON it is. */
+  async function codeOf(response: Response): Promise<string> {
+    const body: unknown = await response.json();
+    if (body && typeof body === "object" && "referralCode" in body && typeof body.referralCode === "string") return body.referralCode;
+    assert.fail(`no referralCode in ${JSON.stringify(body)}`);
+  }
+
+  it("gives referral codes nobody can compute from the email (Security F1, 11 Nov)", async () => {
+    // sha256(email)[:8] was the old code: with it, joining as referredBy=<victim's code> and reading
+    // /api/referrals/<code> told whether the victim was listed. The code must depend on the server secret.
+    const email = "code-is-private@unvibe-mail.test";
+    const referralCode = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email })));
+    assert.match(referralCode, /^[a-f0-9]{8}$/);
+    assert.notEqual(referralCode, createHash("sha256").update(email).digest("hex").slice(0, 8));
+    assert.equal(waitlistRows.get(email)?.referral_code, referralCode);
+    const otherSecret = await withEnv({ RATE_LIMIT_KEY_SECRET: `${KEY_SECRET}-rotated` }, async () =>
+      codeOf(await waitlistRoute.POST(post("/api/waitlist", { email: "code-is-private-2@unvibe-mail.test" }))),
+    );
+    assert.notEqual(otherSecret, referralCode);
+
+    const downloader = "downloader@unvibe-mail.test";
+    const downloadCode = await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email: downloader })));
+    assert.match(downloadCode, /^[A-F0-9]{8}$/);
+    assert.notEqual(downloadCode, createHash("sha256").update(downloader).digest("hex").slice(0, 8).toUpperCase());
+  });
+
+  it("keeps the code a member was already sent when they join or download again", async () => {
+    const email = "joined-last-month@unvibe-mail.test";
+    const oldCode = createHash("sha256").update(email).digest("hex").slice(0, 8); // a pre-HMAC code, as stored
+    waitlistRows.set(email, { id: email, email, referral_code: oldCode, created_at: new Date().toISOString() });
+    assert.equal(await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email }))), oldCode);
+    assert.equal(await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email }))), oldCode.toUpperCase());
+  });
+
   it("refuses the hidden founder metric addresses on beta-download", async () => {
     const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "growth-funnel@unvibe.internal" }));
     assert.equal(response.status, 422);
