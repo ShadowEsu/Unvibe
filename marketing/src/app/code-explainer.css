@@ -171,7 +171,13 @@ ol.explain-notes {
   .explain-page--uc .explain-card dd {
     max-width: 68ch;
   }
-  .explain-page--uc .use-sample,
+  /* The code block is 860 px, or as wide as its longest line when that is longer, never wider than the card: the
+     Cursor sample's `controller.signal` line was cut at a hard 860 (Design MUST on #269). */
+  .explain-page--uc .use-sample {
+    width: fit-content;
+    min-width: min(860px, 100%);
+    max-width: 100%;
+  }
   .explain-page--uc .explain-notes {
     max-width: 860px;
   }
