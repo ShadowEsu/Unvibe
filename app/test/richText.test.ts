@@ -44,6 +44,28 @@ test('a bold label around code that holds an asterisk renders as bold code', () 
   assert.doesNotMatch(html, /\*\*/);
 });
 
+test('single-asterisk and underscore emphasis render as <em>; math, identifiers, bold, code and bullets are untouched', () => {
+  assert.match(markup('the timer has *started*'), /the timer has <em>started<\/em>/);
+  assert.match(markup('pause *this* function'), /pause <em>this<\/em> function/);
+  assert.match(markup('it is _not_ called'), /it is <em>not<\/em> called/);
+  assert.match(markup('*two words* here'), /<em>two words<\/em> here/);
+  assert.match(markup('2 * 3 * 4'), /2 \* 3 \* 4/);
+  assert.match(markup('a*b*c and snake_case_name'), /a\*b\*c and snake_case_name/);
+  assert.match(markup('**bold** stays'), /<strong>bold<\/strong> stays/);
+  assert.match(markup('`n * n` stays'), /<code class="inline">n \* n<\/code> stays/);
+  assert.match(markup('* item one\n* item two'), /<li>item one<\/li><li>item two<\/li>/);
+  assert.doesNotMatch(markup('* item one\n* item two'), /<em>/);
+});
+
+test('streaming a half-open emphasis shows no stray marker, and the closed word is emphasised after it lands', () => {
+  for (const partial of ['The timer has *sta', 'The timer has *sta ', 'The timer has *', 'The timer has _no']) {
+    assert.doesNotMatch(markup(partial, true), /[*_]/, partial);
+  }
+  assert.match(markup('The timer has *sta', true), /<em>sta<\/em>/);
+  assert.match(markup('The timer has *started*.', true), /<em>started<\/em>\./);
+  assert.match(markup('2 * 3', true), /2 \* 3/);
+});
+
 test('streaming renders an unclosed trailing code span or bold label without raw markers', () => {
   assert.match(markup('It checks `isAdu', true), /<code class="inline">isAdu<\/code>/);
   assert.match(markup('1. **The Condition (`if', true), /<strong>The Condition \(<code class="inline">if<\/code><\/strong>/);

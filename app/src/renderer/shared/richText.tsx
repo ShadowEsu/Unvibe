@@ -112,7 +112,11 @@ export function renderInline(text: string, words?: WordCounter): ReactNode[] {
   // Bold text may hold code spans, and a code span may hold `*` (e.g. **`n * n`**); a bare `*` still ends
   // the match, so the inner renderInline pass can't find bold again. The two alternatives share no
   // character (a backtick only opens a code span), so a failed match stays linear on long streamed lines.
-  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*((?:`[^`\n]+`|[^*`\n])+)\*\*/g;
+  // Emphasis (*word* or _word_) comes last and only between word boundaries: the opener is not after a word
+  // character or another marker and is followed by non-space; the closer follows non-space and is not followed by
+  // a word character or marker. So `2 * 3 * 4`, `a*b*c` and snake_case never match, and a `* item` bullet never
+  // reaches here (the list prefix is stripped before inline rendering).
+  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*((?:`[^`\n]+`|[^*`\n])+)\*\*|(?<![\w*])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![\w*])|(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g;
   const out: ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
@@ -132,9 +136,11 @@ export function renderInline(text: string, words?: WordCounter): ReactNode[] {
           {m[3]}
         </code>,
       );
-    } else {
+    } else if (m[4]) {
       // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too, word by word.
-      out.push(<strong key={k++}>{renderInline(m[4]!, words)}</strong>);
+      out.push(<strong key={k++}>{renderInline(m[4], words)}</strong>);
+    } else {
+      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words)}</em>);
     }
     last = m.index + m[0].length;
   }
@@ -306,6 +312,13 @@ function closeStreamingMarkers(text: string): string {
   if (bold >= 0 && (tick < 0 || bold < tick)) {
     if (line.slice(bold + 2).trim()) close += '**';
     else line = line.slice(0, bold);
+  }
+  // A half-open *emphasis* (or _emphasis_) at the end of the line: close it so no marker shows while it streams; a
+  // bare trailing marker waits out of sight. Only an opener in emphasis position counts (not `2 * 3` or a_b).
+  if (tick < 0 && bold < 0) {
+    const open = line.match(/(?<![\w*])\*(?=[^\s*])[^*\n]*$|(?<![\w_])_(?=[^\s_])[^_\n]*$/);
+    if (open) { line = line.replace(/\s+$/, ''); close += open[0][0]!; }
+    else if (/(?<![\w*])\*$|(?<![\w_])_$/.test(line)) line = line.slice(0, -1);
   }
   return head + line + close;
 }
