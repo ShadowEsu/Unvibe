@@ -77,7 +77,10 @@ function Thanks() {
                     <figure className="dt__shot">
                       {/* eslint-disable-next-line @next/next/no-img-element -- a real screenshot at its native size */}
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
-                      <figcaption className="d-mono">{shot.caption}</figcaption>
+                      <figcaption>
+                        <span className="dt__shot-label d-mono">{shot.caption}</span>
+                        {shot.note ? <span className="dt__shot-note">{shot.note}</span> : null}
+                      </figcaption>
                     </figure>
                   ) : null}
                 </div>

@@ -15,7 +15,8 @@ import { MAC_SHA256_URL, WINDOWS_SHA256_URL } from "@/lib/downloadMeta";
 
 export type InstallOs = "mac" | "windows";
 
-interface StepShot { src: string; width: number; height: number; alt: string; caption: string }
+/** `caption` is the short label under a screenshot; `note`, if any, is a sentence under it in the body font (Design 11 Nov). */
+interface StepShot { src: string; width: number; height: number; alt: string; caption: string; note?: string }
 
 /** What the box says for each computer. Mac and Windows copy is Design's (download-fix S-1 rules, 5 Nov). */
 export const INSTALL_COPY: Record<InstallOs, {
@@ -52,7 +53,7 @@ export const INSTALL_COPY: Record<InstallOs, {
     ],
     stepShots: [
       null,
-      { src: "/unvibe/install/macos26-not-opened.webp", width: 260, height: 268, alt: "macOS dialog: “Unvibe” Not Opened, with a blue Move to Trash button on top and Done under it", caption: "Real screen, macOS 26. On macOS 15 the two buttons sit side by side." },
+      { src: "/unvibe/install/macos26-not-opened.webp", width: 260, height: 268, alt: "macOS dialog: “Unvibe” Not Opened, with a blue Move to Trash button on top and Done under it", caption: "Real screen, macOS 26", note: "On macOS 15 the two buttons sit side by side." },
       { src: "/unvibe/install/macos15-open-anyway.webp", width: 476, height: 174, alt: "macOS Privacy & Security, Security section: Unvibe was blocked to protect your Mac, with the Open Anyway button", caption: "Real screen, macOS 15" },
     ],
     note: "The Terminal line checks the download against the published SHA-256 and Unvibe's self-signed signature before it installs anything.",
@@ -197,7 +198,7 @@ export function InstallBox({ os: detectedOs, surface, intelMac = false, guided =
                     <figure className="ninst__shot">
                       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-size real screenshot, shown at its native size */}
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} loading="lazy" decoding="async" />
-                      <figcaption>{shot.caption}</figcaption>
+                      <figcaption>{shot.caption}{shot.note ? <span className="ninst__shot-note">{shot.note}</span> : null}</figcaption>
                     </figure>
                   ) : null}
                 </li>

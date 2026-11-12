@@ -344,13 +344,16 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dt .dt__fast { max-width: 640px; margin-top: 22px; gap: 10px; }
 .dt__k { margin: 0; font: 600 17px/1.4 var(--d-sans); color: var(--d-ink); }
 .dt__or { margin-top: 30px; }
-.dt__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+/* start: each card takes its own height, so the short step 1 isn't a tall empty box next to step 2's picture (Design 11 Nov) */
+.dt__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 18px; margin-top: 28px; }
 .dt__or + .dt__steps { margin-top: 14px; }
 .dt__steps li { display: flex; gap: 12px; padding: 18px; border-radius: 16px; background: var(--d-tint); font-size: 15.5px; line-height: 1.5; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; animation-delay: calc(var(--i, 0) * 150ms); --d-rise: 14px; }
 .dt__n { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--d-violet); color: #fff; font: 600 13px/1 var(--d-sans); }
 .dt__shot { margin-top: 12px; }
 .dt__shot img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--d-line); }
-.dt__shot figcaption { margin-top: 6px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--d-ink-3); }
+.dt__shot figcaption { margin-top: 6px; color: var(--d-ink-3); }
+.dt__shot-label { display: block; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.dt__shot-note { display: block; margin-top: 3px; font-size: 13.5px; line-height: 1.45; }
 .dt__more { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 24px; font-size: 15px; color: var(--d-ink-2); }
 .dt__more a { color: var(--d-violet); font-weight: 500; }
 .dt__more a:hover { text-decoration: underline; text-underline-offset: 3px; }
