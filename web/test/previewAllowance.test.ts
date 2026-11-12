@@ -21,6 +21,7 @@ import {
   type MeterableProvider,
   type SpendStore,
 } from '../src/ai/spendMeter';
+import { PREVIEW_MAX_CONTEXT_CHARS } from '../src/lib/reviewLimits';
 import { getStore } from '../src/data/store';
 import { getBillingStore } from '../src/billing/store';
 import { TRIAL_PREVIEW_IP_DAILY_LIMIT, trialCounterUsed, trialInstallFromRequest, trialIpKey, trialUsageLine } from '../src/lib/trialAccess';
@@ -519,6 +520,30 @@ test('an answer with no text ends the response and gives the preview back; its m
   assert.equal(meter.kindAccounts.get(`ai_preview ${DAY} ${account}`), 0, 'the preview count is given back');
   assert.equal(meter.kindDays.get(`ai_preview ${DAY}`), measured, 'the billed tokens stay on the preview budget');
   assert.equal(meter.days.get(DAY), measured);
+});
+
+test('a quick look takes at most 20,000 characters across the texts that reach its prompt: 19,999 goes through, 20,001 is 413 before anything is reserved', async () => {
+  assert.equal(PREVIEW_MAX_CONTEXT_CHARS, 20_000);
+  const under = await preview(previewRequest(trialHeaders('preview-install-size'), { level: 'beginner', context: { ...context, code: 'x'.repeat(19_999) } }));
+  assert.ok(await streamed(under));
+  const sent = anthropicBodies.length;
+  const reserved = meter.days.get(DAY);
+
+  const overs = [
+    { ...context, code: 'x'.repeat(20_001) },
+    // Counted across fields: selection + nearby files + file name + imports + project list.
+    { ...context, code: 'x'.repeat(10_000), enclosing: 'y'.repeat(9_990), primaryFile: 'src/a.ts', imports: ['b'], projectStructure: ['cc'] },
+  ];
+  for (const over of overs) {
+    const response = await preview(previewRequest(trialHeaders('preview-install-size'), { level: 'beginner', context: over }));
+    assert.equal(response.status, 413);
+    const body = await jsonRecord(response);
+    assert.equal(body.error, 'context_too_long');
+    assert.equal(typeof body.message, 'string');
+  }
+  assert.equal(anthropicBodies.length, sent, 'nothing sent');
+  assert.equal(meter.days.get(DAY), reserved, 'nothing reserved');
+  assert.equal(await networkUsed(), 1, 'no network unit taken');
 });
 
 test('previews keep the explanation input rules: size cap 413, missing fields 400, no session 401', async () => {

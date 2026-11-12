@@ -4,7 +4,7 @@ import { providerErrorSummary } from '@/ai/provider';
 import { AbortedBeforeSendError, AiPausedError, PREVIEW_ACCOUNT_DAY_LIMIT, PreviewLimitError, spendAccount } from '@/ai/spendMeter';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
 import { unauthorized, userFromRequest } from '@/lib/auth';
-import { payloadSizeError } from '@/lib/reviewLimits';
+import { payloadSizeError, previewSizeError } from '@/lib/reviewLimits';
 import { reserveTrialPreview, trialInstallFromRequest, trialInstallMeta } from '@/lib/trialAccess';
 import { clientIp } from '@/lib/tryDemo';
 
@@ -23,7 +23,8 @@ const LEVELS: readonly ExplanationLevel[] = ['new', 'beginner', 'intermediate', 
  * or raise the 400-token output budget (`selectPreviewProvider`).
  *
  * Refusals before anything is reserved or sent: 400 (missing fields), 413 (the explanation's size
- * cap), 401, 429 `plan_limit_reached` (a trial whose 30 days ended), 429 `preview_limit_reached` with
+ * cap, then the preview's own 20,000 characters, `previewSizeError`), 401, 429 `plan_limit_reached` (a trial whose 30 days
+ * ended), 429 `preview_limit_reached` with
  * reason `network_daily_limit` (a network's trial previews for the day), 503. A preview's own
  * allowance answers 429 `preview_limit_reached` too: reason `daily_budget` (≤ $2 a UTC day for
  * everyone, which also counts previews still in flight, so it means "later", not "tomorrow") or
@@ -56,7 +57,7 @@ export async function POST(req: Request): Promise<Response> {
       : {}),
   };
   const payload: ReviewRequestPayload = { scope: 'selection', level, context };
-  const tooLarge = payloadSizeError(payload);
+  const tooLarge = payloadSizeError(payload) ?? previewSizeError(context);
   if (tooLarge) return tooLarge;
 
   const trialInstall = trialInstallFromRequest(req);
