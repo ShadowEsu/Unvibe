@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { compensationCreditsUsd, compensationTotalLabel, compensationTotalPhrase, formatUsd } from "@/data/compensation";
 import { explainPages } from "@/lib/explainPages";
-import { OceanBand } from "@/site/sharks/OceanBand";
 import { D_STATS } from "./content";
 
 /**
@@ -19,17 +18,13 @@ export type NumbersVariant = "n1" | "n2" | "n3";
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** The four facts as N3's glass bar (also N1's row under the money card, Design S-1 r1). Same strings. */
-function FactBar({ className = "" }: { className?: string }) {
-  return (
-    <ul className={`d-nb d-glass ${className}`.trim()} aria-label={D_STATS.label} data-d-enter="">
-      <li style={d(0)}><strong>4 depths free,</strong><span className="d-nb__tail">New to Advanced</span></li>
-      <li style={d(70)}><strong>Mac and Windows</strong></li>
-      <li style={d(140)}><Keys /><span className="d-nb__tail">in any app</span></li>
-      <li style={d(210)}><strong>No card, no API key</strong></li>
-    </ul>
-  );
-}
+/** N1's four facts (the strings Security read at de54ad5d, round 1). */
+const FACTS = [
+  { lead: "4 depths, free", fact: "New, Beginner, Intermediate and Advanced. Expert is part of Pro." },
+  { lead: "Mac and Windows", fact: "Apple silicon or Intel. Windows 10 and 11 (x64)." },
+  { lead: "keys", fact: "In any app." },
+  { lead: "No card, no API key", fact: "" },
+] as const;
 
 /** Security 1232: after a total that includes "committed cash", only the long form is true. */
 const DISCLAIMER_LONG = "Credits are not cash. Not a round.";
@@ -94,14 +89,14 @@ function Figure({ value, className }: { value: string; className?: string }) {
   );
 }
 
-/* ───────────────────────── N1 "Ocean": the figure on a card, sharks in the open water beside it ───────────────────────── */
+/* ───────────────────────── N1 "Figure card": the money left, the four facts right, one white card (Design S-1 r3) ───────────────────────── */
 export function NumbersN1() {
   const root = useRef<HTMLDivElement>(null);
   useCountUp(root, 1600);
   return (
     <section className="d-nr d-nr--n1" aria-labelledby="d-nr-h">
-      <div ref={root} className="d-nr__wrap">
-        <div className="d-nr__card d-glass" data-d-enter="">
+      <div ref={root} className="d-nr__panel d-glass" data-d-enter="">
+        <div className="d-nr__money">
           <h2 id="d-nr-h" className="d-label d-mono d-nr__label">({D_STATS.label})</h2>
           <Figure value={compensationTotalLabel()} className="d-nr__figure d-serif" />
           <p className="d-nr__phrase" data-d-enter="" style={d(80)}>{compensationTotalPhrase()}</p>
@@ -110,8 +105,14 @@ export function NumbersN1() {
             <Link href="/investors">{WHERE} <span aria-hidden="true">→</span></Link>
           </p>
         </div>
-        <OceanBand className="d-nr__ocean" />
-        <FactBar className="d-nr__bar" />
+        <ul className="d-nr__facts">
+          {FACTS.map((f, i) => (
+            <li key={f.lead} data-d-enter="" style={d(200 + i * 70)}>
+              <span className="d-nr__lead">{f.lead === "keys" ? <Keys /> : f.lead}</span>
+              {f.fact ? <span className="d-nr__fact">{f.fact}</span> : null}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -168,7 +169,12 @@ export function NumbersN2() {
 export function NumbersN3() {
   return (
     <div className="d-nb-wrap">
-      <FactBar />
+      <ul className="d-nb d-glass" aria-label={D_STATS.label} data-d-enter="">
+        <li style={d(0)}><strong>4 depths free,</strong><span className="d-nb__tail">New to Advanced</span></li>
+        <li style={d(70)}><strong>Mac and Windows</strong></li>
+        <li style={d(140)}><Keys /><span className="d-nb__tail">in any app</span></li>
+        <li style={d(210)}><strong>No card, no API key</strong></li>
+      </ul>
     </div>
   );
 }

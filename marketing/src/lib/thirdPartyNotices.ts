@@ -1,18 +1,14 @@
 /**
  * Open-source notices for code the site ships to browsers, shown on /licenses. glisse's MIT licence asks that its
  * copyright and permission notice go with every copy, and the minified bundle drops it (Security R-1, 4 Nov).
- * thirdPartyNotices.test.ts fails if a package's version or licence text here stops matching what is installed
- * (or, for code vendored under src/vendor, the LICENSE file kept next to it).
+ * thirdPartyNotices.test.ts fails if a package's version or licence text here stops matching what is installed.
  */
 export interface ThirdPartyNotice {
   name: string;
-  /** The npm pin, or the pinned commit for vendored code. */
   version: string;
   url: string;
   use: string;
   license: string;
-  /** For code copied into the repo instead of installed: its folder under src/vendor (holds LICENSE and VENDOR.md). */
-  vendored?: string;
 }
 
 export const THIRD_PARTY_NOTICES: readonly ThirdPartyNotice[] = [
@@ -24,34 +20,6 @@ export const THIRD_PARTY_NOTICES: readonly ThirdPartyNotice[] = [
     license: `MIT License
 
 Copyright (c) 2026 Kelvin Zhang
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.`,
-  },
-  {
-    name: "ascii-sharks",
-    version: "a0074c16a106f0abc665fe9712ca445f8f98ad8e",
-    url: "https://github.com/stackedlol/ascii-sharks",
-    use: "The ASCII ocean on the page-not-found page and the schooling glyphs behind the ASCII ghost.",
-    vendored: "ascii-sharks",
-    license: `MIT License
-
-Copyright (c) 2026 drewdi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
