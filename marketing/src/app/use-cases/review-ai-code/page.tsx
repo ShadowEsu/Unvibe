@@ -142,7 +142,7 @@ export default async function ReviewAiCodePage() {
 
       <ExplainDownload surface="use_cases" />
 
-      <UseCaseMore current={page} explain={{ id: "typescript", name: "TypeScript" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }

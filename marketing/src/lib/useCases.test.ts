@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import sitemap from "@/app/sitemap";
+import { explainPages } from "@/lib/explainPages";
 import { USE_CASE_PATHS, USE_CASES_INDEX, pathForUseCase, useCases } from "@/lib/useCases";
 
 const appDir = path.resolve("src/app/use-cases");
@@ -23,6 +24,11 @@ describe("use-case pages", () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
     assert.deepEqual(USE_CASE_PATHS, [USE_CASES_INDEX.path, ...useCases.map(pathForUseCase)]);
     for (const route of USE_CASE_PATHS) assert.equal(urls.filter((url) => url === route).length, 1, `${route} in the sitemap`);
+  });
+
+  it("each names an explain page that exists, so the links both ways resolve", () => {
+    const ids = new Set(explainPages.map(({ id }) => id));
+    for (const { slug, explainId } of useCases) assert.ok(ids.has(explainId), `${slug}: no /explain/${explainId}`);
   });
 
   it("have unique titles under 60 characters as shown and unique descriptions under 155", () => {

@@ -6,6 +6,7 @@ import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
 import { explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainCard, pageMetadata } from "@/lib/pageMeta";
+import { pathForUseCase, useCases } from "@/lib/useCases";
 import { explainMono } from "../mono";
 import "../explain.css";
 
@@ -37,6 +38,8 @@ export default function ExplainLanguagePage({ params }: Params) {
   if (!page) notFound();
   const { name } = explainLanguage(page);
   const { related, others } = explainLinks(page);
+  // The use cases whose worked example is in this language (useCases.ts explainId); each links back here.
+  const cases = useCases.filter((entry) => entry.explainId === page.id);
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
@@ -86,6 +89,17 @@ export default function ExplainLanguagePage({ params }: Params) {
       <ExplainDownload language={name} />
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
+        {cases.length > 0 && (
+          <>
+            <h2 id="explain-cases-title">Use cases with a {name} example</h2>
+            <ul>
+              {cases.map((entry) => (
+                <li key={entry.slug}><Link href={pathForUseCase(entry)}>{entry.name}</Link></li>
+              ))}
+            </ul>
+            <hr className="explain-more__rule" />
+          </>
+        )}
         {related.length > 0 && (
           <>
             <h2 id="explain-related-title">Related</h2>

@@ -165,7 +165,7 @@ export default async function ExplainCursorCodePage() {
         </p>
       </section>
 
-      <UseCaseMore current={page} explain={{ id: "typescript", name: "TypeScript" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }

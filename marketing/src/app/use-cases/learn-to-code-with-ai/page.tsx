@@ -121,7 +121,7 @@ export default async function LearnToCodeWithAiPage() {
 
       <ExplainDownload surface="use_cases" />
 
-      <UseCaseMore current={page} explain={{ id: "python", name: "Python" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }
