@@ -87,6 +87,55 @@ function WatchResult($p, $tag) {
   Note "$(if ($first -match 'in front: True') { 'PASS' } else { 'FAIL' })  #208 $tag`: in front when it first shows"
   Note "$(if ($later -match 'main windows: 1;') { 'PASS' } else { 'FAIL' })  #208 $tag`: one main window 3 s later"
 }
+# Returning launch (lead, 0.1.52): a profile that has finished setup opens on the start stage, the sharks' dark ground
+# (windows.ts stageAtLaunch: onboarded, startAnimation on, own-code step done). The ground may be the first frame only
+# if the sharks canvas or the app follows within 300 ms of the window showing; a ground that stays is a FAIL.
+function ReturningLaunch($exe) {
+  Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
+  # Merged into the settings the app wrote on its first launch, so its own revisions stay (a settingsRevision below the
+  # build's resets onboarding). Light theme: the dark theme's ground is the stage's colour, so only light tells them apart.
+  $sf = Join-Path $storeDir 'unvibe-settings.json'
+  $s = if (Test-Path $sf) { Get-Content $sf -Raw | ConvertFrom-Json } else { Note "NOTE  returning launch: the app wrote no $sf on its first launch; settingsRevision 8 assumed"; [pscustomobject]@{ settingsRevision = 8; appearanceRevision = 2 } }
+  foreach ($kv in ([ordered]@{ onboarded = $true; ownCodeExplained = $true; startAnimation = $true; theme = 'light' }).GetEnumerator()) { $s | Add-Member -NotePropertyName $kv.Key -NotePropertyValue $kv.Value -Force }
+  [IO.File]::WriteAllText($sf, ($s | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
+  Note "returning launch: settings set onboarded, ownCodeExplained, startAnimation on, light theme (settingsRevision $($s.settingsRevision), appearanceRevision $($s.appearanceRevision))"
+  $w = Watch 'returning-launch'; Start-Sleep 1
+  Note "returning launch: starting $exe (as the Start menu entry does)"
+  Start-Process $exe
+  $win = $null
+  for ($i = 0; $i -lt 30 -and -not $win; $i++) { Start-Sleep 2; $win = Get-Process Unvibe -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1 }
+  Shot 'returning-launch'
+  $null = $w.Handle; if (-not $w.WaitForExit(180000)) { $w | Stop-Process -Force }
+  $lines = @(Get-Content (Join-Path $Out 'first-paint-returning-launch.txt') -ErrorAction SilentlyContinue)
+  $lines | ForEach-Object { Note "  returning launch: $_" }
+  Note (StageVerdict $lines)
+}
+# The returning launch's verdict from first-paint.ps1's lines (no side effects, so it can be checked on its own).
+function StageVerdict($lines) {
+  $first = $lines | Where-Object { $_ -like 'first visible*' } | Select-Object -First 1
+  $framesLine = $lines | Where-Object { $_ -like 'frames *' } | Select-Object -First 1
+  if (-not $first -or -not $framesLine) { return 'FAIL  returning launch: no Unvibe window (first-paint saw none)' }
+  # "first@<ms> <kind> <share>%; <ms> <kind> <share>%; ..." (ms from the window being seen)
+  $frames = @([regex]::Matches($framesLine, '(?:first@)?(\d+) (stage|blank|content) ([\d.]+)%') | ForEach-Object { [pscustomobject]@{ Ms = [int]$_.Groups[1].Value; Kind = $_.Groups[2].Value; Stage = [double]$_.Groups[3].Value } })
+  $f0 = $frames[0]
+  $contentAt = ($frames | Where-Object Kind -eq 'content' | Select-Object -First 1).Ms
+  $lateGround = $frames | Where-Object { $_.Kind -ne 'content' -and $_.Ms -gt 300 } | Select-Object -First 1
+  $lastEarly = ($frames | Where-Object { $_.Kind -ne 'content' -and $_.Ms -le 300 } | Select-Object -Last 1).Ms
+  $rule = 'stage ground first only if the sharks or the app follow within 300 ms'
+  switch ($f0.Kind) {
+    'blank' { return "FAIL  returning launch: the first frame was an EMPTY page, not the stage ($first)" }
+    'content' {
+      # Content in the very first frame: the sharks on the ground (mostly ground) or the app without the stage (none).
+      if ($f0.Stage -ge 50) { return "PASS  returning launch: the first frame already had the sharks on the stage ($($f0.Stage)% ground; $rule)" }
+      return "FAIL  returning launch: no start stage, the first frame is the app ($($f0.Stage)% ground); the stage should open a set-up profile with Sharks on (settings above)"
+    }
+    'stage' {
+      if ($lateGround) { return "FAIL  returning launch: the stage ground stayed: no content at $($lateGround.Ms) ms ($($lateGround.Kind), $($lateGround.Stage)% ground); content first seen at $(if ($null -ne $contentAt) { "$contentAt ms" } else { 'not within 10 s' }) ($rule)" }
+      if ($null -ne $contentAt -and $contentAt -le 300) { return "PASS  returning launch: stage ground first, then content at $contentAt ms ($rule)" }
+      return "NOTE  returning launch UNDECIDED: bare ground last seen at $lastEarly ms, content first seen at $contentAt ms; the change fell between two samples around 300 ms ($rule)"
+    }
+  }
+}
 $watch = $null
 function DoubleClick($file) {
   $dl = "$env:USERPROFILE\Downloads\$(Split-Path $file -Leaf)"
@@ -202,6 +251,8 @@ $front = Front
 Shot 'first-window'
 if ($win) { Note "$(if ($front -like 'Unvibe: *') { 'PASS' } else { 'FAIL' })  first window in front ('$front'), from $($win.Path)" } else { Note 'FAIL  no Unvibe window' }
 WatchResult $watch $(if ($Kind -eq 'silent') { 'reopen-while-loading' } else { 'first-launch' })
+# The silent row's profile has now launched once: open it again as a returning user (0.1.52's start stage).
+if ($Kind -eq 'silent') { if ($exe -and (Test-Path $exe)) { ReturningLaunch $exe } else { Note 'FAIL  returning launch: no installed exe' } }
 
 # First explanation on the same profile.
 Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3
