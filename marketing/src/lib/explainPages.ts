@@ -1839,7 +1839,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
       "`\\d{1,3}` checks the shape of an address, not its value: `999.999.999.999` matches. Pass the `ip` group to Python's `ipaddress.ip_address()` when the address has to be real.",
       "The pattern only knows IPv4. A line from an IPv6 client, such as `2001:db8::1`, doesn't match at all.",
       "`match()` already starts at the beginning of the string, so the `^` is there for the reader. The `$` at the end is what makes the whole line required.",
-      "`[A-Z]+` takes one or more capital letters, such as `GET`, and `[1-5]\\d{2}` a status from 100 to 599. A backslash makes the next character plain text: `\\.` is a dot and `\\[` a bracket. Inside a class a dot is already plain, so `HTTP/[\\d.]+` takes `HTTP/2.0`.",
+      "`[A-Z]+` takes one or more capital letters, such as `GET`, and `[1-5]\\d{2}` a status from 100 to 599. Before a symbol, a backslash makes it plain text: `\\.` is a dot and `\\[` a bracket. Inside a class a dot is already plain, so `HTTP/[\\d.]+` takes `HTTP/2.0`.",
     ],
     watchOut:
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
