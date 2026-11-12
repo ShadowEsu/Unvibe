@@ -41,8 +41,9 @@ export function SharksBackdrop({ label = 'Sharks swimming in the background' }: 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const theme = themeNow();
-    const palette = monoPalette(tokenHex('--u-accent', theme === 'dark' ? '#a596ff' : '#6d5ce7'), tokenHex('--u-paper', theme === 'dark' ? '#0b0b0d' : '#ffffff'));
-    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 18, still: reducedMotion() });
+    const ink = theme === 'dark' ? tokenHex('--u-accent-text', '#a394fb') : tokenHex('--u-accent', '#8f7cf7');
+    const palette = monoPalette(ink, tokenHex('--u-paper', theme === 'dark' ? '#0f0f0f' : '#ffffff'));
+    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 12, still: reducedMotion() });
     return () => pool.destroy();
   }, [look]);
   return (

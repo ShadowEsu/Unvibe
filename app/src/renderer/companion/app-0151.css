@@ -1138,19 +1138,16 @@ html[data-r2] {
 .sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
 .sharks-intro--out-skip { animation-duration: var(--m-exit); }
 @keyframes mOut { to { opacity: 0; } }
-/* The in-app sharks (Preston 11 Nov: a calm background on a few sections, on the right): the page's ground layer on
-   Today and Ask Vibe, the right 44 % of the content area, one colour (the accent, SharksBackdrop's palette) at a low
-   opacity, no grid, a 32 px mask on every side so no shark is cut by a hard edge. The page's own content sits above
-   it (the glass cards carry their own blur; flat cards are solid). */
+/* The in-app sharks (Design r3-flat OPTIONS.md "Sharks"): a background layer on the right of the content pane on Today
+   and Ask Vibe only, 44 % of the pane (at least 360 px, look.css), one colour (the accent; dark: accent-text,
+   SharksBackdrop's palette) drawn straight on the ground: no grid, no panel. Strongest cell 30 % alpha in light, 36 %
+   in dark. The canvas's left 64 px fades out so a shark never ends on a hard line. The page's content sits above. */
 .sharks-backdrop {
   position: absolute; top: 0; right: 0; bottom: 0; width: 44%; z-index: 0; overflow: hidden; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
-  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 64px); mask-image: linear-gradient(to right, transparent, #000 64px);
 }
-.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.22; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: 0.28; }
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.3; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: 0.36; }
 :root[data-ui="v3"][data-v7] .layout .page { position: relative; }
 :root[data-ui="v3"][data-v7] .layout .page > :not(.sharks-backdrop) { position: relative; z-index: 1; }
 /* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
