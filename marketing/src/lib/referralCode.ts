@@ -6,8 +6,9 @@ import { createHmac } from "node:crypto";
  * Security audit 11 Nov, F1: the code used to be sha256(email)[:8], which anyone could compute from an email. Joining
  * once with `referredBy` set to that code and then reading /api/referrals/<code> told them whether that email was on
  * the list (the count is ≥ 1 only for a member's code). An HMAC keyed by a server secret cannot be computed from the
- * email alone, so a code is only ever known to the person it was sent to. Codes made before this change stay as
- * stored (an entry's code never changes); Security treats those as known exposure.
+ * email alone. The signup routes answer with this function of the posted email and never with a stored code, so the
+ * answer is the same for a listed and an unlisted email. Entries made before this change keep their sha code in the
+ * store (Security treats those as known exposure); such a member who posts again is shown the HMAC code instead.
  *
  * The key is RATE_LIMIT_KEY_SECRET, the private secret the signup routes already require, under its own domain
  * string so referral codes and rate-limit buckets never share a digest. Locally (no VERCEL_ENV, not production) a

@@ -56,9 +56,10 @@ export async function POST(req: Request) {
   if (emailLimited) return emailLimited;
   const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
   if (ceiling) return ceiling;
-  // A member who joins again keeps the code they were sent (their invite link must go on working); codes made
-  // before the HMAC change differ from what referralCodeFor would give today.
-  const referralCode = (await referralCodeForEmail(email).catch(() => undefined)) ?? referralCodeFor(email);
+  // Always the HMAC of the posted email, never the stored code: the answer is then the same for a listed and an
+  // unlisted email, so it tells nothing about membership (Security F1). A member from before the HMAC change who
+  // posts again sees a new code; their old ?ref= link still attributes (referredBy is stored as given).
+  const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
   // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
   // resolved to that waitlister's code when the list knows it.

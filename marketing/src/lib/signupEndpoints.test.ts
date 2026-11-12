@@ -395,12 +395,16 @@ describe("waitlist responses do not reveal membership", () => {
     assert.notEqual(downloadCode, createHash("sha256").update(downloader).digest("hex").slice(0, 8).toUpperCase());
   });
 
-  it("keeps the code a member was already sent when they join or download again", async () => {
+  it("never answers with a stored code, so a member from before the HMAC change looks like anyone else", async () => {
     const email = "joined-last-month@unvibe-mail.test";
     const oldCode = createHash("sha256").update(email).digest("hex").slice(0, 8); // a pre-HMAC code, as stored
     waitlistRows.set(email, { id: email, email, referral_code: oldCode, created_at: new Date().toISOString() });
-    assert.equal(await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email }))), oldCode);
-    assert.equal(await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email }))), oldCode.toUpperCase());
+    const shown = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email })));
+    assert.notEqual(shown, oldCode);
+    assert.equal(waitlistRows.get(email)?.referral_code, oldCode, "the stored code is not rewritten");
+    // The same email posted again (now listed with the HMAC code) and a download get the same answer.
+    assert.equal(await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email }))), shown);
+    assert.equal(await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email }))), shown.toUpperCase());
   });
 
   it("refuses the hidden founder metric addresses on beta-download", async () => {
