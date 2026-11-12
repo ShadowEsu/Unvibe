@@ -43,7 +43,9 @@ export function SharksBackdrop({ label = 'Sharks swimming in the background' }: 
     const theme = themeNow();
     const ink = theme === 'dark' ? tokenHex('--u-accent-text', '#a394fb') : tokenHex('--u-accent', '#8f7cf7');
     const palette = monoPalette(ink, tokenHex('--u-paper', theme === 'dark' ? '#0f0f0f' : '#ffffff'));
-    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 12, still: reducedMotion() });
+    // Design r3-flat early: one shark at a time, 300–340 px long in the pane's box (baseLength ≈ 0.44 × the box's
+    // short side, so 1.5× of it), with the small fish.
+    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 12, sharks: [{ kind: 'classic', size: 1.5 }], still: reducedMotion() });
     return () => pool.destroy();
   }, [look]);
   return (
