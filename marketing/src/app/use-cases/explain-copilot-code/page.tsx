@@ -52,7 +52,7 @@ export default async function ExplainCopilotCodePage() {
   return (
     <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Explain the code GitHub Copilot wrote">
-        <div className="uc-fold">
+        <div className="uc-fold uc-fold--panel">
           <div className="uc-fold__text">
             <p>
               A suggestion that looks right is easy to accept with one Tab. Select the code GitHub Copilot wrote, press{" "}
@@ -65,7 +65,7 @@ export default async function ExplainCopilotCodePage() {
             </p>
           </div>
           <figure className="os-shot">
-            <Image src={PANEL_SHOT.src} width={PANEL_SHOT.width} height={PANEL_SHOT.height} sizes="(min-width: 860px) 400px, 100vw" priority alt={PANEL_SHOT.alt} />
+            <Image src={PANEL_SHOT.src} width={PANEL_SHOT.width} height={PANEL_SHOT.height} sizes="(min-width: 400px) 352px, 100vw" priority alt={PANEL_SHOT.alt} />
             <figcaption>{PANEL_SHOT.caption}</figcaption>
           </figure>
         </div>
