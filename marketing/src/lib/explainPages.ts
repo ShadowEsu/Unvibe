@@ -553,6 +553,7 @@ export default [
     id: "sql",
     fileName: "report.sql",
     published: "2026-10-26",
+    title: "SQL query explained, clause by clause",
     related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
@@ -589,6 +590,7 @@ ORDER BY spend_rank, c.name;`,
       "Use `DENSE_RANK()` to number ties 1, 1, 2 instead of 1, 1, 3.",
       "On a large `orders` table, an index on `orders (customer_id, created_at)` lets the database find each customer's recent orders without reading the whole table.",
       "This page is about what a query returns. A database's own `EXPLAIN` command answers a different question: it shows the plan the database will use to run the query, such as which index it reads and the order it joins the tables in.",
+      "`ORDER BY spend_rank, c.name` lists the biggest spender first, and customers who share a rank in order of name.",
     ],
     watchOut:
       "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
@@ -822,6 +824,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
     id: "curl",
     fileName: "check-orders.sh",
     published: "2026-11-05",
+    title: "curl command explained, flag by flag",
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -930,6 +933,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
     id: "chmod",
     fileName: "set-permissions.sh",
     published: "2026-11-05",
+    title: "chmod 755, 644 and 777 explained",
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
     description:
       "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
@@ -1791,6 +1795,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
     id: "regex",
     fileName: "access_log.py",
     published: "2026-11-04",
+    title: "Regex pattern explained, piece by piece",
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
     description:
       "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
@@ -1834,6 +1839,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
       "`\\d{1,3}` checks the shape of an address, not its value: `999.999.999.999` matches. Pass the `ip` group to Python's `ipaddress.ip_address()` when the address has to be real.",
       "The pattern only knows IPv4. A line from an IPv6 client, such as `2001:db8::1`, doesn't match at all.",
       "`match()` already starts at the beginning of the string, so the `^` is there for the reader. The `$` at the end is what makes the whole line required.",
+      "`[A-Z]+` takes one or more capital letters, such as `GET`, and `[1-5]\\d{2}` a status from 100 to 599. Before a symbol, a backslash makes it plain text: `\\.` is a dot and `\\[` a bracket. Inside a class a dot is already plain, so `HTTP/[\\d.]+` takes `HTTP/2.0`.",
     ],
     watchOut:
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
@@ -2277,6 +2283,7 @@ back door"
     id: "env",
     fileName: ".env",
     published: "2026-11-05",
+    title: "What is a .env file? Explained with a sample",
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
     description:
       "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
@@ -2916,11 +2923,11 @@ export function Profile({ userId }) {
     fileName: "traceback.txt",
     published: "2026-11-06",
     heading: "Python tracebacks",
-    title: "Python traceback explained: read the error",
+    title: "Python traceback explained: read the stack trace",
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
-    lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
+    lead: "Paste a Python traceback, the stack trace printed when a program crashes, and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
-      "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
+      "Paste a Python traceback, the stack trace printed on a crash, and get the error explained in plain English, free online. The sample is a KeyError in a script.",
     sampleSummary: "What Python 3.14 printed when a short script that totals orders met an item with `quantity` where the code expected `qty`: one good line of output, then a traceback ending in `KeyError: 'qty'`.",
     sample: `$ python3 report.py
 A1 25.0
