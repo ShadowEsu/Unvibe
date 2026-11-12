@@ -369,6 +369,17 @@ describe("waitlist responses do not reveal membership", () => {
     assert.deepEqual(await unknown.json(), await known.json());
   });
 
+  it("counts joins for a code no entry stores (a pre-HMAC member's re-issued link)", async () => {
+    const member = "old-member-asks-again@unvibe-mail.test";
+    waitlistRows.set(member, { id: member, email: member, referral_code: createHash("sha256").update(member).digest("hex").slice(0, 8), created_at: new Date().toISOString() });
+    const reissued = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email: member })));
+    assert.notEqual(reissued, waitlistRows.get(member)?.referral_code, "the shown code is not the stored one");
+    const joined = await waitlistRoute.POST(post("/api/waitlist", { email: "friend-of-old-member@unvibe-mail.test", referredBy: reissued }));
+    assert.equal(joined.status, 200);
+    const progress = await referralGET(new Request(`${SITE}/api/referrals/x`, { headers: { "x-forwarded-for": nextIp() } }), { params: { code: reissued } });
+    assert.deepEqual(await progress.json(), { joinedReferrals: 1 });
+  });
+
   /** The referral code a signup route answered with, read as the unknown JSON it is. */
   async function codeOf(response: Response): Promise<string> {
     const body: unknown = await response.json();

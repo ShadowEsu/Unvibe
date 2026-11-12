@@ -697,17 +697,16 @@ export async function getWaitlistFunnelSummary(): Promise<WaitlistFunnelSummary>
 }
 
 /**
- * Public invite link progress deliberately exposes only aggregate counts for a code, never
- * identities. Joining with a link is attribution only; gift months live in the app.
+ * Public invite link progress deliberately exposes only aggregate counts for a code, never identities. Joining with
+ * a link is attribution only; gift months live in the app. Any well-formed code is counted, whether or not an entry
+ * carries it: codes are HMACs of the email (lib/referralCode.ts), and a member from before that change who asks for
+ * their link again is shown the HMAC code, which no entry stores, yet their friends' joins must still count.
  */
-export async function referralProgress(code: string): Promise<{ found: boolean; joinedReferrals: number }> {
+export async function referralProgress(code: string): Promise<{ joinedReferrals: number }> {
   const normalized = code.trim().toLowerCase();
-  if (!/^[a-f0-9]{8}$/.test(normalized)) return { found: false, joinedReferrals: 0 };
+  if (!/^[a-f0-9]{8}$/.test(normalized)) return { joinedReferrals: 0 };
   const entries = await listWaitlistEntries(10_000);
-  const found = entries.some((entry) => entry.referralCode.toLowerCase() === normalized);
-  if (!found) return { found: false, joinedReferrals: 0 };
-  const joinedReferrals = entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length;
-  return { found: true, joinedReferrals };
+  return { joinedReferrals: entries.filter((entry) => entry.referredBy?.trim().toLowerCase() === normalized).length };
 }
 
 export async function deleteWaitlistEntry(email: string): Promise<boolean> {

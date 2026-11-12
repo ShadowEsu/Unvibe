@@ -116,10 +116,11 @@ export async function POST(req: Request) {
         has_referral: Boolean(referredBy),
         has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
       };
-      // Await so Vercel does not freeze the isolate before the capture request leaves.
+      // Await so Vercel does not freeze the isolate before the capture request leaves. The funnel counts a person
+      // once, at their first join (the Mixpanel event carries `duplicate` for the rest).
       await Promise.all([
         captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
-        recordGrowthFunnelEvent("waitlist_completed", referralCode),
+        stored.duplicate ? undefined : recordGrowthFunnelEvent("waitlist_completed", referralCode),
       ]);
     }
     // The same answer whether or not the email was already listed, so this is no membership check.
