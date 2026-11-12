@@ -15,6 +15,8 @@
   padding: clamp(6.5rem, 12vw, 8.5rem) 1.25rem 4rem;
 }
 
+/* A solid card in the paper sheet colour like /activate's (#fffdf6): --paper-raised is 42 % white, so the page's code
+   background showed through behind the buttons and divider words (Design, 11 Nov). */
 .redeem-card {
   box-sizing: border-box;
   width: min(100%, 32rem);
@@ -22,7 +24,7 @@
   padding: 2rem;
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
-  background: var(--paper-raised);
+  background: var(--paper);
   box-shadow: var(--shadow-key);
 }
 
