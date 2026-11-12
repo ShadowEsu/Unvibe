@@ -82,6 +82,12 @@
 :root[data-look] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
 :root[data-look][data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb { background: var(--u-border-control); }
 :root[data-look] .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-look][data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+/* One colour: the selected code line is the look's highlight (never lime); the lime tick goes with it. */
+:root[data-look] .ob-code__line, :root[data-look][data-theme="dark"] .ob-code__line { background: var(--u-highlight); }
+:root[data-look] .ob-code__tick { background: var(--u-accent); }
+/* Depth row: the locked Expert label reads at text-3 (no opacity); its Pro chip is text-2 on the chip fill. */
+:root[data-look] .ob-depth__item:disabled:not(.is-on) { opacity: 1; color: var(--u-ink-3); }
+:root[data-look] .ob-depth__item:not(.is-on) .ob-pro { color: var(--u-ink-2); }
 /* The overlay panel and the Island: solid surface, 1 px border, the floating shadow. */
 :root[data-look] .ob { background: var(--u-surface); box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); border-radius: var(--u-radius-card); }
 :root[data-look] .ob-head, :root[data-look] .ob-foot, :root[data-look] .ob-tabs { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
