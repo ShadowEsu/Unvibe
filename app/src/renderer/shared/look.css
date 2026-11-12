@@ -50,8 +50,12 @@
 :root[data-look][data-ui="v3"][data-v7] .layout :is(.link-btn, .ghost-link, a) { color: var(--u-accent-text); }
 :root[data-look="o1"][data-ui="v3"][data-v7] .layout :is(.link-btn, .ghost-link, a) { text-decoration: underline; text-underline-offset: 2px; }
 :root[data-look] :is(button, input, a, [tabindex]):focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
-:root[data-look] ::-webkit-scrollbar-thumb { background: var(--u-border-control); }
-:root[data-look] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+/* Scrollbar thumbs: border-control, solid, in every pane (the Ask thread's fades otherwise). */
+:root[data-look][data-ui="v3"][data-v7] ::-webkit-scrollbar-thumb,
+:root[data-look][data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--u-border-control); }
+:root[data-look][data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb,
+:root[data-look][data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+:root[data-look][data-ui="v3"][data-v7] :is(.chat-log, .search-palette__body, .mbody) { scrollbar-width: auto; scrollbar-color: auto; }
 /* Nothing purple-tinted that is not the accent: key caps, the sliding nav pill, segmented thumbs, the selected filter,
    code chips and every shadow use the look's neutrals or accent-soft. */
 :root[data-look][data-ui="v3"][data-v7] .layout :is(kbd, .topbar kbd, .side-search kbd, .topbar__explain kbd, .ask-dock__shortcut) { background: var(--u-surface); border-color: var(--u-border); border-bottom-color: var(--u-border-control); color: var(--u-ink); }
@@ -166,5 +170,11 @@
 }
 /* O3 (Design r3 early): no card boxes; one full-width hairline above each section title, nothing else drawn around
    a group. The action card (.home-cta) keeps its border. Menus, modals and the panel keep their border (dark: #161616). */
-:root[data-look="o3"][data-ui="v3"][data-v7] .layout :is(.home-list, .lib-group__rows, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .metric-card) { border: 0; border-top: 1px solid var(--u-border); border-radius: 0; box-shadow: none; background: transparent; padding-left: 0; padding-right: 0; }
+:root[data-look="o3"][data-ui="v3"][data-v7] .layout :is(.home-list, .lib-group__rows, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .metric-card) { border: 0; border-top: 1px solid var(--u-border); border-radius: 0; box-shadow: none; background: transparent; }
+/* O3 keeps violet for the main button, toggles, focus and links only: badges, status pills, code chips, Library row
+   icons and the "Vibe" name are text-2. */
+:root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .chat-assistant__who, .login__eyebrow, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-ink-2); background: var(--u-sunken); }
+:root[data-look="o3"][data-ui="v3"][data-v7] .layout .lib-row__icon { background: var(--u-sunken); stroke: var(--u-ink-2); }
+/* O2 light: chip text on accent-soft is select-ink (#5f41e6, 5.1:1), not the link violet (4.17:1). */
+:root[data-look="o2"][data-ui="v3"][data-v7]:not([data-theme="dark"]) :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-select-ink); }
 :root[data-look="o3"][data-theme="dark"] :is(.ob, .acct-menu, .search-palette, .fbk) { --u-surface: #161616; }
