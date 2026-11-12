@@ -1,23 +1,25 @@
 // IndexNow: tell Bing, Yandex, Seznam and Naver which unvibe.site URLs are new or changed, right after a
-// production deploy (Google doesn't use IndexNow; it reads the sitemap). The key file is
-// public/<key>.txt (a 32-hex name whose content is the same string), a public-safe random string, not a secret (IndexNow's own design:
-// the engines fetch it to prove the host is ours).
+// production deploy (Google doesn't use IndexNow; it reads the sitemap). The key file is public/<key>.txt (a 32-hex
+// name whose content is the same string), a public-safe random string, not a secret (IndexNow's own design: the
+// engines fetch it to prove the host is ours).
 //
+// No state between runs: everything comes from the live sitemap and from git at two commits, the previous
+// successful production deploy (--prev-sha, from the Deployments API) and this one (--sha).
 // What it submits, from the live site (never from the working tree, so a failed deploy submits nothing):
-//   1. every URL in https://unvibe.site/sitemap.xml that was not in the previous run's list (new pages);
-//   2. URLs whose page source changed between the previous deployed commit and this one, mapped from
-//      marketing/src/app/<route>/page.tsx (route groups and dynamic segments are skipped: /explain/* changes
-//      come from the data file, so a change to src/lib/explainPages.ts submits the whole /explain set);
-//   3. "/" when anything under marketing/src/site/ changed (the homepage is built from there).
+//   1. every URL in https://unvibe.site/sitemap.xml that did not exist at the previous commit (new pages: a static
+//      route whose page.tsx was not there, an /explain/<id> whose id was not in src/lib/explainPages.ts, a
+//      /use-cases/<slug> whose slug was not in src/lib/useCases.ts);
+//   2. URLs whose page source changed between the two commits, mapped from marketing/src/app/<route>/page.tsx
+//      (route groups and dynamic segments are skipped: /explain/* and /use-cases/* changes come from their data
+//      files, so a change to explainPages.ts or useCases.ts submits that whole set);
+//   3. the homepage when anything under marketing/src/site/ or the root layout changed (it is built from there).
 // Each candidate must answer 200 on the live site, else it is left out (never submit a URL that 404s).
 //
-// Usage (from marketing/):
-//   node scripts/indexnow.mjs --prev-urls <file> --prev-sha <sha> --sha <sha> [--dry-run]
-//   node scripts/indexnow.mjs --all [--dry-run]           # submit the whole live sitemap (first run, or a reset)
-// Prints the submitted list and writes it to --out (default .indexnow/submitted.txt) for the next run.
+// Usage (from marketing/, in a checkout that has both commits):
+//   node scripts/indexnow.mjs --prev-sha <sha> --sha <sha> [--dry-run]
+//   node scripts/indexnow.mjs --all [--dry-run]           # submit the whole live sitemap (manual reset only)
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
 
 const SITE = "https://unvibe.site";
 const HOST = "unvibe.site";
@@ -35,7 +37,6 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const opt = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
 const dryRun = flag("--dry-run");
-const out = opt("--out") ?? ".indexnow/submitted.txt";
 
 async function liveSitemap() {
   const res = await fetch(`${SITE}/sitemap.xml`);
@@ -44,38 +45,60 @@ async function liveSitemap() {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
 }
 
-/** Only full commit SHAs reach git: the args come from a workflow env and a cached file, never from a user. */
+/** Only full commit SHAs reach git: the args come from a workflow env and the Deployments API, never from a user. */
 const isSha = (s) => /^[0-9a-f]{40}$/.test(s ?? "");
 
+const git = (...a) => execFileSync("git", a, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+
 function changedFiles(prevSha, sha) {
-  if (!isSha(prevSha) || !isSha(sha)) {
-    if (prevSha || sha) console.warn(`not two full commit SHAs (${prevSha} / ${sha}); submitting new sitemap URLs only`);
-    return [];
-  }
   try {
-    return execFileSync("git", ["diff", "--name-only", `${prevSha}..${sha}`], { encoding: "utf8" }).split("\n").filter(Boolean);
+    return git("diff", "--name-only", `${prevSha}..${sha}`).split("\n").filter(Boolean);
   } catch (error) {
-    console.warn(`git diff ${prevSha}..${sha} failed (${error.message}); submitting new sitemap URLs only`);
-    return [];
+    throw new Error(`git diff ${prevSha}..${sha} failed (${error.message}); is the checkout deep enough for both commits?`);
   }
 }
 
-/** marketing/src/app/foo/bar/page.tsx → /foo/bar; the root page → /; dynamic and group segments → null. */
+/** The file's text at a commit, or null when it did not exist there. */
+function fileAt(sha, path) {
+  try {
+    return git("show", `${sha}:${path}`);
+  } catch {
+    return null;
+  }
+}
+
+/** marketing/src/app/foo/bar/page.tsx → /foo/bar; the root page → ""; dynamic and group segments → null. */
 function routeOf(file) {
   const m = file.match(/^marketing\/src\/app\/(.*?)\/?page\.tsx$/);
   if (!m) return null;
   const route = m[1];
   if (route.includes("[") || route.includes("(")) return null;
-  return route === "" ? "/" : `/${route}`;
+  return route === "" ? "" : `/${route}`;
 }
 
-function candidates(sitemap, prevUrls, files) {
-  const set = new Set(sitemap.filter((u) => !prevUrls.has(u)));
+/** The sitemap's own form of a route: the root is `https://unvibe.site`, no trailing slash. */
+const urlOf = (route) => `${SITE}${route}`;
+
+/** Did this live URL exist at `sha`? Decided from the sources the sitemap is built from (src/app/sitemap.ts). */
+function existedAt(sha, url, at) {
+  const route = url.slice(SITE.length);
+  if (route === "") return true;
+  const explain = route.match(/^\/explain\/([^/]+)$/);
+  if (explain) return (at.explain ??= fileAt(sha, "marketing/src/lib/explainPages.ts") ?? "").includes(`id: "${explain[1]}"`);
+  const useCase = route.match(/^\/use-cases\/([^/]+)$/);
+  if (useCase) return (at.useCases ??= fileAt(sha, "marketing/src/lib/useCases.ts") ?? "").includes(`slug: "${useCase[1]}"`);
+  return fileAt(sha, `marketing/src/app${route}/page.tsx`) !== null;
+}
+
+function candidates(sitemap, prevSha, files) {
+  const at = {};
+  const set = new Set(sitemap.filter((u) => !existedAt(prevSha, u, at)));
   for (const file of files) {
     const route = routeOf(file);
-    if (route) set.add(`${SITE}${route}`);
+    if (route !== null) set.add(urlOf(route));
     if (file === "marketing/src/lib/explainPages.ts") for (const u of sitemap) if (u.includes("/explain/")) set.add(u);
-    if (file.startsWith("marketing/src/site/") || file.startsWith("marketing/src/app/layout.tsx")) set.add(`${SITE}/`);
+    if (file === "marketing/src/lib/useCases.ts") for (const u of sitemap) if (u.includes("/use-cases")) set.add(u);
+    if (file.startsWith("marketing/src/site/") || file === "marketing/src/app/layout.tsx") set.add(urlOf(""));
   }
   return [...set].filter((u) => sitemap.includes(u));
 }
@@ -103,10 +126,10 @@ let urls;
 if (flag("--all")) {
   urls = sitemap;
 } else {
-  const prevFile = opt("--prev-urls");
-  const prevUrls = new Set(prevFile ? readFileSync(prevFile, "utf8").split("\n").filter(Boolean) : []);
-  if (!prevFile) console.warn("no --prev-urls: every sitemap URL counts as new");
-  const wanted = candidates(sitemap, prevUrls, changedFiles(opt("--prev-sha"), opt("--sha")));
+  const prevSha = opt("--prev-sha");
+  const sha = opt("--sha");
+  if (!isSha(prevSha) || !isSha(sha)) throw new Error(`--prev-sha and --sha must be full commit SHAs (got ${prevSha} / ${sha})`);
+  const wanted = candidates(sitemap, prevSha, changedFiles(prevSha, sha));
   const checks = await Promise.all(wanted.map(alive));
   urls = wanted.filter((_, i) => checks[i]);
   for (const [i, u] of wanted.entries()) if (!checks[i]) console.warn(`skipped (not 200): ${u}`);
@@ -119,5 +142,3 @@ if (urls.length && !dryRun) {
   console.log(`IndexNow HTTP ${status}`);
   if (status !== 200 && status !== 202) process.exit(1);
 }
-mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, `${sitemap.join("\n")}\n`);

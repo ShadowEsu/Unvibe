@@ -1,20 +1,22 @@
 name: IndexNow
 
 # After Vercel reports a successful Production deployment of the site, submit the new and changed unvibe.site URLs
-# to IndexNow (Bing, Yandex, Seznam, Naver). The previous run's sitemap list and deployed commit come from the
-# Actions cache; with no cache (first run) every sitemap URL is submitted once. Read-only on the repo; the IndexNow
-# key is public by design (marketing/scripts/indexnow.mjs).
+# to IndexNow (Bing, Yandex, Seznam, Naver). The previous deployed commit comes from the Deployments API (the newest
+# successful Production deployment of another commit); nothing is kept between runs. Vercel's deployments carry a
+# commit SHA as `ref`, so actions/cache would never restore or save here (GITHUB_REF is empty on these runs).
+# Read-only on the repo; the IndexNow key is public by design (marketing/scripts/indexnow.mjs).
 on:
   deployment_status:
   workflow_dispatch:
     inputs:
       all:
-        description: "Submit the whole live sitemap"
+        description: "Submit the whole live sitemap (reset)"
         type: boolean
         default: false
 
 permissions:
   contents: read
+  deployments: read
 
 concurrency:
   group: indexnow
@@ -32,33 +34,30 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-      - name: Previous run
+      - name: Previous successful production deploy
         id: prev
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: marketing/.indexnow
-          key: indexnow-${{ github.run_id }}
-          restore-keys: indexnow-
-      - name: Wait for the deployment to serve
+        if: inputs.all != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.deployment.sha || github.sha }}
         run: |
-          for i in $(seq 1 20); do
-            if [ "$(curl -s -o /dev/null -w '%{http_code}' https://unvibe.site/sitemap.xml)" = "200" ]; then exit 0; fi
-            sleep 15
+          prev=""
+          for id_sha in $(gh api "repos/$GITHUB_REPOSITORY/deployments?environment=Production&per_page=30" --jq '.[] | "\(.id):\(.sha)"'); do
+            id=${id_sha%%:*}; sha=${id_sha#*:}
+            [ "$sha" = "$SHA" ] && continue
+            state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses?per_page=1" --jq '.[0].state')
+            if [ "$state" = "success" ]; then prev=$sha; break; fi
           done
-          echo "sitemap.xml never answered 200" >&2; exit 1
+          echo "sha=$prev" >> "$GITHUB_OUTPUT"
+          echo "this $SHA, previous successful ${prev:-none}"
       - name: Submit
         working-directory: marketing
         env:
           SHA: ${{ github.event.deployment.sha || github.sha }}
+          PREV: ${{ steps.prev.outputs.sha }}
         run: |
-          if [ "${{ inputs.all }}" = "true" ] || [ ! -f .indexnow/submitted.txt ]; then
+          if [ "${{ inputs.all }}" = "true" ] || [ -z "$PREV" ]; then
             node scripts/indexnow.mjs --all
           else
-            node scripts/indexnow.mjs --prev-urls .indexnow/submitted.txt --prev-sha "$(cat .indexnow/sha)" --sha "$SHA"
+            node scripts/indexnow.mjs --prev-sha "$PREV" --sha "$SHA"
           fi
-          echo "$SHA" > .indexnow/sha
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always()
-        with:
-          path: marketing/.indexnow
-          key: indexnow-${{ github.run_id }}
