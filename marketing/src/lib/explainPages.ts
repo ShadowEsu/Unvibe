@@ -3942,6 +3942,191 @@ $ kill 1643167`,
     watchOut:
       "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
   },
+  {
+    id: "git-stash",
+    fileName: "git-stash.txt",
+    published: "2026-11-11",
+    heading: "git stash",
+    title: "git stash explained: push, pop and a conflict",
+    related: ["git-merge-conflict", "git-rebase", "git-log", "git-diff"],
+    lead: "Paste a `git stash` session and Vibe explains what each command saved, restored or refused: which changes went into the stash, why `pop` can stop on a conflict, and what the conflict markers mean.",
+    description:
+      "Paste git stash output and get it explained in plain English, free online. The sample stashes half-done work, commits something else and gets a conflict on pop.",
+    sampleSummary: "A developer stashes a half-done change to `rates.js` and a new `total.js`, edits that line to 60 and commits it, and pops the stash: git reports a conflict and keeps the stash entry. Not in the sample: the 11-line `git status` the pop prints and the commit's `1 file changed` line; the rest is as git printed it.",
+    sample: `$ git status --short
+ M rates.js
+?? total.js
+$ git stash push -u -m "raise free shipping"
+Saved working directory and index state On main: raise free shipping
+$ git status --short
+$ git stash list
+stash@{0}: On main: raise free shipping
+$ sed -i "s/= 50/= 60/" rates.js
+$ git commit -am "Free shipping over 60"
+[main 11e3f4b] Free shipping over 60
+$ git stash pop
+Auto-merging rates.js
+CONFLICT (content): Merge conflict in rates.js
+The stash entry is kept in case you need it again.
+$ git status --short
+UU rates.js
+?? total.js
+$ cat rates.js
+<<<<<<< Updated upstream
+export const SHIPPING_FREE_OVER = 60;
+=======
+export const SHIPPING_FREE_OVER = 75;
+>>>>>>> Stashed changes
+export const TAX_RATE = 0.08;`,
+    shows: [
+      {
+        concept: "stash push -u -m",
+        text: "`git stash push` moves every change to tracked files out of the working tree and saves it under refs/stash, so the next `git status --short` printed nothing. `-u` includes untracked files, which is why `total.js` went in too; without it the new file stays behind. `-m` names the entry, so `git stash list` shows `raise free shipping` instead of a WIP line with a commit hash.",
+      },
+      {
+        concept: "stash@{0}",
+        text: "The stash is a stack. `stash@{0}` is the newest entry, and each new push moves the older ones to `stash@{1}` and up. `git stash pop` and `git stash drop` work on `stash@{0}` unless you name another.",
+      },
+      {
+        concept: "pop stops on a conflict",
+        text: "`pop` is `apply` and then `drop`. The commit in between changed the same line the stash changed, so the apply stopped with `CONFLICT (content)` and git skipped the drop: `The stash entry is kept in case you need it again.` `git status --short` then shows `UU rates.js`, both sides modified, and `total.js` already restored.",
+      },
+      {
+        concept: "Updated upstream and Stashed changes",
+        text: "The markers in `rates.js` label the two sides. `Updated upstream`, above `=======`, is the line as it is in the current commit (60). `Stashed changes`, below it, is the line from the stash (75). Keep one, or write a third, delete the 3 marker lines, then `git add rates.js`.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 on Linux in a repository made for this page. The session continued: `git checkout --theirs rates.js` took the stashed version (in a pop, theirs is the stash), `git add rates.js` marked it resolved, and `git stash drop` removed the entry git had kept. The commit's hash changes with every run; the one in the sample came from this run.",
+      "`git stash show -p stash@{0}` printed only the `rates.js` diff. The untracked `total.js` is stored separately, and `git stash show --include-untracked --stat` lists both files.",
+      "Running `git stash pop` a second time with the conflict still open fails with `rates.js: needs merge` and keeps the entry; it does not apply the stash twice.",
+    ],
+    watchOut:
+      "After a conflicting pop the stash entry is still there, and so are the conflict markers. Resolve the file, `git add` it, then `git stash drop` by hand. A plain `git stash` with no `-u` leaves new files in the working tree: in a test for this page, `new.txt` stayed as `??` after `git stash` said it had saved the work.",
+  },
+  {
+    id: "react-usestate",
+    fileName: "Signup.jsx",
+    published: "2026-11-11",
+    heading: "React useState",
+    title: "useState explained: objects and the stale value",
+    related: ["react-useeffect", "javascript", "typescript", "tsconfig"],
+    lead: "Paste a React component and Vibe explains what each `useState` call holds, why updating an object needs the spread, and why two `set` calls in one handler can count once.",
+    description:
+      "Paste a React component and get useState explained in plain English, free online. The sample is a sign-up form whose two setTries calls count one try.",
+    sampleSummary: "A sign-up form with an object in state and a counter. Run in React 19.3 under jsdom: typing fills the fields, the checkbox flips `agreed`, and one submit prints `sending {name, email, agreed}` but shows `1 tries` after two `setTries(tries + 1)` calls.",
+    sample: `import { useState } from "react";
+
+export default function Signup() {
+  const [form, setForm] = useState({ name: "", email: "", agreed: false });
+  const [tries, setTries] = useState(0);
+  const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+
+  function submit(e) {
+    e.preventDefault();
+    setTries(tries + 1);
+    setTries(tries + 1);
+    if (form.agreed) console.log("sending", form);
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <input value={form.name} onChange={update("name")} placeholder="Name" />
+      <input value={form.email} onChange={update("email")} placeholder="Email" />
+      <label>
+        <input type="checkbox" checked={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.checked })} /> I agree
+      </label>
+      <button>Sign up ({tries} tries)</button>
+    </form>
+  );
+}`,
+    shows: [
+      {
+        concept: "useState and the setter",
+        text: "`useState(initial)` returns the current value and a function that replaces it and asks React to render again. `form` holds one object with 3 fields; `tries` holds a number. The setter replaces the whole value: it does not merge fields into an object the way class components' `setState` did.",
+      },
+      {
+        concept: "{ ...form, [field]: value }",
+        text: "Because the setter replaces, `update` copies the old object with `...form` and then overwrites one field, named by the `[field]` computed key. Run without the spread, `setForm({ [field]: e.target.value })`, the sent object lost its name: the harness printed `sending {email, agreed}`, and React warned that a controlled input had become uncontrolled: each keystroke replaced the object and left the other fields `undefined`.",
+      },
+      {
+        concept: "tries + 1, twice",
+        text: "`tries` is the value from the render that created this `submit`. Both `setTries(tries + 1)` calls queue the same number, so after the first submit the button read `Sign up (1 tries)`, and `2 tries` after the second. With `setTries((t) => t + 1)` React runs each updater on the latest value: `2 tries`, then `4 tries`.",
+      },
+      {
+        concept: "Controlled inputs",
+        text: "Each input shows `value={form.name}` and reports typing through `onChange`, so the state is the only source of what the field shows. The checkbox uses `checked` and `e.target.checked` instead of `value`. After typing, the harness read `Ana` and `ana@example.com` back from the inputs, and the checkbox was `true`.",
+      },
+    ],
+    notes: [
+      "Run with React 19.3.1 and jsdom 29.1.1 on Node.js 25.7.0. A script rendered the component, set each input's value and fired `input`, clicked the checkbox, and fired `submit` twice, capturing the console output. Every number above is from that run.",
+      "The first submit printed `sending` with `agreed: true` because the checkbox was clicked before it. With the box unchecked, the `if` skips the log.",
+      "In the no-spread run the input on screen still showed `Ana`: an uncontrolled input keeps the text the user typed even though the state lost it. The screen looked right while the data sent was wrong.",
+    ],
+    watchOut:
+      "A counter that goes up by 1 when the code calls the setter twice is not a React bug, it is the closure: the handler sees the `tries` from its own render. Any setter call that depends on the previous value should pass a function, `setTries((t) => t + 1)`, not read the variable.",
+  },
+  {
+    id: "docker-compose",
+    fileName: "compose.yaml",
+    published: "2026-11-11",
+    heading: "docker-compose.yml",
+    title: "docker compose file explained: ports and depends_on",
+    related: ["yaml", "env", "systemd", "json"],
+    lead: "Paste a `compose.yaml` and Vibe explains what each service, port, volume and `depends_on` line does: which container talks to which, what survives `docker compose down`, and why a healthcheck is what makes `depends_on` wait.",
+    description:
+      "Paste a docker compose file and get it explained in plain English, free online. The sample runs a web app and Postgres with a healthcheck and a named volume.",
+    sampleSummary: "A 2-service file: a web app built from the folder that holds the file, published on port 3000, that waits for a Postgres 17 container to pass its healthcheck. The file was checked against the Compose Specification schema; Docker is not installed on the machine that made this page, so it was not started.",
+    sample: `services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:password@db:5432/postgres
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 10
+volumes:
+  pgdata:`,
+    shows: [
+      {
+        concept: "services, build and image",
+        text: "Each key under `services` is one container. `web` is built from the Dockerfile in the folder that holds `compose.yaml` (`build: .`); `db` pulls the published `postgres:17` image. Inside the Compose network each service is reachable by its name, which is why `DATABASE_URL` points at the host `db`, not `localhost`.",
+      },
+      {
+        concept: "ports",
+        text: "`\"3000:3000\"` publishes the container's port 3000 on the host's port 3000, host side first. The Compose file reference says to write `HOST:CONTAINER` as a quoted string, because YAML can read it as a base-60 number: unquoted, PyYAML read `22:22` as 1342 but left `3000:3000` as text. `db` publishes nothing, so Postgres is reachable from `web` but not from the host.",
+      },
+      {
+        concept: "depends_on with condition: service_healthy",
+        text: "`depends_on` alone only starts `db` before `web`; Postgres can still be seconds away from accepting connections. `condition: service_healthy` makes Compose wait until the `healthcheck` passes: `pg_isready -U postgres` every 5 seconds, up to 10 times. The condition must be `service_started`, `service_healthy` or `service_completed_successfully`; `healthy` on its own fails the schema check.",
+      },
+      {
+        concept: "Bind mount and named volume",
+        text: "`./src:/app/src` is a bind mount: the folder on the host appears inside the container, so an edit on the host is in the container right away, without a rebuild. `pgdata:/var/lib/postgresql/data` is a named volume, declared under top-level `volumes`: Docker owns it, and the database files in it survive `docker compose down` and a new `up`.",
+      },
+    ],
+    notes: [
+      "Checked on Nov 11, 2026 against the Compose Specification JSON schema from github.com/compose-spec/compose-spec with jsonschema 4.26.0 in Python 3.14.7: valid. The 3 `condition` values and the port quoting advice are from the Compose file reference (docs.docker.com/reference/compose-file/services).",
+      "`POSTGRES_PASSWORD` is the only variable the postgres image requires (hub.docker.com/_/postgres); `password` is a placeholder for a local database that publishes no port. The same value appears in `DATABASE_URL` because `web` connects as the default `postgres` user.",
+      "Compose looks for `compose.yaml` or `compose.yml` and still reads `docker-compose.yaml` and `docker-compose.yml`; with both present it uses `compose.yaml` (docs.docker.com/compose/intro/compose-application-model). What `depends_on`, the healthcheck and `down -v` do is from the Compose file reference and the `docker compose down` reference; none of it was run for this page.",
+    ],
+    watchOut:
+      "`docker compose down -v` deletes named volumes, `pgdata` included, and every row in the database with it. Plain `down` keeps them. The bind mount is different again: nothing under `./src` is ever deleted by Compose, because the files belong to the host.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
