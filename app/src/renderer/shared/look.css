@@ -65,6 +65,14 @@
 :root[data-look][data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { background: var(--u-sunken); color: var(--u-ink); }
 :root[data-look][data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .pill.pill--understood, .onboard__ok) { background: var(--u-accent-soft); color: var(--u-accent-text); }
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-user { background: var(--u-sunken); box-shadow: 0 0 0 1px var(--u-border); }
+/* Settings: section labels in sentence case; the selected item is select / select-ink (text, not the accent). The
+   panel's selected tab likewise; its text links are the look's links (O1: black, underlined). */
+:root[data-look][data-ui="v3"][data-v7] .modal :is(.mside .mh, .settings-section-label, .integ__group h3) { text-transform: none; letter-spacing: 0; font-size: 12px; }
+:root[data-look][data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-select); color: var(--u-select-ink); }
+:root[data-look] .ob-tab.is-on { background: var(--u-select); color: var(--u-select-ink); }
+:root[data-look] :is(.ob-link, .more-detail__toggle) { color: var(--u-accent-text); font-weight: 600; }
+:root[data-look="o1"] :is(.ob-link, .more-detail__toggle) { text-decoration: underline; text-underline-offset: 2px; }
+:root[data-look] ::-webkit-scrollbar-track, :root[data-look] ::-webkit-scrollbar-corner { background: transparent; }
 /* The overlay panel and the Island: solid surface, 1 px border, the floating shadow. */
 :root[data-look] .ob { background: var(--u-surface); box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); border-radius: var(--u-radius-card); }
 :root[data-look] .ob-head, :root[data-look] .ob-foot, :root[data-look] .ob-tabs { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
