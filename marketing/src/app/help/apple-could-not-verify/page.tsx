@@ -34,6 +34,10 @@ export default function AppleCouldNotVerifyPage() {
             is free of malware that may harm your Mac or compromise your privacy.&rdquo; Unvibe isn&apos;t notarized by Apple yet, so
             macOS can&apos;t check it. Here is what to press, and, if you haven&apos;t opened the download yet, a way to install that never shows the box.
           </p>
+          <p className="fos__note">
+            Applies to every Unvibe download so far: none is notarized by Apple yet. The pictures are from 0.1.49 on macOS 15; macOS 26
+            shows the same text.
+          </p>
         </div>
       </header>
 
@@ -58,7 +62,10 @@ export default function AppleCouldNotVerifyPage() {
             Anyway button &ldquo;is available for about an hour after you try to open the app&rdquo;, so if it&apos;s gone, open Unvibe
             from Applications again, then come back to Security.
           </li>
-          <li>Apple says macOS then saves Unvibe as an exception, so you do this once. Later versions install from inside the app.</li>
+          <li>
+            Unvibe opens, and its icon appears in the menu bar at the top right. That is the sign it worked. Apple says macOS then
+            saves Unvibe as an exception, so you do this once. Later versions install from inside the app.
+          </li>
         </ol>
         <p>
           On macOS 14 or older, you can instead Control-click Unvibe in Applications, choose <b>Open</b>, then press <b>Open</b>{" "}
