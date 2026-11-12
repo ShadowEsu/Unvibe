@@ -1,0 +1,120 @@
+name: QA admin-window message on Windows
+
+# QA only (0.1.52 RC, 635b8d7d): a shortcut press at a window that runs as administrator. Unvibe at medium integrity,
+# an admin PowerShell console, a normal console and Notepad on Windows Server 2022 + 2025: the panel's admin note, the
+# app's own captureBlock() answer, and how many copy keystrokes it sent, in rows (a), (b1), (b2), (c), (d).
+# Harness: .github/qa/admin-row.ps1 (+ proc-watch.ps1, widget-state.mjs, consent-fixture.mjs).
+# Runs on a push to qa/install-matrix whose commit message holds "[admin-win]" and "[rc:<build-only run id>]".
+on:
+  push:
+    branches: [qa/install-matrix]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: qa-admin-win
+  cancel-in-progress: false
+
+# 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. This row needs none: the send agreement goes through the app's
+# own IPC (consent-fixture.mjs, nothing sent), and before Unvibe starts again admin-row.ps1 points api.unvibe.site at
+# this machine in the hosts file and blocks Unvibe.exe's outbound traffic (row (c)'s captured text can't be sent).
+env:
+  QA_AI_OK: "0"
+  NO_EXPLAIN: "1"
+
+jobs:
+  row:
+    if: contains(github.event.head_commit.message, '[admin-win]') && contains(github.event.head_commit.message, '[rc:')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      INSTALL_ID: qa-admin-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
+      MSG: ${{ github.event.head_commit.message }}
+    steps:
+      - name: RC build id, flag this id as QA before anything installs
+        id: rc
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          rc=$(printf '%s' "$MSG" | sed -n 's/.*\[rc:\([0-9]*\)\].*/\1/p' | head -1)
+          [[ "$rc" =~ ^[0-9]+$ ]] || { echo "::error::no [rc:<run id>] in the commit message"; exit 1; }
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"; echo "RC_DIR=$RUNNER_TEMP\\rc" >> "$GITHUB_ENV"
+          [ -n "$UNVIBE_QA_FLAG_TOKEN" ] || { echo "::error::UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed."; exit 1; }
+          code=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -o /dev/null -w '%{http_code}' \
+            -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$INSTALL_ID\"}")
+          echo "QA pre-flag $INSTALL_ID: $code"; [ "$code" = 200 ]
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .github
+            app/e2e
+
+      - name: Get the RC build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unvibe-windows-latest
+          run-id: ${{ steps.rc.outputs.rc }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/rc
+
+      - name: Playwright for the send agreement and the panel reads
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+          cp "$GITHUB_WORKSPACE/app/e2e/cdp-launch.mjs" "$GITHUB_WORKSPACE/.github/qa/consent-fixture.mjs" "$GITHUB_WORKSPACE/.github/qa/widget-state.mjs" .
+
+      - name: Parse the row scripts
+        shell: powershell
+        run: |
+          foreach ($f in 'admin-row.ps1', 'proc-watch.ps1') {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile("$env:GITHUB_WORKSPACE\.github\qa\$f", [ref]$null, [ref]$errs)
+            if ($errs) { $errs | ForEach-Object { "${f}:$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
+            "$f parses"
+          }
+
+      - name: Admin window rows (a) (b1) (b2) (c) (d)
+        shell: powershell
+        run: .github\qa\admin-row.ps1 -Out "$env:RUNNER_TEMP\m"
+
+      - name: Network back (hosts entry, firewall rule), whatever happened
+        if: always()
+        shell: powershell
+        run: |
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          $h = "$env:SystemRoot\System32\drivers\etc\hosts"
+          (Get-Content $h) | Where-Object { $_ -notmatch '# qa-admin-row' } | Set-Content $h -Encoding ascii
+          Remove-NetFirewallRule -DisplayName 'qa-admin-row: Unvibe outbound' -ErrorAction SilentlyContinue
+          ipconfig /flushdns | Out-Null
+          "hosts lines tagged qa-admin-row: $(@(Get-Content $h | Where-Object { $_ -match '# qa-admin-row' }).Count); api.unvibe.site: $(([Net.Dns]::GetHostAddresses('api.unvibe.site') | ForEach-Object { $_.ToString() }) -join ', ')"
+
+      - name: Flag again (whatever happened)
+        if: always()
+        shell: bash
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          ids="$INSTALL_ID"
+          s="$APPDATA/Unvibe/unvibe-store.json"
+          [ -f "$s" ] && ids="$ids $(grep -o '"installId": *"[^"]*"' "$s" | sed 's/.*"\([^"]*\)"$/\1/')"
+          for x in $(echo $ids | tr ' ' '\n' | sort -u); do
+            printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -w " %{http_code} $x\n" \
+              -X POST https://api.unvibe.site/api/v1/admin/qa-install -H @- -H 'content-type: application/json' --data "{\"installId\":\"$x\"}"
+          done
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: admin-win-${{ matrix.runner }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
