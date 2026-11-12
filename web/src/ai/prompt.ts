@@ -49,6 +49,7 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
         '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
         '- Write a DETAILED explanation the reader can reopen later. Prefer several short sections over a one-line summary.',
         '- Cover: what this code is, how it works step by step, why it is here, risks or edge cases, and what to check next.',
+        '- Keep the whole answer to about 900 words at most. Put the most important points first, and always end on a complete sentence.',
         '- Prefer short paragraphs or simple markdown bullets (* item). Bold sparingly with **words**.',
         '- No markdown tables: the app shows them as raw | rows. For steps or a timeline, use a short numbered or bulleted list.',
         '- When citing a real file from the context, you may use [[cite:FILE:LINE]] or [[cite:FILE:START-END]].',

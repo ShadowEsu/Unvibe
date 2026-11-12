@@ -7,6 +7,12 @@ export const ANTHROPIC_MODEL = 'claude-opus-5-5';
 export const ANTHROPIC_MAX_TOKENS = 2048;
 /** Output budget for a short answer (2 to 4 sentences, owner 2026-11-02): roomy for that, a fifth of the full budget. */
 export const SHORT_MAX_TOKENS = 400;
+/**
+ * Output budget for full-depth answers at the advanced and expert levels. The prompt asks every full answer to stay
+ * near 900 words; these two levels ran past 2048 tokens on 28-30-line snippets (BUGS F-20), so this is the margin.
+ * Only these levels pay the larger worst-case hold against an account's daily share.
+ */
+export const DEEP_MAX_TOKENS = 2560;
 /** Shown after an answer that hit the output budget, so a cut-off answer never looks finished. */
 export const TRUNCATED_NOTE = '\n\n(This answer was cut off at the length limit.)';
 
