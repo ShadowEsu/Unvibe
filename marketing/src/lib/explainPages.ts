@@ -685,7 +685,7 @@ $ git log --oneline --graph --decorate --all
   {
     id: "bash",
     fileName: "top-errors.sh",
-    related: ["bashrc", "zshrc", "grep", "sed"],
+    related: ["bashrc", "find", "grep", "sed"],
     lead: "Paste a shell script or a one-liner and Vibe explains what it does before you run it.",
     description:
       "Find out what a shell script does before you run it: paste it here, free. The sample finds the most common errors in a folder of logs with one pipeline.",
@@ -903,7 +903,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
   {
     id: "chmod",
     fileName: "set-permissions.sh",
-    related: ["bash", "find", "ssh-config", "tar"],
+    related: ["bash", "find", "ssh-config", "rsync"],
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
     description:
       "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
@@ -1349,7 +1349,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
-    related: ["css", "tailwind", "javascript"],
+    related: ["css", "tailwind", "javascript", "jquery"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
       "Paste HTML and get a plain English explanation, free online. The sample is a sign-up form with labels, a required email field and radio buttons.",
@@ -1759,7 +1759,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
   {
     id: "regex",
     fileName: "access_log.py",
-    related: ["grep", "sed", "awk", "javascript"],
+    related: ["grep", "sed", "awk", "python"],
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
     description:
       "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
