@@ -41,8 +41,7 @@ export default async function ReviewAiCodePage() {
       <UseCaseHead useCase={page} heading="Understand an AI code change before you accept it">
         <p>
           {D_STATEMENT.entity} It does not write code. Select what an agent wrote, press {SHORTCUTS.mac.anywhere} (
-          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it beside your editor, so you can say what each
-          changed line does before you accept or commit it.
+          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains the change beside your editor.
         </p>
         <p>
           Cursor, Claude Code and Copilot can change several files in the time it takes you to read one. The

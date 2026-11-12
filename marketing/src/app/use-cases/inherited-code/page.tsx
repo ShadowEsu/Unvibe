@@ -3,8 +3,8 @@ import { ExplainDownload } from "@/components/paper/ExplainParts";
 import { UseCaseFacts, UseCaseHead, UseCaseMore, UseCaseSample, UseCaseSteps } from "@/components/paper/UseCaseParts";
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
-import { findUseCase, pathForUseCase } from "@/lib/useCases";
 import { SHORTCUTS } from "@/lib/shortcuts";
+import { findUseCase, pathForUseCase } from "@/lib/useCases";
 import { D_STATEMENT } from "@/site/dia/content";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
@@ -34,8 +34,8 @@ export default async function InheritedCodePage() {
       <UseCaseHead useCase={page} heading="Understand code you didn't write before you change it">
         <p>
           {D_STATEMENT.entity} Select a function, a file or a diff, press {SHORTCUTS.mac.anywhere} (
-          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it beside your editor: what it does, in the words
-          you would use, before you change it.
+          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it beside your editor, at the depth you choose,
+          before you change it.
         </p>
         <p>
           A teammate&apos;s service, your own project from two years ago, an open-source repo you want to fix. The code
