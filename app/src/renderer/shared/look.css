@@ -130,7 +130,7 @@
   --u-paper: #0f0f0f; --u-surface: #191919; --u-sunken: #141414; --u-border: #2e2e2e; --u-border-control: #7a7a7a;
   --u-ink: #f5f5f5; --u-ink-2: #b8b8b8; --u-ink-3: #9c9c9c;
   --u-accent: #a394fb; --u-accent-hover: #b4a7fd; --u-accent-on: #111111; --u-accent-text: #a394fb; --u-accent-soft: #37344b; --u-highlight: #484366; --u-focus: #a394fb;
-  --u-action: #a394fb; --u-action-on: #111111; --u-action-hover: #b4a7fd; --u-select: #37344b; --u-select-ink: #f5f5f5;
+  --u-action: #7459f0; --u-action-on: #ffffff; --u-action-hover: #6a4ee8; --u-select: #37344b; --u-select-ink: #f5f5f5;
   --u-lilac: #a394fb; --u-amber: #fbbf24;
   --u-shadow-float: 0 8px 24px rgb(0 0 0 / 0.6); --u-shadow-card: none;
 }
