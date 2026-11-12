@@ -91,13 +91,13 @@ export default async function ExplainChatgptCodePage() {
           </li>
           <li>
             <code>line.split(&quot;,&quot;)</code> splits on every comma, including one inside quotes. A customer named{" "}
-            <code>&quot;Ruiz, Ana&quot;</code> pushes the amount one column to the right, and the total prints{" "}
+            <code>&quot;Acme, Inc.&quot;</code> pushes the amount one column to the right, and the total prints{" "}
             <code>NaN</code>. A quoted <code>&quot;1,200.00&quot;</code> does the same.
           </li>
           <li>
-            A file saved on Windows ends each line with <code>\r\n</code>. The last header cell becomes{" "}
-            <code>&quot;amount\r&quot;</code>, <code>indexOf</code> returns -1, <code>cells[-1]</code> is{" "}
-            <code>undefined</code>, and every row adds <code>NaN</code>.
+            A file saved on Windows ends each line with <code>\r\n</code>. When amount is the last column, as in this
+            export, the header cell becomes <code>&quot;amount\r&quot;</code>, <code>indexOf</code> returns -1,{" "}
+            <code>cells[-1]</code> is <code>undefined</code>, and every row adds <code>NaN</code>.
           </li>
           <li>
             One blank amount makes the whole total <code>NaN</code>: <code>parseFloat(&quot;&quot;)</code> is{" "}
