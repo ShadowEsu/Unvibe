@@ -71,6 +71,31 @@ export const DARK_PALETTE: SharkPalette = {
   skin: [[70, 54, 150], [112, 92, 222], [184, 166, 255], [236, 230, 255]],
 };
 
+/** One colour (Preston 11 Nov: "use one color"): every cell of a shark is the accent, the glyphs are knocked out in
+ * the ground colour, nothing else is drawn. The ink's weight comes from the canvas's CSS opacity. `accent` and
+ * `ground` are `#rrggbb`. */
+export function monoPalette(accent: string, ground: string): SharkPalette {
+  const rgb = (hex: string): [number, number, number] => {
+    const n = parseInt(hex.replace('#', '').padEnd(6, '0').slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const a = rgb(accent);
+  const tone = `${a[0]},${a[1]},${a[2]}`;
+  return {
+    grid: "rgba(0,0,0,0)",
+    dots: [a, a, a, a, a],
+    accents: [accent, accent, accent, accent, accent, accent, accent],
+    fish: tone,
+    skin: [a, a, a, a],
+    glyphDark: ground,
+    glyphDarker: ground,
+    glyphLight: ground,
+    eye: ground,
+    edge: a,
+    heat: tone,
+  };
+}
+
 function skinColor(stops: [number, number, number][], level: number, tr: number, tg: number, tb: number) {
   const p = clamp(level / 255, 0, 0.999) * (stops.length - 1);
   const i = p | 0;

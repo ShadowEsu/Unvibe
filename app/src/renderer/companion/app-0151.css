@@ -1138,38 +1138,21 @@ html[data-r2] {
 .sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
 .sharks-intro--out-skip { animation-duration: var(--m-exit); }
 @keyframes mOut { to { opacity: 0; } }
-/* In-app oceans (Design r2-motion SPEC §6). Transparent canvas, no grid; a 32 px CSS mask on every side so no shark
-   is cut by a hard edge (§6.2). Two strengths for Design to pick from stills: "present" (the brightest skin cell at
-   about 50 % alpha) and "quiet" (about 30 %). */
-.sharks-band, .sharks-visit {
-  pointer-events: none;
+/* The in-app sharks (Preston 11 Nov: a calm background on a few sections, on the right): the page's ground layer on
+   Today and Ask Vibe, the right 44 % of the content area, one colour (the accent, SharksBackdrop's palette) at a low
+   opacity, no grid, a 32 px mask on every side so no shark is cut by a hard edge. The page's own content sits above
+   it (the glass cards carry their own blur; flat cards are solid). */
+.sharks-backdrop {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 44%; z-index: 0; overflow: hidden; pointer-events: none;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
   -webkit-mask-composite: source-in;
   mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent), linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
   mask-composite: intersect;
 }
-.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.5; }
-.sharks-band--quiet .sharks-band__canvas { opacity: 0.3; }
-/* A (empty states): a block above the copy, the column's width, 240 px tall. */
-.sharks-band { position: relative; width: 100%; overflow: hidden; }
-:root[data-ui="v3"][data-v7] .layout .learning-empty .sharks-band { margin: -24px 0 4px; }
-/* B and C (visits): the ground layer under the glass cards (z-index 0; the cards are positioned above). In over
-   --m-normal (B) / --m-fast (C), out over --m-slow (B) / --m-normal (C) with `is-leaving`; the owner removes the
-   element when the fade ends. */
-.sharks-visit { position: absolute; left: 0; right: 0; z-index: 0; overflow: hidden; animation: mFade var(--m-normal) var(--m-ease-smooth) both; }
-.sharks-visit--quiz { animation-duration: var(--m-fast); }
-.sharks-visit.is-leaving { opacity: 0; transition: opacity var(--m-slow) var(--m-ease-smooth); animation: none; }
-.sharks-visit--quiz.is-leaving { transition-duration: var(--m-normal); }
-/* Today: from the cards row's top to 16 px above the ask bar; the cards float over it (they carry their own blur).
-   The row is the positioning box; the water's height is measured by Home (page bottom − 92 px − row top). */
-:root[data-ui="v3"][data-v7] .layout .home-cols { position: relative; }
-:root[data-ui="v3"][data-v7] .layout .home-cols > .home-list { position: relative; z-index: 1; }
-:root[data-ui="v3"][data-v7] .layout .home-water { top: 0; height: var(--water, 100%); }
-/* The quiz: behind the result card, the survey area's size. */
-:root[data-ui="v3"][data-v7] .layout .survey { position: relative; }
-:root[data-ui="v3"][data-v7] .layout .survey > :not(.sharks-visit) { position: relative; z-index: 1; }
-:root[data-ui="v3"][data-v7] .layout .survey__water { top: 0; bottom: 0; }
-@media (prefers-reduced-motion: reduce) { .sharks-visit { animation: none; transition: none; } }
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.22; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: 0.28; }
+:root[data-ui="v3"][data-v7] .layout .page { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .page > :not(.sharks-backdrop) { position: relative; z-index: 1; }
 /* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
    stage leaves; without the stage (setting off, reopened from the tray) the app is simply there. */
 :root[data-ui="v3"][data-v7] .layout--arrive .side { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; }

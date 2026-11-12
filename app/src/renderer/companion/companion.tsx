@@ -36,6 +36,7 @@ import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { SettingsIcon } from './settingsIcons';
 import { SharksIntro, type IntroPhase } from '../shared/sharks/SharksIntro';
+import { SharksBackdrop } from '../shared/sharks/SharksBand';
 import { CountUp } from '../shared/countUp';
 import { SlidingPill } from '../shared/slidingThumb';
 
@@ -1775,18 +1776,9 @@ function App() {
     if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
   }, [intro]);
   const introOn = intro === 'swim' || intro === 'leaving';
-  // In-app sharks (Design r2-motion SPEC §6) follow the same switch as the stage. Today's visit (§6.1 B) is due when
-  // the window is shown (a launch with the stage off, or the window shown again after being hidden: the tray, the
-  // Dock; after the start stage, the stage was the visit) and on returning to Today when the last visit ended over
-  // 10 minutes ago. Not on every tab change; absent under reduced motion.
+  // The in-app sharks (Preston 11 Nov) follow the same switch as the stage: a calm background on the right of Today
+  // and Ask Vibe only, mounted by the page shell below.
   const sharks = startAnimation !== false;
-  const [visitDue, setVisitDue] = useState(() => intro === 'off' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const lastVisitEnd = useRef(0);
-  useEffect(() => window.unvibe.onCompanionShown(() => { if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setVisitDue(true); }), []);
-  useEffect(() => {
-    if (gate === 'app' && page === 'Home' && lastVisitEnd.current && Date.now() - lastVisitEnd.current > 10 * 60_000) setVisitDue(true);
-  }, [gate, page]);
-  const endVisit = () => { lastVisitEnd.current = Date.now(); setVisitDue(false); };
   // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
   // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
   // opened), never at launch and never while the start stage is up (Design S-1 whole-app MUST 15).
@@ -2020,8 +2012,9 @@ function App() {
             </button>
           </header>
           <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
+            {sharks && (page === 'Home' || page === 'Chat') ? <SharksBackdrop /> : null}
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} sharksVisit={sharks && visitDue && !introOn && gate === 'app'} onVisitDone={endVisit} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -2031,7 +2024,6 @@ function App() {
                   initialOpenId={lessonSeedId}
                   onReview={() => window.unvibe.companionReview()}
                   onRefresh={() => void refresh()}
-                  sharks={sharks}
                   onRestudy={async (item, level) => {
                     const r = await window.unvibe.reopenLearningItem({ ...item, level }) as { ok?: boolean; cancelled?: boolean; error?: string };
                     if (!r?.ok && !r?.cancelled) flash(r?.error ?? 'Could not reopen that lesson.');

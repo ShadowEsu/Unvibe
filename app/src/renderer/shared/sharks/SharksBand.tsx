@@ -1,98 +1,53 @@
 import { useEffect, useRef, useState } from 'react';
 import { SharksPool } from './sharksPool';
+import { monoPalette } from './violetRenderer';
 
 function themeNow(): 'light' | 'dark' {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
-/** The palette follows `html[data-theme]`, live. */
-function useTheme() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(themeNow);
+/** The palette follows `html[data-theme]` and `html[data-look]`, live. */
+function useLook() {
+  const read = () => `${themeNow()}:${document.documentElement.dataset.look ?? ''}`;
+  const [look, setLook] = useState(read);
   useEffect(() => {
     const root = document.documentElement;
-    const watch = new MutationObserver(() => setTheme(themeNow()));
-    watch.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    const watch = new MutationObserver(() => setLook(read()));
+    watch.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-look'] });
     return () => watch.disconnect();
   }, []);
-  return theme;
+  return look;
 }
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** A token's colour as `#rrggbb` (the renderer wants hex); `fallback` when the token is not a hex colour. */
+function tokenHex(name: string, fallback: string): string {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback;
+}
+
 /**
- * §6.1 A: a band of ocean above an empty state's copy (Library empty, Quiz empty), the column's width and `height`
- * tall; not mounted at all when that is under 200 px. Runs while shown and the window is focused; rests on a still
- * after 30 s without input (sharksPool.ts). Reduced motion: one still frame. `strength` sets the ink's opacity (CSS);
- * Design picks between the two from stills.
+ * The sharks as a calm background on a few sections only (Preston 11 Nov: "the sharks for the background of each
+ * section, maybe a few sections like home and chat, but not every, like on the right"): an open run in the page's
+ * ground layer on the right of the content area, one colour (the accent) at a low opacity (CSS), nothing drawn
+ * behind the text column. Runs while shown and focused; rests on a still after 30 s without input (sharksPool.ts).
+ * Reduced motion: one still frame. Follows the Sharks switch (the owner mounts it only when that is on).
  */
-export function SharksBand({ height = 240, strength = 'present', label = 'Sharks swimming' }: {
-  height?: number;
-  strength?: 'quiet' | 'present';
-  label?: string;
-}) {
+export function SharksBackdrop({ label = 'Sharks swimming in the background' }: { label?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const theme = useTheme();
+  const look = useLook();
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const pool = new SharksPool(canvas, { theme, idleRest: 30, still: reducedMotion() });
+    const theme = themeNow();
+    const palette = monoPalette(tokenHex('--u-accent', theme === 'dark' ? '#a596ff' : '#6d5ce7'), tokenHex('--u-paper', theme === 'dark' ? '#0b0b0d' : '#ffffff'));
+    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 18, still: reducedMotion() });
     return () => pool.destroy();
-  }, [theme]);
-  if (height < 200) return null;
+  }, [look]);
   return (
-    <div className={`sharks-band sharks-band--${strength}`} style={{ height }} role="img" aria-label={label}>
+    <div className="sharks-backdrop" role="img" aria-label={label}>
       <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />
     </div>
   );
 }
-
-/**
- * §6.1 B and C: a visit in a page's ground layer (under the glass cards). Mounted by its owner for one visit of
- * `seconds`: in over --m-normal (B) or --m-fast (C), swim, out over --m-slow (B) or --m-normal (C), then `onDone()`
- * and the owner unmounts it: no canvas, no loop. A pause (window hidden or blurred) ends the visit. Reduced motion:
- * the owner never mounts it (the visit is absent). The element is positioned by its owner's CSS (`className`).
- */
-export function SharksVisit({ seconds, kind, strength = 'present', className = '', height, onDone, label = 'Sharks passing' }: {
-  seconds: number;
-  kind: 'today' | 'quiz';
-  strength?: 'quiet' | 'present';
-  className?: string;
-  /** Today: the measured water height (the owner's CSS fills the box when omitted). */
-  height?: number;
-  onDone: () => void;
-  label?: string;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const theme = useTheme();
-  const [leaving, setLeaving] = useState(false);
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
-  // The out fade starts before the visit's end so the canvas is gone at `seconds` (C: out over --m-normal from
-  // 1,650 ms of 2,000; B: out over --m-slow at the end of the 8 s).
-  const outMs = kind === 'quiz' ? 350 : 600;
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let timer = 0;
-    const pool = new SharksPool(canvas, {
-      theme, visit: Math.max(0.1, seconds - outMs / 1000), fish: kind === 'quiz' ? 16 : 40,
-      onEnd: () => {
-        setLeaving(true);
-        timer = window.setTimeout(() => doneRef.current(), outMs);
-      },
-    });
-    return () => {
-      window.clearTimeout(timer);
-      pool.destroy();
-    };
-    // One visit per mount: a theme change mid-visit keeps the pool it started with.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return (
-    <div className={`sharks-visit sharks-visit--${kind} sharks-band--${strength}${leaving ? ' is-leaving' : ''}${className ? ` ${className}` : ''}`} style={height ? { height } : undefined} role="img" aria-label={label}>
-      <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />
-    </div>
-  );
-}
-
-export { reducedMotion as sharksReducedMotion };

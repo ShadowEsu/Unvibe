@@ -13,7 +13,6 @@ import { InkTitle } from './inkTitle';
 import { SegThumb } from '../shared/slidingThumb';
 import { useSettled } from '../shared/useSettled';
 import { Burst } from '../shared/burst';
-import { SharksBand, SharksVisit, sharksReducedMotion } from '../shared/sharks/SharksBand';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -90,10 +89,9 @@ function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-function LearningEmpty({ title, detail, sharks, onReview }: { title: string; detail: string; sharks: boolean; onReview: () => void }) {
+function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
   return (
     <div className="learning-empty">
-      {sharks ? <SharksBand height={240} /> : null}
       <h2>{title}</h2>
       <p>{detail}</p>
       <button className="primary-btn" onClick={onReview}>Explain some code</button>
@@ -110,7 +108,6 @@ export function Learn({
   onRestudy,
   onRefresh,
   initialOpenId,
-  sharks = false,
 }: {
   history: LearningItem[];
   queue: LearningItem[];
@@ -120,8 +117,6 @@ export function Learn({
   onRestudy: (item: LearningItem, level: string) => void | Promise<void>;
   onRefresh: () => void | Promise<void>;
   initialOpenId?: string | null;
-  /** The Sharks setting: an ocean band on the empty state and a short pass on the done card. */
-  sharks?: boolean;
 }) {
   const catalog = useMemo(() => {
     const seen = new Set<string>();
@@ -160,9 +155,6 @@ export function Learn({
   const [cleared, setCleared] = useState(0);
   // Mixed review: one run across many lessons, revisit ones first, scored on first tries.
   const [mix, setMix] = useState<{ ids: string[]; index: number; firstTry: number; done: boolean } | null>(null);
-  // SPEC §6.1 C: one ocean visit behind the result card on the first correct answer of a sitting, and when a mixed
-  // sitting ends with everything cleared. Not on every answer; absent under reduced motion.
-  const [quizVisit, setQuizVisit] = useState(0);
   const [noteDraft, setNoteDraft] = useState('');
   const [savedNote, setSavedNote] = useState('');
   const [noteStatus, setNoteStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -352,7 +344,6 @@ export function Learn({
       setMix({ ...mix, done: true });
       playTone('celebrate');
       setBuddyMood('celebrate');
-      if (mix.firstTry === mix.ids.length && !sharksReducedMotion()) setQuizVisit((n) => n + 1);
       return;
     }
     setMix({ ...mix, index });
@@ -379,7 +370,6 @@ export function Learn({
     if (mix && wrongPicks.length === 0) setMix((m) => (m ? { ...m, firstTry: m.firstTry + 1 } : m));
     setResult({ correct: true, rationale: r.rationale ?? 'You got it.', answerIndex: r.answerIndex ?? choice });
     setCleared((count) => count + 1);
-    if (cleared === 0 && !sharksReducedMotion()) setQuizVisit((n) => n + 1);
     void onRefresh();
   };
 
@@ -559,7 +549,6 @@ export function Learn({
 
           {survey ? (
             <div className="survey">
-              {sharks && quizVisit > 0 ? <SharksVisit key={`visit-${quizVisit}`} kind="quiz" seconds={2} className="survey__water" onDone={() => setQuizVisit(0)} label="Sharks passing behind the card" /> : null}
               <div className="survey__progress" aria-hidden="true">
                 <i style={{ transform: `scaleX(${Math.max(0.08, ticks / 5)})` }} />
               </div>
@@ -728,7 +717,6 @@ export function Learn({
           title={intent === 'quiz' ? 'Nothing to check yet.' : 'Nothing saved yet.'}
           detail={`Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
           onReview={onReview}
-          sharks={sharks}
         />
       ) : filtered.length === 0 ? (
         query.trim() ? (

@@ -8,7 +8,7 @@
  * glass). Reduced motion: `still` draws one pre-stepped frame and runs no loop.
  */
 import { World, type SharkSpec } from '../../vendor/ascii-sharks/world';
-import { DARK_PALETTE, LIGHT_PALETTE, VioletRenderer } from './violetRenderer';
+import { DARK_PALETTE, LIGHT_PALETTE, VioletRenderer, type SharkPalette } from './violetRenderer';
 
 const STEP = 1 / 60;
 const MAX_STEPS = 4;
@@ -35,6 +35,8 @@ export interface SharksPoolOptions {
   /** Fish in the band (the world's own count is sized for a full screen). */
   fish?: number;
   fontFamily?: string;
+  /** Overrides the theme palette (the single-colour background sharks). */
+  palette?: SharkPalette;
   /** The visit is over (its time, or a pause during it): the owner fades the canvas out and removes it. */
   onEnd?: () => void;
 }
@@ -59,7 +61,7 @@ export class SharksPool {
 
   constructor(private canvas: HTMLCanvasElement, private opts: SharksPoolOptions) {
     this.world = new World(opts.sharks ?? POOL_SHARKS, opts.fish ?? 28);
-    this.renderer = new VioletRenderer(canvas, opts.theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE, 64);
+    this.renderer = new VioletRenderer(canvas, opts.palette ?? (opts.theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE), 64);
     this.renderer.setFontFamily(opts.fontFamily ?? getComputedStyle(canvas).fontFamily);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.resize());
