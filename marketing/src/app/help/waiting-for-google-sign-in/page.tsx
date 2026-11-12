@@ -40,7 +40,7 @@ export default function WaitingForGoogleSignInPage() {
       <section className="verify" aria-labelledby="says-title">
         <h2 id="says-title">What Unvibe shows</h2>
         <p>Under the sign-in button, Unvibe 0.1.51 shows one of these lines, with the code below it:</p>
-        <ul className="help-list">
+        <ul className="help-list help-quotes">
           <li>&ldquo;Finish in your browser. Check this code matches, then press Connect this device:&rdquo;</li>
           <li>&ldquo;Your browser did not open. Press Open browser, then check this code matches:&rdquo;</li>
         </ul>
@@ -88,7 +88,7 @@ export default function WaitingForGoogleSignInPage() {
       <section className="verify" aria-labelledby="expired-title">
         <h2 id="expired-title">It&apos;s been more than 10 minutes</h2>
         <p>A sign-in code lasts 10 minutes. After that Unvibe says one of these:</p>
-        <ul className="help-list">
+        <ul className="help-list help-quotes">
           <li>&ldquo;Sign-in timed out. Use Retry to create a new secure link.&rdquo;</li>
           <li>&ldquo;This sign-in link is no longer valid. Use Retry to create a new one.&rdquo;</li>
         </ul>
