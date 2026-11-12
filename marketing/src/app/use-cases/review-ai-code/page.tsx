@@ -5,6 +5,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { findUseCase, pathForUseCase } from "@/lib/useCases";
+import { D_STATEMENT } from "@/site/dia/content";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
 import "../../code-explainer.css";
@@ -39,13 +40,14 @@ export default async function ReviewAiCodePage() {
     <article className={`explain-page ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Understand an AI code change before you accept it">
         <p>
+          {D_STATEMENT.entity} It does not write code. Select what an agent wrote, press {SHORTCUTS.mac.anywhere} (
+          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it beside your editor, so you can say what each
+          changed line does before you accept or commit it.
+        </p>
+        <p>
           Cursor, Claude Code and Copilot can change several files in the time it takes you to read one. The
           agent&apos;s summary tells you what it meant to do; the diff is what it did. Before you accept or commit, you
           should be able to say what each changed line does and what it changes for the code that calls it.
-        </p>
-        <p>
-          Unvibe does not write code. Select what the agent wrote, press {SHORTCUTS.mac.anywhere} (
-          {SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English beside your editor.
         </p>
       </UseCaseHead>
 
