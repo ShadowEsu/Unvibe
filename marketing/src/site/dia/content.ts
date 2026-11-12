@@ -130,6 +130,13 @@ export const D_FAQ = {
   ids: ["what-is-it", "editors", "sent", "levels", "free", "windows", "accuracy"],
 } as const;
 
+/** Explain links (growth's rank plan #5, Design S-1 11 Nov): 8 /explain pages in this order, then the index. */
+export const D_EXPLAIN = {
+  h2: "(Explain code in your browser)",
+  ids: ["git-diff", "react-useeffect", "python-traceback", "package-lock", "git-rebase", "ps-aux", "cors-error", "bash"],
+  all: { label: "All explain pages", href: "/explain" },
+} as const;
+
 export const D_CLOSE = { h2: { before: "Ready to understand your", em: "code", after: "?" } as Title } as const;
 
 /** /beta (mock 11; Security 18:51Z GO, MUST-D12 OS-aware shortcut, SHOULD-D15 "allow access" Mac only). */

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Home } from "@/site/dia/Home";
-import { D_FAQ, D_STEPS } from "@/site/dia/content";
+import { D_EXPLAIN, D_FAQ, D_STEPS } from "@/site/dia/content";
+import { explainHeadingText, explainPages } from "@/lib/explainPages";
 import { faqItems } from "@/data/faq";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { faqPageJsonLd, howToJsonLd, jsonLdScript, websiteJsonLd } from "@/lib/jsonLd";
@@ -17,6 +18,13 @@ export const metadata: Metadata = pageMetadata({
 
 /** The seven Short answers the page shows, in its order. */
 const homeFaq = D_FAQ.ids.flatMap((id) => faqItems.filter((item) => item.id === id));
+
+/** The explain links row: each label is the page's own H1, so a renamed page can't leave a stale link text. */
+const homeExplain = D_EXPLAIN.ids.map((id) => {
+  const page = explainPages.find((p) => p.id === id);
+  if (!page) throw new Error(`D_EXPLAIN lists /explain/${id}, which doesn't exist`);
+  return { href: `/explain/${id}`, label: `Explain ${explainHeadingText(page)}` };
+});
 
 const macText = (v: string | { readonly mac: string }) => (typeof v === "string" ? v : v.mac);
 
@@ -43,7 +51,7 @@ export default async function HomePage() {
       {homeJsonLd.map((value) => (
         <script key={String(value["@type"])} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(value) }} />
       ))}
-      <Home copy={copy} faq={homeFaq.map(({ id, question, answer }) => ({ id, question, answer }))} />
+      <Home copy={copy} faq={homeFaq.map(({ id, question, answer }) => ({ id, question, answer }))} explain={homeExplain} />
     </>
   );
 }

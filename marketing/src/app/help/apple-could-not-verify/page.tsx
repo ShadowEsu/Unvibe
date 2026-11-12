@@ -9,10 +9,10 @@ import "../help.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/help/apple-could-not-verify",
-  title: "\u201cApple could not verify Unvibe is free of malware\u201d: how to open Unvibe on a Mac",
+  title: "Apple could not verify Unvibe: how to open it on a Mac",
   absolute: true,
   description:
-    "macOS says \u201cUnvibe\u201d Not Opened and that Apple could not verify it. Press Done, then Open Anyway in System Settings \u203a Privacy & Security. Not opened the download yet? One Terminal line installs Unvibe without the dialog.",
+    "macOS says “Unvibe” Not Opened and Apple could not verify it. Press Done, then Open Anyway in Privacy & Security. Not opened the download yet? Use Terminal.",
 });
 
 /**

@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   title: "\u201cWindows protected your PC\u201d: how to open Unvibe on Windows",
   absolute: true,
   description:
-    "Microsoft Defender SmartScreen says Windows protected your PC and prevented an unrecognized app from starting. Press More info, then Run anyway. What to do when the Run anyway button is missing, and what Smart App Control changes.",
+    "SmartScreen says Windows protected your PC. Press More info, then Run anyway. What to do when that button is missing, and what Smart App Control changes.",
 });
 
 /**

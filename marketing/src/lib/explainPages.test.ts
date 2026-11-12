@@ -51,6 +51,13 @@ describe("explain pages", () => {
     }
   });
 
+  it("each meta description fits a search result: 120 to 160 characters (growth's rank plan #4)", () => {
+    for (const page of explainPages) {
+      const n = page.description.length;
+      assert.ok(n >= 120 && n <= 160, `${page.id}: description is ${n} characters, want 120 to 160`);
+    }
+  });
+
   it("are not near copies of each other", () => {
     for (const field of ["sample", "lead", "description", "sampleSummary", "fileName", "watchOut"] as const) {
       const values = explainPages.map((page) => page[field]);
