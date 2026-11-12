@@ -77,6 +77,10 @@
 :root[data-look] :is(.ob-link, .more-detail__toggle) { color: var(--u-accent-text); font-weight: 600; }
 :root[data-look="o1"] :is(.ob-link, .more-detail__toggle) { text-decoration: underline; text-underline-offset: 2px; }
 :root[data-look] ::-webkit-scrollbar-track, :root[data-look] ::-webkit-scrollbar-corner { background: transparent; }
+/* The panel's scrollbars are the same solid border-control thumb as the main window (never the violet tint). */
+:root[data-look] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
+:root[data-look][data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb { background: var(--u-border-control); }
+:root[data-look] .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-look][data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
 /* The overlay panel and the Island: solid surface, 1 px border, the floating shadow. */
 :root[data-look] .ob { background: var(--u-surface); box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); border-radius: var(--u-radius-card); }
 :root[data-look] .ob-head, :root[data-look] .ob-foot, :root[data-look] .ob-tabs { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -177,6 +181,12 @@
 :root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-ink-2); background: var(--u-sunken); }
 :root[data-look="o3"][data-ui="v3"][data-v7] :is(.layout .chat-assistant__who, .login__eyebrow) { color: var(--u-ink-2); }
 :root[data-look="o3"][data-ui="v3"][data-v7] .layout .lib-row__icon { background: var(--u-sunken); stroke: var(--u-ink-2); }
+:root[data-look="o3"][data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-sunken); stroke: var(--u-ink-2); }
+/* Panel code chips: O2 light select-ink (5.1:1 on accent-soft), O3 plain text; O1 keeps the accent text. */
+:root[data-look="o3"] .ob-answer code.inline { background: var(--u-sunken); color: var(--u-ink); }
+:root[data-look="o2"]:not([data-theme="dark"]) .ob-answer code.inline { color: var(--u-select-ink); }
 /* O2 light: chip text on accent-soft is select-ink (#5f41e6, 5.1:1), not the link violet (4.17:1). */
 :root[data-look="o2"][data-ui="v3"][data-v7]:not([data-theme="dark"]) :is(.layout .brand .badge, .layout .lib-row .status-pill[data-tone="current"], .layout .pill.pill--understood, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-select-ink); }
+/* O2: the Library "Continue" round button is the main button (ink), like every O2 primary. */
+:root[data-look="o2"][data-ui="v3"][data-v7] .layout .history-continue__go { background: var(--u-action); color: var(--u-action-on); box-shadow: none; }
 :root[data-look="o3"][data-theme="dark"] :is(.ob, .acct-menu, .search-palette, .fbk) { --u-surface: #161616; }

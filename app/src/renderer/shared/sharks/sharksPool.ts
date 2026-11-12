@@ -195,8 +195,8 @@ export class SharksPool {
 
   /**
    * For the evidence harness: pauses the loop and draws one frame with the first shark laid out straight, side-on,
-   * its head at (`x`, `y`) CSS px and its body trailing opposite to `heading` (0 = swimming right, π = left). The
-   * same pose in every still of a comparison set.
+   * its head at (`x`, `y`) CSS px and its body trailing opposite to `heading` (0 = swimming right, π = left), and no
+   * fish. The same pose in every still of a comparison set.
    */
   pose(x: number, y: number, heading: number): void {
     this.pause();
@@ -209,6 +209,7 @@ export class SharksPool {
     }
     shark.heading = heading;
     shark.turn = 0;
+    this.world.fish.length = 0;
     this.draw(0);
   }
 
