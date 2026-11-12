@@ -74,7 +74,7 @@ export default function HelpIndexPage() {
           </li>
           <li>
             <Link href="/account-deletion">Delete your account and your data</Link>, from inside the app or by email. What Unvibe
-            keeps, for how long, and how to get a copy: <Link href="/data-controls">data controls</Link>.
+            keeps, for how long, and how to ask for a copy: <Link href="/data-controls">data controls</Link>.
           </li>
         </ul>
       </section>
