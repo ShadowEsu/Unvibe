@@ -696,14 +696,6 @@ export async function getWaitlistFunnelSummary(): Promise<WaitlistFunnelSummary>
   return summarizeWaitlistFunnel(await listWaitlistEntries(10_000));
 }
 
-/** Resolves a referring waitlister without ever returning their personal details. */
-export async function referralCodeForEmail(email: string): Promise<string | undefined> {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) return undefined;
-  const entries = await listWaitlistEntries(10_000);
-  return entries.find((entry) => entry.email.trim().toLowerCase() === normalized)?.referralCode;
-}
-
 /**
  * Public invite link progress deliberately exposes only aggregate counts for a code, never
  * identities. Joining with a link is attribution only; gift months live in the app.

@@ -395,6 +395,20 @@ describe("waitlist responses do not reveal membership", () => {
     assert.notEqual(downloadCode, createHash("sha256").update(downloader).digest("hex").slice(0, 8).toUpperCase());
   });
 
+  it("stores the same referredBy for a typed friend email whether or not the friend is listed", async () => {
+    const friend = "typed-friend@unvibe-mail.test";
+    const before = await waitlistRoute.POST(post("/api/waitlist", { email: "joins-first@unvibe-mail.test", referredBy: friend }));
+    assert.equal(before.status, 200);
+    const storedBefore = waitlistRows.get("joins-first@unvibe-mail.test")?.referred_by;
+    // The friend joins (with a pre-HMAC sha code in the store, the worst case for a lookup), then someone else types them.
+    waitlistRows.set(friend, { id: friend, email: friend, referral_code: createHash("sha256").update(friend).digest("hex").slice(0, 8), created_at: new Date().toISOString() });
+    const after = await waitlistRoute.POST(post("/api/waitlist", { email: "joins-second@unvibe-mail.test", referredBy: friend }));
+    assert.equal(after.status, 200);
+    assert.equal(waitlistRows.get("joins-second@unvibe-mail.test")?.referred_by, storedBefore);
+    assert.match(String(storedBefore), /^[a-f0-9]{8}$/);
+    assert.notEqual(storedBefore, friend.toLowerCase(), "a typed email is never stored as referredBy");
+  });
+
   it("never answers with a stored code, so a member from before the HMAC change looks like anyone else", async () => {
     const email = "joined-last-month@unvibe-mail.test";
     const oldCode = createHash("sha256").update(email).digest("hex").slice(0, 8); // a pre-HMAC code, as stored

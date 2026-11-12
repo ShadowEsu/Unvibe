@@ -8,7 +8,6 @@ import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistBetaEmail,
   recordWaitlistNotification,
-  referralCodeForEmail,
   saveWaitlistEntry,
   type WaitlistEntry,
 } from "@/lib/waitlistStore";
@@ -61,11 +60,10 @@ export async function POST(req: Request) {
   // posts again sees a new code; their old ?ref= link still attributes (referredBy is stored as given).
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
-  // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
-  // resolved to that waitlister's code when the list knows it.
-  const referredBy = referralInput?.includes("@")
-    ? (await referralCodeForEmail(referralInput).catch(() => undefined)) ?? referralInput.toLowerCase()
-    : referralInput?.toLowerCase() || undefined;
+  // Stored as the friend's code, for attribution only (it grants nothing). A typed email becomes that email's code
+  // by the same function, with no store read, so what is stored does not depend on whether the friend is listed
+  // (Security F1): the friend's code is the HMAC of their email whether they joined before or after this request.
+  const referredBy = referralInput?.includes("@") ? referralCodeFor(referralInput) : referralInput?.toLowerCase() || undefined;
   const promoCode = parsed.data.promoCode?.trim().toUpperCase();
   const createdAt = new Date().toISOString();
   const entry: WaitlistEntry = {
