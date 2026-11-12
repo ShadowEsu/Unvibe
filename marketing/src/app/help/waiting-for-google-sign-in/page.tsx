@@ -111,8 +111,8 @@ export default function WaitingForGoogleSignInPage() {
 
       <p className="fos-page__help">
         Still stuck? Email <a href={`mailto:${SUPPORT_EMAIL}?subject=Unvibe%20sign-in`}>{SUPPORT_EMAIL}</a> with a screenshot of Unvibe and
-        of the web page, your Unvibe version (bottom of Settings) and your Mac or Windows version. More help:{" "}
-        <Link href="/help">all help pages</Link>. Written for Unvibe 0.1.51.
+        of the web page, your Unvibe version (bottom of Settings) and your Mac or Windows version. Don&apos;t send us the sign-in code or
+        link. More help: <Link href="/help">all help pages</Link>. Written for Unvibe 0.1.51.
       </p>
     </article>
   );
