@@ -100,6 +100,7 @@
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-composer:focus-within { border-color: var(--u-focus); box-shadow: none; }
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-assistant__card { background: var(--u-surface); border: 1px solid var(--u-border); box-shadow: none; }
 :root[data-look][data-ui="v3"][data-v7] .layout .chat-assistant__who { color: var(--u-accent-text); }
+:root[data-look][data-ui="v3"][data-v7] .layout .chat-composer__hint { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 @container pane (max-width: 840px) {
   :root[data-look][data-ui="v3"][data-v7] .layout .page > .sharks-backdrop { display: none; }
   :root[data-look][data-ui="v3"][data-v7] .layout :is(.page--home, .page:has(.chat-page)) > .fade-in { width: auto; min-width: 0; }
