@@ -386,7 +386,7 @@ test('ordinary code that names keys, tokens or secrets goes through, in the sele
 
 test('one network gets a capped number of trial previews a day; its explanations and signed-in previews are not affected', async () => {
   process.env.UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT = '2';
-  assert.equal(TRIAL_PREVIEW_IP_DAILY_LIMIT, 60);
+  assert.equal(TRIAL_PREVIEW_IP_DAILY_LIMIT, 150);
   for (const id of ['preview-net-a', 'preview-net-b']) assert.ok(await streamed(await preview(previewRequest(trialHeaders(id, '198.51.100.7')))), id);
   const sent = anthropicBodies.length;
 

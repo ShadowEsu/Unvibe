@@ -546,13 +546,13 @@ function trialEndedMessage(expiresAt: string): string {
 }
 
 /** Default for UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT: trial quick looks per network per UTC day. */
-export const TRIAL_PREVIEW_IP_DAILY_LIMIT = 60;
+export const TRIAL_PREVIEW_IP_DAILY_LIMIT = 150;
 
 /**
  * Quick look's trial checks, before anything is reserved or sent:
  * - once the install's 30-day window has ended, previews are refused like explanations (429
  *   `plan_limit_reached`, with `resetsAt` = when it ended);
- * - one network gets at most UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT (default 60) trial previews per UTC
+ * - one network gets at most UNVIBE_TRIAL_PREVIEW_IP_DAILY_LIMIT (default 150, the explanation's per-IP limit) trial previews per UTC
  *   day, counted like `reserveTrialProgressPing` under `__preview_ip__:YYYY-MM-DD:<hmac>` (the address
  *   is never stored), so rotating install ids can't take the $2 preview budget for everyone. Past it,
  *   429 `preview_limit_reached` with reason `network_daily_limit`; 503 when the counter can't be
