@@ -82,6 +82,10 @@
 :root[data-look] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
 :root[data-look][data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb { background: var(--u-border-control); }
 :root[data-look] .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-look][data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+/* Answer emphasis: upright at 600 in the body colour (the body font ships no italic; r3 has none). strong keeps its
+   weight around it; code inside keeps the code style. */
+:root[data-look] :is(.rich-text, .ob-answer) em { font-style: normal; font-weight: 600; color: inherit; }
+:root[data-look] :is(.rich-text, .ob-answer) strong em { font-weight: inherit; }
 /* One colour: the selected code line is the look's highlight (never lime); the lime tick goes with it. */
 :root[data-look] .ob-code__line, :root[data-look][data-theme="dark"] .ob-code__line { background: var(--u-highlight); }
 :root[data-look] .ob-code__tick { background: var(--u-accent); }
