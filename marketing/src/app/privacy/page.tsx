@@ -204,9 +204,10 @@ export default function PrivacyPage() {
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
-          install scripts send nothing back to unvibe.site. An older copy of a script, saved before
-          this change, may still send one &apos;installed&apos; count, with no ID, code or personal
-          data; unvibe.site no longer records it. If you use the Try it box on the site,
+          install scripts send nothing back to unvibe.site. Older versions of the scripts sent one
+          &apos;installed&apos; count when they finished, with no ID, code or personal data. A saved
+          copy of one may still send it, but unvibe.site no longer records it; the totals counted
+          before are kept as they are, as numbers only. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Anthropic to write the explanation. To limit how often the box can be used,
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
