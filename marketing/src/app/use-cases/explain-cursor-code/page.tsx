@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { findUseCase, pathForUseCase } from "@/lib/useCases";
-import { D_NAV_CTA } from "@/site/dia/content";
+import { D_NAV_CTA, D_STATEMENT } from "@/site/dia/content";
 import { DownloadCta } from "@/site/dia/DownloadCta";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
@@ -61,9 +61,9 @@ export default async function ExplainCursorCodePage() {
         <div className="uc-fold">
           <div className="uc-fold__text">
             <p>
-              Cursor&apos;s chat says what it meant to do; the file is what it did. Select the code Cursor wrote, press{" "}
-              {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it in plain English
-              in a panel beside Cursor, at the depth you pick. Free for Mac and Windows.
+              {D_STATEMENT.entity} Cursor&apos;s chat says what it meant to do; the file is what it did. Select the code
+              Cursor wrote, press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows), and Vibe explains it
+              in a panel beside Cursor, at the depth you pick.
             </p>
             <p className="uc-fold__cta">
               <DownloadCta surface="use_cases" className="d-cta d-btn d-btn--lg">{D_NAV_CTA}</DownloadCta>
