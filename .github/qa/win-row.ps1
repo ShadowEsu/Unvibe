@@ -25,9 +25,60 @@ using System; using System.Runtime.InteropServices;
 public static class Fg {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, int dx, int dy, uint data, IntPtr extra);
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
+  // The process that owns the top-level window under a screen point (what a click there would reach).
+  public static uint PidAt(int x, int y) { POINT p; p.X = x; p.Y = y; uint pid; GetWindowThreadProcessId(GetAncestor(WindowFromPoint(p), 2), out pid); return pid; }
 }
 "@
 function Front() { $h = [Fg]::GetForegroundWindow(); $fp = [uint32]0; [void][Fg]::GetWindowThreadProcessId($h, [ref]$fp); $q = Get-Process -Id $fp -ErrorAction SilentlyContinue; "$($q.ProcessName): $($q.MainWindowTitle)" }
+# A person's click (lead, 0.1.52 RC): the pointer moves to the element's centre and the left button goes down and up
+# $n times (2 = a double-click). Real input, unlike a UIA press: Windows lets the process that got the last input
+# event bring windows to the front, so this decides whether the app's first window may take the front.
+# Refuses when another window covers the spot, since the click would land there. Its notes go to the host, so the
+# function returns only $true / $false.
+function RealClick($el, [int]$n = 1) {
+  $r = $el.Current.BoundingRectangle; $name = $el.Current.Name
+  if ($r.IsEmpty -or $r.Width -le 0) { Note "  click '$name': no on-screen rectangle" | Write-Host; return $false }
+  $x = [int]($r.Left + $r.Width / 2); $y = [int]($r.Top + $r.Height / 2)
+  $at = [Fg]::PidAt($x, $y)
+  if ($at -ne [uint32]$el.Current.ProcessId) { Note "  click '$name' at $x,$y refused: the window there is $((Get-Process -Id $at -ErrorAction SilentlyContinue).ProcessName)#$at, not $((Get-Process -Id $el.Current.ProcessId -ErrorAction SilentlyContinue).ProcessName)#$($el.Current.ProcessId)" | Write-Host; return $false }
+  [void][Fg]::SetCursorPos($x, $y); Start-Sleep -Milliseconds 150
+  for ($i = 0; $i -lt $n; $i++) { [Fg]::mouse_event(2, 0, 0, 0, [IntPtr]::Zero); [Fg]::mouse_event(4, 0, 0, 0, [IntPtr]::Zero); Start-Sleep -Milliseconds 90 }
+  Note "  real click x$n on '$name' at $x,$y ($((Get-Process -Id $at -ErrorAction SilentlyContinue).ProcessName)#$at)" | Write-Host; return $true
+}
+# Reads win-front-watch.ps1's log and notes what a person would have seen, timed from the launch double-click ($t0, a
+# UTC time of day): when Unvibe's window showed, what was in front then and later, and its taskbar button's state.
+# FLASH is the taskbar's own event: Windows refused the window's bid for the front and flashed its button instead.
+function FrontReport($log, $t0) {
+  if (-not (Test-Path $log)) { Note 'FAIL  front watch: no front-watch.log'; return }
+  $ev = @(Get-Content $log | ForEach-Object {
+    if ($_ -match '^\s*\d+ (\d\d:\d\d:\d\d\.\d{3}) (\S+)\s+(.*)$') { [pscustomobject]@{ S = ([TimeSpan]::Parse($Matches[1]) - $t0).TotalSeconds; Kind = $Matches[2]; Text = $Matches[3] } }
+  })
+  $frontAt = { param($s) $f = $ev | Where-Object { $_.Kind -eq 'front' -and $_.S -le $s } | Select-Object -Last 1; if ($f) { $f.Text } else { '(not seen yet)' } }
+  Note "front watch: $($ev.Count) events; $(($ev | Where-Object Kind -eq 'start').Text)"
+  # The window a taskbar button belongs to: visible, not minimized, not cloaked, not owned, not a tool window.
+  $main = $ev | Where-Object { $_.Kind -eq 'unvibe' -and $_.Text -match 'visible=True minimized=False cloaked=0 owned=False tool=False' } | Select-Object -First 1
+  $flash = @($ev | Where-Object { $_.Kind -eq 'shell' -and $_.Text -match '^FLASH Unvibe#' })
+  $inFront = $ev | Where-Object { $_.Kind -eq 'front' -and $_.Text -match '^Unvibe#' } | Select-Object -First 1
+  if ($main) {
+    Note ("FRONT  Unvibe window visible: yes, from {0:+0.0;-0.0} s after the double-click: {1}" -f $main.S, $main.Text)
+    Note ("FRONT  in front when it showed: {0} | 3 s later: {1} | 10 s later: {2} | at the end: {3}" -f (& $frontAt $main.S), (& $frontAt ($main.S + 3)), (& $frontAt ($main.S + 10)), (& $frontAt 1e9))
+  } else { Note 'FRONT  Unvibe window visible: NO (no visible, unminimized, uncloaked taskbar window in the watch)' }
+  $states = @()
+  if ($flash.Count) { $states += [pscustomobject]@{ S = $flash[0].S; T = ("flashing ({0} FLASH events, first {1:+0.0;-0.0} s)" -f $flash.Count, $flash[0].S) } }
+  if ($inFront) { $states += [pscustomobject]@{ S = $inFront.S; T = ("active (Unvibe in front from {0:+0.0;-0.0} s)" -f $inFront.S) } }
+  $taskbar = if ($states.Count) { ($states | Sort-Object S | ForEach-Object { $_.T }) -join ', then ' } else { 'normal (never in front, never flashed)' }
+  Note "FRONT  taskbar button: $taskbar"
+  # One yes/no setup step with its time (activation-metrics, 611): a stranger who never sees the window never explains.
+  $reach = if ($main -and $inFront) { "YES, in front {0:+0.0;-0.0} s after the double-click" -f [Math]::Max($main.S, $inFront.S) } elseif ($main -and $flash.Count) { 'NO: only a flashing taskbar button' } elseif ($main) { 'NO: open behind other windows, no flash' } else { 'NO: no window' }
+  Note "FRONT  setup step 'the first window reaches the person': $reach"
+  Note 'FRONT  timeline (front changes and the taskbar events for Unvibe):'
+  $ev | Where-Object { $_.Kind -eq 'front' -or ($_.Kind -eq 'shell' -and $_.Text -match ' Unvibe#') } | Select-Object -First 40 | ForEach-Object { Note ("  {0,7:+0.0;-0.0} s {1,-6} {2}" -f $_.S, $_.Kind, $_.Text) }
+}
 function UninstallEntry() {
   Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
     ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object { $_.DisplayName -like 'Unvibe*' } | Select-Object -First 1
@@ -129,19 +180,57 @@ if ($Kind -eq 'ps1') {
   }
   $sig = Get-AuthenticodeSignature $exe
   Note "downloaded $asset ($((Get-Item $exe).Length) bytes), $how; Authenticode: $($sig.Status) $($sig.SignerCertificate.Subject)"
-  Start-Process explorer.exe -ArgumentList "`"$exe`""
+  # Opened as a person does (lead, 0.1.52 RC: who launches the app decides whether its first window may take the
+  # front): every window minimized as on a fresh desktop, so the runner's own terminal covers nothing; the Downloads
+  # folder opens with the file selected; one real click on the file, then a real double-click. Not Start-Process.
+  # win-front-watch.ps1 logs the front window, every Unvibe window and the taskbar's events from just before that.
+  $fw = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\win-front-watch.ps1", '-Out', $Out, '-Seconds', '120' -PassThru -WindowStyle Hidden
+  $null = $fw.Handle
+  # The watcher compiles its C# first: wait until its log has the "start" line, so it sees everything from the click on.
+  $fwLog = Join-Path $Out 'front-watch.log'
+  for ($i = 0; $i -lt 60 -and -not (@(Get-Content $fwLog -ErrorAction SilentlyContinue) -match ' start '); $i++) { Start-Sleep -Milliseconds 500 }
+  Note "front watch: $(if (Test-Path $fwLog) { "started after $($i * 0.5) s" } else { 'NOT started after 30 s (the summary below will say so)' })"
+  (New-Object -ComObject Shell.Application).MinimizeAll(); Start-Sleep 2
+  Start-Process explorer.exe -ArgumentList "/select,`"$exe`""
+  $leaf = Split-Path $exe -Leaf; $base = [IO.Path]::GetFileNameWithoutExtension($leaf); $item = $null
+  $isItem = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
+  $isFolder = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, 'CabinetWClass')
+  for ($i = 0; $i -lt 40 -and -not $item; $i++) {
+    Start-Sleep -Milliseconds 500
+    foreach ($w in @($root.FindAll([System.Windows.Automation.TreeScope]::Children, $isFolder))) {
+      # Explorer hides known extensions by default, so the item may be named without ".exe".
+      $item = @($w.FindAll([System.Windows.Automation.TreeScope]::Descendants, $isItem)) | Where-Object { $_.Current.Name -in $leaf, $base } | Select-Object -First 1
+      if ($item) { break }
+    }
+  }
+  Shot 'explorer-0-downloads'
+  $launchUtc = (Get-Date).ToUniversalTime().TimeOfDay
+  if ($item -and (RealClick $item 1)) {
+    Start-Sleep -Milliseconds 700 # past the double-click time, so the next two clicks are a fresh double-click
+    $launchUtc = (Get-Date).ToUniversalTime().TimeOfDay
+    if (RealClick $item 2) { Note "opened by a real double-click on '$($item.Current.Name)' in Explorer (Downloads)" }
+    else { Note 'FAIL  real Explorer double-click: the second click was refused (see above)' }
+  } else {
+    Note "FAIL  real Explorer double-click: $(if ($item) { 'the file could not be clicked (see above)' } else { "no '$leaf' item in an Explorer window within 20 s" }); opened with explorer.exe <file> instead so the row goes on"
+    Start-Process explorer.exe -ArgumentList "`"$exe`""
+  }
   Start-Sleep 12
   Shot 'smartscreen-1-double-click'
   Note "windows with titles after the double-click: $(Titled)"
   $more = Find 'More info'
   if ($more) {
     Note 'PROMPT SmartScreen: "Windows protected your PC" with More info'
-    [void](Press $more); Start-Sleep 3
+    # Real clicks, as a person's: the SmartScreen window gets the last input event, as it would for them.
+    if (-not (RealClick $more 1)) { [void](Press $more); Note '  More info: UIA press instead (no real click possible)' }
+    Start-Sleep 3
     Shot 'smartscreen-2-more-info'
     $runAnyway = Find 'Run anyway'
     Note "PROMPT SmartScreen after More info: Run anyway shown: $([bool]$runAnyway)"
     # The site's step: More info, then Run anyway.
-    if ($runAnyway) { [void](Press $runAnyway); Note 'pressed Run anyway' }
+    if ($runAnyway) {
+      if (RealClick $runAnyway 1) { Note 'clicked Run anyway (real click)' }
+      else { [void](Press $runAnyway); Note 'pressed Run anyway (UIA press: no real click possible)' }
+    }
   } else {
     Note 'no SmartScreen prompt on this runner (no "More info" on screen)'
   }
@@ -221,6 +310,13 @@ if ($win) {
   $alive = [bool](Get-Process -Id $win.Id -ErrorAction SilentlyContinue)
   if ($alive) { Note "PASS  first launch: window '$($win.MainWindowTitle)' ($($win.Path)), still open 20 s later" } else { Note 'FAIL  first launch: the window closed within 20 s' }
 } else { Note 'FAIL  first launch: no Unvibe window within 90 s' }
+# The double-click rows (exe, setupexe): what a person would have seen, from win-front-watch.ps1 (lead, 0.1.52 RC).
+if ($fw) {
+  if (-not $fw.WaitForExit(180000)) { $fw | Stop-Process -Force; Note 'front watch: still running after 3 min, stopped' }
+  Note "front watch exit $($fw.ExitCode)"
+  Shot 'front-watch-end'
+  FrontReport (Join-Path $Out 'front-watch.log') $launchUtc
+}
 $stores = Get-ChildItem $env:APPDATA, $env:LOCALAPPDATA -Recurse -Filter 'unvibe-store.json' -ErrorAction SilentlyContinue | ForEach-Object { "$($_.FullName): $((Get-Content $_.FullName -Raw | ConvertFrom-Json).installId)" }
 Note "store files: $($stores -join ' | ')"
 if (-not (Flag 'first-contact')) { Note 'FAIL  QA flag right after first contact' }
