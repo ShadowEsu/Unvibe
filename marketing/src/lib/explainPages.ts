@@ -2925,7 +2925,7 @@ export function Profile({ userId }) {
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback (the stack trace Python prints when a program crashes) and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
-      "Paste a Python traceback, the stack trace printed on a crash, and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders.",
+      "Paste a Python traceback, the stack trace printed on a crash, and get the error explained in plain English, free online. The sample is a KeyError in a script.",
     sampleSummary: "What Python 3.14 printed when a short script that totals orders met an item with `quantity` where the code expected `qty`: one good line of output, then a traceback ending in `KeyError: 'qty'`.",
     sample: `$ python3 report.py
 A1 25.0
