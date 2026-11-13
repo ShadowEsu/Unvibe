@@ -4,7 +4,7 @@ import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import sitemap from "@/app/sitemap";
 import { TryIt } from "@/components/paper/TryIt";
-import { EXPLAIN_PATHS, explainLanguage, explainLinks, explainPages } from "./explainPages";
+import { EXPLAIN_PATHS, explainHeadingText, explainLanguage, explainLinks, explainPages } from "./explainPages";
 import { languages } from "./languages";
 // The API's own check (marketing can't import web through "@/"; this file only needs node:crypto).
 import { looksSecret } from "../../../web/src/lib/tryDemo";
@@ -86,6 +86,14 @@ describe("explain pages", () => {
         assert.ok(ids.has(other), `${id}: related page "${other}" has no /explain page`);
       }
     }
+  });
+
+  it("keeps commands, flags and hyphenated names whole on a narrow screen", () => {
+    const text = (id: string) => explainHeadingText(explainPages.find((page) => page.id === id)!);
+    assert.equal(text("git-rebase"), "git\u00a0rebase\u00a0-\u2060i todo lists");
+    assert.equal(text("package-lock"), "package-\u2060lock.json files");
+    assert.equal(text("ps-aux"), "ps\u00a0aux output");
+    assert.equal(text("python"), "Python code");
   });
 
   it("search titles are at most 60 characters with the site suffix and are unique", () => {

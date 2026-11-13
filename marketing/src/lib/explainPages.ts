@@ -24,8 +24,9 @@ export interface ExplainPage {
   related?: readonly string[];
   /**
    * What follows "Explain" in the H1, the <title>, the /explain index link and the link-preview card, for pages
-   * about output or errors rather than code: a lowercase noun as people say it, no article ("lsof output",
-   * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
+   * whose sample isn't code in a language: output, errors, config files and commands. A plural noun as people say it,
+   * no article ("lsof output", "CORS errors", ".env files", "tar commands"). Without it the page reads
+   * "Explain {name} code". The breadcrumb and Related chips keep the name.
    */
   heading?: string;
   /**
@@ -3995,7 +3996,7 @@ export function explainHeadingText(page: ExplainPage): string {
   return explainHeading(page)
     .replace(/^(git|ps) /, "$1\u00a0")
     .replace(/ (-[a-z])\b/g, "\u00a0$1")
-    .replace(/-(\S)/g, "-\u2060$1")
+    .replace(/-(\S)/g, "-\u2060$1");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
