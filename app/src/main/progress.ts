@@ -11,9 +11,11 @@
  * locally only until the server has it.
  * `window_shown` is the other exception (BOSS counter fix, ledger 620, Marketing §10 C): sent once when
  * the first main window has been visible for 3 seconds, from sealed trial builds whether or not the
- * setting is on. It carries nothing but the step name and the install ID the launch usage check
- * already sends; it tells a person who saw the window apart from a launch-only run (the post-upload
- * link checker, or a window that opened hidden). Needs Security's yes before it ships.
+ * setting is on. Like every step it carries the step name with the trial token, the install ID, the
+ * system and the app version (`trialAuthHeaders`), which the launch usage check already sends; the
+ * server keeps only the step and its time. It helps tell a person who saw the window apart from a
+ * launch-only run (the post-upload link checker, or a window that opened hidden). Security 0656: GO on
+ * the design; Preston's show must say it sends with the setting off and no click.
  */
 import { setTimeout as sleep } from 'node:timers/promises';
 import { aiAuthHeaders, postTrialProgress } from './backend';
