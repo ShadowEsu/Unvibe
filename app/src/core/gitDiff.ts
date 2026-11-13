@@ -14,15 +14,23 @@ const MAX_UNTRACKED_BYTES = 80_000;
 export function parseUnifiedDiff(diff: string): DiffHunk[] {
   const hunks: DiffHunk[] = [];
   let currentFile = '';
+  let oldFile = '';
   let current: DiffHunk | undefined;
 
   for (const line of diff.split(/\r?\n/)) {
-    if (line.startsWith('+++ ')) {
-      currentFile = stripDiffPrefix(line.slice(4).trim());
+    if (line.startsWith('--- ')) {
+      oldFile = stripDiffPrefix(line.slice(4).trim());
       current = undefined;
       continue;
     }
-    if (line.startsWith('--- ') || line.startsWith('diff --git') || line.startsWith('index ')) {
+    if (line.startsWith('+++ ')) {
+      // A deleted file's new side is /dev/null: it keeps the name from its old side.
+      const newFile = stripDiffPrefix(line.slice(4).trim());
+      currentFile = newFile === '/dev/null' ? oldFile : newFile;
+      current = undefined;
+      continue;
+    }
+    if (line.startsWith('diff --git') || line.startsWith('index ')) {
       current = undefined;
       continue;
     }

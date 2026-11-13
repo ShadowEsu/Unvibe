@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { briefRepoLabel, buildChangeBrief, hunkStats } from '../src/core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, hunkStats, mainChangeLines } from '../src/core/changeBrief';
 import { parseUnifiedDiff } from '../src/core/gitDiff';
 import { buildOriginReport } from '../src/core/codeOrigin';
 import { freshnessFromChange, hashCode, pathImportance } from '../src/core/knowledge';
@@ -23,6 +23,36 @@ test('change brief uses git hunks and never claims AI authorship', () => {
   assert.equal(brief.architectureImpact, 'HIGH');
   assert.match(brief.provenanceNote, /does not know whether an agent/);
   assert.equal(brief.empty, false);
+});
+
+test('the brief names a file Added, Removed or Changed from its hunk headers, never from the line counts', () => {
+  const diff = `diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -3,0 +4,2 @@
++## Install
++Run the installer.
+diff --git a/src/new.ts b/src/new.ts
+--- /dev/null
++++ b/src/new.ts
+@@ -0,0 +1,2 @@
++export const a = 1;
++export const b = 2;
+diff --git a/src/old.ts b/src/old.ts
+--- a/src/old.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-export const gone = 1;
+-export const too = 2;
+`;
+  const hunks = parseUnifiedDiff(diff);
+  const untracked = [{ file: 'notes/todo.md', oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+- call back'] }];
+  const lines = mainChangeLines(hunkStats([...hunks, ...untracked]).files);
+  assert.ok(lines.includes('Changed README.md (2+ / 0-)'), lines.join('\n'));
+  assert.ok(lines.includes('Added src/new.ts (2+ / 0-)'), lines.join('\n'));
+  assert.ok(lines.includes('Added notes/todo.md (1+ / 0-)'), lines.join('\n'));
+  assert.ok(lines.includes('Removed src/old.ts (0+ / 2-)'), lines.join('\n'));
+  assert.ok(!lines.some((l) => l.includes('/dev/null')), lines.join('\n'));
 });
 
 test('empty hunks produce an empty brief', () => {
