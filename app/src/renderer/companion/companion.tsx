@@ -1936,7 +1936,7 @@ function App() {
       .map((item) => ({
         id: `page-${item.id}`,
         title: pageLabel(item.id),
-        detail: item.id === 'Learn' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about this codebase' : item.id === 'Quiz' ? 'Check understanding' : 'Open page',
+        detail: item.id === 'Learn' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about your code' : item.id === 'Quiz' ? 'Check understanding' : 'Open page',
         run: () => { setLessonSeedId(null); setPage(item.id); close(); },
       }))
       .filter((item) => matches(`${item.title} ${item.detail}`));

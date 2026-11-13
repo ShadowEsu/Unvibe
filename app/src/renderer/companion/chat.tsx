@@ -432,7 +432,7 @@ export function Chat({
           <div className="ask-hello">
             <Buddy mood={vibeMood} size={56} follow label="Vibe" />
             <h2>{greetName(userName)}</h2>
-            <p>Ask Vibe anything about this codebase. Replies use {aiLabel}.</p>
+            <p>Ask Vibe about the code you type or paste here. Replies use {aiLabel}.</p>
             <div className="ask-hello__starters">
               {STARTERS.map((item) => (
                 <button key={item} type="button" className="m-btn m-btn--small m-btn--outlined" onClick={() => void send(item)}>{item}</button>
@@ -495,7 +495,7 @@ export function Chat({
           rows={1}
           value={draft}
           disabled={busy}
-          placeholder={empty ? 'Ask Vibe anything about this codebase…' : 'Follow up'}
+          placeholder={empty ? 'Ask Vibe about your code…' : 'Follow up'}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
