@@ -1,0 +1,149 @@
+/* ── Mono (Design agents/design/r3-flat/OPTIONS.md "Mono: black and white, organised containers", APPROVED by Preston
+   Thu 12 Nov 2026, Slack #app-unvibe ts 1794548455.778179). One look: the interface is black, white and grey; purple is
+   on the sharks and on Vibe only. No blur, no gradient, no shadow on boxes (a shadow only on what floats). Loaded last
+   in every window (scripts/build.mjs), so these tokens win over tokens.css and the rules below win over the glass rules
+   in app-0151.css / widget.css / bar.css. Token map (old → Mono): --u-paper ground · --u-surface box (ground at 72 %) ·
+   --u-sunken grey fill · --u-select strong grey fill · --u-seg selected segment · --u-border box border · --u-border-control
+   control border · --u-ink text · --u-ink-2 / --u-ink-3 grey text (no third level) · --u-action/--u-action-on the filled
+   button · --u-accent the sharks' purple (nowhere else) · --u-accent-text / --u-accent-soft / --u-highlight / --u-focus /
+   --u-select-ink mapped to the text colour and the grey fills. ── */
+
+/* ── Tokens. Every grey has R = G = B. ── */
+:root {
+  --u-paper: #ffffff; --u-surface: rgb(255 255 255 / 0.72); --u-solid-surface: #ffffff;
+  --u-ink: #111111; --u-ink-2: #555555; --u-ink-3: #555555;
+  --u-border: #d9d9d9; --u-border-control: #8c8c8c; --u-border-seg: rgb(17 17 17 / 0.26);
+  --u-sunken: rgb(17 17 17 / 0.06); --u-select: rgb(17 17 17 / 0.084); --u-seg: rgb(17 17 17 / 0.12);
+  --u-select-ink: #111111; --u-off: 0.35;
+  --u-action: #111111; --u-action-on: #ffffff; --u-action-hover: #2b2b2b;
+  --u-accent: #6f52f2; --u-accent-hover: #6f52f2; --u-accent-on: #ffffff; --u-accent-text: #111111; --u-accent-soft: rgb(17 17 17 / 0.06); --u-highlight: rgb(17 17 17 / 0.084); --u-focus: #111111;
+  --u-sharks-alpha: 0.45;
+  --u-lilac: #6f52f2; --u-amber: #b45309;
+  --u-shadow-float: 0 8px 24px rgb(0 0 0 / 0.12); --u-shadow-card: none;
+  --u-radius-card: 12px; --u-radius-chip: 999px; --u-radius-field: 8px;
+}
+:root[data-theme="dark"] {
+  --u-paper: #000000; --u-surface: rgb(0 0 0 / 0.72); --u-solid-surface: #000000;
+  --u-ink: #f5f5f5; --u-ink-2: #b8b8b8; --u-ink-3: #b8b8b8;
+  --u-border: #363636; --u-border-control: #7a7a7a; --u-border-seg: rgb(245 245 245 / 0.35);
+  --u-sunken: rgb(245 245 245 / 0.10); --u-select: rgb(245 245 245 / 0.14); --u-seg: rgb(245 245 245 / 0.20);
+  --u-select-ink: #f5f5f5;
+  --u-action: #f5f5f5; --u-action-on: #111111; --u-action-hover: #dcdcdc;
+  --u-accent: #7357f6; --u-accent-hover: #7357f6; --u-accent-on: #ffffff; --u-accent-text: #f5f5f5; --u-accent-soft: rgb(245 245 245 / 0.10); --u-highlight: rgb(245 245 245 / 0.14); --u-focus: #f5f5f5;
+  --u-sharks-alpha: 0.75;
+  --u-lilac: #7357f6; --u-amber: #fbbf24;
+  --u-shadow-float: 0 8px 24px rgb(0 0 0 / 0.6); --u-shadow-card: none;
+}
+/* ── Structure shared by every look. ── */
+:root {
+  --u-veil: transparent; --u-blur: none; --u-sheen: none; --u-rim: none; --u-rim-line: transparent; --u-card-rim: transparent;
+  --u-glass: var(--u-surface); --u-solid: var(--u-surface); --u-sheet: var(--u-surface); --u-chip: var(--u-surface);
+  --u-glass-1: var(--u-sunken); --u-raised: var(--u-sunken); --u-code-bg: var(--u-sunken); --u-fill: var(--u-sunken);
+  --u-blush: var(--u-sunken); --u-sky: var(--u-sunken);
+  --u-line: var(--u-border); --u-hair: var(--u-border);
+  --u-mist: var(--u-accent-soft);
+  --u-lime: var(--u-highlight);
+  --u-shadow: var(--u-shadow-float); --u-shadow-sm: var(--u-shadow-card);
+  --u-radius-pane: var(--u-radius-card);
+}
+/* The ground: a flat colour, no aurora; no fade under the ask bar. */
+:root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout,
+:root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
+/* Under the composer: a solid strip of ground across the content width (no fade), so nothing shows half-cut
+   behind the ask bar; the lists end above it (the page keeps its 150 px bottom padding). */
+:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after { height: 92px; background: var(--u-paper); border-top: 1px solid var(--u-border); -webkit-mask-image: none; mask-image: none; }
+/* Cards, menus, the ask bar: one solid surface with a 1 px border (a real border, so a look with no card shadow still
+   has its container); O1 light adds a 1 px card shadow; floating things carry the floating shadow. The sidebar is
+   sunken. */
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .plan-pick__card, .metric-card) {
+  background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: var(--u-radius-card);
+  border: 1px solid var(--u-border); box-shadow: var(--u-shadow-card);
+}
+:root[data-ui="v3"][data-v7] .layout .side { background: var(--u-sunken); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock,
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette, .fbk) { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: var(--u-shadow-float); }
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: var(--u-sunken); border-color: var(--u-border-control); box-shadow: var(--u-shadow-card); }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current,
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current { background: var(--u-accent-soft); }
+/* The main button: action / on-action. Active nav and the selected filter: select / select-ink. Links: accent-text. */
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button, .history-continue__go),
+:root[data-ui="v3"][data-v7] .layout .home-card .primary-btn { background: var(--u-action); color: var(--u-action-on); box-shadow: none; }
+:root .ob-ask__send { background: var(--u-action); color: var(--u-action-on); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button):hover:not(:disabled) { background: var(--u-action-hover); filter: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button.on,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: var(--u-select); color: var(--u-select-ink); }
+:root[data-ui="v3"][data-v7] .layout :is(.link-btn, .ghost-link, a) { color: var(--u-accent-text); }
+:root :is(button, input, a, [tabindex]):focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+/* Scrollbar thumbs: border-control, solid, in every pane (the Ask thread's fades otherwise). */
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-thumb,
+:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--u-border-control); }
+:root[data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb,
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] :is(.chat-log, .search-palette__body, .mbody) { scrollbar-width: auto; scrollbar-color: auto; }
+/* Nothing purple-tinted that is not the accent: key caps, the sliding nav pill, segmented thumbs, the selected filter,
+   code chips and every shadow use the look's neutrals or accent-soft. */
+:root[data-ui="v3"][data-v7] .layout :is(kbd, .topbar kbd, .side-search kbd, .topbar__explain kbd, .ask-dock__shortcut) { background: var(--u-surface); border-color: var(--u-border); border-bottom-color: var(--u-border-control); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .nav-pill,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav-pill { background: var(--u-select); }
+:root[data-ui="v3"][data-v7] .layout .seg-thumb,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .seg-thumb { background: var(--u-select); }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]),
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-select); color: var(--u-select-ink); }
+:root[data-ui="v3"][data-v7] :is(.layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code),
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { background: var(--u-sunken); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .pill.pill--understood, .onboard__ok) { background: var(--u-accent-soft); color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7] .layout .chat-user { background: var(--u-sunken); box-shadow: 0 0 0 1px var(--u-border); }
+/* Settings: section labels in sentence case; the selected item is select / select-ink (text, not the accent). The
+   panel's selected tab likewise; its text links are the look's links (O1: black, underlined). */
+:root[data-ui="v3"][data-v7] .modal :is(.mside .mh, .settings-section-label, .integ__group h3) { text-transform: none; letter-spacing: 0; font-size: 12px; }
+:root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-select); color: var(--u-select-ink); }
+:root .ob-tab.is-on { background: var(--u-select); color: var(--u-select-ink); }
+:root :is(.ob-link, .more-detail__toggle) { color: var(--u-accent-text); font-weight: 600; }
+:root ::-webkit-scrollbar-track, :root ::-webkit-scrollbar-corner { background: transparent; }
+/* The panel's scrollbars are the same solid border-control thumb as the main window (never the violet tint). */
+:root :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
+:root[data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb { background: var(--u-border-control); }
+:root .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+/* Answer emphasis: upright at 600 in the body colour (r3 has no italics anywhere). strong keeps its weight around
+   it; code inside keeps the code style. */
+:root :is(.rich-text, .ob-answer) em { font-style: normal; font-weight: 600; color: inherit; }
+:root :is(.rich-text, .ob-answer) strong em { font-weight: inherit; }
+/* One colour: the selected code line is the look's highlight (never lime); the lime tick goes with it. */
+:root .ob-code__line, :root[data-theme="dark"] .ob-code__line { background: var(--u-highlight); }
+:root .ob-code__tick { background: var(--u-accent); }
+/* Depth row: the locked Expert label reads at text-3 (no opacity); its Pro chip is text-2 on the chip fill. */
+:root .ob-depth__item:disabled:not(.is-on) { opacity: 1; color: var(--u-ink-3); }
+:root .ob-depth__item:not(.is-on) .ob-pro { color: var(--u-ink-2); }
+/* The overlay panel and the Island: solid surface, 1 px border, the floating shadow. */
+:root .ob { background: var(--u-surface); box-shadow: 0 0 0 1px var(--u-border), var(--u-shadow-float); border-radius: var(--u-radius-card); }
+:root .ob-head, :root .ob-foot, :root .ob-tabs { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root .island { background: var(--u-surface); border-color: var(--u-border); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root .sharks-intro { background: #0f0f0f; }
+:root .sharks-intro__lockup { background: #191919; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px #2e2e2e; }
+/* Settings: a neutral scrim (no blur), the modal a solid surface with a 1 px border and the floating shadow. */
+:root[data-ui="v3"][data-v7] .overlay { background: rgb(0 0 0 / 0.32); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .overlay { background: rgb(0 0 0 / 0.6); }
+:root[data-ui="v3"][data-v7] .modal { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: var(--u-shadow-float); border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .modal .mbody { background: var(--u-surface); }
+/* Sharks (OPTIONS.md "Sharks: behind everything" + Mono): one window-sized canvas, fixed, inset 0, z-index 0, behind
+   the rail, the top bar and every box, on every page of the main window; #6f52f2 at 45 % light, #7357f6 at 75 % dark.
+   No reserved column, no mask, no minimum width. (Step 2 of the build moves the layer to the layout root.) */
+:root[data-ui="v3"][data-v7] .layout .sharks-backdrop { position: fixed; inset: 0; width: auto; height: auto; z-index: 0; pointer-events: none; }
+:root[data-ui="v3"][data-v7] .sharks-band__canvas, :root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: var(--u-sharks-alpha); }
+:root[data-ui="v3"][data-v7] .layout :is(.page--home, .page:has(.chat-page)) > .fade-in { max-width: none; margin: 0; width: auto; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-cols { grid-template-columns: minmax(0, 1fr); }
+/* Today's note under the greeting: Inter regular 15 px text-2, not the serif italic. */
+:root[data-ui="v3"][data-v7] .layout .home-hero__note { font: 400 15px/1.4 var(--u-font); font-style: normal; color: var(--u-ink-2); }
+/* Ask: the composer at rest has a 1 px border; the assistant card ends at its last line. */
+:root[data-ui="v3"][data-v7] .layout .chat-composer { border: 1px solid var(--u-border); background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-composer:focus-within { border-color: var(--u-focus); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__card { background: var(--u-surface); border: 1px solid var(--u-border); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__who { color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer__bar .chat-ai { flex: 0 0 auto; }
+:root[data-ui="v3"][data-v7] .layout .chat-composer__hint { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: clip; text-align: left; }
+/* Whole phrases only: under 760 px of pane the ", Shift Return for a new line" tail goes, never a cut word. */
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .chat-composer__hint-more { display: none; } }
+/* The Ask thread's scrollbar thumb does not fade with the thread's mask: the mask goes, the paddings stay. */
+:root[data-ui="v3"][data-v7] .layout .chat-log { -webkit-mask-image: none; mask-image: none; }

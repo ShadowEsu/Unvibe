@@ -70,9 +70,11 @@ for (const name of ['bar', 'widget', 'companion']) {
   const css = readFileSync(`src/renderer/${name}/${name}.css`, 'utf8');
   // The companion's v3 design layer loads last so it wins over the older layers; the 0.1.51 redesign (app-0151.css) after v7.
   const v3 = name === 'companion' ? `\n${readFileSync('src/renderer/companion/v3.css', 'utf8')}\n${readFileSync('src/renderer/companion/v5.css', 'utf8')}\n${readFileSync('src/renderer/companion/v7.css', 'utf8')}\n${readFileSync('src/renderer/companion/app-0151.css', 'utf8')}` : '';
-  // The round 3 flat looks (shared/look.css, keyed on html[data-look]) load last in every window.
-  const look = readFileSync('src/renderer/shared/look.css', 'utf8');
-  writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${vibeBubble}\n${pasteTarget}\n${shortcutGuide}\n${consentForm}\n${css}${v3}\n${look}`);
+  // Mono (shared/mono.css: tokens + shared rules) loads last in every window, then that window's Mono slices
+  // (src/renderer/<name>/mono-*.css, in name order): frame, screens, quiz, overlay, island.
+  const look = readFileSync('src/renderer/shared/mono.css', 'utf8');
+  const slices = readdirSync(`src/renderer/${name}`).filter((f) => /^mono-.*\.css$/.test(f)).sort().map((f) => readFileSync(`src/renderer/${name}/${f}`, 'utf8')).join('\n');
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${vibeBubble}\n${pasteTarget}\n${shortcutGuide}\n${consentForm}\n${css}${v3}\n${look}\n${slices}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|webp|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }
