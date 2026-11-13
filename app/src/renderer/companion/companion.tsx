@@ -1,35 +1,61 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
-import { linesLabel } from '../../core/linesLabel';
 import { Chat } from './chat';
 import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
-import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
-import { prettyShortcut } from '../shared/prettyShortcut';
+import { prettyShortcut, shortcutCaps } from '../shared/prettyShortcut';
 import { giftStatusLine, paidStatusLine, proCard, resetLabel } from '../shared/planStatus';
-import { deviceName, isMac, isWindows, modKey, platformAttr, reviewKeyHint, voiceHowTo } from '../shared/platform';
+import { deviceName, isMac, isWindows, modKey, platformAttr, reviewKeyHint } from '../shared/platform';
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
-import type { ChangeBrief } from '../../core/changeBrief';
-import type { KnowledgeObject } from '../../core/knowledge';
+import { Progress } from './momentum';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
-import { FloatingBuddy } from './floatingBuddy';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
+import { VibeBubble } from '../shared/vibeBubble';
+import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
+import { accessibilityRow, type AccessibilityState } from './settingsRows';
+import { FADE_OPACITY } from '../widget/clickAway';
+import { Home } from './home';
+import { IC } from './icons';
+import { InkTitle } from './inkTitle';
+import { NAV, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
+import { trackWindowAway } from '../shared/windowAway';
 import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { SUPPORT_EMAIL } from '../../core/support';
 import type { ConsentStatus } from '../../main/consent';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
+import { SettingsIcon } from './settingsIcons';
+import { SharksIntro, type IntroPhase } from '../shared/sharks/SharksIntro';
+import { SharksBackdrop } from '../shared/sharks/SharksBand';
+import { CountUp } from '../shared/countUp';
+import { SlidingPill } from '../shared/slidingThumb';
+import { signalFirstScreen } from './firstScreen';
+import { ShellContext, type ShellApi } from '../shared/shell';
 
-type PageId = 'Home' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat' | 'Progress' | 'Plan' | 'Gift' | 'Projects' | 'Concepts' | 'Notebook' | 'Briefings' | 'Library' | 'Profile';
+/** The last-known "Start animation" setting, read before the settings arrive so the stage starts with the first screen. */
+const START_ANIMATION_KEY = 'unvibe.startAnimation';
+/** How long the first screen waits for the usage count (#208): long enough for a quick API answer, short enough to never read as a blank window. */
+const USAGE_WAIT_MS = 300;
+/** Main says whether this launch opens on the start stage (windows.ts createCompanion), for the loading frame. */
+const FIRST_FRAME_STAGE = new URLSearchParams(window.location.search).get('first') === 'stage';
+/** Mono's frame (OPTIONS.md "A Rail", "Both sides collapse"): the left side open and folded, the width under which a
+ *  drag snaps to the rail, the right side, the narrowest main column beside it, and the drawer breakpoint (companion.css). */
+const RAIL_OPEN_W = 216;
+const RAIL_W = 56;
+const RAIL_SNAP = 178;
+const RIGHT_W = 296;
+const MAIN_MIN = 400;
+const DRAWER_MAX = 640;
+const RIGHT_KEYS = isMac ? '⇧⌘\\' : 'Ctrl+Shift+\\';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -42,8 +68,6 @@ interface Profile {
   usage: Array<{ label: string; pct: number }>; heat: number[];
 }
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
-/** The daily goal from `learning:today`, derived from saved lessons on this computer. */
-interface TodayGoal { explained: boolean; answered: boolean }
 interface LearningItem extends FeedItem {
   concept?: string; level: string; lines: number;
   file?: string; project?: string; scope?: string; dueLabel?: string;
@@ -68,9 +92,9 @@ interface Settings {
   barVisibility: 'always' | 'during-review'; barHoverPreview: boolean;
   barHoverDelayMs: number;
   barSize: 'small' | 'medium' | 'large';
-  followActiveDisplay: boolean; soundEffects: boolean;
+  followActiveDisplay: boolean; soundEffects: boolean; startAnimation?: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
-  widgetOpacityInactive: number; inactiveBehavior: string;
+  inactiveBehavior: 'fade' | 'hide';
   launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
@@ -80,6 +104,7 @@ interface Settings {
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
   sidebarWidth: number;
   sidebarHidden: boolean;
+  rightPaneHidden: boolean;
   shareSetupProgress: boolean;
   nearbyFiles: boolean;
   features: {
@@ -181,49 +206,6 @@ function collectUsageMeters(
   return meters;
 }
 
-const IC = {
-  home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
-  progress: 'M4 16V9 M10 16V4 M16 16v-6',
-  projects: 'M3 6a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
-  study: 'M4 4h9a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H4z M4 4v9',
-  history: 'M10 3a7 7 0 1 0 7 7 M10 6v4l3 2',
-  quiz: 'M10 3a7 7 0 1 0 7 7 M8.2 8.1a2 2 0 1 1 3.4 1.4c-.8.7-1.6 1.1-1.6 2.3 M10 15h.01',
-  chat: 'M4 5h12v8H8l-4 4z',
-  concepts: 'M10 3l2.1 4.9L17 10l-4.9 2.1L10 17l-2.1-4.9L3 10l4.9-2.1z',
-  notebook: 'M5 3h9a1 1 0 0 1 1 1v13l-3-2-3 2-3-2V4a1 1 0 0 1 1-1z M8 7h5 M8 10h5',
-  briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
-  library: 'M4 3h3v14H4z M9 3h3v14H9z M14 4l3 .8-3.4 12.6-2.9-.8z',
-  profile: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5',
-  spark: 'M10 3v14 M3 10h14 M6 6l8 8 M14 6l-8 8',
-  eye: 'M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z M10 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
-  layers: 'M10 3l7 4-7 4-7-4z M3 11l7 4 7-4',
-  check: 'M4 10l4 4 8-9',
-  clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
-  map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
-  plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
-  gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
-  general: 'M4 5h12 M7 3v4 M4 10h12 M13 8v4 M4 15h12 M9 13v4',
-  island: 'M4 7.5C4 5.6 5.6 4 7.5 4h5C14.4 4 16 5.6 16 7.5v5c0 1.9-1.6 3.5-3.5 3.5h-5C5.6 16 4 14.4 4 12.5z M8 10h4',
-  sound: 'M4 8h3l4-3v10l-4-3H4z M14 7.5c1.5 1.4 1.5 3.6 0 5 M16 5.5c2.6 2.5 2.6 6.5 0 9',
-  privacy: 'M10 2.5 16 5v4.4c0 3.8-2.5 6.7-6 8.1-3.5-1.4-6-4.3-6-8.1V5z M7.5 10l1.7 1.8 3.5-4',
-  integrations: 'M7 3v4H3 M13 17v-4h4 M4.5 7A6.5 6.5 0 0 1 15 4.7 M15.5 13A6.5 6.5 0 0 1 5 15.3',
-  ai: 'M10 2.5 12 7l4.5 2-4.5 2-2 4.5L8 11 3.5 9 8 7z',
-  account: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5 M15.5 3.5v4 M13.5 5.5h4',
-  info: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 9v5 M10 6h.01',
-};
-
-const SETTINGS_ICONS: Record<string, string> = {
-  General: IC.general,
-  Island: IC.island,
-  'Sound & alerts': IC.sound,
-  Learning: IC.study,
-  'Privacy & Data': IC.privacy,
-  Integrations: IC.integrations,
-  AI: IC.ai,
-  'Account & Plan': IC.account,
-  About: IC.info,
-};
-
 const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Learn' | 'Study' | 'History' | 'Quiz' | 'Chat'>, PageDef> = {
   Projects: { id: 'Projects', icon: IC.projects, lead: 'Every repository you point Unvibe at, distilled into something you can actually hold in your head.', features: [
     { icon: IC.eye, t: 'Plain-English summaries', d: 'What each repo is for and how it earns its keep — no folder-tree dumps.' },
@@ -234,20 +216,20 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
   Concepts: { id: 'Concepts', icon: IC.concepts, lead: 'Your growing handbook of ideas — each one explained once, well, and tied back to the code where you met it.', features: [
     { icon: IC.eye, t: 'A definition that sticks', d: 'Plain wording first, precise wording second — never the other way around.' },
     { icon: IC.layers, t: 'Examples from your repos', d: 'Real snippets where the idea shows up in code you have touched.' },
-    { icon: IC.spark, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
+    { icon: IC.code, t: 'Gotchas and near-misses', d: 'The mistakes people make with each idea, so you spot them early.' },
     { icon: IC.check, t: 'A quick check', d: 'One question adds evidence without pretending Unvibe knows exactly what you understand.' },
   ] },
   Notebook: { id: 'Notebook', icon: IC.notebook, lead: 'The keeper for anything worth a second look — explanations, diagrams, and the back-and-forth you had with Unvibe.', features: [
     { icon: IC.notebook, t: 'Saved explanations', d: 'Star an explanation in any widget and it lands here, searchable.' },
     { icon: IC.layers, t: 'Diagrams', d: 'Execution flows and structure sketches, kept next to the code they describe.' },
-    { icon: IC.spark, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
+    { icon: IC.code, t: 'Threads', d: 'Whole follow-up conversations, not just the first answer.' },
     { icon: IC.clock, t: 'Nothing evaporates', d: 'Close a widget without worry — what you kept is still here tomorrow.' },
   ] },
   Briefings: { id: 'Briefings', icon: IC.briefings, lead: 'Short recaps of what changed and what you picked up — a two-minute read each morning, a longer one each week.', features: [
     { icon: IC.clock, t: 'Morning recap', d: 'What the agents changed overnight, told as a story rather than a diff.' },
     { icon: IC.check, t: 'Weekly review', d: 'The concepts you locked in and the ones worth revisiting.' },
     { icon: IC.eye, t: 'Written for skimming', d: 'Headline first, detail underneath — read as deep as you have time for.' },
-    { icon: IC.spark, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
+    { icon: IC.code, t: 'Only what moved', d: 'Quiet days stay quiet. Briefings appear when there is something to say.' },
   ] },
   Library: { id: 'Library', icon: IC.library, lead: 'Hand-picked reading matched to whatever you are learning right now — guides and roadmaps, minus the rabbit holes.', features: [
     { icon: IC.map, t: 'Roadmaps', d: 'The shape of a topic end to end, so you know what is left to learn.' },
@@ -256,34 +238,27 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
     { icon: IC.check, t: 'Tied to your work', d: 'Every pick connects back to code you are actually reviewing.' },
   ] },
   Profile: { id: 'Profile', icon: IC.profile, lead: 'The long view of your learning — evidence you have built, ideas to revisit, and everything you have reviewed.', features: [
-    { icon: IC.spark, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
+    { icon: IC.code, t: 'Milestones', d: 'Quiet, earned markers — first repo understood, first concept you can teach back.' },
     { icon: IC.check, t: 'Evidence map', d: 'Concepts use cautious labels such as developing, familiar, strong, or needs review.' },
     { icon: IC.clock, t: 'Review history', d: 'A full trail of what you looked at and when.' },
     { icon: IC.layers, t: 'Your history', d: 'The record stays grounded in checks you actually completed.' },
   ] },
 };
 
-const NAV_PINNED: Array<{ id: PageId; icon: string }> = [
-  { id: 'Home', icon: IC.home },
-  { id: 'Chat', icon: IC.chat },
-];
-
-const NAV_SPACES: Array<{ id: PageId; icon: string }> = [
-  { id: 'Learn', icon: IC.study },
-  { id: 'Quiz', icon: IC.quiz },
-  { id: 'Briefings', icon: IC.briefings },
-  { id: 'Progress', icon: IC.progress },
-  { id: 'Plan', icon: IC.plan },
-  { id: 'Gift', icon: IC.gift },
-];
-
-const NAV = [...NAV_PINNED, ...NAV_SPACES];
-
-
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
-const MIC_ICON = 'M10 3a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 10 3z M5.5 9.5a4.5 4.5 0 0 0 9 0 M10 14v3 M7.5 17h5';
+
+/** The side buttons' icon: a square with a line 3.5 units in from the side it controls; the strip beside the line is
+ *  filled while that side is open (OPTIONS.md "Both sides collapse"). */
+function PaneIcon({ side, open }: { side: 'left' | 'right'; open: boolean }) {
+  return (
+    <svg className="pane-icon" viewBox="0 0 20 20" aria-hidden="true">
+      {open ? <rect className="pane-icon__strip" x={side === 'left' ? 4 : 12.5} y={4} width={3.5} height={12} /> : null}
+      <path d={side === 'left' ? 'M4 4h12v12H4z M7.5 4v12' : 'M4 4h12v12H4z M12.5 4v12'} />
+    </svg>
+  );
+}
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
 function FadeIn({
@@ -360,7 +335,7 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
       {err && <div className="field-err">{err}</div>}
       {code ? (
         <div className="signin__code" aria-live="polite">
-          <span>{browserOpened ? 'Finish in your browser. Check this code matches, then press Connect this device:' : 'Your browser did not open. Press Open browser, then check this code matches:'}</span>
+          <span>{browserOpened ? 'Finish in your browser. Check this code matches, then press Approve sign-in:' : 'Your browser did not open. Press Open browser, then check this code matches:'}</span>
           <b>{code}</b>
         </div>
       ) : (
@@ -371,16 +346,15 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   );
 }
 
-function PermRow({ compact }: { compact?: boolean }) {
-  const [state, setState] = useState<{ granted: boolean; platform: string } | null>(null);
-  const check = () => void window.unvibe.accessibility().then((r) => setState(r as { granted: boolean; platform: string }));
+function PermRow() {
+  const [state, setState] = useState<AccessibilityState | null>(null);
+  const check = () => void window.unvibe.accessibility().then((r) => setState(r as AccessibilityState));
   useEffect(() => {
     check();
     const t = setInterval(check, 2500); // reflect a grant made in System Settings without a manual re-check
     return () => clearInterval(t);
   }, []);
-  const granted = state?.granted ?? false;
-  const na = state?.platform !== 'darwin';
+  const row = accessibilityRow(state);
   const [asked, setAsked] = useState(false);
   // One button does what a person expects: macOS shows its prompt and the right Settings pane opens.
   const allow = async () => {
@@ -389,31 +363,30 @@ function PermRow({ compact }: { compact?: boolean }) {
     await window.unvibe.openAccessibility();
   };
   return (
-    <div className={compact ? '' : 'perm-block'}>
-      <div className="perm-head">
-        <span className={`pstat ${na ? 'na' : granted ? 'ok' : 'no'}`}>{na ? 'Not needed' : granted ? 'Allowed' : 'Not allowed yet'}</span>
-        <span className="perm-title">Accessibility</span>
-      </div>
-      <div className="perm-why">{isWindows
-        ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
-        : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
-      {!granted && !na && (
-        <div className="perm-actions">
-          <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button>
-        </div>
-      )}
-      {!granted && !na && asked && (
-        <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
-      )}
-      {!granted && !na && asked && (
-        <div className="perm-fix">
-          <p><b>Switched it on but it still says Not allowed?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
-          <div className="perm-actions">
-            <button className="act" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
-            <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+    <div className="setrow">
+      <div>
+        <div className="sl">Accessibility</div>
+        <div className="sd">{isWindows
+          ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
+          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
+        {row.canAllow && asked && (
+          <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
+        )}
+        {row.canAllow && asked && (
+          <div className="perm-fix">
+            <p><b>Switched it on but it still says Not allowed?</b> macOS is holding an old Unvibe entry from a previous version. Press <b>Fix it</b>, turn Unvibe on again in the list that opens, then press <b>Restart Unvibe</b>.</p>
+            <div className="perm-actions">
+              <button className="act" onClick={() => void window.unvibe.resetAccessibility().then(() => window.unvibe.openAccessibility())}>Fix it</button>
+              <button className="act" onClick={() => void window.unvibe.restartApp()}>Restart Unvibe</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="setrow__end">
+        {/* A status, so a screen reader hears "Allowed" when the grant lands and "Allow Accessibility" goes away. */}
+        {row.label ? <span className={`perm-chip perm-chip--${row.tone}`} role="status">{row.label}</span> : null}
+        {row.canAllow ? <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button> : null}
+      </div>
     </div>
   );
 }
@@ -452,10 +425,11 @@ const SAMPLE_LINES = [
 /**
  * First run, built so the first real explanation lands within a minute: 1 hello (name and where you
  * heard about Unvibe, both optional), 2 explain a sample for real (no permission needed), then one
- * skippable level question, 3 try it on your own code. On a Mac, step 3 is one paste target (no
- * permission), and step 4 offers the shortcut only once that own code has been explained
+ * skippable level question, 3 try it on your own code: one paste target (no permission), with Choose a
+ * file under it. On a Mac, step 4 offers the shortcut only once that own code has been explained
  * (onboarding:ownCodeDone): value first, permission second. Windows needs no permission, so it keeps
- * its three steps. Google sign-in and editor bridges are optional and stay reachable later.
+ * three steps and names its shortcut on step 3. Google sign-in and editor bridges are optional and
+ * stay reachable later.
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -474,24 +448,23 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
   const shortcutHeading = useRef<HTMLHeadingElement>(null);
   const paste = useOwnCodePaste();
-  const steps = isWindows ? ['Hello', 'Try it', 'Anywhere'] : ['Hello', 'Try it', 'Your code', 'Shortcut'];
-  const macPaste = !isWindows && step === 2;
+  const steps = onboardingSteps(isWindows);
+  const pasteStep = step === 2;
   const macShortcut = !isWindows && step === 3;
-  const firstName = displayName.trim().split(/\s+/)[0] ?? '';
+  const firstName = firstNameOf(displayName);
   const keys = prettyAccel(shortcut);
   // Glyphs on the key caps; words in sentences, since many people don't know ⌃ is Control.
   const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
   useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
-  // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer.
-  useEffect(() => {
-    if (isWindows) return undefined;
-    return window.unvibe.onOwnCodeDone(() => {
-      setOwnCodeDone(true);
-      setStep((current) => (current === 2 ? 3 : current));
-    });
-  }, []);
+  // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer; Windows
+  // stays and finishes from there, with a fresh paste target (no stale "Explaining in the panel").
+  useEffect(() => window.unvibe.onOwnCodeDone(() => {
+    setOwnCodeDone(true);
+    if (isWindows) paste.reset();
+    else setStep((current) => (current === 2 ? 3 : current));
+  }), []);
   // Announce the card, without making Enter trigger the permission prompt.
   useEffect(() => {
     if (macShortcut) shortcutHeading.current?.focus();
@@ -514,23 +487,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     });
   }, [macShortcut, offer, soundEffects]);
 
-  const lines = [
-    "Hey! I'm Vibe. I explain the code AI writes for you, right beside your editor.",
-    explained
-      ? "That's me, explaining it in the panel. Read it, then press Test me."
-      : `${firstName ? `Nice to meet you, ${firstName}. ` : ''}Let's do one for real. Press the button and watch.`,
-    isWindows
-      ? `Now try it on code of your own. Select some in any app and press ${spoken}.`
-      : paste.started
-        ? 'Got it. Your explanation is opening in the panel.'
-        : 'Now try your own code. Copy a few lines from any file, then paste them here.',
-    offer === 'on'
-      ? 'The shortcut is on. Try it anywhere.'
-      : offer === 'waiting'
-        ? "Switch Unvibe on in the list that opened. I'll notice by myself."
-        : 'That was your own code. Want it one keystroke away next time?',
-  ];
-  const said = useVibeSays(lines[step] ?? '', soundEffects);
+  const flow: OnboardingState = { step, windows: isWindows, firstName, explained, pasteStarted: paste.started, ownCodeDone, offer };
+  const line = vibeLine(flow);
+  const said = useVibeSays(line, soundEffects);
 
   // Google sign-in hands back the account email and profile name; fill what is still empty.
   const fillFromGoogle = (email: string, name?: string) => {
@@ -543,10 +502,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
     // Navigation remounts the paste target without a preview; its speech must reset with it.
-    if (!isWindows) paste.setStarted(false);
+    paste.setStarted(false);
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
+    if (explained) return;
     window.unvibe.explainSample();
     setExplained(true);
     setBuddyMood('reading');
@@ -579,16 +539,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     setOffer('waiting');
     await turnOnShortcut(window.unvibe);
   };
-  // The footer's right button. On a Mac the paste and shortcut steps have no competing primary:
-  // Skip for now, Not now and Do it later are ghosts that finish setup.
-  const forward: { label: string; ghost?: boolean; finishes?: boolean } =
-    step === 0 ? { label: "Let's go" }
-      : step === 1 ? { label: explained ? 'Next' : 'Skip for now' }
-        : macPaste && ownCodeDone ? { label: 'Next', ghost: true }
-          : macPaste ? { label: 'Skip for now', ghost: true, finishes: true }
-            : macShortcut && offer === 'offer' ? { label: 'Not now', ghost: true, finishes: true }
-              : macShortcut && offer === 'waiting' ? { label: 'Do it later', ghost: true, finishes: true }
-                : { label: 'Start using Unvibe', finishes: true };
+  // The footer's one forward button (onboardingFlow.ts).
+  const forward = forwardAction(flow);
   const advance = () => {
     // Optional and never awaited: a blank answer sends nothing and setup never waits on it.
     if (step === 0 && heardFrom.trim()) window.unvibe.answerHeardFrom(heardFrom);
@@ -605,8 +557,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
-      // On a Mac's paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
-      if ((event.key === 'ArrowRight' || event.key === 'Enter') && (isWindows || step < 2)) { event.preventDefault(); advance(); }
+      // On the paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
+      if ((event.key === 'ArrowRight' || event.key === 'Enter') && step < 2) { event.preventDefault(); advance(); }
       if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
     window.addEventListener('keydown', onKey);
@@ -614,146 +566,132 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   });
 
   const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy')
-    : macPaste && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
+    : pasteStep && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
   const continueLabel = forward.finishes && celebrating ? 'Welcome!' : forward.finishes && saving ? 'Saving…' : forward.label;
+  // The shortcut's keys on the card; the line beside them says "press it", so the caps carry the name for screen readers.
+  const macCaps = shortcutCaps('Control+U', false);
+  const shortcutCard = (title: string, note: string, allowed: boolean) => (
+    <div className="onboard__perm">
+      <span className="onboard__caps" role="img" aria-label="Control U">{macCaps.map((key) => <kbd key={key}>{key}</kbd>)}</span>
+      <span className="onboard__perm-text"><b>{title}</b><small>{note}</small></span>
+      {allowed ? <span className="onboard__ok">Allowed</span> : null}
+    </div>
+  );
 
   return (
-    <div className={`ob ob2 ob--scene-${step}`}>
+    <div className={`onboard onboard--step-${step}`}>
       {celebrating ? (
-        <div className="ob__confetti" aria-hidden="true">
+        <div className="onboard__confetti" aria-hidden="true">
           {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
         </div>
       ) : null}
-      <div className="ob__card ob2__card">
-        <div className="ob2__top">
-          <div className="ob__dots">{steps.map((label, i) => <span key={label} title={label} className={`ob__dot${i <= step ? ' on' : ''}`} />)}</div>
-          <span className="ob2__count">{step + 1} / {steps.length}</span>
-        </div>
-        <div className="ob2__vibe">
-          <span className="ob2__blob"><Buddy mood={mood} size={step === 0 ? 112 : 72} follow label="Vibe" key={`${step}-${mood}`} /></span>
-          <p className="ob2__speech" aria-live="polite">{said}<i className={said.length < (lines[step] ?? '').length ? 'ob2__caret' : 'ob2__caret is-off'} /></p>
-        </div>
+      <div className="onboard__top">
+        <div className="onboard__steps" aria-hidden="true">{steps.map((label, i) => <i key={label} className={i <= step ? 'on' : undefined} />)}</div>
+        <span className="onboard__count">{step + 1} / {steps.length}</span>
+      </div>
+      <div className="onboard__vibe">
+        <Buddy mood={mood} size={56} follow label="Vibe" key={`${step}-${mood}`} />
+        {/* The bubble types its line out, so it isn't live: screen readers hear each whole line once, from the status. */}
+        <VibeBubble large live={false}>{said}</VibeBubble>
+        <p className="sr-only" role="status">{line}</p>
+      </div>
 
-        <FadeIn animKey={step} className={`ob__step ob2__body${macPaste || macShortcut ? ' ob2__paste' : ''}`}>
-          {step === 0 && (
-            <>
-              <h2 className="ob__title">Understand the code <em>AI writes.</em></h2>
-              <form className="ob__form ob2__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
-                <label>
-                  <span>What should I call you? <em className="ob2__opt">optional</em></span>
-                  <input className="field" value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
-                    onChange={(event) => setDisplayName(event.target.value)} />
-                </label>
-                <label>
-                  <span>Where did you hear about Unvibe? <em className="ob2__opt">optional</em></span>
-                  <input className="field" value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
-                    aria-describedby="heard-from-note" onChange={(event) => setHeardFrom(event.target.value)} />
-                  {/* Security 0046 (option A): typing an answer is its own opt-in, so the line says what happens. */}
-                  <span className="ob2__note" id="heard-from-note">Sent once to Unvibe with this install&apos;s random ID. Leave it blank to send nothing.</span>
-                </label>
-                <button type="submit" hidden />
-              </form>
-              {signedIn ? <p className="ob2__ok">✓ Signed in as {signedIn}</p> : (
-                <details className="ob2__more">
-                  <summary>Sync across devices with Google (optional)</summary>
-                  <div className="ob2__google"><SignInForm label="Fill this in with Google" onDone={fillFromGoogle} /></div>
-                </details>
-              )}
-            </>
-          )}
+      <FadeIn animKey={step} className="onboard__body">
+        {step === 0 && (
+          <>
+            <h1>Understand the code AI writes.</h1>
+            <form className="onboard__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
+              <label>
+                <span>What should I call you? <small>optional</small></span>
+                <input value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
+                  onChange={(event) => setDisplayName(event.target.value)} />
+              </label>
+              <label>
+                <span>Where did you hear about Unvibe? <small>optional</small></span>
+                <input value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
+                  aria-describedby="heard-from-note" onChange={(event) => setHeardFrom(event.target.value)} />
+                {/* Security 0046 (option A): typing an answer is its own opt-in, so the line says what happens. */}
+                <span className="onboard__note" id="heard-from-note">Sent once to Unvibe with this install&apos;s random ID. Leave it blank to send nothing.</span>
+              </label>
+              <button type="submit" hidden />
+            </form>
+          </>
+        )}
 
-          {step === 1 && (
-            <div className="ob2__try">
-              <div className="obd__editor">
-                <div className="obd__bar"><i /><i /><i /><span>debounce.js</span></div>
-                <pre>{SAMPLE_LINES.join('\n')}</pre>
-              </div>
-              <button type="button" className="field-btn ob2__explain" onClick={explainSample} disabled={explained}>
-                {explained ? 'Explaining in the panel →' : 'Explain this code'}
-              </button>
-              <p className="ob__sub">{explained
-                ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
-                : 'Uses one of your free explanations. No setup needed.'}</p>
-              {sampleDone ? (
-                <div className="ob2__level" role="group" aria-label="How was that explanation pitched?">
-                  {levelSaved ? <p role="status">Got it. The next ones start at {levelSaved}.</p> : (
-                    <>
-                      <p>Was that too basic, about right, or too advanced? I'll pitch the next ones there.</p>
-                      <div className="ob2__choices">
-                        <button type="button" className="act" onClick={() => void answerLevel('too_basic')}>Too basic</button>
-                        <button type="button" className="act" onClick={() => void answerLevel('about_right')}>About right</button>
-                        <button type="button" className="act" onClick={() => void answerLevel('too_advanced')}>Too advanced</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : null}
+        {step === 1 && (
+          <div className="onboard__try">
+            <div className="onboard__editor">
+              <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
+              <pre>{SAMPLE_LINES.join('\n')}</pre>
             </div>
-          )}
-
-          {step === 2 && isWindows && (
-            <>
-              <div className="ob2__keys" aria-label={`Shortcut ${keys}`}>
-                {keys.split('+').map((key, index) => <kbd key={`${key}-${index}`} className="kbd-lg">{key}</kbd>)}
+            {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
+            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={explainSample} aria-disabled={explained}>
+              {explained ? 'Explaining in the panel →' : 'Explain this code'}
+            </button>
+            <p className="onboard__lead">{explained
+              ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
+              : 'Uses one of your free explanations. No setup needed.'}</p>
+            {sampleDone ? (
+              <div className="onboard__level" role="group" aria-label="How was that explanation pitched?">
+                {levelSaved ? <p role="status">Got it. The next ones start at {levelSaved}.</p> : (
+                  <>
+                    <p>Was that too basic, about right, or too advanced? I'll pitch the next ones there.</p>
+                    <div className="onboard__choices">
+                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_basic')}>Too basic</button>
+                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('about_right')}>About right</button>
+                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_advanced')}>Too advanced</button>
+                    </div>
+                  </>
+                )}
               </div>
-              <p className="ob2__task">Open a file you didn't write, select a few lines, press {keys}.</p>
-              <div className="ob2__alt">
-                <span className="ob__sub">Or copy some code first:</span>
-                <button type="button" className="act" onClick={() => window.unvibe.explainClipboard()}>Explain my clipboard</button>
-              </div>
-              <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add Ctrl+U there too</summary>
-                <div className="ob__integrations"><IntegrationsPanel /></div>
-              </details>
-            </>
-          )}
+            ) : null}
+          </div>
+        )}
 
-          {/* A Mac's own-code step needs no permission: one paste target. The shortcut, which needs
-              Accessibility, is offered in step 4 once this has worked. */}
-          {macPaste && (
-            <>
-              <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
-              {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
-              <details className="ob2__more">
-                <summary>Use VS Code or Cursor? Add ⌘U there too</summary>
-                <div className="ob__integrations"><IntegrationsPanel /></div>
-              </details>
-            </>
-          )}
+        {/* The own-code step needs no permission: one paste target. On a Mac the shortcut, which needs
+            Accessibility, is offered in step 4 once this has worked; Windows names it here. */}
+        {pasteStep && (
+          <div className="onboard__paste">
+            <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
+            {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
+            {isWindows ? <p className="onboard__lead">Or select code in any app and press {keys}.</p> : null}
+            <details className="onboard__more">
+              <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
+              <div className="onboard__integrations"><IntegrationsPanel /></div>
+            </details>
+          </div>
+        )}
 
-          {macShortcut && offer === 'offer' && (
-            <>
-              <div className="ob2__offer">
-                <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
-                <div>
-                  <h3 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h3>
-                  <p>Select code in any app and press Control U. No copying, no pasting.</p>
-                </div>
-                <p className="ob2__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
-                <div className="ob2__offer-acts">
-                  <button type="button" className="field-btn ob2__lime" onClick={() => void turnOn()}>Turn on the shortcut</button>
-                </div>
-              </div>
-              <p className="ob__sub ob2__note">Pasting keeps working without it.</p>
-            </>
-          )}
-          {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="act" illustration />}
-          {macShortcut && offer === 'on' && (
-            <div className="ob2__offer">
-              <div className="ob2__keys" aria-hidden="true"><kbd className="kbd-lg">⌃</kbd><kbd className="kbd-lg">U</kbd></div>
-              <div>
-                <span className="shortcut-pill shortcut-pill--on" role="status"><i aria-hidden="true" />Shortcut is on</span>
-                <h3 ref={shortcutHeading} tabIndex={-1}>Select code in any app, press Control U.</h3>
-                <p>Pasting into the panel still works, too.</p>
-              </div>
-            </div>
-          )}
-        </FadeIn>
+        {macShortcut && offer === 'offer' && (
+          <>
+            <h1 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h1>
+            {shortcutCard('Select code in any app, then press it', 'No copying, no pasting.', false)}
+            <p className="onboard__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
+            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={() => void turnOn()}>Turn on the shortcut</button>
+            <p className="onboard__lead">Pasting keeps working without it.</p>
+          </>
+        )}
+        {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="onboard__outline" illustration />}
+        {macShortcut && offer === 'on' && (
+          <>
+            <h1 ref={shortcutHeading} tabIndex={-1}>Shortcut is on</h1>
+            {shortcutCard('Select code in any app, then press it', 'Pasting keeps working without it.', true)}
+          </>
+        )}
+      </FadeIn>
 
-        {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
-        <div className="ob__actions">
-          <button className="ob__skip" disabled={step === 0 || saving} onClick={back}>Back</button>
-          <button className={forward.ghost ? 'act' : 'field-btn inline'} disabled={saving} onClick={advance}>{continueLabel}</button>
+      {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
+      <div className="onboard__foot">
+        {step > 0 ? <button type="button" className="onboard__back" disabled={saving} onClick={back}>Back</button> : <span />}
+        <div className="onboard__forward">
+          <button type="button" className={forward.quiet ? 'onboard__quiet' : 'onboard__primary'} disabled={saving} onClick={advance}>{continueLabel}</button>
+          {/* Design Q11: the Google sign-in disclosure sits directly under Hello's primary. */}
+          {step === 0 ? (signedIn ? <p className="onboard__signed">✓ Signed in as {signedIn}</p> : (
+            <details className="onboard__more onboard__google">
+              <summary>Sync across devices with Google (optional)</summary>
+              <SignInForm label="Fill this in with Google" onDone={fillFromGoogle} />
+            </details>
+          )) : null}
         </div>
       </div>
     </div>
@@ -763,9 +701,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation.";
 
 /**
- * The own-code paste step's two ways in, used by setup's step 3 on a Mac and by the next open's
- * paste step: a paste explains the clipboard, which holds what was just pasted (main reads it there,
- * as Explain my clipboard does), and Choose a file explains a file. Neither needs a permission.
+ * The own-code paste step's two ways in, used by setup's step 3 and by the next open's paste step: a
+ * paste explains the clipboard, which holds what was just pasted (main reads it there, as Explain my
+ * clipboard does), and Choose a file explains a file. Neither needs a permission.
  */
 function useOwnCodePaste() {
   const [started, setStarted] = useState(false);
@@ -797,7 +735,12 @@ function useOwnCodePaste() {
     setStarted(false);
     setAttempt((n) => n + 1);
   }), []);
-  return { started, setStarted, fileError, explainPaste, chooseFile, attempt };
+  // A fresh target, for another paste after one was explained.
+  const reset = () => {
+    setStarted(false);
+    setAttempt((n) => n + 1);
+  };
+  return { started, setStarted, fileError, explainPaste, chooseFile, attempt, reset };
 }
 
 function LockGlyph() {
@@ -816,24 +759,27 @@ function LockGlyph() {
  */
 function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
   const { started, fileError, explainPaste, chooseFile, attempt } = useOwnCodePaste();
-  const said = useVibeSays(started
-    ? 'Got it. Your explanation is opening in the panel.'
-    : 'Welcome back. Try it on your own code: copy a few lines, then paste them here.', soundEffects);
+  const line = welcomeBackLine(started);
+  const said = useVibeSays(line, soundEffects);
   return (
-    <div className="ob ob2">
-      <div className="ob__card ob2__card">
-        <div className="ob2__vibe">
-          <span className="ob2__blob"><Buddy mood={started ? 'reading' : 'wave'} size={72} follow label="Vibe" /></span>
-          <p className="ob2__speech" aria-live="polite">{said}</p>
-        </div>
-        <div className="ob__step ob2__body ob2__paste">
+    <div className="onboard onboard--welcome">
+      <div className="onboard__vibe">
+        <Buddy mood={started ? 'reading' : 'wave'} size={56} follow label="Vibe" />
+        <VibeBubble large live={false}>{said}</VibeBubble>
+        <p className="sr-only" role="status">{line}</p>
+      </div>
+      <div className="onboard__body">
+        <div className="onboard__paste">
           <PasteTarget key={attempt} hint={OWN_CODE_HINT}
             onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
           {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
-          {isWindows ? <p className="ob__sub ob2__shortcut">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
+          {isWindows ? <p className="onboard__lead">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
         </div>
-        <div className="ob__actions ob2__actions--end">
-          <button type="button" className="act" onClick={onNotNow}>Not now</button>
+      </div>
+      <div className="onboard__foot">
+        <span />
+        <div className="onboard__forward">
+          <button type="button" className="onboard__quiet" onClick={onNotNow}>Not now</button>
         </div>
       </div>
     </div>
@@ -858,7 +804,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
       <div className="login__island" aria-hidden="true"><LogoMark size={15} stroke={2} /><span>learning follows your workflow</span><i /><i /><i /></div>
       <FadeIn animKey="login" className="login__layout">
         <section className="login__story">
-          <div className="login__eyebrow">YOUR PRIVATE LEARNING LAYER</div>
+          <div className="login__eyebrow">Your private learning layer</div>
           <h1>Understand the work.<br />Keep the knowledge.</h1>
           <p>Unvibe turns the code you review into a learning history that stays useful across editors, terminals, and projects.</p>
           <div className="login__features">
@@ -870,7 +816,7 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
         <div className="login__actions">
           <aside className="login__card">
             <div className="login__mark"><Buddy mood="wave" size={56} follow label="Vibe" /></div>
-            <div className="login__brand">UNVIBE</div>
+            <div className="login__brand">Unvibe</div>
             <h2 className="login__tag">Carry your learning <em>forward.</em></h2>
             <DeletionNotice message={notice} />
             <p className="login__card-copy">Sign in to sync permitted learning records across devices. Your code and full explanations remain local.</p>
@@ -886,274 +832,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
     </div>
   );
 }
-
-function greetFirst(name?: string): string {
-  const clean = (name ?? '').trim();
-  if (!clean || clean.toLowerCase() === 'there') return '';
-  return clean.split(/\s+/)[0] ?? '';
-}
-
-function pageLabel(id: string): string {
-  if (id === 'Home') return 'Today';
-  if (id === 'Chat') return 'Ask Vibe';
-  if (id === 'Learn') return 'Library';
-  if (id === 'Quiz') return 'Quiz';
-  if (id === 'Briefings') return 'Briefs';
-  if (id === 'Progress') return 'Momentum';
-  if (id === 'Gift') return 'Share';
-  return id;
-}
-
-/** Today or Yesterday when it is recent, otherwise a short calendar date. */
-function shortDate(iso: string): string {
-  const when = new Date(iso);
-  if (Number.isNaN(when.getTime())) return '';
-  const today = new Date();
-  if (when.toDateString() === today.toDateString()) return 'Today';
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  if (when.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  const sameYear = when.getFullYear() === today.getFullYear();
-  return when.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function dayGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function freshnessLabel(status: KnowledgeObject['freshnessStatus']): { text: string; tone: 'current' | 'review' | 'stale' } {
-  if (status === 'CURRENT') return { text: 'Current', tone: 'current' };
-  if (status === 'MAY_BE_STALE') return { text: 'Review', tone: 'review' };
-  return { text: 'Stale', tone: 'stale' };
-}
-
-function Home({ shortcut, userName, profile, today, feed, history, usage, onPlan, onNavigate, onTryVoice }: {
-  onTryVoice: () => void;
-  today: TodayGoal | null;
-  shortcut: string;
-  userName?: string;
-  profile: Profile | null;
-  feed: FeedItem[];
-  history: LearningItem[];
-  usage: AppUsageLine | null;
-  onPlan: () => void;
-  onNavigate: (page: PageId) => void;
-}) {
-  const [brief, setBrief] = useState<ChangeBrief | null>(null);
-  const [knowledge, setKnowledge] = useState<KnowledgeObject[]>([]);
-  const [proOpen, setProOpen] = useState(false);
-  useEffect(() => {
-    void window.unvibe.buildChangeBrief({ scope: 'working' }).then((result) => {
-      const next = result as { ok?: boolean; brief?: ChangeBrief };
-      if (next?.ok && next.brief && !next.brief.empty) setBrief(next.brief);
-    });
-    void window.unvibe.listKnowledge().then((result) => {
-      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
-      if (next?.ok) setKnowledge(next.items ?? []);
-    });
-    void window.unvibe.billingStatus().then((status) => setProOpen(status.paymentsOpen));
-  }, []);
-  const first = greetFirst(userName);
-  const explainDisabled = !!usage && usage.remaining <= 0;
-  const limitOffer = usage && explainDisabled ? limitOfferCopy(usage.plan, usage, proOpen) : null;
-  const startReview = () => window.unvibe.companionReview();
-  const savedKnowledge = knowledge.filter((item) => item.freshnessStatus === 'CURRENT').slice(0, 5);
-  // Until the knowledge index has entries, show the latest saved lessons instead.
-  const saved = savedKnowledge.length
-    ? savedKnowledge.map((item) => ({ id: item.id, title: item.title, meta: item.file || item.repositoryId || item.sourceType, ts: item.updatedAt }))
-    : history.filter((item) => item.outcome !== 'needs_review').slice(0, 5).map((item) => ({ id: item.id, title: item.title, meta: item.file || item.project || item.meta, ts: item.ts }));
-  const stale = knowledge.filter((item) => item.freshnessStatus !== 'CURRENT').slice(0, 4);
-  const briefings = feed.slice(0, 4);
-  const learningSteps: Array<{ id: string; title: string; copy: string; icon: string; done: boolean; run: () => void }> = [
-    { id: '01', title: 'Review a change', copy: `Select code and press ${shortcut}.`, icon: IC.spark, done: (profile?.reviews ?? 0) > 0, run: startReview },
-    { id: '02', title: 'Save the lesson', copy: 'Mark the explanation understood.', icon: IC.study, done: (profile?.understood ?? 0) > 0, run: () => onNavigate('Learn') },
-    { id: '03', title: 'Take a quick quiz', copy: 'Check whether the idea stuck.', icon: IC.quiz, done: false, run: () => onNavigate('Quiz') },
-    { id: '04', title: 'Ask one more thing', copy: 'Follow the question while it is fresh.', icon: IC.chat, done: false, run: () => onNavigate('Chat') },
-    { id: '05', title: 'Read the change brief', copy: 'See the story before you commit.', icon: IC.briefings, done: briefings.length > 0, run: () => onNavigate('Briefings') },
-  ];
-  const completedSteps = learningSteps.filter((step) => step.done).length;
-  const nextStep = learningSteps.find((step) => !step.done) ?? learningSteps[0]!;
-  const concepts = (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0);
-  // Design audit 2026-10-22 item 5: count what was done, hide zero counters, no streak chip.
-  const chips = [
-    { tone: 'sky', n: profile?.reviews ?? 0, one: 'explanation', many: 'explanations' },
-    { tone: 'lime', n: profile?.linesReviewed ?? 0, one: 'line explained', many: 'lines explained' },
-    { tone: 'sun', n: profile?.linesUnderstood ?? 0, one: 'line understood', many: 'lines understood' },
-    { tone: 'lilac', n: concepts, one: 'concept', many: 'concepts' },
-  ].filter((chip) => chip.n > 0);
-  const upNext = learningSteps.filter((step) => !step.done).slice(0, 3);
-  const note = explainDisabled ? 'out of explains this month, catch you soon'
-    : brief ? 'you changed some code, want the story?'
-      : (profile?.reviews ?? 0) === 0 ? 'select any code and press ' + shortcut + ', I got you'
-        : 'ready when you are';
-  return (
-    <div className="today">
-      <header className="today-hero">
-        <Buddy mood={explainDisabled ? 'sleepy' : 'wave'} size={68} follow label="Vibe" />
-        <div className="today-hero__copy">
-          <h1>{dayGreeting()}{first ? <>, <em>{first}.</em></> : <em>.</em>}</h1>
-          <p className="hand-note">{note}</p>
-        </div>
-      </header>
-      {chips.length ? (
-        <div className="stickers" aria-label="Learning overview">
-          {chips.map((chip) => <span key={chip.many} className={`sticker sticker--${chip.tone}`}><b>{chip.n}</b> {chip.n === 1 ? chip.one : chip.many}</span>)}
-        </div>
-      ) : null}
-      {limitOffer && (
-        <div className="limit-banner" role="status">
-          <div>
-            <strong>{limitOffer.title}</strong>
-            <p>{limitOffer.body}</p>
-          </div>
-          <div className="limit-banner__actions">
-            {limitOffer.primaryKind === 'survey' ? (
-              <button type="button" className="primary-btn" onClick={() => void window.unvibe.openUrl(BETA_SURVEY_URL)}>
-                {limitOffer.primary}
-              </button>
-            ) : (
-              <button type="button" className="primary-btn" onClick={onPlan}>{limitOffer.primary}</button>
-            )}
-            {limitOffer.showPlan && limitOffer.primaryKind === 'survey' ? (
-              <button type="button" className="soft-btn" onClick={onPlan}>{proOpen ? 'Buy a subscription' : 'Pro opens soon'}</button>
-            ) : null}
-          </div>
-        </div>
-      )}
-      <button type="button" className="today-cta" onClick={brief ? () => onNavigate('Briefings') : startReview} disabled={!brief && explainDisabled}>
-        <span className="today-cta__text">
-          <b>{brief ? `Review what changed: ${brief.filesChanged} file${brief.filesChanged === 1 ? '' : 's'}` : 'Explain any code, right where it is'}</b>
-          <small>{brief
-            ? `${brief.filesChanged} files changed${brief.repo ? ` in ${brief.repo.split(/[\\/]/).filter(Boolean).pop()}` : ''} · ${brief.understandBeforeCommit.length} worth reviewing`
-            : 'Select code in any app. Vibe pops up beside it.'}</small>
-        </span>
-        <span className="today-cta__key">{brief ? 'Review' : shortcut}</span>
-      </button>
-      <button type="button" className="voice-cta" onClick={onTryVoice}>
-        <span className="voice-cta__mic" aria-hidden="true"><Icon d={MIC_ICON} /></span>
-        <span className="voice-cta__text">
-          <b>Try voice: ask Vibe out loud</b>
-          <small>{voiceHowTo} No typing.</small>
-        </span>
-        <span className="voice-cta__go" aria-hidden="true">→</span>
-      </button>
-      {today ? <TodayGoalCard goal={today} /> : null}
-      <div className="today-cols">
-        {upNext.length ? (
-          <section className="today-sec">
-            <header><h2>Up next</h2><span>{completedSteps} of {learningSteps.length} done</span></header>
-            <ol className="rows">
-              {upNext.map((step) => (
-                <li key={step.id}>
-                  <button type="button" className={`row${step.id === nextStep.id ? ' is-next' : ''}`} onClick={step.run}>
-                    <span className="row__mark" aria-hidden="true">{step.id === nextStep.id ? '→' : '○'}</span>
-                    <span className="row__title">{step.title}</span>
-                    <span className="row__meta">{step.copy}</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </section>
-        ) : null}
-        <section className="today-sec">
-          <header><h2>Recently understood</h2><button type="button" className="link-btn" onClick={() => onNavigate('Learn')}>See all</button></header>
-          {saved.length ? (
-            <ul className="rows">
-              {saved.map((item) => (
-                <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                  <span className="row__mark" aria-hidden="true">✓</span>
-                  <span className="row__title">{item.title}</span>
-                  <span className="row__meta">{item.meta}</span>
-                  <time dateTime={item.ts}>{shortDate(item.ts)}</time>
-                </button></li>
-              ))}
-              {stale.slice(0, 2).map((item) => {
-                const mark = freshnessLabel(item.freshnessStatus);
-                return (
-                  <li key={item.id}><button type="button" className="row" onClick={() => onNavigate('Learn')}>
-                    <span className="row__mark" aria-hidden="true">!</span>
-                    <span className="row__title">{item.title}</span>
-                    <span className="status-pill" data-tone={mark.tone}>{mark.text}</span>
-                    <time dateTime={item.updatedAt}>{shortDate(item.updatedAt)}</time>
-                  </button></li>
-                );
-              })}
-            </ul>
-          ) : <p className="rows-empty hand-note">nothing yet. your first explanation lands here!</p>}
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function GoalCheck({ done }: { done: boolean }) {
-  return <span className={`today-goal__check${done ? ' is-done' : ''}`} role="img" aria-label={done ? 'Done' : 'Not done yet'}>{done ? '✓' : ''}</span>;
-}
-
-/** One quiet card: today's two steps. No count of days and no celebration. */
-function TodayGoalCard({ goal }: { goal: TodayGoal }) {
-  return (
-    <section className="today-goal" aria-label="Today's goal">
-      <p className="today-goal__line">
-        Today: <GoalCheck done={goal.explained} /> explain 1 piece of code and <GoalCheck done={goal.answered} /> answer 1 question
-      </p>
-    </section>
-  );
-}
-
-function Progress({ profile }: { profile: Profile | null }) {
-  const [knowledge, setKnowledge] = useState<KnowledgeObject[] | null>(null);
-  useEffect(() => {
-    void window.unvibe.listKnowledge().then((result) => {
-      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
-      if (next?.ok) setKnowledge(next.items ?? []);
-    });
-  }, []);
-  const heat = profile?.heat ?? Array.from({ length: 182 }, () => 0);
-  const coverage = profile && profile.linesReviewed > 0
-    ? `${Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)}%`
-    : null;
-  const currentKnowledge = knowledge ? knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length : 0;
-  // Like coverage: the share as the figure, the count under it (Design P3: the card repeated "5 of 6 current").
-  const freshness = knowledge && knowledge.length
-    ? { share: `${Math.round((currentKnowledge / knowledge.length) * 100)}%`, count: `${currentKnowledge} of ${knowledge.length} current` }
-    : null;
-  return (
-    <>
-      <div className="topline"><h1>Momentum</h1></div>
-      <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
-      <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage ?? '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage ? `${profile?.linesUnderstood ?? 0} of ${linesLabel(profile?.linesReviewed ?? 0)}` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness?.share ?? '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.reviews : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? profile.needsReview : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
-      </div>
-      <div className="panel-card">
-        <div className="ph"><span className="t">Explained per day</span><span className="m">last 6 months</span></div>
-        <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
-        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
-      </div>
-      <div className="two">
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Where you learn</span></div>
-          <div className="bars">
-            {(profile && profile.usage.length > 0 ? profile.usage : [{ label: 'Editors & IDEs', pct: 0 }, { label: 'Terminal', pct: 0 }, { label: 'Browser & docs', pct: 0 }]).map((u) => (
-              <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
-            ))}
-          </div>
-          <p className="soft-note">Unvibe notes which app you were in when you asked — never what you typed.</p>
-        </div>
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Understanding over time</span></div>
-          <div className="chart-empty">Your weekly curve of lines understood will draw itself here after a few days of reviewing.</div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 
 function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   compact?: boolean;
@@ -1283,12 +961,12 @@ function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
         <div className="page-head">
           <div>
             <div className="eyebrow">Plan & usage</div>
-            <h1>Start free. Grow when your projects do.</h1>
+            <h1><InkTitle text="Start free. Grow when your projects do." /></h1>
             <p>Your AI model access is included. You never need to paste in your own provider API key.</p>
           </div>
         </div>
       )}
-      {compact && <div className="settings-section-label">PLAN & USAGE</div>}
+      {compact && <div className="settings-section-label">Plan & usage</div>}
       {message && <div className={`plan-message${message.startsWith('Sign in') || message.includes('Local limits') || message.includes('Checkout is disabled') ? ' quiet' : ''}`} role="status">{message}</div>}
 
       <div className="plan-pick">
@@ -1465,7 +1143,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
     return (
       <>
         <PlanUsageBoard compact signedIn={false} onSignedIn={onChange} />
-        <div className="settings-section-label">ACCOUNT</div>
+        <div className="settings-section-label">Account</div>
         <div className="setrow setrow--stack">
           <div className="sl">This {deviceName}</div>
           <div className="sd">You are using Unvibe locally right now. Sign in above to attach a cloud plan.</div>
@@ -1488,7 +1166,7 @@ function AccountPanel({ account, onChange, onDeleted, onNotice }: { account: Acc
   return (
     <>
       <PlanUsageBoard compact signedIn onSignedIn={onChange} />
-      <div className="settings-section-label">ACCOUNT</div>
+      <div className="settings-section-label">Account</div>
       <div className="setrow"><div><div className="sl">Signed in</div><div className="sd">{account.email}</div></div>
         <button className="act" onClick={async () => {
           const result = (await window.unvibe.signOut()) as { ok: boolean; error?: string; warning?: string };
@@ -1560,7 +1238,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
     <>
       <section className="ai-container" aria-label="AI settings">
       <div className="ai-container__intro">
-        <span>AI on your terms</span>
+        <span><SettingsIcon tab="AI" className="ai-container__icon" />AI on your terms</span>
         <p>Use included Unvibe AI, or securely connect a provider key kept on this {deviceName}.</p>
       </div>
       <div className="setrow setrow--stack">
@@ -1617,7 +1295,7 @@ function AiSettingsPanel({ settings, onSettings, onNotice }: {
       <div className="setrow setrow--stack">
         <div className="sl">Rough cost per explanation · {selected?.label ?? provider}{selected?.model ? ` · ${selected.model}` : ''}</div>
         <div className="sd" style={{ marginBottom: 10 }}>
-          Estimates update when you change the provider. List prices only — your provider bill may differ.
+          Estimates update when you change the provider. List prices only; your provider bill may differ.
         </div>
         {costs ? (
           <div className="cost-table" role="table" aria-label="Estimated cost by mode and lines">
@@ -1806,11 +1484,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           <div className="settings-brand"><span>Settings</span></div>
           <div className="mside-group">
             <div className="mh">Preferences</div>
-            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            {['General', 'Island', 'Sound & alerts', 'Learning', 'Privacy & Data'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><SettingsIcon tab={t} />{t}</button>)}
           </div>
           <div className="mside-group">
             <div className="mh">Unvibe</div>
-            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><span className="settings-nav-icon" aria-hidden="true"><Icon d={SETTINGS_ICONS[t]!} /></span>{t}</button>)}
+            {['Integrations', 'AI', 'Account & Plan', 'About'].map((t) => <button key={t} type="button" className={t === tab ? 'on' : ''} aria-current={t === tab ? 'true' : undefined} onClick={() => chooseTab(t)}><SettingsIcon tab={t} />{t}</button>)}
           </div>
           <div className="ver">Unvibe v{info.version}</div>
         </div>
@@ -1821,18 +1499,25 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'General' && (
             <>
+              <div className="settings-section-label" id="settings-group-you">You</div>
+              <div className="settings-group" role="group" aria-labelledby="settings-group-you">
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
+              </div>
+              <div className="settings-section-label" id="settings-group-device">This {deviceName}</div>
+              <div className="settings-group" role="group" aria-labelledby="settings-group-device">
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
+              <div className="setrow"><div><div className="sl">Sharks</div><div className="sd">The sharks on the launch screen and behind every page of the main window. Drawn on this {deviceName}, nothing is downloaded.</div></div><Toggle label="Sharks" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
-              <PermRow compact />
+              <PermRow />
+              </div>
             </>
           )}
 
           {tab === 'Island' && (
             <>
-              <div className="settings-section-label">OVERLAY PREVIEW</div>
-              <OverlayPreview position={settings.barPosition} dimmed={settings.widgetOpacityInactive} />
+              <div className="settings-section-label">Overlay preview</div>
+              <OverlayPreview position={settings.barPosition} dimmed={settings.inactiveBehavior === 'hide' ? 0 : FADE_OPACITY} />
               <div className="setrow settings-location"><div><div className="sl">Island location</div><div className="sd">Choose where the Island rests. It moves immediately.</div></div>
                 <div className="location-grid" role="group" aria-label="Island location">
                   {([['top-center', 'Top'], ['top-right', 'Right'], ['bottom-center', 'Bottom'], ['bottom-right', 'Corner']] as const).map(([position, label]) => <button key={position} type="button" className={settings.barPosition === position ? 'on' : ''} onClick={() => void onSettings({ barPosition: position })}>{label}</button>)}
@@ -1847,24 +1532,22 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="setrow"><div><div className="sl">Expand on hover</div><div className="sd">Off keeps the Island calm and click-only. Click and keyboard controls always work.</div></div><Toggle label="Expand on hover" on={settings.barHoverPreview} onClick={() => onSettings({ barHoverPreview: !settings.barHoverPreview })} /></div>
               {settings.barHoverPreview && <div className="setrow"><div><div className="sl">Hover delay</div><div className="sd">Wait {Math.round(settings.barHoverDelayMs / 10) / 100}s before opening, so passing over the Island never feels jumpy.</div></div><input className="range" aria-label="Hover delay" type="range" min={120} max={600} step={20} value={settings.barHoverDelayMs} onChange={(e) => onSettings({ barHoverDelayMs: Number(e.target.value) })} /></div>}
               <div className="setrow"><div><div className="sl">Follow active display</div><div className="sd">Place the strip on the display where your pointer is when it moves or opens.</div></div><Toggle label="Follow active display" on={settings.followActiveDisplay} onClick={() => onSettings({ followActiveDisplay: !settings.followActiveDisplay })} /></div>
-              <div className="setrow"><div><div className="sl">Inactive widget</div><div className="sd">What an explanation does when you click away (and it is not pinned).</div></div>
-                <select className="sel-input" aria-label="Inactive widget" value={settings.inactiveBehavior} onChange={(e) => onSettings({ inactiveBehavior: e.target.value })}>
-                  <option value="dim">Dim (keep size)</option><option value="stay">Stay solid</option>
-                </select>
-              </div>
-              <div className="setrow"><div><div className="sl">Dimmed opacity</div><div className="sd">How faint a dimmed widget becomes — {Math.round(settings.widgetOpacityInactive * 100)}%.</div></div>
-                <input className="range" aria-label="Dimmed opacity" type="range" min={35} max={100} value={Math.round(settings.widgetOpacityInactive * 100)} onChange={(e) => onSettings({ widgetOpacityInactive: Number(e.target.value) / 100 })} />
+              <div className="settings-section-label">Panel</div>
+              <div className="setrow settings-location"><div><div className="sl">When I click away</div></div>
+                <div className="location-grid" role="group" aria-label="When I click away">
+                  {([['fade', 'Fade'], ['hide', 'Hide']] as const).map(([behavior, label]) => <button key={behavior} type="button" className={settings.inactiveBehavior === behavior ? 'on' : ''} aria-pressed={settings.inactiveBehavior === behavior} onClick={() => void onSettings({ inactiveBehavior: behavior })}>{label}</button>)}
+                </div>
               </div>
             </>
           )}
 
           {tab === 'Sound & alerts' && (
             <>
-              <div className="settings-section-label">LOCAL SOUND</div>
+              <div className="settings-section-label">Local sound</div>
               <div className="setrow"><div><div className="sl">Interface sounds</div><div className="sd">Little sounds when Vibe is happy, when an explanation starts and finishes, when you get a quiz right or wrong, and when you move around the app. Nothing is recorded or downloaded.</div></div><Toggle label="Interface sounds" on={settings.soundEffects} onClick={() => onSettings({ soundEffects: !settings.soundEffects })} /></div>
               <div className="setrow"><div><div className="sl">Sound character</div><div className="sd">Soft is subtle. Pixel is sharper and more playful.</div></div><select className="sel-input" aria-label="Sound character" value={settings.soundStyle} disabled={!settings.soundEffects} onChange={(e) => onSettings({ soundStyle: e.target.value as Settings['soundStyle'] })}><option value="soft">Soft</option><option value="pixel">Pixel</option></select></div>
-              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}% — stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
-              <div className="settings-section-label">NOTIFICATIONS</div>
+              <div className="setrow"><div><div className="sl">Volume</div><div className="sd">{Math.round(settings.soundVolume * 100)}%, stored on this {deviceName}.</div></div><div className="sound-controls"><input className="range" aria-label="Sound volume" type="range" min={0} max={1} step={0.05} disabled={!settings.soundEffects} value={settings.soundVolume} onChange={(e) => onSettings({ soundVolume: Number(e.target.value) })} /><button className="act" disabled={!settings.soundEffects} onClick={() => { playUiTone('boop', settings.soundVolume, settings.soundStyle); window.setTimeout(() => playUiTone('celebrate', settings.soundVolume, settings.soundStyle), 420); }}>Preview</button></div></div>
+              <div className="settings-section-label">Notifications</div>
               <div className="setrow"><div><div className="sl">Bar notifications</div><div className="sd">Short, rate-limited messages when an explanation is ready.</div></div><Toggle label="Bar notifications" on={settings.notifications} onClick={() => onSettings({ notifications: !settings.notifications })} /></div>
               <div className="setrow"><div><div className="sl">Quiet hours</div><div className="sd">Silence notifications overnight.</div></div><Toggle label="Quiet hours" on={settings.quietHours.enabled} onClick={() => onSettings({ quietHours: { ...settings.quietHours, enabled: !settings.quietHours.enabled } })} /></div>
               {settings.quietHours.enabled && <div className="setrow"><div><div className="sl">From / to</div><div className="sd">24-hour times.</div></div><div className="danger-row"><input className="time-input" aria-label="Quiet hours start" type="time" value={settings.quietHours.start} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /><input className="time-input" aria-label="Quiet hours end" type="time" value={settings.quietHours.end} onChange={(e) => onSettings({ quietHours: { ...settings.quietHours, end: e.target.value } })} /></div></div>}
@@ -1874,7 +1557,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           {tab === 'Learning' && <>
             <div className="setrow"><div><div className="sl">Default explanation depth</div><div className="sd">The starting depth for a new explanation. You can always switch it in the overlay.</div></div><select className="sel-input" aria-label="Default explanation depth" value={settings.defaultExplanationLevel} onChange={(e) => onSettings({ defaultExplanationLevel: e.target.value as Settings['defaultExplanationLevel'] })}>{STUDY_LEVELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
             <div className="setrow"><div><div className="sl">Learning records</div><div className="sd">Explanations, quiz results, and concepts save immediately on this {deviceName}. Open Learn to search, revisit, or remove a lesson.</div></div></div>
-            <div className="setrow"><div><div className="sl">Change Brief</div><div className="sd">Build a structured brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Change Brief" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
+            <div className="setrow"><div><div className="sl">Briefs</div><div className="sd">Build a brief from the working tree, staged files, latest commit, or branch diff.</div></div><Toggle label="Briefs" on={settings.features?.changeBrief !== false} onClick={() => onSettings({ features: { ...settings.features, changeBrief: !settings.features?.changeBrief } })} /></div>
             <div className="setrow"><div><div className="sl">Why does this exist</div><div className="sd">Look up git blame and commit messages. Facts stay separate from inference.</div></div><Toggle label="Why does this exist" on={settings.features?.whyExists !== false} onClick={() => onSettings({ features: { ...settings.features, whyExists: !settings.features?.whyExists } })} /></div>
             <div className="setrow"><div><div className="sl">Teach it back</div><div className="sd">After an explanation, write what you understood. This is evidence, not a score.</div></div><Toggle label="Teach it back" on={settings.features?.teachBack !== false} onClick={() => onSettings({ features: { ...settings.features, teachBack: !settings.features?.teachBack } })} /></div>
             <div className="setrow"><div><div className="sl">Voice questions</div><div className="sd">Shows a Speak button in the review panel. {isWindows
@@ -1900,7 +1583,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
           )}
 
           {tab === 'Account & Plan' && <AccountPanel account={account} onChange={onAccountChange} onDeleted={onAccountDeleted} onNotice={onNotice} />}
-          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div></>}
+          {tab === 'About' && <><div className="settings-about-mark"><Buddy mood="happy" size={48} label="Vibe" /></div><div className="setrow"><div><div className="sl">Unvibe for {isWindows ? 'Windows' : 'macOS'}</div><div className="sd">Version {info.version}. A private learning layer for understanding AI-generated code.</div></div></div><div className="setrow"><div><div className="sl">Need help?</div><div className="sd">{SUPPORT_EMAIL}</div></div><button className="act" onClick={() => void window.open(`mailto:${SUPPORT_EMAIL}`)}>Email →</button></div><div className="setrow"><div><div className="sl">Credits</div><div className="sd">Inter, © 2016 The Inter Project Authors; Instrument Serif, © 2022 The Instrument Serif Project Authors; Bricolage Grotesque, © 2022 The Bricolage Grotesque Project Authors; JetBrains Mono, © 2020 The JetBrains Mono Project Authors: all SIL Open Font License 1.1. ascii-sharks, © 2026 drewdi, MIT License. Background photo: Tim Marshall (Unsplash), CC0, recoloured.</div></div></div></>}
         </div>
       </div>
     </div>
@@ -1911,27 +1594,37 @@ function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [navOpen, setNavOpen] = useState(false);
   const toggleSideRef = useRef<() => void>(() => {});
+  const toggleRightRef = useRef<() => void>(() => {});
+  // The shell (shared/shell.tsx): pages publish their right side, fold the rail during a flow, or take the top bar.
+  const [rightPane, setRightPane] = useState<ReactNode | null>(null);
+  const [railFolded, setRailFolded] = useState(false);
+  const [topBar, setTopBar] = useState<ReactNode | null>(null);
+  const shellApi = useMemo<ShellApi>(() => ({ setRightPane, setRailFolded, setTopBar }), []);
+  /** The side's width while it is dragged (null otherwise); under RAIL_SNAP it previews the rail. */
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  /** The right side opened by hand while the window is too narrow for it (the saved setting is never changed for that). */
+  const [rightForced, setRightForced] = useState(false);
+  const [railTip, setRailTip] = useState<{ label: string; top: number } | null>(null);
+  const railTipTimer = useRef(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
   const [info, setInfo] = useState({ version: '0.1.0', user: 'there', shortcut: reviewKeyHint, sendsSetupProgress: false });
   const [account, setAccount] = useState<Account>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
-  const [today, setToday] = useState<TodayGoal | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
   const [askSeed, setAskSeed] = useState('');
-  const [voiceTip, setVoiceTip] = useState(false);
   const [gate, setGate] = useState<'checking' | 'onboarding' | 'login' | 'app'>('checking');
   /** The service's note after a confirmed account deletion, shown on the sign-in screen until it is left. */
   const [deletionNotice, setDeletionNotice] = useState('');
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
-  const [sideWidth, setSideWidth] = useState(232);
-  const sideLive = useRef(232);
+  const [sideWidth, setSideWidth] = useState(RAIL_OPEN_W);
+  const sideLive = useRef(RAIL_OPEN_W);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
@@ -1940,35 +1633,37 @@ function App() {
   const [ownCodeStep, setOwnCodeStep] = useState(false);
 
   const refresh = async () => {
+    // The usage line can wait on the network (a trial build asks the API for its count, up to 20 s offline); all
+    // the rest is on this computer, so nothing here waits for it: the first window used to stay empty for that
+    // whole round trip (#208). `usage` settles once the line is set, for the first screen's short wait below.
+    const usage = (window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>).then((reply) => {
+      setUsageLine(reply.ok && reply.data
+        ? reply.data
+        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
+    }, () => undefined);
     try {
-      const [acct, prof, fd, hist, st, syncState, usage, q, goal, appInfo, ownCode] = await Promise.all([
+      const [acct, prof, hist, st, syncState, q, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
-        window.unvibe.feed(8) as Promise<FeedItem[]>,
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
-        window.unvibe.usageGet() as Promise<{ ok: boolean; data?: AppUsageLine }>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
-        window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
         window.unvibe.ownCodeStep(),
       ]);
-      setAccount(acct); setProfile(prof); setFeed(fd); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
       setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
         setSideWidth(st.sidebarWidth);
         sideLive.current = st.sidebarWidth;
       }
-      setUsageLine(usage.ok && usage.data
-        ? usage.data
-        : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
-      return { acct, st };
+      return { acct, st, usage };
     } catch {
       const st = await window.unvibe.getSettings() as Settings;
       setSettings(st);
-      return { acct: null, st };
+      return { acct: null, st, usage };
     }
   };
 
@@ -1976,7 +1671,10 @@ function App() {
     void window.unvibe.appInfo().then((i) => setInfo(i as typeof info));
     void (async () => {
       try {
-        const { st } = await refresh();
+        const { st, usage } = await refresh();
+        // The first screen waits at most USAGE_WAIT_MS for the usage count: a quick answer opens on the right
+        // state (a used-up plan shows its banner from the first frame), a slow one follows on the screen.
+        await Promise.race([usage, new Promise<void>((resolve) => { window.setTimeout(resolve, USAGE_WAIT_MS); })]);
         // Local mode is a full product: no sign-in wall on every launch. Sign in stays in the
         // sidebar account menu for people who want sync.
         setGate(!st.onboarded ? 'onboarding' : 'app');
@@ -2012,9 +1710,11 @@ function App() {
         setSettingsTab('General');
         setSettingsOpen(true);
       }
-      if ((event.metaKey || event.ctrlKey) && event.key === '\\') {
+      // ⌘\ / Ctrl+\ folds the rail; with Shift (the key then reads "|", so match the physical key) the right side.
+      if ((event.metaKey || event.ctrlKey) && (event.code === 'Backslash' || event.key === '\\')) {
         event.preventDefault();
-        toggleSideRef.current();
+        if (event.shiftKey) toggleRightRef.current();
+        else toggleSideRef.current();
       }
       if (event.key === 'Escape') setSearchOpen(false);
     };
@@ -2028,26 +1728,90 @@ function App() {
     };
   }, []);
 
-  // Paper and ink: a light, playful companion next to the dark explain panel.
+  // The 0.1.51 glass has a real dark theme: follow the Theme setting (System follows macOS/Windows,
+  // live). Until the settings load, light.
   useEffect(() => {
-    document.documentElement.dataset.theme = 'light';
     document.documentElement.dataset.ui = 'v3';
     document.documentElement.dataset.v7 = '';
+    // Round 2 glass (G1): the motion tokens key off it (app-0151.css `html[data-r2]`).
+    document.documentElement.dataset.r2 = 'g1';
     // Windows draws its caption buttons over the top-right corner; CSS reserves room for them.
     document.documentElement.dataset.platform = platformAttr;
   }, []);
+  const themePreference = settings?.theme ?? 'light';
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = themePreference === 'dark' || (themePreference === 'system' && media.matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    };
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [themePreference]);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
-  // Ask for a rating once, after the third explanation, when it means something.
+  // The cold-launch ocean (shared/sharks, Design r2-motion SPEC §2): on unless the window starts hidden or the
+  // last-known setting (mirrored in localStorage) is off. It first draws with the first real screen, when the window
+  // shows (#208); a setting that lands with the row off ends it before then. The app renders under it, inert, and
+  // arrives as it leaves. Onboarding and sign-in never get a stage.
+  const [intro, setIntro] = useState<IntroPhase | 'off'>(() => {
+    let off = false;
+    try { off = window.localStorage.getItem(START_ANIMATION_KEY) === 'off'; } catch { off = false; }
+    return !off && document.visibilityState === 'visible' ? 'swim' : 'off';
+  });
+  const startAnimation = settings?.startAnimation;
   useEffect(() => {
-    if (gate !== 'app' || (profile?.reviews ?? 0) < 3) return;
+    if (startAnimation === undefined) return;
+    try { window.localStorage.setItem(START_ANIMATION_KEY, startAnimation ? 'on' : 'off'); } catch { /* private mode */ }
+    if (!startAnimation) setIntro('off');
+  }, [startAnimation]);
+  useEffect(() => {
+    // No stage over the first run, sign-in or the paste step: those screens are full-window moments of their own.
+    if (gate === 'onboarding' || gate === 'login' || ownCodeStep) setIntro('off');
+  }, [gate, ownCodeStep]);
+  // Main darkened the window chrome for the stage (MUST 14); as the stage leaves, or when there is none, it goes back.
+  useEffect(() => {
+    if (intro === 'leaving' || intro === 'gone' || intro === 'off') window.unvibe.companionStageDone?.();
+  }, [intro]);
+  // The window stays hidden until this page has drawn a real screen (setup, sign-in or the app), not the empty
+  // frame it shows while it reads its settings (#208); main also shows the window after 5 s regardless.
+  const paintedSent = useRef(false);
+  useEffect(() => {
+    if (gate === 'checking' || paintedSent.current) return;
+    paintedSent.current = true;
+    return signalFirstScreen(() => window.unvibe.companionPainted());
+  }, [gate]);
+  const introOn = intro === 'swim' || intro === 'leaving';
+  // The sharks behind everything (Design r3-flat OPTIONS.md, Mono) follow the same switch as the stage: one
+  // window-sized canvas under every page of the main window, mounted as the layout's first child below.
+  const sharks = startAnimation !== false;
+  // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
+  // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
+  // opened), never at launch and never while the start stage is up (Design S-1 whole-app MUST 15).
+  const countsAtOpen = useRef<{ reviews: number; understood: number } | null>(null);
+  useEffect(() => {
+    if (gate !== 'app' || !profile) return;
+    const reviews = profile.reviews ?? 0;
+    const understood = profile.understood ?? 0;
+    if (!countsAtOpen.current) {
+      countsAtOpen.current = { reviews, understood };
+      return;
+    }
+    if (reviews < 3 || (reviews <= countsAtOpen.current.reviews && understood <= countsAtOpen.current.understood)) return;
+    if (intro === 'swim' || intro === 'leaving') return;
     let asked = false;
     try { asked = window.localStorage.getItem(FEEDBACK_ASKED_KEY) === '1'; } catch { asked = true; }
     if (asked) return;
-    const t = window.setTimeout(() => setFeedbackOpen(true), 2500);
+    // Only on a window the person is looking at: hidden or unfocused (an explanation finished in the overlay while
+    // the companion sat behind the editor), the card waits for the next finished explanation instead of lying in
+    // wait for the next open (Design code read 11 Nov c).
+    const t = window.setTimeout(() => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) setFeedbackOpen(true);
+    }, 2500);
     return () => window.clearTimeout(t);
-  }, [gate, profile?.reviews]);
+  }, [gate, profile, intro]);
   // Vibe says hi whenever you open a new page.
   const firstPage = useRef(true);
   useEffect(() => {
@@ -2069,16 +1833,87 @@ function App() {
     return r.shortcutError;
   };
 
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 1800); };
+  const [toastLeaving, setToastLeaving] = useState(false);
+  const toastTimers = useRef<number[]>([]);
+  const flash = (m: string) => {
+    for (const t of toastTimers.current) window.clearTimeout(t);
+    setToastLeaving(false);
+    setToast(m);
+    toastTimers.current = [window.setTimeout(() => setToastLeaving(true), 1650), window.setTimeout(() => { setToast(''); setToastLeaving(false); }, 1800)];
+  };
   const shortcutLabel = prettyAccel(info.shortcut);
+  const shortcutKeys = shortcutCaps(info.shortcut);
   const isLearnPage = page === 'Learn' || page === 'Study' || page === 'History' || page === 'Quiz';
   const fillPage = isLearnPage || page === 'Chat' || page === 'Briefings';
+  const navButton = (p: { id: PageId; icon: string }, on: boolean) => {
+    const label = pageLabel(p.id);
+    return (
+      <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} data-tip={label} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
+        <Icon d={p.icon} /><span className="nav-label">{label}</span>
+      </button>
+    );
+  };
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
-  const sideCompact = sideWidth < 178;
+  // The A Rail: `sidebarHidden` now means "folded to the 56 px rail"; a page's useRailFolded folds it without saving;
+  // a saved width under RAIL_SNAP (the old compact side) is the rail too. Below the drawer breakpoint the side is the
+  // drawer, always open-width.
   const sideHidden = settings?.sidebarHidden ?? false;
-  toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
+  const drawer = windowWidth <= DRAWER_MAX;
+  const rail = !drawer && (dragWidth !== null ? dragWidth < RAIL_SNAP : sideHidden || railFolded || sideWidth < RAIL_SNAP);
+  const railWidth = rail ? RAIL_W : dragWidth ?? sideWidth;
+  toggleSideRef.current = () => {
+    if (drawer) { setNavOpen((open) => !open); return; }
+    if (!rail) { void applySettings({ sidebarHidden: true }); return; }
+    setRailFolded(false);
+    if (sideHidden || sideWidth < RAIL_SNAP) {
+      if (sideWidth < RAIL_SNAP) { sideLive.current = RAIL_OPEN_W; setSideWidth(RAIL_OPEN_W); }
+      void applySettings({ sidebarHidden: false, ...(sideWidth < RAIL_SNAP ? { sidebarWidth: RAIL_OPEN_W } : {}) });
+    }
+  };
+  // The right side: shown when the page published one, the setting allows it, and the main column keeps 400 px beside
+  // it (8 px insets and gaps around rail, main column and side); otherwise it closes by itself without saving.
+  const hasRight = rightPane !== null && rightPane !== undefined && rightPane !== false;
+  const rightHidden = settings?.rightPaneHidden ?? false;
+  const cramped = windowWidth - (drawer ? 0 : railWidth + 8) - RIGHT_W - 24 < MAIN_MIN;
+  const rightOpen = hasRight && !rightHidden && (!cramped || rightForced);
+  const rightLabel = `${rightOpen ? 'Hide' : 'Show'} side panel (${RIGHT_KEYS})`;
+  toggleRightRef.current = () => {
+    if (!hasRight) return;
+    if (rightOpen) {
+      if (cramped) setRightForced(false);
+      else void applySettings({ rightPaneHidden: true });
+      return;
+    }
+    if (cramped) setRightForced(true);
+    if (rightHidden) void applySettings({ rightPaneHidden: false });
+  };
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  useEffect(() => { if (!cramped) setRightForced(false); }, [cramped]);
+  useEffect(() => {
+    if (rail) return;
+    window.clearTimeout(railTipTimer.current);
+    setRailTip(null);
+  }, [rail]);
+  // The rail's tooltip (folded only): the place's name after 400 ms of hover, at once on keyboard focus, and at once
+  // when moving from one row to the next while one shows.
+  const showRailTip = (target: EventTarget) => {
+    const el = (target as HTMLElement).closest<HTMLElement>('[data-tip]');
+    window.clearTimeout(railTipTimer.current);
+    if (!el) { setRailTip(null); return null; }
+    return () => {
+      const box = el.getBoundingClientRect();
+      setRailTip({ label: el.dataset.tip ?? '', top: box.top + box.height / 2 });
+    };
+  };
+  const hideRailTip = () => { window.clearTimeout(railTipTimer.current); setRailTip(null); };
+  const syncLine = sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync';
+  const syncRetry = sync.phase === 'offline' || sync.phase === 'error' || sync.phase === 'auth_required';
   const searchGroups = (() => {
     const query = searchQuery.trim().toLowerCase();
     const matches = (value: string) => !query || value.toLowerCase().includes(query);
@@ -2101,7 +1936,7 @@ function App() {
       .map((item) => ({
         id: `page-${item.id}`,
         title: pageLabel(item.id),
-        detail: item.id === 'Learn' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about this codebase' : item.id === 'Quiz' ? 'Check understanding' : 'Open page',
+        detail: item.id === 'Learn' ? 'Saved explanations' : item.id === 'Chat' ? 'Ask about your code' : item.id === 'Quiz' ? 'Check understanding' : 'Open page',
         run: () => { setLessonSeedId(null); setPage(item.id); close(); },
       }))
       .filter((item) => matches(`${item.title} ${item.detail}`));
@@ -2116,20 +1951,28 @@ function App() {
     ].filter((group) => group.items.length > 0) as SearchPaletteGroup[];
   })();
 
+  // Drag to resize: under RAIL_SNAP the side snaps to the 56 px rail (saved as sidebarHidden, the open width kept);
+  // from the rail, a drag past it opens the side at that width. A click without a move changes nothing.
   const startSideResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     const startX = event.clientX;
-    const startW = sideLive.current;
+    const startW = rail ? RAIL_W : sideLive.current;
+    let last = startW;
     const move = (moveEvent: PointerEvent) => {
-      const next = Math.min(340, Math.max(168, Math.round(startW + (moveEvent.clientX - startX))));
-      sideLive.current = next;
-      setSideWidth(next);
+      last = Math.min(340, Math.max(RAIL_W, Math.round(startW + (moveEvent.clientX - startX))));
+      setDragWidth(last);
     };
     const up = () => {
       document.documentElement.classList.remove('is-side-resizing');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      void applySettings({ sidebarWidth: sideLive.current });
+      setDragWidth(null);
+      if (last === startW) return;
+      if (last < RAIL_SNAP) { void applySettings({ sidebarHidden: true }); return; }
+      setRailFolded(false);
+      sideLive.current = last;
+      setSideWidth(last);
+      void applySettings({ sidebarHidden: false, sidebarWidth: last });
     };
     document.documentElement.classList.add('is-side-resizing');
     window.addEventListener('pointermove', move);
@@ -2142,7 +1985,10 @@ function App() {
     playUiTone('launch', settings?.soundVolume ?? 0.3, settings?.soundStyle ?? 'soft');
   }, [gate]);
 
-  if (gate === 'checking') return <div className="titlebar" />;
+  // The window stays hidden while the gate is checking (#208). This frame is still the one on screen for a moment
+  // after the reveal (a hidden window gets no frames), so on a launch with the stage it is the stage's empty ground,
+  // which the sharks then swim into; otherwise the app's ground. No stage starts here: a first run never gets one.
+  if (gate === 'checking') return FIRST_FRAME_STAGE ? <><div className="sharks-intro" aria-hidden="true" /><div className="titlebar" /></> : <div className="titlebar" />;
   if (gate === 'onboarding') {
     return (<><div className="titlebar" /><Onboarding soundEffects={settings?.soundEffects ?? true} soundVolume={settings?.soundVolume ?? 0.3} soundStyle={settings?.soundStyle ?? 'soft'} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onDone={async () => { await refresh(); setGate('app'); }} /></>);
   }
@@ -2155,68 +2001,94 @@ function App() {
     return (<><div className="titlebar" /><OwnCodeWelcome soundEffects={settings?.soundEffects ?? true} shortcut={settings?.shortcut ?? (isMac ? 'Control+U' : 'Control+Alt+U')} onNotNow={notNow} /></>);
   }
 
+  // The stage starts with the first real screen: the window is still hidden before it (#208).
   return (
-    <>
+    <ShellContext.Provider value={shellApi}>
+      {introOn ? <SharksIntro onPhase={setIntro} /> : null}
       <ConsentDialog buttonClass="field-btn" />
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
       <div className="titlebar" />
-      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}`}>
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${rail ? ' layout--rail' : ''}${intro === 'leaving' || intro === 'gone' ? ' layout--arrive' : ''}`} inert={intro === 'swim'}>
+        {sharks ? <SharksBackdrop /> : null}
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-        <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
-          <div className="brand"><Buddy size={22} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
-          <button type="button" className="side-search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-            <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
-            <span className="nav-label">Search</span>
-            <kbd>{modKey}K</kbd>
-          </button>
-          <nav className="nav nav--top">{NAV_PINNED.map((p) => {
-            const on = p.id === page;
-            const label = pageLabel(p.id);
-            return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
-                <Icon d={p.icon} /><span className="nav-label">{label}</span>
-              </button>
-            );
-          })}</nav>
-          <p className="side-spaces">Learn</p>
-          <nav className="nav nav--spaces">{NAV_SPACES.map((p) => {
-            const on = p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'));
-            const label = pageLabel(p.id);
-            return (
-              <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
-                <Icon d={p.icon} /><span className="nav-label">{label}</span>
-              </button>
-            );
-          })}</nav>
-          <div className="spacer" />
-          <button
-            className={`sync-state sync-state--${sync.phase}`}
-            aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
-            onClick={() => void window.unvibe.retrySync()}
-            disabled={sync.phase === 'syncing' || sync.phase === 'local'}
-          >
-            <span className="sync-state__dot" />
-            <span className="sync-state__copy">{sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
-            {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
-          </button>
-          {usageLine ? (
-            <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
-              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b>{usageLine.remaining} left</b></span>
-              <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+        <aside
+          id="companion-sidebar"
+          aria-label="Sidebar"
+          className={`side fade-in fade-in--side${rail ? ' side--rail' : ''}`}
+          style={drawer ? undefined : { width: railWidth }}
+          onPointerOver={(event) => {
+            if (!rail) return;
+            const show = showRailTip(event.target);
+            if (show) { if (railTip) show(); else railTipTimer.current = window.setTimeout(show, 400); }
+          }}
+          onPointerLeave={hideRailTip}
+          onFocus={(event) => {
+            if (!rail || !(event.target as HTMLElement).matches(':focus-visible')) return;
+            showRailTip(event.target)?.();
+          }}
+          onBlur={hideRailTip}
+        >
+          <div className="rail-head">
+            <button
+              type="button"
+              className="rail-collapse"
+              aria-controls="companion-sidebar"
+              aria-expanded={drawer ? navOpen : !rail}
+              aria-label={drawer ? 'Close menu' : rail ? 'Show sidebar' : 'Hide sidebar'}
+              title={drawer || rail ? undefined : `Hide sidebar (${modKey}\\)`}
+              data-tip={`Show sidebar (${modKey}\\)`}
+              onClick={() => toggleSideRef.current()}
+            >
+              <PaneIcon side="left" open={!rail} />
             </button>
-          ) : null}
-          <button type="button" className="side-settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
-            <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
-            <span className="nav-label">Settings</span>
+            <div className="brand rail-fade"><Buddy size={22} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          </div>
+          <button type="button" className="side-search" onClick={() => { setNavOpen(false); setSearchQuery(''); setSearchOpen(true); }} aria-label="Search" data-tip="Search">
+            <Icon d="M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z M13.5 13.5 17 17" />
+            <span className="nav-label">Search</span>
+            <kbd className="rail-fade">{modKey}K</kbd>
           </button>
+          {/* One sliding pill for both navs (motion row 2): it lives in the wrapper so Today → Library is one move. */}
+          <div className="side-navs">
+            <SlidingPill />
+            <nav className="nav nav--top" aria-label="Pages">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
+            <p className="side-spaces"><span className="nav-label">Learn</span></p>
+            <nav className="nav nav--spaces" aria-label="Learn">
+              {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
+            </nav>
+          </div>
+          <div className="spacer" />
+          {usageLine ? (() => {
+            // The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct).
+            const planText = usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`;
+            return (
+              <button type="button" className={`side-usage${page === 'Plan' ? ' on' : ''}`} aria-current={page === 'Plan' ? 'page' : undefined} onClick={() => { setNavOpen(false); setPage('Plan'); }} aria-label={`${planText}, ${usageLine.remaining} left`} data-tip="Plan and usage">
+                <span className="side-usage__row">
+                  <span className="nav-label">{planText}</span>
+                  <b className="nav-label"><CountUp value={usageLine.remaining} /> left</b>
+                  <b className="side-usage__count" aria-hidden="true">{usageLine.remaining}</b>
+                </span>
+                <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+              </button>
+            );
+          })() : null}
+          <div className="nav nav--foot">
+            {navButton({ id: 'Gift', icon: IC.gift }, page === 'Gift')}
+            <button type="button" className="side-settings" aria-label="Settings" data-tip="Settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
+              <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
+              <span className="nav-label">Settings</span>
+            </button>
+          </div>
+          <hr className="rail-hair" />
           <AccountMenu
             name={settings?.displayName?.trim() || info.user || 'You'}
             email={account?.email || settings?.profileEmail || undefined}
             planLabel={planLabel(usageLine?.plan)}
+            syncLine={syncLine}
+            syncPhase={sync.phase}
             signedIn={Boolean(account)}
-            compact={sideCompact}
+            rail={rail}
             version={info.version}
             onSettings={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
             onShortcuts={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
@@ -2229,29 +2101,36 @@ function App() {
               const { acct } = await refresh();
               if (!acct) flash('Signed out. Your learning stays on this computer.');
             }}
+            onRetrySync={syncRetry ? () => void window.unvibe.retrySync() : undefined}
           />
-          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = 204; setSideWidth(204); void applySettings({ sidebarWidth: 204 }); }} />
+          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = RAIL_OPEN_W; setSideWidth(RAIL_OPEN_W); setRailFolded(false); void applySettings({ sidebarWidth: RAIL_OPEN_W, sidebarHidden: false }); }} />
         </aside>
+        {railTip && rail ? <div className="rail-tip" role="tooltip" style={{ top: railTip.top }}>{railTip.label}</div> : null}
         <main className="content">
           <header className="topbar">
-            <button type="button" className="nav-toggle" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+            <button type="button" className="nav-toggle" aria-label="Open menu" aria-controls="companion-sidebar" aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
               <Icon d="M3 6h14 M3 10h14 M3 14h14" />
             </button>
-            <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? `Show sidebar (${modKey}\\)` : `Hide sidebar (${modKey}\\)`} onClick={() => toggleSideRef.current()}>
-              <Icon d="M4 4h12v12H4z M7 4v12" />
-            </button>
-            <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
-            <span className="topbar__spacer" />
-            <button type="button" className="topbar__search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-              <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" /><kbd>{modKey}K</kbd>
-            </button>
-            <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
-              <kbd>{shortcutLabel}</kbd><span>Explain</span>
-            </button>
+            {topBar ?? (
+              <>
+                <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
+                <span className="topbar__spacer" />
+                <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
+                  <kbd className="m-key">{shortcutLabel}</kbd><span>Explain</span>
+                </button>
+              </>
+            )}
+            {hasRight ? (
+              <button type="button" className="topbar__side topbar__side--right" aria-controls="companion-rightside" aria-expanded={rightOpen} aria-label={rightLabel} title={rightLabel} onClick={() => toggleRightRef.current()}>
+                <PaneIcon side="right" open={rightOpen} />
+              </button>
+            ) : null}
           </header>
-          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
+          <div className="content__row">
+          <div className="content__main">
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby={topBar ? undefined : 'companion-page-title'} aria-label={topBar ? pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page) : undefined}>
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} userName={info.user} profile={profile} today={today} feed={feed} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onNavigate={(nextPage) => setPage(nextPage)} onTryVoice={() => { setVoiceTip(true); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0 }} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -2275,7 +2154,6 @@ function App() {
                   usage={usageLine}
                   onRefresh={() => void refresh()}
                   onOpenAiSettings={() => { setSettingsTab('AI'); setSettingsOpen(true); }}
-                  voiceTip={voiceTip}
                 />
                 : page === 'Progress' ? <Progress profile={profile} />
                 : page === 'Plan' ? <Plan signedIn={Boolean(account)} onSignedIn={() => { void refresh(); }} />
@@ -2291,31 +2169,35 @@ function App() {
               setAskDraft('');
               setPage('Chat');
             }}>
-              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
+              <Buddy size={24} />
               <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
+              <kbd className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</kbd>
               <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
             </form>
           )}
+          </div>
+          {hasRight ? (
+            <aside id="companion-rightside" className={`rightside${rightOpen ? '' : ' rightside--off'}`} aria-label="Side panel" inert={!rightOpen}>
+              {rightPane}
+            </aside>
+          ) : null}
+          </div>
         </main>
       </div>
-      <FloatingBuddy
-        userName={settings?.displayName?.trim() || info.user}
-        hidden={page === 'Chat' || settingsOpen}
-        onOpenChat={() => { setAskSeed(''); setPage('Chat'); }}
-      />
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
       {settingsOpen && settings && (
         <Settings info={info} account={account} settings={settings}
           initialTab={settingsTab}
           onAccountChange={async () => { const { acct } = await refresh(); if (!acct) setGate('app'); }}
-          onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setFeed([]); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
+          onAccountDeleted={(message) => { setSettingsOpen(false); setAccount(null); setProfile(null); setDeletionNotice(message ?? ''); setGate('login'); void refresh(); }}
           onSettings={applySettings} onClose={() => setSettingsOpen(false)} onNotice={flash} />
       )}
       <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
-      {toast && <div className="toast" role="status">{toast}</div>}
-    </>
+      {toast && <div className={`toast${toastLeaving ? ' is-leaving' : ''}`} role="status">{toast}</div>}
+    </ShellContext.Provider>
   );
 }
 
+trackWindowAway();
 createRoot(document.getElementById('root')!).render(<App />);

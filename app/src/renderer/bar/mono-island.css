@@ -1,0 +1,108 @@
+/* ── Mono: the Island (Design OPTIONS.md "Overlay window and Island" + Round 2 "The Island"; mocks mono/surfaces/).
+   On the notch: #000000 in both app themes, square top, 13 px bottom corners, a 1 px line at the dark theme's text at
+   35 % on the left, right and bottom, text in the dark theme's colours. Floating: the theme's ground, 12 px corners,
+   the control border and the floating shadow. Row 38: Vibe 20 at 12 px, the Explain button 30 × 26 outlined, the
+   status right-aligned 14 px from the edge. Type 12 and 17 at 400 and 600; mono only in the key. No sharks; Vibe is
+   the only purple. Overrides bar.css and mono.css; loaded after both. ── */
+
+:root:not([data-theme="dark"]) { color-scheme: light; }
+
+/* Floating (any other position, and Windows). */
+:root .island {
+  background: var(--u-solid-surface);
+  border: 1px solid var(--u-border-control);
+  border-radius: 12px;
+  box-shadow: var(--u-shadow-float);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--u-ink);
+  font: 400 12px/16px var(--u-font);
+}
+/* On the notch: the dark theme's tokens on black, whatever the app's theme. */
+:root .island.island--attached {
+  --u-paper: #000000; --u-solid-surface: #000000;
+  --u-ink: #f5f5f5; --u-ink-2: #b8b8b8;
+  --u-border: #363636; --u-border-control: #7a7a7a;
+  --u-sunken: rgb(245 245 245 / 0.10); --u-select: rgb(245 245 245 / 0.14);
+  --u-action: #f5f5f5; --u-action-on: #111111; --u-action-hover: #dcdcdc;
+  --u-focus: #f5f5f5; --u-amber: #fbbf24;
+  background: #000000;
+  border: 1px solid rgb(245 245 245 / 0.35);
+  border-top: 0;
+  border-radius: 0 0 13px 13px;
+  box-shadow: none;
+}
+:root .island :focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+
+/* The row. */
+:root .island .island__compact { padding: 0 14px 0 12px; }
+:root .island .island__wing--left { gap: 8px; }
+:root .island .island__mark { width: 20px; height: 20px; filter: none; }
+:root .island .island__mark .buddy { --vibe-ink: #141217; }
+:root .island .island__tool { width: 30px; height: 26px; border: 1px solid var(--u-border-control); border-radius: 8px; background: transparent; color: var(--u-ink); }
+:root .island .island__tool:hover { border-color: var(--u-border-control); background: var(--u-sunken); color: var(--u-ink); }
+
+/* Idle: the count semibold, " left" grey. */
+:root .island .island__left { gap: 4px; color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+:root .island .island__left b { color: var(--u-ink); font-weight: 600; }
+
+/* Working, Ready and problems: one word, 12 semibold, with its mark. */
+:root .island .island__status { display: inline-flex; align-items: center; gap: 10px; color: var(--u-ink); font-size: 12px; line-height: 16px; font-weight: 600; text-transform: none; white-space: nowrap; }
+/* Working: three 6 px dots, one at full strength at a time, the others at 35 %. */
+:root .island .island__dots { display: inline-flex; align-items: center; gap: 4px; width: auto; }
+:root .island .island__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--u-ink); opacity: 0.35; transform: none; animation: monoIslandDot 1.2s linear infinite; }
+:root .island .island__dots i:nth-child(2) { animation-delay: -0.8s; }
+:root .island .island__dots i:nth-child(3) { animation-delay: -0.4s; }
+@keyframes monoIslandDot { 0%, 33.3% { opacity: 1; } 33.4%, 100% { opacity: 0.35; } }
+:root[data-away] .island .island__dots i { animation-play-state: paused; }
+/* Ready: a 16 px disc in the text colour with the tick in the ground colour. */
+:root .island .island__done { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--u-ink); color: var(--u-solid-surface); }
+/* A problem keeps the warning colour on its dot. */
+:root .island .island__problem { width: 6px; height: 6px; border-radius: 50%; background: var(--u-amber); }
+
+/* A notice under the row: text colour, the dot grey for information, the warning colour for a problem. */
+:root .island .island__notice { color: var(--u-ink); font-size: 12px; line-height: 16px; font-weight: 400; }
+:root .island .island__notice::before { background: var(--u-ink-2); }
+:root .island .island__notice--problem::before { background: var(--u-amber); }
+
+/* Open: "Unvibe" 17 semibold and the line under it 12 grey; four boxes (1 px border, radius 8, 52 px, 8 px apart),
+   the number 17 semibold over its label 12; "14 days" and 14 cells 20 × 8 in greys of the text colour (14, 30, 60,
+   100 %); the two allowances on one line; the hint with its key; "Understand change" filled and "Open Unvibe"
+   outlined, both 32 px pills. */
+:root .island .island__overview { padding: 8px 12px 14px; }
+:root .island .island__header { min-height: 30px; align-items: center; padding-left: 2px; border-bottom: 0; }
+:root .island .island__header > div:first-child { align-items: baseline; gap: 10px; }
+:root .island .island__header strong { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: 0; }
+:root .island .island__header div:first-child span { color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+:root .island .island__settings { width: 28px; height: 28px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); }
+:root .island .island__settings:hover { border: 0; background: var(--u-sunken); color: var(--u-ink); }
+:root .island .island__metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; padding: 0; color: var(--u-ink-2); }
+:root .island .island__metrics > span { align-content: center; gap: 0; height: 52px; padding: 0 10px; border: 1px solid var(--u-border); border-radius: 8px; background: transparent; color: var(--u-ink-2); font-size: 12px; line-height: 16px; }
+:root .island .island__metrics b { color: var(--u-ink); font-size: 17px; line-height: 22px; font-weight: 600; }
+:root .island .island__activity { grid-template-columns: auto 1fr; gap: 12px; margin-top: 12px; padding-left: 2px; }
+:root .island .island__activity > span { color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+:root .island .island__activity > div { grid-template-columns: repeat(14, 20px); justify-content: space-between; gap: 0; }
+:root .island .island__activity i { height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--u-ink) 14%, transparent); }
+:root .island .island__activity i[data-level="1"] { background: color-mix(in srgb, var(--u-ink) 30%, transparent); }
+:root .island .island__activity i[data-level="2"] { background: color-mix(in srgb, var(--u-ink) 60%, transparent); }
+:root .island .island__activity i[data-level="3"] { background: var(--u-ink); }
+:root .island .island__allowance { justify-content: flex-start; gap: 6px; height: auto; margin-top: 10px; padding-left: 2px; color: var(--u-ink-2); font-size: 12px; line-height: 16px; }
+:root .island .island__allowance b { color: var(--u-ink); font-size: 12px; font-weight: 600; }
+:root .island .island__allowance > i { width: auto; height: auto; background: none; color: var(--u-ink-2); font-style: normal; }
+:root .island :is(.island__hint, .island__note) { margin-top: 6px; padding-left: 2px; overflow: visible; color: var(--u-ink-2); font-size: 12px; line-height: 18px; text-align: left; }
+:root .island .island__note { color: var(--u-ink); }
+:root .island kbd { display: inline-grid; place-items: center; height: 18px; padding: 0 4px; border: 1px solid var(--u-border); border-bottom-color: var(--u-border-control); border-radius: 4px; background: transparent; color: var(--u-ink); font: 600 12px/1 var(--u-font-mono); vertical-align: 0; }
+:root .island .island__actions { display: flex; gap: 8px; margin-top: auto; padding-top: 10px; }
+:root .island .island__actions button { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--u-border-control); color: var(--u-ink); font-size: 12px; line-height: 16px; font-weight: 600; }
+:root .island .island__actions button:hover { border: 0; background: var(--u-sunken); }
+:root .island .island__actions button:first-child { background: var(--u-action); color: var(--u-action-on); box-shadow: none; }
+:root .island .island__actions button:first-child:hover { background: var(--u-action-hover); }
+:root .island :is(.island__actions button, .island__tool, .island__settings):focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The dots hold still: the one for the current step at full strength. */
+  :root .island .island__dots i { animation: none; opacity: 0.35; }
+  :root .island [data-step="0"] .island__dots i:nth-child(1),
+  :root .island [data-step="1"] .island__dots i:nth-child(2),
+  :root .island [data-step="2"] .island__dots i:nth-child(3) { opacity: 1; }
+}

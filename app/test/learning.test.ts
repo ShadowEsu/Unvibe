@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, deriveSkillState, forSync, heatLevel, localDayKey, type LocalEvent } from '../src/core/learning';
+import { computeProfile, computeLearningItems, computeReviewQueue, deriveSkillState, forSync, heatLevel, localDayKey, type LocalEvent } from '../src/core/learning';
 
 function ev(p: Partial<LocalEvent>): LocalEvent {
   return { id: Math.random().toString(36), ts: '2026-07-11T10:00:00Z', scope: 'selection', level: 'intermediate', outcome: 'reviewed', lines: 10, ...p };
@@ -83,11 +83,9 @@ test('skill evidence never labels a single correct answer strong', () => {
   ]), 'Needs review');
 });
 
-test('computeFeed returns most-recent first', () => {
-  const events = [ev({ id: 'a', ts: '2026-07-11T08:00:00Z' }), ev({ id: 'b', ts: '2026-07-11T09:00:00Z' })];
-  const feed = computeFeed(events, 5);
-  assert.equal(feed[0].id, 'b');
-  assert.equal(feed.length, 2);
+test('computeLearningItems returns most-recent first, up to the limit', () => {
+  const events = [ev({ id: 'a', ts: '2026-07-11T08:00:00Z' }), ev({ id: 'b', ts: '2026-07-11T09:00:00Z' }), ev({ id: 'c', ts: '2026-07-11T07:00:00Z' })];
+  assert.deepEqual(computeLearningItems(events, 2).map((item) => item.id), ['b', 'a']);
 });
 
 test('computeLearningItems includes on-device code and explanation when present', () => {

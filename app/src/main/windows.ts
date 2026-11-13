@@ -1,21 +1,45 @@
-import { app, BrowserWindow, screen, shell, type WebContents } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import path from 'node:path';
-import { settings, type BarPosition, type BarSize } from './settings';
+import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
+import { ownCodeStepDueNow } from './ownCodeStep';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
 const SNAP = 18;
-/** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 560;
-const DEFAULT_WIDGET_H = 640;
+/**
+ * Overlay B (Design b-refined SPEC, Pane): 380 wide; the height fits the content between 360 and 560, past which
+ * the answer scrolls inside while the header and tabs stay. The renderer measures its content (widget:fitHeight).
+ */
+export const PANEL_W = 380;
+export const PANEL_MIN_H = 360;
+export const PANEL_MAX_H = 560;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
 /** A notice's text is showing under the compact Island (renderer bar:setNotice). */
 let barHasNotice = false;
 let limitPauseActive = false;
+/** A file or folder dialog the panel opened is up: its blur is not a click away. */
+let panelDialogs = 0;
+
+/** Runs a dialog the panel opened; meanwhile losing focus neither fades nor hides the panel. */
+export async function whilePanelDialog<T>(work: () => Promise<T>): Promise<T> {
+  panelDialogs += 1;
+  try {
+    return await work();
+  } finally {
+    panelDialogs -= 1;
+  }
+}
+
+/** The panel's guide opened System Settings for Accessibility: losing focus to it is not a click away. Cleared when
+ * the grant arrives (or the panel closes). */
+let grantFlowOpen = false;
+export function setGrantFlowOpen(open: boolean): void {
+  grantFlowOpen = open;
+}
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -71,8 +95,12 @@ const FLOATING_BAR_W = 184;
 const BOTTOM_BAR_COMPACT_W = 184;
 /** Floating (not attached) bars open into a card this wide, above or below the pill. */
 const FLOATING_EXPANDED_W = 372;
-/** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
-const BAR_EXPANDED_BODY_H = 244;
+/**
+ * Height of the expanded overview under (or above) the compact row: header, tiles, ramp, allowance, hint, an
+ * optional note and the actions with no dead band above the buttons (Design Spectral island S-1, 07 Nov: ~220).
+ * 230 leaves room for the note when the card opens upward from a bottom bar (11 px top padding there).
+ */
+const BAR_EXPANDED_BODY_H = 230;
 const FLOATING_ROW_H = 38;
 /**
  * A notice (notify()) shows its text under the compact row (above it at the bottom) without
@@ -223,28 +251,50 @@ function snap(win: BrowserWindow): void {
   if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
 }
 
+/**
+ * The panel inside a work area: 12 px from every edge (24 in all, Design Q3) and, when the Island sits at the
+ * top, clear of it: a panel that would reach under the Island starts 8 px below it and gets shorter instead.
+ * (At 1024 px wide a 440 px panel can't step aside, and QA saw its corner under the Island there.) Only a real
+ * overlap counts (the Island may be on another display), and only if the room below still fits the minimum height.
+ */
+export function fitPanelBounds(bounds: Electron.Rectangle, workArea: Electron.Rectangle, island?: Electron.Rectangle): Electron.Rectangle {
+  const width = Math.min(bounds.width, workArea.width - 24);
+  let height = Math.min(bounds.height, workArea.height - 24);
+  const x = Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12);
+  let y = Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12);
+  if (island && x < island.x + island.width && x + width > island.x && y < island.y + island.height && y + height > island.y) {
+    const below = island.y + island.height + 8;
+    const room = workArea.y + workArea.height - 12 - below;
+    if (room >= Math.min(height, PANEL_MIN_H)) {
+      y = below;
+      height = Math.min(height, room);
+    }
+  }
+  return { x, y, width, height };
+}
+
+/** Where the compact Island is when it sits at the top of the display it's on; undefined for a bottom bar. */
+function topIslandRect(): Electron.Rectangle | undefined {
+  const position = settings().all().barPosition;
+  if (!position.startsWith('top')) return undefined;
+  const { width, height } = barSize(position, false);
+  return { ...barBounds(position, width, height), width, height };
+}
+
 function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
   const displays = screen.getAllDisplays();
   const visible = displays.find(({ workArea }) =>
     bounds.x < workArea.x + workArea.width && bounds.x + bounds.width > workArea.x &&
     bounds.y < workArea.y + workArea.height && bounds.y + bounds.height > workArea.y,
   );
-  const workArea = (visible ?? screen.getPrimaryDisplay()).workArea;
-  const width = Math.min(bounds.width, workArea.width - 24);
-  const height = Math.min(bounds.height, workArea.height - 24);
-  return {
-    width,
-    height,
-    x: Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12),
-    y: Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12),
-  };
+  return fitPanelBounds(bounds, (visible ?? screen.getPrimaryDisplay()).workArea, topIslandRect());
 }
 
 function defaultWidgetBounds(): Electron.Rectangle {
   const cursor = screen.getCursorScreenPoint();
   const { workArea } = screen.getDisplayNearestPoint(cursor);
-  const w = DEFAULT_WIDGET_W;
-  const h = DEFAULT_WIDGET_H;
+  const w = PANEL_W;
+  const h = PANEL_MIN_H;
   return {
     width: w,
     height: h,
@@ -253,105 +303,52 @@ function defaultWidgetBounds(): Electron.Rectangle {
   };
 }
 
-/** Restore user size/position. Stock tiny panels get the current opening size. */
+/** Where the panel was last left; its size is always overlay B's (the content decides the height). */
 function resolveWidgetBounds(): Electron.Rectangle {
   const saved = settings().all().lastWidgetBounds;
   if (!saved) return defaultWidgetBounds();
-  const stockTiny =
-    (saved.width === 300 && saved.height === 360) ||
-    (saved.width === 280 && saved.height === 240) ||
-    (saved.width === 340 && saved.height === 440) ||
-    (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 480 && saved.height === 600) ||
-    (saved.width === 540 && saved.height === 720) ||
-    (saved.width === 680 && saved.height === 720);
-  if (stockTiny) {
-    return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
-  }
-  return { ...saved };
+  return { x: saved.x, y: saved.y, width: PANEL_W, height: PANEL_MIN_H };
 }
 
-/** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
-export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-
-const WIDGET_MIN_W = 420;
-const WIDGET_MIN_H = 460;
-
-export function applyWidgetResize(
-  start: Electron.Rectangle,
-  edge: WidgetResizeEdge,
-  dx: number,
-  dy: number,
-): Electron.Rectangle {
-  let { x, y, width, height } = start;
-  if (edge.includes('e')) width = Math.max(WIDGET_MIN_W, start.width + dx);
-  if (edge.includes('s')) height = Math.max(WIDGET_MIN_H, start.height + dy);
-  if (edge.includes('w')) {
-    width = Math.max(WIDGET_MIN_W, start.width - dx);
-    x = start.x + (start.width - width);
-  }
-  if (edge.includes('n')) {
-    height = Math.max(WIDGET_MIN_H, start.height - dy);
-    y = start.y + (start.height - height);
-  }
-  return { x, y, width, height };
+/** The window height for content this tall: between 360 and 560 (past that the answer scrolls inside). */
+export function panelHeightFor(contentHeight: number): number {
+  if (!Number.isFinite(contentHeight)) return PANEL_MIN_H;
+  return Math.round(Math.min(PANEL_MAX_H, Math.max(PANEL_MIN_H, contentHeight)));
 }
 
-/** The review panel parts setPanelOpacity touches (a structural type so tests can pass a fake). */
-export type DimmablePanel = Pick<BrowserWindow, 'isDestroyed' | 'setOpacity'> & {
-  webContents: Pick<WebContents, 'isDestroyed' | 'insertCSS' | 'removeInsertedCSS'>;
-};
-
-/** Settings allow 0.35–1 for a dimmed panel; anything else is clamped before it reaches the page. */
-const MIN_PANEL_OPACITY = 0.35;
-const panelDim = new WeakMap<object, { queue: Promise<void>; key: string | null }>();
+/** Fits the panel to its content's height, kept inside the work area and clear of a top Island. */
+export function fitPanelHeight(win: BrowserWindow, contentHeight: number): void {
+  if (win.isDestroyed()) return;
+  const current = win.getBounds();
+  const height = panelHeightFor(contentHeight);
+  if (current.height === height && current.width === PANEL_W) return;
+  win.setBounds(clampToVisibleArea({ ...current, width: PANEL_W, height }), false);
+}
 
 /**
- * Sets how see-through the review panel is.
- *
- * On Windows the panel is a transparent window. Without a usable GPU (software compositing), Chromium
- * draws each new frame of a transparent window with UpdateLayeredWindow. BrowserWindow.setOpacity
- * calls SetLayeredWindowAttributes, and after that Windows refuses every UpdateLayeredWindow call:
- * the panel stays frozen on screen with the old review while the page keeps updating underneath
- * (Electron issue #32555; real-device runs 40266232417 and 40266929130). Even setOpacity(1) does it.
- * So on Windows the window's own opacity is never touched; the page dims itself with a stylesheet.
- * Stylesheet changes run strictly one after another, so the last call wins: a quick blur then
- * focus ends undimmed. Other platforms keep win.setOpacity exactly as before.
+ * What the panel does when it loses focus: Fade (the default) drops the pane to 22 % but keeps it clickable;
+ * Hide closes the window and keeps its state for ⌃U. While the explanation limit holds the panel up, it stays.
  */
-export function setPanelOpacity(win: DimmablePanel, opacity: number, platform: NodeJS.Platform = process.platform): Promise<void> {
-  if (win.isDestroyed()) return Promise.resolve();
-  if (platform !== 'win32') {
-    win.setOpacity(opacity);
-    return Promise.resolve();
-  }
-  const value = Number.isFinite(opacity) ? Math.min(1, Math.max(MIN_PANEL_OPACITY, opacity)) : 1;
-  const contents = win.webContents;
-  const state = panelDim.get(contents) ?? { queue: Promise.resolve(), key: null };
-  panelDim.set(contents, state);
-  state.queue = state.queue
-    .then(async () => {
-      if (contents.isDestroyed()) return;
-      if (state.key) {
-        const key = state.key;
-        state.key = null;
-        await contents.removeInsertedCSS(key);
-      }
-      if (value < 1 && !contents.isDestroyed()) state.key = await contents.insertCSS(`html { opacity: ${value} !important; }`);
-    })
-    .catch((error: unknown) => console.warn('[unvibe] review panel opacity not applied', error));
-  return state.queue;
+export function clickAwayOnBlur(behavior: InactiveBehavior, limitPause: boolean): InactiveBehavior | 'stay' {
+  if (limitPause) return 'stay';
+  return behavior === 'hide' ? 'hide' : 'fade';
+}
+
+/** Tells the panel page whether it is faded (it animates the opacity itself, so reduced motion is honoured). */
+function sendAway(win: BrowserWindow, away: boolean): void {
+  if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('panel:away', away);
 }
 
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
-    minWidth: WIDGET_MIN_W,
-    minHeight: WIDGET_MIN_H,
+    minWidth: PANEL_W,
+    minHeight: PANEL_MIN_H,
+    maxWidth: PANEL_W,
+    maxHeight: PANEL_MAX_H,
     frame: false,
     transparent: true,
-    // System resize hits a thick invisible rim outside the card. Resize is handled
-    // from the visible border grips in the renderer instead.
+    // The content decides the height (widget:fitHeight); the width is fixed.
     resizable: false,
     hasShadow: false,
     roundedCorners: false,
@@ -367,33 +364,25 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
-  const persist = () => {
-    if (win.isDestroyed()) return;
-    settings().set({ lastWidgetBounds: win.getBounds() });
-  };
+  // Moving saves where the panel is; its size always comes from overlay B and the content.
   win.on('moved', () => {
     snap(win);
-    persist();
+    if (win.isDestroyed()) return;
+    settings().set({ lastWidgetBounds: win.getBounds() });
   });
-  win.on('resized', persist);
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
-    if (limitPauseActive) {
-      void setPanelOpacity(win, 1);
-      return;
-    }
-    const behavior = settings().all().inactiveBehavior;
-    if (behavior === 'dim') void setPanelOpacity(win, settings().all().widgetOpacityInactive);
+    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0 || grantFlowOpen);
+    if (action === 'hide') win.hide();
+    else if (action === 'fade') sendAway(win, true);
   });
-  win.on('focus', () => {
-    if (win.isDestroyed()) return;
-    void setPanelOpacity(win, 1);
-  });
+  win.on('focus', () => sendAway(win, false));
 
   lockNavigation(win);
   win.once('ready-to-show', () => win.showInactive());
-  void win.loadFile(page('widget'));
+  // The theme rides in the URL so the panel's first paint matches Settings › Theme.
+  void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light' } });
   return win;
 }
 
@@ -401,6 +390,8 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 export function getOrCreateWidget(): BrowserWindow {
   if (panelWin && !panelWin.isDestroyed()) {
     if (panelWin.isMinimized()) panelWin.restore();
+    // A faded panel comes back before it is focused: the shortcut always shows a full panel.
+    sendAway(panelWin, false);
     panelWin.showInactive();
     panelWin.focus();
     return panelWin;
@@ -443,7 +434,7 @@ export function raiseLimitPause(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-  void setPanelOpacity(win, 1);
+  sendAway(win, false);
   if (win.isMinimized()) win.restore();
   win.show();
   win.moveTop();
@@ -464,9 +455,9 @@ export interface CompanionRevealer {
 }
 
 /**
- * The companion's one reveal, once its page has painted: maximized first on a first run, then shown,
- * and with `front` (a first-run launch the user started) brought above other apps. Later calls do
- * nothing, so the paint and the 5 s fallback can both call it.
+ * The companion's one reveal, once its page has drawn its first real screen (companionPainted): maximized first
+ * on a first run, then shown, and with `front` (a first-run launch the user started) brought above other apps.
+ * Later calls do nothing, so that signal and the 5 s fallback can both call it.
  */
 export function companionRevealer(win: RevealTarget, { maximize, front, platform }: { maximize: boolean; front: boolean; platform: NodeJS.Platform }): CompanionRevealer {
   let shown = false;
@@ -488,34 +479,95 @@ export function companionRevealer(win: RevealTarget, { maximize, front, platform
   return { reveal, revealed: () => shown };
 }
 
-/** Companions whose reveal hasn't run yet: their page is still loading. */
+/** Companions whose reveal hasn't run yet: their page hasn't drawn its first real screen. */
 const companionReveals = new WeakMap<BrowserWindow, CompanionRevealer>();
 
 /**
- * Whether this companion is still loading, hidden until its page paints. Reopening it then must not
- * show it early (blank) or out of turn: its reveal shows it once painted.
+ * Whether this companion is still loading, hidden until its first real screen (companionPainted). Reopening it
+ * then must not show it early (blank) or out of turn: its reveal shows it.
  */
 export function companionLoading(win: BrowserWindow): boolean {
   return companionReveals.get(win)?.revealed() === false;
 }
 
+/** The window events armCompanionReveal listens to (a BrowserWindow, or a stand-in in tests). */
+export interface RevealWiring { once(event: 'show' | 'closed', listener: () => void): unknown }
+
 /**
- * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
- * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
- * first-run launch the user started) then brings it above other apps.
+ * The hidden companion's fallback: it shows after `fallbackMs` unless it showed or closed first. Nothing else here
+ * reveals it; in particular not ready-to-show, which fires on the empty 'checking' frame (#208). The page's own
+ * signal (companionPainted) is the normal reveal.
+ */
+export function armCompanionReveal(win: RevealWiring, reveal: () => void, fallbackMs = 5000): void {
+  const fallback = setTimeout(reveal, fallbackMs);
+  win.once('show', () => clearTimeout(fallback));
+  win.once('closed', () => clearTimeout(fallback));
+}
+
+/**
+ * The companion's page has drawn its first real screen (setup, sign-in or the app; not the empty frame it shows
+ * while it reads its settings): show it now. Chromium's ready-to-show fires on that empty frame, which is the blank
+ * first window QA measured on Windows (#208), so the reveal waits for the page instead.
+ */
+export function companionPainted(win: BrowserWindow): void {
+  companionReveals.get(win)?.reveal();
+}
+
+/**
+ * The companion's own chrome (Mono): the window background behind the first paint and, on Windows and Linux, the
+ * min/max/close overlay take the theme's ground (#ffffff / #000000) with the text colour for the symbols. Flat
+ * colours only: Electron 36 ignores the overlay colour's alpha on Linux (it painted black) and Windows is unverified.
+ * The top bar's box stops short of the overlay (mono-frame.css), so the strip sits on open ground. "system" follows
+ * the OS appearance.
+ */
+export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors, stage = false): {
+  background: string;
+  overlay: { color: string; symbolColor: string; height: number };
+} {
+  // While the start stage (the sharks, dark in both themes) is up, the window-button strip and the first paint take
+  // the stage's ground so a light theme never shows a lilac strip over the dark ocean (Design S-1 whole-app MUST 14).
+  if (stage) return { background: '#16122a', overlay: { color: '#17122f', symbolColor: '#f3f1fa', height: 40 } };
+  const dark = theme === 'dark' || (theme === 'system' && osDark);
+  return dark
+    ? { background: '#000000', overlay: { color: '#000000', symbolColor: '#f5f5f5', height: 40 } }
+    : { background: '#ffffff', overlay: { color: '#ffffff', symbolColor: '#111111', height: 40 } };
+}
+
+/**
+ * The stage shows on a launch into the app proper with the Settings row on: not the first run, and not an open
+ * that leads with the own-code step (the renderer ends the stage for both).
+ */
+function stageAtLaunch(): boolean {
+  const all = settings().all();
+  return all.onboarded && all.startAnimation && !ownCodeStepDueNow();
+}
+
+/** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
+export function applyCompanionChrome(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const chrome = companionChrome(settings().all().theme);
+  win.setBackgroundColor(chrome.background);
+  if (process.platform !== 'darwin') win.setTitleBarOverlay(chrome.overlay);
+}
+
+/**
+ * The home window. It stays hidden until its page has drawn its first real screen (companionPainted), so nobody
+ * sees a blank (on first run, maximized) window while it loads; if the page never says so, it shows anyway after
+ * 5 s. `front` (a first-run launch the user started) then brings it above other apps.
  */
 export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
+  const stage = stageAtLaunch();
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
     minWidth: 980,
     minHeight: 620,
     // 'hiddenInset' is macOS-only; elsewhere it would drop the min/max/close buttons, so draw
-    // them as an overlay in the companion's paper colour (v7 --v-bg).
+    // them as an overlay in the theme's ground colour (the companion reserves 150 px for it).
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
-      : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
-    backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme, undefined, stage).overlay }),
+    backgroundColor: companionChrome(settings().all().theme, undefined, stage).background,
     skipTaskbar: false,
     show: false,
     webPreferences: secureWebPrefs(),
@@ -525,12 +577,9 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
   // launches retain the normal companion size so the app stays out of the way.
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
-  const fallback = setTimeout(revealer.reveal, 5000);
-  win.once('ready-to-show', () => {
-    clearTimeout(fallback);
-    revealer.reveal();
-  });
-  win.once('closed', () => clearTimeout(fallback));
-  void win.loadFile(page('companion'));
+  armCompanionReveal(win, revealer.reveal);
+  // The page draws its loading frame on the ground of the screen to come (the stage's, or the app's). A window
+  // hidden at creation gets no frames, so that frame is the one on screen for the moment after the reveal (#208).
+  void win.loadFile(page('companion'), { query: { first: stage ? 'stage' : 'app' } });
   return win;
 }

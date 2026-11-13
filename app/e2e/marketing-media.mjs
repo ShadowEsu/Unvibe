@@ -290,13 +290,13 @@ mark(`app open ${version}`);
 // A Mac's setup has 4 steps (paste your own code, then the shortcut offer); Windows has 3.
 const steps = process.platform === 'win32' ? 3 : 4;
 const firstRun = await step('onboarding', async () => {
-  await companion.locator('.ob2__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
+  await companion.locator('.onboard__count').filter({ hasText: `1 / ${steps}` }).waitFor({ timeout: 20000 });
   await sleep(800);
   await shot(companion, 'onboarding-hello');
   // A neutral name: the greeting and sidebar show it in every published frame and screenshot.
   await enterText(companion.getByPlaceholder('Your name'), 'Sam');
   await button(companion, "Let's go").click();
-  await companion.locator('.ob2__count').filter({ hasText: `2 / ${steps}` }).waitFor();
+  await companion.locator('.onboard__count').filter({ hasText: `2 / ${steps}` }).waitFor();
   await sleep(1200);
   await shot(companion, 'onboarding-try-it');
   await button(companion, 'Explain this code').click();
@@ -315,7 +315,7 @@ async function saveAnswer(panel, label) {
 
 const explained = firstRun && await step('first explanation', async () => {
   const panel = await windowWith('widget.html', 20000);
-  await resize(panel, 560, 720);
+  await resize(panel, 440, 740);
   await panel.locator('.body .cursor').waitFor({ timeout: 60000 }).catch(() => {});
   await sleep(2500);
   await shot(panel, 'panel-streaming');
@@ -330,7 +330,9 @@ const explained = firstRun && await step('first explanation', async () => {
 
 if (explained) {
   await step('beginner depth', async () => {
-    await (await windowWith('widget.html')).locator('.lvl[data-level="beginner"]').click();
+    const panel = await windowWith('widget.html');
+    await panel.locator('.depth-chip').click();
+    await panel.locator('.pm-menu [data-level="beginner"]').click();
     await sleep(1500);
     const done = await settledPanel();
     await shot(done, 'panel-beginner');
@@ -358,7 +360,8 @@ if (explained) {
   });
   await step('test me', async () => {
     const panel = await windowWith('widget.html');
-    await panel.locator('.tool--quiz').first().click();
+    await panel.getByRole('button', { name: 'More', exact: true }).click();
+    await panel.getByRole('menuitem', { name: 'Test me', exact: true }).click();
     await panel.locator('.quiz__q').waitFor({ timeout: 60000 });
     await sleep(1200);
     await shot(panel, 'panel-test-me');
@@ -503,7 +506,8 @@ if (explained) {
     // Wait for the picked file's preview first, so the earlier finished card can't pass for this one.
     await (await windowWith('widget.html')).locator('.code-context').filter({ hasText: 'MAX_ATTEMPTS' }).first().waitFor({ timeout: 30000 });
     const panel = await settledPanel();
-    await panel.locator('.tool--why').click();
+    await panel.getByRole('button', { name: 'More', exact: true }).click();
+    await panel.getByRole('menuitem', { name: 'Why does this exist?', exact: true }).click();
     await panel.locator('.origin-panel').waitFor({ timeout: 20000 });
     await panel.locator('.origin-panel').scrollIntoViewIfNeeded();
     await sleep(800);
@@ -580,25 +584,26 @@ await step('today', async () => {
   // Walk the rest of setup by whatever the footer offers: step 2 says Next (or Skip for now before an explanation);
   // on a Mac, step 3 says Next once own code was explained there (the pasted samples count) and step 4 offers the
   // shortcut (Not now finishes), else step 3's Skip for now finishes; Windows ends with Start using Unvibe.
+  // The redesign's setup is `.onboard` (`.onboard__count` for the step), not 0.1.51's `.ob2`.
   const labels = ['Not now', 'Do it later', 'Start using Unvibe', 'Skip for now', 'Next'];
   // A step can be mid-transition (e.g. "Welcome!" while setup closes), so a step with no known button is looked at
   // again a moment later; only a step that stays that way fails.
   let stuck = 0;
-  for (let i = 0; i < 12 && await companion.locator('.ob2__count').count(); i++) {
-    if (await companion.locator('.ob2__count').filter({ hasText: `3 / ${steps}` }).count()) {
+  for (let i = 0; i < 12 && await companion.locator('.onboard__count').count(); i++) {
+    if (await companion.locator('.onboard__count').filter({ hasText: `3 / ${steps}` }).count()) {
       await sleep(1000);
       await shot(companion, 'onboarding-anywhere');
     }
     let clicked = false;
     for (const name of labels) {
-      const b = companion.locator('.ob2').getByRole('button', { name, exact: true });
+      const b = companion.locator('.onboard').getByRole('button', { name, exact: true });
       if (await b.count() && await b.first().isVisible()) { await b.first().click(); clicked = true; break; }
     }
     if (!clicked) {
-      if (!await companion.locator('.ob2__count').count()) break; // setup finished while this looked
+      if (!await companion.locator('.onboard__count').count()) break; // setup finished while this looked
       if (++stuck >= 4) {
-        const names = await companion.locator('.ob2 button:visible').allInnerTexts();
-        throw new Error(`setup step ${await companion.locator('.ob2__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
+        const names = await companion.locator('.onboard button:visible').allInnerTexts();
+        throw new Error(`setup step ${await companion.locator('.onboard__count').innerText()} offers no known button: ${names.map((n) => n.trim()).join(' | ')}`);
       }
     }
     await sleep(1200);

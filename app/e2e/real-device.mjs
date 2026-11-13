@@ -279,14 +279,17 @@ desktopShot('first-launch');
 // --- First run, timed: hello → explain the sample for real → your own code ------------------------
 // The walkthrough acts at a brisk human pace (no sleeps beyond what the UI needs), so the time is
 // close to what a new user who reads and clicks straight through would see. A Mac's setup has 4
-// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3.
+// steps (step 3 pastes your own code, step 4 offers the shortcut once that worked); Windows has 3
+// (step 3 pastes your own code and names the global shortcut).
 const setupSteps = os === 'windows' ? 3 : 4;
+// Windows pastes its own code at step 3 (F-16: the step that made Windows setup explain own code).
+const SETUP_PASTE = 'function clamp(n, lo, hi) {\n  return Math.min(hi, Math.max(lo, n));\n}';
 try {
-  await companion.locator('.ob2__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
+  await companion.locator('.onboard__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
   await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
-  await companion.locator('.ob2__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
   await clickText(companion, 'Explain this code');
   log(true, 'Onboarding: hello and sample');
@@ -302,12 +305,25 @@ const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
   await clickText(companion, 'Next');
-  await companion.locator('.ob2__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
-  await companion.locator(os === 'windows' ? '.ob2__task' : '.paste-target__box').waitFor({ timeout: 8000 });
+  await companion.locator('.onboard__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+  await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  // Nothing is pasted here, so a Mac's step 3 finishes with Skip for now (no step 4).
-  await clickText(companion, os === 'windows' ? 'Start using Unvibe' : 'Skip for now');
-  await companion.locator('.ob').waitFor({ state: 'detached', timeout: 10000 });
+  if (os === 'windows') {
+    // A real paste: the system clipboard holds code, Ctrl+V into the box explains it in the panel.
+    await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), SETUP_PASTE);
+    await companion.locator('.paste-target__box').focus();
+    await companion.keyboard.press('Control+V');
+    const own = await waitForExplanation('setup-own-code', SETUP_PASTE, { agree: true });
+    log(own.ok, 'Setup step 3: pasting your own code explains it', own.why);
+    await companion.getByText('That was your own code.', { exact: false }).waitFor({ timeout: 15000 });
+    log(readStore(userData).loginPromptAsked === true, 'Setup step 3: own code makes the launch-at-login question due');
+    await shot(companion, 'onboarding-3-own-code-done');
+    await clickText(companion, 'Start using Unvibe');
+  } else {
+    // Nothing is pasted on a Mac here, so step 3 finishes with Skip for now (no step 4).
+    await clickText(companion, 'Skip for now');
+  }
+  await companion.locator('.onboard').waitFor({ state: 'detached', timeout: 10000 });
   await shot(companion, 'after-onboarding');
   log(true, 'Onboarding: every step');
 } catch (e) { log(false, 'Onboarding: every step', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
@@ -372,7 +388,10 @@ try {
 
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
-    await companion.locator('.side').getByRole('button', { name: page, exact: true }).click();
+    // Momentum, Plan and Share sit under "More" in the 0.1.51 sidebar.
+    const nav = companion.locator('.side').getByRole('button', { name: page, exact: true });
+    if (!(await nav.isVisible())) await companion.locator('.side').getByRole('button', { name: 'More', exact: true }).click();
+    await nav.click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     assert.equal((await companion.locator('.topbar__title').innerText()).trim(), page);
     log(true, `Page ${page}`);
@@ -433,44 +452,45 @@ try {
 const { shortcut } = await companion.evaluate(() => window.unvibe.appInfo());
 const sample = 'function total(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}';
 
-async function waitForExplanation(label, expectedCode, { confirm = false } = {}) {
+async function waitForExplanation(label, expectedCode, { confirm = false, agree = confirm } = {}) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
   try {
-    if (confirm) {
+    if (agree) {
       // The first code of the person's own (0.1.46+): the send agreement comes first. Continue does
       // nothing until all three boxes are ticked; nothing may stream before it.
       const consent = panel.locator('.consent-form');
-      await consent.or(panel.locator('#confirm-title')).first().waitFor({ timeout: 30000 });
+      await consent.or(panel.locator('#confirm-title')).or(panel.locator('.ob-code__all code').filter({ hasText: expectedCode })).first().waitFor({ timeout: 30000 });
       if (await consent.count()) {
         const boxes = consent.locator('input[type="checkbox"]');
         assert.equal(await boxes.count(), 3, 'the send agreement has three boxes');
         for (let i = 0; i < 3; i++) assert.equal(await boxes.nth(i).isChecked(), false, 'every agreement box starts unticked');
-        const agree = consent.getByRole('button', { name: 'Continue', exact: true });
-        assert.equal(await agree.getAttribute('aria-disabled'), 'true', 'Continue is off before the boxes are ticked');
+        const agreeButton = consent.getByRole('button', { name: 'Continue', exact: true });
+        assert.equal(await agreeButton.getAttribute('aria-disabled'), 'true', 'Continue is off before the boxes are ticked');
         await shot(panel, `${label}-consent`);
         for (let i = 0; i < 3; i++) await boxes.nth(i).check();
-        assert.equal(await panel.locator('.stage').count(), 0, 'nothing streams before the agreement');
-        await agree.click();
-        report.push('NOTE  first own code: send agreement shown, all three boxes ticked, Continue');
+        assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams before the agreement');
+        await agreeButton.click();
+        report.push(`NOTE  first own code (${label}): send agreement shown, all three boxes ticked, Continue`);
       }
+    }
+    if (confirm) {
       // A link-started review waits for Explain (Security LOW #8): nothing may stream before the click.
       await panel.locator('#confirm-title').waitFor({ timeout: 30000 });
       await sleep(1500);
-      assert.equal(await panel.locator('.stage').count(), 0, 'a link-started review must not start before Explain');
+      assert.equal(await panel.locator('.ob-answer').count(), 0, 'a link-started review must not start before Explain');
       await shot(panel, `${label}-confirm`);
-      // The confirm sheet's own Explain; the panel's side rail has an Explain tab as well.
+      // The confirm sheet's own Explain; the panel's ⋯ menu has an Explain item as well.
       await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
     }
-    const preview = panel.locator('.code-context code').filter({ hasText: expectedCode });
+    const preview = panel.locator('.ob-code__all code').filter({ hasText: expectedCode });
     await preview.waitFor({ timeout: 30000 });
     assert.equal((await preview.innerText()).trim(), expectedCode.trim());
-    // The selected-code preview alone is not an AI explanation.
-    await panel.locator('.card--done .local-save-note').waitFor({ timeout: 90000 });
-    await panel.locator('.body .cursor').waitFor({ state: 'detached', timeout: 30000 });
-    const bodyText = await panel.locator('.body').innerText();
-    const codeContext = await panel.locator('.code-context').innerText();
-    const text = bodyText.replace(codeContext, '').trim();
+    // The selected-code preview alone is not an AI explanation: the panel reaches its done phase and the typing
+    // cursor is gone before the answer is read.
+    await panel.locator('.ob.ob--done').waitFor({ timeout: 90000 });
+    await panel.locator('.ob-answer .cursor').waitFor({ state: 'detached', timeout: 30000 });
+    const text = (await panel.locator('.ob-answer').innerText()).trim();
     assert.ok(text.length > 80, 'a completed review must contain an explanation beyond the code preview');
     await shot(panel, label);
     desktopShot(label);
@@ -570,8 +590,9 @@ finally {
 }
 if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered', `${shortcut} (shown by the step above)`);
 
-// Launch-at-login question: due after the first explanation of the user's own code (the editor
-// bridge above), never after the built-in sample, and only once (the store flag stops a second ask).
+// Launch-at-login question: due after the first explanation of the user's own code (the setup paste
+// on Windows, the editor bridge above on a Mac), never after the built-in sample, and only once (the
+// store flag stops a second ask).
 await sleep(3000); // one more pass of the dialog watcher
 clearInterval(dialogWatch);
 const askedAtEnd = readStore(userData).loginPromptAsked === true;

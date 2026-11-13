@@ -1,0 +1,108 @@
+/* ── Mono: Ask Vibe (OPTIONS.md "Organised containers", Ask Vibe row; mono/grid/README.md "Ask Vibe"). The thread box
+   and the composer box (104 px) fill the page column; the right side holds "What Vibe can see" and Saved conversations.
+   Your message on the strong grey fill, Vibe's answer with Vibe at 28 px beside it, inline code on the grey fill. The
+   send button is the one filled button. Box, rows, buttons and links are mono-frame.css's. ── */
+
+:root[data-ui="v3"][data-v7] .layout .ask-page { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; padding: 0; font-family: var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout :is(.ask-page, .ask-side) :is(h1, h2, p) { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.ask-page, .ask-side) .m-box__title :is(h1, h2) { color: var(--u-ink); font: 600 14px/20px var(--u-font); letter-spacing: 0; }
+
+/* The thread box: its title row, then the log, which scrolls inside the box. */
+:root[data-ui="v3"][data-v7] .layout .ask-thread { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 240px; overflow: hidden; }
+:root[data-ui="v3"][data-v7] .layout .ask-thread .m-box__title { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-log { display: flex; flex: 1 1 auto; flex-direction: column; gap: 20px; min-height: 0; overflow-y: auto; padding: 20px; }
+
+/* Your message: right-aligned on the strong grey fill. */
+:root[data-ui="v3"][data-v7] .layout .ask-turn--user { display: flex; justify-content: flex-end; }
+:root[data-ui="v3"][data-v7] .layout .ask-user { max-width: min(560px, 80%); padding: 8px 14px; border-radius: 12px; background: var(--u-select); color: var(--u-ink); font: 400 14px/20px var(--u-font); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Vibe's answer: Vibe at 28 px, then its name, the answer and Copy. No card around it. */
+:root[data-ui="v3"][data-v7] .layout :is(.ask-turn--assistant, .ask-turn--thinking) { display: flex; align-items: flex-start; gap: 12px; }
+:root[data-ui="v3"][data-v7] .layout .ask-turn__vibe { flex: none; width: 28px; height: 28px; }
+:root[data-ui="v3"][data-v7] .layout .ask-answer { display: flex; flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding-top: 4px; }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__who { color: var(--u-ink); font: 600 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__body { align-self: stretch; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__body code { padding: 1px 6px; border-radius: 6px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__body pre { padding: 12px 14px; border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__body pre code { padding: 0; background: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-answer__copy { margin-left: -12px; color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .ask-turn--thinking .think-status { padding-top: 2px; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .ask-turn--thinking :is(.think-status__spark, .think-status__sub) { color: var(--u-ink-2); }
+
+/* The empty page: Vibe at rest (eyes follow the pointer), the app's greeting and sentence, the three starters. */
+:root[data-ui="v3"][data-v7] .layout .ask-hello { display: flex; flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; padding: 28px 20px; text-align: center; }
+:root[data-ui="v3"][data-v7] .layout .ask-hello > .buddy { margin-bottom: 8px; }
+:root[data-ui="v3"][data-v7] .layout .ask-hello h2 { color: var(--u-ink); font: 600 22px/28px var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout .ask-hello p { max-width: 480px; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-hello__starters { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 560px; margin-top: 16px; }
+
+/* A failed reply (offline and the rest): today's inline sentence and Retry, in Mono. The mark keeps the warning colour. */
+:root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error { display: flex; align-items: center; gap: 12px; align-self: stretch; margin: 0; padding: 12px 16px; border: 1px solid var(--u-border); border-radius: var(--u-radius-card); background: var(--u-surface); box-shadow: none; text-align: left; }
+:root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error p { flex: 1 1 auto; margin: 0; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error__retry { flex: none; height: 28px; padding: 0 12px; border: 1px solid var(--u-border-control); border-radius: 999px; background: none; color: var(--u-ink); font: 600 12px/1 var(--u-font); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error__retry:hover { background: var(--u-sunken); }
+
+/* The composer box: 104 px, the control border; the text, then one bar of controls. The box is the field: the
+   textarea has no ring of its own, and with the cursor in it the box's border becomes the 2 px ring in the text
+   colour (inset, so nothing moves); the text starts 20 px in. .m-box.ask-composer outweighs mono-frame.css's .m-box,
+   which loads after this file. */
+:root[data-ui="v3"][data-v7] .layout .m-box.ask-composer { display: flex; flex: none; flex-direction: column; gap: 8px; min-height: 104px; padding: 12px 12px 12px 20px; border-color: var(--u-border-control); }
+:root[data-ui="v3"][data-v7] .layout .m-box.ask-composer:focus-within { border-color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea { flex: 1 1 auto; width: 100%; min-height: 40px; padding: 0; border: 0; outline: none; resize: none; background: none; box-shadow: none; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea:is(:focus, :focus-visible) { outline: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea::placeholder { color: var(--u-ink-2); opacity: 1; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea:disabled { opacity: var(--u-off); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip { margin: 0; padding: 12px 14px; border: 1px solid var(--u-border); border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip b { font: 600 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip p { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__bar { display: flex; align-items: center; gap: 12px; min-width: 0; margin-left: -8px; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__hint { flex: 1 1 0; min-width: 0; overflow: hidden; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__meter { flex: none; padding: 0; border: 0; background: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__meter[data-tone="hot"] { color: var(--u-amber); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__mic { flex: none; gap: 6px; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__mic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__send { flex: none; width: 36px; min-width: 36px; padding: 0; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__send svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__send:disabled { opacity: var(--u-off); cursor: default; }
+/* The AI picker: a 32 px grey-filled pill (a chip at control size), its menu floats with the floating shadow. */
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai { position: relative; flex: 0 1 auto; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__btn { display: inline-flex; align-items: center; gap: 4px; max-width: 240px; height: 32px; padding: 0 10px 0 12px; border: 0; border-radius: 999px; background: var(--u-sunken); color: var(--u-ink); box-shadow: none; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__btn:hover { background: var(--u-select); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__btn small { overflow: hidden; color: var(--u-ink); font: 600 12px/16px var(--u-font); text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__caret { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__menu { top: auto; bottom: calc(100% + 6px); border: 1px solid var(--u-border); border-radius: var(--u-radius-card); background: var(--u-solid-surface); box-shadow: var(--u-shadow-float); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__menu button { color: var(--u-ink); font: 600 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__menu button span { color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer .chat-ai__menu button:hover { background: var(--u-sunken); }
+
+/* The right side: two boxes, 8 px apart. */
+:root[data-ui="v3"][data-v7] .layout .ask-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-family: var(--u-font); color: var(--u-ink); }
+/* Your latest brief: three label / value lines, one quiet line on what Ask Vibe sees (Security M1), then the brief's
+   files on the grey fill. */
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows { margin: 0; padding: 4px 20px; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows > div + div { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows dt { flex: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows dd { min-width: 0; margin: 0; overflow: hidden; color: var(--u-ink); font: 600 14px/20px var(--u-font); text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__rows dd code { padding: 0; background: none; color: var(--u-ink); font: 400 12px/16px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__note { margin: 0; padding: 0 20px 16px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__empty { margin: 0; padding: 12px 20px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__files { margin: 0 12px 12px; padding: 4px 12px; border-radius: 8px; background: var(--u-sunken); list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__files li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__files code { min-width: 0; overflow: hidden; padding: 0; background: none; color: var(--u-ink); font: 400 12px/16px var(--u-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-see__files span { flex: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .ask-see__files .ask-see__more { color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+/* Saved conversations: up to six rows. The title on the whole first line; how many messages at the left of the second
+   and the date at its right. .m-row.ask-saved__row outweighs mono-frame.css's .m-row (padding, flex), loaded later. */
+:root[data-ui="v3"][data-v7] .layout .ask-saved__rows { margin: 0; padding: 0 20px 4px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .m-row.ask-saved__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 12px; width: 100%; min-height: 52px; padding: 8px 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__rows > li + li .ask-saved__row { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__main { display: contents; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__title { grid-column: 1 / -1; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__meta { grid-column: 1; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__end { grid-column: 2; margin: 0; padding: 0; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); text-align: right; }
+
+/* Whole phrases only: in a narrow column the ", Shift Return for a new line" tail goes, never a cut word. */
+@container mcol (max-width: 700px) {
+  :root[data-ui="v3"][data-v7] .layout .ask-composer__hint-more { display: none; }
+}

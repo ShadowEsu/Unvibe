@@ -66,7 +66,6 @@ function panel(): { win: BrowserWindow; events: Array<Record<string, unknown>> }
 function session(level: ReviewSession['level']): ReviewSession {
   return {
     reviewId: `rv-${Math.random().toString(36).slice(2)}`,
-    tabId: '1',
     code: 'function debounce(fn, wait) {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), wait);\n  };\n}',
     sourceApp: 'Terminal',
     abort: null,
@@ -324,7 +323,7 @@ test('a correct quiz answer on a panel that outlived a wipe saves no snapshot; a
 });
 
 test('review streams forward only the token, done and error events the service sends', async () => {
-  const appOnly = ['init', 'understood', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
+  const appOnly = ['init', 'understood', 'pinned', 'status', 'consent', 'consentNeeded', 'blocked', 'quizError', 'cancelled', 'question', 'graded', 'usage'];
   const { win, events } = panel();
   // Forwarded events are rebuilt without extra fields, so the stream's own values mark them.
   reviewEvents = [...appOnly, 'token', 'error', 'unhandled', 'constructor', '', 'done'].map((type) => ({
@@ -358,14 +357,14 @@ test('streamed token, done and error events reach the panel with only their chec
   const streamed = events.filter((ev) => ev.type === 'token' || ev.type === 'done' || ev.type === 'error');
   // `short` is the app's own flag (this run asked for the short answer), never a field the service sent.
   assert.deepEqual(streamed, [
-    { type: 'token', text: 'Kept words.', tabId: '1' },
-    { type: 'error', message: 'The explanation service could not complete that request. Please try again.', tabId: '1' },
-    { type: 'done', model: 'service-model', mock: false, short: true, tabId: '1' },
-    { type: 'done', model: undefined, mock: true, short: true, tabId: '1' },
-    { type: 'done', model: 'm'.repeat(80), mock: false, short: true, tabId: '1' },
+    { type: 'token', text: 'Kept words.' },
+    { type: 'error', message: 'The explanation service could not complete that request. Please try again.' },
+    { type: 'done', model: 'service-model', mock: false, short: true },
+    { type: 'done', model: undefined, mock: true, short: true },
+    { type: 'done', model: 'm'.repeat(80), mock: false, short: true },
   ]);
   for (const ev of streamed) {
-    const expected = ev.type === 'token' ? ['tabId', 'text', 'type'] : ev.type === 'error' ? ['message', 'tabId', 'type'] : ['mock', 'model', 'short', 'tabId', 'type'];
+    const expected = ev.type === 'token' ? ['text', 'type'] : ev.type === 'error' ? ['message', 'type'] : ['mock', 'model', 'short', 'type'];
     assert.deepEqual(Object.keys(ev).sort(), expected);
     assert.ok(Object.values(ev).every((value) => value === undefined || typeof value === 'string' || typeof value === 'boolean'), JSON.stringify(ev));
   }
@@ -411,7 +410,7 @@ test('Test me asks quick-check, scenario, recall, then makes no fourth request',
   ]);
 });
 
-test('a new explanation resets Test me, but a follow-up and another tab do not', async () => {
+test('a new explanation resets Test me, but a follow-up does not', async () => {
   received.length = 0;
   const { win, events } = panel();
   const s = session('intermediate');
@@ -419,12 +418,10 @@ test('a new explanation resets Test me, but a follow-up and another tab do not',
   await startComprehension(win, s);
   await runReview(win, s, { level: s.level, question: 'Why wait?' });
   await startComprehension(win, s);
-  const other = { ...session('beginner'), tabId: '2' };
-  await startComprehension(win, other);
   await runReview(win, s, { level: 'advanced', variant: 'different' });
   await startComprehension(win, s);
   assert.deepEqual(received.filter((r) => r.path === '/api/v1/comprehension').map((r) => r.body.quizMode),
-    ['quick-check', 'scenario', 'quick-check', 'quick-check'], 'new explanation starts again at quick-check');
+    ['quick-check', 'scenario', 'quick-check'], 'new explanation starts again at quick-check');
   assert.equal(events.filter((ev) => ev.type === 'question').at(-1)?.index, 1);
 });
 

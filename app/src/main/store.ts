@@ -58,6 +58,8 @@ interface Data {
   trialStartedAt?: string;
   /** Event ids the user removed. Local only, so a later sync cannot restore them. */
   deletedIds?: string[];
+  /** Lessons pinned with the panel's Save (overlay B), newest first. Local only, never synced. */
+  pinnedIds?: string[];
   /** Saved Ask Unvibe conversations. Local only — never synced to the backend. */
   chatThreads?: ChatThread[];
   /** Setup-progress steps the server has acknowledged (progress.ts), so a step is sent once. */
@@ -190,12 +192,27 @@ class Store {
     const existed = this.data.events.some((event) => event.id === id);
     this.data.events = this.data.events.filter((event) => event.id !== id);
     this.data.outbox = this.data.outbox.filter((queued) => queued !== id);
+    this.data.pinnedIds = (this.data.pinnedIds ?? []).filter((pinned) => pinned !== id);
     const hidden = new Set(this.data.deletedIds ?? []);
     hidden.add(id);
     this.data.deletedIds = [...hidden].slice(-2000);
     this.save();
     learningChanged();
     return existed || hidden.has(id);
+  }
+
+  /** Pins (newest first) or unpins a saved lesson. False when there is no such lesson. */
+  setPinned(id: string, pinned: boolean): boolean {
+    if (!this.eventById(id)) return false;
+    const rest = (this.data.pinnedIds ?? []).filter((pinnedId) => pinnedId !== id);
+    this.data.pinnedIds = pinned ? [id, ...rest] : rest;
+    this.save();
+    learningChanged();
+    return true;
+  }
+
+  pinnedIds(): string[] {
+    return [...(this.data.pinnedIds ?? [])];
   }
 
   private todayUsage(): { day: string; studyAsks: number; quizzes: number } {

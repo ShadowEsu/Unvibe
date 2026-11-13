@@ -242,10 +242,6 @@ const OUTCOME_LABEL: Record<Outcome, string> = {
   needs_review: 'To revisit',
 };
 
-export function computeFeed(events: LocalEvent[], limit: number): FeedItem[] {
-  return computeLearningItems(events, limit).map(({ id, ts, title, meta, outcome }) => ({ id, ts, title, meta, outcome }));
-}
-
 export function computeLearningItems(events: LocalEvent[], limit: number): LearningItem[] {
   return [...events]
     .filter((e) => e.scope !== 'chat' && isLearningEvent(e))

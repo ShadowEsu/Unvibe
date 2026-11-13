@@ -1,0 +1,191 @@
+/* Mono, the Quiz (OPTIONS.md "Quiz", mono/quiz/README.md, mono/grid/README.md "Quiz results as tiles").
+   One 640 px box in the middle while a check runs (16 px corners, 28 px padding, 90 % solid); results as tiles across
+   the 960 px column; the Quiz page as three boxes. Right and wrong by shape (disc + tick, outlined disc + cross,
+   weight, greying), never by colour. Markup: companion/quizCheck.tsx. */
+
+/* ── The top bar while a check runs (published through useTopBar) ── */
+:root[data-ui="v3"][data-v7] .qz-bar { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; height: 100%; font: 400 14px/1 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .qz-bar__root { padding: 0; border: 0; background: none; color: var(--u-ink-2); font: inherit; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .qz-bar__root:hover { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .qz-bar .qz-chev { width: 14px; height: 14px; flex: none; color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .qz-bar__lesson { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+:root[data-ui="v3"][data-v7] .qz-bar__gap { flex: 1; }
+:root[data-ui="v3"][data-v7] .qz-bar__left { margin-right: 12px; color: var(--u-ink-2); font-size: 12px; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .qz-bar__leave { gap: 8px; }
+:root[data-ui="v3"][data-v7] .qz-chev { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── The room: the box in the middle, nothing docked under it ── */
+:root[data-ui="v3"][data-v7] .layout .content:has(.qz) .ask-dock,
+:root[data-ui="v3"][data-v7] .layout .content:has(.qz)::after,
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.qz)::after { display: none; }
+:root[data-ui="v3"][data-v7] .layout .qz { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 96px); padding: 8px 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-step, :root[data-ui="v3"][data-v7] .layout .qz-step:focus-visible { width: 640px; max-width: 100%; outline: none; }
+:root[data-ui="v3"][data-v7] .layout .qz--wide .qz-step { width: 100%; }
+:root[data-ui="v3"][data-v7] .layout .qz-step--fade { animation: qzIn 160ms cubic-bezier(0.2, 0, 0, 1) both; }
+@keyframes qzIn { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { :root[data-ui="v3"][data-v7] .layout .qz-step--fade { animation: none; } }
+
+:root[data-ui="v3"][data-v7] .layout .qz-box {
+  padding: 28px; border: 1px solid var(--u-border); border-radius: 16px; box-shadow: none;
+  background: color-mix(in srgb, var(--u-paper) 90%, transparent); color: var(--u-ink);
+}
+:root[data-ui="v3"][data-v7] .layout .qz-solid { background: color-mix(in srgb, var(--u-paper) 90%, transparent); }
+
+/* Type */
+:root[data-ui="v3"][data-v7] .layout .qz-kicker { margin: 0; color: var(--u-ink-2); font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-kicker--strong { font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-title { margin: 6px 0 0; color: var(--u-ink); font: 600 22px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-lead { margin: 8px 0 0; color: var(--u-ink-2); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-hint { margin: 0; color: var(--u-ink-2); font: 400 12px/1.4 var(--u-font); }
+
+/* Progress: three 4 px segments 6 px apart, then where you are and what this check is */
+:root[data-ui="v3"][data-v7] .layout .qz-progress { margin: 0 0 20px; }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__bar i { height: 4px; border-radius: 2px; background: var(--u-select); }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__bar i.is-done { background: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__bar i.is-now { background: color-mix(in srgb, var(--u-ink) 55%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 12px; font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__label { color: var(--u-ink); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-progress__meta { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--u-ink-2); }
+
+/* The question: Vibe 40 px beside it, 22 px semibold */
+:root[data-ui="v3"][data-v7] .layout .qz-q { display: flex; align-items: center; gap: 16px; margin: 0 0 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-q__vibe { display: inline-flex; flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-q__text { margin: 0; color: var(--u-ink); font: 600 22px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-wait { display: grid; justify-items: start; gap: 12px; }
+
+/* The code: solid, the line in question on a grey band with a 2 px bar in the text colour */
+:root[data-ui="v3"][data-v7] .layout .qz-code {
+  max-height: 240px; margin: 0 0 16px; padding: 10px 0; overflow: auto; border-radius: var(--u-radius-field);
+  background: color-mix(in srgb, var(--u-ink) 5%, var(--u-paper));
+}
+:root[data-ui="v3"][data-v7] .layout .qz-code pre { margin: 0; padding: 0; background: none; border: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-code code { display: block; min-width: max-content; font: 400 12.5px/20px var(--u-font-mono, var(--font-mono)); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-code__line { position: relative; display: grid; grid-template-columns: 28px auto 1fr; column-gap: 14px; padding-right: 12px; white-space: pre; }
+:root[data-ui="v3"][data-v7] .layout .qz-code__n { color: var(--u-ink-2); text-align: right; font-size: 12px; user-select: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-code__line.is-on { background: var(--u-select); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-code__line.is-on::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-code__line.is-on .qz-code__n { color: var(--u-ink); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-code__note { justify-self: end; padding-left: 16px; color: var(--u-ink); font: 600 12px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-fold { margin: 0 0 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-fold summary { display: inline-flex; padding: 4px 0; color: var(--u-ink); font: 600 14px/1.4 var(--u-font); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .qz-fold[open] summary { margin-bottom: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-fold .qz-code { margin: 0; }
+
+/* Answers: 52 px rows 8 px apart, 17 px text, a 24 px key tile; selecting is immediate (no transition) */
+:root[data-ui="v3"][data-v7] .layout .qz-options { display: grid; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-option {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; margin: 0; padding: 8px 14px;
+  border: 1px solid var(--u-border-control); border-radius: 10px; background: var(--u-paper); box-shadow: none;
+  color: var(--u-ink); font: 400 17px/1.35 var(--u-font); text-align: left; transform: none; transition: none; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .qz-option:hover:not(:disabled):not(.is-chosen) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
+:root[data-ui="v3"][data-v7] .layout :is(.qz-option.is-chosen, .qz-option.is-right) { padding: 7px 13px; border: 2px solid var(--u-ink); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-option.is-wrong { opacity: var(--u-off); cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option.is-right { margin-top: 0; cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option__text { flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-keytile {
+  display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--u-ink) 30%, transparent); border-bottom-width: 2px; border-radius: 6px;
+  background: var(--u-paper); color: var(--u-ink); font: 600 12px/1 var(--u-font-mono, var(--font-mono));
+}
+:root[data-ui="v3"][data-v7] .layout .qz-option.is-chosen .qz-keytile { border: 0; background: var(--u-action); color: var(--u-action-on); }
+:root[data-ui="v3"][data-v7] .layout .qz-mark { flex: none; width: 20px; height: 20px; margin-left: auto; }
+:root[data-ui="v3"][data-v7] .layout .qz-mark--right circle { fill: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-mark--right path { fill: none; stroke: var(--u-paper); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .qz-mark--wrong circle { fill: none; stroke: var(--u-ink-2); stroke-width: 1.5; }
+:root[data-ui="v3"][data-v7] .layout .qz-mark--wrong path { fill: none; stroke: var(--u-ink-2); stroke-width: 1.6; stroke-linecap: round; }
+
+/* The foot: the hint, or one sentence on why, beside the Check button (which never moves) */
+:root[data-ui="v3"][data-v7] .layout .qz-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-foot .m-btn { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-foot__why { margin: 0; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-foot__why strong { font-weight: 600; }
+
+/* Start: Vibe waves; the three kinds of check as one choice */
+:root[data-ui="v3"][data-v7] .layout .qz-start { text-align: center; }
+:root[data-ui="v3"][data-v7] .layout :is(.qz-start__vibe, .qz-right__vibe) { display: inline-flex; margin-bottom: 14px; }
+:root[data-ui="v3"][data-v7] .layout .qz-start .qz-lead { max-width: 440px; margin: 10px auto 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-modes { display: grid; gap: 8px; margin: 24px 0 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-mode {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; margin: 0; padding: 8px 14px 8px 16px;
+  border: 1px solid var(--u-border-control); border-radius: 10px; background: var(--u-paper); box-shadow: none;
+  color: var(--u-ink); text-align: left; transform: none; transition: none; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .qz-mode:hover:not(:disabled):not(.is-on) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
+:root[data-ui="v3"][data-v7] .layout .qz-mode.is-on { padding: 7px 13px 7px 15px; border: 2px solid var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-mode:disabled { opacity: var(--u-off); cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-radio { flex: none; width: 16px; height: 16px; box-sizing: border-box; border: 1.5px solid var(--u-border-control); border-radius: 50%; background: var(--u-paper); }
+:root[data-ui="v3"][data-v7] .layout .qz-mode.is-on .qz-radio { border: 5px solid var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-mode__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-mode__text strong { font: 600 14px/1.35 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-mode__text span { color: var(--u-ink-2); font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout :is(.qz-start__go, .qz-right__go) { margin: 4px auto 12px; }
+
+/* Right: its own screen */
+:root[data-ui="v3"][data-v7] .layout .qz-right { text-align: center; }
+:root[data-ui="v3"][data-v7] .layout .qz-right .qz-progress { text-align: left; }
+:root[data-ui="v3"][data-v7] .layout .qz-right .qz-title { margin-top: 4px; }
+:root[data-ui="v3"][data-v7] .layout .qz-why { max-width: 500px; margin: 10px auto 18px; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-right .qz-code { margin-bottom: 12px; text-align: left; }
+:root[data-ui="v3"][data-v7] .layout .qz-right .qz-option { margin-bottom: 20px; }
+
+/* Results as tiles: headline + two number tiles, one tile per question, what is next */
+:root[data-ui="v3"][data-v7] .layout .qz-results { display: grid; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-head { display: flex; align-items: center; gap: 20px; }
+:root[data-ui="v3"][data-v7] .layout .qz-head__vibe { display: inline-flex; flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-results .m-tile { display: grid; align-content: start; gap: 2px; }
+:root[data-ui="v3"][data-v7] .layout .qz-tile { display: grid; align-content: start; gap: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--u-border); font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__n { color: var(--u-ink); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__try { display: inline-flex; align-items: center; gap: 8px; color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__try .qz-mark { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__q { margin: 0 0 16px; color: var(--u-ink); font: 600 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__label { margin: 0 0 4px; color: var(--u-ink-2); font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__a { margin: 0 0 16px; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__code {
+  display: flex; gap: 12px; margin: auto 0 0; padding: 8px 12px; overflow: hidden; border-left: 2px solid var(--u-ink); border-radius: 0 6px 6px 0;
+  background: var(--u-sunken); font: 400 12px/20px var(--u-font-mono, var(--font-mono)); white-space: nowrap;
+}
+:root[data-ui="v3"][data-v7] .layout .qz-tile__code span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .qz-tile__code code { overflow: hidden; text-overflow: ellipsis; color: var(--u-ink); font: inherit; background: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-next { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-next__what { flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-next__what p:last-child { margin: 4px 0 0; color: var(--u-ink); font: 400 14px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-next__what strong { font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .qz-next__what .m-muted { margin-left: 6px; font-size: 12px; }
+
+/* ── The Quiz page ── */
+:root[data-ui="v3"][data-v7] .layout .qz-home { display: grid; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__head { display: flex; align-items: center; gap: 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__vibe { display: inline-flex; flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__title { flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__title h1 { margin: 0; color: var(--u-ink); font: 600 22px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__title p { margin: 4px 0 0; color: var(--u-ink-2); font: 400 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__mix { display: grid; justify-items: center; gap: 8px; flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__mix > span { color: var(--u-ink-2); font: 400 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__empty { display: grid; justify-items: start; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__empty h2 { margin: 0; font: 600 17px/1.35 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__empty p { margin: 0 0 8px; color: var(--u-ink-2); font: 400 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__continue { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__lesson { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin: 4px 0 0; font: 400 14px/1.4 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__lesson strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__lesson span { color: var(--u-ink-2); font-size: 12px; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__search { width: 200px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__list .m-box__meta { display: inline-flex; align-items: center; gap: 12px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__row { display: flex; align-items: center; gap: 4px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__pick {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: 100%; margin: 0; padding: 0;
+  border: 0; background: none; box-shadow: none; color: var(--u-ink); font: inherit; text-align: left; transform: none; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .qz-home__icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: var(--u-radius-field); background: var(--u-sunken); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__icon svg { width: 16px; height: 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__pick .m-row__main { flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__day { flex: none; color: var(--u-ink-2); font: 400 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .qz-home__pick .m-link { flex: none; margin-left: 16px; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__pick:hover .m-row__title { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 720px) {
+  :root[data-ui="v3"][data-v7] .layout :is(.qz-home__head, .qz-home__continue) { flex-wrap: wrap; }
+  :root[data-ui="v3"][data-v7] .layout .qz-home__day { display: none; }
+}

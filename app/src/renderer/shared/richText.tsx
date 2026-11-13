@@ -55,8 +55,52 @@ function citeLabel(file: string, lines: string): string {
   return `${base}:${lines}`;
 }
 
-/** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. */
-export function renderInline(text: string): ReactNode[] {
+/** Counts words across one render, so a word keeps its key (and plays its fade once) as the answer grows. */
+type WordCounter = { n: number };
+
+/** A token with a letter or digit; one without (`|`, `-`, `→`, `…`) is punctuation and never fades on its own. */
+export const HAS_WORD = /[\p{L}\p{N}]/u;
+
+/**
+ * Each word as a `span.rich-w` keyed by its place in the answer; whitespace between words stays plain text (SPEC §6
+ * word fade). A punctuation-only token joins the word before it, or, with none before it, the word after it, so it
+ * arrives with that word (Motion, app-0151: a row of table pipes no longer fades in as a burst of "words").
+ */
+function wrapWords(text: string, words: WordCounter): ReactNode[] {
+  const out: ReactNode[] = [];
+  let unit: string | null = null;
+  let unitHasWord = false;
+  let gap = '';
+  const flush = () => {
+    if (unit !== null) out.push(<span key={`w${words.n++}`} className="rich-w">{unit}</span>);
+    if (gap) out.push(gap);
+    unit = null;
+    gap = '';
+  };
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue;
+    if (/^\s/.test(part)) {
+      if (unit === null) out.push(part);
+      else gap = part;
+      continue;
+    }
+    const word = HAS_WORD.test(part);
+    if (unit !== null && (!word || !unitHasWord)) {
+      unit += gap + part;
+      gap = '';
+      unitHasWord ||= word;
+      continue;
+    }
+    flush();
+    unit = part;
+    unitHasWord = word;
+  }
+  flush();
+  return out;
+}
+
+/** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. With `words`, plain words fade in one by one. */
+export function renderInline(text: string, words?: WordCounter): ReactNode[] {
   const cleaned = text
     .replace(/\{\{[^}]+\}\}/g, '')
     .replace(/\[\[(?:cite:)?([^\]]+?)\]\]/gi, (_full, inner: string) => {
@@ -68,33 +112,39 @@ export function renderInline(text: string): ReactNode[] {
   // Bold text may hold code spans, and a code span may hold `*` (e.g. **`n * n`**); a bare `*` still ends
   // the match, so the inner renderInline pass can't find bold again. The two alternatives share no
   // character (a backtick only opens a code span), so a failed match stays linear on long streamed lines.
-  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*((?:`[^`\n]+`|[^*`\n])+)\*\*/g;
+  // Emphasis (*word* or _word_) comes last and only between word boundaries: the opener is not after a word
+  // character or another marker and is followed by non-space; the closer follows non-space and is not followed by
+  // a word character or marker. So `2 * 3 * 4`, `a*b*c` and snake_case never match, and a `* item` bullet never
+  // reaches here (the list prefix is stripped before inline rendering).
+  const re = /\u0000CITE:([^:\u0000]+):(\d+(?:-\d+)?)\u0000|`([^`\n]+)`|\*\*((?:`[^`\n]+`|[^*`\n])+)\*\*|(?<![\w*])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![\w*])|(?<![\w_])_(?=[^\s_])([^_\n]*?[^\s_])_(?![\w_])/g;
   const out: ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
   while ((m = re.exec(cleaned)) !== null) {
-    if (m.index > last) out.push(cleaned.slice(last, m.index));
+    if (m.index > last) out.push(...(words ? wrapWords(cleaned.slice(last, m.index), words) : [cleaned.slice(last, m.index)]));
     if (m[1]) {
       const label = citeLabel(m[1], m[2]!);
       out.push(
-        <span key={k++} className="cite" title={label}>
+        <span key={k++} className={words ? 'cite rich-w' : 'cite'} title={label}>
           {label}
         </span>,
       );
     } else if (m[3]) {
       out.push(
-        <code key={k++} className="inline">
+        <code key={k++} className={words ? 'inline rich-w' : 'inline'}>
           {m[3]}
         </code>,
       );
+    } else if (m[4]) {
+      // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too, word by word.
+      out.push(<strong key={k++}>{renderInline(m[4], words)}</strong>);
     } else {
-      // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too.
-      out.push(<strong key={k++}>{renderInline(m[4]!)}</strong>);
+      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words)}</em>);
     }
     last = m.index + m[0].length;
   }
-  if (last < cleaned.length) out.push(cleaned.slice(last));
+  if (last < cleaned.length) out.push(...(words ? wrapWords(cleaned.slice(last), words) : [cleaned.slice(last)]));
   return out;
 }
 
@@ -109,19 +159,89 @@ export function renderSummary(text: string): ReactNode[] {
 const LIST_RE = /^\s*(?:[-*•]|\d+[.)])\s+/;
 const HEADING_RE = /^\s*(#{1,6})\s+(.+?)\s*$/;
 
-function renderList(lines: string[], key: string): ReactNode {
+function renderList(lines: string[], key: string, words?: WordCounter): ReactNode {
   const ordered = /^\s*\d+[.)]\s+/.test(lines[0] ?? '');
   const Tag = ordered ? 'ol' : 'ul';
   return (
     <Tag key={key} className="rich-list">
       {lines.map((line, i) => (
-        <li key={`${key}-${i}`}>{renderInline(line.replace(LIST_RE, ''))}</li>
+        <li key={`${key}-${i}`}>{renderInline(line.replace(LIST_RE, ''), words)}</li>
       ))}
     </Tag>
   );
 }
 
-function renderTextBlock(block: string, key: string): ReactNode[] {
+type Align = 'left' | 'center' | 'right' | null;
+
+/**
+ * One table row's cells. The outer pipes are optional and `\|` is a literal pipe. A pipe inside a code
+ * span stays in its cell (answers write `a || b` there); if the row's backticks don't pair up, every
+ * pipe splits instead, so one stray backtick can't swallow the rest of the row.
+ */
+function tableCells(line: string): string[] {
+  let row = line.trim();
+  if (row.startsWith('|')) row = row.slice(1);
+  if (row.endsWith('|') && !row.endsWith('\\|')) row = row.slice(0, -1);
+  const split = (codeAware: boolean): { cells: string[]; open: boolean } => {
+    const cells: string[] = [];
+    let cell = '';
+    let inCode = false;
+    for (let j = 0; j < row.length; j += 1) {
+      const ch = row[j]!;
+      if (ch === '\\' && row[j + 1] === '|') { cell += '|'; j += 1; continue; }
+      if (ch === '`') inCode = !inCode;
+      if (ch === '|' && !(codeAware && inCode)) { cells.push(cell.trim()); cell = ''; continue; }
+      cell += ch;
+    }
+    cells.push(cell.trim());
+    return { cells, open: inCode };
+  };
+  const aware = split(true);
+  return aware.open ? split(false).cells : aware.cells;
+}
+
+/**
+ * The column alignments when `line` is a table's `|---|:--:|` separator for `columns` header cells. The
+ * separator needs a pipe too, so prose above a bare `---` (or a list's lone `-` mid-stream) isn't a table.
+ */
+function tableAligns(line: string | undefined, columns: number): Align[] | null {
+  if (!line || !line.includes('-') || !line.includes('|')) return null;
+  const cells = tableCells(line);
+  if (cells.length !== columns || !cells.every((cell) => /^:?-+:?$/.test(cell))) return null;
+  return cells.map((cell) => (cell.startsWith(':') && cell.endsWith(':') ? 'center' : cell.endsWith(':') ? 'right' : cell.startsWith(':') ? 'left' : null));
+}
+
+/** A table starts at `i`: a line with a pipe (not a heading or list item), then a separator with the same number of cells. */
+function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[] } | null {
+  const line = lines[i]!;
+  if (!line.includes('|') || HEADING_RE.test(line) || LIST_RE.test(line)) return null;
+  const header = tableCells(line);
+  const aligns = tableAligns(lines[i + 1], header.length);
+  return aligns ? { header, aligns } : null;
+}
+
+function renderTable(header: string[], aligns: Align[], rows: string[][], key: string): ReactNode {
+  const cls = (c: number) => (aligns[c] ? `is-${aligns[c]}` : undefined);
+  return (
+    // Wide tables scroll sideways inside a narrow panel; the region is focusable so the keyboard can scroll it.
+    <div key={key} className="rich-table" role="region" aria-label={`Table: ${header.join(', ').replace(/[`*]/g, '')}`} tabIndex={0}>
+      <table>
+        <thead>
+          <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell)}</th>)}</tr>
+        </thead>
+        {rows.length ? (
+          <tbody>
+            {rows.map((row, r) => (
+              <tr key={r}>{header.map((_, c) => <td key={c} className={cls(c)}>{renderInline(row[c] ?? '')}</td>)}</tr>
+            ))}
+          </tbody>
+        ) : null}
+      </table>
+    </div>
+  );
+}
+
+function renderTextBlock(block: string, key: string, words?: WordCounter): ReactNode[] {
   const lines = block.split('\n').map((l) => l.replace(/\s+$/, ''));
   const nodes: ReactNode[] = [];
   let i = 0;
@@ -133,8 +253,20 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
     if (heading) {
       const depth = Math.min(4, Math.max(2, heading[1]!.length)) as 2 | 3 | 4;
       const Heading = `h${depth}` as 'h2' | 'h3' | 'h4';
-      nodes.push(<Heading key={`${key}-h${p++}`} className={`rich-heading rich-heading--${depth}`}>{renderInline(heading[2]!)}</Heading>);
+      nodes.push(<Heading key={`${key}-h${p++}`} className={`rich-heading rich-heading--${depth}`}>{renderInline(heading[2]!, words)}</Heading>);
       i += 1;
+      continue;
+    }
+    const table = tableAt(lines, i);
+    if (table) {
+      const rows: string[][] = [];
+      i += 2;
+      // Rows run until a blank line, a heading or a list item (a "- a | b" bullet right under a table is a list).
+      while (i < lines.length && lines[i]!.trim() !== '' && lines[i]!.includes('|') && !HEADING_RE.test(lines[i]!) && !LIST_RE.test(lines[i]!)) {
+        rows.push(tableCells(lines[i]!));
+        i += 1;
+      }
+      nodes.push(renderTable(table.header, table.aligns, rows, `${key}-t${p++}`));
       continue;
     }
     if (LIST_RE.test(lines[i]!)) {
@@ -144,16 +276,16 @@ function renderTextBlock(block: string, key: string): ReactNode[] {
         else group[group.length - 1] = `${group[group.length - 1]} ${lines[i]!.trim()}`;
         i += 1;
       }
-      nodes.push(renderList(group, `${key}-l${p++}`));
+      nodes.push(renderList(group, `${key}-l${p++}`, words));
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i]!.trim() !== '' && !LIST_RE.test(lines[i]!) && !HEADING_RE.test(lines[i]!)) {
+    while (i < lines.length && lines[i]!.trim() !== '' && !LIST_RE.test(lines[i]!) && !HEADING_RE.test(lines[i]!) && !(para.length && tableAt(lines, i))) {
       para.push(lines[i]!.trim());
       i += 1;
     }
     const joined = para.join(' ').replace(/\s+/g, ' ').trim();
-    if (joined) nodes.push(<p key={`${key}-p${p++}`}>{renderInline(joined)}</p>);
+    if (joined) nodes.push(<p key={`${key}-p${p++}`}>{renderInline(joined, words)}</p>);
   }
   return nodes;
 }
@@ -181,11 +313,22 @@ function closeStreamingMarkers(text: string): string {
     if (line.slice(bold + 2).trim()) close += '**';
     else line = line.slice(0, bold);
   }
+  // A half-open *emphasis* (or _emphasis_) at the end of the line: close it so no marker shows while it streams; a
+  // bare trailing marker waits out of sight. Only an opener in emphasis position counts (not `2 * 3` or a_b).
+  if (tick < 0 && bold < 0) {
+    const open = line.match(/(?<![\w*])\*(?=[^\s*])[^*\n]*$|(?<![\w_])_(?=[^\s_])[^_\n]*$/);
+    if (open) { line = line.replace(/\s+$/, ''); close += open[0][0]!; }
+    else if (/(?<![\w*])\*$|(?<![\w_])_$/.test(line)) line = line.slice(0, -1);
+  }
   return head + line + close;
 }
 
-/** Markdown-ish body: lists, bold, inline code, fenced blocks, calm citation chips. */
-export function renderRich(raw: string, streaming = false): ReactNode[] {
+/**
+ * Markdown-ish body: headings, lists, tables, bold, inline code, fenced blocks, calm citation chips. With `words`, each
+ * word of the last text part (after the last fence; earlier parts are finished) is a keyed span that fades in as it
+ * arrives (SPEC §6). Table cells don't fade by word.
+ */
+export function renderRich(raw: string, streaming = false, opts?: { words?: boolean }): ReactNode[] {
   let text = raw.replace(/\r\n/g, '\n');
   if (streaming) {
     text = text
@@ -196,6 +339,7 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
   }
 
   const nodes: ReactNode[] = [];
+  const words = opts?.words ? { n: 0 } : undefined;
   const parts = text.split(/```/);
   parts.forEach((part, i) => {
     if (i % 2 === 1) {
@@ -204,7 +348,7 @@ export function renderRich(raw: string, streaming = false): ReactNode[] {
       const code = nl === -1 ? part : part.slice(nl + 1);
       nodes.push(<CodeBlock key={`cb${i}`} lang={lang} code={code.replace(/\n$/, '')} />);
     } else {
-      nodes.push(...renderTextBlock(part, `t${i}`));
+      nodes.push(...renderTextBlock(part, `t${i}`, i === parts.length - 1 ? words : undefined));
     }
   });
   if (streaming) nodes.push(<span key="cur" className="cursor" />);
