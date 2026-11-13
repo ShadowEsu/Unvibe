@@ -15,13 +15,13 @@ export interface BriefFile {
 }
 
 /**
- * What happened to one file, read from its hunk headers: git writes `@@ -0,0 +1,N @@` for a new file (and the
- * untracked-file hunks use the same header) and `@@ -1,N +0,0 @@` for a deleted one; anything else is an edit.
+ * What happened to one file, from git's own header lines (`new file mode` / `deleted file mode`, carried on each
+ * hunk by `parseUnifiedDiff`; an untracked file's hunks say `added`). Not from the `@@` numbers: `-0,0` also
+ * appears when an empty tracked file gains lines and `+0,0` when a file is emptied in place, and both still exist.
  */
 export function fileChange(hunks: DiffHunk[]): FileChange {
-  if (hunks.length === 0) return 'changed';
-  if (hunks.every((h) => h.oldStart === 0 && h.oldLines === 0)) return 'added';
-  if (hunks.every((h) => h.newStart === 0 && h.newLines === 0)) return 'removed';
+  const first = hunks[0]?.change;
+  if (first && hunks.every((h) => h.change === first)) return first;
   return 'changed';
 }
 
@@ -59,7 +59,8 @@ export function hunkStats(hunks: DiffHunk[]): { insertions: number; deletions: n
       }
     }
     byFile.set(hunk.file, current);
-    hunksByFile.set(hunk.file, [...(hunksByFile.get(hunk.file) ?? []), hunk]);
+    const list = hunksByFile.get(hunk.file);
+    if (list) list.push(hunk); else hunksByFile.set(hunk.file, [hunk]);
   }
   for (const [file, entry] of byFile) entry.change = fileChange(hunksByFile.get(file) ?? []);
   return { insertions, deletions, files: [...byFile.values()].sort((a, b) => (b.insertions + b.deletions) - (a.insertions + a.deletions)) };

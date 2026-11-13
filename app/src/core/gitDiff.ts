@@ -15,9 +15,18 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
   const hunks: DiffHunk[] = [];
   let currentFile = '';
   let oldFile = '';
+  let change: DiffHunk['change'];
   let current: DiffHunk | undefined;
 
   for (const line of diff.split(/\r?\n/)) {
+    if (line.startsWith('diff --git')) {
+      // A new file section: git's verdict comes on the next lines, before the hunks.
+      change = undefined;
+      current = undefined;
+      continue;
+    }
+    if (line.startsWith('new file mode')) { change = 'added'; continue; }
+    if (line.startsWith('deleted file mode')) { change = 'removed'; continue; }
     if (line.startsWith('--- ')) {
       oldFile = stripDiffPrefix(line.slice(4).trim());
       current = undefined;
@@ -30,7 +39,7 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
       current = undefined;
       continue;
     }
-    if (line.startsWith('diff --git') || line.startsWith('index ')) {
+    if (line.startsWith('index ')) {
       current = undefined;
       continue;
     }
@@ -44,6 +53,7 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
           newStart: Number(m[3]),
           newLines: m[4] ? Number(m[4]) : 1,
           lines: [],
+          ...(change ? { change } : {}),
         };
         hunks.push(current);
       }
@@ -56,10 +66,28 @@ export function parseUnifiedDiff(diff: string): DiffHunk[] {
   return hunks;
 }
 
+/** `a/<path>` → `<path>`; git quotes a path with non-ASCII bytes C-style (`"a/caf\303\251.txt"`), which is undone here. */
 function stripDiffPrefix(pathName: string): string {
   if (pathName === '/dev/null') return pathName;
-  if (pathName.startsWith('a/') || pathName.startsWith('b/')) return pathName.slice(2);
-  return pathName;
+  const unquoted = pathName.startsWith('"') && pathName.endsWith('"') ? unquoteGitPath(pathName.slice(1, -1)) : pathName;
+  if (unquoted.startsWith('a/') || unquoted.startsWith('b/')) return unquoted.slice(2);
+  return unquoted;
+}
+
+/** git's C-style quoting: `\ooo` octal bytes (UTF-8), `\t` `\n` `\\` `\"`. */
+function unquoteGitPath(quoted: string): string {
+  const bytes: number[] = [];
+  for (let i = 0; i < quoted.length; i++) {
+    const ch = quoted[i]!;
+    if (ch !== '\\') { bytes.push(...Buffer.from(ch, 'utf8')); continue; }
+    const next = quoted[i + 1] ?? '';
+    const octal = /^[0-7]{3}/.exec(quoted.slice(i + 1));
+    if (octal) { bytes.push(parseInt(octal[0], 8)); i += 3; continue; }
+    const simple: Record<string, number> = { t: 9, n: 10, r: 13, '\\': 92, '"': 34, a: 7, b: 8, f: 12, v: 11 };
+    bytes.push(simple[next] ?? next.charCodeAt(0));
+    i += 1;
+  }
+  return Buffer.from(bytes).toString('utf8');
 }
 
 async function untrackedAsHunks(repoRoot: string): Promise<DiffHunk[]> {
@@ -89,6 +117,7 @@ async function untrackedAsHunks(repoRoot: string): Promise<DiffHunk[]> {
           newStart: 1,
           newLines: body.length,
           lines: body.map((line) => `+${line}`),
+          change: 'added',
         });
       } catch {
         /* skip unreadable */
