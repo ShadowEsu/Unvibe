@@ -3994,7 +3994,7 @@ export function explainHeading(page: ExplainPage): string {
 export function explainHeadingText(page: ExplainPage): string {
   return explainHeading(page)
     .replace(/^(git|ps) /, "$1\u00a0")
-    .replace(/(\S)-(\S)/g, "$1-\u2060$2")
+    .replace(/-(\S)/g, "-\u2060$1")
     .replace(/ (-[a-z])\b/g, "\u00a0$1");
 }
 
