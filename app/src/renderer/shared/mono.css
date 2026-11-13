@@ -89,6 +89,7 @@
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: var(--u-sunken); border-color: var(--u-border-control); box-shadow: var(--u-shadow-card); }
 :root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current,
 :root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current { background: var(--u-accent-soft); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout, .modal) .plan-pick__card .soft-btn:disabled { background: var(--u-sunken); color: var(--u-ink); }
 /* The main button: action / on-action. Active nav and the selected filter: select / select-ink. Links: accent-text. */
 :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button, .history-continue__go),
 :root[data-ui="v3"][data-v7] .layout .home-card .primary-btn { background: var(--u-action); color: var(--u-action-on); box-shadow: none; }
