@@ -4,6 +4,8 @@ name: Real device test
 # build-only "Desktop app release" run so a change is proven before it ships), walks through the
 # timed first run, Google sign-in (up to Google's own page), every page, the editor shortcut path
 # and the global shortcut, and uploads a screenshot of every step plus a pass/fail report.
+# The Mac website media (marketing-media.mjs) is opt-in: it costs about $0.09 of hosted explanations on its own
+# (run 43383011698), more than the walkthrough itself, so a plain run (a sign-in e2e) skips it.
 on:
   workflow_dispatch:
     inputs:
@@ -15,8 +17,13 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      website_media:
+        description: "Also record the website media on the Mac (marketing-media.mjs: a second install and about $0.09 of explanations)"
+        type: boolean
+        required: false
+        default: false
       media_samples:
-        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media"
+        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media (turns the website media on)"
         type: boolean
         required: false
         default: false
@@ -310,7 +317,7 @@ jobs:
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && (inputs.website_media || inputs.media_samples)
         continue-on-error: true
         shell: bash
         env:
@@ -326,7 +333,7 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && (inputs.website_media || inputs.media_samples)
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -347,7 +354,7 @@ jobs:
           echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
-        if: always() && matrix.label == 'mac'
+        if: always() && matrix.label == 'mac' && (inputs.website_media || inputs.media_samples)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-mac-website-media
