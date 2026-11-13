@@ -141,14 +141,14 @@ describe("download source (utm_source only, closed list)", () => {
 });
 
 describe("recordDownload", () => {
-  it("posts the Pacific day, asset and source, nothing else", async () => {
+  it("posts the Pacific day, hour, asset and source, nothing else", async () => {
     const calls: unknown[][] = [];
     const ok = await recordDownload("mac_intel", "devhunt", async (...args) => {
       calls.push(args);
       return true;
     }, new Date("2026-11-07T07:30:00Z"));
     assert.equal(ok, true);
-    assert.deepEqual(calls, [["2026-11-06", "mac_intel", "devhunt"]]);
+    assert.deepEqual(calls, [["2026-11-06", 23, "mac_intel", "devhunt"]]);
   });
 
   it("gives up after waitMs and on errors, without throwing", async () => {
@@ -257,7 +257,7 @@ describe("/download/<file>: the route redirects, the middleware counts", () => {
     assert.equal(res.headers.get("location"), null);
     assert.equal(waits.length, 1);
     assert.equal(bodies.length, 1);
-    assert.deepEqual(Object.keys(bodies[0]).sort(), ["p_asset", "p_day", "p_source"]);
+    assert.deepEqual(Object.keys(bodies[0]).sort(), ["p_asset", "p_day", "p_hour", "p_source"]);
     assert.equal(bodies[0].p_asset, "windows");
     assert.equal(bodies[0].p_source, "email");
   });

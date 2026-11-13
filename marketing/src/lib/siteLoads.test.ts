@@ -10,6 +10,7 @@ import {
   isCountedLoad,
   recordSiteLoad,
   siteLoadDay,
+  siteLoadHour,
   siteLoadSource,
   type DocumentRequest,
 } from "@/lib/siteLoads";
@@ -51,8 +52,8 @@ describe("site load source (Security E1-2: utm_source only, closed list)", () =>
     }
   });
 
-  it("matches the allowlist migrations 0013 and 0014 seed, so no counted source is refused by the foreign key", () => {
-    const seeded = ["0013_site_load_days.sql", "0014_download_days.sql"].flatMap((file) => {
+  it("matches the allowlist migrations 0013, 0014 and 0015 seed, so no counted source is refused by the foreign key", () => {
+    const seeded = ["0013_site_load_days.sql", "0014_download_days.sql", "0015_counters_hourly_typed_links.sql"].flatMap((file) => {
       const sql = readFileSync(path.join(process.cwd(), "supabase/migrations", file), "utf8");
       const insert = sql.slice(sql.indexOf("insert into public.site_load_sources"), sql.indexOf("on conflict (source)"));
       return Array.from(insert.matchAll(/\('([a-z0-9]+)'\)/g), (m) => m[1]);
@@ -105,14 +106,27 @@ describe("site load day and storage", () => {
     }
   });
 
-  it("stores only the day and the source, and never throws when storage fails", async () => {
+  it("gives the Pacific hour, 0 to 23, on both sides of midnight and across both DST changes", () => {
+    const cases: [string, number][] = [
+      ["2026-11-06T07:59:59Z", 23], // PST: 23:59 the day before
+      ["2026-11-06T08:00:00Z", 0],
+      ["2026-11-06T20:05:00Z", 12], // noon, not 0 (h23, no 12-hour cycle)
+      ["2026-11-01T08:30:00Z", 1], // the repeated 01:xx PDT hour on fall-back day
+      ["2026-11-01T09:30:00Z", 1], // the repeated 01:xx PST hour
+      ["2027-03-14T09:59:00Z", 1], // 01:59 PST, before spring-forward
+      ["2027-03-14T10:01:00Z", 3], // 03:01 PDT, 02:xx never happens
+    ];
+    for (const [iso, hour] of cases) assert.equal(siteLoadHour(new Date(iso)), hour, iso);
+  });
+
+  it("stores only the day, the hour and the source, and never throws when storage fails", async () => {
     const calls: unknown[][] = [];
     const ok = async (...args: unknown[]) => {
       calls.push(args);
       return true;
     };
     assert.equal(await recordSiteLoad("youtube", ok, new Date("2026-11-06T07:30:00Z")), true);
-    assert.deepEqual(calls, [["2026-11-05", "youtube"]]);
+    assert.deepEqual(calls, [["2026-11-05", 23, "youtube"]]);
     assert.equal(await recordSiteLoad("none", async () => false), false);
     assert.equal(await recordSiteLoad("none", () => Promise.reject(new Error("network down"))), false);
     assert.equal(await recordSiteLoad("none", null), false);
