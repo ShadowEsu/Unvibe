@@ -1,0 +1,146 @@
+/* ── Mono: the Lesson page, Read and Restudy (mono/lesson/README.md). The top bar "Library › lesson" (the root is the
+   way back) and "⌃U Explain"; one header box, 96 px (title, meta line with the outcome chip; Remove, the mode control
+   and the questions left at the right); then two columns 8 px apart: left 444 px (Selected code, then My note), sticky
+   in the page's scroll area; right the rest (Explanation or the restudy level, then Ask about this lesson). Check is
+   the Quiz (mono-quiz.css). Box, title rows, buttons, chips and the segmented control are mono-frame.css's. ── */
+
+/* The page scrolls (mono-frame.css .page); its column grows with the boxes, so the left column can stick. */
+:root[data-ui="v3"][data-v7] .layout .page--learn:has(> .fade-in > .mles) > .fade-in { flex: 0 0 auto; min-height: auto; }
+:root[data-ui="v3"][data-v7] .layout .learn-page.mles {
+  display: flex; flex: 0 0 auto; flex-direction: column; gap: 8px; width: 100%; max-width: none; min-height: auto; margin: 0; padding: 0;
+  font-family: var(--u-font); color: var(--u-ink);
+}
+
+/* ── The top bar: the root in grey (hover: the text colour), a chevron, the lesson's name semibold. ── */
+:root[data-ui="v3"][data-v7] .layout .mles-bar { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; height: 100%; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mles-bar__root { flex: none; margin: 0; padding: 0; border: 0; background: none; color: var(--u-ink-2); font: inherit; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .mles-bar__root:hover { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .mles-bar__chev { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--u-ink-2); stroke-width: 1.5; }
+:root[data-ui="v3"][data-v7] .layout .mles-bar__lesson { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .mles-bar__gap { flex: 1 1 auto; }
+
+/* ── Header box, 96 px: title's middle 34 px from the top, meta line's 68 px; 20 px at the sides. ── */
+:root[data-ui="v3"][data-v7] .layout .mles-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px 16px; align-items: center; gap: 12px 16px;
+  min-height: 96px; padding: 19px 20px;
+}
+:root[data-ui="v3"][data-v7] .layout .mles-head__title {
+  grid-area: 1 / 1; min-width: 0; margin: 0; overflow: hidden; color: var(--u-ink); font: 600 22px/28px var(--u-font); letter-spacing: 0;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+:root[data-ui="v3"][data-v7] .layout .mles-head__tools { grid-area: 1 / 2; display: flex; align-items: center; justify-self: end; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .mles-head__meta {
+  grid-area: 2 / 1; display: flex; align-items: center; gap: 12px; min-width: 0; margin: 0; color: var(--u-ink-2); font: 400 12px/16px var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .mles-head__where { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .mles-head__where time { color: inherit; font: inherit; }
+:root[data-ui="v3"][data-v7] .layout .mles-head__chip { flex: none; padding: 0 10px 0 8px; }
+:root[data-ui="v3"][data-v7] .layout .mles-head__chip svg { flex: none; width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+:root[data-ui="v3"][data-v7] .layout .mles-head__left { grid-area: 2 / 2; justify-self: end; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: nowrap; }
+/* Remove: a 28 px grey icon button, 12 px left of the segmented control. */
+:root[data-ui="v3"][data-v7] .layout .mles-head .row-trash {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; box-shadow: none; color: var(--u-ink-2); opacity: 1; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .mles-head .row-trash:hover { background: var(--u-sunken); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .mles-head .row-trash svg { width: 16px; height: 16px; }
+
+/* ── Two columns. The left one stays in view while the right one scrolls (sticky in the page). Reading, it fills the
+   scroll area under the header (window − 8 + 40 + 8 top − 8 + 56 + 8 bottom − 96 + 8 header = 100vh − 232 px): the
+   note takes what the code leaves, and long code scrolls inside its block so the column never outgrows the view. ── */
+:root[data-ui="v3"][data-v7] .layout .mles-cols { display: grid; grid-template-columns: 444px minmax(0, 1fr); gap: 8px; align-items: start; }
+:root[data-ui="v3"][data-v7] .layout :is(.mles-left, .mles-right) { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .mles-left { position: sticky; top: 0; max-height: max(calc(100vh - 232px), 440px); }
+:root[data-ui="v3"][data-v7] .layout .mles-left--read { height: max(calc(100vh - 232px), 440px); }
+:root[data-ui="v3"][data-v7] .layout .mles .m-box__title { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .mles-none { margin: 0; color: var(--u-ink-2); font: 400 14px/22px var(--u-font); }
+
+/* Selected code: the block 16 px under the rule, 20 px at the sides and 16 px under it. As in the quiz: the ground
+   with a grey wash, 8 px corners, 20 px lines, 10 px above and below; numbers 12 px grey right-aligned 28 px in,
+   code 12.5 px from 42 px in. */
+:root[data-ui="v3"][data-v7] .layout .mles-codebox { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; }
+:root[data-ui="v3"][data-v7] .layout .mles-codebox__body { display: flex; flex-direction: column; min-height: 0; padding: 16px 20px; }
+:root[data-ui="v3"][data-v7] .layout .mles-code {
+  min-height: 0; margin: 0; padding: 10px 0; overflow: auto; border-radius: var(--u-radius-field);
+  background: color-mix(in srgb, var(--u-ink) 5%, var(--u-paper));
+}
+:root[data-ui="v3"][data-v7] .layout .mles-code pre { max-height: none; margin: 0; padding: 0; overflow: visible; border: 0; background: none; }
+:root[data-ui="v3"][data-v7] .layout .mles-code code {
+  display: block; width: max-content; min-width: 100%; box-sizing: border-box; padding: 0 16px 0 0; border: 0; border-radius: 0; background: none;
+  counter-reset: mles-line; color: var(--u-ink); font: 400 12.5px/20px var(--u-font-mono); font-variant-ligatures: none; white-space: pre; tab-size: 2;
+}
+:root[data-ui="v3"][data-v7] .layout .mles-code__line::before {
+  counter-increment: mles-line; content: counter(mles-line); display: inline-block; width: 28px; margin-right: 14px;
+  color: var(--u-ink-2); font-size: 12px; text-align: right; user-select: none; -webkit-user-select: none;
+}
+
+/* Fields: the control border, 8 px corners, 14 px text 14 px in; focus = a 2 px ring in the text colour on the edge. */
+:root[data-ui="v3"][data-v7] .layout .mles-field {
+  display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 11px 14px; border: 1px solid var(--u-border-control);
+  border-radius: var(--u-radius-field); background: var(--u-surface); box-shadow: none; color: var(--u-ink); font: 400 14px/22px var(--u-font); resize: none;
+}
+:root[data-ui="v3"][data-v7] .layout .mles-field::placeholder { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .mles-field:focus { outline: 2px solid var(--u-focus); outline-offset: 0; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .mles-field:disabled { opacity: var(--u-off); }
+
+/* My note: fills the column under the code; the field 16 px under the rule; the counter (Inter 12 px grey), the
+   note's state and "Save note" on one line, 12 px under the field and 16 px above the edge. */
+:root[data-ui="v3"][data-v7] .layout .mles-note { display: flex; flex-direction: column; flex: 1 0 auto; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__body { display: flex; flex: 1 1 auto; flex-direction: column; padding: 16px 20px; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__field { flex: 1 1 auto; min-height: 96px; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__error { margin: 8px 0 0; font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mles-note__actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout :is(.mles-note__count, .mles-note__status) { color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__count { font-variant-numeric: tabular-nums; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__status { margin-left: auto; }
+:root[data-ui="v3"][data-v7] .layout .mles-note__status.is-error { color: var(--u-ink); }
+
+/* Explanation: headings 15 px semibold with 30 px to the text under them; body 14 px on 22 px lines; 18 px between a
+   paragraph and the next heading, 12 px between a sentence and its table, 16 px under a table. */
+:root[data-ui="v3"][data-v7] .layout .mles-explain__body { padding: 18px 20px 20px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich { margin: 0; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich > * { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich > * + * { margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich > * + .rich-heading { margin-top: 18px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich > .rich-heading + * { margin-top: 0; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich > .rich-table + * { margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-heading { margin-bottom: 8px; color: var(--u-ink); font: 600 15px/22px var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-heading--4 { font-size: 14px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-list { padding-left: 20px; }
+/* Tables: a 1 px border, 8 px corners; the head row 34 px on grey, 12 px semibold; hairlines; cells 13 px, 12 px at
+   the sides and 9 px above and below. */
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table { overflow-x: auto; border: 1px solid var(--u-border); border-radius: var(--u-radius-field); background: transparent; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table:focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table table { width: 100%; border-collapse: collapse; color: var(--u-ink); font: 400 13px/19px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table :is(th, td) { padding: 9px 12px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table th { height: 34px; box-sizing: border-box; background: var(--u-sunken); color: var(--u-ink); font: 600 12px/16px var(--u-font); vertical-align: middle; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table td { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table :is(th, td).is-center { text-align: center; }
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-table :is(th, td).is-right { text-align: right; }
+/* Inline code: the text colour in the mono face, 1.5 px smaller than its sentence, on a grey chip 20 px high, 5 px
+   corners, 6 px at the sides. */
+:root[data-ui="v3"][data-v7] .layout .mles .mles-rich code.inline {
+  display: inline-block; max-width: 100%; box-sizing: border-box; padding: 0 6px; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink);
+  font: 400 calc(1em - 1.5px)/20px var(--u-font-mono); font-variant-ligatures: none; overflow-wrap: anywhere;
+}
+
+/* Ask about this lesson: the hint 12 px grey 14 px under the rule; the field 88 px, 12 px under it; "Ask" 12 px
+   under the field at the right (35 % while there is nothing to send). */
+:root[data-ui="v3"][data-v7] .layout .mles-ask__body { padding: 14px 20px 16px; }
+:root[data-ui="v3"][data-v7] .layout .mles-ask__hint { margin: 0; color: var(--u-ink-2); font: 400 12px/18px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mles-ask__field { height: 88px; margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout .mles-ask__actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout .mles-ask__body > :is(.think-status, .form-error) { margin: 12px 0 0; }
+:root[data-ui="v3"][data-v7] .layout .mles-answer { display: grid; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .mles-answer__label { color: var(--u-ink); font: 600 12px/16px var(--u-font); }
+
+/* Restudy: the level as Mono's segmented control and "Explain again at this level" as a filled pill (Design's
+   lesson README: two filled buttons on this screen, this one and "Ask Vibe" in the bar, as on Briefs and Quiz). */
+:root[data-ui="v3"][data-v7] .layout .mles-restudy__body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 20px; }
+
+/* Narrow content (under 760 px): one column in reading order; nothing sticks and the left column takes its height. */
+@container mcol (max-width: 759px) {
+  :root[data-ui="v3"][data-v7] .layout .mles-cols { grid-template-columns: minmax(0, 1fr); }
+  :root[data-ui="v3"][data-v7] .layout :is(.mles-left, .mles-left--read) { position: static; height: auto; max-height: none; }
+  :root[data-ui="v3"][data-v7] .layout .mles-note__field { min-height: 160px; }
+}

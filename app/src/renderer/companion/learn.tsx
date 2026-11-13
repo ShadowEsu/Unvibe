@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
 import { Buddy } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
-import { linesLabel } from '../../core/linesLabel';
+import { useTopBar } from '../shared/shell';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
 import { InkTitle } from './inkTitle';
@@ -45,6 +45,7 @@ const LIST_ICON = 'M4 6h12 M4 10h12 M4 14h12';
 const GRID_ICON = 'M4 4h5v5H4z M11 4h5v5h-5z M4 11h5v5H4z M11 11h5v5h-5z';
 const SEARCH_ICON = 'M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z M13.5 13.5 17 17';
 const CHEVRON = 'M8 5l5 5-5 5';
+const CHECK_ICON = 'M5 10.5l3.2 3.2L15 7';
 
 /** "6 Nov": the day a lesson was saved, on its card and its row. */
 function shortDate(iso: string): string {
@@ -76,23 +77,25 @@ function StatusChip({ outcome }: { outcome: string }) {
 }
 
 /**
- * `numbered`: the lesson's "Selected code" sheet (c-lesson): line numbers from CSS counters (not copied with the
- * code), no language bar (the lesson's meta line names it).
+ * The lesson's top bar: "Library › lesson" (the root is the way back) and "⌃U Explain" at the right, which the
+ * published bar replaces. The node reads `onBack` through a ref so it only changes with what it shows.
  */
-function LessonCode({ code, language, tall = false, numbered = false }: { code: string; language?: string; tall?: boolean; numbered?: boolean }) {
-  if (numbered) {
-    return (
-      <div className="lesson-code lesson-code--sheet">
-        <pre><code>{code.split('\n').map((line, i) => <span className="lesson-code__line" key={i}>{line}{'\n'}</span>)}</code></pre>
-      </div>
-    );
-  }
-  return (
-    <div className={`lesson-code${tall ? ' lesson-code--tall' : ''}`}>
-      <div className="lesson-code__bar"><span>{language || 'code'}</span><span>{linesLabel(code.split('\n').length)}</span></div>
-      <pre><code>{code}</code></pre>
+function LessonBar({ root, title, shortcut, onBack }: { root: string; title: string; shortcut: string; onBack: () => void }) {
+  const backRef = useRef(onBack);
+  backRef.current = onBack;
+  const node = useMemo(() => (
+    <div className="mles-bar">
+      <button type="button" className="mles-bar__root" onClick={() => backRef.current()}>{root}</button>
+      <LineIcon className="mles-bar__chev" d={CHEVRON} />
+      <span className="mles-bar__lesson">{title}</span>
+      <span className="mles-bar__gap" />
+      <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()}>
+        <kbd className="m-key">{shortcut}</kbd><span>Explain</span>
+      </button>
     </div>
-  );
+  ), [root, title, shortcut]);
+  useTopBar(node);
+  return null;
 }
 
 function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
@@ -259,6 +262,12 @@ export function Learn({
     void window.unvibe.studyAskStatus().then((s) => setAskLeft((s as { remaining: number }).remaining));
   }, [open?.id]);
 
+  // The lesson scrolls with the shell's page (its left column is sticky there), so it opens at its top.
+  const lessonRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    lessonRef.current?.closest('.page')?.scrollTo(0, 0);
+  }, [open?.id]);
+
   const ask = async () => {
     if (!open) return;
     setAskBusy(true); setAskError(''); setAnswer('');
@@ -292,7 +301,7 @@ export function Learn({
       return <QuizCheck lessons={catalog} first={open} mixIds={mixIds} root={intent === 'quiz' ? 'Quiz' : 'Library'} onLeave={closeLesson} onRefresh={onRefresh} />;
     }
     const modes = (
-      <div className="lesson-modes" role="group" aria-label="Lesson mode">
+      <div className="m-seg" role="group" aria-label="Lesson mode">
         {([
           ['read', 'Read'],
           ['restudy', 'Restudy'],
@@ -302,7 +311,7 @@ export function Learn({
             key={id}
             type="button"
             aria-pressed={mode === id}
-            className={mode === id ? 'on' : ''}
+            className={`m-seg__item${mode === id ? ' is-on' : ''}`}
             onClick={() => setMode(id)}
           >
             {label}
@@ -312,110 +321,143 @@ export function Learn({
     );
     const levelLabel = STUDY_LEVELS.find((l) => l.id === open.level)?.label ?? open.level;
     const fileName = open.file?.split(/[\\/]/).pop();
-    const askCard = (
-      <div className="study-assistant">
-        <div className="study-assistant__head">
-          <h2 className="learning-kicker">Ask about this lesson</h2>
+    // Mono (mono/lesson/README.md): one header box, then two columns 8 px apart. Left (444 px, sticky in the scroll
+    // area): Selected code, then My note (Read). Right: Explanation (Read) or the restudy level (Restudy), then Ask.
+    // The code's line numbers are CSS counters (not copied with the code); a long line scrolls sideways in its block.
+    const codeBox = (
+      <section className="m-box m-box--flush mles-codebox" aria-labelledby="mles-code-title">
+        <header className="m-box__title">
+          <h2 id="mles-code-title">Selected code</h2>
+          {fileName ? <span className="m-box__meta">{fileName}</span> : null}
+        </header>
+        <div className="mles-codebox__body">
+          {open.code ? (
+            <div className="mles-code">
+              <pre><code>{open.code.split('\n').map((line, i) => <span className="mles-code__line" key={i}>{line}{'\n'}</span>)}</code></pre>
+            </div>
+          ) : (
+            <p className="mles-none">
+              {mode === 'restudy'
+                ? 'No saved code on this item yet. Restudy will try to reopen the file.'
+                : 'Code was not saved for this older entry. New reviews keep the snippet here.'}
+            </p>
+          )}
         </div>
-        <p className="muted">Short clarifying questions work best.</p>
-        <textarea
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          rows={3}
-          placeholder="e.g. Why does this return early here?"
-          disabled={askBusy || !open.code}
-        />
-        <button className="soft-btn" type="button" disabled={askBusy || !question.trim() || !open.code} onClick={() => void ask()}>
-          {askBusy ? 'Working' : 'Ask'}
-        </button>
-        {askBusy ? <ThinkingStatus label="Unvibe" /> : null}
-        {askError ? <p className="form-error" role="alert">{askError}</p> : null}
-        {answer ? <div className="lesson-explain"><span className="learning-kicker">Answer</span><RichText className="lesson-explain__body" text={answer} /></div> : null}
-      </div>
+      </section>
+    );
+    const askBox = (
+      <section className="m-box m-box--flush mles-ask" aria-labelledby="mles-ask-title">
+        <header className="m-box__title"><h2 id="mles-ask-title">Ask about this lesson</h2></header>
+        <div className="mles-ask__body">
+          <p className="mles-ask__hint">Short clarifying questions work best.</p>
+          <textarea
+            className="mles-field mles-ask__field"
+            aria-labelledby="mles-ask-title"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            rows={3}
+            placeholder="e.g. Why does this return early here?"
+            disabled={askBusy || !open.code}
+          />
+          <div className="mles-ask__actions">
+            <button className="m-btn m-btn--outlined" type="button" disabled={askBusy || !question.trim() || !open.code} onClick={() => void ask()}>
+              {askBusy ? 'Working' : 'Ask'}
+            </button>
+          </div>
+          {askBusy ? <ThinkingStatus label="Unvibe" /> : null}
+          {askError ? <p className="form-error" role="alert">{askError}</p> : null}
+          {answer ? <div className="mles-answer"><span className="mles-answer__label">Answer</span><RichText className="mles-rich" text={answer} /></div> : null}
+        </div>
+      </section>
     );
     return (
-      <div className="learn-page learn-page--lesson">
-        <article className="lesson-doc" key={open.id}>
-            <div className="lesson-doc__head">
-              <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
-              <h1><InkTitle text={open.title} /></h1>
-              <div className="lesson-doc__row">
-                <p className="lesson-doc__meta">
-                  <span>{[open.file || open.project || open.meta, open.language, levelLabel].filter(Boolean).join(' · ')}</span>
-                  <span aria-hidden="true"> · </span>
-                  <time dateTime={open.ts}>{new Date(open.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
-                  <span className={`pill pill--${open.outcome}`}>{outcomeName(open.outcome)}</span>
-                  {askLeft !== null ? <span className="lesson-doc__left">{askLeft} questions left today</span> : null}
-                </p>
-                {intent === 'quiz' ? null : modes}
-                <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
-              </div>
-            </div>
+      <div className="learn-page mles" key={open.id} ref={lessonRef}>
+        <LessonBar root={intent === 'quiz' ? 'Lessons' : 'Library'} title={open.title} shortcut={shortcut} onBack={closeLesson} />
+        <section className="m-box mles-head" aria-labelledby="mles-title">
+          <h1 className="mles-head__title" id="mles-title"><InkTitle text={open.title} /></h1>
+          <div className="mles-head__tools">
+            {intent === 'quiz' ? null : modes}
+            <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
+          </div>
+          <p className="mles-head__meta">
+            <span className="mles-head__where">
+              {[open.file || open.project || open.meta, open.language, levelLabel].filter(Boolean).join(' · ')}
+              <span aria-hidden="true"> · </span>
+              <time dateTime={open.ts}>{new Date(open.ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>
+            </span>
+            <span className="m-chip mles-head__chip">
+              {open.outcome === 'understood' ? <LineIcon d={CHECK_ICON} /> : null}
+              {outcomeName(open.outcome)}
+            </span>
+          </p>
+          {askLeft !== null ? <span className="mles-head__left">{askLeft} questions left today</span> : null}
+        </section>
 
-          {mode === 'read' ? (
-            <div className="lesson-grid">
-              <section className="lesson-card lesson-card--code" aria-labelledby="lesson-code-title">
-                <div className="lesson-card__head">
-                  <h2 className="learning-kicker" id="lesson-code-title">Selected code</h2>
-                  {fileName ? <span className="lesson-card__file">{fileName}</span> : null}
-                </div>
-                {open.code ? <LessonCode code={open.code} language={open.language} numbered /> : (
-                  <p className="muted">Code was not saved for this older entry. New reviews keep the snippet here.</p>
-                )}
-              </section>
-              <section className="lesson-card lesson-card--explain" aria-labelledby="lesson-explain-title">
-                <h2 id="lesson-explain-title">Explanation</h2>
-                {open.explanation ? <RichText className="lesson-explain__body" text={open.explanation} /> : (
-                  <p className="muted">No explanation text on file yet for this one.</p>
-                )}
-              </section>
-              <section className="lesson-card lesson-note" aria-labelledby="lesson-note-title">
-                <div className="lesson-note__head">
-                  <div>
-                    <h2 className="learning-kicker" id="lesson-note-title">My note</h2>
-                    <p>Capture what you want to remember. This stays on this {deviceName}.</p>
+        {mode === 'read' ? (
+          <div className="mles-cols">
+            <div className="mles-left mles-left--read">
+              {codeBox}
+              <section className="m-box m-box--flush mles-note" aria-labelledby="mles-note-title">
+                <header className="m-box__title">
+                  <h2 id="mles-note-title">My note</h2>
+                  <span className="m-box__meta">Stays on this {deviceName}</span>
+                </header>
+                <div className="mles-note__body">
+                  <textarea
+                    className="mles-field mles-note__field"
+                    aria-labelledby="mles-note-title"
+                    value={noteDraft}
+                    maxLength={4000}
+                    rows={4}
+                    placeholder="Add your own explanation, reminder, or question…"
+                    onChange={(event) => { setNoteDraft(event.target.value); setNoteStatus('idle'); setNoteError(''); }}
+                  />
+                  {noteError ? <p className="form-error mles-note__error" role="alert">{noteError}</p> : null}
+                  <div className="mles-note__actions">
+                    <span className="mles-note__count">{noteDraft.length.toLocaleString()} / 4,000</span>
+                    <span className={`mles-note__status${noteStatus === 'error' ? ' is-error' : ''}`} role="status">
+                      {noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved locally' : noteStatus === 'error' ? 'Not saved' : ''}
+                    </span>
+                    <button type="button" className="m-btn m-btn--outlined" disabled={noteStatus === 'saving' || noteDraft.trim() === savedNote} onClick={() => void saveNote()}>
+                      {noteStatus === 'saving' ? 'Saving' : 'Save note'}
+                    </button>
                   </div>
-                  <span className={`lesson-note__status lesson-note__status--${noteStatus}`} role="status">
-                    {noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved locally' : noteStatus === 'error' ? 'Not saved' : ''}
-                  </span>
                 </div>
-                <textarea
-                  value={noteDraft}
-                  maxLength={4000}
-                  rows={4}
-                  placeholder="Add your own explanation, reminder, or question…"
-                  onChange={(event) => { setNoteDraft(event.target.value); setNoteStatus('idle'); setNoteError(''); }}
-                />
-                <div className="lesson-note__actions">
-                  <span>{noteDraft.length.toLocaleString()} / 4,000</span>
-                  <button type="button" className="soft-btn" disabled={noteStatus === 'saving' || noteDraft.trim() === savedNote} onClick={() => void saveNote()}>
-                    {noteStatus === 'saving' ? 'Saving' : 'Save note'}
-                  </button>
-                </div>
-                {noteError ? <p className="form-error" role="alert">{noteError}</p> : null}
               </section>
-              <div className="lesson-card lesson-card--ask">{askCard}</div>
             </div>
-          ) : null}
-
-          {mode === 'restudy' ? (
-            <>
-              {open.code ? <LessonCode code={open.code} language={open.language} tall /> : (
-                <p className="muted">No saved code on this item yet. Restudy will try to reopen the file.</p>
-              )}
-              <div className="study-levels">
-                <span className="learning-kicker">Restudy level</span>
-                <div className="level-row">
-                  {STUDY_LEVELS.map((opt) => (
-                    <button key={opt.id} type="button" className={level === opt.id ? 'on' : ''} onClick={() => setLevel(opt.id)}>{opt.label}</button>
-                  ))}
+            <div className="mles-right">
+              <section className="m-box m-box--flush mles-explain" aria-labelledby="mles-explain-title">
+                <header className="m-box__title"><h2 id="mles-explain-title">Explanation</h2></header>
+                <div className="mles-explain__body">
+                  {open.explanation ? <RichText className="mles-rich" text={open.explanation} /> : (
+                    <p className="mles-none">No explanation text on file yet for this one.</p>
+                  )}
                 </div>
-                <button className="primary-btn" type="button" onClick={() => void onRestudy(open, level)}>Explain again at this level</button>
-              </div>
-              {askCard}
-            </>
-          ) : null}
-        </article>
+              </section>
+              {askBox}
+            </div>
+          </div>
+        ) : null}
+
+        {mode === 'restudy' ? (
+          <div className="mles-cols">
+            <div className="mles-left">{codeBox}</div>
+            <div className="mles-right">
+              <section className="m-box m-box--flush mles-restudy" aria-labelledby="mles-restudy-title">
+                <header className="m-box__title"><h2 id="mles-restudy-title">Restudy level</h2></header>
+                <div className="mles-restudy__body">
+                  <div className="m-seg" role="group" aria-labelledby="mles-restudy-title">
+                    {STUDY_LEVELS.map((opt) => (
+                      <button key={opt.id} type="button" className={`m-seg__item${level === opt.id ? ' is-on' : ''}`} aria-pressed={level === opt.id} onClick={() => setLevel(opt.id)}>{opt.label}</button>
+                    ))}
+                  </div>
+                  <button className="m-btn m-btn--filled" type="button" onClick={() => void onRestudy(open, level)}>Explain again at this level</button>
+                </div>
+              </section>
+              {askBox}
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

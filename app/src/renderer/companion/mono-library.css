@@ -29,9 +29,11 @@
 }
 :root[data-ui="v3"][data-v7] .layout .mlib-card__go:hover { background: var(--u-action-hover); }
 :root[data-ui="v3"][data-v7] .layout .mlib-card__go svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; }
-/* The saved code, mono 12 px in the text colour on the grey fill, filling the card; what does not fit is cut off. */
+/* The saved code, mono 12 px in the text colour on the grey fill, filling the card; what does not fit is cut off at
+   12 px in on every side (the insets are transparent borders, so overflow cuts at their inner edge while the fill runs
+   under them): a hard cut, no fade or dots. */
 :root[data-ui="v3"][data-v7] .layout .mlib-code {
-  flex: 1 1 96px; min-height: 96px; margin: 12px -4px 0; padding: 12px; overflow: hidden; border: 0; border-radius: var(--u-radius-field);
+  flex: 1 1 96px; min-height: 96px; margin: 12px -4px 0; padding: 0; overflow: hidden; border: 12px solid transparent; border-radius: var(--u-radius-field);
   background: var(--u-sunken); color: var(--u-ink); font: 400 12px/20px var(--u-font-mono); white-space: pre; tab-size: 2;
 }
 :root[data-ui="v3"][data-v7] .layout .mlib-code code { padding: 0; background: none; color: inherit; font: inherit; }

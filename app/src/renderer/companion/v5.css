@@ -141,7 +141,6 @@
 :root[data-ui="v3"] .history-search { border-radius: 12px; }
 :root[data-ui="v3"] .history-continue { color: var(--c-violet); font-weight: 700; }
 
-:root[data-ui="v3"] .lesson-doc { border-radius: 20px; box-shadow: var(--v-shadow); border-color: var(--v-line); }
 :root[data-ui="v3"] .survey-pick__go { background: var(--grad); color: #fff; border: 0; }
 
 /* Briefings, Momentum, Plan */

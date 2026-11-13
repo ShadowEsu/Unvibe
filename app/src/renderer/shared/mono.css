@@ -83,11 +83,13 @@
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: var(--u-select); color: var(--u-select-ink); }
 :root[data-ui="v3"][data-v7] .layout :is(.link-btn, .ghost-link, a) { color: var(--u-accent-text); }
 :root :is(button, input, a, [tabindex]):focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
-/* Scrollbar thumbs: border-control, solid, in every pane (the Ask thread's fades otherwise). */
+/* Scrollbars in every pane: 8 px wide, no track, the thumb the text colour at 22 %, the same on hover (and in the Ask
+   thread, whose fade would otherwise dim it). */
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar { width: 8px; height: 8px; }
 :root[data-ui="v3"][data-v7] ::-webkit-scrollbar-thumb,
-:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--u-border-control); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { border: 0; border-radius: 999px; background: color-mix(in srgb, var(--u-ink) 22%, transparent); }
 :root[data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb,
-:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc, .chat-log):hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--u-ink) 22%, transparent); }
 :root[data-ui="v3"][data-v7] :is(.chat-log, .search-palette__body, .mbody) { scrollbar-width: auto; scrollbar-color: auto; }
 /* Nothing purple-tinted that is not the accent: key caps, the sliding nav pill, segmented thumbs, the selected filter,
    code chips and every shadow use the look's neutrals or accent-soft. */
@@ -109,10 +111,10 @@
 :root .ob-tab.is-on { background: var(--u-select); color: var(--u-select-ink); }
 :root :is(.ob-link, .more-detail__toggle) { color: var(--u-accent-text); font-weight: 600; }
 :root ::-webkit-scrollbar-track, :root ::-webkit-scrollbar-corner { background: transparent; }
-/* The panel's scrollbars are the same solid border-control thumb as the main window (never the violet tint). */
+/* The panel's scrollbars are the same thumb as the main window (never the violet tint). */
 :root :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
-:root[data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb { background: var(--u-border-control); }
-:root .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: var(--u-ink-3); }
+:root[data-theme="dark"] :is(.ob-scroll, .ob-code__all, .rich-table)::-webkit-scrollbar-thumb,
+:root .ob-scroll:hover::-webkit-scrollbar-thumb, :root[data-theme="dark"] .ob-scroll:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--u-ink) 22%, transparent); }
 /* Answer emphasis: upright at 600 in the body colour (r3 has no italics anywhere). strong keeps its weight around
    it; code inside keeps the code style. */
 :root :is(.rich-text, .ob-answer) em { font-style: normal; font-weight: 600; color: inherit; }

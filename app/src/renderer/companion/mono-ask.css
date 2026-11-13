@@ -11,7 +11,6 @@
 :root[data-ui="v3"][data-v7] .layout .ask-thread { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 240px; overflow: hidden; }
 :root[data-ui="v3"][data-v7] .layout .ask-thread .m-box__title { flex: none; }
 :root[data-ui="v3"][data-v7] .layout .ask-log { display: flex; flex: 1 1 auto; flex-direction: column; gap: 20px; min-height: 0; overflow-y: auto; padding: 20px; }
-:root[data-ui="v3"][data-v7] .layout .ask-log:hover::-webkit-scrollbar-thumb { background: var(--u-ink-2); }
 
 /* Your message: right-aligned on the strong grey fill. */
 :root[data-ui="v3"][data-v7] .layout .ask-turn--user { display: flex; justify-content: flex-end; }
@@ -43,10 +42,14 @@
 :root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error__retry { flex: none; height: 28px; padding: 0 12px; border: 1px solid var(--u-border-control); border-radius: 999px; background: none; color: var(--u-ink); font: 600 12px/1 var(--u-font); cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout :is(.ask-log, .ask-hello) .chat-error__retry:hover { background: var(--u-sunken); }
 
-/* The composer box: 104 px, the control border; the text, then one bar of controls. */
-:root[data-ui="v3"][data-v7] .layout .ask-composer { display: flex; flex: none; flex-direction: column; gap: 8px; min-height: 104px; padding: 12px 12px 12px 20px; border-color: var(--u-border-control); }
-:root[data-ui="v3"][data-v7] .layout .ask-composer:focus-within { border-color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .ask-composer textarea { flex: 1 1 auto; width: 100%; min-height: 40px; padding: 0; border: 0; outline: none; resize: none; background: none; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+/* The composer box: 104 px, the control border; the text, then one bar of controls. The box is the field: the
+   textarea has no ring of its own, and with the cursor in it the box's border becomes the 2 px ring in the text
+   colour (inset, so nothing moves); the text starts 20 px in. .m-box.ask-composer outweighs mono-frame.css's .m-box,
+   which loads after this file. */
+:root[data-ui="v3"][data-v7] .layout .m-box.ask-composer { display: flex; flex: none; flex-direction: column; gap: 8px; min-height: 104px; padding: 12px 12px 12px 20px; border-color: var(--u-border-control); }
+:root[data-ui="v3"][data-v7] .layout .m-box.ask-composer:focus-within { border-color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea { flex: 1 1 auto; width: 100%; min-height: 40px; padding: 0; border: 0; outline: none; resize: none; background: none; box-shadow: none; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-composer textarea:is(:focus, :focus-visible) { outline: none; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .layout .ask-composer textarea::placeholder { color: var(--u-ink-2); opacity: 1; }
 :root[data-ui="v3"][data-v7] .layout .ask-composer textarea:disabled { opacity: var(--u-off); }
 :root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip { margin: 0; padding: 12px 14px; border: 1px solid var(--u-border); border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/17px var(--u-font); }
@@ -89,13 +92,15 @@
 :root[data-ui="v3"][data-v7] .layout .ask-see__files code { min-width: 0; overflow: hidden; padding: 0; background: none; color: var(--u-ink); font: 400 12px/16px var(--u-font-mono); text-overflow: ellipsis; white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .ask-see__files span { flex: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .ask-see__files .ask-see__more { color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
-/* Saved conversations: up to six rows, the title, how many messages and the date. */
+/* Saved conversations: up to six rows. The title on the whole first line; how many messages at the left of the second
+   and the date at its right. .m-row.ask-saved__row outweighs mono-frame.css's .m-row (padding, flex), loaded later. */
 :root[data-ui="v3"][data-v7] .layout .ask-saved__rows { margin: 0; padding: 0 20px 4px; list-style: none; }
-:root[data-ui="v3"][data-v7] .layout .ask-saved__row { display: flex; align-items: flex-end; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .m-row.ask-saved__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 12px; width: 100%; min-height: 52px; padding: 8px 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout .ask-saved__rows > li + li .ask-saved__row { border-top: 1px solid var(--u-border); }
-:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__main { flex: 1 1 auto; min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__end { flex: none; padding-bottom: 8px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__main { display: contents; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__title { grid-column: 1 / -1; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__meta { grid-column: 1; }
+:root[data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__end { grid-column: 2; margin: 0; padding: 0; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); text-align: right; }
 
 /* Whole phrases only: in a narrow column the ", Shift Return for a new line" tail goes, never a cut word. */
 @container mcol (max-width: 700px) {

@@ -65,9 +65,10 @@
 :root[data-ui="v3"][data-v7] .layout .today-next__row .m-row__main { flex: 1 1 auto; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .today-next__row :is(.m-row__title, .m-row__meta) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Row C, right: four number tiles, 2 x 2. */
+/* Row C, right: four number tiles, 2 x 2, their content from the top: the numbers in a row share a line, 39 px under
+   the tile's top, and a label that wraps only makes its own tile's text longer. */
 :root[data-ui="v3"][data-v7] .layout .today-tiles { grid-auto-rows: 1fr; }
-:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile { display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; padding-top: 38px; }
 
 /* Chevrons on links and rows: the text colour (links) or grey (rows). */
 :root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-chevron { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -93,7 +94,9 @@
 :root[data-ui="v3"][data-v7] .layout .today-brief__lines { flex: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .today-brief__empty p { color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
 
-/* The right side: Recently understood, each lesson with the first 4 lines of its saved code on the grey fill. */
+/* The right side: Recently understood ("See all" at the title row's right, 20 px in), each lesson with the first 4
+   lines of its saved code on the grey fill. */
+:root[data-ui="v3"][data-v7] .layout .today-recent .m-box__title > .m-link { margin-left: auto; }
 :root[data-ui="v3"][data-v7] .layout .today-recent__list { margin: 0; padding: 0 20px; list-style: none; }
 :root[data-ui="v3"][data-v7] .layout .today-recent__list > li + li { border-top: 1px solid var(--u-border); }
 :root[data-ui="v3"][data-v7] .layout .today-recent__item { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 16px 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
@@ -101,7 +104,9 @@
 :root[data-ui="v3"][data-v7] .layout .today-recent__meta { display: flex; justify-content: space-between; gap: 8px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
 :root[data-ui="v3"][data-v7] .layout .today-recent__source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :root[data-ui="v3"][data-v7] .layout .today-recent__meta time { flex: none; }
-:root[data-ui="v3"][data-v7] .layout .today-recent__code { display: block; margin-top: 8px; padding: 10px 12px; overflow: hidden; border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); white-space: pre; text-overflow: clip; }
+/* The code keeps 12 px of grey on the right too: the side insets are transparent borders, so overflow cuts the text
+   at the inner edge (a hard cut, no fade or dots) while the fill runs under them. */
+:root[data-ui="v3"][data-v7] .layout .today-recent__code { display: block; margin-top: 8px; padding: 0; overflow: hidden; border: solid transparent; border-width: 10px 12px; border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); white-space: pre; text-overflow: clip; }
 :root[data-ui="v3"][data-v7] .layout .today-recent__empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 20px; text-align: center; }
 :root[data-ui="v3"][data-v7] .layout .today-recent__empty p { margin: 0; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
 

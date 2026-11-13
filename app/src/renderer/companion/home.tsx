@@ -374,7 +374,7 @@ export function Home({ shortcutKeys, shortcut, userName, reviews, understood, st
         <section className="m-box m-box--flush today-next" aria-labelledby="home-next">
           <header className="m-box__title">
             <h2 id="home-next">Up next</h2>
-            <span className="m-box__meta"><CountUp value={stepsDone} /> of {steps.length} done</span>
+            <span className="m-box__meta"><span><CountUp value={stepsDone} /> of {steps.length} done</span></span>
           </header>
           <ol className="today-next__rows">
             {/* The saved brief leads the list when there is one (Design S-1 whole-app S4). */}
