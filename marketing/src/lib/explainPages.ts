@@ -3986,11 +3986,16 @@ export function explainHeading(page: ExplainPage): string {
 
 /**
  * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
- * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283);
+ * a hyphen inside a file name or flag ("package-lock.json", "-i") gets a word joiner after it, and the space before a
+ * flag becomes no-break, so neither "package- / lock.json" nor "rebase / -i" happens at 390 px (Design on heading 2).
  * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
  */
 export function explainHeadingText(page: ExplainPage): string {
-  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
+  return explainHeading(page)
+    .replace(/^(git|ps) /, "$1\u00a0")
+    .replace(/(\S)-(\S)/g, "$1-\u2060$2")
+    .replace(/ (-[a-z])\b/g, "\u00a0$1");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
