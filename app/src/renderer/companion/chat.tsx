@@ -44,10 +44,11 @@ function whenLabel(iso: string): string {
   return then.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** Starters fill the composer (Security M3: nothing is sent until the person adds their code and presses Return). */
 const STARTERS = [
-  'What just changed in this repo?',
-  'What should I understand before committing?',
-  'Which files are most likely to go stale?',
+  'Explain this function: ',
+  'Why does this fail? ',
+  'Is there a simpler way to write this? ',
 ];
 
 function greetName(name?: string): string {
@@ -435,7 +436,7 @@ export function Chat({
             <p>Ask Vibe about the code you type or paste here. Replies use {aiLabel}.</p>
             <div className="ask-hello__starters">
               {STARTERS.map((item) => (
-                <button key={item} type="button" className="m-btn m-btn--small m-btn--outlined" onClick={() => void send(item)}>{item}</button>
+                <button key={item} type="button" className="m-btn m-btn--small m-btn--outlined" onClick={() => { setDraft(item); areaRef.current?.focus(); }}>{item.trim()}</button>
               ))}
             </div>
             {retryError}
