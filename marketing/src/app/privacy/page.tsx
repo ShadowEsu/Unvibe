@@ -156,7 +156,10 @@ export default function PrivacyPage() {
           switch it off. To turn it on or off, open Settings, then Privacy &amp; Data, and use Send setup
           progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does
           not cover the install ID, dates and counts in the paragraph above, which come with requests
-          the app makes anyway.
+          the app makes anyway, nor one message the app sends once, with that switch on or off, when its
+          main window has been on screen for three seconds (from version 0.1.53). That message carries
+          only the step name and the install ID, and it is how we tell an install a person opened apart
+          from an automatic one.
         </p>
         <p>
           If you type an answer to the optional first-run question &ldquo;Where did you hear about

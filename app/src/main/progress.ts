@@ -9,7 +9,13 @@
  * Unvibe?" (`answerHeardFrom`). Typing it and pressing Continue is its own opt-in (Security 0046,
  * option A), so it goes from sealed trial builds whether or not the setting is on, once, and is kept
  * locally only until the server has it.
+ * `window_shown` is the other exception (BOSS counter fix, ledger 620, Marketing §10 C): sent once when
+ * the first main window has been visible for 3 seconds, from sealed trial builds whether or not the
+ * setting is on. It carries nothing but the step name and the install ID the launch usage check
+ * already sends; it tells a person who saw the window apart from a launch-only run (the post-upload
+ * link checker, or a window that opened hidden). Needs Security's yes before it ships.
  */
+import { setTimeout as sleep } from 'node:timers/promises';
 import { aiAuthHeaders, postTrialProgress } from './backend';
 import { settings } from './settings';
 import { store } from './store';
@@ -23,7 +29,8 @@ export type ProgressStep =
   | 'level_answered'
   | 'login_prompt_shown'
   | 'login_prompt_accepted'
-  | 'heard_from';
+  | 'heard_from'
+  | 'window_shown';
 
 export interface ProgressDeps {
   /** Sealed trial build and not a founder build. */
@@ -36,6 +43,9 @@ export interface ProgressDeps {
   /** The first-run answer waiting to be sent, or null. */
   heardFrom: () => string | null;
   saveHeardFrom: (answer: string) => void;
+  /** The first main window was visible for 3 s on some launch (local truth for `window_shown`). */
+  windowShown: () => boolean;
+  markWindowShown: () => void;
   /** HTTP status, or null when the request never completed. `answer` only for `heard_from`. */
   post: (step: ProgressStep, answer?: string) => Promise<number | null>;
 }
@@ -56,8 +66,8 @@ export function cleanHeardFrom(value: unknown): string {
 
 /** Testable core of `reportProgress`. */
 export async function sendProgress(step: ProgressStep, deps: ProgressDeps): Promise<void> {
-  // The first-run answer is its own opt-in; every other step needs the setting.
-  const allowed = step === 'heard_from' ? deps.trialBuild() : deps.enabled();
+  // The first-run answer is its own opt-in and the window marker carries nothing; every other step needs the setting.
+  const allowed = step === 'heard_from' || step === 'window_shown' ? deps.trialBuild() : deps.enabled();
   if ((MAC_ONLY[step] && deps.platform !== 'darwin') || !allowed || deps.sent(step) || inFlight.has(step)) return;
   const answer = step === 'heard_from' ? deps.heardFrom() : undefined;
   if (answer === null) return;
@@ -79,6 +89,8 @@ const liveDeps: ProgressDeps = {
   markSent: (step) => store().markProgressSent(step),
   heardFrom: () => store().heardFromAnswer(),
   saveHeardFrom: (answer) => store().saveHeardFromAnswer(answer),
+  windowShown: () => store().windowShown(),
+  markWindowShown: () => store().markWindowShown(),
   // aiAuthHeaders(null): the install ID and the session token never travel together.
   post: (step, answer) => postTrialProgress(step, aiAuthHeaders(null), answer),
 };
@@ -113,5 +125,26 @@ export async function syncProgress(
     local.signedIn ? sendProgress('signed_in', deps) : undefined,
     // Sends only when a first-run answer is still waiting.
     sendProgress('heard_from', deps),
+    deps.windowShown() ? sendProgress('window_shown', deps) : undefined,
   ]);
+}
+
+/** How long the first window must stay visible before it counts as seen. */
+export const WINDOW_SHOWN_AFTER_MS = 3000;
+
+/**
+ * Called when a main window is shown: after 3 s, if it is still visible, the local truth is saved and
+ * the marker sent (once ever; later launches only retry a send that never got through).
+ */
+export function noteWindowShown(
+  win: { isDestroyed(): boolean; isVisible(): boolean },
+  deps: ProgressDeps = liveDeps,
+  wait: (ms: number) => Promise<void> = (ms) => sleep(ms),
+): Promise<void> {
+  if (deps.windowShown()) return Promise.resolve();
+  return wait(WINDOW_SHOWN_AFTER_MS).then(() => {
+    if (win.isDestroyed() || !win.isVisible()) return;
+    deps.markWindowShown();
+    return sendProgress('window_shown', deps);
+  });
 }

@@ -64,6 +64,8 @@ interface Data {
   progressSent?: Partial<Record<ProgressStep, true>>;
   /** The optional first-run answer, kept only until the server has it (progress.ts `answerHeardFrom`). */
   heardFrom?: string;
+  /** The first main window was visible for 3 s (progress.ts `window_shown`); kept so the marker can retry next launch. */
+  windowShown?: true;
   /** The launch-at-login question was shown (either answer), so it is never asked again. */
   loginPromptAsked?: true;
   /** This install's first run (ISO). Set once, never later than the store's own records show. */
@@ -376,6 +378,16 @@ class Store {
 
   saveHeardFromAnswer(answer: string): void {
     this.data.heardFrom = answer;
+    this.save();
+  }
+
+  windowShown(): boolean {
+    return this.data.windowShown === true;
+  }
+
+  markWindowShown(): void {
+    if (this.data.windowShown) return;
+    this.data.windowShown = true;
     this.save();
   }
 
