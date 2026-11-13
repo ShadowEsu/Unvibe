@@ -11,6 +11,11 @@
 //                                         steps, on the already running app), epoch-ms timestamps of each screen
 //   node cdp.mjs finish <out> <label>    setup finished by clicks with NO explanation (no hosted-AI call): 1/4 "Let's go" →
 //                                         2/4 "Skip for now" → 3/4 "Skip for now" (Mac: finishes setup), epoch-ms marks
+//   node cdp.mjs brief <out> <label>     design's Briefs half only (Studio's S10): Briefs, the project, "Latest commit";
+//                                         a brief is built from local git (main's brief:build), so no hosted-AI call; no
+//                                         Explain/Understand button is pressed. Stills: the real window at 1x, design's
+//                                         1180x820 at 2x, and the whole page in one tall viewport at 2x and at 1x, with
+//                                         checks that nothing is scrolled out, clipped, masked or covered
 // Prints "KEY value" lines for the shell and writes <out>/cdp-<label>.json; element stills go to <out>/<label>-*.png.
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,7 +26,9 @@ import os from 'node:os';
 const [mode, out, label] = process.argv.slice(2);
 // 591 (BOSS, 10 Nov): no hosted-AI call from any QA run. sample, onboard (the sample explanation) and design (a real
 // brief) make one, so they refuse before connecting unless the workflow sets QA_AI_OK=1 (qa-rc-0150-mac.yml fixes it to
-// "0" in its env; a commit-message marker can't change it).
+// "0" in its env; a commit-message marker can't change it). brief (S10) is not refused: it opens Briefs only, whose
+// brief:build (0.1.51 main.ts) is local git (buildChangeBrief) plus a change_brief_opened product event, and it presses
+// no Explain/Understand button, so no diff leaves the runner and no hosted-AI call is made.
 if (['sample', 'onboard', 'design'].includes(mode) && process.env.QA_AI_OK !== '1') {
   console.log(`ERROR REFUSED ${mode}: hosted-AI step blocked, QA_AI_OK is not 1 (591)`); process.exit(3);
 }
@@ -293,7 +300,7 @@ try {
     mark('setup screens gone');
     await sleep(2000);
     await companion.screenshot({ path: path.join(out, `${label}-after-setup.png`) }).catch(() => {});
-  } else if (mode === 'design') {
+  } else if (mode === 'design' || mode === 'brief') {
     // Design package stills: Briefs with one real brief, then Settings → Privacy & Data. Clicks go through the page's
     // own buttons (as first-explain.mjs does); the folder comes from the app's own folder dialog (PICK_PATH, typed into
     // macOS's Go to Folder) unless the app already knows the project (SKIP_PICK=1). Each screen: a 1x capture of the
@@ -410,20 +417,94 @@ try {
         files: list('.briefings__file'), agentReview: document.querySelector('.agent-review')?.innerText.replace(/\s+/g, ' ').trim().slice(0, 600) ?? null };
     });
     say('BRIEF', JSON.stringify(result.brief));
-    shot1x('briefs-open-1x.png');
-    result.briefs2x = await shot2x('briefs-open-2x.png', '.briefings');
+    if (mode === 'brief') {
+      // Studio's S10 (Marketing's ask 20261113-0108): every number on screen, word for word, then the whole page.
+      Object.assign(result.brief, await companion.evaluate(() => {
+        const t = (n) => n?.innerText.replace(/\s+/g, ' ').trim() ?? null;
+        const r = document.querySelector('.agent-review');
+        return { reviewHead: t(r?.querySelector('.agent-review__head')), reviewFirst: [...(r?.querySelectorAll('.agent-review__checks > li') ?? [])].map(t),
+          whatMatters: [...(r?.querySelectorAll('.agent-review__files > li') ?? [])].map((li) => ({ path: li.querySelector('code')?.textContent.trim(), reason: li.querySelector('small')?.textContent.trim(), counts: li.querySelector(':scope > span')?.textContent.trim() })),
+          areas: [...(r?.querySelectorAll('.agent-review__areas > span') ?? [])].map(t),
+          agentReviewFull: t(r) };
+      }));
+      say('BRIEF_REVIEW', JSON.stringify({ reviewHead: result.brief.reviewHead, whatMatters: result.brief.whatMatters, areas: result.brief.areas }));
+      shot1x('briefs-window-1x.png');
+      result.briefs2x = await shot2x('briefs-open-2x.png', '.briefings');
+      // The whole page in one viewport: as tall as the page scroller's content, so nothing is scrolled out of view. Then
+      // checked: nothing left to scroll, no text cut, no mask on the page or its parents, and at every point of a 16 px
+      // grid over the two brief cards the topmost element is the card itself (so the Ask Vibe dock, the buddy or any
+      // other floating element covers none of it). Positioned elements over the cards that don't take the pointer, and
+      // gradient ::before/::after layers on the page's parents (possible fades), are listed as notes for the eye check.
+      const full = async (file, scale) => {
+        await cdpSession.send('Emulation.setDeviceMetricsOverride', { width: emuW, height: emuH, deviceScaleFactor: scale, mobile: false });
+        await sleep(1000);
+        const need = await companion.evaluate(() => { const p = document.querySelector('.briefings').closest('.page'); p.scrollTop = 0; return { sh: p.scrollHeight, ch: p.clientHeight, ih: innerHeight }; });
+        const h = need.ih + need.sh - need.ch + 8;
+        await cdpSession.send('Emulation.setDeviceMetricsOverride', { width: emuW, height: h, deviceScaleFactor: scale, mobile: false });
+        await sleep(1500);
+        const seen = await companion.evaluate(() => {
+          const p = document.querySelector('.briefings').closest('.page');
+          const cardEls = [...document.querySelectorAll('.agent-review, .briefings__card')];
+          const cards = cardEls.map((n) => n.getBoundingClientRect());
+          const name = (el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`;
+          const covers = new Set();
+          cardEls.forEach((card, i) => {
+            const c = cards[i];
+            for (let y = c.top + 2; y < c.bottom - 1; y += 16) for (let x = c.left + 2; x < c.right - 1; x += 16) {
+              const top = document.elementFromPoint(x, y);
+              // The card's own parents show through its rounded corners; only something else on top covers it.
+              if (top && !card.contains(top) && !top.contains(card)) covers.add(name(top));
+            }
+          });
+          const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+          const over = [];
+          for (const el of document.querySelectorAll('body *')) {
+            if (p.contains(el) || el.contains(p)) continue;
+            const s = getComputedStyle(el);
+            if (!['fixed', 'absolute', 'sticky'].includes(s.position) || s.visibility === 'hidden' || s.display === 'none' || Number(s.opacity) === 0) continue;
+            const b = el.getBoundingClientRect();
+            if (b.width && b.height && cards.some((c) => hit(b, c))) over.push(`${name(el)} (pointer-events ${s.pointerEvents}, z ${s.zIndex})`);
+          }
+          const masks = [];
+          const layers = [];
+          for (let n = p; n; n = n.parentElement) {
+            for (const pseudo of [null, '::before', '::after']) {
+              const s = getComputedStyle(n, pseudo);
+              if ((s.maskImage && s.maskImage !== 'none') || (s.webkitMaskImage && s.webkitMaskImage !== 'none')) masks.push(`${name(n)}${pseudo ?? ''}`);
+              if (pseudo && s.content !== 'none' && /gradient/.test(s.backgroundImage)) layers.push(`${name(n)}${pseudo}`);
+            }
+          }
+          return { leftToScroll: p.scrollHeight - p.clientHeight, scrollTop: p.scrollTop, viewport: [innerWidth, innerHeight, devicePixelRatio], cards: cards.map((c) => [Math.round(c.top), Math.round(c.bottom)]), covers: [...covers], masks, over, layers };
+        });
+        const cut = await clippedText('.briefings');
+        const { data } = await cdpSession.send('Page.captureScreenshot', { format: 'png' });
+        writeFileSync(path.join(out, file), Buffer.from(data, 'base64'));
+        await cdpSession.send('Emulation.clearDeviceMetricsOverride');
+        await sleep(800);
+        const whole = seen.leftToScroll <= 1 && seen.scrollTop === 0 && !cut.length && !seen.covers.length && !seen.masks.length;
+        say(whole ? 'SHOT_FULL' : 'ERROR SHOT_FULL', `${file} viewport ${seen.viewport.join('x')} (CSS px, dpr); left to scroll ${seen.leftToScroll} px; cards top-bottom ${JSON.stringify(seen.cards)}; clipped text: ${cut.length ? cut.join(' | ') : 'none'}; covered by: ${seen.covers.join(', ') || 'nothing'}; masks: ${seen.masks.join(', ') || 'none'}`);
+        say('NOTE_FULL', `${file} positioned elements over the cards: ${seen.over.join(', ') || 'none'}; gradient layers on the page's parents: ${seen.layers.join(', ') || 'none'}`);
+        return { file, ...seen, clipped: cut, whole };
+      };
+      result.full2x = await full('briefs-full-2x.png', 2);
+      result.full1x = await full('briefs-full-1x.png', 1);
+      if (!result.full2x.whole || !result.full1x.whole) throw new Error('the whole brief is not in one unobstructed viewport');
+    } else {
+      shot1x('briefs-open-1x.png');
+      result.briefs2x = await shot2x('briefs-open-2x.png', '.briefings');
 
-    // Settings → Privacy & Data.
-    await companion.locator('.side-settings').click({ timeout: 10000 });
-    const overlay = companion.locator('.overlay[aria-label="Settings"]');
-    await overlay.waitFor({ timeout: 10000 });
-    await overlay.getByRole('button', { name: 'Privacy & Data' }).click({ timeout: 10000 });
-    await sleep(1200);
-    result.privacy = await companion.evaluate(() => [...document.querySelectorAll('.overlay .mbody .setrow')].map((row) => ({
-      label: row.querySelector('.sl')?.textContent.trim(), control: row.querySelector('[role="switch"], .toggle, button, input')?.outerHTML.slice(0, 120) ?? null })));
-    say('PRIVACY_ROWS', JSON.stringify(result.privacy.map((r) => r.label)));
-    shot1x('settings-privacy-1x.png');
-    result.privacy2x = await shot2x('settings-privacy-2x.png', '.overlay');
+      // Settings → Privacy & Data.
+      await companion.locator('.side-settings').click({ timeout: 10000 });
+      const overlay = companion.locator('.overlay[aria-label="Settings"]');
+      await overlay.waitFor({ timeout: 10000 });
+      await overlay.getByRole('button', { name: 'Privacy & Data' }).click({ timeout: 10000 });
+      await sleep(1200);
+      result.privacy = await companion.evaluate(() => [...document.querySelectorAll('.overlay .mbody .setrow')].map((row) => ({
+        label: row.querySelector('.sl')?.textContent.trim(), control: row.querySelector('[role="switch"], .toggle, button, input')?.outerHTML.slice(0, 120) ?? null })));
+      say('PRIVACY_ROWS', JSON.stringify(result.privacy.map((r) => r.label)));
+      shot1x('settings-privacy-1x.png');
+      result.privacy2x = await shot2x('settings-privacy-2x.png', '.overlay');
+    }
   }
 } catch (e) {
   result.error = e.message.split('\n')[0];

@@ -1,0 +1,122 @@
+From 0d41a63de9c04faf45e7900469fc1829b83b3b1f Mon Sep 17 00:00:00 2001
+From: Sample Dev <sample@example.com>
+Date: Fri, 6 Nov 2026 09:00:00 +0000
+Subject: [PATCH] Add quantity limits and a receipt line
+
+---
+ README.md           |  4 ++++
+ src/cart.js         | 11 ++++++++++-
+ src/format.js       |  4 ++++
+ src/limits.js       |  9 +++++++++
+ test/cart.test.js   |  5 ++++-
+ test/format.test.js |  5 +++++
+ test/limits.test.js |  8 ++++++++
+ 7 files changed, 44 insertions(+), 2 deletions(-)
+ create mode 100644 src/format.js
+ create mode 100644 src/limits.js
+ create mode 100644 test/format.test.js
+ create mode 100644 test/limits.test.js
+
+diff --git a/README.md b/README.md
+index d3767cc..ba79401 100644
+--- a/README.md
++++ b/README.md
+@@ -5,3 +5,7 @@ A tiny shopping-cart helper used as sample data.
+ ## Discount codes
+ 
+ `total(items, taxRate, code)` accepts SPRING10 or WELCOME5 and rounds to cents.
++
++## Quantity limits
++
++Each item needs a whole-number `qty` from 1 to 20. `summary(items, taxRate, code)` returns one receipt line.
+diff --git a/src/cart.js b/src/cart.js
+index 2ce19e6..0880296 100644
+--- a/src/cart.js
++++ b/src/cart.js
+@@ -1,7 +1,10 @@
++import { formatMoney } from './format.js';
++import { checkQty } from './limits.js';
++
+ const DISCOUNTS = { SPRING10: 0.1, WELCOME5: 0.05 };
+ 
+ export function subtotal(items) {
+-  return items.reduce((sum, item) => sum + item.price * item.qty, 0);
++  return items.reduce((sum, item) => sum + item.price * checkQty(item.qty), 0);
+ }
+ 
+ /** Applies a known discount code; unknown or missing codes leave the amount unchanged. */
+@@ -14,3 +17,9 @@ export function total(items, taxRate, code) {
+   const discounted = applyDiscount(subtotal(items), code);
+   return Math.round(discounted * (1 + taxRate) * 100) / 100;
+ }
++
++/** One receipt line: "3 items, $61.53". */
++export function summary(items, taxRate, code) {
++  const count = items.reduce((n, item) => n + item.qty, 0);
++  return `${count} ${count === 1 ? 'item' : 'items'}, ${formatMoney(total(items, taxRate, code))}`;
++}
+diff --git a/src/format.js b/src/format.js
+new file mode 100644
+index 0000000..9085424
+--- /dev/null
++++ b/src/format.js
+@@ -0,0 +1,4 @@
++/** Formats an amount as dollars and cents: 61.5 becomes "$61.50". */
++export function formatMoney(amount) {
++  return `$${amount.toFixed(2)}`;
++}
+diff --git a/src/limits.js b/src/limits.js
+new file mode 100644
+index 0000000..a6a807e
+--- /dev/null
++++ b/src/limits.js
+@@ -0,0 +1,9 @@
++export const MAX_QTY = 20;
++
++/** Returns qty when it is a whole number from 1 to MAX_QTY; throws otherwise. */
++export function checkQty(qty) {
++  if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
++    throw new RangeError(`qty must be a whole number from 1 to ${MAX_QTY}`);
++  }
++  return qty;
++}
+diff --git a/test/cart.test.js b/test/cart.test.js
+index 7508ab5..efd61e9 100644
+--- a/test/cart.test.js
++++ b/test/cart.test.js
+@@ -1,6 +1,9 @@
+ import { strict as assert } from 'node:assert';
+-import { applyDiscount, total } from '../src/cart.js';
++import { applyDiscount, summary, total } from '../src/cart.js';
+ 
+ assert.equal(applyDiscount(100, 'spring10'), 90);
+ assert.equal(applyDiscount(100, 'UNKNOWN'), 100);
+ assert.equal(total([{ price: 19.99, qty: 3 }], 0.08, 'WELCOME5'), 61.53);
++assert.equal(summary([{ price: 19.99, qty: 3 }], 0.08, 'WELCOME5'), '3 items, $61.53');
++assert.equal(summary([{ price: 4, qty: 1 }], 0), '1 item, $4.00');
++assert.throws(() => total([{ price: 5, qty: 0 }], 0.08), RangeError);
+diff --git a/test/format.test.js b/test/format.test.js
+new file mode 100644
+index 0000000..023aa51
+--- /dev/null
++++ b/test/format.test.js
+@@ -0,0 +1,5 @@
++import { strict as assert } from 'node:assert';
++import { formatMoney } from '../src/format.js';
++
++assert.equal(formatMoney(61.5), '$61.50');
++assert.equal(formatMoney(0), '$0.00');
+diff --git a/test/limits.test.js b/test/limits.test.js
+new file mode 100644
+index 0000000..76ff151
+--- /dev/null
++++ b/test/limits.test.js
+@@ -0,0 +1,8 @@
++import { strict as assert } from 'node:assert';
++import { checkQty, MAX_QTY } from '../src/limits.js';
++
++assert.equal(checkQty(1), 1);
++assert.equal(checkQty(MAX_QTY), MAX_QTY);
++assert.throws(() => checkQty(0), RangeError);
++assert.throws(() => checkQty(2.5), RangeError);
++assert.throws(() => checkQty(MAX_QTY + 1), RangeError);

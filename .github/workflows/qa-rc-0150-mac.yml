@@ -14,6 +14,8 @@ name: QA 0.1.50 RC Mac stills
 #   r3 also once on arm64 with a virtual microphone (BlackHole 2ch), to see whether an input device brings the question.
 # Notice rows (n-*, for RC-3): DMG install + first launch + first explanation, then qa/install-matrix's first-explain.mjs
 # (pinned below) as is with NOTICES=1 (N-0..N-7). "[rc:<app-release run id>]" in the commit message picks the build.
+# S10 (Studio's "Who reads the rest?", Marketing's ask 20261113-0108): s10-brief, published 0.1.51 from the release,
+# Briefs on Marketing's 7-file sample commit (0d41a63, Security S-2), whole-page stills; local git only, no AI call.
 on:
   push:
     branches: [qa/rc-0150-mac]
@@ -101,6 +103,10 @@ jobs:
           # call); asar vs 971292ed. Row M (the microphone question on Intel) and Intel T-1, twice, each pushed alone.
           - { item: d51-m-intel-1, runner: macos-15-intel }
           - { item: d51-m-intel-2, runner: macos-15-intel }
+          # S10: the published 0.1.51 (v0.1.51, checked against its SHA256SUMS-mac.txt and as the newest release) on the
+          # sample repo + Marketing's commit3 (s10-commit3.patch, sha256 c279c361, id 0d41a63): Briefs → Latest commit,
+          # whole-page stills (design-capture.sh s10 → cdp.mjs brief). Briefs builds from local git; nothing explains.
+          - { item: s10-brief, runner: macos-15 }
     name: ${{ matrix.item }} (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
@@ -109,7 +115,8 @@ jobs:
     steps:
       # Default deny (591): an item runs only when "[only:<item>,…]" names it exactly; a message with no [only:] runs
       # nothing. While QA_AI_OK is "0", only the items audited as making no hosted-AI call run (pub-*, r51-*, d51-*:
-      # mic-row.sh with PHASE2=finish, setup finished by clicks with no explanation); every other item can make one and is skipped.
+      # mic-row.sh with PHASE2=finish, setup finished by clicks with no explanation; s10-*: cdp.mjs brief, Briefs from
+      # local git with no Explain/Understand press); every other item can make one and is skipped.
       - name: Pick this item
         env:
           MSG: ${{ github.event.head_commit.message }}
@@ -119,7 +126,7 @@ jobs:
           list=$(printf '%s\n' "$MSG" | { grep -o '\[only:[^]]*\]' || true; } | sed 's/^\[only://; s/\]$//' | paste -sd, -)
           if [[ ",$list," != *",$ITEM,"* ]]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "item not named by [only:…]: skipped"; exit 0; fi
           case "$ITEM" in
-            pub-*|r51-*|d51-*) echo "named; audited: no hosted-AI call" ;;
+            pub-*|r51-*|d51-*|s10-*) echo "named; audited: no hosted-AI call" ;;
             *) if [ "$QA_AI_OK" != 1 ]; then echo "SKIP=1" >> "$GITHUB_ENV"; echo "::warning::$ITEM can make a hosted-AI call and QA_AI_OK is $QA_AI_OK (591): skipped"; fi ;;
           esac
 
@@ -144,7 +151,7 @@ jobs:
             app/e2e
 
       - name: Get the RC build (${{ env.RC_OVERRIDE || matrix.rc || env.RC_RUN }})
-        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-')
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-') && !startsWith(matrix.item, 's10-')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: unvibe-macos-latest
@@ -153,7 +160,7 @@ jobs:
           path: ${{ runner.temp }}/build
 
       - name: Check the RC DMGs
-        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-')
+        if: env.SKIP != '1' && !startsWith(matrix.item, 'pub-') && !startsWith(matrix.item, 'r51-') && !startsWith(matrix.item, 'd51-') && !startsWith(matrix.item, 's10-')
         env:
           RC: ${{ env.RC_OVERRIDE || matrix.rc }}
         run: |
@@ -245,6 +252,31 @@ jobs:
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
         run: bash .github/qa/rc0150/design-capture.sh "$RUNNER_TEMP/m"
+
+      - name: "S10: published 0.1.51 from the release, Briefs on Marketing's 7-file commit, whole-page stills (no AI call)"
+        if: env.SKIP != '1' && startsWith(matrix.item, 's10-')
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          newest=$(gh api repos/ShadowEsu/Unvibe/releases --jq '[.[] | select(.draft | not)][0].tag_name')
+          echo "newest published release: $newest" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          [ "$newest" = v0.1.51 ] || { echo "::error::the newest release is $newest, not v0.1.51: ask Marketing before taking S10 on it"; exit 1; }
+          arch=$([ "$(uname -m)" = x86_64 ] && echo x64 || echo arm64)
+          d="$RUNNER_TEMP/v0151"; mkdir -p "$d"; f="Unvibe-0.1.51-mac-$arch.dmg"
+          curl -fsSL -o "$d/$f" "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.51/$f"
+          curl -fsSL -o "$d/SHA256SUMS-mac.txt" https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.51/SHA256SUMS-mac.txt
+          want=$(awk -v a="$f" '$NF==a {print $1}' "$d/SHA256SUMS-mac.txt"); got=$(shasum -a 256 "$d/$f" | cut -d' ' -f1)
+          echo "published $f sha256 $got; v0.1.51 SHA256SUMS-mac.txt (sha256 $(shasum -a 256 "$d/SHA256SUMS-mac.txt" | cut -d' ' -f1)) says ${want:-nothing}: $([ -n "$want" ] && [ "$got" = "$want" ] && echo MATCH || echo MISMATCH)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          [ -n "$want" ] && [ "$got" = "$want" ] || exit 1
+          mnt="$RUNNER_TEMP/mnt"; mkdir -p "$mnt"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$d/$f"
+          ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
+          hdiutil detach "$mnt" -force || true
+          echo "installed $(defaults read /Applications/Unvibe.app/Contents/Info.plist CFBundleShortVersionString) ($arch); signature: $(codesign -dv /Applications/Unvibe.app 2>&1 | grep -E '^(Authority|TeamIdentifier)=' | head -2 | paste -sd' ' -)" | tee -a "$RUNNER_TEMP/m/dmg-sha256.txt"
+          db="/Library/Application Support/com.apple.TCC/TCC.db"
+          sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','com.unvibe.app',0,2,4,1,'UNUSED',0);"
+          bash .github/qa/rc0150/design-capture.sh "$RUNNER_TEMP/m" s10
 
       - name: "Notice rows: DMG install, first launch, first explanation, then N-0..N-7 (first-explain.mjs NOTICES=1)"
         if: env.SKIP != '1' && (startsWith(matrix.item, 'n-') || startsWith(matrix.item, 'n3-') || startsWith(matrix.item, 'n3c-'))
