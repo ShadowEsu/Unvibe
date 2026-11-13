@@ -1,0 +1,86 @@
+/* ── Mono: Briefs (OPTIONS.md "Organised containers", Briefs row; mono/grid/README.md "Briefs"). One toolbar (title,
+   sentence, scope as a segmented control, Choose repo, Refresh) · the headline with Vibe 2/3 + two number tiles 1/3 ·
+   Review first 1/2 + What matters 1/2 · Areas touched 1/3 + Knowledge that may be stale 2/3 · then today's Main
+   changes, Files and Saved knowledge in Mono boxes. Box, buttons, chips, tiles and grids are mono-frame.css's. The
+   page titles and the fill-page fix shared with Library and Momentum live here (first in name order). ── */
+
+/* Library and Briefs sit in a fill page (.page--learn): their column grows with its boxes and the page scrolls. */
+:root[data-ui="v3"][data-v7] .layout .page--learn:has(> .fade-in > :is(.mlib, .mbr)) > .fade-in { flex: 0 0 auto; min-height: auto; }
+
+/* Page title (22 px semibold) and its sentence (14 px grey), shared by Library, Briefs and Momentum. */
+:root[data-ui="v3"][data-v7] .layout :is(.mlib, .mbr, .mmom) .mono-title { margin: 0; color: var(--u-ink); font: 600 22px/28px var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout :is(.mlib, .mbr, .mmom) .mono-lead { margin: 6px 0 0; max-width: none; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout :is(.mlib, .mbr, .mmom) .m-box__title h2 { margin: 0; color: var(--u-ink); font: 600 14px/20px var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.mlib-toolbar, .mbr-toolbar) { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 16px; }
+:root[data-ui="v3"][data-v7] .layout :is(.mlib-toolbar__text, .mbr-toolbar__text) { flex: 1 1 260px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.mlib-toolbar__tools, .mbr-toolbar__tools) { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+
+:root[data-ui="v3"][data-v7] .layout .mbr { display: flex; flex: 0 0 auto; flex-direction: column; gap: 8px; min-width: 0; padding: 0; font-family: var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .mbr .m-seg__item:disabled { opacity: var(--u-off); cursor: default; }
+
+/* Status lines and empty states. */
+:root[data-ui="v3"][data-v7] .layout .mbr-status { margin: 0; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 40px 20px; text-align: center; }
+:root[data-ui="v3"][data-v7] .layout .mbr-empty h2 { margin: 8px 0 0; color: var(--u-ink); font: 600 17px/24px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-empty p { max-width: 520px; margin: 0; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-empty .m-btn { margin-top: 8px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-empty--quiet { flex-direction: row; justify-content: center; gap: 16px; padding: 28px 20px; text-align: left; }
+
+/* Row 1: the headline with Vibe and the one filled button; two number tiles beside it. */
+:root[data-ui="v3"][data-v7] .layout .mbr-head { display: flex; flex-direction: column; justify-content: center; gap: 16px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__row > .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__text { flex: 1 1 220px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__eyebrow { margin: 0; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__title { margin: 4px 0; color: var(--u-ink); font: 600 22px/28px var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__sub { margin: 0; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-head__row > .m-btn { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-head > .briefings__empty { margin: 0; }
+
+/* Row 2: Review first (tick boxes) and What matters (files, line counts, the one-line reason). */
+:root[data-ui="v3"][data-v7] .layout .mbr-checks { display: flex; flex-direction: column; gap: 16px; margin: 0; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-checks label { display: flex; align-items: flex-start; gap: 12px; color: var(--u-ink); font: 400 14px/22px var(--u-font); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .mbr-checks label.is-done span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .mbr-checks input {
+  -webkit-appearance: none; appearance: none; display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin: 2px 0 0;
+  border: 1.5px solid var(--u-border-control); border-radius: 5px; background: transparent; box-shadow: none; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .mbr-checks input:checked { border-color: var(--u-ink); background: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .mbr-checks input:checked::after { content: ""; width: 4px; height: 8px; margin-top: -2px; border: solid var(--u-paper); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+:root[data-ui="v3"][data-v7] .layout .mbr-checks__done.m-box__body { padding-top: 0; }
+:root[data-ui="v3"][data-v7] .layout .mbr-matters { margin: 0; padding: 0 20px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-matter { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; padding: 12px 0; }
+:root[data-ui="v3"][data-v7] .layout .mbr-matter + .mbr-matter { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .mbr-matter code { overflow: hidden; padding: 0; background: none; color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .mbr-matter small { grid-column: 1 / -1; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-delta { color: var(--u-ink-2); font: 400 12px/18px var(--u-font-mono); white-space: nowrap; }
+
+/* Row 3: Areas touched (chips and the app's note) beside Knowledge that may be stale. */
+:root[data-ui="v3"][data-v7] .layout .mbr-areas__title { margin: 0 0 12px; color: var(--u-ink); font: 600 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-chips__n { margin-left: 6px; color: var(--u-ink-2); font-weight: 400; }
+:root[data-ui="v3"][data-v7] .layout .mbr-areas .mbr-note { margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-stale { margin: 0; padding: 0 20px; list-style: none; }
+
+/* Today's brief, kept below the drawn rows: Main changes, Things to understand, Files, Saved knowledge. */
+:root[data-ui="v3"][data-v7] .layout .mbr-note { margin: 0; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-list { display: flex; flex-direction: column; gap: 8px; margin: 0; color: var(--u-ink); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-list.m-box__body { padding-left: 38px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-list li::marker { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .mbr-meta { display: flex; gap: 12px; min-width: 0; overflow: hidden; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .mbr-files { margin: 0; padding: 0 20px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-file { display: flex; flex-direction: column; align-items: stretch; justify-content: center; }
+:root[data-ui="v3"][data-v7] .layout .mbr-file__open {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding: 0;
+  border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--u-ink); text-align: left; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .mbr-file__open code { overflow: hidden; padding: 0; background: none; color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .mbr-file__kind { margin: -8px 0 14px; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-files__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .mbr-files__foot .mbr-note { flex: 1 1 260px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-note.m-box__body { padding-bottom: 4px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-note.m-box__body.mbr-note--last { padding-bottom: 20px; }
+:root[data-ui="v3"][data-v7] .layout .mbr-knowlist { margin: 0; padding: 0 20px 4px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .mbr-know { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+:root[data-ui="v3"][data-v7] .layout .mbr-know__summary { margin: 2px 0; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .mbr-know__acts { display: flex; flex: none; gap: 8px; }

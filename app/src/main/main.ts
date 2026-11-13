@@ -1399,7 +1399,7 @@ app.whenReady().then(() => {
     } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
-    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined || patch.theme !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barSize: next.barSize,
@@ -1408,6 +1408,7 @@ app.whenReady().then(() => {
         soundEffects: next.soundEffects,
         soundVolume: next.soundVolume,
         soundStyle: next.soundStyle,
+        theme: next.theme,
       });
     }
     if (patch.barVisibility && bar && !bar.isDestroyed()) {

@@ -25,7 +25,7 @@ test('Expert always keeps its Pro marker, and is locked unless the plan includes
   for (const plan of [undefined, 'free', 'trial']) {
     const expert = expertTag(control('beginner', plan));
     assert.match(expert, /\sdisabled=""/, String(plan));
-    assert.match(expert, /<span class="ob-pro"><svg[^>]*aria-hidden="true"/, 'a lock before Pro');
+    assert.match(expert, /^<button[^>]*><svg class="ob-icon ob-depth__lock"[^>]*aria-hidden="true"/, 'a 12 px lock before the label');
     assert.match(expert, />Pro<\/span>/);
   }
   for (const plan of ['pro', 'teams', 'full']) {

@@ -17,12 +17,13 @@ test('while the answer streams the footer offers only Stop generating', () => {
   assert.deepEqual(buttons(renderToStaticMarkup(createElement(StopButton, { onStop: noop }))), ['Stop generating']);
 });
 
-test('a finished answer offers three small chips: Understand, Save, Explain differently', () => {
+test('a finished answer offers three 28 px pills: Understand (the one filled), Save, Explain differently', () => {
   const html = renderToStaticMarkup(createElement(ExplainChips, chips()));
   assert.deepEqual(buttons(html), ['Understand', 'Save', 'Explain differently']);
-  assert.equal((html.match(/class="ob-chip"/g) ?? []).length, 3, 'no big primary button');
+  assert.equal((html.match(/class="ob-btn ob-btn--small"/g) ?? []).length, 1, 'one filled button: Understand');
+  assert.equal((html.match(/class="ob-chip"/g) ?? []).length, 2, 'Save and Explain differently outlined');
   assert.ok(!html.includes('✓'), 'JetBrains Mono has no ✓: the check is an icon');
-  assert.match(html, /<svg class="ob-icon"[^>]*aria-hidden="true"/);
+  assert.match(renderToStaticMarkup(createElement(ExplainChips, chips({ understood: true }))), /<svg class="ob-icon"[^>]*aria-hidden="true"/);
 });
 
 test('while the answer is still being revealed, all three wait', () => {

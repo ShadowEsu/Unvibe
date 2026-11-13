@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createRoot } from 'react-dom/client';
 import type { WidgetEvent } from '../../main/review';
 import type { ExplanationLevel } from '../../core/protocol';
-import { Buddy, setBuddyMood } from '../shared/buddy';
+import { Buddy, REACTION_HOLD_MS, setBuddyMood } from '../shared/buddy';
 import { configureTones, playTone } from '../shared/tones';
 import { renderRich } from '../shared/richText';
 import { ShortAnswer } from '../shared/shortAnswer';
@@ -31,12 +31,11 @@ import type { PmfDraft } from '../../core/pmf';
 import { PmfCard, type PmfCardModel } from './pmfCard';
 import { freshState, heldFollowUp, reduceEvent, type PanelState, type Phase } from './panelState';
 import '../shared/tokens.css';
-import { SegThumb } from '../shared/slidingThumb';
 
-/** The four bottom tabs (SPEC Tabs). */
+/** The four tabs under the header (Mono). */
 type View = 'explain' | 'test' | 'ask' | 'saved';
 
-/** Shown while the first words are on their way: Vibe thinks out loud with three real steps. */
+/** Shown while the first words are on their way: Vibe (28 px, thinking) with one line and three real steps. */
 function ThinkingCard({ hasCode }: { hasCode: boolean }) {
   const [step, setStep] = useState(0);
   // Blocks shaped like the answer appear only once loading has lasted 200 ms (Design r2 motion row 11).
@@ -48,23 +47,23 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
     return () => { window.clearTimeout(a); window.clearTimeout(b); window.clearTimeout(c); };
   }, []);
   const steps = [hasCode ? 'Reading your selection' : 'Reading the request', 'Checking project context and secrets', 'Writing the explanation'];
-  const notes = [hasCode ? 'hmm, let me read this…' : 'one sec, reading…', 'checking the rest of your project', 'okay, writing it up for you'];
+  const notes = [hasCode ? 'Hmm, let me read this…' : 'One sec, reading…', 'Checking the rest of your project', 'Okay, writing it up for you'];
   return (
     <div className="ob-thinking" role="status" aria-live="polite" aria-label="Generating explanation">
-      <Buddy mood={step === 2 ? 'reading' : 'thinking'} size={34} label="Vibe is thinking" />
-      <div className="ob-thinking__main">
+      <div className="ob-thinking__head">
+        <Buddy mood="thinking" size={28} label="Vibe is thinking" />
         <p className="ob-thinking__note" key={step}>{notes[step]}</p>
-        <ol className="ob-steps">
-          {steps.map((label, i) => (
-            <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}>
-              <i aria-hidden="true">{i < step ? <Icon name="check" size={12} /> : null}</i>{label}
-            </li>
-          ))}
-        </ol>
       </div>
+      <ol className="ob-steps">
+        {steps.map((label, i) => (
+          <li key={label} className={i < step ? 'is-done' : i === step ? 'is-now' : ''}>
+            <i aria-hidden="true">{i < step ? <Icon name="check" size={12} /> : null}</i>{label}
+          </li>
+        ))}
+      </ol>
       {skeleton ? (
         <div className="ob-skeleton" aria-hidden="true">
-          <i style={{ width: '38%' }} /><i /><i style={{ width: '82%' }} /><i className="ob-skeleton__code" /><i style={{ width: '64%' }} />
+          <i style={{ width: '38%' }} /><i /><i style={{ width: '82%' }} />
         </div>
       ) : null}
     </div>
@@ -208,7 +207,7 @@ function EmptyPicker({ accel, level }: { accel: string; level: ExplanationLevel 
         <div className="ob-note" role="status">This window runs as administrator, so Unvibe can't copy from it. Copy the code yourself, then use Explain my clipboard.</div>
       ) : null}
       <div className="ob-actions">
-        <button className="ob-btn" disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
+        <button className={paste.trim() ? 'ob-btn ghost' : 'ob-btn'} disabled={picking} onClick={() => window.unvibe.useClipboard({ level })}>
           Explain my clipboard
         </button>
         <button className="ob-btn ghost" disabled={picking} onClick={() => void chooseFile()}>
@@ -436,6 +435,14 @@ function Widget() {
   const phase = s.phase;
   const answerReady = phase === 'done' && !stillTyping && s.text.length > 0;
   const asking = followUpLive(s.followUps);
+  // Vibe in the header (Mono): thinking while it writes, happy (2 hops) for REACTION_HOLD_MS when the answer lands.
+  const [landed, setLanded] = useState(false);
+  useEffect(() => {
+    if (!answerReady) { setLanded(false); return undefined; }
+    setLanded(true);
+    const back = window.setTimeout(() => setLanded(false), REACTION_HOLD_MS);
+    return () => window.clearTimeout(back);
+  }, [answerReady]);
 
   // Height fits the content (360–560, main clamps): header + the body's natural height + footer + tabs.
   const headRef = useRef<HTMLElement>(null);
@@ -510,6 +517,51 @@ function Widget() {
   };
   const quizKey = view === 'test' && s.quiz?.question ? `q:${s.quiz.index ?? 1}:${s.quiz.question}` : null;
   useEffect(() => { if (quizKey) questionRef.current?.focus(); }, [quizKey]);
+  // A press selects a row; Return or Check grades it (Mono, the Quiz's flow). A new question starts unselected.
+  const [quizPick, setQuizPick] = useState<number | null>(null);
+  const quizPickRef = useRef(quizPick);
+  quizPickRef.current = quizPick;
+  useEffect(() => setQuizPick(null), [quizKey]);
+  const checkQuiz = (choice: number | null = quizPickRef.current) => {
+    const quiz = stateRef.current.quiz;
+    if (choice === null || quiz?.phase !== 'answering') return;
+    patch({ quiz: { ...quiz, choice, phase: 'grading' } });
+    window.unvibe.answer(choice);
+  };
+  const checkQuizRef = useRef(checkQuiz);
+  checkQuizRef.current = checkQuiz;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const quiz = stateRef.current.quiz;
+      if (viewRef.current !== 'test' || quiz?.phase !== 'answering' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const count = quiz.options?.length ?? 0;
+      const key = e.key.toLowerCase();
+      // 1 to 4 as shown; A to D still accepted.
+      const index = key >= '1' && key <= '9' ? Number(key) - 1 : key.length === 1 && key >= 'a' && key <= 'z' ? key.charCodeAt(0) - 97 : -1;
+      if (index >= 0 && index < count) {
+        e.preventDefault();
+        setQuizPick(index);
+        return;
+      }
+      if (e.key !== 'Enter') return;
+      // Return on a focused answer row checks that row; on any other button it stays that button's own press.
+      const row = target?.closest<HTMLElement>('.ob-opt');
+      if (row) {
+        const at = [...(row.parentElement?.children ?? [])].indexOf(row);
+        e.preventDefault();
+        setQuizPick(at);
+        checkQuizRef.current(at);
+        return;
+      }
+      if (target?.closest('button, a')) return;
+      e.preventDefault();
+      checkQuizRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const askInputRef = useRef<HTMLInputElement>(null);
   /** Sends a follow-up into the Ask thread; `consented` after "Send anyway" on a possible secret in it. */
@@ -640,7 +692,7 @@ function Widget() {
     });
   };
 
-  // Header (SPEC: 50 pt): Vibe, the selection's first symbol, "N lines · language", and the count only when ≤ 10 are left.
+  // Header (Mono, 48 px): Vibe, the selection's first symbol, "N lines · language", and the count only when ≤ 10 are left.
   const hasCode = Boolean(s.meta.lines);
   const symbol = firstSymbol(s.meta.preview) ?? s.meta.file?.split(/[\\/]/).pop();
   const title = hasCode ? symbol ?? selectionTitle(s.meta.lines!, s.meta.language) : 'Unvibe';
@@ -925,7 +977,7 @@ function Widget() {
       );
     }
     if (view === 'test') {
-      return s.quiz ? <QuizActions quiz={s.quiz} onAnother={() => openQuiz(true)} onRetry={() => openQuiz(true)} onClose={() => setView('explain')} /> : null;
+      return s.quiz ? <QuizActions quiz={s.quiz} pick={quizPick} onCheck={() => checkQuiz()} onAnother={() => openQuiz(true)} onRetry={() => openQuiz(true)} onClose={() => setView('explain')} /> : null;
     }
     if (view === 'ask') return asking ? <StopButton onStop={() => window.unvibe.cancel()} /> : phase === 'done' ? askField : null;
     return null;
@@ -933,7 +985,7 @@ function Widget() {
 
   return (
     <div
-      className={`ob u-rim ob--${phase}${leaving ? ' is-leaving' : ''}`}
+      className={`ob u-rim ob--${phase} ob--view-${view}${leaving ? ' is-leaving' : ''}`}
       aria-label="Unvibe"
       style={{ opacity: fadeNow.opacity, transition: `opacity ${fadeNow.transitionMs}ms var(--u-ease)` }}
       onPointerDown={() => fadeTo('press')}
@@ -948,7 +1000,7 @@ function Widget() {
     >
       <header className="ob-head" ref={headRef}>
         <span className="ob-head__vibe" aria-hidden="true">
-          <Buddy mood={phase === 'streaming' ? (s.text ? 'reading' : 'thinking') : phase === 'error' || phase === 'blocked' ? 'confused' : 'idle'} size={20} label="Vibe" listen />
+          <Buddy mood={phase === 'streaming' ? 'thinking' : landed ? 'happy' : 'idle'} size={20} label="Vibe" listen />
         </span>
         <div className="ob-head__text">
           <span className="ob-head__title">{title}</span>
@@ -959,26 +1011,6 @@ function Widget() {
           <Icon name="x" size={16} />
         </button>
       </header>
-      <div className="ob-scroll" ref={scrollRef} tabIndex={0} role="region" aria-label="Explanation">
-        <div className="ob-body" ref={innerRef} key={view} id="ob-tabpanel" role="tabpanel" aria-labelledby={`ob-tab-${view}`}>
-          {view === 'explain' ? explainBody() : null}
-          {view === 'test' ? (
-            <section aria-label="Test me">
-              {s.quiz ? <QuizCard quiz={s.quiz} depth={depthLabel} questionRef={questionRef} onAnswer={(i) => {
-                if (stateRef.current.quiz?.phase !== 'answering') return;
-                patch({ quiz: { ...stateRef.current.quiz, choice: i, phase: 'grading' } });
-                window.unvibe.answer(i);
-              }} /> : null}
-            </section>
-          ) : null}
-          {view === 'ask' ? askBody : null}
-          {view === 'saved' ? <SavedTab version={savedVersion} /> : null}
-        </div>
-      </div>
-      <div className="ob-foot" ref={footRef}>
-        <div className="ob-toast-region" role="status">{toast ? <PanelToast text={toast.text} leaving={toast.leaving} /> : null}</div>
-        {footer()}
-      </div>
       {/* Arrows move focus only; Enter or Space opens a tab (Test me asks for a question, so moving must not). */}
       <nav
         className="ob-tabs"
@@ -998,7 +1030,6 @@ function Widget() {
           tabs[to]?.focus();
         }}
       >
-        <SegThumb />
         {TABS.map((tab) => {
           const on = view === tab.id;
           const enabled = tabEnabled(tab.id);
@@ -1015,12 +1046,30 @@ function Widget() {
               className={`ob-tab${on ? ' is-on' : ''}`}
               onClick={() => choose(tab.id)}
             >
-              <Icon name={tab.icon} size={16} />
+              <Icon name={tab.icon} size={14} />
               <span>{tab.label}</span>
             </button>
           );
         })}
       </nav>
+      <div className="ob-scroll" ref={scrollRef} tabIndex={0} role="region" aria-label="Explanation">
+        <div className="ob-body" ref={innerRef} key={view} id="ob-tabpanel" role="tabpanel" aria-labelledby={`ob-tab-${view}`}>
+          {view === 'explain' ? explainBody() : null}
+          {view === 'test' ? (
+            <section aria-label="Test me">
+              {s.quiz ? <QuizCard quiz={s.quiz} depth={depthLabel} pick={quizPick} questionRef={questionRef} onPick={(i) => {
+                if (stateRef.current.quiz?.phase === 'answering') setQuizPick(i);
+              }} /> : null}
+            </section>
+          ) : null}
+          {view === 'ask' ? askBody : null}
+          {view === 'saved' ? <SavedTab version={savedVersion} /> : null}
+        </div>
+      </div>
+      <div className="ob-foot" ref={footRef}>
+        <div className="ob-toast-region" role="status">{toast ? <PanelToast text={toast.text} leaving={toast.leaving} /> : null}</div>
+        {footer()}
+      </div>
     </div>
   );
 }

@@ -47,8 +47,8 @@ const SETTINGS_REVISION = 8;
 const ISLAND_BEHAVIOR_REVISION = 4;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
-/** Makes the companion navigation quieter without overriding custom widths. */
-const SIDEBAR_DENSITY_REVISION = 2;
+/** Moves the former default widths (204, and 216/232 before them) to the A Rail's open 216 px; custom widths stay. */
+const SIDEBAR_DENSITY_REVISION = 3;
 /** Moves Windows installs off Ctrl+U, which belongs to the editor bridge and other apps. */
 const WINDOWS_SHORTCUT_REVISION = 1;
 /**
@@ -127,8 +127,10 @@ export interface Settings {
   lastProjectRoot?: string;
   /** Companion sidebar width in pixels. */
   sidebarWidth: number;
-  /** Hide the companion sidebar while keeping its small reveal control available. */
+  /** Fold the companion's left side to its 56 px rail (Mono's A Rail; ⌘\ / Ctrl+\). */
   sidebarHidden: boolean;
+  /** Hide the companion's 296 px right side on the pages that have one (⇧⌘\ / Ctrl+Shift+\). */
+  rightPaneHidden: boolean;
   /** Local 8 character gift code when the Mac is not signed in. */
   giftCode: string;
   /** Incomplete B2B work stays behind flags so existing users keep the current loop. */
@@ -180,8 +182,9 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
-  sidebarWidth: 204,
+  sidebarWidth: 216,
   sidebarHidden: false,
+  rightPaneHidden: false,
   giftCode: '',
   features: DEFAULT_FEATURES,
   shareSetupProgress: false,
@@ -218,7 +221,7 @@ class SettingsStore {
     const needsIslandTiming = needsIslandRevision &&
       (loaded.barHoverDelayMs === undefined || loaded.barHoverDelayMs === 220);
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
-      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
+      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 204 || loaded.sidebarWidth === 232);
     // Only the former defaults move; a deliberately chosen shortcut stays as it is.
     const needsWindowsShortcut = IS_WIN && (loaded.windowsShortcutRevision ?? 0) < WINDOWS_SHORTCUT_REVISION &&
       (loaded.shortcut === 'Control+U' || loaded.shortcut === 'CommandOrControl+U');
@@ -262,7 +265,7 @@ class SettingsStore {
         : {}),
       ...(needsIdeShortcutMigration ? { shortcut: DEFAULT_SHORTCUT } : {}),
       ...(needsWindowsShortcut ? { shortcut: DEFAULT_SHORTCUT } : {}),
-      ...(needsSidebarDensity ? { sidebarWidth: 204 } : {}),
+      ...(needsSidebarDensity ? { sidebarWidth: 216 } : {}),
     };
     if (needsOnboardingReset) delete this.data.lastWidgetBounds;
     delete this.data.aiModel;

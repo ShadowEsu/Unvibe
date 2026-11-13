@@ -10,9 +10,22 @@
  *   3. fish as minimal ASCII dashes, one per cell, glinting on hard turns
  *   4. sharks rasterised cell-by-cell with supersampled edges: grey blocks
  *      shaded by the light, dense glyphs, and shimmering accent colours
+ *
+ * Cost (Design r3-flat OPTIONS.md "Sharks", "Cost"): the per-cell passes (shark rasterising, wake, dots, heat) run only
+ * inside each shark's bounding box plus REGION_PAD cells, and the wake field is not kept outside it. A world with fish,
+ * an active pointer or events writes into the field anywhere, so it gets the whole grid, as in the original.
  */
 import { clamp, hash3, smoothstep } from "../../vendor/ascii-sharks/math";
 import { SHARK_NODES, type Shark, type SharkKind, type World } from "../../vendor/ascii-sharks/world";
+
+/** What the renderer reads of a world: the vendored World and Design's WanderWorld both have it. */
+export type RenderWorld = Pick<World, "time" | "sharks" | "fish" | "events" | "pointer">;
+
+/** Cells around a shark's bounding box that the per-cell passes still cover (its wake and the edge of its glyphs). */
+const REGION_PAD = 6;
+/** How far a shark's cells reach past its simulated spine, in body lengths: the rasteriser's 0.36 (fins, head) plus
+ * the body wave's largest swing, 0.05 × 1.4. */
+const REGION_REACH = 0.43;
 
 export interface SharkPalette {
   grid: string;
@@ -355,6 +368,14 @@ export function paintGrid(g: CanvasRenderingContext2D, W: number, H: number, cw:
   g.stroke();
 }
 
+/** Whether a cell lies in one of `rects` (4 numbers each: first col, first row, last col, last row). */
+function inRects(rects: number[], c: number, r: number) {
+  for (let p = 0; p < rects.length; p += 4) {
+    if (c >= rects[p] && r >= rects[p + 1] && c <= rects[p + 2] && r <= rects[p + 3]) return true;
+  }
+  return false;
+}
+
 export class VioletRenderer {
   private ctx: CanvasRenderingContext2D;
   private bg: HTMLCanvasElement;
@@ -376,7 +397,15 @@ export class VioletRenderer {
   private bucketOf = new Uint8Array(0);
   private bucketOrder = new Int32Array(0);
   private bucketCounts = new Int32Array(DOT_CLASSES * ALPHA_LEVELS + 1);
+  private bucketStarts = new Int32Array(DOT_CLASSES * ALPHA_LEVELS + 1);
+  private bucketCursor = new Int32Array(DOT_CLASSES * ALPHA_LEVELS + 1);
   private dotStyles: string[] = [];
+  /** The cells the per-cell passes cover this frame and covered last frame: disjoint rectangles, 4 numbers each
+   * (first col, first row, last col, last row, inclusive). Everything drawn last frame lies inside `prevRects`. */
+  private rects: number[] = [];
+  private prevRects: number[] = [];
+  /** Whether the palette draws a grid (the stage); the in-app palettes have none, so nothing is drawn under them. */
+  private readonly gridOn: boolean;
 
   private sharkFlag = new Uint8Array(0);
   private sharkShade = new Float32Array(0);
@@ -407,14 +436,19 @@ export class VioletRenderer {
   private fishStyles: string[];
   private accents: string[];
 
-  /** Cells per canvas width: the stage uses 124 across the window; a band in a page uses fewer, so its sharks are not
-   * 8 px specks (the cell stays within 8–13 px). */
-  constructor(private canvas: HTMLCanvasElement, private readonly palette: SharkPalette = PALETTE, private readonly cellsAcross = 124) {
+  /** Cells per canvas width, or a rule for it per width: the stage uses 124 across the window; the background sharks
+   * use `round(width / 10)` so a cell is 10 × 15 px at every size (the cell stays within 8–13 px). */
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private readonly palette: SharkPalette = PALETTE,
+    private readonly cellsAcross: number | ((width: number) => number) = 124,
+  ) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) throw new Error("2D canvas unavailable");
     this.ctx = ctx;
     this.bg = document.createElement("canvas");
     const T = palette;
+    this.gridOn = !/,\s*0\s*\)\s*$/.test(T.grid);
     this.fishStyles = FISH_ALPHAS.map((a) => `rgba(${T.fish},${a})`);
     this.accents = T.accents;
 
@@ -445,7 +479,8 @@ export class VioletRenderer {
     this.width = width;
     this.height = height;
     this.dpr = dpr;
-    this.cw = clamp(Math.round(width / this.cellsAcross), 8, 13);
+    const across = typeof this.cellsAcross === "function" ? this.cellsAcross(width) : this.cellsAcross;
+    this.cw = clamp(Math.round(width / across), 8, 13);
     this.ch = Math.round(this.cw * 1.45);
     this.cols = Math.ceil(width / this.cw);
     this.rows = Math.ceil(height / this.ch);
@@ -482,6 +517,8 @@ export class VioletRenderer {
       this.dotPhase[i] = hash3(col, row, 23) * Math.PI * 2;
       this.dotFreq[i] = 0.3 + hash3(col, row, 37) * 1.1;
     }
+    // The canvas was just cleared: next frame clears every field cell outside its region.
+    this.prevRects = [0, 0, this.cols - 1, this.rows - 1];
     this.paintBackground();
   }
 
@@ -494,19 +531,18 @@ export class VioletRenderer {
     paintGrid(g, W, H, cw, ch, dpr, this.palette.grid);
   }
 
-  render(world: World, dt: number) {
+  render(world: RenderWorld, dt: number) {
     const { ctx, dpr, cols, ch } = this;
     if (cols === 0) return;
     const t = world.time;
 
+    this.planRegion(world);
+    this.clearStale();
     this.consumeEvents(world);
     this.rasterizeSharks(world.sharks, t);
     this.depositWake(world);
     this.diffuse(dt);
 
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.drawImage(this.bg, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     this.markFish(world);
@@ -519,6 +555,89 @@ export class VioletRenderer {
     this.drawHeat();
     this.drawFish();
     this.drawSharks(t);
+
+    const drawn = this.rects;
+    this.rects = this.prevRects;
+    this.prevRects = drawn;
+  }
+
+  // ── region ──────────────────────────────────────────────────────────
+
+  /** This frame's cells: each shark's bounding box (spine plus REGION_REACH) plus REGION_PAD cells, overlapping boxes
+   * merged; the whole grid when fish, the pointer or events write into the field. */
+  private planRegion(world: RenderWorld) {
+    const { cols, rows, cw, ch, rects } = this;
+    rects.length = 0;
+    if (world.fish.length > 0 || world.pointer.active || world.events.length > 0) {
+      rects.push(0, 0, cols - 1, rows - 1);
+      return;
+    }
+    for (const sh of world.sharks) {
+      const n = sh.nodes;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (let k = 0; k < n.length; k += 2) {
+        if (n[k] < minX) minX = n[k];
+        if (n[k] > maxX) maxX = n[k];
+        if (n[k + 1] < minY) minY = n[k + 1];
+        if (n[k + 1] > maxY) maxY = n[k + 1];
+      }
+      const reach = sh.length * REGION_REACH;
+      const c0 = Math.max(0, Math.floor((minX - reach) / cw) - REGION_PAD);
+      const c1 = Math.min(cols - 1, Math.floor((maxX + reach) / cw) + REGION_PAD);
+      const r0 = Math.max(0, Math.floor((minY - reach) / ch) - REGION_PAD);
+      const r1 = Math.min(rows - 1, Math.floor((maxY + reach) / ch) + REGION_PAD);
+      if (c0 <= c1 && r0 <= r1) rects.push(c0, r0, c1, r1);
+    }
+    // Overlapping boxes become their common bounding box, so no cell is visited twice.
+    for (let a = 0; a < rects.length; a += 4) {
+      for (let b = a + 4; b < rects.length; b += 4) {
+        if (rects[a] > rects[b + 2] || rects[b] > rects[a + 2] || rects[a + 1] > rects[b + 3] || rects[b + 1] > rects[a + 3]) continue;
+        rects[a] = Math.min(rects[a], rects[b]);
+        rects[a + 1] = Math.min(rects[a + 1], rects[b + 1]);
+        rects[a + 2] = Math.max(rects[a + 2], rects[b + 2]);
+        rects[a + 3] = Math.max(rects[a + 3], rects[b + 3]);
+        rects.splice(b, 4);
+        // The grown box may now overlap one already passed: start over.
+        a = -4;
+        break;
+      }
+    }
+  }
+
+  /** Clears what last frame left: the shark cells of its region, the wake and heat that fall outside this frame's
+   * region, and its pixels (redrawing the grid under them, if any). */
+  private clearStale() {
+    const { ctx, cols, cw, ch, dpr, prevRects, rects, energy, heat, sharkFlag, sharkShadow } = this;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    for (let p = 0; p < prevRects.length; p += 4) {
+      const c0 = prevRects[p];
+      const r0 = prevRects[p + 1];
+      const c1 = prevRects[p + 2];
+      const r1 = prevRects[p + 3];
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const i = r * cols + c;
+          sharkFlag[i] = 0;
+          sharkShadow[i] = 0;
+          if (!inRects(rects, c, r)) {
+            energy[i] = 0;
+            heat[i] = 0;
+          }
+        }
+      }
+      const x0 = Math.max(0, Math.floor(c0 * cw * dpr));
+      const y0 = Math.max(0, Math.floor(r0 * ch * dpr));
+      const x1 = Math.min(W, Math.ceil((c1 + 1) * cw * dpr));
+      const y1 = Math.min(H, Math.ceil((r1 + 1) * ch * dpr));
+      if (x1 <= x0 || y1 <= y0) continue;
+      ctx.clearRect(x0, y0, x1 - x0, y1 - y0);
+      if (this.gridOn) ctx.drawImage(this.bg, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+    }
   }
 
   // ── simulation → field ──────────────────────────────────────────────
@@ -544,7 +663,7 @@ export class VioletRenderer {
     }
   }
 
-  private consumeEvents(world: World) {
+  private consumeEvents(world: RenderWorld) {
     for (const e of world.events) {
       if (e.kind === "eat") {
         this.stamp(this.heat, e.x, e.y, 2, 1);
@@ -556,7 +675,7 @@ export class VioletRenderer {
     world.events.length = 0;
   }
 
-  private depositWake(world: World) {
+  private depositWake(world: RenderWorld) {
     const { energy } = this;
     for (const f of world.fish) {
       if (!f.alive) continue;
@@ -575,24 +694,33 @@ export class VioletRenderer {
     }
   }
 
-  /** Blur + decay so wakes spread out like ripples and fade. */
+  /** Blur + decay so wakes spread out like ripples and fade (inside this frame's region only). */
   private diffuse(dt: number) {
-    const { cols, rows, energy, energyTmp: tmp, heat } = this;
+    const { cols, rows, energy, energyTmp: tmp, heat, rects } = this;
     const decay = Math.exp(-dt * 1.5);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const i = r * cols + c;
-        const l = c > 0 ? energy[i - 1] : energy[i];
-        const rt = c < cols - 1 ? energy[i + 1] : energy[i];
-        const u = r > 0 ? energy[i - cols] : energy[i];
-        const d = r < rows - 1 ? energy[i + cols] : energy[i];
-        tmp[i] = (energy[i] * 4 + l + rt + u + d) * 0.125 * decay;
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let r = rects[p + 1]; r <= rects[p + 3]; r++) {
+        for (let c = rects[p]; c <= rects[p + 2]; c++) {
+          const i = r * cols + c;
+          const l = c > 0 ? energy[i - 1] : energy[i];
+          const rt = c < cols - 1 ? energy[i + 1] : energy[i];
+          const u = r > 0 ? energy[i - cols] : energy[i];
+          const d = r < rows - 1 ? energy[i + cols] : energy[i];
+          tmp[i] = (energy[i] * 4 + l + rt + u + d) * 0.125 * decay;
+        }
       }
     }
-    this.energy = tmp;
-    this.energyTmp = energy;
+    // Copied back only once every box is blurred, so a box never reads a neighbour's new values.
     const heatDecay = Math.exp(-dt * 2.2);
-    for (let i = 0; i < heat.length; i++) heat[i] *= heatDecay;
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let r = rects[p + 1]; r <= rects[p + 3]; r++) {
+        const end = r * cols + rects[p + 2];
+        for (let i = r * cols + rects[p]; i <= end; i++) {
+          energy[i] = tmp[i];
+          heat[i] *= heatDecay;
+        }
+      }
+    }
   }
 
   // ── sharks ──────────────────────────────────────────────────────────
@@ -741,8 +869,6 @@ export class VioletRenderer {
    */
   private rasterizeSharks(sharks: Shark[], t: number) {
     const { sharkFlag, sharkShade, sharkKey, sharkDepth, sharkKind, sharkShadow, spine, arc, cw, ch, cols, rows } = this;
-    sharkFlag.fill(0);
-    sharkShadow.fill(0);
 
     for (const sh of sharks) {
       const L = sh.length;
@@ -846,68 +972,74 @@ export class VioletRenderer {
   }
 
   private drawSharks(t: number) {
-    const { ctx, cols, rows, cw, ch, sharkFlag, sharkShade, sharkKey, sharkDepth, sharkKind } = this;
-    const n = cols * rows;
-    for (let i = 0; i < n; i++) {
-      const flag = sharkFlag[i];
-      if (!flag) continue;
-      const col = i % cols;
-      const row = (i / cols) | 0;
-      const x = col * cw;
-      const y = row * ch;
-      const key = sharkKey[i];
-      const shade = sharkShade[i];
-      const dim = 0.7 + 0.3 * sharkDepth[i];
-      const [tr, tg, tb] = SHAPES[KINDS[sharkKind[i]]].tint;
-
-      // Colours re-roll on a staggered clock so the hide shimmers.
-      const tick = Math.floor(t * 2.4 + (key % 997) / 97);
-      const roll = hash3(key, tick, 7);
-
-      if (flag === FLAG_EDGE) {
-        // Soft, anti-aliased silhouette: no block, just a light glyph.
-        const set = shade >= 0.5 ? EDGE_HEAVY : EDGE_LIGHT;
-        const g = (0.45 + shade * 0.45) * dim;
-        const [er, eg, eb] = this.palette.edge;
-        ctx.fillStyle = roll < 0.07 ? this.accents[key % this.accents.length] : `rgba(${er},${eg},${eb},${g.toFixed(2)})`;
-        ctx.fillText(set[(key >>> 8) % set.length], x + cw / 2, y + ch / 2 + 1);
-        continue;
+    const { cols, sharkFlag, rects } = this;
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let row = rects[p + 1]; row <= rects[p + 3]; row++) {
+        for (let col = rects[p]; col <= rects[p + 2]; col++) {
+          if (sharkFlag[row * cols + col]) this.drawSharkCell(t, col, row);
+        }
       }
-
-      let level: number;
-      let glyph: string;
-      if (flag === FLAG_RIDGE) {
-        level = 226;
-        glyph = RIDGE_GLYPHS[(key >>> 8) % RIDGE_GLYPHS.length];
-      } else if (flag === FLAG_EYE) {
-        level = 12;
-        glyph = "o";
-      } else if (flag === FLAG_MARK) {
-        level = 24 + shade * 22;
-        glyph = MARK_GLYPHS[(key >>> 8) % MARK_GLYPHS.length];
-      } else if (flag === FLAG_FIN) {
-        level = 40 + shade * 120;
-        glyph = FIN_GLYPHS[(key >>> 8) % FIN_GLYPHS.length];
-      } else {
-        level = 46 + shade * 160;
-        const jitter = ((key >>> 4) % 3) - 1;
-        glyph = SKIN_RAMP[clamp(Math.floor((1 - shade) * 8.99) + jitter, 0, SKIN_RAMP.length - 1)];
-      }
-      level *= dim;
-      // Tinted per species; the classic tint is a cool blue-grey, like a back seen through deep water.
-      ctx.fillStyle = skinColor(this.palette.skin, level, tr, tg, tb);
-      ctx.fillRect(x + 1, y + 1, cw - 1, ch - 1);
-
-      let color: string;
-      const T = this.palette;
-      if (flag === FLAG_EYE) color = T.eye;
-      else if (flag === FLAG_MARK) color = T.glyphDarker;
-      else if (roll < 0.09) color = this.accents[key % this.accents.length];
-      else if (roll < 0.13) color = T.glyphLight;
-      else color = shade > 0.55 ? T.glyphDarker : T.glyphDark;
-      ctx.fillStyle = color;
-      ctx.fillText(glyph, x + cw / 2, y + ch / 2 + 1);
     }
+  }
+
+  private drawSharkCell(t: number, col: number, row: number) {
+    const { ctx, cols, cw, ch, sharkFlag, sharkShade, sharkKey, sharkDepth, sharkKind } = this;
+    const i = row * cols + col;
+    const flag = sharkFlag[i];
+    const x = col * cw;
+    const y = row * ch;
+    const key = sharkKey[i];
+    const shade = sharkShade[i];
+    const dim = 0.7 + 0.3 * sharkDepth[i];
+    const [tr, tg, tb] = SHAPES[KINDS[sharkKind[i]]].tint;
+
+    // Colours re-roll on a staggered clock so the hide shimmers.
+    const tick = Math.floor(t * 2.4 + (key % 997) / 97);
+    const roll = hash3(key, tick, 7);
+
+    if (flag === FLAG_EDGE) {
+      // Soft, anti-aliased silhouette: no block, just a light glyph.
+      const set = shade >= 0.5 ? EDGE_HEAVY : EDGE_LIGHT;
+      const g = (0.45 + shade * 0.45) * dim;
+      const [er, eg, eb] = this.palette.edge;
+      ctx.fillStyle = roll < 0.07 ? this.accents[key % this.accents.length] : `rgba(${er},${eg},${eb},${g.toFixed(2)})`;
+      ctx.fillText(set[(key >>> 8) % set.length], x + cw / 2, y + ch / 2 + 1);
+      return;
+    }
+
+    let level: number;
+    let glyph: string;
+    if (flag === FLAG_RIDGE) {
+      level = 226;
+      glyph = RIDGE_GLYPHS[(key >>> 8) % RIDGE_GLYPHS.length];
+    } else if (flag === FLAG_EYE) {
+      level = 12;
+      glyph = "o";
+    } else if (flag === FLAG_MARK) {
+      level = 24 + shade * 22;
+      glyph = MARK_GLYPHS[(key >>> 8) % MARK_GLYPHS.length];
+    } else if (flag === FLAG_FIN) {
+      level = 40 + shade * 120;
+      glyph = FIN_GLYPHS[(key >>> 8) % FIN_GLYPHS.length];
+    } else {
+      level = 46 + shade * 160;
+      const jitter = ((key >>> 4) % 3) - 1;
+      glyph = SKIN_RAMP[clamp(Math.floor((1 - shade) * 8.99) + jitter, 0, SKIN_RAMP.length - 1)];
+    }
+    level *= dim;
+    // Tinted per species; the classic tint is a cool blue-grey, like a back seen through deep water.
+    ctx.fillStyle = skinColor(this.palette.skin, level, tr, tg, tb);
+    ctx.fillRect(x + 1, y + 1, cw - 1, ch - 1);
+
+    let color: string;
+    const T = this.palette;
+    if (flag === FLAG_EYE) color = T.eye;
+    else if (flag === FLAG_MARK) color = T.glyphDarker;
+    else if (roll < 0.09) color = this.accents[key % this.accents.length];
+    else if (roll < 0.13) color = T.glyphLight;
+    else color = shade > 0.55 ? T.glyphDarker : T.glyphDark;
+    ctx.fillStyle = color;
+    ctx.fillText(glyph, x + cw / 2, y + ch / 2 + 1);
   }
 
   // ── fish, dots, heat ────────────────────────────────────────────────
@@ -917,7 +1049,7 @@ export class VioletRenderer {
    * near fish brighter, and turning or panicking fish glint. Nearer fish
    * claim a cell first when two land in the same one.
    */
-  private markFish(world: World) {
+  private markFish(world: RenderWorld) {
     const { fishStamp, fishBuckets, sharkFlag } = this;
     const frame = ++this.frameId;
     for (const bucket of fishBuckets) bucket.length = 0;
@@ -947,14 +1079,16 @@ export class VioletRenderer {
   }
 
   private drawHeat() {
-    const { ctx, heat, cols, cw, ch } = this;
-    for (let i = 0; i < heat.length; i++) {
-      const h = heat[i];
-      if (h < 0.08) continue;
-      const col = i % cols;
-      const row = (i / cols) | 0;
-      ctx.fillStyle = `rgba(${this.palette.heat},${(h > 0.5 ? h : h * 1.6).toFixed(2)})`;
-      ctx.fillText(h > 0.6 ? "*" : "·", col * cw + cw / 2, row * ch + ch / 2 + 1);
+    const { ctx, heat, cols, cw, ch, rects } = this;
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let row = rects[p + 1]; row <= rects[p + 3]; row++) {
+        for (let col = rects[p]; col <= rects[p + 2]; col++) {
+          const h = heat[row * cols + col];
+          if (h < 0.08) continue;
+          ctx.fillStyle = `rgba(${this.palette.heat},${(h > 0.5 ? h : h * 1.6).toFixed(2)})`;
+          ctx.fillText(h > 0.6 ? "*" : "·", col * cw + cw / 2, row * ch + ch / 2 + 1);
+        }
+      }
     }
   }
 
@@ -964,44 +1098,51 @@ export class VioletRenderer {
    * Dots are bucketed by colour/alpha so each bucket is one fillStyle.
    */
   private drawDots(t: number) {
-    const { ctx, cols, rows, cw, ch, dotKind, dotPhase, dotFreq, energy, sharkFlag, sharkShadow, fishStamp, frameId } = this;
-    const { bucketOf, bucketOrder, bucketCounts } = this;
-    const n = cols * rows;
+    const { ctx, cols, cw, ch, dotKind, dotPhase, dotFreq, energy, sharkFlag, sharkShadow, fishStamp, frameId, rects } = this;
+    const { bucketOf, bucketOrder, bucketCounts, bucketStarts: starts, bucketCursor: cursor } = this;
     const SKIP = bucketCounts.length - 1;
     bucketCounts.fill(0);
 
-    for (let i = 0; i < n; i++) {
-      const e = energy[i];
-      const kind = dotKind[i];
-      if (sharkFlag[i] || fishStamp[i] === frameId || (kind === 0 && e < 0.45)) {
-        bucketOf[i] = SKIP;
-        continue;
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let row = rects[p + 1]; row <= rects[p + 3]; row++) {
+        for (let col = rects[p]; col <= rects[p + 2]; col++) {
+          const i = row * cols + col;
+          const e = energy[i];
+          const kind = dotKind[i];
+          if (sharkFlag[i] || fishStamp[i] === frameId || (kind === 0 && e < 0.45)) {
+            bucketOf[i] = SKIP;
+            continue;
+          }
+          let bucket: number;
+          if (e > 0.45) {
+            const level = clamp(Math.floor((e - 0.45) * 5), 0, ALPHA_LEVELS - 1);
+            bucket = WAKE * ALPHA_LEVELS + level;
+          } else {
+            // Dots stay bright and crisp; the twinkle is a gentle breathe, not a fade.
+            const twinkle = 0.5 + 0.5 * Math.sin(t * dotFreq[i] + dotPhase[i]);
+            const caustic = 0.85 + 0.15 * Math.sin(col * 0.11 + t * 0.35) * Math.sin(row * 0.17 - t * 0.27);
+            let v = clamp((0.55 + 0.45 * twinkle) * caustic + e * 2, 0, 1);
+            if (sharkShadow[i]) v *= 0.2;
+            bucket = (kind - 1) * ALPHA_LEVELS + clamp(Math.floor(v * ALPHA_LEVELS), 0, ALPHA_LEVELS - 1);
+          }
+          bucketOf[i] = bucket;
+          bucketCounts[bucket]++;
+        }
       }
-      let bucket: number;
-      if (e > 0.45) {
-        const level = clamp(Math.floor((e - 0.45) * 5), 0, ALPHA_LEVELS - 1);
-        bucket = WAKE * ALPHA_LEVELS + level;
-      } else {
-        const col = i % cols;
-        const row = (i / cols) | 0;
-        // Dots stay bright and crisp; the twinkle is a gentle breathe, not a fade.
-        const twinkle = 0.5 + 0.5 * Math.sin(t * dotFreq[i] + dotPhase[i]);
-        const caustic = 0.85 + 0.15 * Math.sin(col * 0.11 + t * 0.35) * Math.sin(row * 0.17 - t * 0.27);
-        let v = clamp((0.55 + 0.45 * twinkle) * caustic + e * 2, 0, 1);
-        if (sharkShadow[i]) v *= 0.2;
-        bucket = (kind - 1) * ALPHA_LEVELS + clamp(Math.floor(v * ALPHA_LEVELS), 0, ALPHA_LEVELS - 1);
-      }
-      bucketOf[i] = bucket;
-      bucketCounts[bucket]++;
     }
 
     // Counting sort cells by bucket.
-    const starts = new Int32Array(bucketCounts.length);
+    starts[0] = 0;
     for (let b = 1; b < bucketCounts.length; b++) starts[b] = starts[b - 1] + bucketCounts[b - 1];
-    const cursor = starts.slice();
-    for (let i = 0; i < n; i++) {
-      const b = bucketOf[i];
-      if (b !== SKIP) bucketOrder[cursor[b]++] = i;
+    cursor.set(starts);
+    for (let p = 0; p < rects.length; p += 4) {
+      for (let row = rects[p + 1]; row <= rects[p + 3]; row++) {
+        for (let col = rects[p]; col <= rects[p + 2]; col++) {
+          const i = row * cols + col;
+          const b = bucketOf[i];
+          if (b !== SKIP) bucketOrder[cursor[b]++] = i;
+        }
+      }
     }
 
     const small = Math.max(2, Math.round(cw * 0.19));

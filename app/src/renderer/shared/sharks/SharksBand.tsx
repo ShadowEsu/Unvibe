@@ -2,24 +2,29 @@ import { useEffect, useRef, useState } from 'react';
 import { SharksPool } from './sharksPool';
 import { monoPalette } from './violetRenderer';
 
-function themeNow(): 'light' | 'dark' {
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-}
-
-/** The palette follows `html[data-theme]` and `html[data-look]`, live. */
-function useLook() {
-  const read = () => `${themeNow()}:${document.documentElement.dataset.look ?? ''}`;
-  const [look, setLook] = useState(read);
+/** `html[data-theme]`, live: the palette is rebuilt when it changes. */
+function useTheme() {
+  const root = document.documentElement;
+  const [theme, setTheme] = useState(root.dataset.theme);
   useEffect(() => {
-    const root = document.documentElement;
-    const watch = new MutationObserver(() => setLook(read()));
-    watch.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-look'] });
+    const watch = new MutationObserver(() => setTheme(root.dataset.theme));
+    watch.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => watch.disconnect();
-  }, []);
-  return look;
+  }, [root]);
+  return theme;
 }
 
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** `prefers-reduced-motion: reduce`, live. */
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => setReduced(media.matches);
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
+  return reduced;
+}
 
 /** A token's colour as `#rrggbb` (the renderer wants hex); `fallback` when the token is not a hex colour. */
 function tokenHex(name: string, fallback: string): string {
@@ -28,31 +33,29 @@ function tokenHex(name: string, fallback: string): string {
 }
 
 /**
- * The sharks as a calm background on a few sections only (Preston 11 Nov: "the sharks for the background of each
- * section, maybe a few sections like home and chat, but not every, like on the right"): an open run in the page's
- * ground layer on the right of the content area, one colour (the accent) at a low opacity (CSS), nothing drawn
- * behind the text column. Runs while shown and focused; rests on a still after 30 s without input (sharksPool.ts).
- * Reduced motion: one still frame. Follows the Sharks switch (the owner mounts it only when that is on).
+ * The sharks behind everything (Design r3-flat OPTIONS.md "Sharks: behind everything", as Mono amends it): one
+ * window-sized canvas behind every page of the main window, two sharks in the sharks' purple (`--u-accent`) on the
+ * ground (`--u-paper`), the canvas at `--u-sharks-alpha` (mono.css). Swims at 30 frames a second focused, 15 visible
+ * but not focused, stops while hidden (sharksPool.ts). Reduced motion: one still frame. The owner mounts it only while
+ * the Sharks switch is on, so with it off there is no canvas.
  */
 export function SharksBackdrop({ label = 'Sharks swimming in the background' }: { label?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const look = useLook();
+  const theme = useTheme();
+  const still = useReducedMotion();
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const theme = themeNow();
-    const ink = theme === 'dark' ? tokenHex('--u-accent-text', '#a394fb') : tokenHex('--u-accent', '#8f7cf7');
-    const palette = monoPalette(ink, tokenHex('--u-paper', theme === 'dark' ? '#0f0f0f' : '#ffffff'));
-    // Design r3-flat: one shark at a time, about 320 px long in the pane's box (baseLength = 0.44 × the box's short
-    // side, clamped at 170 → 1.75× of it), with the small fish.
-    const pool = new SharksPool(canvas, { theme, palette, idleRest: 30, fish: 12, sharks: [{ kind: 'classic', size: 1.75 }], still: reducedMotion() });
-    // The evidence harness poses one frame through this (SharksPool.pose); nothing in the app reads it.
+    const dark = theme === 'dark';
+    const palette = monoPalette(tokenHex('--u-accent', dark ? '#7357f6' : '#6f52f2'), tokenHex('--u-paper', dark ? '#000000' : '#ffffff'));
+    const pool = new SharksPool(canvas, { palette, still });
+    // The evidence harness poses a still through this (SharksPool.pose / poseAll); nothing in the app reads it.
     (canvas as HTMLCanvasElement & { sharksPool?: SharksPool }).sharksPool = pool;
     return () => {
       delete (canvas as HTMLCanvasElement & { sharksPool?: SharksPool }).sharksPool;
       pool.destroy();
     };
-  }, [look]);
+  }, [theme, still]);
   return (
     <div className="sharks-backdrop" role="img" aria-label={label}>
       <canvas ref={canvasRef} className="sharks-band__canvas" aria-hidden="true" />

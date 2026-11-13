@@ -18,8 +18,8 @@ export function expertLocked(plan?: string): boolean {
 }
 
 /**
- * Overlay B's one depth control (SPEC Depth): a 26 pt segmented row of all five, the current one an accent pill.
- * Expert always carries its "Pro" marker (Security N3); locked, it adds a lock and picks nothing. A radio group whose
+ * Overlay B's one depth control (Mono): a 32 px pill track of all five, the current one on the selected-segment fill.
+ * Expert always carries its "Pro" marker (Security N3); locked, a 12 px lock goes before its label and it picks nothing. A radio group whose
  * arrows only move focus between depths that can be picked; Enter or Space (the button's click) picks. Picking starts
  * a new explanation, so stepping across depths must not start one per step (review SHOULD).
  */
@@ -59,10 +59,9 @@ export function DepthControl({ level, plan, disabled, onPick }: {
             title={locked ? 'Expert explanations are included with Unvibe Pro' : `Explain at ${l.label} depth`}
             onClick={() => { if (!on) onPick(l.id); }}
           >
+            {locked ? <Icon name="lock" size={12} className="ob-depth__lock" /> : null}
             {l.label}
-            {l.id === 'expert' ? (
-              <span className="ob-pro">{locked ? <Icon name="lock" size={9} /> : null}Pro</span>
-            ) : null}
+            {l.id === 'expert' ? <span className="ob-pro">Pro</span> : null}
           </button>
         );
       })}

@@ -332,7 +332,7 @@ export function answerQuizCard(eventId: string, choice: number):
     return {
       ok: true,
       correct: false,
-      rationale: 'Sorry — wrong. Try another option; the card stays open.',
+      rationale: 'Try another option; the question stays open.',
     };
   }
   try {

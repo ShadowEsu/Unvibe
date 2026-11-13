@@ -48,15 +48,19 @@ export function quizHasNext(quiz: Quiz): boolean {
 }
 
 /**
- * The Test me tab (SPEC Test me): "Question x of n", the question at 13.5, four 40 pt rows lettered A–D to press.
- * Pressing a row answers; the picked row gets the accent outline and tint, the right one the check, a wrong pick an ×.
- * Vibe's verdict line (main's strings) and the reasoning follow. The card rises in once per question.
+ * The Test me tab, the Quiz at the overlay's size (Mono): a 3-part bar, "Question x of n" and the depth, the question
+ * at 17 semibold, four 42 px answer rows with key tiles 1 to 4. A press (or 1 to 4, A to D still accepted) selects;
+ * Return or Check grades (`onCheck`, in the footer). Graded: the right row a filled disc with a tick, a wrong pick an
+ * outlined disc with a cross, so neither relies on colour. Vibe's verdict line (main's strings) and the reasoning
+ * follow. The card fades in once per question.
  */
-export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
+export function QuizCard({ quiz, depth, pick, questionRef, onPick }: {
   quiz: Quiz;
   depth?: string;
+  /** The selected row before it is checked. */
+  pick: number | null;
   questionRef?: Ref<HTMLHeadingElement>;
-  onAnswer: (index: number) => void;
+  onPick: (index: number) => void;
 }) {
   if (quiz.phase === 'loading') {
     return (
@@ -77,16 +81,24 @@ export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
   const graded = quiz.phase === 'graded';
   const endLine = graded ? quizEndLine(quiz) : null;
   const kind = quizKind(quiz, depth);
+  const index = quiz.index ?? 1;
+  const total = quiz.total ?? 3;
+  const selected = quiz.phase === 'answering' ? pick : quiz.choice ?? null;
   return (
-    <div className="ob-quiz" key={`${quiz.index ?? 1}:${quiz.question}`}>
+    <div className="ob-quiz" key={`${index}:${quiz.question}`}>
+      <div className="ob-quiz__bar" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <i key={i} className={i + 1 < index || (i + 1 === index && graded) ? 'is-done' : i + 1 === index ? 'is-now' : ''} />
+        ))}
+      </div>
       <div className="ob-quiz__kicker"><span>{quizCount(quiz)}</span>{kind ? <span>{kind}</span> : null}</div>
       <h2 className="ob-quiz__q" ref={questionRef} tabIndex={-1}>{quiz.question}</h2>
       <div className="ob-quiz__opts">
         {quiz.options?.map((option, i) => {
-          const picked = i === quiz.choice;
+          const picked = i === selected;
           const right = graded && i === quiz.answerIndex;
           const wrong = graded && picked && !right;
-          const state = `${picked ? ' is-picked' : ''}${right ? ' is-right' : ''}${wrong ? ' is-wrong' : ''}`;
+          const state = `${picked ? ' is-picked' : ''}${right ? ' is-right' : ''}${wrong ? ' is-wrong' : ''}${graded && !picked && !right ? ' is-off' : ''}`;
           return (
             <button
               key={i}
@@ -94,19 +106,19 @@ export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
               className={`ob-opt${state}`}
               aria-pressed={picked}
               disabled={quiz.phase !== 'answering'}
-              onClick={() => onAnswer(i)}
+              onClick={() => onPick(i)}
             >
-              <em aria-hidden="true">{String.fromCharCode(65 + i)}</em>
-              <span>{option}</span>
-              {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={14} /><span className="sr-only">Correct answer</span></span> : null}
-              {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={14} /><span className="sr-only">Your answer, not correct</span></span> : null}
+              <kbd className="ob-opt__key" aria-hidden="true">{i + 1}</kbd>
+              <span className="ob-opt__text">{option}</span>
+              {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={12} /><span className="sr-only">Correct answer</span></span> : null}
+              {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={12} /><span className="sr-only">Your answer, not correct</span></span> : null}
             </button>
           );
         })}
       </div>
       {graded ? (
         <div className={`ob-verdict ${quiz.correct ? 'is-ok' : 'is-no'}`}>
-          <span aria-hidden="true"><Buddy mood={quiz.correct ? 'celebrate' : 'confused'} size={26} label="Vibe" /></span>
+          <span aria-hidden="true"><Buddy mood={quiz.correct ? 'celebrate' : 'confused'} size={28} label="Vibe" /></span>
           <div>
             <p className="ob-verdict__line" role="status">{quizVerdict(quiz)}</p>
             {quiz.rationale ? <p className="ob-quiz__why">{quiz.rationale}</p> : null}
@@ -118,27 +130,44 @@ export function QuizCard({ quiz, depth, questionRef, onAnswer }: {
   );
 }
 
-/** The Test me footer: after an answer, the next question or back to the explanation; after a failure, try again. */
-export function QuizActions({ quiz, onAnother, onRetry, onClose }: {
+/**
+ * The Test me footer. Answering: the key hint and the one filled "Check ↵" (off until a row is selected). After an
+ * answer: the next question or back to the explanation; after a failure: try again.
+ */
+export function QuizActions({ quiz, pick, onCheck, onAnother, onRetry, onClose }: {
   quiz: Quiz;
+  pick: number | null;
+  onCheck: () => void;
   onAnother: () => void;
   onRetry: () => void;
   onClose: () => void;
 }) {
+  if (quiz.phase === 'answering' || quiz.phase === 'grading') {
+    const count = quiz.options?.length ?? 4;
+    const ready = quiz.phase === 'answering' && pick !== null;
+    return (
+      <div className="ob-quiz__foot">
+        <span className="ob-quiz__hint">{pick === null ? `Press 1 to ${count}, then Return` : 'Return to check'}</span>
+        <button type="button" className="ob-btn ob-btn--small" disabled={!ready} onClick={onCheck}>
+          Check<kbd className="ob-key" aria-hidden="true">↵</kbd>
+        </button>
+      </div>
+    );
+  }
   if (quiz.phase === 'graded') {
     const next = quizHasNext(quiz);
     return (
       <div className="ob-chips">
-        {next ? <button type="button" className="ob-btn" onClick={onAnother}>Another question</button> : null}
-        <button type="button" className={next ? 'ob-btn ghost' : 'ob-btn'} onClick={onClose}>Hide question</button>
+        {next ? <button type="button" className="ob-btn ob-btn--small" onClick={onAnother}>Another question</button> : null}
+        <button type="button" className={next ? 'ob-btn ob-btn--small ghost' : 'ob-btn ob-btn--small'} onClick={onClose}>Hide question</button>
       </div>
     );
   }
   if (quiz.phase === 'failed') {
     return (
       <div className="ob-chips">
-        <button type="button" className="ob-btn" onClick={onRetry}>Try again</button>
-        <button type="button" className="ob-btn ghost" onClick={onClose}>Hide</button>
+        <button type="button" className="ob-btn ob-btn--small" onClick={onRetry}>Try again</button>
+        <button type="button" className="ob-btn ob-btn--small ghost" onClick={onClose}>Hide</button>
       </div>
     );
   }

@@ -8,7 +8,6 @@ import { CONSENT_PROVIDERS } from '../../core/consent';
 import { BriefsProCard, briefsAiLabel } from './briefsPro';
 import { renderSummary } from '../shared/richText';
 import { InkTitle } from './inkTitle';
-import { SegThumb } from '../shared/slidingThumb';
 
 const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'working', label: 'Working tree' },
@@ -16,6 +15,10 @@ const SCOPES: Array<{ id: BriefScope; label: string }> = [
   { id: 'latest', label: 'Latest commit' },
   { id: 'branch', label: 'Branch vs base' },
 ];
+
+/** Saved knowledge's status line in sentence case (Mono: no capital-letter labels). */
+const VERIFIED_LABEL: Record<KnowledgeObject['verificationStatus'], string> = { AI_GENERATED: 'AI generated', HUMAN_CONFIRMED: 'Human confirmed', HUMAN_CORRECTED: 'Human corrected' };
+const FRESHNESS_LABEL: Record<KnowledgeObject['freshnessStatus'], string> = { CURRENT: 'current', MAY_BE_STALE: 'may be stale', STALE: 'stale' };
 
 /** `plan` is the account's plan once usage has loaded (null before); `onPlan` opens Plan & usage. */
 export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () => void }) {
@@ -95,44 +98,45 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
   };
 
   return (
-    <div className="briefings">
-      <div className="briefings__head">
-        <div>
-          <div className="kicker">Brief</div>
-          <h1><InkTitle text="Briefs" /></h1>
-          <p>A clear recap of what changed in your project. Available offline from local git.</p>
+    <div className="mbr">
+      <section className="m-box mbr-toolbar">
+        <div className="mbr-toolbar__text">
+          <h1 className="mono-title"><InkTitle text="Brief" /></h1>
+          <p className="mono-lead">A clear recap of what changed in your project. Available offline from local git.</p>
         </div>
-        {needsRepo && !busy ? null : (
-          <div className="briefings__actions">
-            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
-            <button type="button" className="soft-btn" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</button>
+        <div className="mbr-toolbar__tools">
+          <div className="m-seg" role="tablist" aria-label="Git scope">
+            {SCOPES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                disabled={busy}
+                aria-selected={scope === item.id}
+                className={`m-seg__item${scope === item.id ? ' is-on' : ''}`}
+                onClick={() => setScope(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+          {needsRepo && !busy ? null : (
+            <>
+              <button type="button" className="m-btn m-btn--outlined m-btn--small" disabled={busy} onClick={() => void build(true)}>Choose repo</button>
+              <button type="button" className="m-btn m-btn--outlined m-btn--small" disabled={busy} onClick={() => void build(false)}>{busy ? 'Reading…' : 'Refresh'}</button>
+            </>
+          )}
+        </div>
+      </section>
 
-      <div className="briefings__scopes" role="tablist" aria-label="Git scope"><SegThumb />
-        {SCOPES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            disabled={busy}
-            aria-selected={scope === item.id}
-            className={scope === item.id ? 'on' : ''}
-            onClick={() => setScope(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {error ? <div className="briefings__empty" role="alert">{error}</div> : null}
-      {busy && <p className="briefings__busy" role="status">Reading your project…</p>}
+      {error ? <div className="m-box mbr-status" role="alert">{error}</div> : null}
+      {busy && <p className="m-box mbr-status" role="status">Reading your project…</p>}
       {needsRepo && !busy && (
-        <section className="briefings__empty">
+        <section className="m-box mbr-empty">
+          <Buddy mood="sleepy" size={48} />
           <h2>Your next change, made clear.</h2>
           <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Explain the brief and Understand the brief send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
-          <button type="button" className="primary-btn" onClick={() => void build(true)}>Choose a project</button>
+          <button type="button" className="m-btn m-btn--filled" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
 
@@ -140,6 +144,9 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
         <AgentReviewCard
           review={buildAgentReview(brief, knowledge)}
           repo={brief.repo}
+          files={brief.filesChanged}
+          insertions={brief.insertions}
+          deletions={brief.deletions}
           busy={busy}
           explainLabel={briefsAiLabel('Explain the brief', plan)}
           onExplain={() => void understand('review')}
@@ -149,74 +156,80 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
       ) : null}
 
       {brief && !brief.empty ? (
-        <article className="briefings__card">
-          <div className="briefings__meta">
-            {repoLabel ? <span>{repoLabel}</span> : null}
-            {branch ? <span>{branch}</span> : null}
-            <strong>{brief.filesChanged} files changed</strong>
-            <span>+{brief.insertions} / -{brief.deletions}</span>
-            <span className="impact" data-level={brief.architectureImpact}>Architecture impact {brief.architectureImpact.toLowerCase()}</span>
+        <>
+          <div className="m-grid m-grid--half">
+            <section className="m-box m-box--flush">
+              <header className="m-box__title"><h2>Main changes</h2></header>
+              <ul className="m-box__body mbr-list">
+                {brief.mainChanges.map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            </section>
+            <section className="m-box m-box--flush">
+              <header className="m-box__title"><h2>Things to understand before committing</h2></header>
+              <ol className="m-box__body mbr-list">
+                {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
+              </ol>
+            </section>
           </div>
-          <h2>Main changes</h2>
-          <ul>
-            {brief.mainChanges.map((line) => <li key={line}>{line}</li>)}
-          </ul>
-          <h2>Things to understand before committing</h2>
-          <ol>
-            {brief.understandBeforeCommit.map((line) => <li key={line}>{line}</li>)}
-          </ol>
-          <p className="briefings__note">{brief.provenanceNote}</p>
-          <button type="button" className="primary-btn" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand the brief', plan)}</button>
-          {needsPro === 'brief' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
-          <h2>Files</h2>
-          <ul className="briefings__files">
-            {brief.files.map((file) => (
-              <li key={file.path}>
-                <button type="button" className="briefings__file" onClick={() => setOpenFile(openFile === file.path ? null : file.path)}>
-                  <span>{file.path}</span>
-                  <span>+{file.insertions} / -{file.deletions}</span>
-                </button>
-                {openFile === file.path ? (
-                  <p>Kind: {file.kind}. Explain the brief to read the actual diff.</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </article>
+          <section className="m-box m-box--flush">
+            <header className="m-box__title">
+              <h2>Files</h2>
+              <span className="m-box__meta mbr-meta">
+                {repoLabel ? <span>{repoLabel}</span> : null}
+                {branch ? <span>{branch}</span> : null}
+                <span>Architecture impact {brief.architectureImpact.toLowerCase()}</span>
+              </span>
+            </header>
+            <ul className="mbr-files">
+              {brief.files.map((file) => (
+                <li key={file.path} className="m-row mbr-file">
+                  <button type="button" className="mbr-file__open" aria-expanded={openFile === file.path} onClick={() => setOpenFile(openFile === file.path ? null : file.path)}>
+                    <code>{file.path}</code>
+                    <span className="mbr-delta">+{file.insertions} / -{file.deletions}</span>
+                  </button>
+                  {openFile === file.path ? <p className="mbr-file__kind">Kind: {file.kind}. Explain the brief to read the actual diff.</p> : null}
+                </li>
+              ))}
+            </ul>
+            <div className="m-box__body mbr-files__foot">
+              <p className="mbr-note">{brief.provenanceNote}</p>
+              <button type="button" className="m-btn m-btn--outlined" disabled={busy} onClick={() => void understand('brief')}>{briefsAiLabel('Understand the brief', plan)}</button>
+            </div>
+            {needsPro === 'brief' ? <div className="m-box__body"><BriefsProCard proOpen={proOpen} onPlan={onPlan} /></div> : null}
+          </section>
+        </>
       ) : !error && !needsRepo && !busy ? (
-        <div className="briefings__empty">No documented changes in this git scope.</div>
+        <section className="m-box mbr-empty mbr-empty--quiet">
+          <Buddy mood="sleepy" size={40} />
+          <p>No documented changes in this git scope.</p>
+        </section>
       ) : null}
 
-      <section className="briefings__knowledge">
-        <div className="briefings__head">
-          <div>
-            <div className="kicker">Saved knowledge</div>
-            <h2>On this {deviceName}</h2>
-            <p>AI-generated notes stay labelled until you confirm them. Freshness follows code change, not calendar time.</p>
-          </div>
-        </div>
+      <section className="m-box m-box--flush">
+        <header className="m-box__title"><h2>Saved knowledge</h2><span className="m-box__meta">On this {deviceName}</span></header>
+        <p className="m-box__body mbr-note">AI-generated notes stay labelled until you confirm them. Freshness follows code change, not calendar time.</p>
         {knowledge.length === 0 ? (
-          <div className="briefings__empty">No saved knowledge yet. Finish an explanation to save the first note.</div>
+          <p className="m-box__body mbr-note mbr-note--last">No saved knowledge yet. Finish an explanation to save the first note.</p>
         ) : (
-          <ul className="briefings__knowlist">
+          <ul className="mbr-knowlist">
             {knowledge.slice(0, 20).map((item) => (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{renderSummary(item.summary)}</p>
-                  <span>
-                    {item.verificationStatus.replaceAll('_', ' ')} · {item.freshnessStatus.replaceAll('_', ' ')} ·{' '}
+              <li key={item.id} className="m-row mbr-know">
+                <div className="m-row__main">
+                  <strong className="m-row__title">{item.title}</strong>
+                  <p className="mbr-know__summary">{renderSummary(item.summary)}</p>
+                  <span className="m-row__meta">
+                    {VERIFIED_LABEL[item.verificationStatus]} · {FRESHNESS_LABEL[item.freshnessStatus]} ·{' '}
                     <time dateTime={item.updatedAt}>
                       {new Date(item.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </time>
                   </span>
                 </div>
-                <div className="briefings__knowacts">
+                <div className="m-row__end mbr-know__acts">
                   {item.freshnessStatus !== 'CURRENT' ? (
-                    <button type="button" className="btn ghost" onClick={() => void window.unvibe.refreshKnowledge(item.id).then(() => loadKnowledge())}>Refresh</button>
+                    <button type="button" className="m-btn m-btn--outlined m-btn--small" onClick={() => void window.unvibe.refreshKnowledge(item.id).then(() => loadKnowledge())}>Refresh</button>
                   ) : null}
                   {item.verificationStatus === 'AI_GENERATED' ? (
-                    <button type="button" className="btn ghost" onClick={() => void window.unvibe.verifyKnowledge({ id: item.id, status: 'HUMAN_CONFIRMED' }).then(() => loadKnowledge())}>Confirm</button>
+                    <button type="button" className="m-btn m-btn--outlined m-btn--small" onClick={() => void window.unvibe.verifyKnowledge({ id: item.id, status: 'HUMAN_CONFIRMED' }).then(() => loadKnowledge())}>Confirm</button>
                   ) : null}
                 </div>
               </li>
@@ -230,10 +243,16 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
 
 const SIZE_LABEL: Record<AgentReview['size'], string> = { small: 'Small change', medium: 'Medium change', large: 'Big change' };
 
-/** After-Agent Review: what an agent (or you) just changed, ranked by what deserves a human look. */
-function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard, onRefreshKnowledge }: {
+/**
+ * After-Agent Review in Mono's rows: the headline with Vibe beside two number tiles; Review first beside What
+ * matters; Areas touched beside Knowledge that may be stale.
+ */
+function AgentReviewCard({ review, repo, files, insertions, deletions, busy, explainLabel, onExplain, proCard, onRefreshKnowledge }: {
   review: AgentReview;
   repo: string;
+  files: number;
+  insertions: number;
+  deletions: number;
   busy: boolean;
   explainLabel: string;
   onExplain: () => void;
@@ -255,22 +274,50 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
     });
   };
   const done = review.reviewFirst.length > 0 && checked.length >= review.reviewFirst.length;
+  const reviewed = `${checked.length} of ${review.reviewFirst.length}`;
+  const areas = (
+    <section className="m-box mbr-areas">
+      <h2 className="mbr-areas__title">Areas touched</h2>
+      <div className="mbr-chips">
+        {review.areas.map((area) => (
+          <span key={area.name} className={`m-chip${area.sensitive ? ' m-chip--outlined' : ''}`}>{area.name}<span className="mbr-chips__n">{area.files}</span></span>
+        ))}
+      </div>
+      <p className="mbr-note">Built from local git on this computer. Unvibe ranks the real diff; it does not guess why the agent made each edit.</p>
+    </section>
+  );
   return (
-    <article className="agent-review" aria-label="After-agent review">
-      <header className="agent-review__head">
-        <Buddy mood={done ? 'happy' : 'reading'} size={44} label="Vibe" />
-        <div>
-          <p className="agent-review__eyebrow">What your agent changed</p>
-          <h2>{review.headline}</h2>
-          <p className="agent-review__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
+    <>
+      <div className="m-grid m-grid--23">
+        <article className="m-box mbr-head" aria-label="After-agent review">
+          <div className="mbr-head__row">
+            <Buddy mood={done ? 'happy' : 'idle'} size={56} label="Vibe" />
+            <div className="mbr-head__text">
+              <p className="mbr-head__eyebrow">After-agent review</p>
+              <h2 className="mbr-head__title">{review.headline}</h2>
+              <p className="mbr-head__sub">{SIZE_LABEL[review.size]}{repo ? ` in ${repo.split(/[\\/]/).filter(Boolean).pop()}` : ''}. Here is what deserves your eyes first.</p>
+            </div>
+            <button type="button" className="m-btn m-btn--filled" disabled={busy} onClick={onExplain}>{explainLabel}</button>
+          </div>
+          {proCard}
+        </article>
+        <div className="m-grid m-grid--half">
+          <div className="m-box m-tile">
+            <span className="m-tile__num">{files}</span>
+            <span className="m-tile__label">Files changed</span>
+            <span className="m-tile__note">+{insertions} / -{deletions} lines</span>
+          </div>
+          <div className="m-box m-tile">
+            <span className="m-tile__num">{reviewed}</span>
+            <span className="m-tile__label">Reviewed</span>
+            <span className="m-tile__note">in Review first</span>
+          </div>
         </div>
-        <button type="button" className="primary-btn" disabled={busy} onClick={onExplain}>{explainLabel}</button>
-      </header>
-      {proCard}
-      <div className="agent-review__grid">
-        <section>
-          <h3>Review first <span>{checked.length}/{review.reviewFirst.length}</span></h3>
-          <ol className="agent-review__checks">
+      </div>
+      <div className="m-grid m-grid--half">
+        <section className="m-box m-box--flush">
+          <header className="m-box__title"><h2>Review first</h2><span className="m-box__meta">{reviewed}</span></header>
+          <ol className="m-box__body mbr-checks">
             {review.reviewFirst.map((line, index) => (
               <li key={line}>
                 <label className={checked.includes(index) ? 'is-done' : ''}>
@@ -280,41 +327,37 @@ function AgentReviewCard({ review, repo, busy, explainLabel, onExplain, proCard,
               </li>
             ))}
           </ol>
-          {done ? <p className="agent-review__done">All reviewed. Nice, you actually know what shipped.</p> : null}
+          {done ? <p className="m-box__body mbr-note mbr-checks__done">All reviewed. Nice, you actually know what shipped.</p> : null}
         </section>
-        <section>
-          <h3>What matters</h3>
-          <ul className="agent-review__files">
+        <section className="m-box m-box--flush">
+          <header className="m-box__title"><h2>What matters</h2><span className="m-box__meta">{review.whatMatters.length === 1 ? '1 file' : `${review.whatMatters.length} files`}</span></header>
+          <ul className="mbr-matters">
             {review.whatMatters.map((file) => (
-              <li key={file.path} data-kind={file.kind}>
+              <li key={file.path} className="mbr-matter" data-kind={file.kind}>
                 <code>{file.path}</code>
+                <span className="mbr-delta">+{file.insertions} / -{file.deletions}</span>
                 <small>{file.reason}</small>
-                <span>+{file.insertions} / -{file.deletions}</span>
               </li>
             ))}
           </ul>
-          <h3>Areas touched</h3>
-          <div className="agent-review__areas">
-            {review.areas.map((area) => (
-              <span key={area.name} className={area.sensitive ? 'is-sensitive' : ''}>{area.name} <b>{area.files}</b></span>
-            ))}
-          </div>
-          {review.staleKnowledge.length ? (
-            <>
-              <h3>Knowledge that may be stale</h3>
-              <ul className="agent-review__stale">
-                {review.staleKnowledge.map((hit) => (
-                  <li key={hit.id}>
-                    <span><strong>{hit.title}</strong><small>{hit.file}</small></span>
-                    <button type="button" className="soft-btn" onClick={() => onRefreshKnowledge(hit.id)}>Refresh</button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
         </section>
       </div>
-      <p className="agent-review__note">Built from local git on this computer. Unvibe ranks the real diff; it does not guess why the agent made each edit.</p>
-    </article>
+      {review.staleKnowledge.length ? (
+        <div className="m-grid m-grid--32">
+          {areas}
+          <section className="m-box m-box--flush">
+            <header className="m-box__title"><h2>Knowledge that may be stale</h2><span className="m-box__meta">{review.staleKnowledge.length}</span></header>
+            <ul className="mbr-stale">
+              {review.staleKnowledge.map((hit) => (
+                <li key={hit.id} className="m-row">
+                  <span className="m-row__main"><strong className="m-row__title">{hit.title}</strong><span className="m-row__meta">{hit.file}</span></span>
+                  <span className="m-row__end"><button type="button" className="m-btn m-btn--outlined m-btn--small" onClick={() => onRefreshKnowledge(hit.id)}>Refresh</button></span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      ) : areas}
+    </>
   );
 }

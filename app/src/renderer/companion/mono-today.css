@@ -1,0 +1,112 @@
+/* ── Mono: Today as a grid (OPTIONS.md "Organised containers", Today row; mono/grid/README.md "Today as a grid"). Row A
+   112 px: greeting with Vibe 2/3 + Explained per day 1/3 · Row B 104 px: Explain as three steps · Row C 212 px: Up next
+   1/2 + four number tiles 2 x 2 · Row D: the saved brief · the shell's ask bar under it. Right side: Recently understood
+   with the first 4 lines of each lesson's code. Box, rows, tiles, grids, buttons, chips and links are mono-frame.css's;
+   this file sets only Today's own parts. ── */
+
+:root[data-ui="v3"][data-v7] .layout .today { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 0; font-family: var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .today :is(h1, h2, p) { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-box__title h2 { color: var(--u-ink); font: 600 14px/20px var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { min-height: 112px; }
+:root[data-ui="v3"][data-v7] .layout .today-row--c { min-height: 212px; }
+
+/* Row A, left: Vibe 56 px, the greeting at 22 px, Vibe's note at 14 px grey; the date at the top right. */
+:root[data-ui="v3"][data-v7] .layout .today-hello { position: relative; display: flex; align-items: center; gap: 20px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-hello > .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .today-hello__copy { flex: 1 1 auto; min-width: 0; padding-top: 8px; }
+:root[data-ui="v3"][data-v7] .layout .today-hello h1 { color: var(--u-ink); font: 600 22px/28px var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout .today-hello__note { margin-top: 4px; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-hello__date { position: absolute; top: 16px; right: 20px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+
+/* Row A, right: Explained per day, the Island's 14 days as a strip of greys, and how many of them had any. */
+:root[data-ui="v3"][data-v7] .layout .today-strip { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-width: 0; padding: 16px 20px; }
+:root[data-ui="v3"][data-v7] .layout .today-strip__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .today-strip__head h2 { color: var(--u-ink); font: 600 12px/16px var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-strip__head .m-muted { font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; height: 24px; }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i { border-radius: 3px; background: var(--u-sunken); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i[data-level="1"] { background: color-mix(in srgb, var(--u-ink) 14%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i[data-level="2"] { background: color-mix(in srgb, var(--u-ink) 30%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i[data-level="3"] { background: color-mix(in srgb, var(--u-ink) 45%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i[data-level="4"] { background: color-mix(in srgb, var(--u-ink) 60%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__cells i[data-level="5"] { background: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__count { color: var(--u-ink); font: 400 12px/22px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-strip__count b { font: 600 17px/22px var(--u-font); }
+
+/* Row B: the Explain box. The whole box starts an explanation, as Today's card did; three steps at the right. */
+:root[data-ui="v3"][data-v7] .layout .today-explain { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; min-height: 104px; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .today-explain:hover { background: var(--u-surface); border-color: var(--u-border-control); }
+:root[data-ui="v3"][data-v7] .layout .today-explain__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-explain__text b { color: var(--u-ink); font: 600 17px/24px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-explain__text small { color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-steps { display: flex; flex: none; align-items: flex-start; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .today-step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+:root[data-ui="v3"][data-v7] .layout .today-step__art { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; }
+:root[data-ui="v3"][data-v7] .layout .today-step__label { color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .today-step__arrow { height: 36px; color: var(--u-ink-2); font: 400 14px/36px var(--u-font); }
+/* The selection: a small outlined box with three grey lines, the middle one selected. */
+:root[data-ui="v3"][data-v7] .layout .today-step__select { flex-direction: column; justify-content: center; gap: 4px; width: 52px; padding: 0 8px; border: 1px solid var(--u-border-control); border-radius: 8px; }
+:root[data-ui="v3"][data-v7] .layout .today-step__select i { display: block; width: 100%; height: 3px; border-radius: 2px; background: var(--u-seg); }
+:root[data-ui="v3"][data-v7] .layout .today-step__select i:nth-child(2) { height: 5px; background: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .today-step__keys kbd { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid var(--u-border-control); border-radius: 8px; background: var(--u-surface); color: var(--u-ink); font: 600 12px/1 var(--u-font-mono); box-shadow: none; }
+
+/* At the limit, the banner sits where the Explain box was. */
+:root[data-ui="v3"][data-v7] .layout .today-limit { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; min-height: 104px; margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-limit__text { flex: 1 1 280px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-limit__text strong { display: block; color: var(--u-ink); font: 600 17px/24px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-limit__text p { margin-top: 4px; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-limit .limit-banner__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Row C, left: Up next, three 52 px rows with an icon tile and a chevron. */
+:root[data-ui="v3"][data-v7] .layout .today-next__rows { margin: 0; padding: 0 20px 4px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .today-next__row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .today-next__rows > li + li .today-next__row { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .today-next__icon { flex: none; width: 28px; height: 28px; padding: 5px; border-radius: 8px; background: var(--u-select); fill: none; stroke: var(--u-ink); stroke-width: 1.6; }
+:root[data-ui="v3"][data-v7] .layout .today-next__row .m-row__main { flex: 1 1 auto; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-next__row :is(.m-row__title, .m-row__meta) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Row C, right: four number tiles, 2 x 2. */
+:root[data-ui="v3"][data-v7] .layout .today-tiles { grid-auto-rows: 1fr; }
+:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+
+/* Chevrons on links and rows: the text colour (links) or grey (rows). */
+:root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-chevron { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .today .m-row__end { color: var(--u-ink-2); }
+
+/* Row D: the saved brief. Headline, the Briefs page's sentence and Explain the change at the left; files at the right. */
+:root[data-ui="v3"][data-v7] .layout .today-brief .m-box__title { gap: 12px; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__open { margin-left: auto; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 32px; align-items: start; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lead { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__headline { color: var(--u-ink); font: 600 17px/24px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__sub { color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lead > .m-btn { margin-top: 12px; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lead > .briefings__empty { margin: 8px 0 0; padding: 16px; border: 1px solid var(--u-border); border-radius: var(--u-radius-card); background: none; text-align: left; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lead > .briefings__empty h2 { margin: 0 0 4px; color: var(--u-ink); font: 600 14px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lead > .briefings__empty p { margin: 0 0 12px; color: var(--u-ink-2); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__error { color: var(--u-ink); font: 400 12px/17px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__files { margin: 0; padding: 0; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__files li { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__files li + li { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__glyph { flex: none; width: 16px; height: 16px; fill: none; stroke: var(--u-ink-2); stroke-width: 1.3; stroke-linejoin: round; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__files code { flex: 1 1 auto; min-width: 0; overflow: hidden; padding: 0; background: none; color: var(--u-ink); font: 400 12px/16px var(--u-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .today-brief__lines { flex: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .today-brief__empty p { color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+
+/* The right side: Recently understood, each lesson with the first 4 lines of its saved code on the grey fill. */
+:root[data-ui="v3"][data-v7] .layout .today-recent__list { margin: 0; padding: 0 20px; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__list > li + li { border-top: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .layout .today-recent__item { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 16px 0; border: 0; background: none; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__title { overflow: hidden; color: var(--u-ink); font: 600 14px/20px var(--u-font); text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__meta { display: flex; justify-content: space-between; gap: 8px; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .today-recent__source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__meta time { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__code { display: block; margin-top: 8px; padding: 10px 12px; overflow: hidden; border-radius: 8px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); white-space: pre; text-overflow: clip; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 20px; text-align: center; }
+:root[data-ui="v3"][data-v7] .layout .today-recent__empty p { margin: 0; color: var(--u-ink-2); font: 400 14px/20px var(--u-font); }
+
+/* Under 600 px of content the rows stack (mono-frame.css's grids); the steps and the brief's two columns follow. */
+@container mcol (max-width: 600px) {
+  :root[data-ui="v3"][data-v7] .layout .today-explain { flex-direction: column; align-items: flex-start; }
+  :root[data-ui="v3"][data-v7] .layout .today-brief__body { grid-template-columns: minmax(0, 1fr); }
+}

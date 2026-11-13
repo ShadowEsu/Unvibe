@@ -119,7 +119,6 @@
 :root[data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(90 63 224 / 0.32); }
 :root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
 :root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.4); }
-:root[data-ui="v3"][data-v7] .layout .sync-state { color: var(--u-ink-3); }
 /* The glass recipe, once: tint, blur, the 1 px inner rim, the hairline outside, the top sheen and the soft shadow. */
 :root[data-ui="v3"][data-v7] .layout .side,
 :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .plan-pick__card, .metric-card),
@@ -326,8 +325,6 @@
 :root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 1; }
 /* Dark: the selected segment on the lighter glass fill, not the dark plate (Design S6). */
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: rgb(184 166 255 / 0.18); }
-:root[data-ui="v3"][data-v7] .layout .mix-start { flex: none; white-space: nowrap; }
-:root[data-ui="v3"][data-v7] .layout .mix-start span { margin-left: 4px; opacity: 0.8; }
 :root[data-ui="v3"][data-v7] .layout .history-continue {
   display: flex; align-items: center; gap: 16px; width: 100%; margin: 0 0 20px; padding: 16px 16px 16px 20px;
   border-radius: var(--u-radius-card); text-align: left; text-decoration: none; white-space: normal; cursor: pointer;
@@ -402,18 +399,6 @@
 :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 24px 0 22px; }
 @container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 :root[data-ui="v3"][data-v7] .layout .metric-card { padding: 20px 22px; }
-/* The six months fill the card's width (26 weeks as fluid columns, square cells) instead of a 390 px block at the
-   left; the "Where you learn" bar gets a visible track (Design S-1 whole-app, Momentum). */
-:root[data-ui="v3"][data-v7] .layout .heat { grid-template-columns: repeat(26, minmax(0, 1fr)); grid-template-rows: repeat(7, auto); grid-auto-columns: auto; gap: 4px; max-width: 568px; overflow: hidden; padding-bottom: 0; }
-:root[data-ui="v3"][data-v7] .layout .heat i { aspect-ratio: 1; width: 100%; background: color-mix(in srgb, var(--u-ink) 7%, transparent); border-radius: 4px; }
-:root[data-ui="v3"][data-v7] .layout .bar-track { height: 9px; background: color-mix(in srgb, var(--u-ink) 10%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .bar-track i { background: var(--u-accent); min-width: 0; }
-:root[data-ui="v3"][data-v7] .layout .heat .a1, :root[data-ui="v3"][data-v7] .layout .heat-legend .a1 { background: color-mix(in srgb, var(--u-accent) 16%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .heat .a2, :root[data-ui="v3"][data-v7] .layout .heat-legend .a2 { background: color-mix(in srgb, var(--u-accent) 34%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .heat .a3, :root[data-ui="v3"][data-v7] .layout .heat-legend .a3 { background: color-mix(in srgb, var(--u-accent) 55%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .heat .a4, :root[data-ui="v3"][data-v7] .layout .heat-legend .a4 { background: color-mix(in srgb, var(--u-accent) 78%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .heat .a5, :root[data-ui="v3"][data-v7] .layout .heat-legend .a5 { background: var(--u-accent); }
-
 /* ── Plan (c-plan): the three plans side by side; the current one tinted mist with an accent label ── */
 :root[data-ui="v3"][data-v7] .layout .plan-board:not(.plan-board--compact) { max-width: none; }
 :root[data-ui="v3"][data-v7] .layout .plan-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
@@ -840,31 +825,7 @@
 /* ── Lesson, Read and Restudy (c-lesson): back link, title, meta line with the mode segment; then a 2 × 2 grid of glass
    cards: Selected code (a numbered sheet) | Explanation, My note | Ask about this lesson. Check keeps its quiz bar. ── */
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson:not(.learn-page--survey) { align-self: stretch; width: 100%; }
-/* The ask bar floats over the page's bottom on every page that has it (Design S-1 r2 SHOULD 1, whole-app S2): the
-   page is the scroller and keeps bar + 24 px (58 + 18 + 24 = 100 px) of bottom padding so its last row clears the
-   bar at the end of the scroll. Rows passing under the bar fade out first: a 140 px overlay on the column, edge to
-   edge (over the scrollbar too), painted with the ground itself (the same veil + aurora stack as .layout,
-   background-attachment: fixed so it lines up with the window's ground) and masked from transparent at its top to
-   opaque at 94 px: rows fade into the real ground, no flat band (Design code read 11 Nov a). An overlay, not a mask
-   on the page, so the cards keep their backdrop blur (Design 07 Nov answer 2). The lesson scrolls inside
-   .lesson-doc, so its page drops the side padding and the lesson's scrollbar sits at the window's edge. */
-:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .page { padding-bottom: 100px; }
-:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock) > .ask-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; margin: 0 auto 18px; }
-:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 140px; z-index: 1; pointer-events: none;
-  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
-  background-attachment: fixed;
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 94px); mask-image: linear-gradient(to bottom, transparent, #000 94px);
-}
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after {
-  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center 30% / 170% auto no-repeat, var(--u-paper);
-  background-attachment: fixed;
-}
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after { background: var(--u-paper); }
-}
 :root[data-ui="v3"][data-v7] .layout .page--learn:has(.learn-page--lesson) { padding: 12px 0 0; }
-:root[data-ui="v3"][data-v7] .layout .learn-page--survey .survey { padding-bottom: 100px; }
 :root[data-ui="v3"][data-v7] .layout .learn-page--lesson .lesson-doc:not(.lesson-doc--survey) {
   box-sizing: border-box; width: 100%; padding: 22px clamp(20px, 3vw, 36px) 100px; border: 0; border-radius: 0; background: transparent; box-shadow: none;
   /* The lesson itself scrolls (companion.css .lesson-doc): a control reached with Tab stops clear of the bar (WCAG 2.4.11). */
@@ -1040,55 +1001,6 @@
 :root[data-ui="v3"][data-v7] .layout .chat-send:disabled { background: var(--u-fill); color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .layout .chat-dock .chat-meter { color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }
 
-/* ── Quiz (Check, c-quiz-q): a quiet link row on top; the welcome, question and result in one glass card; the
-   progress as accent segments; options as sheet rows with the letter in ink-3; a right answer in mist with an accent
-   rim, a wrong one in the amber tint (amber is the problem colour). Behaviour unchanged: a pick answers. ── */
-:root[data-ui="v3"][data-v7] .layout .learn-page--survey .lesson-bar {
-  min-height: 44px; padding: 10px clamp(20px, 3vw, 36px) 0; border: 0; background: transparent; box-shadow: none;
-}
-:root[data-ui="v3"][data-v7] .layout .learn-page--survey .lesson-back { color: var(--u-accent); font: var(--u-w-label) 14px/1 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .learn-page--survey :is(.lesson-bar__meta, .survey-cleared) { color: var(--u-ink-3); font: var(--u-w-body) 13px/1.3 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .survey__progress { height: 4px; border: 0; border-radius: 999px; background: var(--u-line); }
-:root[data-ui="v3"][data-v7] .layout .survey__progress i { background: var(--u-accent); }
-:root[data-ui="v3"][data-v7] .layout .survey__ticks span { height: 4px; border-radius: 999px; background: var(--u-line); }
-:root[data-ui="v3"][data-v7] .layout .survey__ticks span.on { background: var(--u-accent); }
-:root[data-ui="v3"][data-v7] .layout :is(.survey__card, .survey__welcome, .survey__end) {
-  padding: 22px 24px 24px; border: 0; border-radius: 18px; background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
-  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow); color: var(--u-ink);
-}
-:root[data-ui="v3"][data-v7] .layout .survey__kicker,
-:root[data-ui="v3"][data-v7] .layout .survey__end .survey__kicker {
-  color: var(--u-ink-3); font: var(--u-w-label) 12px/1.2 var(--u-font); letter-spacing: 0.04em; text-transform: uppercase;
-}
-:root[data-ui="v3"][data-v7] .layout .survey h2 { color: var(--u-ink); font: var(--u-w-title) 17px/1.45 var(--u-font); letter-spacing: 0; text-wrap: pretty; }
-:root[data-ui="v3"][data-v7] .layout .survey :is(p, .survey__rationale, .survey__hint) { font-family: var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .survey :is(.survey__hint, .survey__welcome > p) { color: var(--u-ink-3); font-size: 13px; }
-:root[data-ui="v3"][data-v7] .layout .survey__rationale { color: var(--u-ink-2); font: var(--u-w-body) 14px/1.6 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .survey__nudge { color: var(--u-amber); font: var(--u-w-body) 13.5px/1.55 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options { gap: 8px; }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button {
-  min-height: 48px; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--u-sheet); color: var(--u-ink);
-  font: var(--u-w-body) 14px/1.45 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line); transform: none;
-}
-:root[data-ui="v3"][data-v7] .layout .quiz-options button:hover:not(:disabled) { background: var(--u-mist); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--u-accent) 30%, transparent); transform: none; }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
-:root[data-ui="v3"][data-v7] .layout .quiz-opt-letter { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--u-ink-3); font: var(--u-w-label) 13px/1 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.correct { background: var(--u-mist); color: var(--u-ink); box-shadow: inset 0 0 0 1.5px var(--u-accent); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.correct .quiz-opt-letter { background: var(--u-accent); color: var(--u-accent-on); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.wrong { background: var(--u-amber-tint); color: var(--u-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--u-amber) 45%, transparent); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.wrong .quiz-opt-letter { background: transparent; color: var(--u-amber); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.dimmed { opacity: 0.5; }
-:root[data-ui="v3"][data-v7] .layout .quiz-code { border: 0; border-radius: 12px; background: var(--u-fill); }
-:root[data-ui="v3"][data-v7] .layout .quiz-code summary { color: var(--u-ink-2); font: var(--u-w-label) 13px/1 var(--u-font); }
-:root[data-ui="v3"][data-v7] .layout .survey__modes button {
-  border: 0; border-radius: 14px; background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line); color: var(--u-ink); transform: none;
-}
-:root[data-ui="v3"][data-v7] .layout .survey__modes button:hover:not(:disabled) { background: var(--u-mist); transform: none; }
-:root[data-ui="v3"][data-v7] .layout .survey__modes button:is([aria-checked="true"], .on) { background: var(--u-mist); box-shadow: inset 0 0 0 1.5px var(--u-accent); }
-:root[data-ui="v3"][data-v7] .layout .survey__modes button strong { font: var(--u-w-title) 14px/1.3 var(--u-font); color: var(--u-ink); }
-:root[data-ui="v3"][data-v7] .layout .survey__modes button span { font: var(--u-w-body) 12.5px/1.45 var(--u-font); color: var(--u-ink-3); }
-:root[data-ui="v3"][data-v7] .layout .survey .primary-btn { border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: var(--u-w-label) 14px/1 var(--u-font); box-shadow: none; transform: none; }
-
 /* ── SP6: page titles ink in once per view (InkTitle): each letter 15 % → full ink over 140 ms, left to right, opacity
    only; the last letter starts within 100 ms of the first, so every title, however long, is fully inked by 240 ms
    (Design motion review 07 Nov SHOULD 1). Reduced motion: the global rule in companion.css drops the animation. ── */
@@ -1117,7 +1029,6 @@ html[data-r2] {
 @keyframes mArriveMd { from { opacity: 0; transform: translateY(var(--m-dist-md)); } }
 @keyframes mPop { from { opacity: 0; transform: scale(.98); } }
 @keyframes mGrow { from { transform: scaleX(0); } }
-@keyframes mShake { 0% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); } }
 
 /* §2 The start stage: the G1 dark ground in both themes, the violet sharks on a canvas (shared/sharks, our palette
    copy of the vendored renderer), the lockup on a dark glass-2 pill. In: canvas over --m-fast; lockup 250–600 ms.
@@ -1138,16 +1049,9 @@ html[data-r2] {
 .sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
 .sharks-intro--out-skip { animation-duration: var(--m-exit); }
 @keyframes mOut { to { opacity: 0; } }
-/* The in-app sharks (Design r3-flat OPTIONS.md "Sharks"): a background layer on the right of the content pane on Today
-   and Ask Vibe only, 44 % of the pane (at least 360 px, look.css), one colour (the accent; dark: accent-text,
-   SharksBackdrop's palette) drawn straight on the ground: no grid, no panel. Strongest cell 30 % alpha in light, 36 %
-   in dark. The canvas's left 64 px fades out so a shark never ends on a hard line. The page's content sits above. */
-.sharks-backdrop {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 44%; z-index: 0; overflow: hidden; pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 64px); mask-image: linear-gradient(to right, transparent, #000 64px);
-}
-.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); opacity: 0.3; }
-:root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: 0.36; }
+/* The in-app sharks' canvas fills its layer; the layer's place (fixed, under the whole layout) is in mono-sharks.css
+   and the canvas's opacity (--u-sharks-alpha) in mono.css. */
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .page { position: relative; }
 :root[data-ui="v3"][data-v7] .layout .page > :not(.sharks-backdrop) { position: relative; z-index: 1; }
 /* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
@@ -1203,12 +1107,6 @@ html[data-r2] {
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .seg-thumb { background: rgb(184 166 255 / 0.18); }
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button { position: relative; z-index: 1; }
 :root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes):has(.seg-thumb) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: transparent; box-shadow: none; }
-/* §3 row 12 and 13: a right answer fills over --m-fast and pops once; a wrong one shakes once over --m-normal while
-   the amber outline fades in over --m-fast. */
-:root[data-ui="v3"][data-v7] .layout .quiz-options button { transition: background var(--m-fast) var(--m-ease-sharp), box-shadow var(--m-fast) var(--m-ease-sharp), transform var(--m-fast) var(--m-ease-sharp); }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.correct { animation: mPopOnce var(--m-fast) var(--m-ease-pop) both; }
-@keyframes mPopOnce { 50% { transform: scale(var(--m-scale-pop)); } to { transform: scale(1); } }
-:root[data-ui="v3"][data-v7] .layout .quiz-options button.wrong { animation: mShake var(--m-normal) var(--m-ease-sharp) both; }
 /* §3 row 15: toasts in from the bottom over --m-normal; out over --m-exit. */
 :root[data-ui="v3"][data-v7] .toast { animation: mArriveMd var(--m-normal) var(--m-ease-smooth) both; }
 :root[data-ui="v3"][data-v7] .toast.is-leaving { animation: mToastOut var(--m-exit) var(--m-ease-sharp) forwards; }

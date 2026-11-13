@@ -46,13 +46,20 @@
   --u-shadow: var(--u-shadow-float); --u-shadow-sm: var(--u-shadow-card);
   --u-radius-pane: var(--u-radius-card);
 }
+/* Legacy aliases that app-0151.css / v3 / v5 / v7 map to the accent: in Mono they are the text colour (fills, selections,
+   links), the control border (edges, glows) or the focus colour, so every old rule on an untouched screen is grey.
+   The sharks read --u-accent directly; nothing else may. */
+:root[data-ui="v3"][data-v7], :root[data-ui="v3"][data-v7][data-theme="dark"] {
+  --accent: var(--u-ink); --accent-strong: var(--u-ink); --accent-soft: var(--u-sunken); --on-accent: var(--u-paper);
+  --c-violet: var(--u-ink); --grad: var(--u-ink); --focus-ring: var(--u-focus);
+  --v-btn: var(--u-action); --v-btn-ink: var(--u-action-on); --v-sel: var(--u-select); --v-sel-ink: var(--u-select-ink);
+  --v-active: var(--u-select); --v-edge-hi: var(--u-border-control); --v-glow: transparent; --v-tint-base: var(--u-ink);
+  --u-violet: var(--u-ink); --u-violet-lip: var(--u-border-control); --u-violet-text: var(--u-ink); --u-violet-tint: var(--u-sunken); --u-on-violet: var(--u-paper);
+  --lilac: var(--u-ink); --lime: var(--u-select); --mint: var(--u-sunken); --sky: var(--u-sunken); --sun: var(--u-sunken); --coral: var(--u-sunken);
+}
 /* The ground: a flat colour, no aurora; no fade under the ask bar. */
 :root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout,
 :root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
-/* Under the composer: a solid strip of ground across the content width (no fade), so nothing shows half-cut
-   behind the ask bar; the lists end above it (the page keeps its 150 px bottom padding). */
-:root[data-ui="v3"][data-v7] .layout .content:has(.ask-dock)::after,
-:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .content:has(.ask-dock)::after { height: 92px; background: var(--u-paper); border-top: 1px solid var(--u-border); -webkit-mask-image: none; mask-image: none; }
 /* Cards, menus, the ask bar: one solid surface with a 1 px border (a real border, so a look with no card shadow still
    has its container); O1 light adds a 1 px card shadow; floating things carry the floating shadow. The sidebar is
    sunken. */
@@ -110,9 +117,8 @@
    it; code inside keeps the code style. */
 :root :is(.rich-text, .ob-answer) em { font-style: normal; font-weight: 600; color: inherit; }
 :root :is(.rich-text, .ob-answer) strong em { font-weight: inherit; }
-/* One colour: the selected code line is the look's highlight (never lime); the lime tick goes with it. */
+/* The selected code line sits on the grey fill (no lime, no bar; mono-overlay.css owns the row). */
 :root .ob-code__line, :root[data-theme="dark"] .ob-code__line { background: var(--u-highlight); }
-:root .ob-code__tick { background: var(--u-accent); }
 /* Depth row: the locked Expert label reads at text-3 (no opacity); its Pro chip is text-2 on the chip fill. */
 :root .ob-depth__item:disabled:not(.is-on) { opacity: 1; color: var(--u-ink-3); }
 :root .ob-depth__item:not(.is-on) .ob-pro { color: var(--u-ink-2); }
@@ -127,12 +133,10 @@
 :root[data-ui="v3"][data-v7][data-theme="dark"] .overlay { background: rgb(0 0 0 / 0.6); }
 :root[data-ui="v3"][data-v7] .modal { background: var(--u-surface); -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--u-border); box-shadow: var(--u-shadow-float); border-radius: var(--u-radius-card); }
 :root[data-ui="v3"][data-v7] .modal .mbody { background: var(--u-surface); }
-/* Sharks (OPTIONS.md "Sharks: behind everything" + Mono): one window-sized canvas, fixed, inset 0, z-index 0, behind
-   the rail, the top bar and every box, on every page of the main window; #6f52f2 at 45 % light, #7357f6 at 75 % dark.
-   No reserved column, no mask, no minimum width. (Step 2 of the build moves the layer to the layout root.) */
-:root[data-ui="v3"][data-v7] .layout .sharks-backdrop { position: fixed; inset: 0; width: auto; height: auto; z-index: 0; pointer-events: none; }
+/* Sharks (OPTIONS.md "Sharks: behind everything" + Mono): one window-sized canvas behind the rail, the top bar and
+   every box on every page of the main window (placement in companion/mono-sharks.css: fixed, inset 0, under the
+   isolated .layout); #6f52f2 at 45 % light, #7357f6 at 75 % dark. No reserved column, no mask, no minimum width. */
 :root[data-ui="v3"][data-v7] .sharks-band__canvas, :root[data-ui="v3"][data-v7][data-theme="dark"] .sharks-band__canvas { opacity: var(--u-sharks-alpha); }
-:root[data-ui="v3"][data-v7] .layout :is(.page--home, .page:has(.chat-page)) > .fade-in { max-width: none; margin: 0; width: auto; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .home-cols { grid-template-columns: minmax(0, 1fr); }
 /* Today's note under the greeting: Inter regular 15 px text-2, not the serif italic. */
 :root[data-ui="v3"][data-v7] .layout .home-hero__note { font: 400 15px/1.4 var(--u-font); font-style: normal; color: var(--u-ink-2); }

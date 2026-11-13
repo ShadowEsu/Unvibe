@@ -4,9 +4,10 @@ import { Icon } from './icons';
 import { firstCodeLine } from './selectionName';
 
 /**
- * Overlay B's code row (SPEC Code): one 32 pt line, the lime tick, the selection's first line and "Show code".
- * Show code opens the whole selection inline and pushes the answer down; the whole selection is always in the DOM
- * (folded by CSS), so copy, search and screen readers get all of it.
+ * The code row (Mono, OPTIONS.md "Overlay window and Island"): one 36 px line on the grey fill, the selection's first
+ * line in mono 12 and "Show code" as a link with a chevron. Show code opens the whole selection inline and pushes
+ * the answer down; the whole selection is always in the DOM (folded by CSS), so copy, search and screen readers get
+ * all of it.
  */
 export function CodeRow({ id, code, open, onToggle }: {
   id: string;
@@ -17,10 +18,9 @@ export function CodeRow({ id, code, open, onToggle }: {
   return (
     <section className={`ob-code${open ? ' is-open' : ''}`} aria-label="Selected code context">
       <div className="ob-code__row">
-        <span className="ob-code__tick" aria-hidden="true" />
         <span className="ob-code__line" aria-hidden={open || undefined}>{firstCodeLine(code)}</span>
         <button type="button" className="ob-link" aria-expanded={open} aria-controls={id} onClick={onToggle}>
-          {open ? 'Show less' : 'Show code'}
+          {open ? 'Show less' : 'Show code'}<Icon name="chevron-right" size={12} className="ob-link__chev" />
         </button>
       </div>
       <pre id={id} className="ob-code__all" tabIndex={open ? 0 : -1}><code>{code}</code></pre>
@@ -29,9 +29,9 @@ export function CodeRow({ id, code, open, onToggle }: {
 }
 
 /**
- * The finished answer's actions (SPEC Action chips): small 28 pt chips, no big button. Understand is the panel's
- * existing understood action (it stays pressed, and a second press does nothing new); Save pins the lesson to Saved
- * (pressed again, it unpins); Explain differently asks again. While the answer is still being revealed, all wait.
+ * The finished answer's actions (Mono): 28 px pills. Understand is the one filled button and the panel's existing
+ * understood action (it stays pressed, with a tick, and a second press does nothing new); Save pins the lesson to
+ * Saved (pressed again, it unpins); Explain differently asks again. While the answer is still being revealed, all wait.
  */
 export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, onDifferent, children }: {
   busy: boolean;
@@ -44,12 +44,12 @@ export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, o
 }) {
   return (
     <div className="ob-chips">
-      <button type="button" className={`ob-chip${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
+      <button type="button" className={`ob-btn ob-btn--small${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
         onClick={() => { if (!understood) onUnderstand(); }}>
-        <Icon name="check" size={14} />Understand
+        {understood ? <Icon name="check" size={14} /> : null}Understand
       </button>
       <button type="button" className={`ob-chip${pinned ? ' is-on' : ''}`} aria-pressed={pinned} disabled={busy} onClick={onSave}>
-        <Icon name="bookmark" size={14} />Save
+        {pinned ? <Icon name="bookmark" size={14} /> : null}Save
       </button>
       <button type="button" className="ob-chip" disabled={busy} onClick={onDifferent}>Explain differently</button>
       {children}
@@ -61,12 +61,12 @@ export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, o
 export function StopButton({ onStop }: { onStop: () => void }) {
   return (
     <div className="ob-chips">
-      <button type="button" className="ob-chip" onClick={onStop}><Icon name="x" size={14} />Stop generating</button>
+      <button type="button" className="ob-chip" onClick={onStop}>Stop generating</button>
     </div>
   );
 }
 
-/** The 32 pt Ask field with its accent send button (SPEC Ask). */
+/** The 36 px Ask field, a pill with the control border and a 28 px round send button (Mono). */
 export function AskField({ value, disabled, inputRef, onChange, onSend, children }: {
   value: string;
   disabled: boolean;

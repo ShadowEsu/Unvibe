@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SavedLesson, SavedRow } from '../../main/panelSaved';
 import { linesLabel } from '../../core/linesLabel';
 import { renderRich } from '../shared/richText';
+import { Buddy } from '../shared/buddy';
 import { LEVELS } from './levelChip';
 import { CodeRow } from './panelBody';
 import { Icon } from './icons';
@@ -87,7 +88,7 @@ export function SavedTab({ version }: { version: number }) {
   return (
     <div className="ob-saved" ref={listRef}>
       {error ? <p className="ob-sub" role="alert">{error}</p> : null}
-      {empty ? <p className="ob-sub">Nothing saved yet.</p> : null}
+      {empty ? <div className="ob-saved__empty"><Buddy mood="sleepy" size={36} label="Vibe" /><p className="ob-sub">Nothing saved yet.</p></div> : null}
       {([['Saved', lists.pinned], ['Recent', lists.recent]] as const).map(([heading, rows]) => rows.length ? (
         <section key={heading} className="ob-saved__group" aria-label={heading}>
           <h2 className="ob-label">{heading}</h2>

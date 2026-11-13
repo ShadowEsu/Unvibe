@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RichText } from '../shared/richText';
 import { ThinkingStatus } from '../shared/thinkingStatus';
-import { Buddy, setBuddyMood } from '../shared/buddy';
-import { playTone } from '../shared/tones';
+import { Buddy } from '../shared/buddy';
 import { deviceName } from '../shared/platform';
 import { askForConsent } from '../shared/consentForm';
 import type { ConsentProvider } from '../../core/consent';
@@ -10,9 +9,8 @@ import { linesLabel } from '../../core/linesLabel';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
 import { InkTitle } from './inkTitle';
-import { SegThumb } from '../shared/slidingThumb';
 import { useSettled } from '../shared/useSettled';
-import { Burst } from '../shared/burst';
+import { QuizCheck, QuizHome, MIX_MAX } from './quizCheck';
 
 interface FeedItem { id: string; ts: string; title: string; meta: string; outcome: string }
 interface LearningItem extends FeedItem {
@@ -31,32 +29,50 @@ const STUDY_LEVELS = [
 ] as const;
 
 type LessonMode = 'read' | 'restudy' | 'check';
-type QuizMode = 'quick-check' | 'recall' | 'scenario';
-
-const QUIZ_MODES = [
-  { id: 'scenario' as const, label: 'Prove it', detail: 'What breaks if you change this line? The real test of understanding.' },
-  { id: 'quick-check' as const, label: 'Quick check', detail: 'One fact from the snippet you already read.' },
-  { id: 'recall' as const, label: 'Recall', detail: 'Answer from memory. Peek at the code only if you need it.' },
-];
 
 function outcomeName(outcome: string): string {
   return outcome === 'understood' ? 'Understood' : outcome === 'needs_review' ? 'To revisit' : 'Reviewed';
 }
 
-function dayGroup(iso: string): string {
-  const when = new Date(iso);
-  const today = new Date();
-  const start = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((start(today) - start(when)) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  return when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+/** Library's list / grid choice: a view preference on this computer only (no setting, nothing synced). */
+const LIBRARY_VIEW_KEY = 'unvibe.library.view';
+type LibraryView = 'grid' | 'list';
+function readLibraryView(): LibraryView {
+  try { return window.localStorage.getItem(LIBRARY_VIEW_KEY) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
 }
 
-function clockTime(iso: string): string {
+const LIST_ICON = 'M4 6h12 M4 10h12 M4 14h12';
+const GRID_ICON = 'M4 4h5v5H4z M11 4h5v5h-5z M4 11h5v5H4z M11 11h5v5h-5z';
+const SEARCH_ICON = 'M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z M13.5 13.5 17 17';
+const CHEVRON = 'M8 5l5 5-5 5';
+
+/** "6 Nov": the day a lesson was saved, on its card and its row. */
+function shortDate(iso: string): string {
   const when = new Date(iso);
   if (Number.isNaN(when.getTime())) return '';
-  return when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+/** The first `count` lines of a lesson's saved code, leading blank lines dropped and the common indent removed. */
+function codeHead(code: string | undefined, count: number): string {
+  if (!code) return '';
+  const lines = code.replace(/\s+$/, '').split('\n');
+  let start = 0;
+  while (start < lines.length && !lines[start].trim()) start++;
+  const head = lines.slice(start, start + count).map((line) => line.replace(/\t/g, '  '));
+  const indent = Math.min(...head.filter((line) => line.trim()).map((line) => line.length - line.trimStart().length));
+  return head.map((line) => line.slice(Number.isFinite(indent) ? indent : 0)).join('\n');
+}
+
+/** "sample-app · debounce.js": where a lesson's code came from (the file's name, not its path). */
+function lessonWhere(item: LearningItem): string {
+  return `${item.project || `This ${deviceName}`} · ${item.file?.split(/[\\/]/).pop() || item.scope || 'Selection'}`;
+}
+
+function StatusChip({ outcome }: { outcome: string }) {
+  return outcome === 'needs_review'
+    ? <span className="m-chip m-chip--outlined">Review</span>
+    : <span className="m-chip">Current</span>;
 }
 
 /**
@@ -86,16 +102,6 @@ function TrashBtn({ label, onClick }: { label: string; onClick: () => void }) {
         <path d="M5 6h10M8 6V4.5h4V6M7 6l.5 10h5L13 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
-  );
-}
-
-function LearningEmpty({ title, detail, onReview }: { title: string; detail: string; onReview: () => void }) {
-  return (
-    <div className="learning-empty">
-      <h2>{title}</h2>
-      <p>{detail}</p>
-      <button className="primary-btn" onClick={onReview}>Explain some code</button>
-    </div>
   );
 }
 
@@ -131,6 +137,11 @@ export function Learn({
 
   const [filter, setFilter] = useState<'all' | 'understood' | 'needs_review'>('all');
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<LibraryView>(readLibraryView);
+  const chooseView = (next: LibraryView) => {
+    setView(next);
+    try { window.localStorage.setItem(LIBRARY_VIEW_KEY, next); } catch { /* storage blocked: the choice lasts this visit */ }
+  };
   const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
   const feedRef = useRef<HTMLDivElement>(null);
   // The list's arrival (app-0151.css §3 row 3) plays once; a filter or search re-render shows rows at once.
@@ -143,23 +154,12 @@ export function Learn({
   const [askBusy, setAskBusy] = useState(false);
   const [askError, setAskError] = useState('');
   const [askLeft, setAskLeft] = useState<number | null>(null);
-  const [quizMode, setQuizMode] = useState<QuizMode>('scenario');
-  const [card, setCard] = useState<{ question: string; options: string[]; conceptLabel: string; key: number } | null>(null);
-  const [result, setResult] = useState<{ correct: boolean; rationale: string; answerIndex?: number } | null>(null);
-  const [wrongPicks, setWrongPicks] = useState<number[]>([]);
-  const [quizBusy, setQuizBusy] = useState(false);
-  const [quizError, setQuizError] = useState('');
-  const [quizLeft, setQuizLeft] = useState<number | null>(null);
-  const [cardKey, setCardKey] = useState(0);
-  const quizRequestRef = useRef(false);
-  const [cleared, setCleared] = useState(0);
-  // Mixed review: one run across many lessons, revisit ones first, scored on first tries.
-  const [mix, setMix] = useState<{ ids: string[]; index: number; firstTry: number; done: boolean } | null>(null);
+  // "Quiz me on everything": the lessons of one mixed review (one question each, revisit ones first).
+  const [mixIds, setMixIds] = useState<string[] | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [savedNote, setSavedNote] = useState('');
   const [noteStatus, setNoteStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [noteError, setNoteError] = useState('');
-  const letters = 'ABCDEFGH';
   const forgetLesson = async (id: string) => {
     if (!window.confirm(`Remove this lesson from this ${deviceName}?`)) return;
     const r = await window.unvibe.forgetLearning(id) as { ok?: boolean };
@@ -173,17 +173,6 @@ export function Learn({
     const haystack = [item.title, item.meta, item.file, item.project, item.language, item.concept, item.explanation, item.note].filter(Boolean).join(' ').toLowerCase();
     return matchesFilter && haystack.includes(query.trim().toLowerCase());
   });
-
-  const groups = useMemo(() => {
-    const map = new Map<string, LearningItem[]>();
-    for (const item of filtered) {
-      const key = dayGroup(item.ts);
-      const bucket = map.get(key) ?? [];
-      bucket.push(item);
-      map.set(key, bucket);
-    }
-    return [...map.entries()];
-  }, [filtered]);
 
   const open = catalog.find((item) => item.id === openId) ?? null;
   const continueItem = catalog.find((item) => item.outcome === 'needs_review') ?? catalog[0] ?? null;
@@ -201,11 +190,6 @@ export function Learn({
     setQuestion('');
     setAnswer('');
     setAskError('');
-    setCard(null);
-    setResult(null);
-    setWrongPicks([]);
-    setQuizError('');
-    setCleared(0);
     setNoteDraft(item.note ?? '');
     setSavedNote(item.note ?? '');
     setNoteStatus('idle');
@@ -215,11 +199,7 @@ export function Learn({
   const closeLesson = () => {
     setOpenId(null);
     setMode('read');
-    setCard(null);
-    setResult(null);
-    setWrongPicks([]);
-    setCleared(0);
-    setMix(null);
+    setMixIds(null);
   };
 
   const saveNote = async () => {
@@ -277,7 +257,6 @@ export function Learn({
   useEffect(() => {
     if (!open) return;
     void window.unvibe.studyAskStatus().then((s) => setAskLeft((s as { remaining: number }).remaining));
-    void window.unvibe.quizStatus().then((s) => setQuizLeft((s as { remaining: number }).remaining));
   }, [open?.id]);
 
   const ask = async () => {
@@ -297,117 +276,21 @@ export function Learn({
     void onRefresh();
   };
 
-  const startQuiz = async (item: LearningItem) => {
-    if (quizRequestRef.current) return;
-    quizRequestRef.current = true;
-    setQuizBusy(true); setQuizError(''); setCard(null); setResult(null); setWrongPicks([]);
-    // Nothing was sent without the first-send agreement: ask after this request settles, then start again.
-    let needsConsent: ConsentProvider | null = null;
-    try {
-      const r = await window.unvibe.quizStart({ eventId: item.id, mode: quizMode }) as {
-        ok: boolean; question?: string; options?: string[]; conceptLabel?: string; error?: string; remaining?: number; code?: string; provider?: ConsentProvider;
-      };
-      if (r.remaining !== undefined) setQuizLeft(r.remaining);
-      if (!r.ok && r.code === 'consent' && r.provider) {
-        needsConsent = r.provider;
-        return;
-      }
-      if (!r.ok || !r.question || !r.options) { setQuizError(r.error ?? 'Could not start quiz.'); return; }
-      const nextKey = cardKey + 1;
-      setCardKey(nextKey);
-      setCard({ question: r.question, options: r.options, conceptLabel: r.conceptLabel ?? item.title, key: nextKey });
-    } catch {
-      setQuizError('Could not start the next question. Try again.');
-    } finally {
-      quizRequestRef.current = false;
-      setQuizBusy(false);
-    }
-    if (needsConsent && await askForConsent(needsConsent)) void startQuiz(item);
-  };
-
   const startMix = () => {
     const revisit = catalog.filter((item) => item.outcome === 'needs_review');
     const rest = catalog.filter((item) => item.outcome !== 'needs_review').sort(() => Math.random() - 0.5);
-    const ids = [...revisit, ...rest].slice(0, 10).map((item) => item.id);
+    const ids = [...revisit, ...rest].slice(0, MIX_MAX).map((item) => item.id);
     const first = catalog.find((item) => item.id === ids[0]);
     if (!first) return;
-    setMix({ ids, index: 0, firstTry: 0, done: false });
     openLesson(first, 'check');
-    void startQuiz(first);
+    setMixIds(ids);
   };
-  const nextQuestion = () => {
-    if (!open) return;
-    if (!mix) { void startQuiz(open); return; }
-    const index = mix.index + 1;
-    const item = catalog.find((entry) => entry.id === mix.ids[index]);
-    if (!item) {
-      setMix({ ...mix, done: true });
-      playTone('celebrate');
-      setBuddyMood('celebrate');
-      return;
-    }
-    setMix({ ...mix, index });
-    setOpenId(item.id);
-    void startQuiz(item);
-  };
-
-  const answerQuiz = async (choice: number) => {
-    if (!open || result?.correct || wrongPicks.includes(choice)) return;
-    setQuizBusy(true); setQuizError('');
-    const r = await window.unvibe.quizAnswer({ eventId: open.id, choice }) as {
-      ok: boolean; correct?: boolean; rationale?: string; answerIndex?: number; error?: string;
-    };
-    setQuizBusy(false);
-    if (!r.ok) { setQuizError(r.error ?? 'Could not grade.'); return; }
-    if (!r.correct) {
-      setWrongPicks((prev) => (prev.includes(choice) ? prev : [...prev, choice]));
-      playTone('wrong');
-      setResult({ correct: false, rationale: r.rationale ?? 'Sorry, wrong. Pick another option.' });
-      void onRefresh();
-      return;
-    }
-    setBuddyMood('celebrate');
-    if (mix && wrongPicks.length === 0) setMix((m) => (m ? { ...m, firstTry: m.firstTry + 1 } : m));
-    setResult({ correct: true, rationale: r.rationale ?? 'You got it.', answerIndex: r.answerIndex ?? choice });
-    setCleared((count) => count + 1);
-    void onRefresh();
-  };
-
-  useEffect(() => {
-    if (!open || mode !== 'check') return;
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, select')) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key === 'Escape') return;
-      if (mix?.done) return;
-      if (!card && !quizBusy && (event.key === 'Enter' || event.key === ' ')) {
-        event.preventDefault();
-        void startQuiz(open);
-        return;
-      }
-      if (!card || quizBusy) return;
-      if (result?.correct && (event.key === 'Enter' || event.key === ' ')) {
-        event.preventDefault();
-        nextQuestion();
-        return;
-      }
-      if (result?.correct) return;
-      const letter = event.key.toUpperCase();
-      const fromLetter = letters.indexOf(letter);
-      const fromNumber = /^[1-8]$/.test(event.key) ? Number(event.key) - 1 : -1;
-      const index = fromLetter >= 0 ? fromLetter : fromNumber;
-      if (index < 0 || index >= card.options.length) return;
-      event.preventDefault();
-      void answerQuiz(index);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, mode, card, quizBusy, result, quizMode, wrongPicks, mix]);
 
   if (open) {
-    const survey = mode === 'check';
-    const ticks = Math.min(5, cleared);
+    // A check (Mono quiz flow) takes the whole page: quizCheck.tsx; Esc (above) leaves it like any lesson.
+    if (mode === 'check') {
+      return <QuizCheck lessons={catalog} first={open} mixIds={mixIds} root={intent === 'quiz' ? 'Quiz' : 'Library'} onLeave={closeLesson} onRefresh={onRefresh} />;
+    }
     const modes = (
       <div className="lesson-modes" role="group" aria-label="Lesson mode">
         {([
@@ -451,21 +334,8 @@ export function Learn({
       </div>
     );
     return (
-      <div className={`learn-page learn-page--lesson${survey ? ' learn-page--survey' : ''}`}>
-        {survey ? (
-          <header className="lesson-bar">
-            <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
-            <div className="lesson-bar__meta">
-              <span>{open.file || open.project || open.meta || 'Saved lesson'}</span>
-              {quizLeft !== null ? <span>{quizLeft} left today</span> : null}
-            </div>
-            {intent === 'quiz' ? <span className="survey-cleared">{cleared} cleared this sitting</span> : modes}
-            <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
-          </header>
-        ) : null}
-
-        <article className={`lesson-doc${survey ? ' lesson-doc--survey' : ''}`} key={open.id}>
-          {!survey ? (
+      <div className="learn-page learn-page--lesson">
+        <article className="lesson-doc" key={open.id}>
             <div className="lesson-doc__head">
               <button type="button" className="lesson-back" onClick={closeLesson}>{intent === 'quiz' ? 'Lessons' : 'Library'}</button>
               <h1><InkTitle text={open.title} /></h1>
@@ -481,7 +351,6 @@ export function Learn({
                 <TrashBtn label={`Remove ${open.title}`} onClick={() => void forgetLesson(open.id)} />
               </div>
             </div>
-          ) : null}
 
           {mode === 'read' ? (
             <div className="lesson-grid">
@@ -546,235 +415,150 @@ export function Learn({
               {askCard}
             </>
           ) : null}
-
-          {survey ? (
-            <div className="survey">
-              <div className="survey__progress" aria-hidden="true">
-                <i style={{ transform: `scaleX(${Math.max(0.08, ticks / 5)})` }} />
-              </div>
-              <div className="survey__ticks" aria-label={`${cleared} cards cleared this sitting`}>
-                {[0, 1, 2, 3, 4].map((index) => (
-                  <span key={index} className={index < ticks ? 'on' : ''} />
-                ))}
-              </div>
-
-              {mix?.done ? (
-                <div className="survey__end">
-                  <Burst trigger="mix" />
-                  <span className="survey__vibe"><Buddy mood={mix.firstTry >= mix.ids.length * 0.7 ? 'celebrate' : 'happy'} size={72} label="Vibe" /></span>
-                  <p className="survey__kicker">Mixed review done</p>
-                  <h2>{mix.firstTry} of {mix.ids.length} on the first try.</h2>
-                  <p className="survey__rationale">{mix.firstTry === mix.ids.length ? 'Perfect run. You really know this code.' : mix.firstTry >= mix.ids.length * 0.7 ? 'Strong. The ones you missed are marked to revisit.' : 'Good start. Run it again tomorrow and watch the number climb.'}</p>
-                  <button className="primary-btn" type="button" onClick={() => { setMix(null); closeLesson(); }}>Back to lessons</button>
-                </div>
-              ) : result?.correct && card ? (
-                <div className="survey__end" key={`end-${card.key}`}>
-                  <Burst trigger="quiz" />
-                  <span className="survey__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
-                  <p className="survey__kicker">Nice work</p>
-                  <h2>You got it.</h2>
-                  <p className="survey__rationale">{result.rationale}</p>
-                  <button className="primary-btn" type="button" onClick={nextQuestion}>{mix ? (mix.index + 1 >= mix.ids.length ? 'See my score' : `Next lesson (${mix.index + 2} of ${mix.ids.length})`) : 'Next question'}</button>
-                  <p className="survey__hint">Press Return to continue</p>
-                </div>
-              ) : card ? (
-                <div className="survey__card" key={card.key}>
-                  <span className="survey__vibe survey__vibe--small"><Buddy mood={quizBusy ? 'thinking' : result && !result.correct ? 'confused' : 'idle'} size={40} follow label="Vibe" /></span>
-                  <p className="survey__kicker">{card.conceptLabel || 'Check'}</p>
-                  <h2>{card.question}</h2>
-                  {open.code ? (
-                    <details className="quiz-code">
-                      <summary>Show the code</summary>
-                      <LessonCode code={open.code.slice(0, 2400)} language={open.language} />
-                    </details>
-                  ) : null}
-                  <div className="quiz-options" role="list">
-                    {card.options.map((opt, idx) => {
-                      const isWrong = wrongPicks.includes(idx);
-                      const isCorrect = Boolean(result?.correct && result.answerIndex === idx);
-                      let cls = '';
-                      if (isCorrect) cls = 'correct';
-                      else if (isWrong) cls = 'wrong';
-                      else if (result?.correct) cls = 'dimmed';
-                      return (
-                        <button
-                          key={`${card.key}-${idx}`}
-                          type="button"
-                          className={cls}
-                          disabled={quizBusy || isWrong || Boolean(result?.correct)}
-                          onClick={() => void answerQuiz(idx)}
-                        >
-                          <span className="quiz-opt-letter" aria-hidden="true">{letters[idx] ?? String(idx + 1)}</span>
-                          <span className="quiz-opt-text">{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {result && !result.correct ? (
-                    <p className="survey__nudge">{result.rationale} Try another option, or press its letter.</p>
-                  ) : (
-                    <p className="survey__hint">Press A to {letters[card.options.length - 1] ?? 'D'}, or 1 to {card.options.length}</p>
-                  )}
-                  {quizError ? <p className="form-error" role="alert">{quizError}</p> : null}
-                </div>
-              ) : (
-                <div className="survey__welcome">
-                  <span className="survey__vibe"><Buddy mood="wave" size={56} label="Vibe" /></span>
-                  <p className="survey__kicker">{open.level}, {open.file || 'Saved lesson'}</p>
-                  <h2>{open.title}</h2>
-                  <p>One question at a time. Wrong answers stay open so you can keep trying. About 30 seconds each.</p>
-                  <div className="survey__modes" role="radiogroup" aria-label="Quiz mode">
-                    {QUIZ_MODES.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={quizMode === item.id}
-                        className={quizMode === item.id ? 'on' : ''}
-                        disabled={quizBusy}
-                        onClick={() => setQuizMode(item.id)}
-                      >
-                        <strong>{item.label}</strong>
-                        <span>{item.detail}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {quizBusy ? <ThinkingStatus label="Unvibe" /> : (
-                    <button className="primary-btn" type="button" onClick={() => void startQuiz(open)}>Start this check</button>
-                  )}
-                  {quizError ? <p className="form-error" role="alert">{quizError}</p> : null}
-                  {!quizBusy ? <p className="survey__hint">Press Return to start</p> : null}
-                </div>
-              )}
-            </div>
-          ) : null}
         </article>
       </div>
     );
   }
 
-  return (
-    <div className={`learn-page${intent === 'quiz' ? ' learn-page--quiz' : ''}`}>
-      <div className="topline learn-topline">
-        <div>
-          <h1><InkTitle text={intent === 'quiz' ? 'Quick Quiz' : 'Learning Library'} /></h1>
-          <p className="lead lead--tight">
-            {intent === 'quiz'
-              ? 'Pick a saved lesson, choose the challenge, and see what stayed with you.'
-              : `Saved explanations on this ${deviceName}, with source and freshness where we have it.`}
-          </p>
-        </div>
-      </div>
+  // Quiz's lesson picker (the Quiz slice owns this block).
+  if (intent === 'quiz') return (
+    <QuizHome
+      catalog={catalog}
+      continueItem={continueItem}
+      shortcut={shortcut}
+      query={query}
+      onQuery={setQuery}
+      onMix={startMix}
+      onOpen={(item) => openLesson(item, 'check')}
+      onReview={onReview}
+      trash={(item) => <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />}
+    />
+  );
 
-      {catalog.length > 0 ? (
-        <div className="history-tools">
-          {intent === 'quiz' && catalog.length > 1 ? (
-            <button className="primary-btn mix-start" type="button" onClick={startMix}>
-              Quiz me on everything <span>{Math.min(10, catalog.length)} questions</span>
-            </button>
-          ) : null}
-          {intent !== 'quiz' ? (
-            <div className="learn-filters" role="group" aria-label="Filter lessons"><SegThumb />
+  // Library (Mono, grid/README.md "Library"): one toolbar box, then cards three across or one box of rows.
+  const others = continueItem ? filtered.filter((item) => item.id !== continueItem.id) : filtered;
+  const shownCards = (continueItem ? 1 : 0) + others.length;
+  const listTitle = filter === 'understood' ? 'Understood' : filter === 'needs_review' ? 'Revisit' : 'All lessons';
+  return (
+    <div className="learn-page mlib">
+      <section className="m-box mlib-toolbar">
+        <div className="mlib-toolbar__text">
+          <h1 className="mono-title"><InkTitle text="Learning Library" /></h1>
+          <p className="mono-lead">Saved explanations on this {deviceName}, with source and freshness where we have it.</p>
+        </div>
+        {catalog.length > 0 ? (
+          <div className="mlib-toolbar__tools">
+            <div className="m-seg" role="group" aria-label="Filter lessons">
               {([
                 ['all', 'All', counts.all],
                 ['understood', 'Understood', counts.understood],
                 ['needs_review', 'Revisit', counts.needs_review],
               ] as const).map(([id, label, n]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={filter === id}
-                  className={filter === id ? 'on' : ''}
-                  onClick={() => setFilter(id)}
-                >
-                  {label}<em>{n}</em>
+                <button key={id} type="button" className={`m-seg__item${filter === id ? ' is-on' : ''}`} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+                  {label}<span className="mlib-count">{n}</span>
                 </button>
               ))}
             </div>
-          ) : null}
-          <label className="history-search">
-            <span className="sr-only">Search your explanations</span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your library" />
-          </label>
-        </div>
-      ) : null}
-
-      {continueItem ? (
-        <button type="button" className="history-continue" onClick={() => openLesson(continueItem, intent === 'quiz' ? 'check' : continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
-          <span className="history-continue__text">
-            <span className="history-continue__kicker">{intent === 'quiz' ? 'Check understanding' : 'Continue where you left off'}</span>
-            <span className="history-continue__lesson">
-              <strong>{continueItem.title}</strong>
-              {continueItem.file || continueItem.project ? <span>{continueItem.file || continueItem.project}</span> : null}
-            </span>
-          </span>
-          <span className="history-continue__go" aria-hidden="true"><LineIcon d="M8 5l5 5-5 5" /></span>
-        </button>
-      ) : null}
+            <label className="m-search mlib-search">
+              <LineIcon d={SEARCH_ICON} />
+              <span className="sr-only">Search your explanations</span>
+              <input className="m-input m-input--pill" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your library" />
+            </label>
+            <div className="m-seg mlib-view" role="group" aria-label="View">
+              {([['list', 'List', LIST_ICON], ['grid', 'Grid', GRID_ICON]] as const).map(([id, label, d]) => (
+                <button key={id} type="button" className={`m-seg__item${view === id ? ' is-on' : ''}`} aria-pressed={view === id} aria-label={label} title={label} onClick={() => chooseView(id)}>
+                  <LineIcon d={d} />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       {catalog.length === 0 ? (
-        <LearningEmpty
-          title={intent === 'quiz' ? 'Nothing to check yet.' : 'Nothing saved yet.'}
-          detail={`Select code and press ${shortcut}. After an explanation finishes, it lands here.`}
-          onReview={onReview}
-        />
-      ) : filtered.length === 0 ? (
-        query.trim() ? (
-          <div className="learn-no-match">
-            <p className="muted" role="status">No lessons match “{query.trim()}”{filter === 'all' ? '' : ' in this filter'}.</p>
-            <button type="button" className="soft-btn" onClick={() => setQuery('')}>Clear search</button>
-          </div>
-        ) : (
-          <p className="muted" role="status">Nothing in this filter.</p>
-        )
-      ) : intent === 'quiz' ? (
-        <div className="lib-feed" ref={feedRef} data-m-settled={settled || undefined}>
-          <div className="lib-group__rows">
+        <section className="m-box mlib-empty">
+          <Buddy mood="sleepy" size={48} />
+          <h2>Nothing saved yet.</h2>
+          <p>Select code and press {shortcut}. After an explanation finishes, it lands here.</p>
+          <button type="button" className="m-btn m-btn--filled" onClick={onReview}>Explain some code</button>
+        </section>
+      ) : filtered.length === 0 && (view === 'list' || !continueItem) ? (
+        <section className="m-box mlib-empty mlib-empty--quiet" role="status">
+          {query.trim() ? (
+            <>
+              <p>No lessons match “{query.trim()}”{filter === 'all' ? '' : ' in this filter'}.</p>
+              <button type="button" className="m-btn m-btn--outlined m-btn--small" onClick={() => setQuery('')}>Clear search</button>
+            </>
+          ) : <p>Nothing in this filter.</p>}
+        </section>
+      ) : view === 'grid' ? (
+        <div className="m-grid m-grid--thirds mlib-cards" ref={feedRef} data-m-settled={settled || undefined}>
+          {continueItem ? (
+            <article className="m-box mlib-card mlib-card--resume">
+              <div className="mlib-card__head">
+                <div className="mlib-card__titles">
+                  <span className="mlib-card__kicker">Continue where you left off</span>
+                  <h2 className="mlib-card__title">{continueItem.title}</h2>
+                  <span className="mlib-card__where">{lessonWhere(continueItem)}</span>
+                </div>
+                <button type="button" className="mlib-card__go" aria-label={`Continue ${continueItem.title}`} onClick={() => openLesson(continueItem, continueItem.outcome === 'needs_review' ? 'restudy' : 'read')}>
+                  <LineIcon d={CHEVRON} />
+                </button>
+              </div>
+              {continueItem.code ? <pre className="mlib-code"><code>{codeHead(continueItem.code, 14)}</code></pre> : <div className="mlib-code mlib-code--none" />}
+              <footer className="mlib-card__foot">
+                <time dateTime={continueItem.ts}>{shortDate(continueItem.ts)}</time>
+                <TrashBtn label={`Remove ${continueItem.title}`} onClick={() => void forgetLesson(continueItem.id)} />
+              </footer>
+            </article>
+          ) : null}
+          {others.map((item) => (
+            <article key={item.id} className="m-box mlib-card">
+              <div className="mlib-card__head">
+                <div className="mlib-card__titles">
+                  <h2 className="mlib-card__title">{item.title}</h2>
+                  <span className="mlib-card__where">{lessonWhere(item)}</span>
+                </div>
+                <StatusChip outcome={item.outcome} />
+              </div>
+              {item.code ? <pre className="mlib-code"><code>{codeHead(item.code, 14)}</code></pre> : <div className="mlib-code mlib-code--none" />}
+              <footer className="mlib-card__foot">
+                <time dateTime={item.ts}>{shortDate(item.ts)}</time>
+                <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />
+                <button type="button" className="m-link" aria-label={`Open ${item.title}`} onClick={() => openLesson(item)}>Open<LineIcon d={CHEVRON} /></button>
+              </footer>
+            </article>
+          ))}
+          {shownCards < 6 ? (
+            <div className="m-box mlib-card mlib-card--next">
+              <Buddy mood="idle" size={48} />
+              <h2>Explain something new</h2>
+              <p>Select code and press {shortcut}. After an explanation finishes, it lands here.</p>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <section className="m-box m-box--flush mlib-list">
+          <header className="m-box__title"><h2>{listTitle}</h2><span className="m-box__meta">{filtered.length === 1 ? '1 lesson' : `${filtered.length} lessons`}</span></header>
+          <div className="mlib-rows" ref={feedRef} data-m-settled={settled || undefined}>
             {filtered.map((item) => (
-              <div key={item.id} className="survey-line">
-                <button type="button" className="survey-pick" onClick={() => openLesson(item)}>
-                  <LineIcon className="lib-row__icon" d={IC.quiz} />
-                  <span className="survey-pick__body">
-                    <strong>{item.title}</strong>
-                    <span>{item.file || item.project || item.meta || linesLabel(item.lines)}</span>
+              <div key={item.id} className="m-row mlib-row">
+                <button type="button" className="mlib-row__open" onClick={() => openLesson(item)}>
+                  <span className="mlib-row__icon"><LineIcon d={IC.library} /></span>
+                  <span className="m-row__main">
+                    <strong className="m-row__title">{item.title}</strong>
+                    <span className="m-row__meta">{lessonWhere(item)}</span>
                   </span>
-                  <span className="survey-pick__day">{dayGroup(item.ts)}</span>
-                  <span className="survey-pick__go">Check understanding</span>
+                  <code className="mlib-row__code">{codeHead(item.code, 1)}</code>
+                  <time className="mlib-row__date" dateTime={item.ts}>{shortDate(item.ts)}</time>
+                  <StatusChip outcome={item.outcome} />
+                  <LineIcon className="mlib-row__chev" d={CHEVRON} />
                 </button>
                 <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />
               </div>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="lib-feed" ref={feedRef} data-m-settled={settled || undefined}>
-          {groups.map(([label, items]) => (
-            <section key={label} className="lib-group">
-              <h2 className="lib-group__label">{label}</h2>
-              <div className="lib-group__rows">
-                {items.map((item) => (
-                  <div key={item.id} className="lib-line">
-                    <button type="button" className="lib-row" onClick={() => openLesson(item)}>
-                      <LineIcon className="lib-row__icon" d={IC.study} />
-                      <span className="lib-row__body">
-                        <strong>{item.title}</strong>
-                        <span className="know-meta">
-                          <span>{item.project || `This ${deviceName}`}</span>
-                          <span>{item.file || item.scope || 'Selection'}</span>
-                        </span>
-                      </span>
-                      <time dateTime={item.ts}>{clockTime(item.ts)}</time>
-                      <span className="status-pill" data-tone={item.outcome === 'needs_review' ? 'review' : 'current'}>
-                        {item.outcome === 'needs_review' ? 'Review' : 'Current'}
-                      </span>
-                    </button>
-                    <TrashBtn label={`Remove ${item.title}`} onClick={() => void forgetLesson(item.id)} />
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        </section>
       )}
     </div>
   );

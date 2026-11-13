@@ -112,13 +112,6 @@
 :root[data-ui="v3"] .nav button::before,
 :root[data-ui="v3"] .nav button::after { display: none; }
 
-:root[data-ui="v3"] .sync-state {
-  display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 4px 10px; border: 0; background: transparent;
-  color: var(--v-faint); font: 450 12px var(--font-sans);
-}
-:root[data-ui="v3"] .sync-state__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--v-faint); box-shadow: none; }
-:root[data-ui="v3"] .sync-state--synced .sync-state__dot { background: var(--v-good); }
-
 :root[data-ui="v3"] .side-usage {
   display: grid; gap: 7px; width: 100%; margin: 0 0 4px; padding: 10px; text-align: left;
   border: 1px solid var(--v-line); border-radius: var(--v-radius-sm); background: var(--v-surface); cursor: pointer;
@@ -159,7 +152,6 @@
   box-shadow: var(--v-shadow);
   backdrop-filter: none;
 }
-:root[data-ui="v3"] .layout--side-hidden .content { margin-left: 8px; }
 :root[data-ui="v3"] .content-tools { top: 10px; right: 14px; }
 :root[data-ui="v3"] .theme-toggle {
   width: 30px; height: 30px; border: 1px solid transparent; border-radius: 8px; background: transparent;
@@ -341,12 +333,6 @@
 :root[data-ui="v3"] .briefings__scopes button { border: 1px solid var(--v-line); border-radius: 999px; background: var(--v-surface); color: var(--v-muted); box-shadow: none; }
 :root[data-ui="v3"] .briefings__scopes button.on,
 :root[data-ui="v3"] .briefings__scopes button[aria-pressed="true"] { border-color: var(--v-ink); color: var(--v-ink); }
-:root[data-ui="v3"] .heat i, :root[data-ui="v3"] .heat-legend i { background: var(--v-line-2); }
-:root[data-ui="v3"] .heat .a1, :root[data-ui="v3"] .heat-legend .a1 { background: #d9d5cc; }
-:root[data-ui="v3"] .heat .a2, :root[data-ui="v3"] .heat-legend .a2 { background: #b2ada2; }
-:root[data-ui="v3"] .heat .a3, :root[data-ui="v3"] .heat-legend .a3 { background: #77736a; }
-:root[data-ui="v3"] .heat .a4, :root[data-ui="v3"] .heat-legend .a4 { background: #3a3833; }
-:root[data-ui="v3"] .heat .a5, :root[data-ui="v3"] .heat-legend .a5 { background: #1b1a17; }
 :root[data-ui="v3"] .feed-empty h2,
 :root[data-ui="v3"] .stub h2,
 :root[data-ui="v3"] .page .empty h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -0.02em; }

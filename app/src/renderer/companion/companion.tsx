@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { Learn } from './learn';
-import { linesLabel } from '../../core/linesLabel';
 import { Chat } from './chat';
 import { Gift } from './gift';
 import { configureTones, playTone, playUiTone } from '../shared/tones';
@@ -13,7 +12,7 @@ import { deviceName, isMac, isWindows, modKey, platformAttr, reviewKeyHint } fro
 import { SearchPalette, type SearchPaletteGroup } from './searchPalette';
 import { GoogleMark } from '../shared/googleMark';
 import { Briefings } from './briefings';
-import type { KnowledgeObject } from '../../core/knowledge';
+import { Progress } from './momentum';
 import '../shared/tokens.css';
 import { AccountMenu } from './accountMenu';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
@@ -23,7 +22,7 @@ import { VibeBubble } from '../shared/vibeBubble';
 import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
 import { accessibilityRow, type AccessibilityState } from './settingsRows';
 import { FADE_OPACITY } from '../widget/clickAway';
-import { Home, type TodayGoal } from './home';
+import { Home } from './home';
 import { IC } from './icons';
 import { InkTitle } from './inkTitle';
 import { NAV, NAV_PINNED, NAV_SPACES, pageLabel, type PageId } from './nav';
@@ -40,6 +39,7 @@ import { SharksBackdrop } from '../shared/sharks/SharksBand';
 import { CountUp } from '../shared/countUp';
 import { SlidingPill } from '../shared/slidingThumb';
 import { signalFirstScreen } from './firstScreen';
+import { ShellContext, type ShellApi } from '../shared/shell';
 
 /** The last-known "Start animation" setting, read before the settings arrive so the stage starts with the first screen. */
 const START_ANIMATION_KEY = 'unvibe.startAnimation';
@@ -47,6 +47,15 @@ const START_ANIMATION_KEY = 'unvibe.startAnimation';
 const USAGE_WAIT_MS = 300;
 /** Main says whether this launch opens on the start stage (windows.ts createCompanion), for the loading frame. */
 const FIRST_FRAME_STAGE = new URLSearchParams(window.location.search).get('first') === 'stage';
+/** Mono's frame (OPTIONS.md "A Rail", "Both sides collapse"): the left side open and folded, the width under which a
+ *  drag snaps to the rail, the right side, the narrowest main column beside it, and the drawer breakpoint (companion.css). */
+const RAIL_OPEN_W = 216;
+const RAIL_W = 56;
+const RAIL_SNAP = 178;
+const RIGHT_W = 296;
+const MAIN_MIN = 400;
+const DRAWER_MAX = 640;
+const RIGHT_KEYS = isMac ? '⇧⌘\\' : 'Ctrl+Shift+\\';
 
 interface Feature { icon: string; t: string; d: string }
 interface PageDef { id: PageId; icon: string; lead: string; features: Feature[] }
@@ -95,6 +104,7 @@ interface Settings {
   aiProvider: 'gemini' | 'anthropic' | 'openai' | 'grok' | 'deepseek' | 'kimi';
   sidebarWidth: number;
   sidebarHidden: boolean;
+  rightPaneHidden: boolean;
   shareSetupProgress: boolean;
   nearbyFiles: boolean;
   features: {
@@ -237,6 +247,17 @@ const PAGES: Record<Exclude<PageId, 'Home' | 'Progress' | 'Plan' | 'Gift' | 'Lea
 
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 20 20" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+}
+
+/** The side buttons' icon: a square with a line 3.5 units in from the side it controls; the strip beside the line is
+ *  filled while that side is open (OPTIONS.md "Both sides collapse"). */
+function PaneIcon({ side, open }: { side: 'left' | 'right'; open: boolean }) {
+  return (
+    <svg className="pane-icon" viewBox="0 0 20 20" aria-hidden="true">
+      {open ? <rect className="pane-icon__strip" x={side === 'left' ? 4 : 12.5} y={4} width={3.5} height={12} /> : null}
+      <path d={side === 'left' ? 'M4 4h12v12H4z M7.5 4v12' : 'M4 4h12v12H4z M12.5 4v12'} />
+    </svg>
+  );
 }
 
 /** Remounts on `animKey` so CSS fade-in plays on every navigation / step change. */
@@ -811,58 +832,6 @@ function LoginScreen({ onSignedIn, onSkip, shortcut, notice = '' }: { onSignedIn
     </div>
   );
 }
-
-function Progress({ profile }: { profile: Profile | null }) {
-  const [knowledge, setKnowledge] = useState<KnowledgeObject[] | null>(null);
-  useEffect(() => {
-    void window.unvibe.listKnowledge().then((result) => {
-      const next = result as { ok?: boolean; items?: KnowledgeObject[] };
-      if (next?.ok) setKnowledge(next.items ?? []);
-    });
-  }, []);
-  const heat = profile?.heat ?? Array.from({ length: 182 }, () => 0);
-  const coverage = profile && profile.linesReviewed > 0
-    ? Math.round((profile.linesUnderstood / profile.linesReviewed) * 100)
-    : null;
-  const currentKnowledge = knowledge ? knowledge.filter((item) => item.freshnessStatus === 'CURRENT').length : 0;
-  // Like coverage: the share as the figure, the count under it (Design P3: the card repeated "5 of 6 current").
-  const freshness = knowledge && knowledge.length
-    ? { share: Math.round((currentKnowledge / knowledge.length) * 100), count: `${currentKnowledge} of ${knowledge.length} current` }
-    : null;
-  return (
-    <>
-      <div className="topline"><h1><InkTitle text="Momentum" /></h1></div>
-      <p className="lead">What you have actually understood on this {deviceName}. No invented scores.</p>
-      <div className="metrics">
-        <article className="metric-card"><span className="v">{coverage !== null ? <><CountUp value={coverage} />%</> : '–'}</span><span className="l">Understanding coverage</span><span className="note">{coverage !== null ? `${profile?.linesUnderstood ?? 0} of ${linesLabel(profile?.linesReviewed ?? 0)}` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{freshness ? <><CountUp value={freshness.share} />%</> : '–'}</span><span className="l">Knowledge freshness</span><span className="note">{freshness?.count ?? 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? <CountUp value={profile.reviews} /> : '–'}</span><span className="l">Explanations saved</span><span className="note">{profile ? `${profile.needsReview} still to revisit` : 'Not enough data yet.'}</span></article>
-        <article className="metric-card"><span className="v">{profile ? <CountUp value={profile.needsReview} /> : '–'}</span><span className="l">Marked to revisit</span><span className="note">{profile && profile.needsReview > 0 ? 'Saved to check again' : 'Not enough data yet.'}</span></article>
-      </div>
-      <div className="panel-card">
-        <div className="ph"><span className="t">Explained per day</span><span className="m">last 6 months</span></div>
-        <div className="heat">{heat.map((lvl, i) => <i key={i} className={lvl ? `a${lvl}` : ''} />)}</div>
-        <div className="heat-legend"><span>Less</span><i /><i className="a1" /><i className="a2" /><i className="a3" /><i className="a4" /><i className="a5" /><span>More</span><span className="heat-legend__note">5, 25, 50, 100, 200 lines explained that day.</span></div>
-      </div>
-      <div className="two">
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Where you learn</span></div>
-          <div className="bars">
-            {(profile && profile.usage.length > 0 ? profile.usage : [{ label: 'Editors & IDEs', pct: 0 }, { label: 'Terminal', pct: 0 }, { label: 'Browser & docs', pct: 0 }]).map((u) => (
-              <div className="bar-row" key={u.label}><div className="bl"><span>{u.label}</span><span>{u.pct}%</span></div><div className="bar-track"><i style={{ width: `${u.pct}%` }} /></div></div>
-            ))}
-          </div>
-          <p className="soft-note">Unvibe notes which app you were in when you asked, never what you typed.</p>
-        </div>
-        <div className="panel-card" style={{ marginBottom: 0 }}>
-          <div className="ph"><span className="t">Understanding over time</span></div>
-          <div className="chart-empty">Your weekly curve of lines understood will draw itself here after a few days of reviewing.</div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 
 function PlanUsageBoard({ compact = false, signedIn, onSignedIn }: {
   compact?: boolean;
@@ -1530,12 +1499,18 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
 
           {tab === 'General' && (
             <>
+              <div className="settings-section-label" id="settings-group-you">You</div>
+              <div className="settings-group" role="group" aria-labelledby="settings-group-you">
               <div className="setrow"><div><div className="sl">Name</div><div className="sd">Chat greets you with Hello again, then this name.</div></div><input className="field setrow-field" aria-label="Name" value={settings.displayName ?? ''} onChange={(e) => void onSettings({ displayName: e.target.value })} autoComplete="given-name" /></div>
               <div className="setrow"><div><div className="sl">Email</div><div className="sd">Optional. Stays on this {deviceName} for your profile.</div></div><input className="field setrow-field" aria-label="Email" type="email" value={settings.profileEmail ?? ''} onChange={(e) => void onSettings({ profileEmail: e.target.value })} autoComplete="email" /></div>
+              </div>
+              <div className="settings-section-label" id="settings-group-device">This {deviceName}</div>
+              <div className="settings-group" role="group" aria-labelledby="settings-group-device">
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
-              <div className="setrow"><div><div className="sl">Sharks</div><div className="sd">The sharks that swim in when Unvibe opens, and the ones on Today and Ask Vibe. Drawn on this {deviceName}; nothing is downloaded.</div></div><Toggle label="Sharks" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
+              <div className="setrow"><div><div className="sl">Sharks</div><div className="sd">The sharks on the launch screen and behind every page of the main window. Drawn on this {deviceName}, nothing is downloaded.</div></div><Toggle label="Sharks" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow />
+              </div>
             </>
           )}
 
@@ -1619,6 +1594,19 @@ function App() {
   const [page, setPage] = useState<PageId>('Home');
   const [navOpen, setNavOpen] = useState(false);
   const toggleSideRef = useRef<() => void>(() => {});
+  const toggleRightRef = useRef<() => void>(() => {});
+  // The shell (shared/shell.tsx): pages publish their right side, fold the rail during a flow, or take the top bar.
+  const [rightPane, setRightPane] = useState<ReactNode | null>(null);
+  const [railFolded, setRailFolded] = useState(false);
+  const [topBar, setTopBar] = useState<ReactNode | null>(null);
+  const shellApi = useMemo<ShellApi>(() => ({ setRightPane, setRailFolded, setTopBar }), []);
+  /** The side's width while it is dragged (null otherwise); under RAIL_SNAP it previews the rail. */
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  /** The right side opened by hand while the window is too narrow for it (the saved setting is never changed for that). */
+  const [rightForced, setRightForced] = useState(false);
+  const [railTip, setRailTip] = useState<{ label: string; top: number } | null>(null);
+  const railTipTimer = useRef(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('General');
   const [toast, setToast] = useState('');
@@ -1627,7 +1615,6 @@ function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [history, setHistory] = useState<LearningItem[]>([]);
   const [queue, setQueue] = useState<LearningItem[]>([]);
-  const [today, setToday] = useState<TodayGoal | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ phase: 'local', pending: 0 });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [askDraft, setAskDraft] = useState('');
@@ -1636,8 +1623,8 @@ function App() {
   /** The service's note after a confirmed account deletion, shown on the sign-in screen until it is left. */
   const [deletionNotice, setDeletionNotice] = useState('');
   const [usageLine, setUsageLine] = useState<AppUsageLine | null>(null);
-  const [sideWidth, setSideWidth] = useState(232);
-  const sideLive = useRef(232);
+  const [sideWidth, setSideWidth] = useState(RAIL_OPEN_W);
+  const sideLive = useRef(RAIL_OPEN_W);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [lessonSeedId, setLessonSeedId] = useState<string | null>(null);
@@ -1655,18 +1642,17 @@ function App() {
         : { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString(), plan: 'local', selections: { used: 0, limit: 50, remaining: 50, resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() } });
     }, () => undefined);
     try {
-      const [acct, prof, hist, st, syncState, q, goal, appInfo, ownCode] = await Promise.all([
+      const [acct, prof, hist, st, syncState, q, appInfo, ownCode] = await Promise.all([
         window.unvibe.account() as Promise<Account>,
         window.unvibe.profile() as Promise<Profile>,
         window.unvibe.history(100) as Promise<LearningItem[]>,
         window.unvibe.getSettings() as Promise<Settings>,
         window.unvibe.syncStatus() as Promise<SyncStatus>,
         window.unvibe.reviewQueue(20) as Promise<LearningItem[]>,
-        window.unvibe.learningToday() as Promise<TodayGoal>,
         window.unvibe.appInfo(),
         window.unvibe.ownCodeStep(),
       ]);
-      setAccount(acct); setProfile(prof); setHistory(hist); setQueue(q); setToday(goal); setSettings(st); setSync(syncState);
+      setAccount(acct); setProfile(prof); setHistory(hist); setQueue(q); setSettings(st); setSync(syncState);
       setOwnCodeStep(ownCode);
       setInfo(appInfo);
       if (typeof st.sidebarWidth === 'number') {
@@ -1724,9 +1710,11 @@ function App() {
         setSettingsTab('General');
         setSettingsOpen(true);
       }
-      if ((event.metaKey || event.ctrlKey) && event.key === '\\') {
+      // ⌘\ / Ctrl+\ folds the rail; with Shift (the key then reads "|", so match the physical key) the right side.
+      if ((event.metaKey || event.ctrlKey) && (event.code === 'Backslash' || event.key === '\\')) {
         event.preventDefault();
-        toggleSideRef.current();
+        if (event.shiftKey) toggleRightRef.current();
+        else toggleSideRef.current();
       }
       if (event.key === 'Escape') setSearchOpen(false);
     };
@@ -1796,8 +1784,8 @@ function App() {
     return signalFirstScreen(() => window.unvibe.companionPainted());
   }, [gate]);
   const introOn = intro === 'swim' || intro === 'leaving';
-  // The in-app sharks (Preston 11 Nov) follow the same switch as the stage: a calm background on the right of Today
-  // and Ask Vibe only, mounted by the page shell below.
+  // The sharks behind everything (Design r3-flat OPTIONS.md, Mono) follow the same switch as the stage: one
+  // window-sized canvas under every page of the main window, mounted as the layout's first child below.
   const sharks = startAnimation !== false;
   // Ask for a rating once, after the third explanation, when it means something: only once an explanation has
   // finished or a lesson was marked understood in this session (the counts moved past what they were when the app
@@ -1860,7 +1848,7 @@ function App() {
   const navButton = (p: { id: PageId; icon: string }, on: boolean) => {
     const label = pageLabel(p.id);
     return (
-      <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} title={sideCompact ? label : undefined} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
+      <button key={p.id} type="button" className={on ? 'on' : ''} aria-current={on ? 'page' : undefined} aria-label={label} data-tip={label} onClick={() => { setAskSeed(''); setLessonSeedId(null); setPage(p.id); setNavOpen(false); }}>
         <Icon d={p.icon} /><span className="nav-label">{label}</span>
       </button>
     );
@@ -1868,9 +1856,64 @@ function App() {
   const chatLabel = settings?.useOwnAi
     ? settings.aiProvider.charAt(0).toUpperCase() + settings.aiProvider.slice(1)
     : 'Unvibe AI';
-  const sideCompact = sideWidth < 178;
+  // The A Rail: `sidebarHidden` now means "folded to the 56 px rail"; a page's useRailFolded folds it without saving;
+  // a saved width under RAIL_SNAP (the old compact side) is the rail too. Below the drawer breakpoint the side is the
+  // drawer, always open-width.
   const sideHidden = settings?.sidebarHidden ?? false;
-  toggleSideRef.current = () => void applySettings({ sidebarHidden: !sideHidden });
+  const drawer = windowWidth <= DRAWER_MAX;
+  const rail = !drawer && (dragWidth !== null ? dragWidth < RAIL_SNAP : sideHidden || railFolded || sideWidth < RAIL_SNAP);
+  const railWidth = rail ? RAIL_W : dragWidth ?? sideWidth;
+  toggleSideRef.current = () => {
+    if (drawer) { setNavOpen((open) => !open); return; }
+    if (!rail) { void applySettings({ sidebarHidden: true }); return; }
+    setRailFolded(false);
+    if (sideHidden || sideWidth < RAIL_SNAP) {
+      if (sideWidth < RAIL_SNAP) { sideLive.current = RAIL_OPEN_W; setSideWidth(RAIL_OPEN_W); }
+      void applySettings({ sidebarHidden: false, ...(sideWidth < RAIL_SNAP ? { sidebarWidth: RAIL_OPEN_W } : {}) });
+    }
+  };
+  // The right side: shown when the page published one, the setting allows it, and the main column keeps 400 px beside
+  // it (8 px insets and gaps around rail, main column and side); otherwise it closes by itself without saving.
+  const hasRight = rightPane !== null && rightPane !== undefined && rightPane !== false;
+  const rightHidden = settings?.rightPaneHidden ?? false;
+  const cramped = windowWidth - (drawer ? 0 : railWidth + 8) - RIGHT_W - 24 < MAIN_MIN;
+  const rightOpen = hasRight && !rightHidden && (!cramped || rightForced);
+  const rightLabel = `${rightOpen ? 'Hide' : 'Show'} side panel (${RIGHT_KEYS})`;
+  toggleRightRef.current = () => {
+    if (!hasRight) return;
+    if (rightOpen) {
+      if (cramped) setRightForced(false);
+      else void applySettings({ rightPaneHidden: true });
+      return;
+    }
+    if (cramped) setRightForced(true);
+    if (rightHidden) void applySettings({ rightPaneHidden: false });
+  };
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  useEffect(() => { if (!cramped) setRightForced(false); }, [cramped]);
+  useEffect(() => {
+    if (rail) return;
+    window.clearTimeout(railTipTimer.current);
+    setRailTip(null);
+  }, [rail]);
+  // The rail's tooltip (folded only): the place's name after 400 ms of hover, at once on keyboard focus, and at once
+  // when moving from one row to the next while one shows.
+  const showRailTip = (target: EventTarget) => {
+    const el = (target as HTMLElement).closest<HTMLElement>('[data-tip]');
+    window.clearTimeout(railTipTimer.current);
+    if (!el) { setRailTip(null); return null; }
+    return () => {
+      const box = el.getBoundingClientRect();
+      setRailTip({ label: el.dataset.tip ?? '', top: box.top + box.height / 2 });
+    };
+  };
+  const hideRailTip = () => { window.clearTimeout(railTipTimer.current); setRailTip(null); };
+  const syncLine = sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync';
+  const syncRetry = sync.phase === 'offline' || sync.phase === 'error' || sync.phase === 'auth_required';
   const searchGroups = (() => {
     const query = searchQuery.trim().toLowerCase();
     const matches = (value: string) => !query || value.toLowerCase().includes(query);
@@ -1908,20 +1951,28 @@ function App() {
     ].filter((group) => group.items.length > 0) as SearchPaletteGroup[];
   })();
 
+  // Drag to resize: under RAIL_SNAP the side snaps to the 56 px rail (saved as sidebarHidden, the open width kept);
+  // from the rail, a drag past it opens the side at that width. A click without a move changes nothing.
   const startSideResize = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     const startX = event.clientX;
-    const startW = sideLive.current;
+    const startW = rail ? RAIL_W : sideLive.current;
+    let last = startW;
     const move = (moveEvent: PointerEvent) => {
-      const next = Math.min(340, Math.max(168, Math.round(startW + (moveEvent.clientX - startX))));
-      sideLive.current = next;
-      setSideWidth(next);
+      last = Math.min(340, Math.max(RAIL_W, Math.round(startW + (moveEvent.clientX - startX))));
+      setDragWidth(last);
     };
     const up = () => {
       document.documentElement.classList.remove('is-side-resizing');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      void applySettings({ sidebarWidth: sideLive.current });
+      setDragWidth(null);
+      if (last === startW) return;
+      if (last < RAIL_SNAP) { void applySettings({ sidebarHidden: true }); return; }
+      setRailFolded(false);
+      sideLive.current = last;
+      setSideWidth(last);
+      void applySettings({ sidebarHidden: false, sidebarWidth: last });
     };
     document.documentElement.classList.add('is-side-resizing');
     window.addEventListener('pointermove', move);
@@ -1952,58 +2003,92 @@ function App() {
 
   // The stage starts with the first real screen: the window is still hidden before it (#208).
   return (
-    <>
+    <ShellContext.Provider value={shellApi}>
       {introOn ? <SharksIntro onPhase={setIntro} /> : null}
       <ConsentDialog buttonClass="field-btn" />
       {/* Drag strip only. Clickable controls live in the topbar: macOS drag regions swallow
           clicks on anything layered over them, whatever the z-index. */}
       <div className="titlebar" />
-      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${sideHidden ? ' layout--side-hidden' : ''}${intro === 'leaving' || intro === 'gone' ? ' layout--arrive' : ''}`} inert={intro === 'swim'}>
+      <div className={`layout${navOpen ? ' layout--nav-open' : ''}${rail ? ' layout--rail' : ''}${intro === 'leaving' || intro === 'gone' ? ' layout--arrive' : ''}`} inert={intro === 'swim'}>
+        {sharks ? <SharksBackdrop /> : null}
         {navOpen ? <button type="button" className="nav-scrim" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-        <aside id="companion-sidebar" hidden={sideHidden} className={`side fade-in fade-in--side${sideCompact ? ' side--compact' : ''}`} style={{ width: sideWidth }}>
-          <div className="brand"><Buddy size={26} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
-          <button type="button" className="side-search" onClick={() => { setSearchQuery(''); setSearchOpen(true); }} aria-label="Search">
-            <Icon d="M8.5 14a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z M12.5 12.5L16 16" />
+        <aside
+          id="companion-sidebar"
+          aria-label="Sidebar"
+          className={`side fade-in fade-in--side${rail ? ' side--rail' : ''}`}
+          style={drawer ? undefined : { width: railWidth }}
+          onPointerOver={(event) => {
+            if (!rail) return;
+            const show = showRailTip(event.target);
+            if (show) { if (railTip) show(); else railTipTimer.current = window.setTimeout(show, 400); }
+          }}
+          onPointerLeave={hideRailTip}
+          onFocus={(event) => {
+            if (!rail || !(event.target as HTMLElement).matches(':focus-visible')) return;
+            showRailTip(event.target)?.();
+          }}
+          onBlur={hideRailTip}
+        >
+          <div className="rail-head">
+            <button
+              type="button"
+              className="rail-collapse"
+              aria-controls="companion-sidebar"
+              aria-expanded={drawer ? navOpen : !rail}
+              aria-label={drawer ? 'Close menu' : rail ? 'Show sidebar' : 'Hide sidebar'}
+              title={drawer || rail ? undefined : `Hide sidebar (${modKey}\\)`}
+              data-tip={`Show sidebar (${modKey}\\)`}
+              onClick={() => toggleSideRef.current()}
+            >
+              <PaneIcon side="left" open={!rail} />
+            </button>
+            <div className="brand rail-fade"><Buddy size={22} label="Vibe" /><span className="name">Unvibe</span><span className="badge">Beta</span></div>
+          </div>
+          <button type="button" className="side-search" onClick={() => { setNavOpen(false); setSearchQuery(''); setSearchOpen(true); }} aria-label="Search" data-tip="Search">
+            <Icon d="M9 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z M13.5 13.5 17 17" />
             <span className="nav-label">Search</span>
-            <kbd>{modKey}K</kbd>
+            <kbd className="rail-fade">{modKey}K</kbd>
           </button>
           {/* One sliding pill for both navs (motion row 2): it lives in the wrapper so Today → Library is one move. */}
           <div className="side-navs">
             <SlidingPill />
-            <nav className="nav nav--top">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
-            <p className="side-spaces">Learn</p>
-            <nav className="nav nav--spaces">
+            <nav className="nav nav--top" aria-label="Pages">{NAV_PINNED.map((p) => navButton(p, p.id === page))}</nav>
+            <p className="side-spaces"><span className="nav-label">Learn</span></p>
+            <nav className="nav nav--spaces" aria-label="Learn">
               {NAV_SPACES.map((p) => navButton(p, p.id === page || (p.id === 'Learn' && (page === 'Study' || page === 'History'))))}
             </nav>
           </div>
           <div className="spacer" />
-          {usageLine ? (
-            <button type="button" className="side-usage" onClick={() => setPage('Plan')} title="Plan and usage">
-              {/* The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct). */}
-              <span className="side-usage__row"><span>{usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`}</span><b><CountUp value={usageLine.remaining} /> left</b></span>
-              <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+          {usageLine ? (() => {
+            // The signed-out trial is Free too, but its 50 never refill, so it isn't called a plan (Security INFO 30 Oct).
+            const planText = usageLine.plan === 'trial' ? 'Free on this computer' : `${planLabel(usageLine.plan)} plan`;
+            return (
+              <button type="button" className={`side-usage${page === 'Plan' ? ' on' : ''}`} aria-current={page === 'Plan' ? 'page' : undefined} onClick={() => { setNavOpen(false); setPage('Plan'); }} aria-label={`${planText}, ${usageLine.remaining} left`} data-tip="Plan and usage">
+                <span className="side-usage__row">
+                  <span className="nav-label">{planText}</span>
+                  <b className="nav-label"><CountUp value={usageLine.remaining} /> left</b>
+                  <b className="side-usage__count" aria-hidden="true">{usageLine.remaining}</b>
+                </span>
+                <i className="side-usage__bar"><i style={{ width: `${usageLine.limit ? Math.min(100, (usageLine.used / usageLine.limit) * 100) : 0}%` }} /></i>
+              </button>
+            );
+          })() : null}
+          <div className="nav nav--foot">
+            {navButton({ id: 'Gift', icon: IC.gift }, page === 'Gift')}
+            <button type="button" className="side-settings" aria-label="Settings" data-tip="Settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
+              <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
+              <span className="nav-label">Settings</span>
             </button>
-          ) : null}
-          <button
-            className={`sync-state sync-state--${sync.phase}`}
-            aria-label={`Sync status: ${sync.phase}. ${sync.pending} pending.`}
-            onClick={() => void window.unvibe.retrySync()}
-            disabled={sync.phase === 'syncing' || sync.phase === 'local'}
-          >
-            <span className="sync-state__dot" />
-            <span className="sync-state__copy">{sync.phase === 'local' ? `Saved on this ${deviceName}` : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'synced' ? 'Synced' : sync.phase === 'auth_required' ? 'Sign in again' : 'Retry sync'}</span>
-            {sync.pending > 0 && sync.phase !== 'local' && <small>{sync.pending} pending</small>}
-          </button>
-          <button type="button" className="side-settings" onClick={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}>
-            <Icon d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M16.2 11.6l1.3 1-1.6 2.8-1.6-.6a6.3 6.3 0 0 1-1.6.9l-.3 1.7H9.2l-.3-1.7a6.3 6.3 0 0 1-1.6-.9l-1.6.6-1.6-2.8 1.3-1a6.4 6.4 0 0 1 0-1.8l-1.3-1 1.6-2.8 1.6.6a6.3 6.3 0 0 1 1.6-.9l.3-1.7h3.2l.3 1.7c.6.2 1.1.5 1.6.9l1.6-.6 1.6 2.8-1.3 1c.1.6.1 1.2 0 1.8z" />
-            <span className="nav-label">Settings</span>
-          </button>
+          </div>
+          <hr className="rail-hair" />
           <AccountMenu
             name={settings?.displayName?.trim() || info.user || 'You'}
             email={account?.email || settings?.profileEmail || undefined}
             planLabel={planLabel(usageLine?.plan)}
+            syncLine={syncLine}
+            syncPhase={sync.phase}
             signedIn={Boolean(account)}
-            compact={sideCompact}
+            rail={rail}
             version={info.version}
             onSettings={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
             onShortcuts={() => { setNavOpen(false); setSettingsTab('General'); setSettingsOpen(true); }}
@@ -2016,27 +2101,36 @@ function App() {
               const { acct } = await refresh();
               if (!acct) flash('Signed out. Your learning stays on this computer.');
             }}
+            onRetrySync={syncRetry ? () => void window.unvibe.retrySync() : undefined}
           />
-          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = 204; setSideWidth(204); void applySettings({ sidebarWidth: 204 }); }} />
+          <button type="button" className="side-resize" aria-label="Resize sidebar" title="Drag to resize, double-click to reset" onPointerDown={startSideResize} onDoubleClick={() => { sideLive.current = RAIL_OPEN_W; setSideWidth(RAIL_OPEN_W); setRailFolded(false); void applySettings({ sidebarWidth: RAIL_OPEN_W, sidebarHidden: false }); }} />
         </aside>
+        {railTip && rail ? <div className="rail-tip" role="tooltip" style={{ top: railTip.top }}>{railTip.label}</div> : null}
         <main className="content">
           <header className="topbar">
-            <button type="button" className="nav-toggle" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+            <button type="button" className="nav-toggle" aria-label="Open menu" aria-controls="companion-sidebar" aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
               <Icon d="M3 6h14 M3 10h14 M3 14h14" />
             </button>
-            <button type="button" className="topbar__side" aria-controls="companion-sidebar" aria-expanded={!sideHidden} aria-label={sideHidden ? 'Show sidebar' : 'Hide sidebar'} title={sideHidden ? `Show sidebar (${modKey}\\)` : `Hide sidebar (${modKey}\\)`} onClick={() => toggleSideRef.current()}>
-              <Icon d="M4 4h12v12H4z M7 4v12" />
-            </button>
-            <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
-            <span className="topbar__spacer" />
-            <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
-              <kbd>{shortcutLabel}</kbd><span>Explain</span>
-            </button>
+            {topBar ?? (
+              <>
+                <h2 id="companion-page-title" className="topbar__title">{pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page)}</h2>
+                <span className="topbar__spacer" />
+                <button type="button" className="topbar__explain" onClick={() => window.unvibe.companionReview()} disabled={!!usageLine && usageLine.remaining <= 0}>
+                  <kbd className="m-key">{shortcutLabel}</kbd><span>Explain</span>
+                </button>
+              </>
+            )}
+            {hasRight ? (
+              <button type="button" className="topbar__side topbar__side--right" aria-controls="companion-rightside" aria-expanded={rightOpen} aria-label={rightLabel} title={rightLabel} onClick={() => toggleRightRef.current()}>
+                <PaneIcon side="right" open={rightOpen} />
+              </button>
+            ) : null}
           </header>
-          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby="companion-page-title">
-            {sharks && (page === 'Home' || page === 'Chat') ? <SharksBackdrop /> : null}
+          <div className="content__row">
+          <div className="content__main">
+          <div className={`page${fillPage ? ' page--learn' : ''}${page === 'Home' ? ' page--home' : ''}`} tabIndex={0} role="region" aria-labelledby={topBar ? undefined : 'companion-page-title'} aria-label={topBar ? pageLabel(page === 'Study' || page === 'History' ? 'Learn' : page) : undefined}>
             <FadeIn animKey={page} stagger={!fillPage}>
-              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0, concepts: (profile?.conceptsFamiliar ?? 0) + (profile?.conceptsStrong ?? 0) }} today={today} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
+              {page === 'Home' ? <Home shortcut={shortcutLabel} shortcutKeys={shortcutKeys} userName={info.user} reviews={profile?.reviews ?? 0} understood={profile?.understood ?? 0} stats={{ reviews: profile?.reviews ?? 0, linesReviewed: profile?.linesReviewed ?? 0, linesUnderstood: profile?.linesUnderstood ?? 0 }} history={history} usage={usageLine} onPlan={() => setPage('Plan')} onLibrary={() => setPage('Learn')} onBriefs={() => setPage('Briefings')} onQuiz={() => setPage('Quiz')} onAsk={() => { setAskSeed(''); setPage('Chat'); }} />
                 : isLearnPage ? <Learn
                   key={`${page}:${lessonSeedId ?? ''}:${lessonSeedRevision}`}
                   history={history}
@@ -2075,11 +2169,19 @@ function App() {
               setAskDraft('');
               setPage('Chat');
             }}>
-              <span className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</span>
+              <Buddy size={24} />
               <input aria-label="Ask Unvibe" placeholder="Ask Vibe about your code…" value={askDraft} onChange={(event) => setAskDraft(event.target.value)} />
+              <kbd className="ask-dock__shortcut" aria-hidden="true">{shortcutLabel}</kbd>
               <button type="submit">{askDraft.trim() ? 'Ask ↵' : 'Ask Vibe'}</button>
             </form>
           )}
+          </div>
+          {hasRight ? (
+            <aside id="companion-rightside" className={`rightside${rightOpen ? '' : ' rightside--off'}`} aria-label="Side panel" inert={!rightOpen}>
+              {rightPane}
+            </aside>
+          ) : null}
+          </div>
         </main>
       </div>
       {searchOpen && !settingsOpen ? <SearchPalette groups={searchGroups} query={searchQuery} onQuery={setSearchQuery} onClose={() => setSearchOpen(false)} /> : null}
@@ -2093,7 +2195,7 @@ function App() {
       <UpdateCard />
       {feedbackOpen ? <FeedbackCard onClose={() => setFeedbackOpen(false)} /> : null}
       {toast && <div className={`toast${toastLeaving ? ' is-leaving' : ''}`} role="status">{toast}</div>}
-    </>
+    </ShellContext.Provider>
   );
 }
 

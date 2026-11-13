@@ -8,10 +8,10 @@ const noop = () => undefined;
 const base: Quiz = {
   phase: 'answering', question: 'When does fn run?', options: ['On the first call', 'Every 300 ms', 'Once, 300 ms after the last call', 'Never'], index: 1, total: 3, mode: 'scenario',
 };
-const card = (quiz: Quiz) => renderToStaticMarkup(createElement(QuizCard, { quiz, depth: 'Advanced', onAnswer: noop }));
+const card = (quiz: Quiz, pick: number | null = null) => renderToStaticMarkup(createElement(QuizCard, { quiz, depth: 'Advanced', pick, onPick: noop }));
 const graded = (over: Partial<Quiz>): Quiz => ({ ...base, phase: 'graded', choice: 2, answerIndex: 2, correct: true, rationale: 'Every call clears the old timer.', ...over });
 const verdict = (html: string) => /<p class="ob-verdict__line"[^>]*>(.*?)<\/p>/.exec(html)?.[1] ?? '';
-const actions = (quiz: Quiz) => [...renderToStaticMarkup(createElement(QuizActions, { quiz, onAnother: noop, onRetry: noop, onClose: noop }))
+const actions = (quiz: Quiz, pick: number | null = null) => [...renderToStaticMarkup(createElement(QuizActions, { quiz, pick, onCheck: noop, onAnother: noop, onRetry: noop, onClose: noop }))
   .matchAll(/<button[^>]*class="([^"]+)"[^>]*>(.*?)<\/button>/g)].map((m) => `${m[1]}:${m[2].replace(/<[^>]+>/g, '')}`);
 
 test('the kicker says which question this is, and what kind at which depth', () => {
@@ -35,10 +35,10 @@ test('each verdict is main\'s line, verbatim, with Vibe in the matching mood', (
   }
 });
 
-test('rows are lettered A–D; once graded the right one gets the check and a wrong pick the ×', () => {
+test('rows carry key tiles 1 to 4; once graded the right one gets the check, a wrong pick the × and the rest switch off', () => {
   const html = card(graded({ correct: false, choice: 0 }));
-  const rows = [...html.matchAll(/<button[^>]*class="(ob-opt[^"]*)"[^>]*><em aria-hidden="true">(.)<\/em>/g)].map((m) => `${m[1]}:${m[2]}`);
-  assert.deepEqual(rows, ['ob-opt is-picked is-wrong:A', 'ob-opt:B', 'ob-opt is-right:C', 'ob-opt:D']);
+  const rows = [...html.matchAll(/<button[^>]*class="(ob-opt[^"]*)"[^>]*><kbd class="ob-opt__key" aria-hidden="true">(.)<\/kbd>/g)].map((m) => `${m[1]}:${m[2]}`);
+  assert.deepEqual(rows, ['ob-opt is-picked is-wrong:1', 'ob-opt is-off:2', 'ob-opt is-right:3', 'ob-opt is-off:4']);
   assert.equal((html.match(/ob-opt__mark--right/g) ?? []).length, 1);
   assert.equal((html.match(/ob-opt__mark--wrong/g) ?? []).length, 1);
   assert.ok(!html.includes('✓'), 'JetBrains Mono has no ✓: the check is an icon');
@@ -60,9 +60,18 @@ test('the question can take focus and the rows are pressable until answered', ()
   assert.equal((card(graded({})).match(/<button[^>]*disabled=""/g) ?? []).length, 4);
 });
 
-test('the footer offers the next question or a way back, and nothing while a question is open', () => {
-  assert.deepEqual(actions(base), []);
-  assert.deepEqual(actions(graded({ index: 1 })), ['ob-btn:Another question', 'ob-btn ghost:Hide question']);
-  assert.deepEqual(actions(graded({ index: 3 })), ['ob-btn:Hide question']);
-  assert.deepEqual(actions({ phase: 'failed', error: 'x' }), ['ob-btn:Try again', 'ob-btn ghost:Hide']);
+test('a press selects a row without grading it', () => {
+  const html = card(base, 2);
+  const rows = [...html.matchAll(/<button[^>]*class="(ob-opt[^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(rows, ['ob-opt', 'ob-opt', 'ob-opt is-picked', 'ob-opt']);
+  assert.ok(!html.includes('ob-opt__mark'), 'nothing is marked before Check');
+});
+
+test('the footer offers Check while a question is open, then the next question or a way back', () => {
+  assert.deepEqual(actions(base), ['ob-btn ob-btn--small:Check↵']);
+  assert.match(renderToStaticMarkup(createElement(QuizActions, { quiz: base, pick: null, onCheck: noop, onAnother: noop, onRetry: noop, onClose: noop })), /Press 1 to 4, then Return.*disabled=""/);
+  assert.doesNotMatch(renderToStaticMarkup(createElement(QuizActions, { quiz: base, pick: 1, onCheck: noop, onAnother: noop, onRetry: noop, onClose: noop })), /disabled=""/);
+  assert.deepEqual(actions(graded({ index: 1 })), ['ob-btn ob-btn--small:Another question', 'ob-btn ob-btn--small ghost:Hide question']);
+  assert.deepEqual(actions(graded({ index: 3 })), ['ob-btn ob-btn--small:Hide question']);
+  assert.deepEqual(actions({ phase: 'failed', error: 'x' }), ['ob-btn ob-btn--small:Try again', 'ob-btn ob-btn--small ghost:Hide']);
 });

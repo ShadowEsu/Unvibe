@@ -9,17 +9,21 @@ export const NAV_PINNED: NavPage[] = [
   { id: 'Chat', icon: IC.chat },
 ];
 
-/** Under LEARN in the sidebar, all listed (Design's Spectral screens, from the 0.1.51-glass layout). */
+/** Under "Learn" in the rail (Mono's A Rail: Library, Quiz, Briefs, Momentum). */
 export const NAV_SPACES: NavPage[] = [
   { id: 'Learn', icon: IC.study },
   { id: 'Quiz', icon: IC.quiz },
   { id: 'Briefings', icon: IC.briefings },
   { id: 'Progress', icon: IC.progress },
-  { id: 'Plan', icon: IC.plan },
-  { id: 'Gift', icon: IC.gift },
 ];
 
-export const NAV = [...NAV_PINNED, ...NAV_SPACES];
+/** Plan and Share left the Learn group: the rail's plan card opens Plan, and Share sits with Settings at the foot. */
+export const NAV_FOOT: NavPage[] = [
+  { id: 'Gift', icon: IC.gift },
+  { id: 'Plan', icon: IC.plan },
+];
+
+export const NAV = [...NAV_PINNED, ...NAV_SPACES, ...NAV_FOOT];
 
 /** The name a page goes by in the sidebar and the top bar. */
 export function pageLabel(id: string): string {

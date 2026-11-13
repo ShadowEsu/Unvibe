@@ -514,11 +514,11 @@ export function companionPainted(win: BrowserWindow): void {
 }
 
 /**
- * The companion's own chrome (round 2 glass): the window background behind the first paint (the veil's flat colour),
- * and on Windows and Linux the min/max/close overlay. The overlay takes the ground's colour at the window's top-right
- * corner at 1180 × 780 (sampled from the renders), not a translucent one: Electron 36 ignores the overlay colour's
- * alpha on Linux (it painted black) and Windows is unverified, so a flat match is the safe choice (BOSS
- * 20261110-1331's white box). "system" follows the OS appearance.
+ * The companion's own chrome (Mono): the window background behind the first paint and, on Windows and Linux, the
+ * min/max/close overlay take the theme's ground (#ffffff / #000000) with the text colour for the symbols. Flat
+ * colours only: Electron 36 ignores the overlay colour's alpha on Linux (it painted black) and Windows is unverified.
+ * The top bar's box stops short of the overlay (mono-frame.css), so the strip sits on open ground. "system" follows
+ * the OS appearance.
  */
 export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors, stage = false): {
   background: string;
@@ -529,8 +529,8 @@ export function companionChrome(theme: ThemePreference, osDark = nativeTheme.sho
   if (stage) return { background: '#16122a', overlay: { color: '#17122f', symbolColor: '#f3f1fa', height: 40 } };
   const dark = theme === 'dark' || (theme === 'system' && osDark);
   return dark
-    ? { background: '#16122a', overlay: { color: '#1f1643', symbolColor: '#f3f1fa', height: 40 } }
-    : { background: '#f3f0fb', overlay: { color: '#cac0ec', symbolColor: '#15141a', height: 40 } };
+    ? { background: '#000000', overlay: { color: '#000000', symbolColor: '#f5f5f5', height: 40 } }
+    : { background: '#ffffff', overlay: { color: '#ffffff', symbolColor: '#111111', height: 40 } };
 }
 
 /**

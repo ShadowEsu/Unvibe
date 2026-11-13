@@ -141,21 +141,7 @@
 :root[data-ui="v3"] .history-search { border-radius: 12px; }
 :root[data-ui="v3"] .history-continue { color: var(--c-violet); font-weight: 700; }
 
-/* Quiz (survey) */
-:root[data-ui="v3"] .survey__card,
 :root[data-ui="v3"] .lesson-doc { border-radius: 20px; box-shadow: var(--v-shadow); border-color: var(--v-line); }
-:root[data-ui="v3"] .survey__kicker { color: var(--c-pink); font: 750 11px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; }
-:root[data-ui="v3"] .survey__progress { background: var(--v-line-2); border-radius: 999px; overflow: hidden; }
-:root[data-ui="v3"] .survey__progress i,
-:root[data-ui="v3"] .survey__progress span { background: var(--grad-warm); }
-:root[data-ui="v3"] .quiz-options button,
-:root[data-ui="v3"] .quiz-options li {
-  border: 1.5px solid var(--v-line); border-radius: 14px; background: var(--v-surface); transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-:root[data-ui="v3"] .quiz-options button:hover:not(:disabled) { border-color: var(--c-violet); background: rgb(124 92 255 / 0.05); transform: translateX(3px); }
-:root[data-ui="v3"] .quiz-opt-letter { background: rgb(124 92 255 / 0.1); color: var(--c-violet); border-radius: 8px; font-weight: 800; }
-:root[data-ui="v3"] .quiz-options .correct, :root[data-ui="v3"] .quiz-options [data-state="correct"] { border-color: var(--c-mint); background: rgb(18 184 134 / 0.08); }
-:root[data-ui="v3"] .quiz-options .wrong, :root[data-ui="v3"] .quiz-options [data-state="wrong"] { border-color: var(--c-pink); background: rgb(240 80 154 / 0.07); }
 :root[data-ui="v3"] .survey-pick__go { background: var(--grad); color: #fff; border: 0; }
 
 /* Briefings, Momentum, Plan */
@@ -163,11 +149,6 @@
   border-radius: 18px; box-shadow: var(--v-shadow); transition: transform 200ms var(--ease-emphatic), box-shadow 200ms ease;
 }
 :root[data-ui="v3"] .tile:hover, :root[data-ui="v3"] .briefings__card:hover { transform: translateY(-2px); }
-:root[data-ui="v3"] .heat .a1, :root[data-ui="v3"] .heat-legend .a1 { background: #ddd6fe; }
-:root[data-ui="v3"] .heat .a2, :root[data-ui="v3"] .heat-legend .a2 { background: #c4b5fd; }
-:root[data-ui="v3"] .heat .a3, :root[data-ui="v3"] .heat-legend .a3 { background: #a78bfa; }
-:root[data-ui="v3"] .heat .a4, :root[data-ui="v3"] .heat-legend .a4 { background: #7c5cff; }
-:root[data-ui="v3"] .heat .a5, :root[data-ui="v3"] .heat-legend .a5 { background: #5b3fd6; }
 :root[data-ui="v3"] .briefings__scopes button.on, :root[data-ui="v3"] .briefings__scopes button[aria-pressed="true"] { background: var(--grad); border-color: transparent; color: #fff; }
 
 /* Ask Vibe */
@@ -245,66 +226,6 @@
 :root[data-ui="v3"] .survey-pick__body strong { font-weight: 750; letter-spacing: -0.015em; }
 :root[data-ui="v3"] .survey-pick__go { border-radius: 999px; padding: 6px 12px; font-weight: 700; background: linear-gradient(135deg, #f472b6, #8b5cf6); }
 :root[data-ui="v3"] .survey-line .row-trash, :root[data-ui="v3"] .lib-line .row-trash { border-radius: 10px; }
-
-/* ── Quiz: a centered card with Vibe, roomy and colorful ─────────────────── */
-:root[data-ui="v3"] .learn-page--survey .lesson-doc { border-radius: 22px; background: rgb(255 255 255 / 0.9); }
-:root[data-ui="v3"] .survey { width: min(760px, 100%); margin: 0 auto; padding: 28px clamp(20px, 5cqw, 48px) 36px; display: grid; gap: 14px; }
-:root[data-ui="v3"] .survey__progress { height: 6px; border-radius: 999px; background: var(--v-line-2); overflow: hidden; }
-:root[data-ui="v3"] .survey__progress i { display: block; height: 100%; transform-origin: left; background: linear-gradient(90deg, #f472b6, #8b5cf6, #3b82f6); border-radius: inherit; transition: transform 500ms var(--ease-emphatic); }
-:root[data-ui="v3"] .survey__ticks { display: flex; gap: 6px; }
-:root[data-ui="v3"] .survey__ticks span { width: 22px; height: 6px; border-radius: 999px; background: var(--v-line); transition: background 300ms ease; }
-:root[data-ui="v3"] .survey__ticks span.on { background: var(--c-mint); }
-:root[data-ui="v3"] .survey__card, :root[data-ui="v3"] .survey__end, :root[data-ui="v3"] .survey__welcome {
-  display: grid; gap: 10px; padding: 26px 28px; border: 1px solid var(--v-line); border-radius: 20px;
-  background: var(--v-surface); box-shadow: var(--v-shadow); animation: v5RiseIn 460ms var(--ease-emphatic) both;
-}
-:root[data-ui="v3"] .survey__end { background: linear-gradient(140deg, rgb(18 184 134 / 0.10), rgb(124 92 255 / 0.08)), var(--v-surface); border-color: rgb(18 184 134 / 0.3); text-align: center; justify-items: center; }
-:root[data-ui="v3"] .survey__vibe { display: inline-flex; filter: drop-shadow(0 10px 16px rgb(91 60 220 / 0.3)); }
-:root[data-ui="v3"] .survey__vibe--small { justify-self: start; }
-:root[data-ui="v3"] .survey h2 { font-family: var(--font-sans); font-weight: 800; font-size: clamp(20px, 1.2rem + 0.6cqw, 26px); line-height: 1.25; letter-spacing: -0.03em; color: var(--v-ink); margin: 0; }
-:root[data-ui="v3"] .survey__kicker { margin: 0; }
-:root[data-ui="v3"] .survey__end .survey__kicker { color: var(--c-mint); }
-:root[data-ui="v3"] .survey__rationale, :root[data-ui="v3"] .survey__welcome > p { color: var(--v-muted); font-size: 14.5px; line-height: 1.6; margin: 0; }
-:root[data-ui="v3"] .survey__hint { color: var(--v-faint); font-size: 12px; margin: 2px 0 0; }
-:root[data-ui="v3"] .survey__nudge { color: var(--c-pink); font-weight: 600; font-size: 13px; margin: 2px 0 0; }
-:root[data-ui="v3"] .survey__modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 6px 0; }
-:root[data-ui="v3"] .survey__modes button {
-  display: grid; gap: 4px; text-align: left; padding: 14px 16px; border: 1.5px solid var(--v-line); border-radius: 16px;
-  background: var(--v-surface); cursor: pointer; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-:root[data-ui="v3"] .survey__modes button:hover { transform: translateY(-2px); border-color: rgb(124 92 255 / 0.4); }
-:root[data-ui="v3"] .survey__modes button:nth-child(1) { --m: #8b5cf6; }
-:root[data-ui="v3"] .survey__modes button:nth-child(2) { --m: #3b82f6; }
-:root[data-ui="v3"] .survey__modes button:nth-child(3) { --m: #f472b6; }
-:root[data-ui="v3"] .survey__modes button[aria-checked="true"], :root[data-ui="v3"] .survey__modes button.on {
-  border-color: var(--m); background: color-mix(in srgb, var(--m) 8%, var(--v-surface)); box-shadow: 0 10px 24px -16px var(--m);
-}
-:root[data-ui="v3"] .survey__modes button strong, :root[data-ui="v3"] .survey__modes button b { font-weight: 750; color: var(--v-ink); }
-:root[data-ui="v3"] .survey__modes button span, :root[data-ui="v3"] .survey__modes button small { color: var(--v-muted); font-size: 12.5px; line-height: 1.45; }
-:root[data-ui="v3"] .quiz-options { display: grid; gap: 8px; margin: 6px 0 0; }
-:root[data-ui="v3"] .quiz-options button {
-  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; opacity: 1;
-  color: var(--v-ink); font-size: 14px; font-weight: 550; animation: v5RiseIn 420ms var(--ease-emphatic) both;
-}
-:root[data-ui="v3"] .quiz-options button:nth-child(2) { animation-delay: 50ms; }
-:root[data-ui="v3"] .quiz-options button:nth-child(3) { animation-delay: 100ms; }
-:root[data-ui="v3"] .quiz-options button:nth-child(4) { animation-delay: 150ms; }
-:root[data-ui="v3"] .quiz-opt-letter { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; }
-:root[data-ui="v3"] .quiz-options button.correct .quiz-opt-letter { background: var(--c-mint); color: #fff; }
-:root[data-ui="v3"] .quiz-options button.wrong { animation: v5Shake 360ms ease both; }
-:root[data-ui="v3"] .quiz-options button.wrong .quiz-opt-letter { background: var(--c-pink); color: #fff; }
-:root[data-ui="v3"] .quiz-options button.dimmed { opacity: 0.45; }
-:root[data-ui="v3"] .quiz-code summary { color: var(--c-violet); font: 650 12px var(--font-sans); cursor: pointer; }
-:root[data-ui="v3"] .quiz-code { border: 1px dashed rgb(124 92 255 / 0.3); border-radius: 12px; padding: 8px 12px; }
-@keyframes v5Shake { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-@media (prefers-reduced-motion: reduce) { :root[data-ui="v3"] .quiz-options button, :root[data-ui="v3"] .survey__card, :root[data-ui="v3"] .survey__end, :root[data-ui="v3"] .survey__welcome { animation: none; } }
-:root[data-ui="v3"] .learn-page--survey .lesson-doc { border: 0; background: transparent; box-shadow: none; backdrop-filter: none; overflow: visible; max-height: none; height: auto; }
-:root[data-ui="v3"] .learn-page--survey { overflow-y: auto; }
-:root[data-ui="v3"] .quiz-code summary { display: list-item; font-size: 12.5px; line-height: 1.4; color: var(--c-violet); }
-:root[data-ui="v3"] .survey .survey__card { max-height: none; overflow: visible; }
-:root[data-ui="v3"] .survey .quiz-code { padding: 0; overflow: hidden; background: var(--v-surface); }
-:root[data-ui="v3"] .survey .quiz-code summary { display: block; padding: 9px 12px; font: 650 12.5px/1.4 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--c-violet); }
-:root[data-ui="v3"] .survey .survey__welcome, :root[data-ui="v3"] .survey .survey__card, :root[data-ui="v3"] .survey .survey__end { flex: 0 0 auto; min-height: auto; overflow: visible; }
 :root[data-ui="v3"] .plan-toggle { border-radius: 12px; background: var(--v-sunken); border-color: var(--v-line); }
 :root[data-ui="v3"] .plan-toggle button { color: var(--v-muted); border-radius: 9px; }
 :root[data-ui="v3"] .plan-toggle button.on { background: var(--grad); color: #fff; box-shadow: 0 6px 16px -8px rgb(91 60 220 / 0.6); }

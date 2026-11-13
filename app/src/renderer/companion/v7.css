@@ -120,9 +120,6 @@
   & .nav--spaces button:nth-child(6).on svg { background: var(--lilac); }
   & .nav button.on svg { color: var(--v-ink); }
 
-  /* "Saved on this Mac" is small text: #5c565c is 6.21:1 on the sidebar; the disabled fade would drop it under 4.5:1. */
-  & .sync-state { color: #5c565c; font-size: 12px; padding: 4px 8px; }
-  & .sync-state:disabled { opacity: 1; }
   & .side-usage { padding: 10px; border: 1.5px solid var(--v-line); background: var(--v-surface); backdrop-filter: none; border-radius: var(--v-radius-sm); box-shadow: none; }
   & .side-usage:hover { border-color: var(--v-edge-hi); }
   & .side-usage__row { font-size: 12px; color: var(--v-muted); }
@@ -142,7 +139,6 @@
     background: var(--v-surface); backdrop-filter: none; box-shadow: none;
     display: flex; flex-direction: column;
   }
-  & .layout--side-hidden .content { margin-left: 8px; }
   & .content-tools { display: none; }
 
   & .topbar {
@@ -279,50 +275,10 @@
   & .learn-filters button.on, & .learn-filters button[aria-pressed="true"] { background: var(--v-sel); border-color: var(--v-sel); color: var(--v-sel-ink); box-shadow: none; }
   & .history-continue { color: var(--v-ink); text-decoration: underline; text-decoration-color: var(--lime); text-decoration-thickness: 3px; text-underline-offset: 3px; }
 
-  /* Quiz */
-  & .learn-page--survey .lesson-doc { background: transparent; border: 0; }
-  & .survey__card, & .survey__welcome, & .survey__end {
-    padding: 22px 24px; border: 1.5px solid var(--v-edge); border-radius: 18px; background: var(--v-surface); box-shadow: var(--hard);
-  }
-  & .survey__end { background: color-mix(in srgb, var(--mint) 40%, var(--v-tint-base)); text-align: center; }
-  & .survey h2 { font: 800 22px/1.25 var(--font-display); letter-spacing: -0.03em; }
-  & .survey__kicker { color: var(--v-muted); font: var(--v-hand-style) 400 19px/1 var(--font-hand); letter-spacing: 0; text-transform: none; }
-  & .survey__end .survey__kicker { color: var(--v-good); }
-  & .survey__progress { height: 10px; border: 1.5px solid var(--v-edge); border-radius: 99px; background: var(--v-surface); }
-  & .survey__progress i { background: var(--lime); }
-  & .survey__ticks span { height: 8px; background: var(--v-line); }
-  & .survey__ticks span.on { background: var(--v-sel); }
-  & .survey__vibe { filter: none; }
-  & .survey__modes button { border: 1.5px solid var(--v-line); border-radius: 14px; background: var(--v-surface); box-shadow: none; }
-  & .survey__modes button:hover { transform: translateY(-2px); border-color: var(--v-edge-hi); }
-  & .survey__modes button[aria-checked="true"], & .survey__modes button.on { border-color: var(--v-edge-hi); background: color-mix(in srgb, var(--m, var(--lime)) 30%, var(--v-tint-base)); box-shadow: var(--hard-sm); }
-  & .survey__modes button:nth-child(1) { --m: var(--lime); }
-  & .survey__modes button:nth-child(2) { --m: var(--sky); }
-  & .survey__modes button:nth-child(3) { --m: var(--coral); }
-  & .survey__nudge { color: #c2410c; }
-  & .quiz-options button { border: 1.5px solid var(--v-line); border-radius: 12px; background: var(--v-surface); color: var(--v-ink); font-size: 14px; box-shadow: 0 2px 0 var(--v-line); }
-  & .quiz-options button:hover:not(:disabled) { border-color: var(--v-edge-hi); background: var(--v-sunken); transform: translateY(-1px); box-shadow: 0 3px 0 var(--v-edge); }
-  & .quiz-opt-letter { width: 26px; height: 26px; border: 1.5px solid var(--v-edge); border-radius: 7px; background: var(--v-surface); color: var(--v-ink); font: 800 12px var(--font-sans); }
-  & .quiz-options .correct, & .quiz-options [data-state="correct"] { border-color: var(--v-edge-hi); background: color-mix(in srgb, var(--mint) 50%, var(--v-tint-base)); }
-  & .quiz-options button.correct .quiz-opt-letter { background: var(--mint); color: var(--v-ink); }
-  & .quiz-options .wrong, & .quiz-options [data-state="wrong"] { border-color: var(--v-edge-hi); background: color-mix(in srgb, var(--coral) 40%, var(--v-tint-base)); }
-  & .quiz-options button.wrong .quiz-opt-letter { background: var(--coral); color: var(--v-ink); }
-  & .quiz-code { border: 1.5px dashed var(--v-line); border-radius: 10px; background: var(--v-sunken); }
-  & .survey .quiz-code { background: var(--v-sunken); }
-  & .quiz-code summary, & .survey .quiz-code summary { color: var(--v-ink); }
-
   /* Briefs, Momentum, Plan */
   & .briefings__scopes button { height: 30px; border: 1.5px solid var(--v-line); border-radius: 99px; background: var(--v-surface); color: var(--v-muted); font-size: 12.5px; box-shadow: none; }
   & .briefings__scopes button.on, & .briefings__scopes button[aria-pressed="true"] { background: var(--v-sel); border-color: var(--v-sel); color: var(--v-sel-ink); }
   & .briefings__head .primary-btn + .primary-btn { background: var(--v-surface); color: var(--v-ink); border-color: var(--v-edge-hi); box-shadow: 0 2px 0 var(--v-edge); }
-  & .heat i, & .heat-legend i { background: var(--v-line-2); border-radius: 3px; }
-  & .heat .a1, & .heat-legend .a1 { background: #e9f9a8; }
-  & .heat .a2, & .heat-legend .a2 { background: var(--v-sel); }
-  & .heat .a3, & .heat-legend .a3 { background: #a8cf2a; }
-  & .heat .a4, & .heat-legend .a4 { background: #5f7d0f; }
-  & .heat .a5, & .heat-legend .a5 { background: var(--v-sel); }
-  & .bar-track { background: var(--v-line-2); border-radius: 99px; }
-  & .bar-track i { background: var(--sky); box-shadow: inset 0 0 0 1.5px var(--v-edge); border-radius: 99px; }
   & .plan-toggle { border: 1.5px solid var(--v-edge); border-radius: 12px; background: var(--v-sunken); }
   & .plan-toggle button { color: var(--v-muted); border-radius: 9px; }
   & .plan-toggle button span { margin-top: 3px; color: #1d6b3f; font: 700 11px/1.2 var(--font-sans); letter-spacing: 0; }
@@ -549,12 +505,6 @@
 :root[data-ui="v3"][data-v7] .chat-composer textarea:focus, :root[data-ui="v3"][data-v7] .chat-composer textarea:focus-visible { outline: none; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .ask-dock:focus-within { box-shadow: var(--hard); }
 
-/* Sidebar toggle sits right after the window buttons, and the page title moves clear of
-   them when the sidebar is hidden, so nothing overlaps at any window size. */
-:root[data-ui="v3"][data-v7] .topbar__side { -webkit-app-region: no-drag; display: grid; place-items: center; width: 30px; height: 30px; margin-left: -8px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--v-muted); cursor: pointer; }
-:root[data-ui="v3"][data-v7] .topbar__side:hover { background: var(--v-hover); color: var(--v-ink); }
-:root[data-ui="v3"][data-v7] .topbar__side svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
-:root[data-ui="v3"][data-v7] .layout--side-hidden .topbar { padding-left: 86px; }
 /* Windows draws min/max/close (titleBarOverlay, 138px wide) over the top-right corner. */
 :root[data-ui="v3"][data-v7][data-platform="win"] .topbar { padding-right: 150px; }
 :root[data-ui="v3"][data-v7] .side-resize { width: 12px; right: -4px; }
