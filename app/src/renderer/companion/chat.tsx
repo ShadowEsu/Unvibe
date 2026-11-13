@@ -141,10 +141,10 @@ export function VoiceTip({ onClose }: { onClose?: () => void }) {
   );
 }
 
-/** How many of a saved brief's files "What Vibe can see" lists before it says how many more there are. */
+/** How many of the latest brief's files the side box lists before it says how many more there are. */
 const SEE_FILES = 6;
 
-/** Ask Vibe's right side (Mono, `mono/grid/README.md` "Ask Vibe"): what Vibe can see, then saved conversations. */
+/** Ask Vibe's right side (Mono): the user's latest brief (Security M1: Ask Vibe itself sees only the typed thread), then saved conversations. */
 function AskSide({ brief, repoLabel, saved, onResume }: {
   brief: ChangeBrief | null;
   repoLabel: string;
@@ -155,12 +155,13 @@ function AskSide({ brief, repoLabel, saved, onResume }: {
   return (
     <div className="ask-side">
       <section className="m-box m-box--flush ask-see" aria-labelledby="ask-see-title">
-        <header className="m-box__title"><h2 id="ask-see-title">What Vibe can see</h2></header>
+        <header className="m-box__title"><h2 id="ask-see-title">Your latest brief</h2></header>
         <dl className="ask-see__rows">
           <div><dt>Repository</dt><dd>{repoLabel || `On this ${deviceName}`}</dd></div>
-          <div><dt>Working tree</dt><dd>{brief ? `${brief.filesChanged} ${brief.filesChanged === 1 ? 'file' : 'files'}` : 'No current change'}</dd></div>
-          {files[0] ? <div><dt>Current file</dt><dd><code>{files[0].path}</code></dd></div> : null}
+          <div><dt>Changed files</dt><dd>{brief ? `${brief.filesChanged} ${brief.filesChanged === 1 ? 'file' : 'files'}` : 'No brief yet'}</dd></div>
+          {files[0] ? <div><dt>First file</dt><dd><code>{files[0].path}</code></dd></div> : null}
         </dl>
+        <p className="ask-see__note m-muted">Ask Vibe sees only what you type or paste here.</p>
         {files.length ? (
           <ul className="ask-see__files" aria-label="Changed files">
             {files.slice(0, SEE_FILES).map((file) => (
