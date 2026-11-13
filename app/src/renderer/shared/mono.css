@@ -57,6 +57,12 @@
   --u-violet: var(--u-ink); --u-violet-lip: var(--u-border-control); --u-violet-text: var(--u-ink); --u-violet-tint: var(--u-sunken); --u-on-violet: var(--u-paper);
   --lilac: var(--u-ink); --lime: var(--u-select); --mint: var(--u-sunken); --sky: var(--u-sunken); --sun: var(--u-sunken); --coral: var(--u-sunken);
 }
+/* Old rules that use --u-accent directly (code keywords, "Current plan", hovers, focus rings, checks, the usage bar)
+   get the action colour: the remap sits on <body>, and the sharks read --u-accent from the root element itself
+   (SharksBand.tsx tokenHex), so only they stay purple. */
+:root[data-ui="v3"][data-v7] body { --u-accent: var(--u-action); --u-accent-hover: var(--u-action-hover); --u-accent-on: var(--u-action-on); --u-lilac: var(--u-ink); }
+/* The Island preview card in Settings: Mono's surface and ink, not the old tinted card. */
+:root[data-ui="v3"][data-v7] .modal .settings-preview__card { background: var(--u-surface); color: var(--u-ink); box-shadow: var(--u-shadow-float); }
 /* The ground: a flat colour, no aurora; no fade under the ask bar. */
 :root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout,
 :root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
