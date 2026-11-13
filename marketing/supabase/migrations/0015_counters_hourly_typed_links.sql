@@ -7,16 +7,19 @@
 -- user agent, referrer, path or per-request row; the day and hour come from the server, never from the request):
 --
 --   1. site_load_hours and download_hours: the same counts as site_load_days and download_days, with the Pacific
---      hour (0 to 23). A burst two minutes after an upload can then be matched from the database alone. The day
+--      hour (0 to 23; on fall-back day hour 1 holds two real hours, 01:xx PDT and 01:xx PST). A burst two minutes
+--      after an upload can then be matched from the database alone. The day
 --      tables stay as they are and keep every reader working; the hour tables are siblings, not a replacement.
---   2. Sources 'youtubetyped' and 'instagramtyped': the short links unvibe.site/yt and /ig (next.config.ts) redirect
+--   2. Sources 'youtubetyped' and 'instagramtyped': the short links unvibe.site/yt and /ig (next.config.mjs) redirect
 --      to /explain?utm_source=<that>. They are said aloud in Shorts and Reels and never written in a description,
 --      caption or comment, so the checker never follows them: a count here is a person who typed the address.
 --      The source column's check allows only [a-z0-9], hence no underscore.
 --
 -- record_site_load and record_download gain a p_hour parameter and write both the day row and the hour row in one
--- call. The two-parameter versions from 0013 and 0014 stay until the site that posts p_hour is deployed, so the
--- order of "apply migration" and "deploy" doesn't matter; they can be dropped afterwards:
+-- call. APPLY THIS MIGRATION BEFORE MERGING THE SITE THAT POSTS p_hour: main deploys on merge, and a deployment
+-- posting p_hour against a database without these functions gets PostgREST 404 PGRST202 on every call, so every
+-- count, day totals included, is lost until the migration is applied. The two-parameter versions from 0013 and
+-- 0014 stay so the deployment running before the merge keeps counting; they can be dropped once it is gone:
 --   drop function if exists public.record_site_load(date, text);
 --   drop function if exists public.record_download(date, text, text);
 --

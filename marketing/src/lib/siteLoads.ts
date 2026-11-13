@@ -126,10 +126,11 @@ export const SITE_LOAD_SOURCES = [
   "discord",
   "dvc",
   "gdg",
-  // Migration 0015: the typed short links /yt and /ig (next.config.ts redirects), said aloud in Shorts and Reels and
-  // never written in a description, so a count here is a person who typed it, not the link checker that follows
-  // every description link after an upload (agents/marketing/why-no-customers-20261112.md §10). The column's
-  // check allows only [a-z0-9], hence no underscore.
+  // Migration 0015: the typed short links /yt and /ig (next.config.mjs redirects), said aloud in Shorts and Reels and
+  // never written in a description, caption or comment (Security MUST), so the link checker that follows every
+  // description link after an upload has nothing to follow (agents/marketing/why-no-customers-20261112.md §10).
+  // Not "viewers" by itself: a description that ever carried /yt would make the checker's loads typed too; the
+  // hour tables separate the upload hour from the rest. The column's check allows only [a-z0-9], hence no underscore.
   "youtubetyped",
   "instagramtyped",
 ] as const;
@@ -219,7 +220,10 @@ export function siteLoadDay(now = new Date()): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-/** Hour of that Pacific day, 0 to 23 (migration 0015: counts per hour, so a burst after an upload can be matched). */
+/**
+ * Hour of that Pacific day, 0 to 23 (migration 0015: counts per hour, so a burst after an upload can be matched).
+ * On fall-back day hour 1 holds two real hours (01:xx PDT, then 01:xx PST).
+ */
 export function siteLoadHour(now = new Date()): number {
   return Number(pacificParts(now)("hour"));
 }
