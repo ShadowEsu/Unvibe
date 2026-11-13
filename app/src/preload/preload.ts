@@ -66,6 +66,8 @@ const api = {
   explainDiff: (opts?: unknown) => ipcRenderer.invoke('review:explainDiff', opts),
   explainCompare: (opts?: unknown) => ipcRenderer.invoke('review:explainCompare', opts),
   buildChangeBrief: (opts?: unknown) => ipcRenderer.invoke('brief:build', opts),
+  /** The working-tree brief the user last built in Briefs, or null. Runs no git. */
+  lastChangeBrief: () => ipcRenderer.invoke('brief:last'),
   lookupOrigin: () => ipcRenderer.invoke('origin:lookup'),
   listKnowledge: () => ipcRenderer.invoke('knowledge:list'),
   verifyKnowledge: (input: unknown) => ipcRenderer.invoke('knowledge:verify', input),

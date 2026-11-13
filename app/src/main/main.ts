@@ -124,7 +124,7 @@ import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { deleteAccountAndLocalData } from './accountDeletion';
-import { briefRepoLabel, buildChangeBrief, type BriefScope } from '../core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, type BriefScope, type ChangeBrief } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
@@ -170,6 +170,8 @@ let currentDeviceVerificationUrl: string | null = null;
 let panelSession: ReviewSession | undefined;
 let panelReady = false;
 let pendingExternalReview: { preferClipboard: boolean } | null = null;
+/** The working-tree brief the user last built (Briefs), which Home and Chat show without running git. */
+let lastWorkingBrief: { ok: true; brief: ChangeBrief; repoLabel: string; branch: string; detached: boolean } | null = null;
 
 /**
  * The IDE bridge deliberately carries no code. The desktop app captures the current selection
@@ -1171,10 +1173,13 @@ app.whenReady().then(() => {
     );
   });
 
+  // Only a user action builds a brief: opening Briefs or pressing its buttons. Home and Chat show the
+  // last one built (brief:last) and never run git themselves (Security F-P1: the privacy page says
+  // Unvibe does not read your repository in the background).
   ipcMain.handle('brief:build', async (_e, input?: { scope?: BriefScope; pick?: boolean }) => {
     const scope = input?.scope ?? 'working';
     let root = await resolveRepoRoot();
-    // Only ever open a folder dialog when the user asked for it. Background refreshes stay silent.
+    // Only ever open a folder dialog when the user asked for it.
     if (input?.pick) {
       const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
       if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
@@ -1189,12 +1194,16 @@ app.whenReady().then(() => {
       const brief = buildChangeBrief({ repo: root, scope, hunks });
       productEvent('change_brief_opened', { files: brief.filesChanged });
       pulseBar({ phase: 'ready', label: 'Ready' });
-      return { ok: true, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
+      const result = { ok: true as const, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
+      if (scope === 'working') lastWorkingBrief = result;
+      return result;
     } catch (error) {
       pulseBar({ phase: 'error', label: 'Issue' });
       return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };
     }
   });
+  // The working-tree brief the user last built in this session, or null. No git: it's a copy.
+  ipcMain.handle('brief:last', () => lastWorkingBrief);
 
   ipcMain.handle('origin:lookup', async () => {
     const session = panelSession;
@@ -1808,6 +1817,7 @@ app.whenReady().then(() => {
       const panel = currentWidget();
       if (panel && !panel.isDestroyed()) panel.close();
       clearPanelSessions();
+      lastWorkingBrief = null;
     });
     if (result.ok) invalidateAppUsage();
     return result;
