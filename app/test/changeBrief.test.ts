@@ -71,23 +71,21 @@ index 7777777..0000000
 `;
   const hunks = parseUnifiedDiff(diff);
   const untracked = [{ file: 'notes/todo.md', oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+- call back'], change: 'added' as const }];
-  const lines = mainChangeLines(hunkStats([...hunks, ...untracked]).files);
+  const lines = mainChangeLines(hunkStats(hunks).files);
   const want = [
     'Changed README.md (2+ / 0-)',
     'Added src/new.ts (2+ / 0-)',
-    'Added notes/todo.md (1+ / 0-)',
     'Removed src/old.ts (0+ / 2-)',
     // Still there, only its content changed: never Added or Removed.
     'Changed was-empty.txt (1+ / 0-)',
     'Changed emptied.txt (0+ / 1-)',
+    // git's C-style quoting of a non-ASCII name is undone, and the file keeps its name although +++ is /dev/null.
+    'Removed gone-é.txt (0+ / 1-)',
   ];
   for (const line of want) assert.ok(lines.includes(line), `${line}\n--\n${lines.join('\n')}`);
   assert.ok(!lines.some((l) => l.includes('/dev/null')), lines.join('\n'));
-  // mainChangeLines shows six files; the quoted name is checked on the stats.
-  const files = hunkStats(hunks).files;
-  const quoted = files.find((f) => f.path === 'gone-é.txt');
-  assert.ok(quoted, files.map((f) => f.path).join(', '));
-  assert.equal(quoted.change, 'removed');
+  const files = hunkStats([...hunks, ...untracked]).files;
+  assert.equal(files.find((f) => f.path === 'notes/todo.md')?.change, 'added');
 });
 
 test('empty hunks produce an empty brief', () => {
