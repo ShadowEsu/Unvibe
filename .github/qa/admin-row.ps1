@@ -10,7 +10,9 @@
 #   (b2) normal Notepad, nothing selected: the usual picker, no admin note, null, 2 keystrokes (an editor gets a retry).
 #   (c)  normal console, text selected: the panel holds the text, no admin note, null (the elevated block is cleared),
 #        1 keystroke. This also proves the selection method (a) relies on.
-#   (d)  admin console, nothing selected: the admin note again, 'elevated', 1 keystroke.
+#   (d)  admin console, nothing selected: the admin note again, 'elevated', 1 keystroke. By design (the app can't tell
+#        "nothing selected" from "dropped" at an elevated window), so it is recorded as EXPECTED, not as a feature PASS;
+#        any other outcome is a FAIL.
 # captureBlock() is the app's own answer through the panel's IPC (widget-state.mjs); the keystrokes are the
 # powershell.exe starts whose parent is Unvibe and whose command line sends keys (proc-watch.ps1).
 # No AI (591): after the send agreement (consent-fixture.mjs, nothing sent), api.unvibe.site points at 127.0.0.1 and ::1
@@ -241,7 +243,8 @@ try {
   $rC = Row 'c' 'normal console, text selected' $normalW 'qanormalrow7731' 'marker'
   Verdict ($rC.Front -and $rC.State.marker -and -not $rC.State.adminNote -and $null -eq $rC.State.captureBlock -and $rC.Keys -eq 1) "(c) normal console with a selection: text captured $($rC.State.marker), admin note $($rC.State.adminNote), captureBlock '$($rC.State.captureBlock)' after an elevated press, $($rC.Keys) keystroke(s) (want: captured, no note, null, 1)"
   $rD = Row 'd' 'admin console, nothing selected' $adminW $null 'admin'
-  Verdict ($rD.Front -and $rD.State.adminNote -and $rD.State.captureBlock -eq 'elevated' -and $rD.Keys -eq 1) "(d) admin console, nothing selected: admin note $($rD.State.adminNote), captureBlock '$($rD.State.captureBlock)', $($rD.Keys) keystroke(s) (want: note, 'elevated', 1; the same note as (a), as expected)"
+  $asDesigned = $rD.Front -and $rD.State.adminNote -and $rD.State.captureBlock -eq 'elevated' -and $rD.Keys -eq 1
+  Note "$(if ($asDesigned) { 'EXPECTED' } else { 'FAIL    ' })  (d) admin console, nothing selected: admin note $($rD.State.adminNote), captureBlock '$($rD.State.captureBlock)', $($rD.Keys) keystroke(s) (by design the same note as (a); recorded, not a pass of the feature)"
 } finally {
   Get-Process Unvibe, notepad -ErrorAction SilentlyContinue | Stop-Process -Force
   Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -match 'qa-(admin|normal)-console|proc-watch\.ps1' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
