@@ -156,20 +156,25 @@ function AskSide({ brief, repoLabel, saved, onResume }: {
     <div className="ask-side">
       <section className="m-box m-box--flush ask-see" aria-labelledby="ask-see-title">
         <header className="m-box__title"><h2 id="ask-see-title">Your latest brief</h2></header>
-        <dl className="ask-see__rows">
-          <div><dt>Repository</dt><dd>{repoLabel || `On this ${deviceName}`}</dd></div>
-          <div><dt>Changed files</dt><dd>{brief ? `${brief.filesChanged} ${brief.filesChanged === 1 ? 'file' : 'files'}` : 'No brief yet'}</dd></div>
-          {files[0] ? <div><dt>First file</dt><dd><code>{files[0].path}</code></dd></div> : null}
-        </dl>
-        <p className="ask-see__note m-muted">Ask Vibe sees only what you type or paste here.</p>
-        {files.length ? (
-          <ul className="ask-see__files" aria-label="Changed files">
-            {files.slice(0, SEE_FILES).map((file) => (
-              <li key={file.path}><code>{file.path}</code><span>+{file.insertions} / -{file.deletions}</span></li>
-            ))}
-            {files.length > SEE_FILES ? <li className="ask-see__more">{`${files.length - SEE_FILES} more ${files.length - SEE_FILES === 1 ? 'file' : 'files'}`}</li> : null}
-          </ul>
-        ) : null}
+        {brief ? (
+          <>
+            <dl className="ask-see__rows">
+              <div><dt>Repository</dt><dd>{repoLabel || `On this ${deviceName}`}</dd></div>
+              <div><dt>Changed files</dt><dd>{`${brief.filesChanged} ${brief.filesChanged === 1 ? 'file' : 'files'}`}</dd></div>
+            </dl>
+            {files.length ? (
+              <ul className="ask-see__files" aria-label="Changed files">
+                {files.slice(0, SEE_FILES).map((file) => (
+                  <li key={file.path}><code>{file.path}</code><span>+{file.insertions} / -{file.deletions}</span></li>
+                ))}
+                {files.length > SEE_FILES ? <li className="ask-see__more">{`${files.length - SEE_FILES} more ${files.length - SEE_FILES === 1 ? 'file' : 'files'}`}</li> : null}
+              </ul>
+            ) : null}
+          </>
+        ) : (
+          <p className="ask-see__empty">No brief yet. Build one in Briefs to see what changed before you commit.</p>
+        )}
+        <p className="ask-see__note">Ask Vibe sees only what you type or paste here.</p>
       </section>
       {saved.length > 0 ? (
         <section className="m-box m-box--flush ask-saved" aria-labelledby="ask-saved-title">

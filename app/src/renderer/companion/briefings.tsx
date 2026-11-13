@@ -135,7 +135,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
         <section className="m-box mbr-empty">
           <Buddy mood="sleepy" size={48} />
           <h2>Your next change, made clear.</h2>
-          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Explain the brief and Understand the brief send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
+          <p>Choose a local git project to see its recent changes. Reading a brief stays on this {deviceName}. Explain the change and Understand the brief send that git diff to {CONSENT_PROVIDERS.unvibe} (or your own key's provider), after you agree.</p>
           <button type="button" className="m-btn m-btn--filled" onClick={() => void build(true)}>Choose a project</button>
         </section>
       )}
@@ -148,7 +148,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
           insertions={brief.insertions}
           deletions={brief.deletions}
           busy={busy}
-          explainLabel={briefsAiLabel('Explain the brief', plan)}
+          explainLabel={briefsAiLabel('Explain the change', plan)}
           onExplain={() => void understand('review')}
           proCard={needsPro === 'review' ? <BriefsProCard proOpen={proOpen} onPlan={onPlan} /> : null}
           onRefreshKnowledge={(id) => void window.unvibe.refreshKnowledge(id).then(() => loadKnowledge())}
@@ -187,7 +187,7 @@ export function Briefings({ plan, onPlan }: { plan: string | null; onPlan: () =>
                     <code>{file.path}</code>
                     <span className="mbr-delta">+{file.insertions} / -{file.deletions}</span>
                   </button>
-                  {openFile === file.path ? <p className="mbr-file__kind">Kind: {file.kind}. Explain the brief to read the actual diff.</p> : null}
+                  {openFile === file.path ? <p className="mbr-file__kind">Kind: {file.kind}. Explain the change to read the actual diff.</p> : null}
                 </li>
               ))}
             </ul>
