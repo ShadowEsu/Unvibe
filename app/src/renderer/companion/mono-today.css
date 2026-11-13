@@ -7,7 +7,9 @@
 :root[data-ui="v3"][data-v7] .layout .today { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 0; font-family: var(--u-font); color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .layout .today :is(h1, h2, p) { margin: 0; }
 :root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-box__title h2 { color: var(--u-ink); font: 600 14px/20px var(--u-font); letter-spacing: 0; }
-:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { min-height: 112px; }
+/* Heights from the mock (borders included; Design 0653): greeting 112, Explain 104, tiles 102 (two rows + 8 = 212), the
+   Brief box takes what is left, so Today fits 780 px with no scrollbar. */
+:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { box-sizing: border-box; height: 112px; min-height: 0; padding-top: 0; padding-bottom: 0; justify-content: center; }
 :root[data-ui="v3"][data-v7] .layout .today-row--c { min-height: 212px; }
 
 /* Row A, left: Vibe 56 px, the greeting at 22 px, Vibe's note at 14 px grey; the date at the top right. */
@@ -34,7 +36,7 @@
 :root[data-ui="v3"][data-v7] .layout .today-strip__count b { font: 600 17px/22px var(--u-font); }
 
 /* Row B: the Explain box. The whole box starts an explanation, as Today's card did; three steps at the right. */
-:root[data-ui="v3"][data-v7] .layout .today-explain { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; min-height: 104px; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .today-explain { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; height: 104px; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout .today-explain:hover { background: var(--u-surface); border-color: var(--u-border-control); }
 :root[data-ui="v3"][data-v7] .layout .today-explain__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .today-explain__text b { color: var(--u-ink); font: 600 17px/24px var(--u-font); }
@@ -65,10 +67,11 @@
 :root[data-ui="v3"][data-v7] .layout .today-next__row .m-row__main { flex: 1 1 auto; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .today-next__row :is(.m-row__title, .m-row__meta) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Row C, right: four number tiles, 2 x 2, their content from the top: the numbers in a row share a line, 39 px under
-   the tile's top, and a label that wraps only makes its own tile's text longer. */
-:root[data-ui="v3"][data-v7] .layout .today-tiles { grid-auto-rows: 1fr; }
-:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile { display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; padding-top: 38px; }
+/* Row C, right: four number tiles, 2 x 2, 102 px each (borders included), their content from the top: the digits start
+   19 px under the tile's top so the numbers in a row share a line; the sub-line stays on one line (12 px side padding). */
+:root[data-ui="v3"][data-v7] .layout .today-tiles { grid-auto-rows: 102px; }
+:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile { display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; box-sizing: border-box; height: 102px; padding: 18px 12px 8px; overflow: hidden; }
+:root[data-ui="v3"][data-v7] .layout .today-tiles .m-tile :is(.m-tile__label, .m-tile__note) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Chevrons on links and rows: the text colour (links) or grey (rows). */
 :root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-chevron { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

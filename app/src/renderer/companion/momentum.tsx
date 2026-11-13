@@ -59,7 +59,7 @@ export function Progress({ profile }: { profile: MomentumProfile | null }) {
       </div>
       <div className="m-grid m-grid--23">
         <section className="m-box m-box--flush">
-          <header className="m-box__title"><h2>Explained per day</h2><span className="m-box__meta">last 6 months</span></header>
+          <header className="m-box__title"><h2>Explained per day</h2><span className="m-box__meta">Last 6 months</span></header>
           <div className="m-box__body mmom-days">
             <div className="mmom-heat">{heat.map((lvl, i) => <i key={i} data-level={lvl || undefined} />)}</div>
             <div className="mmom-legend">

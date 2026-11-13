@@ -212,6 +212,8 @@
 :root[data-ui="v3"][data-v7] .layout .rightside::-webkit-scrollbar-track { margin-block: 2px; }
 :root[data-ui="v3"][data-v7] .layout .rightside::-webkit-scrollbar-thumb,
 :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .rightside::-webkit-scrollbar-thumb { border: 0 solid transparent; border-right-width: 2px; background-clip: padding-box; }
+/* When a page stacks its own boxes in the right side (Ask: `.ask-side`), the side has no frame of its own. */
+:root[data-ui="v3"][data-v7] .layout .rightside:has(> .ask-side) { border-color: transparent; background: transparent; }
 :root[data-ui="v3"][data-v7] .layout .rightside--off {
   position: absolute; top: 0; right: 0; bottom: 0; opacity: 0; transform: translateX(8px); visibility: hidden; pointer-events: none;
   transition: opacity 160ms ease-out, transform 160ms ease-out, visibility 0s linear 160ms;
