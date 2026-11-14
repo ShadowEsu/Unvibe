@@ -22,6 +22,12 @@ export interface ExplainPage {
   fileName: string;
   /** Up to 4 other explain page ids that a reader of this page is likely to want next, shown before the full list. */
   related?: readonly string[];
+  /**
+   * What follows "Explain" in the H1, the <title>, the /explain index link and the link-preview card, for pages
+   * about output or errors rather than code: a lowercase noun as people say it, no article ("lsof output",
+   * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
+   */
+  heading?: string;
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -623,6 +629,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    heading: "git log output",
     related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
@@ -2720,6 +2727,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    heading: "git diff output",
     related: ["git-log", "git-rebase", "gitignore", "bash"],
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
@@ -2839,6 +2847,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    heading: "Python tracebacks",
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
     lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
@@ -3160,6 +3169,7 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    heading: "CORS errors",
     related: ["javascript", "curl", "json"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
@@ -3463,6 +3473,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
+    heading: "ps aux output",
     related: ["bash", "grep", "awk", "lsof"],
     lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
     description:
@@ -3676,6 +3687,7 @@ LBB0_4:
   {
     id: "git-merge-conflict",
     fileName: "shipping.js",
+    heading: "git merge conflicts",
     related: ["git-diff", "git-rebase", "git-log"],
     lead: "Paste a file with `<<<<<<<`, `=======` and `>>>>>>>` lines in it and Vibe explains which version came from which branch, what git already merged on its own, and what the fixed code should keep.",
     description:
@@ -3724,6 +3736,7 @@ export function deliveryDays(country) {
   {
     id: "npm-error",
     fileName: "npm-install.txt",
+    heading: "npm errors",
     related: ["npm-scripts", "package-lock", "json", "python-traceback"],
     lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
     description:
@@ -3776,6 +3789,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
   {
     id: "lsof",
     fileName: "lsof.txt",
+    heading: "lsof output",
     related: ["ps-aux", "curl", "bash"],
     lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
     description:
@@ -3830,6 +3844,20 @@ export function explainLanguage(page: ExplainPage): Language {
   const language = languages.find((entry) => entry.id === page.id);
   if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
   return language;
+}
+
+/** What follows "Explain" in the page's H1, <title>, index link and card: its `heading`, or "{name} code". */
+export function explainHeading(page: ExplainPage): string {
+  return page.heading ?? `${explainLanguage(page).name} code`;
+}
+
+/**
+ * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
+ */
+export function explainHeadingText(page: ExplainPage): string {
+  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
