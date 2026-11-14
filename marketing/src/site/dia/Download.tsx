@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useId, useState, type CSSProperties } from "react";
 import { EmailMeLink } from "@/components/paper/EmailMeLink";
-import { INSTALL_COPY, InstallBox } from "@/components/paper/InstallBox";
+import { INSTALL_COPY, InstallBox, InstallCommand } from "@/components/paper/InstallBox";
 import { ReminderInline } from "@/components/paper/ReminderToast";
 import { AI_MAINTENANCE } from "@/lib/aiMaintenance";
 import { track } from "@/lib/analytics";
@@ -16,14 +16,17 @@ import { useVisitor } from "./os";
 import { startDownload, takeQueuedDownload } from "./DownloadCta";
 
 /**
- * The thank-you state (Preston, 6 Nov): after a one-click download, /beta?dl=<file> opens on the file that started and
- * its first-open steps, InstallBox's live steps word for word (the .dmg isn't notarized, the .exe isn't signed), with
- * the other files one click away ("Intel Mac? / Windows? Download here") and the file again if it didn't start.
+ * The thank-you state (Preston, 6 Nov): after a one-click download, /beta?dl=<file> opens on the file that started.
+ * On a Mac it leads with the Terminal line and what it does (Design 11 Nov), then the .dmg's first-open steps; on
+ * Windows, the .exe's. The steps are InstallBox's live steps word for word (the .dmg isn't notarized, the .exe isn't
+ * signed), with the other files one click away ("Intel Mac? / Windows? Download here") and the file again if it didn't
+ * start.
  */
 function Thanks() {
   const params = useSearchParams();
   const fromUrl = params.get("dl");
   const [picked, setPicked] = useState<DownloadKey | null>(null);
+  const fastId = useId();
   useEffect(() => {
     setPicked(null);
     // The click that brought us here queued its file: start it now that the route has settled (DownloadCta).
@@ -50,7 +53,18 @@ function Thanks() {
       <div className="dt__in">
         <p className="d-label d-mono d-left">{D_THANKS.file(file.label)}</p>
         <h2 id="dt-h" className="dt__h d-serif">{D_THANKS.h1}</h2>
-        <p className="dt__lede">{file.os === "mac" ? D_THANKS.lede : D_THANKS.ledeWindows}</p>
+        {file.os === "mac" ? (
+          <>
+            {/* the Terminal line first (Design 11 Nov), the steps after it for anyone who opens the download */}
+            <div className="ninst dt__fast">
+              <h3 id={fastId} className="dt__k">{D_THANKS.fastest}</h3>
+              <InstallCommand os="mac" surface="beta" labelledBy={fastId} line={<p className="ninst__line">{D_THANKS.fastLine}</p>} />
+            </div>
+            <h3 className="dt__k dt__or">{D_THANKS.orFile}</h3>
+          </>
+        ) : (
+          <p className="dt__lede">{D_THANKS.ledeWindows}</p>
+        )}
         <ol className="dt__steps">
           {copy.steps.map((step, i) => {
             const shot = copy.stepShots[i];

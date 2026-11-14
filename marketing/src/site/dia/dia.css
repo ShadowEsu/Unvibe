@@ -306,13 +306,13 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dd .ninst__title { font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.05; letter-spacing: -0.02em; color: var(--d-ink); }
 .dd .ninst__picked { margin: 2px 0 16px; font: 400 16px/1.4 var(--d-sans); color: var(--d-ink-2); }
 .dd .ninst__k { font: 500 11.5px/1 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-ink-3); }
-.dd .ninst__box { height: 56px; border: 1px solid var(--d-line); border-radius: 14px; background: #fff; }
-.dd .ninst__box::after { background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff); }
-.dd .ninst__cmd code { font: 500 15px/1 var(--d-mono); color: var(--d-ink); }
-.dd .ninst__copy { background: var(--d-violet); color: #fff; border-radius: 10px; }
-.dd .ninst__copy:hover { background: var(--d-violet-2); }
-.dd .ninst__copy.is-copied { background: var(--d-lime); color: var(--d-ink); }
-.dd .ninst__line { font-size: 15px; color: var(--d-ink-2); }
+:is(.dd, .dt) .ninst__box { height: 56px; border: 1px solid var(--d-line); border-radius: 14px; background: #fff; }
+:is(.dd, .dt) .ninst__box::after { background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff); }
+:is(.dd, .dt) .ninst__cmd code { font: 500 15px/1 var(--d-mono); color: var(--d-ink); }
+:is(.dd, .dt) .ninst__copy { background: var(--d-violet); color: #fff; border-radius: 10px; }
+:is(.dd, .dt) .ninst__copy:hover { background: var(--d-violet-2); }
+:is(.dd, .dt) .ninst__copy.is-copied { background: var(--d-lime); color: var(--d-ink); }
+:is(.dd, .dt) .ninst__line { font-size: 15px; color: var(--d-ink-2); }
 .dd .ninst__switch { color: var(--d-violet); font-weight: 500; }
 .dd .ninst__file { margin-top: 18px; padding-top: 22px; gap: 14px; }
 .dd .ninst__file-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -338,7 +338,11 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dt__in { max-width: 1120px; margin: 0 auto; padding: 40px 44px 36px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--d-line), 0 30px 70px -40px rgb(30 10 80 / 0.4); }
 .dt__h { font-size: 48px; line-height: 1.08; letter-spacing: -0.02em; }
 .dt__lede { margin-top: 12px; max-width: 640px; font-size: 18px; color: var(--d-ink-2); }
+.dt .dt__fast { max-width: 640px; margin-top: 22px; gap: 10px; }
+.dt__k { margin: 0; font: 600 17px/1.4 var(--d-sans); color: var(--d-ink); }
+.dt__or { margin-top: 30px; }
 .dt__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+.dt__or + .dt__steps { margin-top: 14px; }
 .dt__steps li { display: flex; gap: 12px; padding: 18px; border-radius: 16px; background: var(--d-tint); font-size: 15.5px; line-height: 1.5; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; animation-delay: calc(var(--i, 0) * 150ms); --d-rise: 14px; }
 .dt__n { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--d-violet); color: #fff; font: 600 13px/1 var(--d-sans); }
 .dt__shot { margin-top: 12px; }
