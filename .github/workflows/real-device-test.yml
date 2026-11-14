@@ -6,6 +6,9 @@ name: Real device test
 # and the global shortcut, and uploads a screenshot of every step plus a pass/fail report.
 # The Mac website media (marketing-media.mjs) is opt-in: it costs about $0.09 of hosted explanations on its own
 # (run 43383011698), more than the walkthrough itself, so a plain run (a sign-in e2e) skips it.
+# QA branch qa/rc-walk-smoke (never merged; BOSS ledger 624): the release candidate's walk-only smoke with NO hosted-AI
+# call. WALK_ONLY is a constant here, not an input: real-device.mjs requests no explanation anywhere (setup skipped,
+# the global shortcut only pops the panel up, the agreement never ticked), and the website media step can't run.
 on:
   workflow_dispatch:
     inputs:
@@ -36,6 +39,9 @@ on:
 permissions:
   contents: read
   actions: read
+
+env:
+  WALK_ONLY: "1"
 
 jobs:
   walkthrough:
@@ -317,7 +323,7 @@ jobs:
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && (inputs.website_media || inputs.media_samples)
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.WALK_ONLY != '1' && (inputs.website_media || inputs.media_samples)
         continue-on-error: true
         shell: bash
         env:
@@ -333,7 +339,7 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && (inputs.website_media || inputs.media_samples)
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.WALK_ONLY != '1' && (inputs.website_media || inputs.media_samples)
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -354,7 +360,7 @@ jobs:
           echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
-        if: always() && matrix.label == 'mac' && (inputs.website_media || inputs.media_samples)
+        if: always() && matrix.label == 'mac' && env.WALK_ONLY != '1' && (inputs.website_media || inputs.media_samples)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-mac-website-media

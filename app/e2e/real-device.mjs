@@ -10,7 +10,11 @@
 //      script never holds the admin token),
 //      E2E_LOCAL=1 (a run on someone's own Mac: no keystrokes into other apps, no whole-screen shots),
 //      DESKTOP_RECORDING=1 (also record the whole screen around the global-shortcut step, for the demo
-//      video; written to DESKTOP_RECORDING_DIR, default <SHOTS_DIR>/desktop-recording).
+//      video; written to DESKTOP_RECORDING_DIR, default <SHOTS_DIR>/desktop-recording),
+//      WALK_ONLY=1 (QA branch qa/rc-walk-smoke, BOSS ledger 624: NO hosted-AI call. Setup is skipped with
+//      "Skip for now" twice, the editor-bridge explanation is skipped, and the global shortcut only checks
+//      that the panel pops up with the send agreement or the selected code, never ticking the agreement;
+//      the launch-at-login checks, which need an own-code explanation, become NOTEs).
 import { chromium } from 'playwright';
 import { launchApp, readStore } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
@@ -208,6 +212,8 @@ report.push(`NOTE  install id ${readStore(userData).installId}`);
 // Shell-launched protocol handlers must use the same isolated profile as the driven app.
 process.env.UNVIBE_USER_DATA = userData;
 const local = process.env.E2E_LOCAL === '1';
+const walkOnly = process.env.WALK_ONLY === '1';
+if (walkOnly) report.push('NOTE  WALK_ONLY: no explanation is requested anywhere in this run (no hosted-AI call)');
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
 // The app under test never gets the founder stats token, even if this process has it.
@@ -291,24 +297,35 @@ try {
   await clickText(companion, "Let's go");
   await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
-  await clickText(companion, 'Explain this code');
-  log(true, 'Onboarding: hello and sample');
+  if (walkOnly) {
+    // Walk only: the step's quiet forward button ("Skip for now") goes to step 3 without explaining.
+    await clickText(companion, 'Skip for now');
+    log(true, 'Onboarding: hello, then the sample step skipped (walk only)');
+  } else {
+    await clickText(companion, 'Explain this code');
+    log(true, 'Onboarding: hello and sample');
+  }
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
-const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
-const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
-log(first.ok, 'First-run sample explains code', first.why);
-log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
-writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
+if (walkOnly) {
+  const toStep3 = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
+  report.push(`NOTE  first-run explanation and its time budget: skipped (walk only); launch to setup step 3 took ${toStep3}s`);
+} else {
+  const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
+  const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
+  log(first.ok, 'First-run sample explains code', first.why);
+  log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
+  writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
+}
 // The built-in sample is not the user's own code, so the launch-at-login question is not due yet.
 const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
-  await clickText(companion, 'Next');
+  if (!walkOnly) await clickText(companion, 'Next');
   await companion.locator('.onboard__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  if (os === 'windows') {
+  if (os === 'windows' && !walkOnly) {
     // A real paste: the system clipboard holds code, Ctrl+V into the box explains it in the panel.
     await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), SETUP_PASTE);
     await companion.locator('.paste-target__box').focus();
@@ -320,7 +337,7 @@ try {
     await shot(companion, 'onboarding-3-own-code-done');
     await clickText(companion, 'Start using Unvibe');
   } else {
-    // Nothing is pasted on a Mac here, so step 3 finishes with Skip for now (no step 4).
+    // Nothing is pasted on a Mac here (nor anywhere in a walk-only run), so step 3 finishes with Skip for now.
     await clickText(companion, 'Skip for now');
   }
   await companion.locator('.onboard').waitFor({ state: 'detached', timeout: 10000 });
@@ -503,8 +520,37 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
   }
 }
 
+// Walk only: the panel the shortcut opens, with no explanation. This profile has no send agreement, so the panel asks
+// for it first (a build that shows the selection first shows the selected code); either one is the pop-up. The
+// agreement is never ticked, and nothing may stream.
+async function waitForPopup(label, expectedCode) {
+  const panel = await windowWith(app, 'widget.html', 20000);
+  if (!panel) return { ok: false, why: 'review panel did not open' };
+  try {
+    const consent = panel.locator('.consent-form');
+    const preview = panel.locator('.ob-code__all code').filter({ hasText: expectedCode });
+    await consent.or(preview).or(panel.locator('#confirm-title')).first().waitFor({ state: 'visible', timeout: 30000 });
+    assert.equal(await panel.evaluate(() => document.visibilityState), 'visible', 'the panel window is shown');
+    const shown = (await consent.count()) ? 'the send agreement' : (await preview.count()) ? 'the selected code' : 'the Explain confirm sheet';
+    if (await consent.count()) {
+      const boxes = consent.locator('input[type="checkbox"]');
+      for (let i = 0; i < await boxes.count(); i++) assert.equal(await boxes.nth(i).isChecked(), false, 'every agreement box starts unticked');
+    }
+    await sleep(3000);
+    assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams in a walk-only run');
+    await shot(panel, label);
+    desktopShot(label);
+    return { ok: true, why: `the panel popped up showing ${shown}; nothing streamed in 3 s; the agreement was not ticked` };
+  } catch (error) {
+    await shot(panel, `${label}-failed`);
+    desktopShot(`${label}-failed`);
+    return { ok: false, why: error.message.split('\n')[0] };
+  }
+}
+
 // --- Editor bridge path (what ⌘U / Ctrl+U does inside VS Code and Cursor) -------------------
-try {
+if (walkOnly) report.push('NOTE  editor shortcut path (unvibe:// link → Explain): skipped (walk only: it ends in an explanation)');
+else try {
   if (os === 'mac') execFileSync('pbcopy', { input: sample });
   else execFileSync('powershell', ['-NoProfile', '-Command', '[Console]::In.ReadToEnd() | Set-Clipboard'], { input: sample });
   // Plain `open` asks macOS for the registered unvibe:// handler, as a real editor does. A build that
@@ -581,10 +627,10 @@ else try {
     }
     desktopShot('notepad-selected');
   }
-  const r = await waitForExplanation('global-shortcut-explanation', globalSample);
-  recording?.mark(r.ok ? 'explanation done' : 'explanation failed');
+  const r = walkOnly ? await waitForPopup('global-shortcut-popup', globalSample) : await waitForExplanation('global-shortcut-explanation', globalSample);
+  recording?.mark(r.ok ? (walkOnly ? 'pop-up shown' : 'explanation done') : (walkOnly ? 'pop-up failed' : 'explanation failed'));
   globalShortcutWorked = r.ok;
-  log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}`, r.why);
+  log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}${walkOnly ? ' pops up the panel' : ''}`, r.why);
 } catch (e) { log(false, 'Global shortcut in another app', e.message.split('\n')[0]); }
 finally {
   if (recording) { await sleep(2000); await recording.stop(); }
@@ -597,10 +643,12 @@ if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered'
 await sleep(3000); // one more pass of the dialog watcher
 clearInterval(dialogWatch);
 const askedAtEnd = readStore(userData).loginPromptAsked === true;
-log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
+if (walkOnly) report.push(`NOTE  launch-at-login checks: skipped (walk only: the question is due only after an own-code explanation); store flag at end: ${askedAtEnd}`);
+else log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
 if (os === 'mac') {
   const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
-  log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
+  if (!walkOnly) log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
+  else if (loginAsks) report.push(`NOTE  launch-at-login question shown ${loginAsks} time(s) in a walk-only run (answered No)`);
   for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
 } else report.push('NOTE  launch-at-login dialog count: not read on Windows (no main-process access); the store flag above covers when it is due.');
 
