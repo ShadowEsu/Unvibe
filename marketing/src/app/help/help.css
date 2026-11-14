@@ -3,6 +3,8 @@
 .fos-page .verify .help-list > li + li { margin-top: 10px; }
 .fos-page .verify ol.help-list { padding-left: 22px; list-style: decimal; }
 .fos-page .verify ol.help-list > li::marker { color: var(--u-text); font-weight: 700; }
+/* Quoted app messages: bullets, not numbers, with room before the sentence that follows (Design S-1 on #297). */
+.fos-page .verify ul.help-quotes { padding-left: 22px; list-style: disc; margin: 8px 0 12px; }
 .fos-page .verify .help-shots { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin: 12px 0 4px; }
 .fos-page .verify .help-shot { margin: 0; max-width: 100%; }
 .fos-page .verify .help-shot img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(20, 20, 20, 0.14); }
