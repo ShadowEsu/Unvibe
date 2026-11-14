@@ -7,7 +7,7 @@
  */
 
 /**
- * The utm_source values counted by name (migrations 0013 and 0014 seed the same list into site_load_sources,
+ * The utm_source values counted by name (migrations 0013, 0014 and 0015 seed the same list into site_load_sources,
  * and a test keeps them equal). Marketing's UTM dictionary (agents/unvibe-marketing/utm-dictionary.md), the
  * launch sites from site/first-party-channels, first100's and unvibe-marketing's listing sites (row 550 kit,
  * agents/unvibe-growth/POSITIONING.md) and unvibe-pm's WEEK-100 channels. Never a per-person value.
@@ -126,6 +126,13 @@ export const SITE_LOAD_SOURCES = [
   "discord",
   "dvc",
   "gdg",
+  // Migration 0015: the typed short links /yt and /ig (next.config.mjs redirects), said aloud in Shorts and Reels and
+  // never written in a description, caption or comment (Security MUST), so the link checker that follows every
+  // description link after an upload has nothing to follow (agents/marketing/why-no-customers-20261112.md §10).
+  // Not "viewers" by itself: a description that ever carried /yt would make the checker's loads typed too; the
+  // hour tables separate the upload hour from the rest. The column's check allows only [a-z0-9], hence no underscore.
+  "youtubetyped",
+  "instagramtyped",
 ] as const;
 
 type KnownSource = (typeof SITE_LOAD_SOURCES)[number];
@@ -192,23 +199,37 @@ export function isCountedLoad(req: DocumentRequest): boolean {
   return true;
 }
 
-/**
- * Calendar day key in Pacific time (YYYY-MM-DD). The same day as `dayKey()` in siteStatsStore (a test
- * checks it), kept here because that module imports Node APIs the edge middleware can't load.
- */
-export function siteLoadDay(now = new Date()): string {
+function pacificParts(now: Date): (type: Intl.DateTimeFormatPartTypes) => string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
   }).formatToParts(now);
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return (type) => parts.find((p) => p.type === type)?.value ?? "";
+}
+
+/**
+ * Calendar day key in Pacific time (YYYY-MM-DD). The same day as `dayKey()` in siteStatsStore (a test
+ * checks it), kept here because that module imports Node APIs the edge middleware can't load.
+ */
+export function siteLoadDay(now = new Date()): string {
+  const part = pacificParts(now);
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+/**
+ * Hour of that Pacific day, 0 to 23 (migration 0015: counts per hour, so a burst after an upload can be matched).
+ * On fall-back day hour 1 holds two real hours (01:xx PDT, then 01:xx PST).
+ */
+export function siteLoadHour(now = new Date()): number {
+  return Number(pacificParts(now)("hour"));
+}
+
 /** Posts one increment. Injected in tests; in production a PostgREST RPC call with the service role. */
-export type SiteLoadPost = (day: string, source: SiteLoadSource) => Promise<boolean>;
+export type SiteLoadPost = (day: string, hour: number, source: SiteLoadSource) => Promise<boolean>;
 
 export function usableEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -216,16 +237,16 @@ export function usableEnv(value: string | undefined): string | undefined {
   return trimmed;
 }
 
-/** The service-role RPC call (`record_site_load`, migration 0013), or null when storage isn't configured. */
+/** The service-role RPC call (`record_site_load`, migrations 0013 and 0015), or null when storage isn't configured. */
 export function supabaseSiteLoadPost(): SiteLoadPost | null {
   const url = usableEnv(process.env.SUPABASE_URL);
   const key = usableEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (!url || !key) return null;
-  return async (day, source) => {
+  return async (day, hour, source) => {
     const res = await fetch(`${url}/rest/v1/rpc/record_site_load`, {
       method: "POST",
       headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_day: day, p_source: source }),
+      body: JSON.stringify({ p_day: day, p_hour: hour, p_source: source }),
       cache: "no-store",
     });
     return res.ok;
@@ -243,7 +264,7 @@ export async function recordSiteLoad(
 ): Promise<boolean> {
   if (!post) return false;
   try {
-    if (await post(siteLoadDay(now), source)) return true;
+    if (await post(siteLoadDay(now), siteLoadHour(now), source)) return true;
   } catch {
     // Fall through to the fixed log line.
   }
