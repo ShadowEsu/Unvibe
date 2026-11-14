@@ -81,7 +81,7 @@ describe("footer listings", () => {
 
   it("records every badge file in public/badges/BADGES.md with its sha256, and keeps no unused file (Security B2)", () => {
     const record = readFileSync(path.join(BADGE_DIR, "BADGES.md"), "utf8");
-    const used = new Set(LISTINGS.flatMap(({ badges = [] }) => badges.map(({ src }) => path.basename(src))));
+    const used = new Set(LISTINGS.flatMap(({ badges = [] }) => badges.flatMap(({ src, darkSrc }) => [src, darkSrc].filter((s) => s !== undefined).map((s) => path.basename(s)))));
     for (const file of readdirSync(BADGE_DIR).filter((name) => name !== "BADGES.md")) {
       assert.ok(used.has(file), `public/badges/${file} is not a live listing's badge`);
       const sha256 = createHash("sha256").update(readFileSync(path.join(BADGE_DIR, file))).digest("hex");

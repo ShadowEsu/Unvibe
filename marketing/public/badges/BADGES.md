@@ -11,3 +11,5 @@ Each file is a copy of a live listing's own badge (Security B1, B2: no hotlinked
 | `toolindex-unvibe-medium.svg` | Tool Index | https://toolindex.net/badge/unvibe/medium.svg | 2026-10-28 | 5873ffc84dc8b2016855f3ce5e799393700dcbe6737bb3191b724e807a21486d |
 | `toolindex-verify.svg` | Tool Index (verification) | https://toolindex.net/badge/verify/d8a3d4fa8bba7c93.svg | 2026-10-28 | bedb356ca7eb7fdedbfb46bf0c1770ae0935cfe8d46760ee6d716a54cdb5081b |
 | `vibecoding-listed-light.svg` | vibecoding.app | https://vibecoding.app/badges/tools/unvibe/listed-light.svg | 2026-11-06 | 74cd803b2cb708b23c67acb9d90f75c59d3858389e100da93fe40ddfde2ebe89 |
+| `nicklaunches-featured.png` | Nick Launches | https://nicklaunches.com/badges/featured.png | 2026-11-08 | 6ed4ddfe30ade78645100042e9f68ab6c1f37b7a68d7b2194c88eb8e2f8cbe1f |
+| `nicklaunches-featured-dark.png` | Nick Launches (dark variant) | https://nicklaunches.com/badges/featured-dark.png | 2026-11-08 | 837ca6d18d7df66d24de0ae375b5cba4fea1aba6d7da946f6b3ca18a30409dee |
