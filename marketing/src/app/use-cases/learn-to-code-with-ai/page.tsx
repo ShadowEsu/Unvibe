@@ -4,6 +4,7 @@ import { UseCaseFacts, UseCaseHead, UseCaseMore, UseCaseSample, UseCaseSteps } f
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { findUseCase, pathForUseCase } from "@/lib/useCases";
+import { D_STATEMENT } from "@/site/dia/content";
 import { explainMono } from "../../explain/mono";
 import "../../explain/explain.css";
 import "../../code-explainer.css";
@@ -31,13 +32,13 @@ export default async function LearnToCodeWithAiPage() {
     <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Learn to code from the code AI writes for you">
         <p>
+          {D_STATEMENT.entity} It is not a code generator: it helps students and beginners who build with AI understand
+          the code they already have. Pick the New or Beginner depth and read your own project at your level.
+        </p>
+        <p>
           If an AI tool writes most of your project, the project can work while you still cannot say how. You find out
           when it breaks, when you need to change it, or when someone asks you to walk them through it. The way out is to
           read what it wrote, one small piece at a time, until you could have written it yourself.
-        </p>
-        <p>
-          Unvibe is not a code generator. It helps you understand the code you already have: pick New or Beginner and
-          read your own project at your level.
         </p>
       </UseCaseHead>
 
