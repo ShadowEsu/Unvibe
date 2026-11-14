@@ -183,7 +183,7 @@ export default function PrivacyPage() {
           Global Privacy Control, Mixpanel does not load. unvibe.site still keeps daily totals: how
           many times visitors pressed Allow or No thanks, how many pages were loaded and which campaign
           label (utm_source) the link that brought them carried, how many times the install scripts
-          were downloaded and finished installing, and how many times each download link (Mac, Intel
+          were downloaded, and how many times each download link (Mac, Intel
           Mac or Windows) was used. Each total is just a day, a number and, for page loads and download
           links, that campaign label, with no ID, IP address, cookie, time or page address, so it
           can&apos;t be linked to you.
@@ -204,8 +204,10 @@ export default function PrivacyPage() {
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
-          install scripts send one &apos;installed&apos; count to unvibe.site when they finish,
-          with no ID, code or personal data. If you use the Try it box on the site,
+          install scripts send nothing back to unvibe.site. Older versions of the scripts sent one
+          &apos;installed&apos; count when they finished, with no ID, code or personal data. A saved
+          copy of one may still send it, but unvibe.site no longer records it; the totals counted
+          before are kept as they are, as numbers only. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Anthropic to write the explanation. To limit how often the box can be used,
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since
