@@ -15,6 +15,8 @@
   padding: clamp(6.5rem, 12vw, 8.5rem) 1.25rem 4rem;
 }
 
+/* A solid card in the paper sheet colour like /activate's (#fffdf6): --paper-raised is 42 % white, so the page's code
+   background showed through the card, the faded disabled buttons and the divider words (Design, 11 Nov). */
 .redeem-card {
   box-sizing: border-box;
   width: min(100%, 32rem);
@@ -22,7 +24,7 @@
   padding: 2rem;
   border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
-  background: var(--paper-raised);
+  background: var(--paper);
   box-shadow: var(--shadow-key);
 }
 
@@ -50,12 +52,14 @@
   font-weight: 700;
 }
 
+/* The field and the quiet button share the card's paper fill, so their outline alone marks them: 50 % ink is 3.5:1 on
+   #fffdf6 (WCAG 1.4.11 asks 3:1; 30 % was 2.0:1, Review301). */
 .redeem-field {
   box-sizing: border-box;
   width: 100%;
   margin: 0 0 0.75rem;
   padding: 0.8rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
   border-radius: var(--radius-field);
   color: var(--ink);
   background: var(--paper);
@@ -114,7 +118,7 @@
 .redeem-btn--quiet {
   color: var(--ink);
   background: var(--paper);
-  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent);
 }
 
 /* /activate's two separate unticked boxes, before any sign-in starts (Terms and Privacy; 18 or older). */
