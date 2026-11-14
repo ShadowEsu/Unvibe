@@ -1,5 +1,5 @@
 import { selectProvider, buildSystemPrompt, buildUserPrompt, isMoreDetail, isShortExplanation } from '@/ai';
-import { SHORT_MAX_TOKENS } from '@/ai/anthropic';
+import { DEEP_MAX_TOKENS, SHORT_MAX_TOKENS } from '@/ai/anthropic';
 import type { ReviewRequestPayload, StreamEvent } from '@/ai/protocol';
 import { unauthorized, userFromRequest } from '@/lib/auth';
 import { aiRequestRequiresSession } from '@/lib/aiAccess';
@@ -27,7 +27,10 @@ export async function POST(req: Request): Promise<Response> {
   const trialInstall = trialInstallFromRequest(req);
   const userId = trialInstall ? null : await userFromRequest(req);
   const account = userId ? spendAccount('user', userId) : trialInstall ? spendAccount('install', trialInstall) : undefined;
-  const provider = selectProvider(account, isShortExplanation(payload) ? SHORT_MAX_TOKENS : undefined);
+  // Output budget, which the meter holds in full before the call: short answers 400, advanced/expert full answers
+  // 2560 (F-20), everything else the provider's 2048.
+  const deep = payload.level === 'advanced' || payload.level === 'expert';
+  const provider = selectProvider(account, isShortExplanation(payload) ? SHORT_MAX_TOKENS : deep ? DEEP_MAX_TOKENS : undefined);
   if (!provider) return Response.json({ error: 'The AI service is unavailable. Try again later.' }, { status: 503 });
   if (aiRequestRequiresSession(provider.mock) && !userId && !trialInstall) {
     return unauthorized();

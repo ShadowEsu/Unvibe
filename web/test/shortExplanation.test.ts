@@ -90,9 +90,19 @@ test('the review route sends a short answer with the short output budget, and a 
     }));
     assert.match(await more.text(), /"type":"done"/, 'more detail');
     assert.equal(activations.length, before, 'More detail writes no activation marker');
-    // Literal numbers on purpose: the short answer's 400-token budget is the cost claim (Security SHOULD-U116b).
+    // Advanced and expert full-depth answers get headroom over 2048 (F-20: they were cut off); a short answer stays short.
+    for (const [level, detail] of [['advanced', 'full'], ['expert', 'full'], ['expert', 'short']] as const) {
+      const deep = await POST(new Request('http://localhost/api/v1/reviews', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${process.env.UNVIBE_TRIAL_TOKEN}`, 'x-unvibe-install-id': `deep-${level}-${detail}` },
+        body: JSON.stringify({ ...base, level, detail }),
+      }));
+      assert.match(await deep.text(), /"type":"done"/, `${level} ${detail}`);
+    }
+    // Literal numbers on purpose: each budget is the meter's worst-case hold, a cost claim (Security SHOULD-U116b).
     assert.equal(SHORT_MAX_TOKENS, 400);
-    assert.deepEqual(budgets, [400, ANTHROPIC_MAX_TOKENS, ANTHROPIC_MAX_TOKENS]);
+    assert.equal(ANTHROPIC_MAX_TOKENS, 2048);
+    assert.deepEqual(budgets, [400, 2048, 2048, 2560, 2560, 400]);
     assert.ok(Number(holds[0]) < Number(holds[1]), 'the short call holds less of the budget');
   } finally {
     process.env = previousEnv;
