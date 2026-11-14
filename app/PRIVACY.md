@@ -1,6 +1,6 @@
 # Unvibe Privacy Policy
 
-**Last updated: October 2026**
+**Last updated: November 2026**
 
 ## What Unvibe processes
 
@@ -44,6 +44,8 @@ Without an account, the app sends a random install ID, your computer's system (M
 - When it first explained the setup sample, first explained your own code, and first explained code again on a later day of its first week
 
 No code or prompts are stored with it. Signed in, explanations carry your sign-in token instead of the install ID.
+
+To check for new versions, the app asks Unvibe's server (api.unvibe.site) for GitHub's public list of releases, and asks GitHub directly if Unvibe's server does not answer. The check sends the app version and no install ID or account. Unvibe's server saves nothing from it; like every request, it appears for a short time in our hosting provider's request logs.
 
 ## Setup progress
 
