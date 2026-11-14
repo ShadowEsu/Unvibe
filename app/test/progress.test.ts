@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { aiAuthHeaders, postTrialProgress, trialAuthHeaders } from '../src/main/backend';
-import { answerHeardFrom, cleanHeardFrom, sendProgress, syncProgress, type ProgressDeps, type ProgressStep } from '../src/main/progress';
+import { answerHeardFrom, cleanHeardFrom, noteWindowShown, sendProgress, syncProgress, type ProgressDeps, type ProgressStep } from '../src/main/progress';
 import { netCalls } from './electronStub';
 
 /**
@@ -12,7 +12,7 @@ function fakeInstall(options: { enabled?: boolean; trialBuild?: boolean; platfor
   const persisted = options.persisted ?? {};
   const posts: ProgressStep[] = [];
   const answers: string[] = [];
-  const local: { heardFrom: string | null; enabled: boolean; trialBuild: boolean } = { heardFrom: null, enabled: options.enabled ?? true, trialBuild: options.trialBuild ?? true };
+  const local: { heardFrom: string | null; enabled: boolean; trialBuild: boolean; windowShown: boolean } = { heardFrom: null, enabled: options.enabled ?? true, trialBuild: options.trialBuild ?? true, windowShown: false };
   let status = options.status === undefined ? 204 : options.status;
   const deps: ProgressDeps = {
     trialBuild: () => local.trialBuild,
@@ -25,6 +25,8 @@ function fakeInstall(options: { enabled?: boolean; trialBuild?: boolean; platfor
     },
     heardFrom: () => local.heardFrom,
     saveHeardFrom: (answer) => { local.heardFrom = answer; },
+    windowShown: () => local.windowShown,
+    markWindowShown: () => { local.windowShown = true; },
     post: async (step, answer) => {
       posts.push(step);
       if (answer !== undefined) answers.push(answer);
@@ -39,6 +41,44 @@ test('nothing is sent when the build or the setting turns progress off', async (
   const install = fakeInstall({ enabled: false });
   await sendProgress('onboarded', install.deps);
   assert.deepEqual(install.posts, []);
+});
+
+const shown = (visible: boolean, destroyed = false) => ({ isDestroyed: () => destroyed, isVisible: () => visible });
+const now = async () => {};
+
+test('window_shown goes once from a sealed trial build, setting on or off, after the window stayed visible', async () => {
+  const install = fakeInstall({ enabled: false });
+  await noteWindowShown(shown(true), install.deps, now);
+  assert.deepEqual(install.posts, ['window_shown']);
+  assert.equal(install.local.windowShown, true);
+  await noteWindowShown(shown(true), install.deps, now);
+  await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
+  assert.deepEqual(install.posts, ['window_shown']);
+});
+
+test('a window that is hidden or gone by the time the wait ends is not a shown window', async () => {
+  const install = fakeInstall();
+  await noteWindowShown(shown(false), install.deps, now);
+  await noteWindowShown(shown(true, true), install.deps, now);
+  assert.deepEqual(install.posts, []);
+  assert.equal(install.local.windowShown, false);
+});
+
+test('window_shown never leaves a dev or founder build', async () => {
+  const install = fakeInstall({ trialBuild: false });
+  await noteWindowShown(shown(true), install.deps, now);
+  assert.deepEqual(install.posts, []);
+});
+
+test('a window_shown the server did not take is retried by the next launch sync', async () => {
+  const install = fakeInstall({ status: 409 });
+  await noteWindowShown(shown(true), install.deps, now);
+  assert.deepEqual(install.posts, ['window_shown']);
+  assert.equal(install.persisted.window_shown, undefined);
+  install.setStatus(204);
+  await syncProgress({ onboarded: false, accessibilityGranted: false, signedIn: false }, install.deps);
+  assert.deepEqual(install.posts, ['window_shown', 'window_shown']);
+  assert.equal(install.persisted.window_shown, true);
 });
 
 test('each step is sent once, across repeated calls and a restart', async () => {
