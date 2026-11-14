@@ -369,6 +369,69 @@ describe("waitlist responses do not reveal membership", () => {
     assert.deepEqual(await unknown.json(), await known.json());
   });
 
+  it("counts joins for a code no entry stores (a pre-HMAC member's re-issued link)", async () => {
+    const member = "old-member-asks-again@unvibe-mail.test";
+    waitlistRows.set(member, { id: member, email: member, referral_code: createHash("sha256").update(member).digest("hex").slice(0, 8), created_at: new Date().toISOString() });
+    const reissued = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email: member })));
+    assert.notEqual(reissued, waitlistRows.get(member)?.referral_code, "the shown code is not the stored one");
+    const joined = await waitlistRoute.POST(post("/api/waitlist", { email: "friend-of-old-member@unvibe-mail.test", referredBy: reissued }));
+    assert.equal(joined.status, 200);
+    const progress = await referralGET(new Request(`${SITE}/api/referrals/x`, { headers: { "x-forwarded-for": nextIp() } }), { params: { code: reissued } });
+    assert.deepEqual(await progress.json(), { joinedReferrals: 1 });
+  });
+
+  /** The referral code a signup route answered with, read as the unknown JSON it is. */
+  async function codeOf(response: Response): Promise<string> {
+    const body: unknown = await response.json();
+    if (body && typeof body === "object" && "referralCode" in body && typeof body.referralCode === "string") return body.referralCode;
+    assert.fail(`no referralCode in ${JSON.stringify(body)}`);
+  }
+
+  it("gives referral codes nobody can compute from the email (Security F1, 11 Nov)", async () => {
+    // sha256(email)[:8] was the old code: with it, joining as referredBy=<victim's code> and reading
+    // /api/referrals/<code> told whether the victim was listed. The code must depend on the server secret.
+    const email = "code-is-private@unvibe-mail.test";
+    const referralCode = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email })));
+    assert.match(referralCode, /^[a-f0-9]{8}$/);
+    assert.notEqual(referralCode, createHash("sha256").update(email).digest("hex").slice(0, 8));
+    assert.equal(waitlistRows.get(email)?.referral_code, referralCode);
+    const otherSecret = await withEnv({ RATE_LIMIT_KEY_SECRET: `${KEY_SECRET}-rotated` }, async () =>
+      codeOf(await waitlistRoute.POST(post("/api/waitlist", { email: "code-is-private-2@unvibe-mail.test" }))),
+    );
+    assert.notEqual(otherSecret, referralCode);
+
+    const downloader = "downloader@unvibe-mail.test";
+    const downloadCode = await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email: downloader })));
+    assert.match(downloadCode, /^[A-F0-9]{8}$/);
+    assert.notEqual(downloadCode, createHash("sha256").update(downloader).digest("hex").slice(0, 8).toUpperCase());
+  });
+
+  it("stores the same referredBy for a typed friend email whether or not the friend is listed", async () => {
+    const friend = "typed-friend@unvibe-mail.test";
+    const before = await waitlistRoute.POST(post("/api/waitlist", { email: "joins-first@unvibe-mail.test", referredBy: friend }));
+    assert.equal(before.status, 200);
+    const storedBefore = waitlistRows.get("joins-first@unvibe-mail.test")?.referred_by;
+    // The friend joins (with a pre-HMAC sha code in the store, the worst case for a lookup), then someone else types them.
+    waitlistRows.set(friend, { id: friend, email: friend, referral_code: createHash("sha256").update(friend).digest("hex").slice(0, 8), created_at: new Date().toISOString() });
+    const after = await waitlistRoute.POST(post("/api/waitlist", { email: "joins-second@unvibe-mail.test", referredBy: friend }));
+    assert.equal(after.status, 200);
+    assert.equal(waitlistRows.get("joins-second@unvibe-mail.test")?.referred_by, storedBefore);
+    assert.match(String(storedBefore), /^[a-f0-9]{8}$/);
+    assert.notEqual(storedBefore, friend.toLowerCase(), "a typed email is never stored as referredBy");
+  });
+
+  it("never answers with a stored code, so a member from before the HMAC change looks like anyone else", async () => {
+    const email = "joined-last-month@unvibe-mail.test";
+    const oldCode = createHash("sha256").update(email).digest("hex").slice(0, 8); // a pre-HMAC code, as stored
+    waitlistRows.set(email, { id: email, email, referral_code: oldCode, created_at: new Date().toISOString() });
+    const shown = await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email })));
+    assert.notEqual(shown, oldCode);
+    assert.equal(waitlistRows.get(email)?.referral_code, oldCode, "the stored code is not rewritten");
+    // The same email posted again (now listed with the HMAC code) and a download get the same answer.
+    assert.equal(await codeOf(await waitlistRoute.POST(post("/api/waitlist", { email }))), shown);
+    assert.equal(await codeOf(await betaDownloadRoute.POST(post("/api/beta-download", { email }))), shown.toUpperCase());
+  });
+
   it("refuses the hidden founder metric addresses on beta-download", async () => {
     const response = await betaDownloadRoute.POST(post("/api/beta-download", { email: "growth-funnel@unvibe.internal" }));
     assert.equal(response.status, 422);
