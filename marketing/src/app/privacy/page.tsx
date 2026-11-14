@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="9 November 2026"
+      updated="11 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -126,8 +126,8 @@ export default function PrivacyPage() {
           code in, the file and project name, and the concept it covered.
           Row-level security is designed to restrict direct reads of those records to your account. Your auth
           token is encrypted at rest using the operating system keychain, and data is
-          encrypted in transit. Backend at-rest and backup settings must be verified for
-          the selected staging/production infrastructure. You can access and delete your
+          encrypted in transit. Our database host, Supabase, encrypts stored data at rest
+          (AES-256). You can access and delete your
           data. See <a href="/data-controls">data controls</a> and{" "}
           <a href="/account-deletion">account deletion</a>. We use no advertising
           trackers.
