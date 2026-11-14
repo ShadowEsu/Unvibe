@@ -5,11 +5,12 @@ import type { ChangeBrief, BriefFile } from '../src/core/changeBrief';
 import type { KnowledgeObject } from '../src/core/knowledge';
 
 const files: BriefFile[] = [
-  { path: 'src/ui/Button.tsx', insertions: 4, deletions: 2, kind: 'code' },
-  { path: 'src/auth/session.ts', insertions: 30, deletions: 10, kind: 'sensitive' },
-  { path: 'src/api/users.ts', insertions: 120, deletions: 20, kind: 'service' },
-  { path: 'package.json', insertions: 2, deletions: 0, kind: 'config' },
-  { path: 'src/ui/NewCard.tsx', insertions: 50, deletions: 0, kind: 'code' },
+  { path: 'src/ui/Button.tsx', insertions: 4, deletions: 2, kind: 'code', change: 'changed' },
+  { path: 'src/auth/session.ts', insertions: 30, deletions: 10, kind: 'sensitive', change: 'changed' },
+  { path: 'src/api/users.ts', insertions: 120, deletions: 20, kind: 'service', change: 'changed' },
+  // An edit that only adds lines: not a new file.
+  { path: 'package.json', insertions: 2, deletions: 0, kind: 'config', change: 'changed' },
+  { path: 'src/ui/NewCard.tsx', insertions: 50, deletions: 0, kind: 'code', change: 'added' },
 ];
 
 function brief(list: BriefFile[]): ChangeBrief {
@@ -57,7 +58,9 @@ test('review checklist covers sensitive files, config, missing tests and stale k
   assert.ok(review.reviewFirst.some((line) => line.includes('package.json')));
   assert.ok(review.reviewFirst.some((line) => line.includes('no test changes')));
   assert.ok(review.reviewFirst.some((line) => line.includes('saved explanation')));
-  assert.deepEqual(review.added, ['package.json', 'src/ui/NewCard.tsx']);
+  assert.deepEqual(review.added, ['src/ui/NewCard.tsx']);
+  assert.match(rankFiles(files).find((f) => f.path === 'src/ui/NewCard.tsx')!.reason, /^New file/);
+  assert.doesNotMatch(rankFiles(files).find((f) => f.path === 'package.json')!.reason, /New/);
   assert.equal(review.headline, '5 files changed, +206 / -32');
 });
 

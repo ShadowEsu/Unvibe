@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { briefRepoLabel, buildChangeBrief, hunkStats } from '../src/core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, hunkStats, mainChangeLines } from '../src/core/changeBrief';
 import { parseUnifiedDiff } from '../src/core/gitDiff';
 import { buildOriginReport } from '../src/core/codeOrigin';
 import { freshnessFromChange, hashCode, pathImportance } from '../src/core/knowledge';
@@ -23,6 +23,69 @@ test('change brief uses git hunks and never claims AI authorship', () => {
   assert.equal(brief.architectureImpact, 'HIGH');
   assert.match(brief.provenanceNote, /does not know whether an agent/);
   assert.equal(brief.empty, false);
+});
+
+test('the brief names a file Added, Removed or Changed from git\'s file headers, never from the line counts', () => {
+  const diff = `diff --git a/README.md b/README.md
+index 1111111..2222222 100644
+--- a/README.md
++++ b/README.md
+@@ -3,0 +4,2 @@
++## Install
++Run the installer.
+diff --git a/src/new.ts b/src/new.ts
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/src/new.ts
+@@ -0,0 +1,2 @@
++export const a = 1;
++export const b = 2;
+diff --git a/src/old.ts b/src/old.ts
+deleted file mode 100644
+index 4444444..0000000
+--- a/src/old.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-export const gone = 1;
+-export const too = 2;
+diff --git a/was-empty.txt b/was-empty.txt
+index e69de29..5555555 100644
+--- a/was-empty.txt
++++ b/was-empty.txt
+@@ -0,0 +1 @@
++now has a line
+diff --git a/emptied.txt b/emptied.txt
+index 6666666..e69de29 100644
+--- a/emptied.txt
++++ b/emptied.txt
+@@ -1 +0,0 @@
+-the only line
+diff --git "a/gone-\\303\\251.txt" "b/gone-\\303\\251.txt"
+deleted file mode 100644
+index 7777777..0000000
+--- "a/gone-\\303\\251.txt"
++++ /dev/null
+@@ -1 +0,0 @@
+-au revoir
+`;
+  const hunks = parseUnifiedDiff(diff);
+  const untracked = [{ file: 'notes/todo.md', oldStart: 0, oldLines: 0, newStart: 1, newLines: 1, lines: ['+- call back'], change: 'added' as const }];
+  const lines = mainChangeLines(hunkStats(hunks).files);
+  const want = [
+    'Changed README.md (2+ / 0-)',
+    'Added src/new.ts (2+ / 0-)',
+    'Removed src/old.ts (0+ / 2-)',
+    // Still there, only its content changed: never Added or Removed.
+    'Changed was-empty.txt (1+ / 0-)',
+    'Changed emptied.txt (0+ / 1-)',
+    // git's C-style quoting of a non-ASCII name is undone, and the file keeps its name although +++ is /dev/null.
+    'Removed gone-é.txt (0+ / 1-)',
+  ];
+  for (const line of want) assert.ok(lines.includes(line), `${line}\n--\n${lines.join('\n')}`);
+  assert.ok(!lines.some((l) => l.includes('/dev/null')), lines.join('\n'));
+  const files = hunkStats([...hunks, ...untracked]).files;
+  assert.equal(files.find((f) => f.path === 'notes/todo.md')?.change, 'added');
 });
 
 test('empty hunks produce an empty brief', () => {
