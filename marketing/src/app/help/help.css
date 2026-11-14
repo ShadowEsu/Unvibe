@@ -7,3 +7,5 @@
 .fos-page .verify .help-shot { margin: 0; max-width: 100%; }
 .fos-page .verify .help-shot img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(20, 20, 20, 0.14); }
 .fos-page .verify .help-shot figcaption { margin-top: 6px; color: var(--u-text-2); font: 500 12px/16px var(--font-mono); }
+/* The "Applies to" line under a page's lead (first-open pages): a small gap so it reads as its own line. */
+.fos-page .fos-page__head .fos__note { margin: 10px 0 0; }

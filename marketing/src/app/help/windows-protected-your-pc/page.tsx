@@ -34,6 +34,10 @@ export default function WindowsProtectedYourPcPage() {
             app from starting.&rdquo; It shows because Unvibe is new and not yet signed with a paid certificate. Two presses get past it,
             and a PowerShell line installs without it.
           </p>
+          <p className="fos__note">
+            Applies to every Unvibe download so far: none is signed with a certificate yet. The pictures are from the 0.1.49 portable
+            .exe.
+          </p>
         </div>
       </header>
 
@@ -57,7 +61,7 @@ export default function WindowsProtectedYourPcPage() {
               <HelpShot {...HELP_SHOTS.runAnyway} caption="Real screen, Windows" />
             </div>
           </li>
-          <li>Unvibe opens and stays in your taskbar. Later versions install from inside the app.</li>
+          <li>Unvibe opens and stays in your taskbar. That is the sign it worked. Later versions install from inside the app.</li>
         </ol>
       </section>
 
