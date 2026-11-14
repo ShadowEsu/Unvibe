@@ -28,7 +28,7 @@ print(top_words("notes.txt"))`;
 export default async function LearnToCodeWithAiPage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <article className={`explain-page ${explainMono.variable}`}>
+    <article className={`explain-page explain-page--uc ${explainMono.variable}`}>
       <UseCaseHead useCase={page} heading="Learn to code from the code AI writes for you">
         <p>
           If an AI tool writes most of your project, the project can work while you still cannot say how. You find out

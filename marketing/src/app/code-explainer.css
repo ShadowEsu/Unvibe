@@ -124,3 +124,64 @@ ol.explain-notes {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Search landing pages (Design, 7 Nov): the H1 names the job, one line of what you get, then the real panel
+   screenshot of that job at the fold with the one Download free button beside it; the same button ends the page. */
+.uc-fold {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 860px) {
+  .uc-fold {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 32rem);
+    align-items: center;
+    gap: 2rem;
+  }
+}
+
+.uc-fold__text {
+  display: grid;
+  gap: 1rem;
+}
+
+.uc-fold__cta,
+.uc-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.2rem;
+}
+
+.uc-fold__cta small,
+.uc-end small {
+  color: var(--explain-muted);
+  font-size: 0.95rem;
+}
+
+/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays a reading measure (68ch), while the worked example's
+   code block and the "Doing it with Unvibe" steps sit at about 860 px, wider than the prose but not the whole card
+   (Design SHOULD on #269; the 1440 page is not shorter for it: 6,079 px against 6,020). The list keeps its marker
+   inside the same 860 px. Under 1024 nothing changes. */
+@media (min-width: 1024px) {
+  .explain-page--uc .explain-card p,
+  .explain-page--uc .explain-card li,
+  .explain-page--uc .explain-card dd {
+    max-width: 68ch;
+  }
+  /* The code block is 860 px, or as wide as its longest line when that is longer, never wider than the card: the
+     Cursor sample's `controller.signal` line was cut at a hard 860 (Design MUST on #269). */
+  .explain-page--uc .use-sample {
+    width: fit-content;
+    min-width: min(860px, 100%);
+    max-width: 100%;
+  }
+  .explain-page--uc .explain-notes {
+    max-width: 860px;
+  }
+  .explain-page--uc .explain-notes li {
+    max-width: none;
+  }
+}
