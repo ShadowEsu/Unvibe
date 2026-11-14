@@ -1,9 +1,9 @@
 import type { Provider } from './provider';
 import { MockProvider } from './mock';
-import { AnthropicProvider } from './anthropic';
+import { AnthropicProvider, SHORT_MAX_TOKENS } from './anthropic';
 import { MeteredProvider, spendStore } from './spendMeter';
 
-export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt, isMoreDetail, isShortExplanation } from './prompt';
+export { buildSystemPrompt, buildUserPrompt, buildComprehensionPrompt, buildPreviewSystemPrompt, buildPreviewUserPrompt, isMoreDetail, isShortExplanation } from './prompt';
 export type { Provider, ModelProvider, ModelRoute } from './provider';
 export type { SpeechToTextProvider, TextToSpeechProvider, EmbeddingProvider } from './speech';
 
@@ -19,4 +19,15 @@ export function selectProvider(account?: string, maxOutputTokens?: number): Prov
   if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_MOCK_AI === 'true') return new MockProvider();
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   return key ? new MeteredProvider(new AnthropicProvider(key, maxOutputTokens), spendStore(), account) : null;
+}
+
+/**
+ * Quick look (previews): the same provider and meter as `selectProvider`, with the output budget fixed
+ * at SHORT_MAX_TOKENS here (no request field reaches it) and the preview allowance checked on top of
+ * the caps (`MeteredProvider` with kind 'ai_preview'). Without `account` every hosted call is refused.
+ */
+export function selectPreviewProvider(account: string | undefined): Provider | null {
+  if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_MOCK_AI === 'true') return new MockProvider();
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  return key ? new MeteredProvider(new AnthropicProvider(key, SHORT_MAX_TOKENS), spendStore(), account, 'ai_preview') : null;
 }
