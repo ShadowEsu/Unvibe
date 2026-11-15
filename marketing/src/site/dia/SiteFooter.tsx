@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { listingBadges, listingLinks, submittedTo } from "@/data/listings";
+import { footerBadges, listingLinks, submittedTo } from "@/data/listings";
 import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { OFFICIAL_PROFILES } from "@/lib/contact";
@@ -12,8 +12,9 @@ import { D_ART_CREDITS, D_FOOT } from "./content";
 /**
  * The footer on every page (plan mock 09): mono-caps columns with every link of the live footer (Security MUST-D6),
  * Analytics settings and the newsletter; then the quiet directory rows (Security 20261106-1849): "Listed on" holds the
- * live listings, each directory's own badge as a self-hosted copy (never hotlinked, never recoloured) and every live
- * listing as a plain text link; "Submitted to" holds, as plain text only, the pending directories that need a link back
+ * live listings, each directory's own badge as a self-hosted copy (never hotlinked, never recoloured; a badge marked
+ * listedOnOnly shows on /listed-on instead) and every live listing as a plain text link; "Submitted to" holds, as plain
+ * text only, the pending directories that need a link back
  * before they approve. Server-rendered <a>s without nofollow, so the directories' checkers find them. Then the photo
  * and painting credits. The Follow column (Design, ledger 563) links the profiles Unvibe controls with rel="me", the
  * same list as the Organization JSON-LD sameAs.
@@ -51,7 +52,7 @@ export function SiteFooter() {
         <p className="d-foot__dirs-h">Listed on</p>
         <div>
           <div className="d-foot__badges">
-            {listingBadges.map((badge) => (
+            {footerBadges.map((badge) => (
               <a key={badge.src} href={badge.href} target="_blank" rel="noopener" title={badge.alt}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- a directory's badge as supplied, self-hosted */}
                 <img src={badge.src} alt={badge.alt} width={badge.width} height={badge.height} loading="lazy" decoding="async" />
