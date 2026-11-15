@@ -79,8 +79,9 @@ function Thanks() {
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
                       <figcaption>
                         <span className="dt__shot-label d-mono">{shot.caption}</span>
-                        {/* the space keeps the label and note apart in the text (screen readers, copy); between blocks it doesn't render */}
-                        {shot.note ? <>{" "}<span className="dt__shot-note">{shot.note}</span></> : null}
+                        {/* a hidden full stop and a space keep "…macOS 26. On macOS 15…" two sentences for screen readers and
+                            textContent; the label stays unpunctuated on screen */}
+                        {shot.note ? <><span className="sr-only">.</span>{" "}<span className="dt__shot-note">{shot.note}</span></> : null}
                       </figcaption>
                     </figure>
                   ) : null}
