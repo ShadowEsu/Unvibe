@@ -22,7 +22,9 @@ export const metadata: Metadata = pageMetadata({
  * empty and paste states, app/src/renderer/shared/limitOffer.ts, companion.tsx Settings; the System Events timing
  * against v0.1.51: main.ts onboarding:complete and selection.ts startFrontmostWatch). Notices the app
  * may also show come second: they can be skipped (notify.ts) and fade after a few seconds. Screenshots are
- * real macOS 15 captures (HelpShot.tsx).
+ * real macOS 15 captures (HelpShot.tsx). The administrator-window limit: selection.ts PS_COPY sends SendKeys,
+ * which falls back to SendInput, and Windows blocks that for windows running as administrator (UIPI, Microsoft's
+ * SendInput docs); not reproduced here.
  */
 export default function ShortcutHelpPage() {
   return (
@@ -76,9 +78,9 @@ export default function ShortcutHelpPage() {
         <ul className="help-list">
           <li><b>Check the keys:</b> {windows.anywhere}, all three together. Windows has no permission to allow.</li>
           <li>
-            <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection
-            (Unvibe may also say &ldquo;Couldn&apos;t copy from&rdquo; that app), and Unvibe can&apos;t copy from a window running as
-            administrator. Copy the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the
+            <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection, and
+            Unvibe can&apos;t copy from a window running as administrator (it may also say &ldquo;Couldn&apos;t copy from&rdquo; that
+            app). Copy the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the
             panel.
           </li>
         </ul>
