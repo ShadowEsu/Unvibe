@@ -17,7 +17,7 @@ export const USE_CASES_INDEX = {
   path: "/use-cases",
   title: "Unvibe use cases: AI code, learning, inherited code",
   description:
-    "Four times you need to understand code you did not write: an AI agent's change, Cursor's code, code AI wrote while you learn, and a codebase you inherited.",
+    "Five times you need to understand code you did not write: an AI agent's change, Cursor's or Copilot's code, code AI wrote as you learn, and inherited code.",
 } as const;
 
 export const useCases: readonly UseCase[] = [
@@ -52,6 +52,14 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read what Cursor's Agent or Tab wrote before you accept it, with a worked React hook in TypeScript, explained at the depth you pick.",
     summary: "Cursor wrote it and you accepted it. How to find out what it does, line by line, before you ship it.",
+  },
+  {
+    slug: "explain-copilot-code",
+    name: "Explain code GitHub Copilot wrote",
+    title: "Explain the code GitHub Copilot wrote",
+    description:
+      "How to read what GitHub Copilot suggested before you keep it, with a worked Python function checked by running it, explained at the depth you pick.",
+    summary: "Copilot suggested it and you pressed Tab. How to find out what it does, and what it gets wrong, before you ship it.",
   },
 ];
 

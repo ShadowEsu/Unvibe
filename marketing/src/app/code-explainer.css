@@ -142,6 +142,18 @@ ol.explain-notes {
   }
 }
 
+/* A portrait panel capture (no landscape capture beside the tool exists): at 32rem it ran past the fold and left the
+   text centred in empty space. 22rem matches .os-how beside the same captures on /code-explainer-mac and -windows. */
+.uc-fold--panel .os-shot {
+  max-width: 22rem;
+}
+
+@media (min-width: 860px) {
+  .uc-fold--panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  }
+}
+
 .uc-fold__text {
   display: grid;
   gap: 1rem;
