@@ -88,6 +88,24 @@ describe("explain pages", () => {
     }
   });
 
+  it("search titles are at most 60 characters with the site suffix and are unique", () => {
+    const seen = new Set<string>();
+    for (const { id, title } of explainPages) {
+      if (!title) continue;
+      assert.ok(`${title} · Unvibe`.length <= 60, `${id}: title "${title}" runs past 60 with " · Unvibe"`);
+      assert.ok(!seen.has(title.toLowerCase()), `${id}: title "${title}" is used twice`);
+      seen.add(title.toLowerCase());
+    }
+  });
+
+  it("each carries the day it went live, as YYYY-MM-DD, no earlier than the /explain route and not in the future", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const { id, published } of explainPages) {
+      assert.match(published, /^\d{4}-\d{2}-\d{2}$/, `${id}: published "${published}" is not YYYY-MM-DD`);
+      assert.ok(published >= "2026-10-26" && published <= today, `${id}: published "${published}" is outside 2026-10-26..${today}`);
+    }
+  });
+
   it("link every other page exactly once: related first, then the rest", () => {
     for (const page of explainPages) {
       const { related, others } = explainLinks(page);

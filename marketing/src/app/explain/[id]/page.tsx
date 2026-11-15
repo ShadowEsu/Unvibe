@@ -24,7 +24,7 @@ export function generateMetadata({ params }: Params): Metadata {
   if (!page) return {};
   return pageMetadata({
     path: `/explain/${page.id}`,
-    title: `Explain ${explainHeading(page)} in plain English`,
+    title: page.title ?? `Explain ${explainHeading(page)} in plain English`,
     description: page.description,
     // The page's own sample with the shortcut and Vibe; no panel, since none explains these exact lines.
     card: explainCard(page),
