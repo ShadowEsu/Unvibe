@@ -149,7 +149,8 @@ export default function BetaDownloadsPage() {
                 A link opened on your phone or in another browser won’t sign you in. If no browser opened, go to{" "}
                 {/* In running text: not the section's inline-block, margin-topped .paper-text-link (paper.css .paper-center). */}
                 <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="https://api.unvibe.site/activate">api.unvibe.site/activate</a>,
-                sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.
+                sign in, and type the code shown in the app. Codes expire after 10 minutes, so restart sign-in if it has been a while.{" "}
+                <a className="paper-text-link" style={{ display: "inline", marginTop: 0, fontSize: "inherit", textDecoration: "underline", textUnderlineOffset: "0.18em" }} href="/help/waiting-for-google-sign-in">More sign-in help</a>.
               </p>
             </details>
             <details>

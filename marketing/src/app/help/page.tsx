@@ -66,6 +66,10 @@ export default function HelpIndexPage() {
         <h2 id="account-title">Account and plans</h2>
         <ul className="help-list">
           <li>
+            <Link href="/help/waiting-for-google-sign-in">Unvibe says &ldquo;Waiting for Google sign-in&hellip;&rdquo;</Link>. Open browser,
+            Copy link, the email link, and what to do when the code times out.
+          </li>
+          <li>
             <Link href="/beta#help">Sign-in doesn&apos;t finish, or I&apos;d rather not sign in</Link>. Check your Spam folder if the
             sign-in email doesn&apos;t arrive. You can start without an account.
           </li>
