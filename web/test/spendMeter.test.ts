@@ -169,6 +169,8 @@ test('fail closed: no store, or a store that throws, refuses without calling the
   const broken: SpendStore = {
     reserve: async () => { throw new Error('connection refused'); },
     settle: async () => {},
+    reserveKind: async () => { throw new Error('connection refused'); },
+    settleKind: async () => {},
   };
   for (const store of [null, broken]) {
     const inner = new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } });
@@ -181,7 +183,12 @@ test('fail closed: no store, or a store that throws, refuses without calling the
 
 test('a failed settle keeps the worst case counted and still returns the answer', async () => {
   const memory = new MemorySpendStore();
-  const store: SpendStore = { reserve: (n) => memory.reserve(n), settle: async () => { throw new Error('timeout'); } };
+  const store: SpendStore = {
+    reserve: (n) => memory.reserve(n),
+    settle: async () => { throw new Error('timeout'); },
+    reserveKind: (kind, n, account) => memory.reserveKind(kind, n, account),
+    settleKind: async () => { throw new Error('timeout'); },
+  };
   const { text } = await new MeteredProvider(new SpyProvider({ usage: { inputTokens: 1, outputTokens: 1 } }), store).complete('s', 'u');
   assert.equal(text, 'answer');
   assert.equal(sum(memory), worst('s', 'u'));
