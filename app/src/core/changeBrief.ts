@@ -3,11 +3,26 @@ import type { DiffHunk } from './protocol';
 export type BriefScope = 'working' | 'staged' | 'latest' | 'branch';
 export type ArchitectureImpact = 'LOW' | 'MEDIUM' | 'HIGH';
 
+export type FileChange = 'added' | 'removed' | 'changed';
+
 export interface BriefFile {
   path: string;
   insertions: number;
   deletions: number;
   kind: string;
+  /** From the hunk headers, not the line counts: an edited file that only gained lines is still "changed". */
+  change: FileChange;
+}
+
+/**
+ * What happened to one file, from git's own header lines (`new file mode` / `deleted file mode`, carried on each
+ * hunk by `parseUnifiedDiff`; an untracked file's hunks say `added`). Not from the `@@` numbers: `-0,0` also
+ * appears when an empty tracked file gains lines and `+0,0` when a file is emptied in place, and both still exist.
+ */
+export function fileChange(hunks: DiffHunk[]): FileChange {
+  const first = hunks[0]?.change;
+  if (first && hunks.every((h) => h.change === first)) return first;
+  return 'changed';
 }
 
 export interface ChangeBrief {
@@ -29,10 +44,11 @@ const MED_PATH = /(api|route|server|sql|store|queue|redis|worker|config)/i;
 
 export function hunkStats(hunks: DiffHunk[]): { insertions: number; deletions: number; files: BriefFile[] } {
   const byFile = new Map<string, BriefFile>();
+  const hunksByFile = new Map<string, DiffHunk[]>();
   let insertions = 0;
   let deletions = 0;
   for (const hunk of hunks) {
-    const current = byFile.get(hunk.file) ?? { path: hunk.file, insertions: 0, deletions: 0, kind: fileKind(hunk.file) };
+    const current = byFile.get(hunk.file) ?? { path: hunk.file, insertions: 0, deletions: 0, kind: fileKind(hunk.file), change: 'changed' as FileChange };
     for (const line of hunk.lines) {
       if (line.startsWith('+') && !line.startsWith('+++')) {
         current.insertions += 1;
@@ -43,7 +59,10 @@ export function hunkStats(hunks: DiffHunk[]): { insertions: number; deletions: n
       }
     }
     byFile.set(hunk.file, current);
+    const list = hunksByFile.get(hunk.file);
+    if (list) list.push(hunk); else hunksByFile.set(hunk.file, [hunk]);
   }
+  for (const [file, entry] of byFile) entry.change = fileChange(hunksByFile.get(file) ?? []);
   return { insertions, deletions, files: [...byFile.values()].sort((a, b) => (b.insertions + b.deletions) - (a.insertions + a.deletions)) };
 }
 
@@ -64,11 +83,10 @@ export function architectureImpact(files: BriefFile[]): ArchitectureImpact {
   return 'LOW';
 }
 
+const CHANGE_VERB: Record<FileChange, string> = { added: 'Added', removed: 'Removed', changed: 'Changed' };
+
 export function mainChangeLines(files: BriefFile[]): string[] {
-  return files.slice(0, 6).map((file) => {
-    const verb = file.insertions && !file.deletions ? 'Added' : file.deletions && !file.insertions ? 'Removed' : 'Changed';
-    return `${verb} ${file.path} (${file.insertions}+ / ${file.deletions}-)`;
-  });
+  return files.slice(0, 6).map((file) => `${CHANGE_VERB[file.change]} ${file.path} (${file.insertions}+ / ${file.deletions}-)`);
 }
 
 export function understandItems(files: BriefFile[], impact: ArchitectureImpact): string[] {
