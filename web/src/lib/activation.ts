@@ -53,6 +53,8 @@ export const PROGRESS_KINDS = [
   'level_answered',
   'login_prompt_shown',
   'login_prompt_accepted',
+  // The first main window stayed visible 3 s: a person saw the app (BOSS counter fix, ledger 620).
+  'window_shown',
 ] as const;
 export type ProgressKind = (typeof PROGRESS_KINDS)[number];
 
