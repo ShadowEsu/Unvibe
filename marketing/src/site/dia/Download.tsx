@@ -58,7 +58,7 @@ function Thanks() {
             {/* the Terminal line first (Design 11 Nov), the steps after it for anyone who opens the download */}
             <div className="ninst dt__fast">
               <h3 id={fastId} className="dt__k">{D_THANKS.fastest}</h3>
-              <InstallCommand os="mac" surface="beta" labelledBy={fastId} line={<p className="ninst__line">{D_THANKS.fastLine}</p>} />
+              <InstallCommand os="mac" surface="beta_thanks" labelledBy={fastId} line={<p className="ninst__line">{D_THANKS.fastLine}</p>} />
             </div>
             <h3 className="dt__k dt__or">{D_THANKS.orFile}</h3>
           </>
