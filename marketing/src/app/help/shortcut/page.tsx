@@ -77,8 +77,9 @@ export default function ShortcutHelpPage() {
           <li><b>Check the keys:</b> {windows.anywhere}, all three together. Windows has no permission to allow.</li>
           <li>
             <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection
-            (Unvibe may also say &ldquo;Couldn&apos;t copy from&rdquo; that app). Copy the code yourself (Ctrl+C, or Ctrl+Insert in a
-            terminal) and press <b>Explain my clipboard</b> in the panel.
+            (Unvibe may also say &ldquo;Couldn&apos;t copy from&rdquo; that app), and Unvibe can&apos;t copy from a window running as
+            administrator. Copy the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the
+            panel.
           </li>
         </ul>
       </section>
