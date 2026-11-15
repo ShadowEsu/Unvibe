@@ -18,8 +18,10 @@
  * `install_help_viewed {from, os_default}`: once per /install-help view, from home | beta | pricing |
  * installer | other; os_default (mac | windows) is the tab the first-open steps opened on.
  * `beta_install_copied {os, surface}`: a copy of the install command. surface beta_thanks = the Terminal line on the
- * post-download card (/beta#thanks, after a Mac download); beta = the /beta install box; home_install, investors and
- * the other install boxes as named. The card's copies counted as beta until beta_thanks was added.
+ * post-download card (/beta#thanks, after a Mac download); beta = the /beta install box; seo_mac, seo_windows,
+ * activate, redeem, explain, explain_answer, explain_try, faq and use_cases = the InstallBox on those pages
+ * (GetUnvibe / TryIt); install_help = FirstOpenSteps on /install-help. The card's copies counted as beta until
+ * beta_thanks was added.
  */
 
 import { track } from "@/lib/analytics";
