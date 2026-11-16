@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PricingCopy } from "@/lib/pricingCopy";
-import { D_BRIEF, D_CARDS, D_CLOSE, D_EXPLAIN, D_FAQ, D_GET_TABLE, D_HERO, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
+import { D_BRIEF, D_CARDS, D_CLOSE, D_EXPLAIN, D_FAQ, D_GET_TABLE, D_HERO, D_NEWAPP, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
 import { BtnDot, Letters, Statement, Stats, VioletSplit } from "./effects";
 import { Faq, Os, PixelVibe, PixelWipe, Pixels, Ribbon, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
@@ -152,6 +152,29 @@ function Crop({ src, alt, crop }: { src: string; alt: string; crop: { x: number;
       {/* eslint-disable-next-line @next/next/no-img-element -- a real capture, cropped to the part its card names */}
       <img src={src} width={704} height={905} alt={alt} loading="lazy" decoding="async" />
     </div>
+  );
+}
+
+/** The 0.1.52 band: "one" = the Today capture full width; "pair" = Today and Ask Vibe side by side (stacked on phones). */
+function NewApp({ layout }: { layout: "one" | "pair" }) {
+  const shots = layout === "one" ? D_NEWAPP.shots.slice(0, 1) : D_NEWAPP.shots;
+  const id = `d-newapp-h-${layout}`;
+  return (
+    <section className={`d-newapp d-newapp--${layout}`} aria-labelledby={id}>
+      <p className="d-label d-mono" data-d-enter="">{D_NEWAPP.label}</p>
+      <h2 id={id} className="d-h2 d-serif" data-d-ink=""><T t={D_NEWAPP.h2} /></h2>
+      <p className="d-newapp__b" data-d-enter="">{D_NEWAPP.body}</p>
+      <div className="d-newapp__shots">
+        {shots.map((shot, i) => (
+          <figure key={shot.src} className="d-newapp__shot" data-d-enter="" style={d(i * 80)}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
+            <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} loading="lazy" decoding="async" />
+          </figure>
+        ))}
+      </div>
+      <p className="d-cap">{D_NEWAPP.caption}</p>
+      <p className="d-newapp__more"><Link className="d-pill-link d-btn" href={D_NEWAPP.more.href}>{D_NEWAPP.more.label}<BtnDot /></Link></p>
+    </section>
   );
 }
 
@@ -389,6 +412,8 @@ export function Home({ copy, faq, explain }: {
       <DiaMotion />
       <div data-d-dock-scope="">
         <Hero />
+        <NewApp layout="one" />
+        <NewApp layout="pair" />
         <Ribbon />
         <Numbers />
         <Statement labelledBy="d-stmt-h">

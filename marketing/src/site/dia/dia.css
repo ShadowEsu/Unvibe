@@ -150,6 +150,14 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-card__shot { display: grid; place-items: center; min-height: 300px; margin-top: 14px; padding: 24px; border-radius: 14px; background: var(--d-tint); }
 .d-crop { position: relative; width: min(100%, calc(var(--cw) * 1px)); overflow: hidden; container-type: inline-size; border-radius: 10px; box-shadow: 0 0 0 1px rgb(23 19 31 / 0.12), 0 18px 40px -24px rgb(40 20 110 / 0.45); }
 .d-crop img { position: absolute; max-width: none; height: auto; width: calc(704 / var(--cw) * 100cqw); left: calc(var(--cx) / var(--cw) * -100cqw); top: calc(var(--cy) / var(--cw) * -100cqw); }
+/* 0.1.52 announce band: the real Mono captures on the paper grid, one full-width shot or a pair. */
+.d-newapp { padding: 120px 30px 120px; text-align: center; background: linear-gradient(#ece8e2 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, #ece8e2 1px, transparent 1px) 0 0 / 24px 24px, var(--d-paper); }
+.d-newapp__b { max-width: 620px; margin: 20px auto 0; font: 400 18px/1.5 var(--d-sans); color: var(--d-ink-2); text-wrap: pretty; }
+.d-newapp__shots { display: grid; gap: 24px; max-width: 1180px; margin: 56px auto 0; }
+.d-newapp--pair .d-newapp__shots { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1224px; }
+.d-newapp__shot { margin: 0; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px rgb(23 19 31 / 0.12), 0 24px 50px -30px rgb(40 20 110 / 0.45); }
+.d-newapp__shot img { display: block; width: 100%; height: auto; }
+.d-newapp__more .d-pill-link { margin-top: 24px; }
 .d-card__editors { display: grid; gap: 26px; justify-items: start; width: 100%; }
 .d-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .d-chip { padding: 10px 16px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px var(--d-line); font: 500 16px/1 var(--d-sans); color: var(--d-ink); }
@@ -416,6 +424,10 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
   .d-stat { padding: 18px 16px 20px; }
   .d-stat__value { margin-top: 24px; font-size: 52px; }
   .d-steps, .d-cards { padding: 100px 16px 90px; }
+  .d-newapp { padding: 80px 16px 72px; }
+  .d-newapp__b { font-size: 16px; }
+  .d-newapp__shots, .d-newapp--pair .d-newapp__shots { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 32px; }
+  .d-newapp__shot { border-radius: 10px; }
   .d-steps__track { height: auto; margin-top: 40px; }
   .d-steps__mark, .d-steps__stage { display: none; }
   .d-steps__pin { position: static; display: block; }
