@@ -329,7 +329,7 @@ export function ConsoleAnalytics({ embedded = false }: { embedded?: boolean }) {
             <article>
               <span>Install copies</span>
               <strong>{(data.funnel?.installCopiedPeople ?? data.installs?.copied ?? 0).toLocaleString()}</strong>
-              <small>{data.funnel?.installViewedPeople ?? 0} saw the command · {data.installs?.fetched ?? 0} fetches · {data.installs?.installed ?? 0} finished</small>
+              <small>{data.funnel?.installViewedPeople ?? 0} saw the command · {data.installs?.fetched ?? 0} fetches · {data.installs?.installed ?? 0} finished (fixed: the scripts stopped reporting this; count trial installs instead)</small>
             </article>
             <article>
               <span>Feedback clicks</span>

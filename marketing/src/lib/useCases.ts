@@ -17,7 +17,7 @@ export const USE_CASES_INDEX = {
   path: "/use-cases",
   title: "Unvibe use cases: AI code, learning, inherited code",
   description:
-    "Three times you need to understand code you did not write: an AI agent's change, code AI wrote while you learn, and a codebase you inherited.",
+    "Six times you need to understand code you did not write: an agent's change, code from Cursor, Copilot or ChatGPT, learning with AI, and inherited code.",
 } as const;
 
 export const useCases: readonly UseCase[] = [
@@ -44,6 +44,30 @@ export const useCases: readonly UseCase[] = [
     description:
       "How to read an unfamiliar file top-down before you change it, with a worked JavaScript example, from callers and imports to tests and git history.",
     summary: "A teammate's code, an old project or an open-source repo. How to read a file before you change it.",
+  },
+  {
+    slug: "explain-cursor-code",
+    name: "Explain code Cursor wrote",
+    title: "Explain the code Cursor wrote",
+    description:
+      "How to read what Cursor's Agent or Tab wrote before you accept it, with a worked React hook in TypeScript, explained at the depth you pick.",
+    summary: "Cursor wrote it and you accepted it. How to find out what it does, line by line, before you ship it.",
+  },
+  {
+    slug: "explain-copilot-code",
+    name: "Explain code GitHub Copilot wrote",
+    title: "Explain the code GitHub Copilot wrote",
+    description:
+      "How to read what GitHub Copilot suggested before you keep it, with a worked Python function checked by running it, explained at the depth you pick.",
+    summary: "Copilot suggested it and you pressed Tab. How to find out what it does, and what it gets wrong, before you ship it.",
+  },
+  {
+    slug: "explain-chatgpt-code",
+    name: "Explain code ChatGPT wrote",
+    title: "Explain the code ChatGPT wrote",
+    description:
+      "How to read a script ChatGPT gave you before you run it, with a worked JavaScript example checked by running it, explained at the depth you pick.",
+    summary: "You asked ChatGPT for a script and pasted it in. How to find out what it does, and where it breaks, before you rely on it.",
   },
 ];
 

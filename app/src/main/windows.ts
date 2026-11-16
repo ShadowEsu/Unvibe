@@ -1,6 +1,7 @@
 import { app, BrowserWindow, screen, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize } from './settings';
+import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
@@ -525,10 +526,12 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
   // launches retain the normal companion size so the app stays out of the way.
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
-  const fallback = setTimeout(revealer.reveal, 5000);
+  // `window_shown` (progress.ts): the marker that a person saw the window, 3 s after it is revealed.
+  const reveal = () => { revealer.reveal(); void noteWindowShown(win); };
+  const fallback = setTimeout(reveal, 5000);
   win.once('ready-to-show', () => {
     clearTimeout(fallback);
-    revealer.reveal();
+    reveal();
   });
   win.once('closed', () => clearTimeout(fallback));
   void win.loadFile(page('companion'));

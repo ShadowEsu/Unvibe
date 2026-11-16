@@ -9,10 +9,10 @@ import "../help.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/help/apple-could-not-verify",
-  title: "\u201cApple could not verify Unvibe is free of malware\u201d: how to open Unvibe on a Mac",
+  title: "Apple could not verify Unvibe: how to open it on a Mac",
   absolute: true,
   description:
-    "macOS says \u201cUnvibe\u201d Not Opened and that Apple could not verify it. Press Done, then Open Anyway in System Settings \u203a Privacy & Security. Not opened the download yet? One Terminal line installs Unvibe without the dialog.",
+    "macOS says “Unvibe” Not Opened and Apple could not verify it. Press Done, then Open Anyway in Privacy & Security. Not opened the download yet? Use Terminal.",
 });
 
 /**
@@ -33,6 +33,10 @@ export default function AppleCouldNotVerifyPage() {
             The first time you open the Unvibe download, macOS shows a box that says &ldquo;Apple could not verify &lsquo;Unvibe&rsquo;
             is free of malware that may harm your Mac or compromise your privacy.&rdquo; Unvibe isn&apos;t notarized by Apple yet, so
             macOS can&apos;t check it. Here is what to press, and, if you haven&apos;t opened the download yet, a way to install that never shows the box.
+          </p>
+          <p className="fos__note">
+            Applies to every Unvibe download so far: none is notarized by Apple yet. The pictures are from 0.1.49 on macOS 15; macOS 26
+            shows the same text, with Move to Trash above Done.
           </p>
         </div>
       </header>
@@ -58,7 +62,10 @@ export default function AppleCouldNotVerifyPage() {
             Anyway button &ldquo;is available for about an hour after you try to open the app&rdquo;, so if it&apos;s gone, open Unvibe
             from Applications again, then come back to Security.
           </li>
-          <li>Apple says macOS then saves Unvibe as an exception, so you do this once. Later versions install from inside the app.</li>
+          <li>
+            Unvibe opens: its icon appears in the Dock, and in the menu bar at the top right when there is room. That is the sign it
+            worked. Apple says macOS then saves Unvibe as an exception, so you do this once. Later versions install from inside the app.
+          </li>
         </ol>
         <p>
           On macOS 14 or older, you can instead Control-click Unvibe in Applications, choose <b>Open</b>, then press <b>Open</b>{" "}

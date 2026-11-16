@@ -238,6 +238,23 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-faq__a > div { overflow: hidden; }
 .d-faq__a p { padding: 0 24px 22px; font-size: 16px; line-height: 1.6; color: var(--d-ink-2); }
 
+/* ---------- 6d · explain links (growth #5, Design S-1 11 Nov): text links to /explain pages, between FAQ and close ---------- */
+.d-explain { max-width: 1224px; margin: 0 auto; padding: 0 30px 110px; }
+.d-explain__list { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px; }
+.d-explain__list a { font: 400 16px/1.5 var(--d-sans); color: var(--d-ink); text-decoration: underline; text-decoration-color: rgb(23 19 31 / 0.3); text-underline-offset: 3px; }
+.d-explain__list a:hover, .d-explain__list a:focus-visible { text-decoration-color: var(--d-violet); }
+.d-explain__list a:focus-visible { outline: 2px solid var(--d-violet); outline-offset: 2px; border-radius: 2px; }
+.d-explain__all { color: var(--d-violet) !important; }
+@media (max-width: 820px) {
+  .d-explain { padding: 0 16px 72px; }
+  .d-explain .d-label { text-align: left; }
+  .d-explain__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+  .d-explain__list a { display: flex; align-items: center; min-height: 44px; font-size: 15px; line-height: 1.35; }
+}
+@media (max-width: 480px) {
+  .d-explain__list { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ---------- 7 · close (mock 09): the arch rises over the bubbles, then the dock comes to rest under the question ---------- */
 .d-closebg { height: 300px; background: #5a3cc6 image-set(url("/d/bg/hero-bubbles-1440.avif") type("image/avif"), url("/d/bg/hero-bubbles-1440.webp") type("image/webp")) center / cover no-repeat; }
 .d-close { --d-arch-h: 160px; display: grid; justify-items: center; gap: 24px; padding: 10px 30px 40px; text-align: center; }
@@ -263,14 +280,21 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 [data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) .pricing-plans__intro::before { opacity: 1; }
 [data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) .pricing-plans__intro :is(h1, p) { color: #fff; }
 [data-d-bgswap-root]:has([data-d-bgswap-trigger]:is(:hover, :focus-visible, :focus-within)) .pricing-disclosure { background: rgb(250 248 245 / 0.94); }
-.dp .marketing-plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 340px)); justify-content: center; align-items: start; gap: 18px; margin-top: 60px; }
+/* One height per row (Design 11 Nov, #302): the feature list grows to fill each card and keeps its bullets at the top
+   (`.marketing-plan-card ul { flex: 1; align-content: start }`, globals.css), so the three CTAs line up at the cards'
+   feet. Pro keeps its 36 px raise at the top. */
+.dp .marketing-plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 340px)); justify-content: center; align-items: stretch; gap: 18px; margin-top: 60px; }
 .dp .marketing-plan-card { position: relative; display: flex; flex-direction: column; gap: 0; padding: 26px 24px 28px; border: 0; border-radius: 26px; background: var(--d-card); box-shadow: 0 0 0 1px var(--d-line), 0 20px 50px -36px rgb(30 10 80 / 0.4); color: var(--d-ink); transform: none; }
 .dp .marketing-plan-card.featured { margin-top: -36px; box-shadow: 0 0 0 1px var(--d-line), 0 30px 70px -36px rgb(30 10 80 / 0.55); }
 .dp .plan-badge { align-self: flex-start; padding: 5px 10px; border-radius: 999px; background: #f4f1fa; font: 500 10.5px/1 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-ink); }
 .dp .marketing-plan-card h3 { margin: 14px 0 0; font: 500 19px/1.2 var(--d-sans); letter-spacing: -0.01em; }
 .dp .plan-kicker { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--d-ink-2); }
-.dp .marketing-plan-price { display: block; margin-top: 18px; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; color: var(--d-ink); }
-.dp .marketing-plan-per { font: 400 14px/1.4 var(--d-sans); letter-spacing: 0; color: var(--d-ink-2); }
+/* flex + wrap + baseline: at any width where the per text doesn't fit beside the figure (with the closed copy, Teams
+   at 821-965 px and Pro at 821), "a seat a month, or $72 a year" drops under the figure as one block, right under it,
+   instead of leaving "a year" alone 44 px down (F-25). pre-wrap keeps the per text's own leading space
+   (" a month, …"), which a flex item would otherwise drop; "/month" has none. */
+.dp .marketing-plan-price { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: 18px; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; color: var(--d-ink); }
+.dp .marketing-plan-per { white-space: pre-wrap; font: 400 14px/1.4 var(--d-sans); letter-spacing: 0; color: var(--d-ink-2); }
 .dp .plan-note { margin: 6px 0 0; font-family: var(--font-display); font-style: italic; font-size: 22px; color: var(--d-violet); }
 .dp .marketing-plan-card small { display: block; margin-top: 8px; font-size: 13.5px; line-height: 1.45; color: var(--d-ink-2); }
 .dp .marketing-plan-card ul { display: grid; gap: 10px; margin: 20px 0 0; padding: 20px 0 0; border-top: 1px solid var(--d-line); list-style: none; }
@@ -283,6 +307,14 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dp .pricing-button--quiet:hover { background: var(--d-tint); }
 .dp .pricing-disclosure { margin: 40px auto 0; max-width: 760px; padding: 10px 16px; border-radius: 12px; text-align: center; font: 500 11px/1.6 var(--d-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--d-ink-2); transition: background-color 300ms; }
 .dp .pricing-toggle { margin: 28px auto 0; }
+/* Three columns from 821 px: below ~880 a card is about 240 px wide, and "Email about Teams" broke onto two lines
+   inside its 48 px pill (F-25). Narrower card sides and button start give the label room. No nowrap: a longer
+   label (the open-payments "Download, then upgrade") still wraps rather than run under the hover arrow; the
+   button's right padding stays 46 px for the dot (dia-motion.css). */
+@media (min-width: 821px) and (max-width: 900px) {
+  .dp .marketing-plan-card { padding-left: 18px; padding-right: 18px; }
+  .dp .pricing-button { padding-left: 16px; font-size: 15px; }
+}
 
 /* ---------- /beta (mock 11): the bubbles panel and the cream column with the live InstallBox ---------- */
 .dd-page { background: var(--d-paper); padding-bottom: 40px; }
@@ -306,13 +338,13 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dd .ninst__title { font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.05; letter-spacing: -0.02em; color: var(--d-ink); }
 .dd .ninst__picked { margin: 2px 0 16px; font: 400 16px/1.4 var(--d-sans); color: var(--d-ink-2); }
 .dd .ninst__k { font: 500 11.5px/1 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-ink-3); }
-.dd .ninst__box { height: 56px; border: 1px solid var(--d-line); border-radius: 14px; background: #fff; }
-.dd .ninst__box::after { background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff); }
-.dd .ninst__cmd code { font: 500 15px/1 var(--d-mono); color: var(--d-ink); }
-.dd .ninst__copy { background: var(--d-violet); color: #fff; border-radius: 10px; }
-.dd .ninst__copy:hover { background: var(--d-violet-2); }
-.dd .ninst__copy.is-copied { background: var(--d-lime); color: var(--d-ink); }
-.dd .ninst__line { font-size: 15px; color: var(--d-ink-2); }
+:is(.dd, .dt) .ninst__box { height: 56px; border: 1px solid var(--d-line); border-radius: 14px; background: #fff; }
+:is(.dd, .dt) .ninst__box::after { background: linear-gradient(90deg, rgb(255 255 255 / 0), #fff); }
+:is(.dd, .dt) .ninst__cmd code { font: 500 15px/1 var(--d-mono); color: var(--d-ink); }
+:is(.dd, .dt) .ninst__copy { background: var(--d-violet); color: #fff; border-radius: 10px; }
+:is(.dd, .dt) .ninst__copy:hover { background: var(--d-violet-2); }
+:is(.dd, .dt) .ninst__copy.is-copied { background: var(--d-lime); color: var(--d-ink); }
+:is(.dd, .dt) .ninst__line { font-size: 15px; color: var(--d-ink-2); }
 .dd .ninst__switch { color: var(--d-violet); font-weight: 500; }
 .dd .ninst__file { margin-top: 18px; padding-top: 22px; gap: 14px; }
 .dd .ninst__file-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -338,7 +370,11 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dt__in { max-width: 1120px; margin: 0 auto; padding: 40px 44px 36px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--d-line), 0 30px 70px -40px rgb(30 10 80 / 0.4); }
 .dt__h { font-size: 48px; line-height: 1.08; letter-spacing: -0.02em; }
 .dt__lede { margin-top: 12px; max-width: 640px; font-size: 18px; color: var(--d-ink-2); }
+.dt .dt__fast { max-width: 640px; margin-top: 22px; gap: 10px; }
+.dt__k { margin: 0; font: 600 17px/1.4 var(--d-sans); color: var(--d-ink); }
+.dt__or { margin-top: 30px; }
 .dt__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+.dt__or + .dt__steps { margin-top: 14px; }
 .dt__steps li { display: flex; gap: 12px; padding: 18px; border-radius: 16px; background: var(--d-tint); font-size: 15.5px; line-height: 1.5; animation: dRiseFade 600ms var(--d-ease-out, cubic-bezier(0.19, 1, 0.22, 1)) both; animation-delay: calc(var(--i, 0) * 150ms); --d-rise: 14px; }
 .dt__n { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--d-violet); color: #fff; font: 600 13px/1 var(--d-sans); }
 .dt__shot { margin-top: 12px; }

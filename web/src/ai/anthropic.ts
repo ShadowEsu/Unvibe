@@ -3,10 +3,17 @@ import type { MeterableProvider } from './spendMeter';
 
 /** The one hosted model (owner 2026-11-02: Opus only). It keys the meter's MODEL_PRICES; a model without a row there is never called. */
 export const ANTHROPIC_MODEL = 'claude-opus-5-5';
-/** Output budget per call for full-depth answers; the meter reserves all of it before each call. */
+/** Default output budget per call (full-depth answers below advanced, comprehension); the meter reserves all of it before each call. */
 export const ANTHROPIC_MAX_TOKENS = 2048;
 /** Output budget for a short answer (2 to 4 sentences, owner 2026-11-02): roomy for that, a fifth of the full budget. */
 export const SHORT_MAX_TOKENS = 400;
+/**
+ * Output budget for full-depth answers at the advanced and expert levels. These ran past 2048 tokens on 28-30-line
+ * snippets (BUGS F-20). The prompt asks every full answer for about 750 words: about 2.8 tokens a word on average and
+ * 3.2 on code-heavy answers (F-20 eval, 11 Nov) puts that at about 2,100-2,400 tokens, so 2560 is the margin.
+ * Only these levels pay the larger worst-case hold against an account's daily share.
+ */
+export const DEEP_MAX_TOKENS = 2560;
 /** Shown after an answer that hit the output budget, so a cut-off answer never looks finished. */
 export const TRUNCATED_NOTE = '\n\n(This answer was cut off at the length limit.)';
 
