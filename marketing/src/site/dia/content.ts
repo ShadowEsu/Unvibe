@@ -75,17 +75,17 @@ export const D_BRIEF = {
 
 const PANEL = { width: 704, height: 905 };
 
-/** The 0.1.52 announce band under the hero (BOSS, ledger 624): real Mono captures of the packaged app, sample data. */
+/** The 0.1.52 announce band under the hero (BOSS, ledger 624): the packaged RC2 build on a Mac (QA run 43936125326). */
 export const D_NEWAPP = {
   label: "(New in 0.1.52)",
   h2: { before: "The app has a", em: "new look", after: "." } as Title,
   body: "Unvibe 0.1.52 redraws the whole app in black and white, from Today and Ask Vibe to the Library, quizzes and Settings. Purple is left for Vibe and the sharks that swim faintly behind every box.",
   more: { href: "/releases", label: "What's new" },
   shots: [
-    { src: "/product/v0152/today-1180.webp", alt: "Unvibe 0.1.52's Today page: a greeting from Vibe, explanations per day, what to do next and recently understood code", width: 1180, height: 780 },
-    { src: "/product/v0152/ask-vibe-1180.webp", alt: "Unvibe 0.1.52's Ask Vibe page: a follow-up question about a retry loop and Vibe's answer with a code block", width: 1180, height: 780 },
+    { src: "/product/v0152/today-1024.webp", alt: "Unvibe 0.1.52's Today page on a Mac: a greeting from Vibe, explanations per day, how to explain code with the shortcut and what to do next", width: 1024, height: 677 },
+    { src: "/product/v0152/ask-vibe-1024.webp", alt: "Unvibe 0.1.52's Ask Vibe page on a Mac: Vibe asks what we are figuring out, with 3 suggested questions and a box for your own", width: 1024, height: 677 },
   ],
-  caption: "Real screens, sample data · Unvibe 0.1.52",
+  caption: "Real screens, test account · Unvibe 0.1.52 on a Mac",
 } as const;
 
 /** Four cards (mock 06): each real 0.1.49 capture cropped in CSS to the part its card names (capture pixels). */
