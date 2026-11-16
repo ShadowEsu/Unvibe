@@ -10,6 +10,11 @@ import {
 import { dayKey } from "@/lib/siteStatsStore";
 
 export type BetaInstallEvent = "copied" | "fetched" | "installed" | "survey";
+/**
+ * The events still counted. 'installed' was the install scripts' finish post: the scripts stopped sending it (Security
+ * R4(a), Kaspersky), so its all-time total is kept as it stands and nothing adds to it.
+ */
+export type RecordedBetaInstallEvent = Exclude<BetaInstallEvent, "installed">;
 
 export interface BetaInstallCounts {
   copied: number;
@@ -174,13 +179,13 @@ async function readSupabaseTable(): Promise<BetaInstallCounts> {
   return normalize(data ?? undefined);
 }
 
-async function recordSupabaseDirect(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+async function recordSupabaseDirect(event: RecordedBetaInstallEvent): Promise<BetaInstallCounts> {
   const client = supabaseClient();
   const current = await readSupabaseTable();
   const next: BetaInstallCounts = {
     copied: current.copied + (event === "copied" ? 1 : 0),
     fetched: current.fetched + (event === "fetched" ? 1 : 0),
-    installed: current.installed + (event === "installed" ? 1 : 0),
+    installed: current.installed,
     survey: current.survey + (event === "survey" ? 1 : 0),
   };
   const { data, error } = await client
@@ -202,7 +207,7 @@ async function recordSupabaseDirect(event: BetaInstallEvent): Promise<BetaInstal
   return normalize(data);
 }
 
-async function recordSupabaseTable(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+async function recordSupabaseTable(event: RecordedBetaInstallEvent): Promise<BetaInstallCounts> {
   const { data, error } = await supabaseClient().rpc("record_beta_install_event", {
     p_event: event,
   });
@@ -224,12 +229,12 @@ async function readWaitlistSentinel(): Promise<BetaInstallCounts> {
   }
 }
 
-async function recordWaitlistSentinel(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+async function recordWaitlistSentinel(event: RecordedBetaInstallEvent): Promise<BetaInstallCounts> {
   const current = await readWaitlistSentinel();
   const next: BetaInstallCounts = {
     copied: current.copied + (event === "copied" ? 1 : 0),
     fetched: current.fetched + (event === "fetched" ? 1 : 0),
-    installed: current.installed + (event === "installed" ? 1 : 0),
+    installed: current.installed,
     survey: current.survey + (event === "survey" ? 1 : 0),
   };
   const payload = JSON.stringify(next);
@@ -272,7 +277,7 @@ export function isBetaInstallStatsEmail(email: string | null | undefined): boole
  * Install script requests per Pacific day (migration 0012), beside the all-time counts above:
  * the server's day, the event and +1. Nothing about the request (IP, user agent, headers) is passed.
  */
-export type InstallScriptDayEvent = "mac_fetched" | "win_fetched" | "installed";
+export type InstallScriptDayEvent = "mac_fetched" | "win_fetched";
 
 export type InstallScriptDayRpc = (day: string, event: InstallScriptDayEvent) => Promise<{ error: unknown }>;
 
@@ -314,7 +319,7 @@ export async function recordInstallScriptDay(
   return false;
 }
 
-export async function recordBetaInstallEvent(event: BetaInstallEvent): Promise<BetaInstallCounts> {
+export async function recordBetaInstallEvent(event: RecordedBetaInstallEvent): Promise<BetaInstallCounts> {
   if (supabaseConfigured()) {
     try {
       return await recordSupabaseTable(event);

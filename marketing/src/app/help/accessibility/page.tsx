@@ -13,7 +13,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/help/accessibility",
   title: `Allow Accessibility so ${mac.anywhere} works in Unvibe on a Mac`,
   absolute: true,
-  description: `Why Unvibe asks for macOS Accessibility, how to switch it on in System Settings › Privacy & Security › Accessibility, and what to do when it still says Not allowed yet.`,
+  description: `Why Unvibe asks for Accessibility on a Mac, how to switch it on in System Settings, what to do when it still says Not allowed yet, and how to turn it off.`,
 });
 
 /**

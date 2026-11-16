@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { referralCodeFor } from "@/lib/referralCode";
 import { waitlistSchema } from "@/lib/waitlistSchema";
 import { notifyFounder } from "@/lib/notifyWaitlist";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
@@ -8,7 +8,6 @@ import { publicWaitlistFailure } from "@/lib/waitlistErrors";
 import {
   recordWaitlistBetaEmail,
   recordWaitlistNotification,
-  referralCodeForEmail,
   saveWaitlistEntry,
   type WaitlistEntry,
 } from "@/lib/waitlistStore";
@@ -30,10 +29,6 @@ export const dynamic = "force-dynamic";
 
 const IP_LIMIT: RateLimitRule = { name: "waitlist-ip", windowSeconds: 60, max: 8 };
 const TOO_MANY = "Too many requests. Please try again shortly.";
-
-function referralCodeFor(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 8);
-}
 
 export async function POST(req: Request) {
   const crossSite = rejectCrossSitePost(req);
@@ -60,13 +55,15 @@ export async function POST(req: Request) {
   if (emailLimited) return emailLimited;
   const ceiling = emailCeilingRejection(await consumeRateLimit(signupEmailDailyCeiling(), GLOBAL_KEY));
   if (ceiling) return ceiling;
+  // Always the HMAC of the posted email, never the stored code: the answer is then the same for a listed and an
+  // unlisted email, so it tells nothing about membership (Security F1). A member from before the HMAC change who
+  // posts again sees a new code; their old ?ref= link still attributes (referredBy is stored as given).
   const referralCode = referralCodeFor(email);
   const referralInput = parsed.data.referredBy?.trim();
-  // Stored as the friend's code, for attribution only (it grants nothing). A typed email is
-  // resolved to that waitlister's code when the list knows it.
-  const referredBy = referralInput?.includes("@")
-    ? (await referralCodeForEmail(referralInput).catch(() => undefined)) ?? referralInput.toLowerCase()
-    : referralInput?.toLowerCase() || undefined;
+  // Stored as the friend's code, for attribution only (it grants nothing). A typed email becomes that email's code
+  // by the same function, with no store read, so what is stored does not depend on whether the friend is listed
+  // (Security F1): the friend's code is the HMAC of their email whether they joined before or after this request.
+  const referredBy = referralInput?.includes("@") ? referralCodeFor(referralInput) : referralInput?.toLowerCase() || undefined;
   const promoCode = parsed.data.promoCode?.trim().toUpperCase();
   const createdAt = new Date().toISOString();
   const entry: WaitlistEntry = {
@@ -119,10 +116,11 @@ export async function POST(req: Request) {
         has_referral: Boolean(referredBy),
         has_utm: Boolean(entry.utmSource || entry.utmMedium || entry.utmCampaign),
       };
-      // Await so Vercel does not freeze the isolate before the capture request leaves.
+      // Await so Vercel does not freeze the isolate before the capture request leaves. The funnel counts a person
+      // once, at their first join (the Mixpanel event carries `duplicate` for the rest).
       await Promise.all([
         captureMixpanelServerEvent("waitlist_completed", referralCode, completionProps),
-        recordGrowthFunnelEvent("waitlist_completed", referralCode),
+        stored.duplicate ? undefined : recordGrowthFunnelEvent("waitlist_completed", referralCode),
       ]);
     }
     // The same answer whether or not the email was already listed, so this is no membership check.

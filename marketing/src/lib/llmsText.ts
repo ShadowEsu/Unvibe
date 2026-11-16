@@ -2,7 +2,7 @@ import { faqCategories, faqItems } from "@/data/faq";
 import { STEPS } from "@/data/howItWorks";
 import { FREE_MONTHLY_ALLOWANCE, SIGNED_OUT_ALLOWANCE } from "@/lib/allowance";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
-import { explainLanguage, explainPages } from "@/lib/explainPages";
+import { explainHeading, explainPages } from "@/lib/explainPages";
 import { PRICING } from "@/lib/pricing";
 import { proSentence } from "@/lib/proOffer";
 import { PRODUCT_FEATURES, PRODUCT_HOW, PRODUCT_SENTENCE } from "@/lib/productFacts";
@@ -94,7 +94,7 @@ export function llmsFullTxt(): string {
     ...byCategory,
     "## Explain code by language",
     "",
-    ...explainPages.map((page) => `- [Explain ${explainLanguage(page).name} code](${url(`/explain/${page.id}`)})`),
+    ...explainPages.map((page) => `- [Explain ${explainHeading(page)}](${url(`/explain/${page.id}`)})`),
     "",
   ].join("\n");
 }

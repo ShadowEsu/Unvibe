@@ -119,7 +119,7 @@ test('stores one write-once marker; a repeat is a no-op', async () => {
 test('every app-reported kind is accepted', async () => {
   const id = 'progress-install-kinds';
   installs.add(trialInstallKey(id));
-  const kinds = ['onboarded', 'accessibility', 'signed_in', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted'];
+  const kinds = ['onboarded', 'accessibility', 'signed_in', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted', 'window_shown'];
   for (const step of kinds) assert.equal((await ping(id, { step })).status, 204, step);
   assert.deepEqual(upserts.map((u) => u.body.kind), kinds);
 });

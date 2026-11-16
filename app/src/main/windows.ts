@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
 import { ownCodeStepDueNow } from './ownCodeStep';
+import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
@@ -578,6 +579,9 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
   armCompanionReveal(win, revealer.reveal);
+  // `window_shown` (progress.ts): the marker that a person saw the window, 3 s after it is revealed (by the page's
+  // first paint or the fallback; both show the window).
+  win.once('show', () => void noteWindowShown(win));
   // The page draws its loading frame on the ground of the screen to come (the stage's, or the app's). A window
   // hidden at creation gets no frames, so that frame is the one on screen for the moment after the reveal (#208).
   void win.loadFile(page('companion'), { query: { first: stage ? 'stage' : 'app' } });

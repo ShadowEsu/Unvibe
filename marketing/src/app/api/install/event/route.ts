@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseBetaInstallEvent, recordBetaInstallEvent, recordInstallScriptDay } from "@/lib/betaInstallStats";
+import { parseBetaInstallEvent, recordBetaInstallEvent } from "@/lib/betaInstallStats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,10 +11,10 @@ export async function POST(req: Request) {
     if (!event || event === "fetched") {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    // The scripts' finish post counts per day too; that call never throws and waits at most 1 s.
-    const dayCount = event === "installed" ? recordInstallScriptDay("installed") : null;
+    // The install scripts no longer post 'installed' (Kaspersky read the call back as C&C; Security R4(a)). Copies cached
+    // before that still do: answer them, record nothing. Installs are counted from the app's own first launch.
+    if (event === "installed") return new NextResponse(null, { status: 204 });
     const counts = await recordBetaInstallEvent(event);
-    await dayCount;
     return NextResponse.json({ ok: true, counts });
   } catch (error) {
     console.error("install event failed", error);

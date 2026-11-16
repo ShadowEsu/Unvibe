@@ -39,6 +39,11 @@ describe("link-preview cards", () => {
     assert.equal((meta.twitter as { card: string }).card, "summary_large_image");
   });
 
+  it("a page with its own heading names it in the card alt instead of '{name} code'", () => {
+    const lsof = explainPages.find(({ id }) => id === "lsof")!;
+    assert.equal(explainCard(lsof).alt, "Explain lsof output in plain English. Free for Mac and Windows.");
+  });
+
   it("every card file is named for its content, so the year-long immutable cache never serves a stale card", () => {
     const cards = readdirSync(path.join(publicDir, "og"));
     assert.ok(cards.length > 0);

@@ -47,7 +47,7 @@ test('daily activation ignores the funnel kinds, so its output is unchanged by t
   const now = new Date('2026-10-18T12:00:00Z');
   const at = (iso: string) => new Date(iso);
   const base = [{ kind: 'sample', at: at('2026-10-18T01:00:05Z') }, { kind: 'code', at: at('2026-10-18T02:00:00Z') }];
-  const funnel = ['onboarded', 'accessibility', 'signed_in', 'return', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted']
+  const funnel = ['onboarded', 'accessibility', 'signed_in', 'return', 'accessibility_asked', 'level_answered', 'login_prompt_shown', 'login_prompt_accepted', 'window_shown']
     .map((kind) => ({ kind, at: at('2026-10-18T03:00:00Z') }));
   const installs = [at('2026-10-18T01:00:00Z')];
   const withFunnel = dailyActivation(installs, [...base, ...funnel], now, 2);

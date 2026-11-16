@@ -45,8 +45,8 @@ function reasonFor(file: BriefFile): string {
   if (file.kind === 'sensitive') return 'Touches auth, billing, schema or infrastructure.';
   if (file.kind === 'service') return 'API, worker or data path. Requests flow through here.';
   if (file.kind === 'config') return 'Dependencies or configuration changed.';
-  if (file.insertions > 0 && file.deletions === 0) return `New code, ${linesLabel(file.insertions)} added.`;
-  if (file.deletions > 0 && file.insertions === 0) return `Code removed, ${linesLabel(file.deletions)}.`;
+  if (file.change === 'added') return `New file, ${linesLabel(file.insertions)}.`;
+  if (file.change === 'removed') return `File removed, ${linesLabel(file.deletions)}.`;
   if (lines >= 80) return `Large edit, ${lines} lines changed.`;
   if (file.kind === 'test') return 'Tests changed.';
   if (file.kind === 'docs') return 'Docs changed.';
@@ -136,8 +136,8 @@ export function buildAgentReview(brief: ChangeBrief, knowledge: KnowledgeObject[
     size,
     whatMatters: ranked.slice(0, 5),
     areas: areas.slice(0, 6),
-    added: brief.files.filter((f) => f.insertions > 0 && f.deletions === 0).map((f) => f.path).slice(0, 6),
-    removed: brief.files.filter((f) => f.deletions > 0 && f.insertions === 0).map((f) => f.path).slice(0, 6),
+    added: brief.files.filter((f) => f.change === 'added').map((f) => f.path).slice(0, 6),
+    removed: brief.files.filter((f) => f.change === 'removed').map((f) => f.path).slice(0, 6),
     reviewFirst: reviewFirst.slice(0, 5),
     staleKnowledge: stale.slice(0, 6),
   };

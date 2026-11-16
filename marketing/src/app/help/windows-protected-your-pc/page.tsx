@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   title: "\u201cWindows protected your PC\u201d: how to open Unvibe on Windows",
   absolute: true,
   description:
-    "Microsoft Defender SmartScreen says Windows protected your PC and prevented an unrecognized app from starting. Press More info, then Run anyway. What to do when the Run anyway button is missing, and what Smart App Control changes.",
+    "SmartScreen says Windows protected your PC. Press More info, then Run anyway. What to do when that button is missing, and what Smart App Control changes.",
 });
 
 /**
@@ -33,6 +33,10 @@ export default function WindowsProtectedYourPcPage() {
             The first time you run the Unvibe download, a blue box says &ldquo;Microsoft Defender SmartScreen prevented an unrecognized
             app from starting.&rdquo; It shows because Unvibe is new and not yet signed with a paid certificate. Two presses get past it,
             and a PowerShell line installs without it.
+          </p>
+          <p className="fos__note">
+            Applies to every Unvibe download so far: none is signed with a certificate yet. The pictures are from the 0.1.49 portable
+            .exe.
           </p>
         </div>
       </header>
@@ -57,7 +61,7 @@ export default function WindowsProtectedYourPcPage() {
               <HelpShot {...HELP_SHOTS.runAnyway} caption="Real screen, Windows" />
             </div>
           </li>
-          <li>Unvibe opens and stays in your taskbar. Later versions install from inside the app.</li>
+          <li>Unvibe opens and stays in your taskbar. That is the sign it worked. Later versions install from inside the app.</li>
         </ol>
       </section>
 

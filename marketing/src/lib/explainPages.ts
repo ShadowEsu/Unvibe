@@ -22,6 +22,25 @@ export interface ExplainPage {
   fileName: string;
   /** Up to 4 other explain page ids that a reader of this page is likely to want next, shown before the full list. */
   related?: readonly string[];
+  /**
+   * What follows "Explain" in the H1, the <title>, the /explain index link and the link-preview card, for pages
+   * about output or errors rather than code: a lowercase noun as people say it, no article ("lsof output",
+   * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
+   */
+  heading?: string;
+  /**
+   * The <title> and link-preview title without the " · Unvibe" suffix, for pages whose target query is a command,
+   * error or pattern: it starts with the words people type ("ps aux output explained, column by column"), at most
+   * 51 characters so the whole title is at most 60. Without it the title is "Explain {heading} in plain English".
+   * The H1 keeps "Explain {heading}" (Design); the two say the same thing in a different order.
+   */
+  title?: string;
+  /**
+   * The day the page went live on unvibe.site (Pacific, YYYY-MM-DD): the merge day of the PR that added it. The
+   * sitemap's lastModified reads it, so bump it only when the page's content changes, never on a template or
+   * metadata change; search engines re-read the sitemap on their own when these dates are honest.
+   */
+  published: string;
   /** The line under the page's heading. */
   lead: string;
   /** Meta description. */
@@ -40,6 +59,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
+    published: "2026-10-26",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
     description:
@@ -94,9 +114,10 @@ def total_by_city(path):
   {
     id: "pyproject-toml",
     fileName: "pyproject.toml",
+    published: "2026-11-05",
     lead: "Paste a pyproject.toml and Vibe explains what each table does: how the package is built, what it depends on, which commands it installs and where tools like pytest read their settings.",
     description:
-      "Paste a pyproject.toml and get it explained in plain English, free online. The sample builds a small Python package with setuptools, one dependency, a dev extra and a command line script.",
+      "Paste a pyproject.toml and get it explained in plain English, free online. The sample builds a small Python package with setuptools and a dev extra.",
     sampleSummary: "A pyproject.toml for a small package: the setuptools build backend, name and version, the Python versions it supports, one dependency, a dev extra with pytest, a command called invoicer and pytest's settings.",
     sample: `# pyproject.toml: how to build, install and run the "invoicer" package.
 
@@ -150,9 +171,10 @@ testpaths = ["tests"]`,
   {
     id: "requirements-txt",
     fileName: "requirements.txt",
+    published: "2026-11-05",
     lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
     description:
-      "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range for another, uses ~= for a third and installs a fourth only on Windows.",
+      "Paste a requirements.txt and get it explained in plain English, free online. The sample pins one package, allows a range for another and uses ~= for a third.",
     sampleSummary: "A requirements.txt for a small Python app: requests pinned to one version, python-dotenv limited to 1.x, rich allowed any 15.x release, and tzdata only on Windows.",
     sample: `# requirements.txt: the packages this app needs, one per line.
 # Install them all with: pip install -r requirements.txt
@@ -198,6 +220,7 @@ tzdata; sys_platform == "win32"`,
   {
     id: "javascript",
     fileName: "profiles.js",
+    published: "2026-10-26",
     related: ["react-useeffect", "cors-error", "typescript", "json"],
     lead: "Paste JavaScript, whether it is a callback, a promise chain or an async function, and Vibe explains what runs when.",
     description:
@@ -253,6 +276,7 @@ console.log("after");`,
   {
     id: "jquery",
     fileName: "products.js",
+    published: "2026-11-05",
     lead: "Paste jQuery and Vibe explains what each `$()` selects, which element a handler runs on, and what `this` and `.closest()` point to.",
     description:
       "Paste jQuery code and get a plain English explanation, free online. The sample filters a product list as you type and removes items with a fade.",
@@ -306,6 +330,7 @@ $(function () {
   {
     id: "typescript",
     fileName: "users.ts",
+    published: "2026-10-26",
     related: ["javascript", "react-useeffect", "tsconfig"],
     lead: "Paste TypeScript, generics and all, and Vibe explains what the code does and what its types are telling you.",
     description:
@@ -364,6 +389,7 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "tsconfig",
     fileName: "tsconfig.json",
+    published: "2026-11-05",
     lead: "Paste a tsconfig.json and Vibe explains what each compiler option changes, which files TypeScript checks and why `strict` suddenly finds errors.",
     description:
       "Paste a tsconfig.json and get a plain English explanation, free online. The sample builds a Node project from src/ to dist/ with strict checks on.",
@@ -414,9 +440,11 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "npm-scripts",
     fileName: "shop/package.json",
+    published: "2026-11-05",
+    related: ["package-lock", "json", "npm-error"],
     lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
     description:
-      "Paste npm scripts and get a plain English explanation of npm run dev, build, test and lint, free online. The sample is a small shop's package.json with eight scripts.",
+      "Paste npm scripts and get npm run dev, build, test and lint explained in plain English, free online. The sample is a small shop's package.json.",
     sampleSummary: "A package.json with the usual npm scripts: dev with a file watcher, start, build with a prebuild step, test, lint with ESLint, one that chains two others and one that prints package fields.",
     sample: `{
   "name": "shop",
@@ -466,9 +494,10 @@ export async function userLabel(id: number): Promise<string> {
   {
     id: "eslint-config",
     fileName: "eslint.config.js",
+    published: "2026-11-05",
     lead: "Paste an eslint.config.js and Vibe explains which files each block covers, which rules it turns on and which block wins when two of them disagree.",
     description:
-      "Paste an ESLint config and get it explained in plain English, free online. The sample ignores a build folder, starts from the recommended rules and sets different globals and rules for browser code and Node scripts.",
+      "Paste an ESLint config and get it explained in plain English, free online. The sample starts from the recommended rules and splits browser and Node rules.",
     sampleSummary: "An ESLint flat config: a build folder left out, the recommended rules, browser globals and three rules for src, and Node globals for scripts.",
     sample: `// eslint.config.js: which files ESLint checks and which rules apply to them.
 import js from "@eslint/js";
@@ -523,6 +552,8 @@ export default [
   {
     id: "sql",
     fileName: "report.sql",
+    published: "2026-10-26",
+    title: "SQL query explained, clause by clause",
     related: ["sql-joins", "supabase-rls", "prisma-schema", "sqlite"],
     lead: "Paste a SQL query and Vibe explains which rows it returns and why.",
     description:
@@ -559,6 +590,7 @@ ORDER BY spend_rank, c.name;`,
       "Use `DENSE_RANK()` to number ties 1, 1, 2 instead of 1, 1, 3.",
       "On a large `orders` table, an index on `orders (customer_id, created_at)` lets the database find each customer's recent orders without reading the whole table.",
       "This page is about what a query returns. A database's own `EXPLAIN` command answers a different question: it shows the plan the database will use to run the query, such as which index it reads and the order it joins the tables in.",
+      "`ORDER BY spend_rank, c.name` lists the biggest spender first, and customers who share a rank in order of name.",
     ],
     watchOut:
       "Comparing `created_at` with `'2026-01-01'` works when dates are stored as a date type or as ISO text like `2026-03-01`. Text in another format, such as `03/01/2026`, compares character by character and gives wrong results.",
@@ -566,9 +598,10 @@ ORDER BY spend_rank, c.name;`,
   {
     id: "graphql",
     fileName: "query.graphql",
+    published: "2026-11-05",
     lead: "Paste a GraphQL query and Vibe explains what it asks the server for: which fields come back, what each variable and argument does and how a fragment fits in.",
     description:
-      "Paste a GraphQL query and get it explained in plain English, free online. The sample asks an orders API for open orders with their customer and items, using variables, a default value and a fragment.",
+      "Paste a GraphQL query and get it explained in plain English, free online. The sample asks an orders API for open orders, with variables and a fragment.",
     sampleSummary: "A named GraphQL query with two variables, one with a default: it asks for orders with their id, total, customer name and items, plus the signed-in user's name and email through a fragment.",
     sample: `# query.graphql: ask an orders API for exactly the fields this page shows.
 query OpenOrders($status: Status = OPEN, $first: Int!) {
@@ -622,10 +655,12 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    published: "2026-11-05",
+    heading: "git log output",
     related: ["git-diff", "git-rebase", "gitignore"],
     lead: "Paste what `git log` printed and Vibe explains each commit, what the `Merge:` line and `(HEAD -> main)` mean and how to read the `--graph` lines.",
     description:
-      "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph view.",
+      "Paste git log output and get a plain English explanation, free online. The sample is a small shop repo's log: commits, a merged branch, a tag and the graph.",
     sampleSummary: "The output of `git log -2` and `git log --oneline --graph --decorate --all` for a small repo: two people's commits, a branch merged back into main and a release tag.",
     sample: `$ git log -2
 commit 6dd93ddd5276a4e1a8ee3c3af46db31f8057a267
@@ -678,6 +713,7 @@ $ git log --oneline --graph --decorate --all
   {
     id: "bash",
     fileName: "top-errors.sh",
+    published: "2026-10-26",
     lead: "Paste a shell script or a one-liner and Vibe explains what it does before you run it.",
     description:
       "Find out what a shell script does before you run it: paste it here, free. The sample finds the most common errors in a folder of logs with one pipeline.",
@@ -730,9 +766,10 @@ echo "Top errors written to $report"`,
   {
     id: "powershell",
     fileName: "Clear-OldLogs.ps1",
+    published: "2026-11-05",
     lead: "Paste a PowerShell script and Vibe explains what each cmdlet in the pipeline passes along, what `$_` holds and what `-WhatIf` would change before anything runs.",
     description:
-      "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and reports their size.",
+      "Paste a PowerShell script and get a plain English explanation, free online. The sample finds old log files, previews the delete with -WhatIf and sizes them.",
     sampleSummary: "A PowerShell script that finds .log files older than a number of days, deletes them with WhatIf support and prints a size report.",
     sample: `# Delete .log files older than -Days in a folder and its subfolders.
 # Run: ./Clear-OldLogs.ps1 -Path ./logs -Days 30 -WhatIf
@@ -786,6 +823,8 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
   {
     id: "curl",
     fileName: "check-orders.sh",
+    published: "2026-11-05",
+    title: "curl command explained, flag by flag",
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -837,9 +876,10 @@ curl -si -X DELETE "$API/api/orders/42"`,
   {
     id: "bashrc",
     fileName: ".bashrc",
+    published: "2026-11-05",
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
     description:
-      "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a small function and a prompt with the git branch.",
+      "Paste a .bashrc and get a plain English explanation, free online. The sample sets up history, PATH, two aliases, a function and a prompt with the git branch.",
     sampleSummary: "A personal .bashrc: an interactive-only guard, history settings, your own folder first on PATH, two aliases, a make-and-enter folder function and a prompt that shows the git branch.",
     sample: `# ~/.bashrc: read by every new interactive bash shell.
 # Scripts and other non-interactive shells stop here.
@@ -892,9 +932,11 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
   {
     id: "chmod",
     fileName: "set-permissions.sh",
+    published: "2026-11-05",
+    title: "chmod 755, 644 and 777 explained",
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
     description:
-      "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600, 700, u+x, go-w and a+rX.",
+      "Paste chmod commands and get the numbers explained in plain English, free online. The sample sets permissions for a web app with 755, 644, 600 and u+x.",
     sampleSummary: "A shell script that sets permissions before a deploy: numeric modes for a script, a config file, a secrets file and a private folder, then letter modes that add or remove one permission.",
     sample: `#!/bin/sh
 # Set file permissions for a small web app before deploying it.
@@ -939,10 +981,11 @@ ls -l bin config`,
   {
     id: "find",
     fileName: "clean-project.sh",
+    published: "2026-11-05",
     related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
-      "Paste find commands and get them explained in plain English, free online. The sample looks through a project for logs, big files, recent changes and empty folders, and counts lines in its code.",
+      "Paste find commands and get them explained in plain English, free online. The sample looks through a project for logs, big files and recent changes.",
     sampleSummary: "A shell script with six find commands for a project cleanup: .log files, node_modules folders, files over 1 MB, files changed this week outside .git, line counts for .js files and deleting empty folders.",
     sample: `#!/bin/sh
 # Find files in a project folder before a cleanup.
@@ -993,6 +1036,7 @@ find . -type d -empty -delete`,
   {
     id: "c",
     fileName: "players.c",
+    published: "2026-10-26",
     related: ["cpp", "make", "assembly"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
@@ -1052,6 +1096,7 @@ int main(void) {
   {
     id: "cpp",
     fileName: "documents.cpp",
+    published: "2026-10-26",
     lead: "Paste modern C++ and Vibe explains the templates, smart pointers and object lifetimes in it.",
     description:
       "Get C++ explained in plain English online, free. The sample shows a function template, RAII with a destructor and moving a unique_ptr.",
@@ -1110,6 +1155,7 @@ int main() {
   {
     id: "swift",
     fileName: "Todos.swift",
+    published: "2026-10-26",
     lead: "Paste Swift from an app or a playground and Vibe explains what it does, optionals included.",
     description:
       "Paste Swift and get a plain English explanation, free online. The sample filters a to-do list with a protocol, an optional due date and closures.",
@@ -1164,6 +1210,7 @@ print(quick)`,
   {
     id: "ruby",
     fileName: "member.rb",
+    published: "2026-10-26",
     lead: "Paste Ruby and Vibe explains the blocks, symbols and mixins that keep it so short.",
     description:
       "Paste Ruby and get blocks, symbols and mixins explained in plain English, free. The sample mixes modules into a class and sorts members with the <=> operator.",
@@ -1221,10 +1268,11 @@ puts members.sort.map(&:name).inspect`,
   {
     id: "sqlite",
     fileName: "shop.sql",
+    published: "2026-11-05",
     related: ["sql", "sql-joins", "prisma-schema"],
     lead: "Paste a SQLite schema or query and Vibe explains each table, constraint and join, and where SQLite behaves differently from other databases.",
     description:
-      "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index, inserts rows and runs a report.",
+      "Paste SQLite code and get a plain English explanation, free online. The sample creates two tables with keys and checks, adds an index and runs a report.",
     sampleSummary: "A SQLite script for a small shop: customers and orders tables with a foreign key, a CHECK and a default date, an index, a few rows and a spending report per customer.",
     sample: `-- A small shop database. Run: sqlite3 shop.db < shop.sql
 PRAGMA foreign_keys = ON;
@@ -1280,6 +1328,7 @@ ORDER BY spent DESC;`,
   {
     id: "java",
     fileName: "Reports.java",
+    published: "2026-10-28",
     lead: "Paste Java, from a record to a stream pipeline, and Vibe explains what each step does and which types it works with.",
     description:
       "Paste Java code and get a plain English explanation, free online. The sample totals paid orders with a record, a stream and Collectors.groupingBy.",
@@ -1333,6 +1382,7 @@ class Reports {
   {
     id: "html",
     fileName: "signup.html",
+    published: "2026-10-28",
     related: ["css", "tailwind", "javascript"],
     lead: "Paste HTML and Vibe explains what each element means to the browser, to keyboard users and to screen readers.",
     description:
@@ -1381,6 +1431,7 @@ class Reports {
   {
     id: "css",
     fileName: "cards.css",
+    published: "2026-10-28",
     related: ["tailwind", "html"],
     lead: "Paste CSS and Vibe explains which rule wins, why the layout lands where it does and where each value comes from.",
     description:
@@ -1441,9 +1492,10 @@ class Reports {
   {
     id: "xml",
     fileName: "catalog.xml",
+    published: "2026-11-05",
     lead: "Paste XML and Vibe explains its structure: which elements hold which, what each attribute adds, and what `&amp;` and `<![CDATA[` are doing there.",
     description:
-      "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and a CDATA block.",
+      "Paste XML and get a plain English explanation of its structure, free online. The sample is a product catalog with attributes, an escaped character and CDATA.",
     sampleSummary: "An XML product catalog: a root element with a schema reference, two products with attributes, nested tags, an escaped ampersand and a CDATA description.",
     sample: `<?xml version="1.0" encoding="UTF-8"?>
 <!-- A shop's product list, checked against catalog.xsd -->
@@ -1493,9 +1545,10 @@ class Reports {
   {
     id: "markdown",
     fileName: "README.md",
+    published: "2026-11-05",
     lead: "Paste Markdown and Vibe explains what each mark turns into: headings, lists, links, code blocks and tables, and why a line sometimes doesn't break where you expect.",
     description:
-      "Paste a Markdown file and get it explained in plain English, free online. The sample is a project README with headings, a numbered list, a code block, a quote and a table.",
+      "Paste a Markdown file and get it explained in plain English, free online. The sample is a project README with headings, a list, a code block and a table.",
     sampleSummary: "A README for a small command line tool: a title, bold text and a link, a numbered install list, a shell code block, a bullet list, a tip in a quote and a table of flags.",
     sample: `# Invoicer
 
@@ -1551,6 +1604,7 @@ invoicer hours.csv --client "Acme Ltd" --out march.pdf
   {
     id: "go",
     fileName: "counts.go",
+    published: "2026-10-28",
     lead: "Paste Go and Vibe explains what each goroutine does, what travels over each channel and where every error ends up.",
     description:
       "Paste Go code and get a plain English explanation, free online. The sample parses lines in goroutines and collects their errors over a buffered channel.",
@@ -1604,6 +1658,7 @@ func parseCounts(raw []string) ([]int, error) {
   {
     id: "rust",
     fileName: "stock.rs",
+    published: "2026-10-28",
     lead: "Paste Rust and Vibe explains what each borrow allows, what a lifetime ties together and why the compiler accepts or rejects it.",
     description:
       "Paste Rust code and get a plain English explanation, free online. The sample picks and reserves stock with a trait, a lifetime and shared and mutable borrows.",
@@ -1655,6 +1710,7 @@ pub fn reserve(stock: &mut Stock) -> bool {
   {
     id: "csharp",
     fileName: "Batches.cs",
+    published: "2026-10-28",
     lead: "Paste C#, LINQ queries and records included, and Vibe explains what each line returns and when the query actually runs.",
     description:
       "Paste C# code and get a plain English explanation, free online. The sample filters task batches with LINQ and copies a record with a with expression.",
@@ -1696,6 +1752,7 @@ static class Batches
   {
     id: "kotlin",
     fileName: "Parcel.kt",
+    published: "2026-10-28",
     lead: "Paste Kotlin and Vibe explains where null can turn up, what a data class writes for you and where an extension function comes from.",
     description:
       "Paste Kotlin code and get a plain English explanation, free online. The sample labels parcels with a data class, two extension functions and safe calls.",
@@ -1737,6 +1794,8 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
   {
     id: "regex",
     fileName: "access_log.py",
+    published: "2026-11-04",
+    title: "Regex pattern explained, piece by piece",
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
     description:
       "Paste a regex and read what each part matches, explained in plain English, free. The sample pulls the fields out of one line of a web server's access log.",
@@ -1780,6 +1839,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
       "`\\d{1,3}` checks the shape of an address, not its value: `999.999.999.999` matches. Pass the `ip` group to Python's `ipaddress.ip_address()` when the address has to be real.",
       "The pattern only knows IPv4. A line from an IPv6 client, such as `2001:db8::1`, doesn't match at all.",
       "`match()` already starts at the beginning of the string, so the `^` is there for the reader. The `$` at the end is what makes the whole line required.",
+      "`[A-Z]+` takes one or more capital letters, such as `GET`, and `[1-5]\\d{2}` a status from 100 to 599. Before a symbol, a backslash makes it plain text: `\\.` is a dot and `\\[` a bracket. Inside a class a dot is already plain, so `HTTP/[\\d.]+` takes `HTTP/2.0`.",
     ],
     watchOut:
       "This is the common log format. Nginx's default `combined` format adds the referrer and the user agent after the byte count, so the `$` makes every one of those lines fail: `match()` returns `None`, and `m.group(...)` then raises `AttributeError`.",
@@ -1787,10 +1847,11 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
   {
     id: "cron",
     fileName: "crontab",
+    published: "2026-11-05",
     related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
-      "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup, weekday reports and a monthly job.",
+      "Paste a cron expression or crontab and get a plain English explanation, free online. The sample schedules checks, a nightly backup and a monthly job.",
     sampleSummary: "A crontab for an app server: a check every 15 minutes, a nightly backup with a log, a weekday report, a monthly archive job and one schedule that runs far more often than meant.",
     sample: `# Jobs for the app server. Edit with: crontab -e
 # minute  hour  day-of-month  month  day-of-week  command
@@ -1839,6 +1900,7 @@ MAILTO=ops@example.com
   {
     id: "dart",
     fileName: "track.dart",
+    published: "2026-11-05",
     lead: "Paste Dart, Flutter app code included, and Vibe explains where null is allowed, what a constructor does with its arguments and what each type cast checks.",
     description:
       "Paste Dart code and get a plain English explanation, free online. The sample reads a JSON list of music tracks into a model class with null safety.",
@@ -1895,9 +1957,10 @@ List<Track> parseTracks(String body) {
   {
     id: "zshrc",
     fileName: ".zshrc",
+    published: "2026-11-05",
     lead: "Paste a .zshrc and Vibe explains what each line sets up in a new terminal: history options, `path`, completion, aliases, functions and what the `%` codes in `PROMPT` show.",
     description:
-      "Paste a .zshrc and get a plain English explanation, free online. The sample sets up shared history, PATH, tab completion, two aliases, a function and a colored prompt.",
+      "Paste a .zshrc and get a plain English explanation, free online. The sample sets up history, PATH, tab completion, aliases, a function and a prompt.",
     sampleSummary: "A personal .zshrc: history shared between terminals, your own folder first on the path without duplicates, tab completion, two aliases, a make-and-enter folder function and a short colored prompt.",
     sample: `# ~/.zshrc: read by every new interactive zsh, the default shell on a Mac.
 
@@ -1953,9 +2016,10 @@ PROMPT='%F{blue}%~%f %# '`,
   {
     id: "lua",
     fileName: "Leaderboard.lua",
+    published: "2026-11-05",
     lead: "Paste Lua, Roblox game scripts included, and Vibe explains what each table holds, what a colon call passes and how a metatable makes a class.",
     description:
-      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use too.",
+      "Paste Lua code and get a plain English explanation, free online. The sample is a game leaderboard class in plain Lua, the metatable pattern Roblox scripts use.",
     sampleSummary: "A game leaderboard built from a table and a metatable, with a method that adds points and one that lists the top players.",
     sample: `local Leaderboard = {}
 Leaderboard.__index = Leaderboard
@@ -2005,10 +2069,11 @@ end`,
   {
     id: "yaml",
     fileName: "ci.yml",
+    published: "2026-11-05",
     related: ["json", "terraform"],
     lead: "Paste YAML, GitHub Actions workflows included, and Vibe explains what each key sets, which lines are lists and what each value turns into when it's read.",
     description:
-      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow that tests a Python app on pushes to main and on pull requests.",
+      "Paste YAML and get a plain English explanation, free online. The sample is a GitHub Actions workflow testing a Python app on pushes to main and pull requests.",
     sampleSummary: "A GitHub Actions workflow that installs a Python app's dependencies with a pip cache and runs its tests, with a secret passed in as an environment variable.",
     sample: `name: CI
 
@@ -2061,9 +2126,10 @@ jobs:
   {
     id: "ini",
     fileName: "settings.ini",
+    published: "2026-11-05",
     lead: "Paste an .ini file and Vibe explains what each section and setting is for, which defaults every section shares and how a value like `%(log_dir)s` gets filled in.",
     description:
-      "Paste an INI file and get it explained in plain English, free online. The sample is an app's settings with shared defaults, a server, a database and an email section.",
+      "Paste an INI file and get it explained in plain English, free online. The sample is an app's settings with defaults, a server, a database and email.",
     sampleSummary: "An app's settings.ini: a comment, a [DEFAULT] section shared by every section, then server, database and email sections, with one value built from another.",
     sample: `; settings.ini: settings for the invoicer app, one [section] per area.
 
@@ -2114,6 +2180,7 @@ subject = Your invoice from Acme`,
   {
     id: "json",
     fileName: "package.json",
+    published: "2026-11-05",
     related: ["package-lock", "npm-scripts", "javascript"],
     lead: "Paste JSON, such as a package.json, and Vibe explains what each field is for, what npm runs for each script and which versions `^` and `~` let in.",
     description:
@@ -2172,9 +2239,10 @@ subject = Your invoice from Acme`,
   {
     id: "csv",
     fileName: "orders.csv",
+    published: "2026-11-05",
     lead: "Paste a CSV file and Vibe explains what each column holds and how the quoting works: why some values sit in quotes, what a doubled quote means and why one row can run over two lines.",
     description:
-      "Paste a CSV file and get it explained in plain English, free online. The sample is an orders export with a header row, commas inside quoted values, a doubled quote and a note that runs over two lines.",
+      "Paste a CSV file and get it explained in plain English, free online. The sample is an orders export with a header row, quoted commas and a 2-line note.",
     sampleSummary: "An orders export: a header row, then six orders with an id, customer, item, quantity, price and note, including quoted values with commas, a doubled quote, a note over two lines and empty notes.",
     sample: `order_id,customer,item,qty,price,note
 1001,Ana Ruiz,Blue mug,2,12.50,
@@ -2214,9 +2282,11 @@ back door"
   {
     id: "env",
     fileName: ".env",
+    published: "2026-11-05",
+    title: "What is a .env file? Explained with a sample",
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
     description:
-      "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings: a port, a database URL, a test key and quoted text.",
+      "Paste a .env file, with placeholders in place of real keys, and get a plain English explanation, free online. The sample holds an app's local settings.",
     sampleSummary: "A .env file for running a web shop on your own machine: the port, a database URL, a test API key, quoted values, a comment after a value and one value built from another.",
     sample: `# Settings for running the shop on your own machine.
 # Copy .env.example to .env, fill in your values, and keep .env out of git.
@@ -2267,6 +2337,7 @@ APP_URL=http://localhost:\${PORT}`,
   {
     id: "awk",
     fileName: "totals.awk",
+    published: "2026-11-05",
     lead: "Paste awk, one-liners included, and Vibe explains which lines each pattern picks, which column each `$` number reads and what an array is adding up.",
     description:
       "Paste awk code and get a plain English explanation, free online. The sample totals sales per region from a CSV file, skips the header and sorts the result.",
@@ -2325,9 +2396,10 @@ END {
   {
     id: "fish",
     fileName: "config.fish",
+    published: "2026-11-05",
     lead: "Paste a fish config or script and Vibe explains what each line does: `set -gx`, `fish_add_path`, abbreviations, functions and where fish differs from bash.",
     description:
-      "Paste fish shell code and get a plain English explanation, free online. The sample is a config.fish with PATH, an exported variable, an abbreviation, an alias and a function.",
+      "Paste fish shell code and get a plain English explanation, free online. The sample is a config.fish with PATH, an abbreviation, an alias and a function.",
     sampleSummary: "A personal config.fish: your own folder on the PATH, an exported EDITOR, an abbreviation and an alias for interactive shells, no greeting and a make-and-enter folder function.",
     sample: `# ~/.config/fish/config.fish: read by every new fish shell.
 
@@ -2379,6 +2451,7 @@ end`,
   {
     id: "make",
     fileName: "Makefile",
+    published: "2026-11-05",
     lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",
     description:
       "Paste a Makefile and get a plain English explanation, free online. The sample builds a small C program, rebuilds only the files that changed and runs a test.",
@@ -2440,10 +2513,11 @@ clean:
   {
     id: "gitignore",
     fileName: ".gitignore",
+    published: "2026-11-05",
     related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
-      "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with a few exceptions kept in.",
+      "Paste a .gitignore and get a plain English explanation, free online. The sample keeps secrets, build output and editor files out of git, with exceptions.",
     sampleSummary: "A .gitignore for a web project: dependencies, build output, logs, secrets and editor files left out, with the example settings file, one editor file and an empty folder kept in.",
     sample: `# Dependencies and build output
 node_modules/
@@ -2495,9 +2569,10 @@ uploads/*
   {
     id: "ssh-config",
     fileName: "config",
+    published: "2026-11-05",
     lead: "Paste an ~/.ssh/config and Vibe explains what each `Host` block sets, which key goes to which server and what ssh actually uses when several blocks match.",
     description:
-      "Paste an SSH config file and get a plain English explanation, free online. The sample sets keys for two GitHub accounts, a server behind a jump host and defaults for every host.",
+      "Paste an SSH config file and get a plain English explanation, free online. The sample sets keys for two GitHub accounts and a server behind a jump host.",
     sampleSummary: "An ~/.ssh/config with two GitHub identities, a staging server reached through a bastion on a custom port, the bastion itself and defaults for every other host.",
     sample: `# ~/.ssh/config: shortcuts and settings for ssh, scp and git over SSH.
 
@@ -2553,6 +2628,7 @@ Host *
   {
     id: "perl",
     fileName: "slow_pages.pl",
+    published: "2026-11-05",
     lead: "Paste Perl and Vibe explains what each regular expression captures, whether a sigil means one value, a list or a hash, and what a `sort` block compares.",
     description:
       "Paste Perl code and get a plain English explanation, free online. The sample reads a web server log, averages response times per page and counts server errors.",
@@ -2611,6 +2687,7 @@ print "$errors server errors\\n";`,
   {
     id: "sed",
     fileName: "tidy.sed",
+    published: "2026-11-05",
     lead: "Paste a sed command or script and Vibe explains which lines each address picks, what a `s///` swaps in and what `\\1` and `\\2` hold.",
     description:
       "Paste a sed command or script and get a plain English explanation, free online. The sample cleans up a settings file, rewrites dates and hides secret values.",
@@ -2666,9 +2743,10 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
   {
     id: "grep",
     fileName: "find-problems.sh",
+    published: "2026-11-05",
     lead: "Paste grep commands and Vibe explains what each one finds: what the flags change, what the pattern matches and what the command prints back.",
     description:
-      "Paste grep commands and get every flag explained in plain English, free online. The sample searches an app's logs and code with -i, -n, -c, -w, -v, -r, -l, -o and -E.",
+      "Paste grep commands and get every flag explained in plain English, free online. The sample searches an app's logs and code with -i, -n, -c, -v, -r and -E.",
     sampleSummary: "A shell script with six grep searches: errors in any case with line numbers, a count of timeouts, a whole word, every line but the health checks, files with a TODO, and just the error status codes.",
     sample: `#!/bin/sh
 # Search an app's logs and code for problems.
@@ -2719,6 +2797,9 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    published: "2026-11-06",
+    heading: "git diff output",
+    title: "git diff output explained, line by line",
     related: ["git-log", "git-rebase", "gitignore", "bash"],
     lead: "Paste what `git diff` printed and Vibe explains each change: what the `@@` line counts, which lines a `-` or `+` marks and what a rename or `index` line is telling you.",
     description:
@@ -2779,6 +2860,8 @@ rename to lib/money.js`,
   {
     id: "react-useeffect",
     fileName: "Profile.jsx",
+    published: "2026-11-06",
+    title: "useEffect explained: the dependency array",
     related: ["javascript", "typescript", "tailwind", "npm-scripts"],
     lead: "Paste a React component and Vibe explains what its `useEffect` does: when it runs, what the dependency array changes and what the cleanup function stops.",
     description:
@@ -2838,10 +2921,13 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    published: "2026-11-06",
+    heading: "Python tracebacks",
+    title: "Python traceback explained: read the stack trace",
     related: ["python", "json", "requirements-txt", "pyproject-toml"],
-    lead: "Paste a Python traceback and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
+    lead: "Paste a Python traceback, the stack trace printed when a program crashes, and Vibe explains what went wrong: which line in your code failed, how the program got there and what the error on the last line means.",
     description:
-      "Paste a Python traceback and get the error explained in plain English, free online. The sample is a KeyError from a script that totals orders from a JSON file.",
+      "Paste a Python traceback, the stack trace printed on a crash, and get the error explained in plain English, free online. The sample is a KeyError in a script.",
     sampleSummary: "What Python 3.14 printed when a short script that totals orders met an item with `quantity` where the code expected `qty`: one good line of output, then a traceback ending in `KeyError: 'qty'`.",
     sample: `$ python3 report.py
 A1 25.0
@@ -2886,10 +2972,12 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    published: "2026-11-06",
+    title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
     description:
-      "Paste a package-lock.json and get it explained in plain English, free online. The sample is 3 packages from a small project's lock file, one of them nested inside another.",
+      "Paste a package-lock.json and get it explained in plain English, free online. The sample is 3 packages from a small project's lock file, one nested.",
     sampleSummary: "Lines 15 to 35 of the package-lock.json npm 11.10.1 wrote for a project whose package.json asks for `debug` `^2.6.9` and `ms` `^2.1.1`, after `npm install ms@2.1.1`.",
     sample: `$ sed -n '15,35p' package-lock.json
     "node_modules/debug": {
@@ -2941,10 +3029,12 @@ KeyError: 'qty'`,
   {
     id: "prisma-schema",
     fileName: "prisma/schema.prisma",
+    published: "2026-11-06",
+    title: "What is a Prisma schema? Explained with a sample",
     related: ["sql", "sqlite", "sql-joins", "env"],
     lead: "Paste a Prisma schema and Vibe explains the tables it describes: each model and field, what `?`, `@id` and `@default` do, and how two models point at each other.",
     description:
-      "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts, with a relation between them.",
+      "Paste a schema.prisma file and get it explained in plain English, free online. The sample is a small blog's schema: users and their posts.",
     sampleSummary: "A schema.prisma for a small blog, of the kind an AI assistant writes when asked for users and posts: a generator, a SQLite datasource and 2 models joined by a relation.",
     sample: `generator client {
   provider = "prisma-client"
@@ -2998,10 +3088,12 @@ model Post {
   {
     id: "tailwind",
     fileName: "PlanCard.jsx",
+    published: "2026-11-06",
+    title: "Tailwind CSS classes explained: md:, hover:, dark:",
     related: ["css", "html", "react-useeffect"],
     lead: "Paste a component full of Tailwind classes and Vibe explains what each one does: spacing, size, color, what changes on bigger screens, on hover and in dark mode, and the CSS each class becomes.",
     description:
-      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with up to 12 utility classes on one element, the way AI assistants write them.",
+      "Paste Tailwind CSS classes and get them explained in plain English, free online. The sample is a React card with up to 12 utility classes on one element.",
     sampleSummary: "A React component of the kind an AI assistant writes with Tailwind CSS: a pricing card whose layout, colors and button states all come from class names.",
     sample: `export function PlanCard({ plan }) {
   return (
@@ -3045,10 +3137,12 @@ model Post {
   {
     id: "sql-joins",
     fileName: "joins.sql",
+    published: "2026-11-06",
+    title: "SQL joins explained with examples",
     related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
     description:
-      "Paste SQL joins and get them explained in plain English, free online. The sample is 4 queries over customers, orders and refunds, including one whose totals come out doubled.",
+      "Paste SQL joins and get them explained in plain English, free online. The sample is 4 queries over customers, orders and refunds, one with doubled totals.",
     sampleSummary: "4 queries of the kind an AI assistant writes for a small shop's report, over 3 tables: customers, orders and refunds. Run in SQLite 3.53.4 with 3 customers, 3 orders and 2 refunds.",
     sample: `-- Tables: customers(id, name), orders(id, customer_id, total),
 -- refunds(id, customer_id, amount)
@@ -3103,10 +3197,12 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
+    published: "2026-11-06",
+    title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
     description:
-      "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each signed-in user reads, adds and updates only their own rows.",
+      "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each user sees only their own rows.",
     sampleSummary: "SQL of the kind an AI app builder writes for a Supabase todos table: the table, row level security switched on, and 3 policies that tie each row to the signed-in user.",
     sample: `-- todos: each signed-in user sees and changes only their own rows
 create table todos (
@@ -3159,10 +3255,13 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    published: "2026-11-06",
+    heading: "CORS errors",
+    title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
-      "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end on port 5173 got from its own API on port 3000, with the API's code.",
+      "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end got from its own API, with the API's code.",
     sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: a common setup, with the front end and the API on different ports.",
     sample: `// Browser console on http://localhost:5173
 Access to fetch at 'http://localhost:3000/api/todos' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
@@ -3210,10 +3309,12 @@ server.listen(3000);`,
   {
     id: "asyncio",
     fileName: "fetch_all.py",
+    published: "2026-11-06",
+    title: "Python async and await explained (asyncio)",
     related: ["python", "python-traceback", "javascript"],
     lead: "Paste async Python and Vibe explains what runs at the same time and what waits: what `async def`, `await`, `gather` and a timeout do, and which line quietly stops everything else.",
     description:
-      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample starts 3 stand-in page loads at once with asyncio.gather and gives up on one after 3 seconds.",
+      "Paste Python asyncio code and get async and await explained in plain English, free online. The sample starts 3 stand-in page loads at once with asyncio.gather.",
     sampleSummary: "A Python script that starts 3 slow loads at once with `asyncio.gather`, each one a stand-in that sleeps, and gives the slowest a 3 second timeout.",
     sample: `# fetch_all.py: start 3 stand-in page loads at once, give up on any that take too long
 import asyncio
@@ -3266,10 +3367,12 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
   {
     id: "tar",
     fileName: "backup-site.sh",
+    published: "2026-11-06",
+    title: "tar command explained: what each letter does",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
     description:
-      "Paste a tar command and get its flags explained in plain English, free online. The sample packs a project into a .tar.gz without node_modules, lists it and unpacks a copy.",
+      "Paste a tar command and get its flags explained in plain English, free online. The sample packs a project into a .tar.gz, lists it and unpacks a copy.",
     sampleSummary: "A shell script that packs a small website folder into a .tar.gz without node_modules and log files, lists what's inside, unpacks a copy into another folder, then pulls out one file.",
     sample: `# backup-site.sh: pack the site into one file, check it, unpack a copy
 cd ~/projects
@@ -3314,10 +3417,12 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
   {
     id: "rsync",
     fileName: "backup.sh",
+    published: "2026-11-06",
+    title: "rsync command explained: flags and trailing slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
     description:
-      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup folder with a dry run first, a yes to go on, --delete and --exclude.",
+      "Paste an rsync command and get its flags explained in plain English, free online. The sample mirrors a project into a backup with a dry run first.",
     sampleSummary: "A backup script that mirrors a project folder into a backup drive: a dry run first, a prompt that stops unless you type yes, then the real run with `--delete` and `--exclude`.",
     sample: `# backup.sh: dry run first, then mirror the project into the backup drive
 SRC=~/projects/my-site/      # trailing slash: copy what's inside my-site
@@ -3363,10 +3468,12 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
-    related: ["git-log", "git-diff", "gitignore"],
+    published: "2026-11-06",
+    title: "git rebase -i explained: the interactive todo list",
+    related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
     description:
-      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into the first, rewords one and drops one before a pull request.",
+      "Paste a git rebase -i todo list and get each line explained in plain English, free online. The sample folds 2 messy commits into one before a pull request.",
     sampleSummary: "The todo list `git rebase -i main` opened for a branch of 5 commits, edited to fold 2 fix-up commits into the first, reword one and drop one, with part of git's own help text kept below it.",
     sample: `pick 7b4c146 # Add discount codes
 fixup c6d63af # wip
@@ -3415,10 +3522,12 @@ drop 803b36d # Add gitignore
   {
     id: "xargs",
     fileName: "shrink-logs.sh",
+    published: "2026-11-06",
+    title: "xargs explained: how it works, with find",
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
     description:
-      "Paste an xargs command and get it explained in plain English, free online. The sample gzips logs at least 8 days old, 4 at a time, moves them with -I {}, and shows how a space in a name breaks find | xargs.",
+      "Paste an xargs command and get it explained in plain English, free online. The sample gzips old logs 4 at a time and shows how a space in a name breaks a pipe.",
     sampleSummary: "A shell script that compresses log files at least 8 days old (`-mtime +7`), 4 at a time, moves the results into an archive folder, deletes temp files only if there are any, and ends with the plain `find | xargs` line that breaks.",
     sample: `# shrink-logs.sh: compress old log files, one gzip per file, 4 at a time
 cd ~/app/logs || exit 1
@@ -3462,10 +3571,13 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
-    related: ["bash", "grep", "awk"],
+    published: "2026-11-06",
+    heading: "ps aux output",
+    title: "ps aux output explained, column by column",
+    related: ["bash", "grep", "awk", "lsof"],
     lead: "Paste what `ps aux` printed and Vibe explains each column: who owns a process, how much CPU and memory it uses, and what `R`, `S`, `T` and `Z` in the STAT column mean.",
     description:
-      "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a big Python list, a stopped job and a zombie.",
+      "Paste ps aux output and get every column explained in plain English, free online. The sample has a busy loop at 99% CPU, a stopped job and a zombie.",
     sampleSummary: "`ps aux` output trimmed to the header, PID 1 and 2, and a test session: a Node server, a Python loop using a full CPU core, a Python list of 60 million items, a sleeping job, a stopped job and a zombie.",
     sample: `$ ps aux   # Linux, procps-ng 4.0.7: the header, PID 1 and 2, then a test session
 USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
@@ -3507,10 +3619,12 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
   {
     id: "systemd",
     fileName: "notes-api.service",
+    published: "2026-11-08",
+    title: "systemd service file explained, section by section",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
     description:
-      "Paste a systemd service file and get each line explained in plain English, free online. The sample keeps a small Python API running as a user service and restarts it 2 seconds after a crash.",
+      "Paste a systemd service file and get each line explained in plain English, free online. The sample keeps a small API running and restarts it after a crash.",
     sampleSummary: "A user service file for a small Python API: the folder it runs in, its settings from `Environment=` and an optional .env file, and a restart 2 seconds after it crashes.",
     sample: `# notes-api.service: keep a small Python API running, restart it if it crashes
 # install: systemctl --user link ./notes-api.service, then start notes-api
@@ -3558,10 +3672,12 @@ WantedBy=default.target`,
   {
     id: "terraform",
     fileName: "main.tf",
+    published: "2026-11-08",
+    title: "Terraform code explained, block by block",
     related: ["yaml", "json", "ini"],
     lead: "Paste Terraform and Vibe explains what it will build and change: each `resource`, `variable` and `output`, what `plan` and `apply` do, and why one changed value can destroy and rebuild a resource.",
     description:
-      "Paste Terraform code and get it explained in plain English, free online. The sample writes a config file with a random name, using only the local and random providers, so it runs without a cloud account.",
+      "Paste Terraform code and get it explained in plain English, free online. The sample writes a file with a random name and runs without a cloud account.",
     sampleSummary: "A main.tf that pins 2 providers, takes an `env` variable, makes a random name and writes it into a JSON file, then prints the name as an output.",
     sample: `# main.tf: write a small config file with a random name, no cloud account needed
 terraform {
@@ -3616,10 +3732,12 @@ output "app_name" {
   {
     id: "assembly",
     fileName: "sum.s",
+    published: "2026-11-08",
+    title: "Assembly code explained: arm64 from a C function",
     related: ["c", "cpp", "make"],
     lead: "Paste assembly from a debugger or Compiler Explorer and Vibe explains it in plain English: which register holds which C variable, how `subs` and `b.ne` make a loop, and what changes between `-O0`, `-O1` and `-O2`.",
     description:
-      "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64 for a Mac, with its registers and loop.",
+      "Paste assembly code and get it explained in plain English, free online. The sample is a C function that adds up an array, compiled by clang to arm64.",
     sampleSummary: "A 7-line C function that adds up an array of ints, and the arm64 assembly clang 22.1.8 made from it at `-O1` for macOS: 13 instructions, with the C on top as comments.",
     sample: `; sum.c (clang 22.1.8, -O1, arm64-apple-macos)
 ; int sum(const int *nums, int count) {
@@ -3672,6 +3790,165 @@ LBB0_4:
     watchOut:
       "The function you're looking for may not be in the assembly at all. With `sum` and a `main` that calls it in one file, `-O1` turned `main` into 2 instructions, `mov w0, #16` and `ret`: the compiler worked out the total of 3, 5, -2 and 10 itself, and nothing calls `sum`, though it is still in the file. In the x86-64 build, a gdb breakpoint on `sum` never stopped, and the program exited with 16. At `-O0`, `main` calls `sum`.",
   },
+  {
+    id: "git-merge-conflict",
+    fileName: "shipping.js",
+    published: "2026-11-10",
+    heading: "git merge conflicts",
+    title: "git merge conflict explained: the markers",
+    related: ["git-diff", "git-rebase", "git-log"],
+    lead: "Paste a file with `<<<<<<<`, `=======` and `>>>>>>>` lines in it and Vibe explains which version came from which branch, what git already merged on its own, and what the fixed code should keep.",
+    description:
+      "Paste a git merge conflict and get the markers explained in plain English, free online. The sample is a file where 2 branches changed the same line.",
+    sampleSummary: "A JavaScript file in the middle of a merge: main raised the free shipping limit to 75, the free-for-members branch added free shipping for members, and git couldn't pick between the 2 versions of that line.",
+    sample: `// shipping.js: the checkout's shipping rules
+export function shippingCost(order) {
+<<<<<<< HEAD
+  if (order.total >= 75) {
+=======
+  if (order.total >= 50 || order.member) {
+>>>>>>> free-for-members
+    return 0;
+  }
+  return 5.99;
+}
+
+export function deliveryDays(country) {
+  return country === "US" ? 3 : 5;
+}`,
+    shows: [
+      {
+        concept: "conflict markers",
+        text: "`<<<<<<< HEAD` starts your side, from the branch you're on (main here), `=======` divides the 2 sides, and `>>>>>>> free-for-members` ends the side from the branch being merged in. git stopped with `CONFLICT (content): Merge conflict in src/shipping.js` and exit code 1, and `git status` listed the file under `both modified`.",
+      },
+      {
+        concept: "what merged by itself",
+        text: "Only the line both branches changed is marked. main's new fee, `return 5.99`, and the branch's delivery change, `? 3 : 5`, each touched a line the other branch left alone, so git merged them in without asking. Run as it is, the file fails: Node.js stopped at line 3 with `SyntaxError: Unexpected token '<<'`.",
+      },
+      {
+        concept: "--ours and --theirs",
+        text: "`git checkout --ours` and `--theirs` take one side's whole file, not just the marked line. `--theirs` brought back the branch's `return 4.99` and undid main's fee change, and `--ours` kept 7 delivery days and undid the branch's 5. During a rebase the names swap: `--ours` gave main's line and `--theirs` the line from the commit being replayed.",
+      },
+      {
+        concept: "resolving and committing",
+        text: "The fix keeps both changes: `if (order.total >= 75 || order.member)`. With the markers gone, `git diff --check` printed nothing, `git add` marked the file resolved (`All conflicts fixed but you are still merging.`) and `git commit --no-edit` made the merge commit. The fixed file returned 5.99 for a 60 order, 0 for a member's 60 order and 0 for an 80 order.",
+      },
+    ],
+    notes: [
+      "Run with git 2.55.0 and Node.js 25.7.0 in a test repo with 2 branches. `git merge --abort` put main back as it was, with nothing in `git status --short`.",
+      "With `merge.conflictStyle=zdiff3`, git adds a third part between `|||||||` and `=======`: the line as it was before either branch changed it, `if (order.total >= 50) {`. That shows what each side changed, not just where they ended up.",
+    ],
+    watchOut:
+      "git doesn't stop you from committing the markers. `git add` on the file with `<<<<<<<` still in it marked the conflict resolved, and `git commit` made the merge with exit code 0. `git diff --check HEAD~1 HEAD` on that merge caught it: it printed `leftover conflict marker` for lines 3, 5 and 7 and exited with code 2. Search the file for `<<<<<<<` before you add it.",
+  },
+  {
+    id: "npm-error",
+    fileName: "npm-install.txt",
+    published: "2026-11-10",
+    heading: "npm errors",
+    title: "npm error code 1, ENOENT and node-gyp explained",
+    related: ["npm-scripts", "package-lock", "json", "python-traceback"],
+    lead: "Paste the `npm error` lines from your terminal and Vibe explains them in plain English: which package and command failed, what `code 1` or `code ENOENT` means, why a missing command exits with 127, and which line holds the real cause.",
+    description:
+      "Paste npm error output and get it explained in plain English, free online. The sample is an npm install that fails while a native addon builds with node-gyp.",
+    sampleSummary: "`npm install` in a test project whose dependency, native-thing, compiles a C++ addon when it installs. Its source file is missing, so the build stops and npm prints its error block. 33 lines of node-gyp detail and a 2-line Node.js deprecation warning are left out.",
+    sample: `$ npm install
+npm error code 1
+npm error path ~/notes-app/node_modules/native-thing
+npm error command failed
+npm error command sh -c node-gyp rebuild
+npm error make: Entering directory '~/notes-app/node_modules/native-thing/build'
+npm error make: Leaving directory '~/notes-app/node_modules/native-thing/build'
+npm error gyp info it worked if it ends with ok
+npm error gyp info using node-gyp@12.2.0
+npm error gyp info using node@25.7.0 | linux | x64
+npm error make: *** No rule to make target 'Release/obj.target/addon/src/addon.o', needed by 'Release/obj.target/addon.node'.  Stop.
+npm error gyp ERR! build error 
+npm error gyp ERR! stack Error: \`make\` failed with exit code: 2
+npm error gyp ERR! cwd ~/notes-app/node_modules/native-thing
+npm error gyp ERR! node -v v25.7.0
+npm error gyp ERR! node-gyp -v v12.2.0
+npm error gyp ERR! not ok
+npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09_21_02_432Z-debug-0.log`,
+    shows: [
+      {
+        concept: "code, path and command",
+        text: "`npm error code 1` comes with `command failed`: the dependency's install command exited with an error, and npm itself then exited with code 1. It isn't make's code, which was 2. `path` and `command` say where and what: the install step of native-thing inside node_modules, `sh -c node-gyp rebuild`. So the failure is in a dependency's build, not in your own files.",
+      },
+      {
+        concept: "the line with the cause",
+        text: "Most of the block is node-gyp reporting on itself. The cause is the `make: *** No rule to make target` line: make had no way to build addon.o because src/addon.cc, the addon's source file, isn't there. `gyp ERR! build error` and the `make` exit code 2 after it report that same failure.",
+      },
+      {
+        concept: "code 127 and ENOENT",
+        text: "`npm run build` with vite not installed printed `sh: line 1: vite: command not found` and exited with code 127, the shell's code for a command it can't find. `npm --prefix web run dev` with no web folder printed `npm error code ENOENT` and `Could not read package.json`, and exited with code 254.",
+      },
+      {
+        concept: "the debug log",
+        text: "The last line names a debug log in ~/.npm/_logs, a new one for each run. This one had 96 lines, including `error code 1` and `verbose exit 1`. It's the file to attach when you ask for help, after checking it for anything private.",
+      },
+    ],
+    notes: [
+      "Run with npm 11.10.1 and Node.js 25.7.0 on Linux, in a test project. native-thing is a local test package whose `install` script runs node-gyp on a binding.gyp that lists a missing src/addon.cc. It was installed with `npm install --install-links`, so the local package was copied into node_modules the way a registry package is; the sample shows the command as `npm install`. Paths are shortened to ~, and node-gyp used the headers from the local Node.js install, so nothing was downloaded.",
+      "When a script itself fails, npm 11.10.1 adds no `npm error` lines: `npm run dev` with server.js throwing `Error: ENOENT: no such file or directory, open './config.json'` printed npm's `> node server.js` header, then only the Node.js error, and exited with code 1. A script that doesn't exist gives `npm error Missing script: \"test\"`.",
+      "`npm uninstall native-thing` and a config.json fixed both: `npm run dev` then printed `listening on 3000`.",
+    ],
+    watchOut:
+      "The last lines aren't the cause. Here they are `gyp ERR! not ok` and the log path, while the line that names the problem, `No rule to make target 'Release/obj.target/addon/src/addon.o'`, is line 40 of the 52 lines in the full output, after 28 lines of node-gyp detail and a 2-line Node.js deprecation warning. Search for that line, the first error from the tool that failed, not for the last line.",
+  },
+  {
+    id: "lsof",
+    fileName: "lsof.txt",
+    published: "2026-11-10",
+    heading: "lsof output",
+    title: "lsof command explained: find what holds a port",
+    related: ["ps-aux", "curl", "bash"],
+    lead: "Paste `lsof` output and Vibe explains each column and row: which process holds a port, which rows are the server and which are connections to it, and which PID to stop when a port is already in use.",
+    description:
+      "Paste lsof output and get it explained in plain English, free online. The sample finds what is holding port 3000 when a dev server won't start.",
+    sampleSummary: "A second Node.js server fails with `EADDRINUSE` on port 3000, and lsof finds the first one: its listening row, its connection to a client, and the one PID to stop. The Node.js error is cut to its `Error:` line.",
+    sample: `$ node server.mjs
+Error: listen EADDRINUSE: address already in use :::3000
+$ lsof -i :3000
+COMMAND       PID    USER FD   TYPE   DEVICE SIZE/OFF NODE NAME
+node-Main 1643167 devuser 23u  IPv6 66205412      0t0  TCP *:hbci (LISTEN)
+node-Main 1643167 devuser 24u  IPv6 66204636      0t0  TCP localhost:hbci->localhost:49166 (ESTABLISHED)
+python3   1643207 devuser  3u  IPv4 66209556      0t0  TCP localhost:49166->localhost:hbci (ESTABLISHED)
+$ lsof -nP -i :3000 -sTCP:LISTEN
+COMMAND       PID    USER FD   TYPE   DEVICE SIZE/OFF NODE NAME
+node-Main 1643167 devuser 23u  IPv6 66205412      0t0  TCP *:3000 (LISTEN)
+$ lsof -t -i :3000
+1643167
+1643207
+$ lsof -t -i :3000 -sTCP:LISTEN
+1643167
+$ kill 1643167`,
+    shows: [
+      {
+        concept: "COMMAND, PID, USER and FD",
+        text: "Each row is one open file or network socket of one process. The Node.js server showed up as `node-Main` with PID 1643167, and USER is the account running it, shown here as devuser. FD is the file's number inside that process: `23u` is file 23, open for reading and writing.",
+      },
+      {
+        concept: "LISTEN and ESTABLISHED",
+        text: "`TCP *:hbci (LISTEN)` is the server waiting for connections on every address. The 2 ESTABLISHED rows are 1 connection seen from both ends: the server's side, `localhost:hbci->localhost:49166`, and the python3 client's side, `localhost:49166->localhost:hbci`.",
+      },
+      {
+        concept: "-n and -P",
+        text: "`hbci` is port 3000: lsof swapped the number for the name /etc/services gives it. `-P` keeps port numbers and `-n` keeps addresses as numbers, so `lsof -nP` showed `*:3000` and `127.0.0.1:3000` instead.",
+      },
+      {
+        concept: "-t and -sTCP:LISTEN",
+        text: "`-t` prints only PIDs, for use with kill. `-sTCP:LISTEN` keeps only listening sockets, so with both it printed the server's PID alone. After `kill 1643167`, a new server started on port 3000 and printed `listening on 3000`.",
+      },
+    ],
+    notes: [
+      "Run with lsof 4.99.7, Node.js 25.7.0 and Python 3.14.7 on Linux. The server is a 3-line Node.js HTTP server, and the client is a Python script that keeps 1 connection open, like a browser tab. The account name is replaced with devuser, which has the same length, so the columns stay aligned.",
+      "After the server was stopped, the client's row stayed, now in state `CLOSE_WAIT`: the server's end had closed and the client hadn't closed its own yet.",
+      "What `-n`, `-P`, `-t` and `u` mean is from the lsof manual. lsof also ships with macOS, where Apple publishes its source (github.com/apple-oss-distributions/lsof); this page didn't run it on a Mac.",
+    ],
+    watchOut:
+      "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
@@ -3679,6 +3956,20 @@ export function explainLanguage(page: ExplainPage): Language {
   const language = languages.find((entry) => entry.id === page.id);
   if (!language) throw new Error(`No language "${page.id}" in languages.ts`);
   return language;
+}
+
+/** What follows "Explain" in the page's H1, <title>, index link and card: its `heading`, or "{name} code". */
+export function explainHeading(page: ExplainPage): string {
+  return page.heading ?? `${explainLanguage(page).name} code`;
+}
+
+/**
+ * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
+ */
+export function explainHeadingText(page: ExplainPage): string {
+  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
