@@ -35,9 +35,9 @@ jobs:
     timeout-minutes: 60
     env:
       INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
-      FROM: "0.1.50"
-      TO: "0.1.51"
-      WANT_ASAR: 971292ed004438fb6b5b15904623d9f33d589b3ebaeaabefb74234becfc47f2b
+      FROM: "0.1.51"
+      TO: "0.1.52"
+      WANT_ASAR: 3858a8999b6c5db2fdf879bfe59b94271fdb1555fa50de5b7a0fbaa659635b10
       ARCH: ${{ matrix.arch }}
     steps:
       - name: Require the QA flag token
