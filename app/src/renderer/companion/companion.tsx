@@ -1323,7 +1323,9 @@ function OverlayPreview({ position, dimmed }: { position: string; dimmed: number
   return <div className="settings-preview" aria-label="Live preview of the Unvibe overlay">
     <div className="settings-preview__window"><span /><span /><span /></div>
     <div className={`settings-preview__bar settings-preview__bar--${position}`}><LogoMark size={13} stroke={2} /><b>Unvibe</b><em>Ready to explain</em></div>
-    <div className="settings-preview__card" style={{ opacity: dimmed }}><span>Selected code</span><b>verifyUser()</b><small>Intermediate · Local filter on</small></div>
+    {/* The overlay as it looks after a click away: faded to 22 % or gone, never read, so it is drawn as lines rather
+        than as faded text that would fail contrast (axe, RC walk 43932305812). */}
+    <div className="settings-preview__card" style={{ opacity: dimmed }}><i className="settings-preview__line" /><i className="settings-preview__line settings-preview__line--title" /><i className="settings-preview__line settings-preview__line--long" /></div>
   </div>;
 }
 
