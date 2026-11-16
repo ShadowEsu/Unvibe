@@ -487,8 +487,8 @@ h2 {
 .program-list { text-align: center; }
 .paper-backing .program-list { margin-top: clamp(20px, 3vw, 32px); padding-top: clamp(20px, 3vw, 32px); border-top: 1px solid var(--u-line); }
 .program-list__items { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
-.program-list__item { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.9rem; border: 1.5px solid var(--u-line); border-radius: 12px; color: var(--u-text); font-size: 0.95rem; font-weight: 650; }
-.program-list__logo { display: inline-flex; padding: 4px 8px; border-radius: 8px; background: #fff; }
+.program-list__item { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.9rem; border: 1.5px solid var(--u-line); border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; color: var(--u-text); font-size: 0.95rem; font-weight: 650; }
+.program-list__logo { display: inline-flex; padding: 4px 8px; border-radius: calc(8px * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; }
 .program-list__logo img { display: block; width: auto; height: 16px; }
 .program-list__fine { margin: 0.8rem 0 0; color: var(--u-text-2); font-size: 0.78rem; }
 
@@ -2303,7 +2303,7 @@ h2 {
   align-items: center;
   gap: 0.55rem;
   padding: 0.85rem 1.1rem;
-  border-radius: 20px;
+  border-radius: calc(20px * var(--squircle-k, 1)); corner-shape: squircle;
   font-size: 0.95rem;
 }
 

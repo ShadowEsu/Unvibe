@@ -32,7 +32,7 @@ ol.explain-notes {
 
 .use-sample__scroll {
   overflow-x: auto;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle;
   scroll-timeline: --use-sample inline;
 }
 
@@ -46,7 +46,7 @@ ol.explain-notes {
   right: 0;
   bottom: 0;
   width: 2.5rem;
-  border-radius: 0 12px 12px 0;
+  border-radius: 0 calc(12px * var(--squircle-k, 1)) calc(12px * var(--squircle-k, 1)) 0; corner-shape: squircle;
   background: linear-gradient(to right, rgb(21 21 20 / 0), #151514 80%);
   opacity: 0;
   pointer-events: none;
@@ -93,7 +93,7 @@ ol.explain-notes {
   width: 100%;
   height: auto;
   border: 1.5px solid var(--v-ink);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--squircle-k, 1)); corner-shape: squircle;
   box-shadow: var(--v-shadow);
 }
 
@@ -117,7 +117,7 @@ ol.explain-notes {
   margin: 0 0 1rem;
   padding: 0.8rem 1rem;
   border: 0;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle;
   background: #151514;
   color: #f4f1ea;
   font: 500 0.95rem / 1.4 var(--font-mono);
