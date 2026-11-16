@@ -40,7 +40,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
             setTimeout(() => setCopied(false), 1200);
           }}
         >
-          {copied ? 'copied' : 'copy'}
+          {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
       <pre>{highlight(code)}</pre>
