@@ -3955,11 +3955,11 @@ $ kill 1643167`,
     fileName: "scores-crash.txt",
     heading: "segmentation faults",
     title: "Segmentation fault (core dumped) explained, in C",
-    published: "2026-11-12",
+    published: "2026-11-16",
     related: ["c", "cpp", "assembly", "python-traceback"],
     lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
     description:
-      "Paste a segmentation fault and get it explained in plain English, free online. The sample is a C program that crashes on a NULL pointer, with the shell's message and GDB's backtrace.",
+      "Paste a segmentation fault and get it explained in plain English, free online. The sample is a C program that crashes on a NULL pointer, with GDB's backtrace.",
     sampleSummary: "A C program that prints the best score from a list of players. It works for 3 players and crashes for 0, and GDB shows the line and the NULL pointer behind the crash.",
     sample: `$ clang -g -O0 -o scores scores.c
 $ ./scores 3
@@ -4008,11 +4008,11 @@ best = 0x0`,
     fileName: "response.txt",
     heading: "HTTP headers",
     title: "HTTP headers explained with an example response",
-    published: "2026-11-12",
+    published: "2026-11-16",
     related: ["curl", "cors-error", "json"],
     lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
     description:
-      "Paste HTTP response headers and get each one explained in plain English, free online. The sample is a JSON API response with caching, an ETag, a session cookie and a CORS header.",
+      "Paste HTTP response headers and get each one explained in plain English, free online. The sample is an API response with caching, an ETag and a cookie.",
     sampleSummary: "`curl -i` against a small test API: the status line, 9 headers, a blank line and a JSON body.",
     sample: `$ curl -i http://127.0.0.1:8050/notes/42
 HTTP/1.1 200 OK
@@ -4057,11 +4057,11 @@ Vary: Origin
     fileName: "notes-app.zone",
     heading: "DNS records",
     title: "DNS records explained: A, CNAME, MX, TXT (SPF)",
-    published: "2026-11-12",
+    published: "2026-11-16",
     related: ["http-headers", "curl", "ssh-config"],
     lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
     description:
-      "Paste DNS records and get each one explained in plain English, free online. The sample is a zone file for a web app's domain with A, AAAA, CNAME, MX, TXT and CAA records.",
+      "Paste DNS records and get each one explained in plain English, free online. The sample is a zone file with A, AAAA, CNAME, MX, TXT and CAA records.",
     sampleSummary: "A zone file for a test domain, notes-app.example: the web app's addresses, 2 CNAMEs, 2 mail servers, SPF and DMARC records and a CAA record.",
     sample: `; notes-app.example: DNS records for a web app and its email
 $TTL 3600
