@@ -114,13 +114,13 @@ export function macCaptureFailure(error: unknown): 'automation_denied' | 'automa
   return 'failed';
 }
 
-export type CaptureBlock = 'automation_denied' | 'automation_timeout' | null;
+export type CaptureBlock = 'automation_denied' | 'automation_timeout' | 'elevated' | null;
 
 /**
- * What the panel should say about System Events after a review starts. Only a shortcut press reads
- * through System Events, so only its result changes the answer: a refusal or timeout is kept until
- * the next press, anything else clears it. The sample, an already captured selection and clipboard
- * explains leave it as it was.
+ * What the panel should say about the last shortcut press after a review starts. Only a shortcut press reads
+ * another window, so only its result changes the answer: macOS refusing or still asking about System Events, or a
+ * Windows window that runs as administrator (UIPI), is kept until the next press; anything else clears it. The
+ * sample, an already captured selection and clipboard explains leave it as it was.
  */
 export function nextCaptureBlock(
   previous: CaptureBlock,
@@ -129,7 +129,7 @@ export function nextCaptureBlock(
 ): CaptureBlock {
   if (options.sample || options.captured || options.preferClipboard) return previous;
   if (capture.code) return null;
-  return capture.error === 'automation_denied' || capture.error === 'automation_timeout' ? capture.error : null;
+  return capture.error === 'automation_denied' || capture.error === 'automation_timeout' || capture.error === 'elevated' ? capture.error : null;
 }
 
 /**
@@ -137,9 +137,14 @@ export function nextCaptureBlock(
  * variable, so the window's process id goes in $procId.)
  */
 const PS_FOREGROUND =
-  'Add-Type @"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Fg {\n  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();\n  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);\n}\n"@\n' +
+  'Add-Type @"\nusing System;\nusing System.Runtime.InteropServices;\npublic class Fg {\n  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();\n  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);\n  [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);\n  [DllImport("advapi32.dll", SetLastError = true)] public static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);\n  [DllImport("advapi32.dll", SetLastError = true)] public static extern bool GetTokenInformation(IntPtr token, int cls, out uint info, uint len, out uint ret);\n  [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);\n}\n"@\n' +
   '$h = [Fg]::GetForegroundWindow(); [uint32]$procId = 0; [void][Fg]::GetWindowThreadProcessId($h, [ref]$procId); ' +
-  '$name = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName';
+  '$name = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName; ' +
+  // UIPI: a normal-integrity app's synthetic keystrokes never reach an elevated window, and SendKeys reports success
+  // anyway. The foreground process's token says whether it is elevated (TokenElevation = 20); a process we may not
+  // even query (OpenProcess / OpenProcessToken refused) is treated the same. $elevated is "1" or "0".
+  '$elevated = "0"; $p = [Fg]::OpenProcess(0x1000, $false, $procId); if ($p -eq [IntPtr]::Zero) { $elevated = "1" } else { [IntPtr]$t = [IntPtr]::Zero; if (-not [Fg]::OpenProcessToken($p, 0x8, [ref]$t)) { $elevated = "1" } else { [uint32]$e = 0; [uint32]$r = 0; if ([Fg]::GetTokenInformation($t, 20, [ref]$e, 4, [ref]$r) -and $e -ne 0) { $elevated = "1" }; [void][Fg]::CloseHandle($t) }; [void][Fg]::CloseHandle($p) }; ' +
+  '$me = [IntPtr]::Zero; [uint32]$mine = 0; [uint32]$mr = 0; if ([Fg]::OpenProcessToken([System.Diagnostics.Process]::GetCurrentProcess().Handle, 0x8, [ref]$me) -and [Fg]::GetTokenInformation($me, 20, [ref]$mine, 4, [ref]$mr) -and $mine -ne 0) { $elevated = "0" }';
 
 /** Ctrl+Insert copies in editors, browsers and consoles without sending SIGINT like Ctrl+C. */
 const PS_COPY = "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^{INSERT}')";
@@ -207,13 +212,21 @@ export interface CaptureResult {
   /** The app the selection was read from, when capture already looked it up (Windows). */
   sourceApp?: string | null;
   /** Why no code came back: nothing was copied, the copy itself failed, or macOS blocked or is still asking about System Events. */
-  error?: 'empty' | 'failed' | 'unsupported' | 'automation_denied' | 'automation_timeout';
+  error?: 'empty' | 'failed' | 'unsupported' | 'automation_denied' | 'automation_timeout' | 'elevated';
 }
 
-/** Windows: one PowerShell launch finds the foreground app and sends the copy keystroke. */
-async function windowsDetectAndCopy(): Promise<string | null> {
-  const name = await powershell(`${PS_FOREGROUND}; ${PS_COPY}; $name`);
-  return name || null;
+/** The foreground app's name and whether it runs elevated, as PowerShell printed them (`<name>\n<0|1>`). */
+export function parseWindowsForeground(output: string): { name: string | null; elevated: boolean } {
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const flag = lines.at(-1);
+  const elevated = flag === '1';
+  const name = (flag === '1' || flag === '0' ? lines.slice(0, -1) : lines).join(' ').trim();
+  return { name: name || null, elevated };
+}
+
+/** Windows: one PowerShell launch finds the foreground app, says whether it is elevated, and sends the copy keystroke. */
+async function windowsDetectAndCopy(): Promise<{ name: string | null; elevated: boolean }> {
+  return parseWindowsForeground(await powershell(`${PS_FOREGROUND}; ${PS_COPY}; $name; $elevated`));
 }
 
 /**
@@ -235,13 +248,14 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
   // The explicit Use clipboard action remains available in the no-selection picker.
   clipboard.writeText('');
   let sourceApp: string | null | undefined;
+  let elevated = false;
   try {
     let grabbed: string;
     if (isWindows) {
-      sourceApp = await windowsDetectAndCopy();
+      ({ name: sourceApp, elevated } = await windowsDetectAndCopy());
       grabbed = await waitForCopiedText();
-      // A second keystroke is harmless in an editor but not in a console.
-      if (!grabbed && !isWindowsTerminal(sourceApp)) {
+      // A second keystroke is harmless in an editor but not in a console, and pointless at an elevated window.
+      if (!grabbed && !elevated && !isWindowsTerminal(sourceApp)) {
         await syntheticCopy();
         grabbed = await waitForCopiedText();
       }
@@ -271,7 +285,8 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
     if (grabbed.trim().length > 0) {
       return { code: grabbed, sourceApp };
     }
-    return { code: null, sourceApp, error: 'empty' };
+    // Nothing arrived from a window the keystroke could never reach: say so, instead of "select code first".
+    return { code: null, sourceApp, error: elevated ? 'elevated' : 'empty' };
   } catch (error) {
     return { code: null, sourceApp, error: isMac ? macCaptureFailure(error) : 'failed' };
   } finally {

@@ -45,7 +45,7 @@ function lesson(id: string, extra: Partial<LocalEvent> = {}): LocalEvent {
 async function explain(code: string, sample: boolean): Promise<void> {
   const win = { isDestroyed: () => false, webContents: { send: () => undefined } } as unknown as BrowserWindow;
   const session: ReviewSession = {
-    reviewId: `rv-${Math.random().toString(36).slice(2)}`, tabId: '1', code, sourceApp: sample ? 'Unvibe' : 'Cursor',
+    reviewId: `rv-${Math.random().toString(36).slice(2)}`, code, sourceApp: sample ? 'Unvibe' : 'Cursor',
     abort: null, recorded: false, level: 'intermediate', mode: 'selection', isSample: () => sample,
   };
   await runReview(win, session, { level: 'intermediate' });

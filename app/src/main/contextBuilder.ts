@@ -11,6 +11,7 @@ import { store } from './store';
 import { settings } from './settings';
 import { fenceBlock } from './promptFence';
 import { isProPlan } from '../core/plan';
+import { lineCount } from '../core/lineCount';
 
 const MAX_NEARBY_CHARS = 8_000;
 const MAX_SNAPSHOT_CHARS = 12_000;
@@ -135,7 +136,7 @@ export async function buildSelectionPayload(opts: {
       imports,
       code: opts.code,
       enclosing,
-      selection: relFile ? { file: relFile, startLine: 1, endLine: opts.code.split('\n').length } : undefined,
+      selection: relFile ? { file: relFile, startLine: 1, endLine: lineCount(opts.code) } : undefined,
     },
   };
 
@@ -146,7 +147,7 @@ export async function buildSelectionPayload(opts: {
     project: repoRoot ? projectName(repoRoot) : undefined,
     sourceFilePath: opts.filePath,
     snapshotText: opts.filePath ? opts.code.slice(0, MAX_SNAPSHOT_CHARS) : undefined,
-    lines: opts.code.split('\n').length,
+    lines: lineCount(opts.code),
     language,
     mode: 'selection',
   };
@@ -200,7 +201,7 @@ export async function buildDiffPayload(opts: {
     displayCode,
     file: primary,
     project: projectName(opts.repoRoot),
-    lines: displayCode.split('\n').length,
+    lines: lineCount(displayCode),
     language: payload.context.language,
     mode: opts.mode,
   };
@@ -272,7 +273,7 @@ export async function buildComparePayload(opts: {
     project,
     sourceFilePath: opts.filePath,
     snapshotText: current.slice(0, MAX_SNAPSHOT_CHARS),
-    lines: current.split('\n').length,
+    lines: lineCount(current),
     language: payload.context.language,
     mode: 'compare',
   };

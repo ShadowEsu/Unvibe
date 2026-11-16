@@ -61,11 +61,6 @@ button { font: inherit; }
 .island__dots i { width: 2px; height: 2px; border-radius: 50%; background: #8b5cf6; opacity: .26; animation: island-dot 1.3s ease-in-out infinite; }
 .island__dots i:nth-child(2) { animation-delay: 130ms; }
 .island__dots i:nth-child(3) { animation-delay: 260ms; }
-.island__dots i:nth-child(4) { animation-delay: 390ms; }
-.island--phase-ready .island__dots i,
-.island--phase-understood .island__dots i { background: #70c996; }
-.island--phase-error .island__dots i,
-.island--phase-offline .island__dots i { background: #c98b84; }
 @keyframes island-dot { 0%,65%,100% { opacity: .22; transform: translateY(0); } 32% { opacity: 1; transform: translateY(-1px); } }
 
 .island__overview {
@@ -88,8 +83,6 @@ button { font: inherit; }
 .island__settings:hover { background:#1e1a27;color:#fff;border-color:#8e74e2; }
 .island__metrics { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 5px; padding: 10px 0 8px; font-size: 12px; color: #b0b0b8; white-space: nowrap; }
 .island__metrics b { color: #f7f7f8; font-size: 17px; font-weight: 650; letter-spacing: 0; }
-.island__metrics [data-tone="green"] b { color: #61c78a; }
-.island__metrics [data-tone="blue"] b { color: #69aaf6; }
 .island__activity { display: grid; grid-template-columns: 20px 1fr; gap: 6px; align-items: center; }
 .island__activity > span { color: #8d8d96; font-size: 10px; font-weight: 550; }
 .island__activity > div { display: grid; grid-template-columns: repeat(14, minmax(2px,1fr)); gap: 3px; }
@@ -149,50 +142,58 @@ button { font: inherit; }
   .island__overview { opacity: 1; transform: none; }
 }
 
-/* ── Island, Unvibe edition: app fonts, Vibe as the mark, sticker colours ── */
-:root { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.island { background: #121211; border-color: rgba(255,255,255,.1); }
+/* ── Island in Spectral (Design spectral i-island): dark glass with a faint rim, JetBrains Mono, lilac on the numbers
+   and the activity ramp, one filled lilac action. The Island stays dark in both app themes, like the notch it sits in. ── */
+:root { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 430; }
+.island {
+  background: rgb(26 24 34 / 0.92); border-color: rgb(255 255 255 / 0.12);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8);
+}
 .island__mark { width: 22px; height: 22px; filter: none; }
 .island__mark .buddy { --vibe-ink: #0b0b0a; }
-.island__tool { width: 23px; height: 23px; border-radius: 7px; background: #1e1e1c; border-color: rgba(255,255,255,.12); color: #b7b4ab; }
-.island__tool:hover { background: #d6f45a; border-color: #d6f45a; color: #141414; }
-.island__left b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.02em; }
-.island__status { font-weight: 600; }
-.island__dots i { background: #d6f45a; }
-.island__header strong { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; }
-.island__header div:first-child span { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 14px; color: #aeaba2; }
-.island__metrics { gap: 6px; }
-.island__metrics > span { display: grid; justify-items: start; gap: 1px; padding: 5px 8px; border-radius: 9px; background: #1e1e1c; color: #aeaba2; font-size: 11px; }
-.island__metrics b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
-.island__metrics [data-tone="lime"] b { color: #d6f45a; }
-.island__metrics [data-tone="sky"] b { color: #9fd8ff; }
-.island__metrics [data-tone="sun"] b { color: #ffd84d; }
-.island__metrics [data-tone="lilac"] b { color: #b8a6ff; }
-.island__activity i { background: #262624; }
-.island__activity i[data-level="1"] { background: rgb(214 244 90 / 0.35); }
-.island__activity i[data-level="2"] { background: rgb(214 244 90 / 0.65); }
-.island__activity i[data-level="3"] { background: #d6f45a; }
-.island__allowance b { font-family: "Bricolage Grotesque", "Inter", sans-serif; font-weight: 800; }
+.island__tool { width: 23px; height: 23px; border-radius: 999px; background: rgb(255 255 255 / 0.08); border-color: rgb(255 255 255 / 0.14); color: #d9d4ea; }
+.island__tool:hover { background: rgb(201 182 255 / 0.22); border-color: rgb(201 182 255 / 0.5); color: #fff; }
+.island__left b { font-weight: 620; letter-spacing: 0; }
+.island__status { font-weight: 520; }
+.island__dots i { background: #c9b6ff; }
+.island__header strong { font-weight: 650; letter-spacing: -0.01em; }
+.island__header div:first-child span { font-style: normal; font-size: 12px; color: #a29db2; }
+/* Four equal tiles across the card (Design island S-1 07 Nov SHOULD 1); "understood" fits the narrowest at 372 wide. */
+.island__metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); justify-content: stretch; gap: 6px; }
+.island__metrics > span { display: grid; justify-items: start; gap: 2px; min-width: 0; padding: 6px 7px; border-radius: 10px; background: rgb(201 182 255 / 0.1); color: #a29db2; font-size: 10.5px; }
+.island__metrics b { font-weight: 650; font-size: 16px; letter-spacing: 0; color: #f1eefa; }
+.island__activity i { background: rgb(255 255 255 / 0.08); }
+.island__activity i[data-level="1"] { background: rgb(201 182 255 / 0.35); }
+.island__activity i[data-level="2"] { background: rgb(201 182 255 / 0.65); }
+.island__activity i[data-level="3"] { background: #c9b6ff; }
+.island__allowance b { font-weight: 650; }
 .island__note { color: #ededed; }
-.island__actions button { border-radius: 9px; background: #1e1e1c; border-color: rgba(255,255,255,.12); font-weight: 650; box-shadow: 0 2px 0 #000; }
-.island__actions button:first-child { background: #d6f45a; border-color: #d6f45a; color: #141414; box-shadow: 0 2px 0 #6f8a12; }
-.island__actions button:hover { border-color: rgba(214,244,90,.6); }
-.island__actions button:active { transform: translateY(2px); box-shadow: none; }
-.island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #d6f45a; }
+.island__actions button { border-radius: 999px; background: rgb(255 255 255 / 0.08); border-color: rgb(255 255 255 / 0.12); font-weight: 520; box-shadow: none; }
+.island__actions button:first-child { background: #6a52e6; border-color: #6a52e6; color: #fff; box-shadow: 0 8px 18px -10px rgb(106 82 230 / 0.8); } /* white on it 5.3:1 */
+.island__actions button:hover { border-color: rgb(201 182 255 / 0.6); }
+.island__actions button:active { transform: none; }
+.island__actions button:focus-visible, .island__tool:focus-visible, .island__settings:focus-visible { outline-color: #c9b6ff; }
 
-/* Vibe Island life: a hop when an answer lands. */
-.island--phase-ready .island__mark, .island--phase-understood .island__mark { animation: island-hop .7s cubic-bezier(.3,1.6,.5,1) 2; }
-.island--phase-thinking .island__mark, .island--phase-generating .island__mark, .island--phase-analyzing .island__mark, .island--phase-contextualizing .island__mark { animation: island-think 1.2s ease-in-out infinite; }
-@keyframes island-hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.08, .94); } 60% { transform: translateY(0) scale(.94, 1.06); } }
-@keyframes island-think { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
-@media (prefers-reduced-motion: reduce) { .island__mark { animation: none !important; } }
-
-/* Polish: bigger invisible hit areas inside the notch row, readable activity dots, steady numbers, a dusk rule. */
+/* Polish: bigger invisible hit areas inside the notch row, readable activity dots, steady numbers, a hairline rule. */
 .island__tool, .island__settings { position: relative; }
 .island__tool::after, .island__settings::after { content: ""; position: absolute; inset: -7px; }
 .island__actions button { height: 32px; }
 .island__dots { width: 22px; gap: 3px; }
 .island__dots i { width: 3px; height: 3px; }
 .island__left b, .island__metrics b, .island__allowance b { font-variant-numeric: tabular-nums; }
-.island__header { border-bottom: 1px solid; border-image: linear-gradient(90deg, rgb(249 151 143 / .6), rgb(180 156 240 / .6), rgb(105 158 252 / .6)) 1; }
+.island__header { border-bottom: 1px solid rgb(255 255 255 / 0.08); }
+.island__settings { border-radius: 999px; background: rgb(255 255 255 / 0.08); border-color: rgb(255 255 255 / 0.14); color: #d9d4ea; }
+.island__settings:hover { background: rgb(201 182 255 / 0.22); border-color: rgb(201 182 255 / 0.5); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .island__dots i { opacity: .85; } }
+
+/* Notice in Spectral (Design island S-1 07 Nov SHOULD 3): left-aligned under the row, the dot inline before the
+   first word instead of hanging, like the target's toast. Still at most three lines in BAR_NOTICE_H. */
+.island__notice { text-align: left; text-wrap: pretty; }
+.island__notice::before { margin: 0 8px 1px 0; }
+
+/* G1 (Design S-1 whole-app MUST 9): the Island reads in Inter like the rest of the app, figures in Inter with tabular
+   numerals; mono is for the keycaps only. The status line keeps its case. */
+:root { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight: 450; }
+.island__status { text-transform: none; }
+.island__allowance b, .island__metrics b { font-family: inherit; font-variant-numeric: tabular-nums; }
+.island kbd { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; }

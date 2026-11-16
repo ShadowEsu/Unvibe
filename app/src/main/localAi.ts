@@ -170,7 +170,7 @@ export function buildLocalSystemPrompt(payload: ReviewRequestPayload): string {
       ]
       : [
         'Separate what the code SHOWS, what you INFER, and what is UNCERTAIN.',
-        'Write clean readable prose. Short paragraphs or simple markdown bullets (* item) are fine.',
+        'Write clean readable prose. Short paragraphs or simple markdown bullets (* item) are fine. No tables: the answer shows in a narrow panel, so give a short list instead.',
         'Use these four markdown headings in this exact order: ## What changed, ## Why it matters, ## What to watch, ## Check yourself.',
         'For a selection rather than a diff, “What changed” means what the selected code does. Keep Check yourself to one short question and do not answer it.',
       ]),

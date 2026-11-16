@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { GoogleMark } from '../shared/googleMark';
+import { InkTitle } from './inkTitle';
 
 export function Gift() {
   const [code, setCode] = useState('');
@@ -121,7 +122,7 @@ export function Gift() {
           <div className="gift-view__brand">
             <div className="eyebrow">Share Unvibe</div>
           </div>
-          <h1>Invite friends to Unvibe.</h1>
+          <h1><InkTitle text="Invite friends to Unvibe." /></h1>
           <p>
             {needsSignIn
               ? 'Sign in with Google first so your invite code is tied to your account.'

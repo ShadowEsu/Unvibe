@@ -46,6 +46,12 @@ export const screen = {
   },
 };
 
+/** The OS appearance: light in tests (the companion's Windows title-bar colours read it). */
+export const nativeTheme = {
+  shouldUseDarkColors: false,
+  on: () => nativeTheme,
+};
+
 export const shell = {
   openExternal: async (): Promise<never> => {
     throw new Error('Opening external links is disabled in tests.');
