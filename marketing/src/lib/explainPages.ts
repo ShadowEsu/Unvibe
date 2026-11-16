@@ -4042,7 +4042,7 @@ Vary: Origin
       },
       {
         concept: "Access-Control-Allow-Origin and Vary",
-        text: "`Access-Control-Allow-Origin: http://localhost:5173` lets a page from that one origin read this response in the browser; a page from any other origin is blocked. `Vary: Origin` tells caches the answer depends on the `Origin` request header, so they don't hand one site's version to another.",
+        text: "`Access-Control-Allow-Origin: http://localhost:5173` lets a page from that one origin read this response in the browser. A page from any other origin can still send the request, and it still reaches the server, but the browser blocks that page from reading the answer. `Vary: Origin` tells caches the answer depends on the `Origin` request header, so they don't hand one site's version to another.",
       },
     ],
     notes: [
