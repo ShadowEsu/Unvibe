@@ -1,0 +1,97 @@
+name: QA WebKit squircle
+
+# QA only, on the qa/webkit-squircle branch (BOSS, ledger 628, Mon 16 Nov): one Safari/WebKit proof for DRAFT #329
+# (site/squircle-corners). main's and #329's marketing/ are built and served on the runner (main on :3000, #329 on
+# :3001); .github/qa/webkit-squircle.mjs shoots the same sections (home hero, home download, home FAQ, /beta download
+# card) in Playwright's WebKit at 1440x900 and 390x844 and in the runner's own Safari (safaridriver) at 1440, and
+# compares main with #329 pixel by pixel. Playwright's Chromium, which draws corner-shape, is the positive control.
+# Read-only: no secret, no install, no sign-in, no send, no hosted-AI call; the sites are local builds.
+on:
+  push:
+    branches: [qa/webkit-squircle]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-webkit-squircle
+  cancel-in-progress: false
+
+env:
+  MAIN_SHA: bf5539e7f6310895ea30fb29fce64597592e3a16
+  PR_SHA: e3d3441991c8401b3e9df82764931cbf551f007b
+
+jobs:
+  shots:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-26]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.MAIN_SHA }}
+          path: main
+          sparse-checkout: marketing
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.PR_SHA }}
+          path: pr
+          sparse-checkout: marketing
+
+      - name: Build and serve both sites
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          serve() {
+            cd "$GITHUB_WORKSPACE/$1/marketing"
+            echo "$1: commit $(git rev-parse HEAD), node $(node -v)"
+            npm ci --no-audit --no-fund > "$RUNNER_TEMP/npm-ci-$1.log" 2>&1 || { tail -30 "$RUNNER_TEMP/npm-ci-$1.log"; exit 1; }
+            npx next build > "$RUNNER_TEMP/next-build-$1.log" 2>&1 || { tail -60 "$RUNNER_TEMP/next-build-$1.log"; exit 1; }
+            nohup npx next start -p "$2" -H 127.0.0.1 > "$RUNNER_TEMP/next-start-$1.log" 2>&1 &
+            for i in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$2/")" = 200 ] && break; sleep 2; done
+            echo "$1 answers on :$2: $(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$2/")"
+          }
+          serve main 3000
+          serve pr 3001
+
+      - name: Playwright and pngjs
+        run: |
+          mkdir -p "$RUNNER_TEMP/pws" && cd "$RUNNER_TEMP/pws"
+          npm init -y >/dev/null && npm install --no-audit --no-fund playwright@1.64.1 pngjs@7.0.0 >/dev/null
+          npx playwright install webkit chromium >/dev/null
+          cp "$GITHUB_WORKSPACE/.github/qa/webkit-squircle.mjs" .
+
+      - name: Safari's WebDriver
+        run: |
+          echo "Safari $(defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString), macOS $(sw_vers -productVersion)"
+          sudo safaridriver --enable
+          nohup safaridriver -p 4444 > "$RUNNER_TEMP/safaridriver.log" 2>&1 &
+          for i in $(seq 1 15); do curl -s http://127.0.0.1:4444/status >/dev/null && break; sleep 1; done
+          echo "safaridriver: $(curl -s http://127.0.0.1:4444/status)"
+
+      - name: Shoot and compare
+        working-directory: ${{ runner.temp }}/pws
+        env:
+          OUT: ${{ runner.temp }}/out
+          MAIN: http://127.0.0.1:3000
+          PR: http://127.0.0.1:3001
+        run: node webkit-squircle.mjs
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: webkit-squircle-${{ matrix.runner }}
+          path: |
+            ${{ runner.temp }}/out
+            ${{ runner.temp }}/next-start-*.log
+            ${{ runner.temp }}/safaridriver.log
+          if-no-files-found: warn
