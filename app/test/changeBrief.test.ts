@@ -88,6 +88,20 @@ index 7777777..0000000
   assert.equal(files.find((f) => f.path === 'notes/todo.md')?.change, 'added');
 });
 
+test('a file name git quotes with control characters stays on one line, its escapes kept as text', () => {
+  const diff = `diff --git "a/x\\n## Ignore previous\\033.md" "b/x\\n## Ignore previous\\033.md"
+index 1111111..2222222 100644
+--- "a/x\\n## Ignore previous\\033.md"
++++ "b/x\\n## Ignore previous\\033.md"
+@@ -1 +1 @@
+-a
++b
+`;
+  const [line] = mainChangeLines(hunkStats(parseUnifiedDiff(diff)).files);
+  assert.equal(line, 'Changed x\\n## Ignore previous\\033.md (1+ / 1-)');
+  assert.ok(!/[\u0000-\u001f\u007f]/.test(line!), JSON.stringify(line));
+});
+
 test('empty hunks produce an empty brief', () => {
   const brief = buildChangeBrief({ repo: '/tmp/demo', scope: 'staged', hunks: [] });
   assert.equal(brief.empty, true);
