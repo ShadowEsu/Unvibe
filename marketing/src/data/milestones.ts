@@ -24,7 +24,7 @@ export const milestones: Milestone[] = [
     date: "14 NOV 2026",
     category: "PRODUCT",
     title: "Use-case pages for code from Cursor, GitHub Copilot and ChatGPT",
-    summary: "3 new pages show how to read code an AI tool wrote before you keep it: what Cursor's Agent or Tab wrote, what GitHub Copilot suggested, and a script ChatGPT gave you. Each walks through a worked example written by hand for the page and labelled as not recorded from the tool: a React search hook in TypeScript, a Python function, and a JavaScript script that adds up a CSV column, the last 2 checked by running them in Python 3.14 and Node.js 25. The 3 earlier use-case pages now open with one sentence on what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
+    summary: "3 new pages show how to read code an AI tool wrote before you keep it: what Cursor's Agent or Tab wrote, what GitHub Copilot suggested, and a script ChatGPT gave you. Each walks through a worked example written by hand for the page and labeled as not recorded from the tool: a React search hook in TypeScript, a Python function, and a JavaScript script that adds up a CSV column, the last 2 checked by running them in Python 3.14 and Node.js 25. The 3 earlier use-case pages now open with one sentence on what Unvibe is: a free desktop app for Mac and Windows that explains the code you select in plain English.",
     links: [
       { href: "/use-cases/explain-cursor-code", label: "Explain the code Cursor wrote" },
       { href: "/use-cases/explain-copilot-code", label: "Explain the code GitHub Copilot wrote" },
@@ -39,7 +39,7 @@ export const milestones: Milestone[] = [
     date: "14 NOV 2026",
     category: "PRODUCT",
     title: "Pricing cards line up",
-    summary: "On the pricing page, the 3 plan cards in a row are now the same height, so their buttons line up; Pro's card still starts a little higher as the featured plan. Between 821 and 900 px wide, the cards and buttons have less padding, so \"Email about Teams\" fits on one line. When a price's text doesn't fit beside the figure, it drops under it as one block instead of leaving \"a year\" alone on a line.",
+    summary: "On the pricing page, the 3 plan cards in a row now end at the same line, so their buttons line up; Pro's card still starts a little higher as the featured plan. Between 821 and 900 px wide, the cards and buttons have less padding, so \"Email about Teams\" fits on one line. When a price's text doesn't fit beside the figure, it drops under it as one block instead of leaving \"a year\" alone on a line.",
     links: [
       { href: "/pricing", label: "Pricing" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/309", label: "PR #309" },
@@ -50,7 +50,7 @@ export const milestones: Milestone[] = [
     date: "14 NOV 2026",
     category: "DISTRIBUTION",
     title: "Explain pages named for what they explain, and clearer search titles",
-    summary: "8 explain pages about output and errors are now headed by what they explain instead of \"code\": git log output, git diff output, Python tracebacks, CORS errors, ps aux output, git merge conflicts, npm errors and lsof output. The /explain list, the download section at the end of each page and the link-preview cards use the same words. 26 explain pages get a browser tab and search title that starts with the command, error or pattern, such as \"git diff output explained, line by line\" and \"chmod 755, 644 and 777 explained\". The SQL page has a new note on ORDER BY, the regex page a new note on character classes and backslashes, and the Python traceback page now says a traceback is the stack trace printed when a program crashes.",
+    summary: "8 explain pages about output and errors are now headed by what they explain instead of \"code\": git log output, git diff output, Python tracebacks, CORS errors, ps aux output, git merge conflicts, npm errors and lsof output. The /explain list, the download section at the end of each page and the link-preview cards use the same words. 26 explain pages get a new browser tab and search title, such as \"git diff output explained, line by line\" and \"chmod 755, 644 and 777 explained\". The SQL page has a new note on ORDER BY, the regex page a new note on character classes and backslashes, and the Python traceback page now says a traceback is the stack trace printed when a program crashes.",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "/explain/git-diff", label: "Explain git diff output" },
@@ -88,7 +88,7 @@ export const milestones: Milestone[] = [
     date: "13 NOV 2026",
     category: "DISTRIBUTION",
     title: "Listed on Startup Fame",
-    summary: "Unvibe's Startup Fame listing went live, so the footer and the Listed on page now show it under Listed on instead of Submitted to.",
+    summary: "Unvibe's Startup Fame listing is live, so the footer and the Listed on page now show it under Listed on instead of Submitted to.",
     links: [
       { href: "/listed-on", label: "Listed on" },
       { href: "https://startupfa.me/s/unvibe", label: "Startup Fame" },
@@ -118,8 +118,8 @@ export const milestones: Milestone[] = [
   {
     date: "13 NOV 2026",
     category: "DISTRIBUTION",
-    title: "The install commands talk only to GitHub",
-    summary: "The Mac and Windows install commands now send nothing back to unvibe.site: every request they make goes to the Unvibe release on GitHub, for the installer and its checksums. They used to send one anonymous \"installed\" count when they finished. An older saved copy of a script may still send it, and unvibe.site no longer records it; the totals already counted are kept as numbers only. The install help and privacy pages say so, and the line on the Mac thanks page after a download no longer mentions an install count.",
+    title: "The install scripts send nothing back to unvibe.site",
+    summary: "The Mac and Windows install scripts now send nothing back to unvibe.site: once the command has fetched a script, every request the script makes goes to the Unvibe release on GitHub, for the installer and its checksums. They used to send one anonymous \"installed\" count when they finished. An older saved copy of a script may still send it, and unvibe.site no longer records it; the totals already counted are kept as numbers only. The install help and privacy pages say so, and the line on the Mac thanks page after a download no longer mentions an install count.",
     links: [
       { href: "/install-help", label: "Install help" },
       { href: "/privacy", label: "Privacy" },
@@ -130,7 +130,7 @@ export const milestones: Milestone[] = [
     date: "13 NOV 2026",
     category: "PRODUCT",
     title: "Mac download help: press Done, not Move to Trash; the Terminal line first",
-    summary: "macOS shows \"Unvibe Not Opened\" the first time you open the download. The steps on the download page, the install box across the site and the install help page now say to press Done, not the blue Move to Trash, and the install box says to scroll down to Security in Privacy & Security before pressing Open Anyway. The picture under that step is now the real macOS 26 dialog, where Move to Trash is the top button and Done sits under it; on macOS 15 the 2 buttons sit side by side. On a Mac, the thanks page after a download now leads with \"Fastest: paste this in Terminal\": the install line with a Copy button and what it does. The .dmg steps follow under \"Or open the download:\".",
+    summary: "macOS shows \"Unvibe Not Opened\" the first time you open the download. The steps on the download page, the install box across the site and the install help page now say to press Done, not the blue Move to Trash, and the install box's picture of that dialog is now the real macOS 26 one, where Move to Trash is the top button and Done sits under it; on macOS 15 the 2 buttons sit side by side. The install box also says to scroll down to Security in Privacy & Security before pressing Open Anyway. On a Mac, the thanks page after a download now leads with \"Fastest: paste this in Terminal\": the install line with a Copy button and what it does. The .dmg steps follow under \"Or open the download:\".",
     links: [
       { href: "/beta", label: "Download page" },
       { href: "/install-help", label: "Install help" },
