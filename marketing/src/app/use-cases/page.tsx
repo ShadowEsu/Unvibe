@@ -52,8 +52,8 @@ export default function UseCasesPage() {
           {SHORTCUTS.windows.anywhere} on Windows, and read the explanation beside your editor.
         </p>
         <p>
-          Want to try it first? <Link className="paper-text-link" href="/explain">Explain code in your browser</Link>.
-          Setup, the five depths and shortcuts are on the <Link className="paper-text-link" href="/resources">resources page</Link>.
+          Want to try it first? <Link className="paper-text-link paper-text-link--inline" href="/explain">Explain code in your browser</Link>.
+          Setup, the five depths and shortcuts are on the <Link className="paper-text-link paper-text-link--inline" href="/resources">resources page</Link>.
         </p>
       </section>
 

@@ -169,7 +169,7 @@ export function ResourcesHub() {
 
           <p className="resources-section__more">
             Want to see it first? Paste a snippet on{" "}
-            <Link href="/explain" className="paper-text-link">
+            <Link href="/explain" className="paper-text-link paper-text-link--inline">
               Explain code
             </Link>
             , pick a depth and Vibe tells you what the code does. Free, no account.
@@ -326,7 +326,7 @@ export function ResourcesHub() {
               </div>
               <div className="resources-spec-item">
                 <strong>No training set built from your code</strong>
-                <p>Unvibe does not build a training set from your code. Provider retention follows the provider’s API terms, described on the <Link href="/privacy" className="paper-text-link">privacy page</Link>.</p>
+                <p>Unvibe does not build a training set from your code. Provider retention follows the provider’s API terms, described on the <Link href="/privacy" className="paper-text-link paper-text-link--inline">privacy page</Link>.</p>
               </div>
               <div className="resources-spec-item">
                 <strong>Local history</strong>
