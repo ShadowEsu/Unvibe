@@ -148,6 +148,7 @@
 
 .explain-langs li {
   display: grid;
+  align-content: start;
   gap: 0.3rem;
   padding: 1rem 1.1rem;
   border: 1.5px solid var(--v-ink);

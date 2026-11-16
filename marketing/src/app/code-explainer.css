@@ -137,7 +137,8 @@ ol.explain-notes {
 @media (min-width: 860px) {
   .uc-fold {
     grid-template-columns: minmax(0, 1fr) minmax(0, 32rem);
-    align-items: center;
+    /* The text column starts at the top beside the capture (Design on #269: centring left 92-188 px under the h1). */
+    align-items: start;
     gap: 2rem;
   }
 }
