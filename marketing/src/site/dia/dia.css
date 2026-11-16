@@ -19,8 +19,10 @@
   --d-ease: cubic-bezier(0.22, 0.7, 0.2, 1);
 }
 .d { position: relative; background: var(--d-paper); color: var(--d-ink); font-family: var(--d-sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: clip; }
-/* the site's own page ground (its code-art backdrop) never shows under a D page */
+/* the site's own page ground (its code-art backdrop) never shows under a D page, so it isn't fetched there either:
+   body::before (paper.css) would otherwise request the 120 KB code-field webp behind every D page */
 html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !important; background-image: none !important; }
+html:has(.d-page) body::before { background: var(--d-paper); }
 .d *, .d *::before, .d *::after { box-sizing: border-box; }
 .d :where(h1, h2, h3, p, ol, ul, dl, dd, figure) { margin: 0; padding: 0; }
 .d :where(ol, ul) { list-style: none; }

@@ -6,6 +6,7 @@ import { breadcrumbJsonLd, faqPageJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { pageMetadata } from "@/lib/pageMeta";
 import { PRODUCT_SENTENCE } from "@/lib/productFacts";
 import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
+import "@/site/dia/photo.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/faq",

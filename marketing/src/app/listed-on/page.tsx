@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listingBadges, listingLinks, submittedTo } from "@/data/listings";
 import { pageMetadata } from "@/lib/pageMeta";
+import "@/site/dia/listed.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/listed-on",

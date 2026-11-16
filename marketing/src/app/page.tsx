@@ -8,6 +8,8 @@ import { faqPageJsonLd, howToJsonLd, jsonLdScript, websiteJsonLd } from "@/lib/j
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { pricingCopy } from "@/lib/pricingCopy";
+// The demo's CSS loads here, on the only route that shows it (root layout comment).
+import "@/site/dia/demo.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",

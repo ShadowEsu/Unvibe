@@ -1,3 +1,9 @@
+/* Glisse's own CSS first, inside this file, so it precedes every site rule and the site wins ties. A separate
+   `import "glisse/styles.css"` in layout.tsx gets its own chunk, and webpack doesn't keep chunk order once pages
+   import CSS of their own (route-scoped CSS put Glisse's chunk after paper.css and glass.css, and its
+   `.lg-input input::placeholder` beat the newsletter's). Bundled, so still a 'self' stylesheet (GlisseStylesMarker). */
+@import "glisse/styles.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
