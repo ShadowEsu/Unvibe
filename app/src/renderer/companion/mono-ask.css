@@ -56,7 +56,10 @@
 :root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip b { font: 600 14px/20px var(--u-font); }
 :root[data-ui="v3"][data-v7] .layout .ask-composer .voice-tip p { color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .layout .ask-composer__bar { display: flex; align-items: center; gap: 12px; min-width: 0; margin-left: -8px; }
-:root[data-ui="v3"][data-v7] .layout .ask-composer__hint { flex: 1 1 0; min-width: 0; overflow: hidden; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: nowrap; }
+/* The hint shows whole phrases or nothing: its phrases are flex items that wrap onto a hidden second line when they
+   don't fit. The empty ::before holds the first line, so even "Return to send" wraps away rather than being cut. */
+:root[data-ui="v3"][data-v7] .layout .ask-composer__hint { display: flex; flex-wrap: wrap; flex: 1 1 0; min-width: 0; height: 16px; overflow: hidden; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); white-space: pre; }
+:root[data-ui="v3"][data-v7] .layout .ask-composer__hint::before { content: ""; width: 0; height: 16px; }
 :root[data-ui="v3"][data-v7] .layout .ask-composer__meter { flex: none; padding: 0; border: 0; background: none; color: var(--u-ink-2); font: 400 12px/16px var(--u-font); cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout .ask-composer__meter[data-tone="hot"] { color: var(--u-amber); }
 :root[data-ui="v3"][data-v7] .layout .ask-composer__mic { flex: none; gap: 6px; }
