@@ -78,7 +78,7 @@ export default function CodeExplainerMacPage() {
         <h2 id="mac-first-open">The first open</h2>
         <p>
           Unvibe is not verified by Apple yet, so the first time you open it macOS says{" "}
-          <Link className="paper-text-link" href="/help/apple-could-not-verify">&ldquo;Unvibe Not Opened&rdquo;</Link>.
+          <Link className="paper-text-link paper-text-link--inline" href="/help/apple-could-not-verify">&ldquo;Unvibe Not Opened&rdquo;</Link>.
           You allow it once with Open Anyway in System Settings, under Privacy &amp; Security, and later versions install
           from inside the app with one click. The one-line Terminal install skips this step.
         </p>
@@ -118,9 +118,9 @@ export default function CodeExplainerMacPage() {
           <InstallBox os="mac" surface="seo_mac" />
         </div>
         <p>
-          On Windows? <Link className="paper-text-link" href="/code-explainer-windows">Unvibe for Windows</Link>.
-          Want to try first? <Link className="paper-text-link" href="/explain">Explain code in your browser</Link>. All
-          downloads are on the <Link className="paper-text-link" href="/beta">download page</Link>.
+          On Windows? <Link className="paper-text-link paper-text-link--inline" href="/code-explainer-windows">Unvibe for Windows</Link>.
+          Want to try first? <Link className="paper-text-link paper-text-link--inline" href="/explain">Explain code in your browser</Link>. All
+          downloads are on the <Link className="paper-text-link paper-text-link--inline" href="/beta">download page</Link>.
         </p>
       </section>
     </article>

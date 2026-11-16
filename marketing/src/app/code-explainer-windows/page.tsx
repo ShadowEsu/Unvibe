@@ -82,7 +82,7 @@ export default function CodeExplainerWindowsPage() {
         <h2 id="win-first-open">The first run</h2>
         <p>
           Unvibe is not signed with a paid certificate yet, so when you first run the .exe Windows may show a blue{" "}
-          <Link className="paper-text-link" href="/help/windows-protected-your-pc">&ldquo;Windows protected your PC&rdquo;</Link>{" "}
+          <Link className="paper-text-link paper-text-link--inline" href="/help/windows-protected-your-pc">&ldquo;Windows protected your PC&rdquo;</Link>{" "}
           box. Press More info, then Run anyway. You only do this once.
         </p>
         <p>
@@ -124,9 +124,9 @@ export default function CodeExplainerWindowsPage() {
           <InstallBox os="windows" surface="seo_windows" />
         </div>
         <p>
-          Using a Mac? <Link className="paper-text-link" href="/code-explainer-mac">Unvibe for Mac</Link>. Not ready to
-          install? <Link className="paper-text-link" href="/explain">Explain code in your browser</Link>. Every build is
-          on the <Link className="paper-text-link" href="/beta">download page</Link>.
+          Using a Mac? <Link className="paper-text-link paper-text-link--inline" href="/code-explainer-mac">Unvibe for Mac</Link>. Not ready to
+          install? <Link className="paper-text-link paper-text-link--inline" href="/explain">Explain code in your browser</Link>. Every build is
+          on the <Link className="paper-text-link paper-text-link--inline" href="/beta">download page</Link>.
         </p>
       </section>
     </article>

@@ -1036,6 +1036,14 @@ h2 {
   font-size: 0.9rem;
 }
 
+/* A link inside a sentence (Design SHOULD on #308): the sentence's own size, inline, no stand-alone spacing.
+   Doubled class so it also beats `.paper-center .paper-text-link`'s inline-block and top margin. */
+.paper-text-link.paper-text-link--inline {
+  display: inline;
+  margin-top: 0;
+  font-size: inherit;
+}
+
 .skip-link {
   position: absolute;
   left: 1rem;

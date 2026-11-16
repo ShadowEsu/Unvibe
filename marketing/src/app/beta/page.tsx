@@ -54,8 +54,8 @@ export default function BetaDownloadsPage() {
                   </p>
                   <p>
                     Check your download against its SHA-256:{" "}
-                    <a className="paper-text-link" href={MAC_SHA256_URL}>Mac</a>,{" "}
-                    <a className="paper-text-link" href={WINDOWS_SHA256_URL}>Windows</a>.
+                    <a className="paper-text-link paper-text-link--inline" href={MAC_SHA256_URL}>Mac</a>,{" "}
+                    <a className="paper-text-link paper-text-link--inline" href={WINDOWS_SHA256_URL}>Windows</a>.
                   </p>
                 </div>
               </li>
@@ -185,7 +185,7 @@ export default function BetaDownloadsPage() {
               <p>
                 No Run anyway button? Work and school PCs can remove it. If Smart App Control is turned on (Windows 11), it
                 blocks unsigned apps like Unvibe and can’t make an exception for one app. Email{" "}
-                <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20Windows%20install">support@unvibe.site</a>
+                <a className="paper-text-link paper-text-link--inline" href="mailto:support@unvibe.site?subject=Unvibe%20Windows%20install">support@unvibe.site</a>
                 {" "}and we’ll help.
               </p>
             </details>
@@ -218,7 +218,7 @@ export default function BetaDownloadsPage() {
             </div>
             <div className="beta-page__trust-item">
               <MonitorIcon />
-              <p>Need help? <a className="paper-text-link" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
+              <p>Need help? <a className="paper-text-link paper-text-link--inline" href="mailto:support@unvibe.site?subject=Unvibe%20help">Email us</a></p>
             </div>
           </div>
           <BetaFeedbackAsk />
