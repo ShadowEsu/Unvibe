@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
 import { Learn } from './learn';
 import { Chat } from './chat';
 import { Gift } from './gift';
@@ -304,33 +305,26 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
-  const [browserOpened, setBrowserOpened] = useState(true);
+  const [browser, dispatchBrowser] = useReducer(deviceBrowserReducer, DEVICE_BROWSER_START);
+  const browserOpened = browserOpenedFor(browser);
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
   // The code shows as soon as main has it; the browser opens alongside and reports only a failure, for its own link.
-  // A failure can arrive before the code does (the browser can fail at once), so the failed link is remembered.
-  const urlRef = useRef('');
-  const failedUrlRef = useRef('');
-  useEffect(() => window.unvibe.onDeviceBrowser((r) => {
-    if (r.opened) return;
-    failedUrlRef.current = r.verificationUri;
-    if (r.verificationUri === urlRef.current) setBrowserOpened(false);
-  }), []);
+  useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
-      urlRef.current = r.verificationUri;
+      dispatchBrowser({ type: 'code', url: r.verificationUri });
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);
-      setBrowserOpened(failedUrlRef.current !== r.verificationUri);
     } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
   const openBrowser = async () => {
     const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
     if (!result.ok) setErr(result.error ?? 'Could not open your browser.');
-    else setBrowserOpened(true);
+    else dispatchBrowser({ type: 'opened', url: verificationUrl });
   };
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(verificationUrl); }

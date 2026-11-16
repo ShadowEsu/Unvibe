@@ -1736,18 +1736,22 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('account:startDevice', async (e) => {
     try {
+      const asked = Date.now();
       const device = await startDeviceAuth();
+      console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
       currentDeviceVerificationUrl = verificationUrl;
-      // The code goes back to the window at once; the browser opens alongside. Waiting for openExternal held the
-      // code back until the browser had launched (20 s on a cold QA runner). A failure arrives as an event for this
-      // link only, so a Retry's newer link is never marked as failed by an older one.
+      // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
+      // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
+      // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
+      // in these log lines are there to tell a slow server from a slow browser.
+      const opening = Date.now();
       void shell.openExternal(verificationUrl).then(
-        () => console.info('[auth] opened device verification browser'),
+        () => console.info(`[auth] opened device verification browser in ${Date.now() - opening} ms`),
         () => {
-          console.warn('[auth] could not open device verification browser');
-          if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowser', { opened: false, verificationUri: verificationUrl });
+          console.warn(`[auth] could not open device verification browser (after ${Date.now() - opening} ms)`);
+          if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
         },
       );
       if (devicePoll) clearInterval(devicePoll);
