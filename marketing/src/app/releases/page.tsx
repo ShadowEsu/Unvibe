@@ -5,6 +5,7 @@ import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
 import { pageMetadata } from "@/lib/pageMeta";
 import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
+import "@/site/dia/photo.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/releases",

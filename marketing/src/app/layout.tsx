@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
-// Glisse's own CSS first, bundled as a 'self' stylesheet, so server HTML is styled before hydration
-// and the site's CSS below wins ties. GlisseStylesMarker stops Glisse adding an inline copy (Security).
-import "glisse/styles.css";
 import "./globals.css";
 import "./paper.css";
 import "./polish.css";
@@ -14,11 +11,11 @@ import "./system.css";
 import "./home-ux.css";
 import "./glass.css";
 import "@/site/dia/dia.css";
-import "@/site/dia/demo.css";
+// demo.css, listed.css and photo.css are imported by the pages that use them (/, /faq, /releases, /investors,
+// /listed-on), so other routes don't download and parse them before first paint (LCP,
+// agents/unvibe-site/lcp-20261111). `npm test` loads .css imports as empty modules (scripts/test-css-stub.cjs).
 import "@/site/dia/motion/dia-motion.css";
 import "@/site/dia/site.css";
-import "@/site/dia/listed.css";
-import "@/site/dia/photo.css";
 import { GlisseStylesMarker } from "@/components/glass/GlisseStylesMarker";
 import { Providers } from "@/components/providers/Providers";
 import { AnalyticsConsentBar } from "@/components/AnalyticsConsentBar";

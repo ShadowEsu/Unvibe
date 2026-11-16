@@ -20,6 +20,8 @@ import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { PRICING } from "@/lib/pricing";
 import { BtnDot } from "@/site/dia/effects";
 import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
+import "@/site/dia/photo.css";
+import "@/site/dia/listed.css";
 
 export const metadata: Metadata = pageMetadata({
   path: "/investors",

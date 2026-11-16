@@ -24,10 +24,12 @@ describe("Glisse styles stay CSP-clean (Security, glisse 0.5.0 review finding 1)
     assert.doesNotMatch(layout, /<style\b/);
   });
 
-  it("the layout bundles glisse/styles.css before the site's CSS and glass.css after it", () => {
+  it("globals.css bundles glisse/styles.css before every site rule, and the layout loads glass.css after the rest", () => {
+    const globals = readFileSync("src/app/globals.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    assert.ok(globals.startsWith('@import "glisse/styles.css";'), "Glisse's CSS is the first statement of globals.css");
+    assert.doesNotMatch(layout, /import "glisse\/styles\.css";/, "not also imported as its own chunk");
     const at = (source: string) => layout.indexOf(`import "${source}";`);
-    assert.ok(at("glisse/styles.css") >= 0 && at("glisse/styles.css") < at("./globals.css"));
-    assert.ok(at("./glass.css") > at("./home-ux.css"));
+    assert.ok(at("./globals.css") >= 0 && at("./glass.css") > at("./home-ux.css"));
   });
 });
 
