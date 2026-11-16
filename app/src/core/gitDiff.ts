@@ -74,10 +74,14 @@ function stripDiffPrefix(pathName: string): string {
   return unquoted;
 }
 
+/** Valid UTF-8 that still breaks or reorders a line: C1 controls (NEL), line/paragraph separators, bidi controls. */
+const UNSAFE_DECODED = /[\u0080-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+
 /**
  * git's C-style quoting: `\ooo` octal bytes, `\t` `\n` `\\` `\"`. Only what is safe to show is decoded: octal bytes of
- * 0x80 and up (a UTF-8 name), `\\` and `\"`. Control characters stay escaped as text (`\n`, `\033`), so a crafted
- * file name cannot split a "Main changes" line or the AI context's headings (Security SHOULD-315a).
+ * 0x80 and up (a UTF-8 name), `\\` and `\"`. Control characters stay escaped as text (`\n`, `\033`), and decoded
+ * characters that break or reorder a line become `\u2028`-style text, so a crafted file name cannot split a "Main
+ * changes" line or the AI context's headings, or flip how the name reads (Security SHOULD-315a, 315b).
  */
 function unquoteGitPath(quoted: string): string {
   const bytes: number[] = [];
@@ -96,7 +100,7 @@ function unquoteGitPath(quoted: string): string {
     text(next === '\\' || next === '"' ? next : `\\${next}`);
     i += 1;
   }
-  return Buffer.from(bytes).toString('utf8');
+  return Buffer.from(bytes).toString('utf8').replace(UNSAFE_DECODED, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 async function untrackedAsHunks(repoRoot: string): Promise<DiffHunk[]> {
