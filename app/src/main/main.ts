@@ -1734,20 +1734,22 @@ app.whenReady().then(() => {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
     }
   });
-  ipcMain.handle('account:startDevice', async () => {
+  ipcMain.handle('account:startDevice', async (e) => {
     try {
       const device = await startDeviceAuth();
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
       currentDeviceVerificationUrl = verificationUrl;
-      let browserOpened = true;
-      try {
-        await shell.openExternal(verificationUrl);
-        console.info('[auth] opened device verification browser');
-      } catch {
-        browserOpened = false;
-        console.warn('[auth] could not open device verification browser');
-      }
+      // The code goes back to the window at once; the browser opens alongside. Waiting for openExternal held the
+      // code back until the browser had launched (20 s on a cold QA runner). A failure arrives as an event for this
+      // link only, so a Retry's newer link is never marked as failed by an older one.
+      void shell.openExternal(verificationUrl).then(
+        () => console.info('[auth] opened device verification browser'),
+        () => {
+          console.warn('[auth] could not open device verification browser');
+          if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowser', { opened: false, verificationUri: verificationUrl });
+        },
+      );
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {
@@ -1781,7 +1783,7 @@ app.whenReady().then(() => {
           }
         }
       })(), Math.max(2, device.interval) * 1000);
-      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl, browserOpened };
+      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
   ipcMain.handle('account:openDeviceAuth', async () => {

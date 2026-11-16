@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GoogleMark } from '../shared/googleMark';
 import { InkTitle } from './inkTitle';
 
@@ -56,15 +56,24 @@ export function Gift() {
       if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
     });
   }, []);
+  // The browser opens alongside the code and reports only a failure, for its own link; it can arrive before the code.
+  const urlRef = useRef('');
+  const failedUrlRef = useRef('');
+  useEffect(() => window.unvibe.onDeviceBrowser((r) => {
+    if (r.opened) return;
+    failedUrlRef.current = r.verificationUri;
+    if (r.verificationUri === urlRef.current) setBrowserOpened(false);
+  }), []);
 
   const startSignIn = async () => {
     setSignInBusy(true);
     setSignInError('');
-    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
+      urlRef.current = result.verificationUri;
       setDeviceCode(result.userCode);
       setVerificationUrl(result.verificationUri);
-      setBrowserOpened(result.browserOpened !== false);
+      setBrowserOpened(failedUrlRef.current !== result.verificationUri);
     }
     else {
       setSignInBusy(false);

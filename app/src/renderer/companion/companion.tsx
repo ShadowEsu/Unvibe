@@ -308,13 +308,23 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
+  // The code shows as soon as main has it; the browser opens alongside and reports only a failure, for its own link.
+  // A failure can arrive before the code does (the browser can fail at once), so the failed link is remembered.
+  const urlRef = useRef('');
+  const failedUrlRef = useRef('');
+  useEffect(() => window.unvibe.onDeviceBrowser((r) => {
+    if (r.opened) return;
+    failedUrlRef.current = r.verificationUri;
+    if (r.verificationUri === urlRef.current) setBrowserOpened(false);
+  }), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
+      urlRef.current = r.verificationUri;
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);
-      setBrowserOpened(r.browserOpened !== false);
+      setBrowserOpened(failedUrlRef.current !== r.verificationUri);
     } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
   const openBrowser = async () => {
