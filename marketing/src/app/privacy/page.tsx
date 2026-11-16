@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="16 November 2026"
+      updated="11 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -157,7 +157,7 @@ export default function PrivacyPage() {
           progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does
           not cover the install ID, dates and counts in the paragraph above, which come with requests
           the app makes anyway, nor one message the app sends once, with that switch on or off, when its
-          main window has been on screen for three seconds (from version 0.1.52). That message carries
+          main window has been on screen for three seconds (from version 0.1.53). That message carries
           the step name with the same random install ID, system and app version as above; we keep only
           the step and the time it arrived. It helps us tell an install a person opened apart from an
           automatic one.
