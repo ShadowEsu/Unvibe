@@ -4,7 +4,8 @@ name: IndexNow
 # to IndexNow (Bing, Yandex, Seznam, Naver). The previous deployed commit comes from the Deployments API: the newest
 # successful Production deployment created before this one. Nothing is kept between runs, and runs are not queued or
 # cancelled against each other: a batch of merges gives a batch of deploys, and each run diffs its own deploy against
-# the one before it, so every change is submitted once (a cancelled or newest-only scheme would drop the middle ones).
+# the one before it, so every change is submitted at least once (a run whose predecessor deploy failed diffs against
+# an older one and resubmits; a cancelled or newest-only scheme would drop the middle ones).
 # Vercel's deployments carry a commit SHA as `ref`, so actions/cache would never restore or save here (GITHUB_REF is
 # empty on these runs). Read-only on the repo; the IndexNow key is public by design (marketing/scripts/indexnow.mjs).
 on:
