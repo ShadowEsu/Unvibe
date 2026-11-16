@@ -17,6 +17,38 @@ import {
 import { BETA_INSTALL_VERSION } from "./betaOffer";
 
 const HELP_URL = "https://unvibe.site/install-help";
+const RELEASES = "https://github.com/ShadowEsu/Unvibe/releases/download/";
+
+/**
+ * Every address a script may contain, anywhere (requests, messages, comments): the release files and pages and the
+ * scripts' source on GitHub, and the unvibe.site pages its messages point people to.
+ */
+const ALLOWED_ADDRESS =
+  /^https:\/\/(github\.com\/ShadowEsu\/Unvibe\/(releases\/download\/\S+|releases(\/latest)?|blob\/main\/marketing\/src\/lib\/betaInstallScript\.ts)|unvibe\.site\/(install-help|install\.sh|install\.ps1))$/;
+
+/**
+ * Kaspersky read "fetch a script, run a download, then call the site back" as a botnet C&C (Security R4(a)). So: no
+ * address outside ALLOWED_ADDRESS is written anywhere in a script, nothing is posted, and every web request reads a URL
+ * variable that is only ever a GitHub release address.
+ */
+function assertOnlyReleaseRequests(script: string): void {
+  const addresses = Array.from(script.matchAll(/https?:\/\/[^\s"'`)<>]+/gi), (m) => m[0].replace(/[.,;:]+$/, ""));
+  for (const address of addresses) assert.match(address, ALLOWED_ADDRESS, `an address a script may contain: ${address}`);
+  assert.doesNotMatch(script, /-X\s*POST|--data|-Method\s+["']?Post|-Body\b|Invoke-RestMethod|Upload(String|Data|File)|\/api\//i, "nothing is posted");
+  const request = /\b(curl(\.exe)?|wget|Invoke-WebRequest|iwr|irm|Start-BitsTransfer)\s|WebClient|HttpClient/i;
+  // A message line that only names a command in its text (echo / Write-* / throw "…") is not a request.
+  const messageOnly = (l: string) => /^(echo|Write-\w+|throw)\b/i.test(l) && !/\$\([^)]*\b(curl|wget|Invoke-WebRequest|iwr|irm)\b|\((Invoke-WebRequest|iwr|irm|New-Object)\b/i.test(l);
+  const requests = script.split("\n").map((l) => l.trim())
+    .filter((l) => !l.startsWith("#") && !/Get-Command/i.test(l) && !messageOnly(l) && request.test(l));
+  assert.ok(requests.length >= 2, `the download and its checksums: ${requests.join("\n")}`);
+  for (const line of requests) {
+    assert.doesNotMatch(line, /https?:\/\//i, `requests use the URL variables: ${line}`);
+    const used = Array.from(line.matchAll(/\$\{?([A-Za-z_]\w*)\}?/g), (m) => m[1]).filter((v) => /url/i.test(v));
+    assert.equal(used.length, 1, `exactly one URL variable per request: ${line}`);
+    const assigned = Array.from(script.matchAll(new RegExp(`\\$?\\b${used[0]}\\s*=\\s*["']([^"']*)["']`, "gi")), (m) => m[1]);
+    assert.ok(assigned.length > 0 && assigned.every((u) => u.startsWith(RELEASES)), `${used[0]} is only a GitHub release address: ${assigned.join(", ")}`);
+  }
+}
 /** The version install.sh installs by default: its tag without the "v". */
 const INSTALLED_VERSION = BETA_INSTALL_TAG.replace(/^v/, "");
 /**
@@ -227,7 +259,6 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.ok(!named(r.calls, "rm").some(touchesTarget), "must not remove anything in Applications");
     assert.equal(installedVersion(), OLD_VERSION, "the installed app is unchanged");
     assert.ok(!named(r.calls, "codesign").some((c) => c.includes("--sign")), "must not re-sign");
-    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   }
 
   /** The one pinned signature check: exactly one codesign --verify, with `-R=<pin>` as one whole argument. */
@@ -315,6 +346,10 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.equal(installedVersion(), INSTALLED_VERSION, "the new version is in place");
     assert.deepEqual(readdirSync(target), ["Unvibe.app"], "no .new or .old is left behind");
     assert.deepEqual(named(r.calls, "open"), [["open", DEST]], "opens the installed app");
+    // Kaspersky (Security R4(a)): a finished install must not call back to unvibe.site, only the GitHub release.
+    const urls = named(r.calls, "curl").flatMap((c) => c.filter((a) => /^https?:\/\//i.test(a)));
+    assert.equal(urls.length, 2, `the dmg and its checksums, nothing else: ${show(r.calls)}`);
+    for (const url of urls) assert.ok(url.startsWith(RELEASES), `only the GitHub release is contacted: ${url}`);
   });
 
   it("installs when no Unvibe is installed yet, with nothing to move aside", () => {
@@ -352,7 +387,6 @@ describe("Mac install script, run with bash against stubs", () => {
     assert.deepEqual(named(r.calls, "mv"), [["mv", DEST, OLD], ["mv", STAGED, DEST], ["mv", OLD, DEST]], "moved aside, the move in failed, moved back");
     assert.deepEqual(readdirSync(target), ["Unvibe.app"], "the copy that could not be moved in is removed");
     assert.equal(named(r.calls, "open").length, 0, "does not open anything");
-    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   });
 
   it("stops after the signature check, before anything is removed, when the app is not the version it installs", () => {
@@ -382,7 +416,6 @@ describe("Mac install script, run with bash against stubs", () => {
     for (const cmd of ["mv", "osascript", "pkill", "open"]) {
       assert.equal(named(r.calls, cmd).length, 0, `${cmd} must not run after a failed copy: ${show(r.calls)}`);
     }
-    assert.ok(!named(r.calls, "curl").some((c) => c.some((a) => a.includes("/api/install/event"))), "must not count an install");
   });
 
   it("stops when the disk image's Unvibe.app is a symlink, before the signature check", () => {
@@ -458,11 +491,9 @@ describe("Mac install script text", () => {
     assert.doesNotMatch(script, /rm -rf "\$DEST"(?!\.)/, "the installed app is never deleted in place");
   });
 
-  it("discloses the installed count near the top and still sends it", () => {
-    const head = script.split("\n").slice(0, 12).join("\n");
-    assert.match(head, /# .*one anonymous 'installed' count to unvibe\.site/);
-    assert.match(head, /no code or personal data/i);
-    assert.match(script, /"event":"installed"/);
+  it("contacts only the GitHub release: nothing is sent back to unvibe.site", () => {
+    assertOnlyReleaseRequests(script);
+    assert.match(script.split("\n").slice(0, 12).join("\n"), /# Talks only to GitHub: it sends nothing to unvibe\.site\./);
   });
 
   it("ends by pointing at install help, then calls main on the very last line", () => {
@@ -477,11 +508,9 @@ describe("Windows install script text", () => {
   const script = betaWindowsInstallScript();
   const startAt = script.indexOf("Start-Process -FilePath $download");
 
-  it("discloses the installed count near the top and still sends it", () => {
-    const head = script.split("\n").slice(0, 8).join("\n");
-    assert.match(head, /# .*one anonymous 'installed' count to unvibe\.site/);
-    assert.match(head, /no code or personal data/i);
-    assert.match(script, /"event":"installed"/);
+  it("contacts only the GitHub release: nothing is sent back to unvibe.site", () => {
+    assertOnlyReleaseRequests(script);
+    assert.match(script.split("\n").slice(0, 8).join("\n"), /# Talks only to GitHub: it sends nothing to unvibe\.site\./);
   });
 
   it("stops before running anything when the checksum can't be confirmed", () => {

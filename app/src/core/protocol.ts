@@ -16,6 +16,8 @@ export interface DiffHunk {
   newStart: number;
   newLines: number;
   lines: string[];
+  /** From git's `new file mode` / `deleted file mode` header lines (an untracked file is `added`); absent for an edit. */
+  change?: 'added' | 'removed';
 }
 
 export interface ReviewContext {

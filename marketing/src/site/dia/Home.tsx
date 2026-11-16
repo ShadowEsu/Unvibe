@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PricingCopy } from "@/lib/pricingCopy";
-import { D_BRIEF, D_CARDS, D_CLOSE, D_FAQ, D_GET_TABLE, D_HERO, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
+import { D_BRIEF, D_CARDS, D_CLOSE, D_EXPLAIN, D_FAQ, D_GET_TABLE, D_HERO, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
 import { BtnDot, Letters, Statement, Stats, VioletSplit } from "./effects";
 import { Faq, Os, PixelVibe, PixelWipe, Pixels, Ribbon, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
@@ -333,6 +333,21 @@ function ShortAnswers({ faq }: { faq: ReadonlyArray<{ id: string; question: stri
   );
 }
 
+/** Links to 8 /explain pages; each label is that page's own H1 (explainHeadingText), built on the server in app/page.tsx. */
+function ExplainLinks({ links }: { links: ReadonlyArray<{ href: string; label: string }> }) {
+  return (
+    <section className="d-explain" aria-labelledby="d-explain-h">
+      <h2 id="d-explain-h" className="d-label d-mono" data-d-enter="">{D_EXPLAIN.h2}</h2>
+      <ul className="d-explain__list" data-d-enter="" style={d(80)}>
+        {links.map((link) => (
+          <li key={link.href}><Link href={link.href}>{link.label}</Link></li>
+        ))}
+        <li><Link className="d-explain__all" href={D_EXPLAIN.all.href}>{D_EXPLAIN.all.label}</Link></li>
+      </ul>
+    </section>
+  );
+}
+
 function Close() {
   return (
     <>
@@ -364,7 +379,11 @@ function Dock() {
  * page drives the scroll-linked parts; the rest is CSS (dia-motion.css). The H1, wordmark and demo window are painted
  * from the first frame and only rise.
  */
-export function Home({ copy, faq }: { copy: PricingCopy; faq: ReadonlyArray<{ id: string; question: string; answer: string }> }) {
+export function Home({ copy, faq, explain }: {
+  copy: PricingCopy;
+  faq: ReadonlyArray<{ id: string; question: string; answer: string }>;
+  explain: ReadonlyArray<{ href: string; label: string }>;
+}) {
   return (
     <div className="d d-page d-home">
       <DiaMotion />
@@ -394,6 +413,7 @@ export function Home({ copy, faq }: { copy: PricingCopy; faq: ReadonlyArray<{ id
         <Ribbon />
         <WhatYouGet copy={copy} />
         <ShortAnswers faq={faq} />
+        <ExplainLinks links={explain} />
         <Close />
         <Dock />
       </div>
