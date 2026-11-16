@@ -10,7 +10,7 @@
 /* Heights from the mock (borders included; Design 0653): greeting 112, Explain 104, tiles 102 (two rows + 8 = 212), the
    Brief box takes what is left, so Today fits 780 px with no scrollbar. Greeting and Explain take those heights as a
    minimum: in a narrow window the Explain steps wrap under the text and the box grows with them (QA RC walk, Windows). */
-:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { box-sizing: border-box; min-height: 112px; padding-top: 16px; padding-bottom: 16px; justify-content: center; }
+:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { box-sizing: border-box; min-height: 112px; padding-top: 12px; padding-bottom: 12px; justify-content: center; }
 :root[data-ui="v3"][data-v7] .layout .today-row--c { min-height: 212px; }
 
 /* Row A, left: Vibe 56 px, the greeting at 22 px, Vibe's note at 14 px grey; the date at the top right. */
