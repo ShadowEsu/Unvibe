@@ -388,9 +388,10 @@ try {
 
 for (const page of ['Ask Vibe', 'Library', 'Quiz', 'Briefs', 'Momentum', 'Plan', 'Share']) {
   try {
-    // Momentum, Plan and Share sit under "More" in the 0.1.51 sidebar.
-    const nav = companion.locator('.side').getByRole('button', { name: page, exact: true });
-    if (!(await nav.isVisible())) await companion.locator('.side').getByRole('button', { name: 'More', exact: true }).click();
+    // Mono's sidebar lists every page but Plan, which opens from the usage card above Share (0.1.52+).
+    const nav = page === 'Plan'
+      ? companion.locator('.side .side-usage')
+      : companion.locator('.side').getByRole('button', { name: page, exact: true });
     await nav.click();
     await companion.locator('.topbar__title').filter({ hasText: page }).waitFor({ timeout: 10000 });
     assert.equal((await companion.locator('.topbar__title').innerText()).trim(), page);
@@ -433,7 +434,7 @@ try {
 } catch (e) { log(false, 'Settings design coverage', e.message.split('\n')[0]); await shot(companion, 'settings-stuck'); }
 
 try {
-  await companion.locator('.topbar__search').click();
+  await companion.locator('.side .side-search').click();
   await companion.getByRole('dialog').waitFor();
   await shot(companion, 'search-empty');
   await companion.keyboard.press('Escape');

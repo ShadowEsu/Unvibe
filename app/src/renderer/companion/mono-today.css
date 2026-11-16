@@ -8,8 +8,9 @@
 :root[data-ui="v3"][data-v7] .layout .today :is(h1, h2, p) { margin: 0; }
 :root[data-ui="v3"][data-v7] .layout :is(.today, .today-recent) .m-box__title h2 { color: var(--u-ink); font: 600 14px/20px var(--u-font); letter-spacing: 0; }
 /* Heights from the mock (borders included; Design 0653): greeting 112, Explain 104, tiles 102 (two rows + 8 = 212), the
-   Brief box takes what is left, so Today fits 780 px with no scrollbar. */
-:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { box-sizing: border-box; height: 112px; min-height: 0; padding-top: 0; padding-bottom: 0; justify-content: center; }
+   Brief box takes what is left, so Today fits 780 px with no scrollbar. Greeting and Explain take those heights as a
+   minimum: in a narrow window the Explain steps wrap under the text and the box grows with them (QA RC walk, Windows). */
+:root[data-ui="v3"][data-v7] .layout .today-row--a > .m-box { box-sizing: border-box; min-height: 112px; padding-top: 16px; padding-bottom: 16px; justify-content: center; }
 :root[data-ui="v3"][data-v7] .layout .today-row--c { min-height: 212px; }
 
 /* Row A, left: Vibe 56 px, the greeting at 22 px, Vibe's note at 14 px grey; the date at the top right. */
@@ -36,7 +37,7 @@
 :root[data-ui="v3"][data-v7] .layout .today-strip__count b { font: 600 17px/22px var(--u-font); }
 
 /* Row B: the Explain box. The whole box starts an explanation, as Today's card did; three steps at the right. */
-:root[data-ui="v3"][data-v7] .layout .today-explain { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; height: 104px; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
+:root[data-ui="v3"][data-v7] .layout .today-explain { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; min-height: 104px; box-sizing: border-box; padding-top: 16px; padding-bottom: 16px; color: var(--u-ink); font: inherit; text-align: left; cursor: pointer; }
 :root[data-ui="v3"][data-v7] .layout .today-explain:hover { background: var(--u-surface); border-color: var(--u-border-control); }
 :root[data-ui="v3"][data-v7] .layout .today-explain__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .today-explain__text b { color: var(--u-ink); font: 600 17px/24px var(--u-font); }

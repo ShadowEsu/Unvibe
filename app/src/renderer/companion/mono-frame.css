@@ -486,6 +486,13 @@
 :root[data-ui="v3"][data-v7] .modal .ai-container__icon { color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .modal :is(.integ-card, .integ-card:hover, .plan-pick__card, .plan-board__signin, .plan-usage-card, .cost-table) { border: 1px solid var(--u-border); border-radius: var(--u-radius-card); background: transparent; box-shadow: none; }
 :root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current { border-color: var(--u-border-control); background: var(--u-sunken); box-shadow: none; }
+/* The Plan page (undrawn; by the rule): its head and its usage sit in boxes like every other page's, so no text is on
+   the bare ground where the sharks swim (QA RC walk: sharks across "Plan & usage"). The usage meters are the box's
+   content, without a frame of their own. */
+:root[data-ui="v3"][data-v7] .layout .plan-board > :is(.page-head, .plan-usage-block) {
+  box-sizing: border-box; margin: 0; padding: 20px; border: 1px solid var(--u-border); border-radius: var(--u-radius-card); background: var(--u-surface);
+}
+:root[data-ui="v3"][data-v7] .layout .plan-board .plan-usage-card { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 
 /* ── Narrow windows: below 640 px the side is the drawer (as before), a floating solid box 8 px from the edges. ── */
 @media (max-width: 640px) {
