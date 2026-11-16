@@ -21,6 +21,21 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "16 NOV 2026",
+    category: "PRODUCT",
+    title: "Unvibe 0.1.52: a new look for the whole app",
+    summary: "The app is black and white now, with purple left for Vibe and the sharks that swim behind the pages. Each page is a grid of boxes: Today shows your greeting, the Explain box, Up next, 4 counts and your latest brief, and Ask Vibe has a side column with your latest brief and your saved conversations. The sidebar folds down to icons, and ⇧⌘\\ (Ctrl+Shift+\\ on Windows) hides the right column. In a quiz, press 1 to 4 to pick an answer and Return to check it. Settings has a switch that stops the sharks, and reduced motion holds them still. In Briefs, each file is labeled Added, Removed or Changed from git's own file headers, and files with non-English names show their real names. An installed Unvibe now sends its tokens only to api.unvibe.site. Once, after the main window has been on screen for 3 seconds, the app sends one message with this install's random ID, system and app version, whether Send setup progress is on or off; the privacy policy describes it.",
+    figure: "v0.1.52",
+    links: [
+      { href: "/privacy", label: "Privacy policy" },
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.52", label: "Release v0.1.52" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/314", label: "PR #314" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/315", label: "PR #315" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/316", label: "PR #316" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/287", label: "PR #287" },
+    ],
+  },
+  {
     date: "14 NOV 2026",
     category: "PRODUCT",
     title: "Use-case pages for code from Cursor, GitHub Copilot and ChatGPT",
