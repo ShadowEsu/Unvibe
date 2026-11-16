@@ -1,4 +1,4 @@
-import type { ReviewRequestPayload } from '@/ai/protocol';
+import type { ReviewContext, ReviewRequestPayload } from '@/ai/protocol';
 
 /** Largest review context (serialized) the AI routes accept, in UTF-16 units. */
 export const MAX_CONTEXT_CHARS = 120_000;
@@ -33,4 +33,22 @@ export function payloadSizeError(payload: ReviewRequestPayload): Response | null
     }, { status: 413 });
   }
   return null;
+}
+
+/**
+ * Largest quick look (Security GO on PR #290, SHOULD): at most 20,000 characters (UTF-16 units) across
+ * the texts that reach the preview prompt (the selection, nearby files, the file name, imports and the
+ * project list), well under the explanation's cap, since a 3-bullet preview needs far less.
+ */
+export const PREVIEW_MAX_CONTEXT_CHARS = 20_000;
+
+/** The preview's own size check, after `payloadSizeError`: 413 in the same shape, or null. */
+export function previewSizeError(context: ReviewContext): Response | null {
+  const texts = [context.code ?? '', context.enclosing ?? '', context.primaryFile ?? '', ...context.imports, ...context.projectStructure];
+  const chars = texts.reduce((sum, text) => sum + text.length, 0);
+  if (chars <= PREVIEW_MAX_CONTEXT_CHARS) return null;
+  return Response.json({
+    error: 'context_too_long',
+    message: 'That is too much code for a quick look. Select a smaller part, or open the full explanation.',
+  }, { status: 413 });
 }

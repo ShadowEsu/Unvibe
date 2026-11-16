@@ -6,7 +6,8 @@ import "./survey.css";
 
 // Linked only from our own PMF email, so it stays out of search and the sitemap (Security W4).
 export const metadata: Metadata = {
-  title: "One question about Unvibe",
+  // Names the brand, so it skips the layout's "%s · Unvibe" (check:canonicals: no title says Unvibe twice).
+  title: { absolute: "One question about Unvibe" },
   description: "One question about Unvibe, anonymous.",
   robots: { index: false, follow: false },
   alternates: { canonical: "/survey" },

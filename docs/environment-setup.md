@@ -24,7 +24,9 @@ secret store or an untracked `web/.env.local`; never put them in `app/` or rende
 2. Set `APP_ENV=staging`, HTTPS `WEB_BASE_URL`, `SUPABASE_URL`, and the service-role key in the
    web host's secret store.
 3. Set a real Anthropic key and set `ENABLE_MOCK_AI=false`.
-4. Package the app with `UNVIBE_BACKEND=https://<staging-host>` available to the **main process**.
+4. Package the app with `UNVIBE_BACKEND=https://<staging-host>` set when `app/scripts/build.mjs` runs: the build
+   bakes it in. A packaged app reads no `.env` file and ignores `UNVIBE_BACKEND` at runtime (Security 5o), so the
+   value at build time is the only one it uses.
 5. Do not enable `UNCODE_ALLOW_DEV_EMAIL_AUTH`; complete the verified device-auth implementation
    before inviting testers.
 

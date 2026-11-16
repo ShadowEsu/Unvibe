@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="9 November 2026"
+      updated="11 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -126,8 +126,8 @@ export default function PrivacyPage() {
           code in, the file and project name, and the concept it covered.
           Row-level security is designed to restrict direct reads of those records to your account. Your auth
           token is encrypted at rest using the operating system keychain, and data is
-          encrypted in transit. Backend at-rest and backup settings must be verified for
-          the selected staging/production infrastructure. You can access and delete your
+          encrypted in transit. Our database host, Supabase, encrypts stored data at rest
+          (AES-256). You can access and delete your
           data. See <a href="/data-controls">data controls</a> and{" "}
           <a href="/account-deletion">account deletion</a>. We use no advertising
           trackers.
@@ -156,7 +156,11 @@ export default function PrivacyPage() {
           switch it off. To turn it on or off, open Settings, then Privacy &amp; Data, and use Send setup
           progress (in version 0.1.44 the switch reads Send anonymous setup progress). That switch does
           not cover the install ID, dates and counts in the paragraph above, which come with requests
-          the app makes anyway.
+          the app makes anyway, nor one message the app sends once, with that switch on or off, when its
+          main window has been on screen for three seconds (from version 0.1.53). That message carries
+          the step name with the same random install ID, system and app version as above; we keep only
+          the step and the time it arrived. It helps us tell an install a person opened apart from an
+          automatic one.
         </p>
         <p>
           If you type an answer to the optional first-run question &ldquo;Where did you hear about
@@ -183,7 +187,7 @@ export default function PrivacyPage() {
           Global Privacy Control, Mixpanel does not load. unvibe.site still keeps daily totals: how
           many times visitors pressed Allow or No thanks, how many pages were loaded and which campaign
           label (utm_source) the link that brought them carried, how many times the install scripts
-          were downloaded and finished installing, and how many times each download link (Mac, Intel
+          were downloaded, and how many times each download link (Mac, Intel
           Mac or Windows) was used. Each total is just a day, a number and, for page loads and download
           links, that campaign label, with no ID, IP address, cookie, time or page address, so it
           can&apos;t be linked to you.
@@ -204,8 +208,10 @@ export default function PrivacyPage() {
           use this to fix confusing pages, not to sell or share your data. The desktop
           app does not send this kind of analytics. If you join a list or request a
           download email, we store your name and email to contact you about Unvibe. The
-          install scripts send one &apos;installed&apos; count to unvibe.site when they finish,
-          with no ID, code or personal data. If you use the Try it box on the site,
+          install scripts send nothing back to unvibe.site. Older versions of the scripts sent one
+          &apos;installed&apos; count when they finished, with no ID, code or personal data. A saved
+          copy of one may still send it, but unvibe.site no longer records it; the totals counted
+          before are kept as they are, as numbers only. If you use the Try it box on the site,
           the code you paste is sent to Unvibe&apos;s server, which refuses common key formats, and
           then to Anthropic to write the explanation. To limit how often the box can be used,
           Unvibe keeps the time of each request and a hash of your IP address, not the code. Since

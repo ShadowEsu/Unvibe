@@ -13,7 +13,7 @@ import {
   BETA_WINDOWS_DOWNLOAD_URL,
 } from "@/lib/betaInstallScript";
 import { DOWNLOAD_FILE_NAMES, type DownloadFile } from "@/lib/downloadFiles";
-import { isBotUserAgent, siteLoadDay, siteLoadSource, usableEnv, type SiteLoadSource } from "@/lib/siteLoads";
+import { isBotUserAgent, siteLoadDay, siteLoadHour, siteLoadSource, usableEnv, type SiteLoadSource } from "@/lib/siteLoads";
 
 /**
  * The only files /download/<file> serves, each to this release's asset (BETA_INSTALL_TAG moves them all).
@@ -80,18 +80,18 @@ export function downloadSource(req: DownloadRequest): SiteLoadSource {
 }
 
 /** Posts one increment. Injected in tests; in production a PostgREST RPC call with the service role. */
-export type DownloadPost = (day: string, asset: DownloadAsset, source: SiteLoadSource) => Promise<boolean>;
+export type DownloadPost = (day: string, hour: number, asset: DownloadAsset, source: SiteLoadSource) => Promise<boolean>;
 
-/** The service-role RPC call (`record_download`, migration 0014), or null when storage isn't configured. */
+/** The service-role RPC call (`record_download`, migrations 0014 and 0015), or null when storage isn't configured. */
 export function supabaseDownloadPost(): DownloadPost | null {
   const url = usableEnv(process.env.SUPABASE_URL);
   const key = usableEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (!url || !key) return null;
-  return async (day, asset, source) => {
+  return async (day, hour, asset, source) => {
     const res = await fetch(`${url}/rest/v1/rpc/record_download`, {
       method: "POST",
       headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_day: day, p_asset: asset, p_source: source }),
+      body: JSON.stringify({ p_day: day, p_hour: hour, p_asset: asset, p_source: source }),
       cache: "no-store",
     });
     return res.ok;
@@ -115,7 +115,7 @@ export async function recordDownload(
     const id = setTimeout(() => resolve(false), waitMs);
     stopTimer = () => clearTimeout(id);
   });
-  const ok = await Promise.race([post(siteLoadDay(now), asset, source).catch(() => false), timedOut]);
+  const ok = await Promise.race([post(siteLoadDay(now), siteLoadHour(now), asset, source).catch(() => false), timedOut]);
   stopTimer();
   if (ok) return true;
   console.error("download count failed");

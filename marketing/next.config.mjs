@@ -20,6 +20,13 @@ const nextConfig = {
       { source: "/contact", destination: "/help", permanent: true },
       // Legacy admin path: a real redirect, so no page (and no inherited "index, follow") is ever served.
       { source: "/waitlist-admin", destination: "/waitlist", permanent: false },
+      // Typed short links, said aloud in Shorts and Reels and never written in a description (migration 0015,
+      // src/lib/siteLoads.ts): the /explain load they land on is counted under its own source, apart from the
+      // link checker that follows every description link after an upload. Temporary (307), so the landing page
+      // can change without browsers caching the old one. Redirects run before the middleware, so /yt itself
+      // isn't counted, only the page it lands on.
+      { source: "/yt", destination: "/explain?utm_source=youtubetyped", permanent: false },
+      { source: "/ig", destination: "/explain?utm_source=instagramtyped", permanent: false },
     ];
   },
   async rewrites() {
