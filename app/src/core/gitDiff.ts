@@ -74,17 +74,26 @@ function stripDiffPrefix(pathName: string): string {
   return unquoted;
 }
 
-/** git's C-style quoting: `\ooo` octal bytes (UTF-8), `\t` `\n` `\\` `\"`. */
+/**
+ * git's C-style quoting: `\ooo` octal bytes, `\t` `\n` `\\` `\"`. Only what is safe to show is decoded: octal bytes of
+ * 0x80 and up (a UTF-8 name), `\\` and `\"`. Control characters stay escaped as text (`\n`, `\033`), so a crafted
+ * file name cannot split a "Main changes" line or the AI context's headings (Security SHOULD-315a).
+ */
 function unquoteGitPath(quoted: string): string {
   const bytes: number[] = [];
+  const text = (s: string) => bytes.push(...Buffer.from(s, 'utf8'));
   for (let i = 0; i < quoted.length; i++) {
     const ch = quoted[i]!;
-    if (ch !== '\\') { bytes.push(...Buffer.from(ch, 'utf8')); continue; }
-    const next = quoted[i + 1] ?? '';
+    if (ch !== '\\') { text(ch); continue; }
     const octal = /^[0-7]{3}/.exec(quoted.slice(i + 1));
-    if (octal) { bytes.push(parseInt(octal[0], 8)); i += 3; continue; }
-    const simple: Record<string, number> = { t: 9, n: 10, r: 13, '\\': 92, '"': 34, a: 7, b: 8, f: 12, v: 11 };
-    bytes.push(simple[next] ?? next.charCodeAt(0));
+    if (octal) {
+      const byte = parseInt(octal[0], 8);
+      if (byte >= 0x80) bytes.push(byte); else text(`\\${octal[0]}`);
+      i += 3;
+      continue;
+    }
+    const next = quoted[i + 1] ?? '';
+    text(next === '\\' || next === '"' ? next : `\\${next}`);
     i += 1;
   }
   return Buffer.from(bytes).toString('utf8');
