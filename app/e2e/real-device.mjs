@@ -604,6 +604,9 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
             await shot(panel, `${label}-confirm`);
             await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
             report.push(`NOTE  first own code (${label}): the held clipboard explain came back on the confirm sheet; Explain pressed`);
+          } else {
+            // Security SHOULD (2136): the clipboard must be shown again before it is sent.
+            log(false, `First own code (${label}): the confirm sheet comes before anything is sent`, 'the explanation started without the confirm sheet');
           }
         }
       }
