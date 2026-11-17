@@ -79,8 +79,8 @@ export default function ShortcutHelpPage() {
           <li><b>Check the keys:</b> {windows.anywhere}, all three together. Windows has no permission to allow.</li>
           <li>
             <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection (Unvibe may
-            also say &ldquo;Couldn&apos;t copy from&rdquo; that app). Windows also blocks apps from sending keystrokes to a window that
-            runs as administrator, which is how Unvibe copies (Microsoft&apos;s{" "}
+            also say &ldquo;Couldn&apos;t copy from&rdquo; that app). Windows also blocks apps that aren&apos;t running as administrator from
+            sending keystrokes to a window that is, which is how Unvibe copies (Microsoft&apos;s{" "}
             <a href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput" rel="noopener noreferrer">
               SendInput documentation
             </a>
