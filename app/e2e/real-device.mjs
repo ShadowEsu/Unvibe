@@ -12,12 +12,13 @@
 //      DESKTOP_RECORDING=1 (also record the whole screen around the global-shortcut step, for the demo
 //      video; written to DESKTOP_RECORDING_DIR, default <SHOTS_DIR>/desktop-recording),
 //      QA_AI_OK=1 (workflow input ai=true) explains for real: the first-run sample, one pasted own code in setup,
-//      the editor shortcut path and the global shortcut, 4 hosted-AI calls per system. Anything else (the default,
-//      ai=false) is a walk only with NO hosted-AI call: setup is skipped with "Skip for now" twice, the editor-bridge
-//      explanation is skipped, the global shortcut only checks that the panel pops up with the send agreement or the
-//      selected code (the agreement is never ticked), and the launch-at-login checks, which need an own-code
-//      explanation, become NOTEs. Every step that would send code for an explanation calls mustAllowAi first, so a
-//      walk-only run that reaches one fails there instead of sending.
+//      the editor shortcut path and the global shortcut, 4 hosted-AI calls per system; it needs Unvibe 0.1.53+ and
+//      refuses an older build before sending anything. Anything else (the default, ai=false) is a walk only with NO
+//      hosted-AI call: setup is skipped with "Skip for now" twice, the editor-bridge explanation is skipped, and the
+//      launch-at-login checks, which need an own-code explanation, become NOTEs. The sending steps (the sample's
+//      Explain, the setup paste, every explanation wait) call mustAllowAi, which refuses (FAILs) in a walk-only run.
+//      The global shortcut is still pressed: first the profile must hold no send agreement (unvibe-consent.json),
+//      or the keystroke is refused; then the panel must ask for the agreement (never ticked) and nothing may stream.
 import { chromium } from 'playwright';
 import { launchApp, readStore } from './cdp-launch.mjs';
 import { execFile, execFileSync, spawn } from 'node:child_process';
@@ -245,7 +246,19 @@ const mainLog = app.output;
 const companion = await windowWith(app, 'companion.html', 60000);
 if (!companion) { log(false, 'App opens'); writeFileSync(path.join(out, 'report.txt'), report.join('\n')); process.exit(1); }
 await companion.waitForLoadState('domcontentloaded');
-log(true, 'App opens', `version ${(await companion.evaluate(() => window.unvibe.appInfo())).version}`);
+const appVersion = (await companion.evaluate(() => window.unvibe.appInfo())).version;
+log(true, 'App opens', `version ${appVersion}`);
+// An AI run needs 0.1.53+: before it, setup step 3 drops a paste while the sample's panel is still open (fixed by
+// #339), so the run would spend the sample's call and then fail. Refused here, before anything is sent.
+if (!walkOnly) {
+  const [major, minor, patch] = String(appVersion).split('.').map(Number);
+  if (major === 0 && (minor < 1 || (minor === 1 && patch < 53))) {
+    log(false, 'AI mode (ai=true) needs Unvibe 0.1.53 or later', `this build is ${appVersion}; nothing was sent`);
+    writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
+    await app.close().catch(() => {});
+    process.exit(1);
+  }
+}
 // The launch-at-login question is a native dialog. The main process can't be stubbed on a release
 // build, so the operating system answers it: on macOS a watcher reads every sheet/dialog the app
 // shows, keeps its message, and presses No (Cancel/OK for any other one) through Accessibility.
@@ -574,27 +587,28 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
   }
 }
 
-// Walk only: the panel the shortcut opens, with no explanation. This profile has no send agreement, so the panel asks
-// for it first (a build that shows the selection first shows the selected code); either one is the pop-up. The
-// agreement is never ticked, and nothing may stream.
-async function waitForPopup(label, expectedCode) {
+// Walk only: the panel the shortcut opens, with no explanation. The profile holds no send agreement (checked before
+// the keystroke), so the panel must ask for it: the agreement form with three unticked boxes and Continue off.
+// Anything else (the Explain sheet, an answer) FAILs. The agreement is never ticked, and nothing may stream.
+async function waitForPopup(label) {
   const panel = await windowWith(app, 'widget.html', 20000);
   if (!panel) return { ok: false, why: 'review panel did not open' };
   try {
     const consent = panel.locator('.consent-form');
-    const preview = panel.locator('.ob-code__all code').filter({ hasText: expectedCode });
-    await consent.or(preview).or(panel.locator('#confirm-title')).first().waitFor({ state: 'visible', timeout: 30000 });
+    await consent.or(panel.locator('#confirm-title')).or(panel.locator('.ob-answer')).first().waitFor({ state: 'attached', timeout: 30000 });
+    assert.equal(await consent.count(), 1, 'the panel asks for the send agreement (this profile has none)');
+    await consent.waitFor({ state: 'visible', timeout: 5000 });
     assert.equal(await panel.evaluate(() => document.visibilityState), 'visible', 'the panel window is shown');
-    const shown = (await consent.count()) ? 'the send agreement' : (await preview.count()) ? 'the selected code' : 'the Explain confirm sheet';
-    if (await consent.count()) {
-      const boxes = consent.locator('input[type="checkbox"]');
-      for (let i = 0; i < await boxes.count(); i++) assert.equal(await boxes.nth(i).isChecked(), false, 'every agreement box starts unticked');
-    }
+    const boxes = consent.locator('input[type="checkbox"]');
+    assert.equal(await boxes.count(), 3, 'the send agreement has three boxes');
+    for (let i = 0; i < 3; i++) assert.equal(await boxes.nth(i).isChecked(), false, 'every agreement box starts unticked');
+    assert.equal(await consent.getByRole('button', { name: 'Continue', exact: true }).getAttribute('aria-disabled'), 'true', 'Continue is off before the boxes are ticked');
     await sleep(3000);
     assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams in a walk-only run');
+    assert.equal(await panel.locator('#confirm-title').count(), 0, 'no Explain sheet in a walk-only run');
     await shot(panel, label);
     desktopShot(label);
-    return { ok: true, why: `the panel popped up showing ${shown}; nothing streamed in 3 s; the agreement was not ticked` };
+    return { ok: true, why: 'the panel popped up asking for the send agreement (3 unticked boxes, Continue off); nothing streamed in 3 s; the agreement was not ticked' };
   } catch (error) {
     await shot(panel, `${label}-failed`);
     desktopShot(`${label}-failed`);
@@ -623,6 +637,10 @@ let globalShortcutWorked = false;
 const recording = local ? null : startDesktopRecording('global-shortcut');
 if (local) report.push('NOTE  global shortcut in another app: skipped (E2E_LOCAL: no keystrokes into the person\'s own apps)');
 else try {
+  // Walk only: without the send agreement the shortcut only opens the agreement. A profile that already holds it
+  // (unvibe-consent.json, e.g. a reused UNVIBE_E2E_PROFILE from an AI run) would send the selection at once, so the
+  // keystroke is refused there.
+  if (walkOnly && existsSync(path.join(userData, 'unvibe-consent.json'))) throw new Error('walk only: this profile already holds the send agreement (unvibe-consent.json), so the global shortcut would send the selection; refused before the keystroke');
   const file = path.join(tmpdir(), 'unvibe-sample.js');
   const globalSample = sample.replace('function total', 'function selectedTotal');
   writeFileSync(file, globalSample);
@@ -681,7 +699,7 @@ else try {
     }
     desktopShot('notepad-selected');
   }
-  const r = walkOnly ? await waitForPopup('global-shortcut-popup', globalSample) : await waitForExplanation('global-shortcut-explanation', globalSample);
+  const r = walkOnly ? await waitForPopup('global-shortcut-popup') : await waitForExplanation('global-shortcut-explanation', globalSample);
   recording?.mark(r.ok ? (walkOnly ? 'pop-up shown' : 'explanation done') : (walkOnly ? 'pop-up failed' : 'explanation failed'));
   globalShortcutWorked = r.ok;
   log(r.ok, `Global shortcut (${shortcut}) in ${os === 'mac' ? 'TextEdit' : 'Notepad'}${walkOnly ? ' pops up the panel' : ''}`, r.why);
