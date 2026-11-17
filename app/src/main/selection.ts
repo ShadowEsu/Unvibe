@@ -133,6 +133,16 @@ export function nextCaptureBlock(
 }
 
 /**
+ * Whether a review start only brings the open panel back as it was (Design ruling e: ⌃U with nothing newly selected).
+ * That needs a real read that came back empty. Before the person agrees to sending code nothing is read at all
+ * (Security CC-4), so the panel has to open on the agreement instead, even while it still shows an earlier
+ * explanation. Setup step 3's paste was dropped exactly there: the sample's panel was still open (QA, 0.1.53 RC).
+ */
+export function restoresOpenPanel(start: { code: string | null; agreed: boolean; needsGrant: boolean; panelOpen: boolean; panelHasCode: boolean }): boolean {
+  return start.agreed && !start.code && !start.needsGrant && start.panelOpen && start.panelHasCode;
+}
+
+/**
  * Sets $name to the foreground process name. ($pid is PowerShell's read-only automatic
  * variable, so the window's process id goes in $procId.)
  */
