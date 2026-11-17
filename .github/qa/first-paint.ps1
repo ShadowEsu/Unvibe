@@ -27,9 +27,15 @@ public static class Px {
     foreach (KeyValuePair<int, int> kv in counts) { if (kv.Value > top) { top = kv.Value; topK = kv.Key; } }
     return new double[] { Math.Round(100.0 * top / n, 1), counts.Count, n, topK, Math.Round(100.0 * stage / n, 1) };
   }
-  // The stage's ground (app-0151.css: rgb(16 12 34 / 0.8) over aurora.webp over #16122a) is 0.8 x (16,12,34) plus
-  // 0.2 x any colour: R 12.8-63.8, G 9.6-60.6, B 27.2-78.2 (the button strip #17122f is inside too); +-2 for rounding.
-  static bool StageGround(int r, int g, int b) { return r >= 11 && r <= 66 && g >= 8 && g <= 63 && b >= 25 && b <= 80; }
+  // The stage's ground, two looks. Before Mono (app-0151.css: rgb(16 12 34 / 0.8) over aurora.webp over #16122a): 0.8 x
+  // (16,12,34) plus 0.2 x any colour, R 12.8-63.8, G 9.6-60.6, B 27.2-78.2 (the button strip #17122f and Mono's grid
+  // lines #1a191f fall inside too); +-2 for rounding. Mono (0.1.52+, mono.css .sharks-intro #0f0f0f, lockup #191919):
+  // a neutral dark, R=G=B 10-30 (+-2 between channels). Run 44029989730 read Mono's stage as "the app" without this.
+  static bool StageGround(int r, int g, int b) {
+    bool navy = r >= 11 && r <= 66 && g >= 8 && g <= 63 && b >= 25 && b <= 80;
+    bool neutral = r >= 10 && r <= 30 && Math.Abs(r - g) <= 2 && Math.Abs(g - b) <= 2;
+    return navy || neutral;
+  }
 }
 "@
 Add-Type @"
