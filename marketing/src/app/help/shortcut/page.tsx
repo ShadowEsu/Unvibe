@@ -78,10 +78,14 @@ export default function ShortcutHelpPage() {
         <ul className="help-list">
           <li><b>Check the keys:</b> {windows.anywhere}, all three together. Windows has no permission to allow.</li>
           <li>
-            <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection, and
-            Unvibe can&apos;t copy from a window running as administrator (it may also say &ldquo;Couldn&apos;t copy from&rdquo; that
-            app; from 0.1.52 the panel says &ldquo;This window runs as administrator, so Unvibe can&apos;t copy from it.&rdquo;). Copy
-            the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the panel.
+            <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection (Unvibe may
+            also say &ldquo;Couldn&apos;t copy from&rdquo; that app). Windows also blocks apps from sending keystrokes to a window that
+            runs as administrator, which is how Unvibe copies (Microsoft&apos;s{" "}
+            <a href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput" rel="noopener noreferrer">
+              SendInput documentation
+            </a>
+            ); from 0.1.52 the panel then says &ldquo;This window runs as administrator, so Unvibe can&apos;t copy from it.&rdquo; Either
+            way, copy the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the panel.
           </li>
         </ul>
       </section>
