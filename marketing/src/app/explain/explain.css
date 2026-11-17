@@ -74,7 +74,8 @@
   letter-spacing: -0.02em;
 }
 
-.explain-card h2:not(:first-child) {
+.explain-card h2:not(:first-child),
+.explain-more__rule + nav > h2 {
   margin-top: 2rem;
 }
 
@@ -195,7 +196,7 @@
   background: color-mix(in srgb, var(--v-ink) 6%, var(--v-card));
 }
 
-/* Between the Related row and the full list in the same card. */
+/* Between the rows of the card; each row is its own nav. */
 .explain-more__rule {
   margin: 1.4rem 0;
   border: 0;

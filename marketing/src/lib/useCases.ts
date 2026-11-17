@@ -13,6 +13,8 @@ export interface UseCase {
   summary: string;
   /** The /explain/<id> page for this case's sample language: linked from the case's Read next, and back from that page. */
   explainId: string;
+  /** Shorter pill text for the "Use cases with a … example" row on /explain/<id>, where `name` would wrap at 390 px (Design S-1, #320). */
+  pillLabel?: string;
 }
 
 export const USE_CASES_INDEX = {
@@ -67,6 +69,7 @@ export const useCases: readonly UseCase[] = [
       "How to read what GitHub Copilot suggested before you keep it, with a worked Python function checked by running it, explained at the depth you pick.",
     summary: "Copilot suggested it and you pressed Tab. How to find out what it does, and what it gets wrong, before you ship it.",
     explainId: "python",
+    pillLabel: "Code GitHub Copilot wrote",
   },
   {
     slug: "explain-chatgpt-code",
