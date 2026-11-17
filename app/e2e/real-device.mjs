@@ -500,17 +500,20 @@ try {
     await companion.keyboard.press(os === 'mac' ? 'Meta+V' : 'Control+V');
     const own = await waitForExplanation('setup-own-code', SETUP_PASTE, { agree: true });
     log(own.ok, 'Setup step 3: pasting your own code explains it', own.why);
-    const forward = companion.locator('.onboard__foot').getByRole('button', { name: os === 'mac' ? 'Next' : 'Start using Unvibe', exact: true });
-    await forward.waitFor({ timeout: 15000 });
-    await shot(companion, 'onboarding-3-own-code-done');
-    await fitCheck('3-own-code-done');
-    await forward.click();
     if (os === 'mac') {
-      await companion.locator('.onboard__count').filter({ hasText: `4 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+      // A Mac moves on to the shortcut step by itself once its own code is explained (companion.tsx onOwnCodeDone,
+      // dd3351b4); its footer then says Not now, Do it later or (shortcut already allowed) Start using Unvibe.
+      await companion.locator('.onboard__count').filter({ hasText: `4 / ${setupSteps}` }).waitFor({ timeout: 15000 });
       await shot(companion, 'onboarding-4-shortcut');
       await fitCheck('4');
-      // The shortcut offer's quiet forward button; the walk never opens System Settings.
-      await clickText(companion, 'Not now');
+      // The walk never opens System Settings: the footer's own forward button finishes setup.
+      await companion.locator('.onboard__foot .onboard__primary, .onboard__foot .onboard__quiet').first().click();
+    } else {
+      const forward = companion.locator('.onboard__foot').getByRole('button', { name: 'Start using Unvibe', exact: true });
+      await forward.waitFor({ timeout: 15000 });
+      await shot(companion, 'onboarding-3-own-code-done');
+      await fitCheck('3-own-code-done');
+      await forward.click();
     }
   } else if (os === 'windows' && !walkOnly) {
     // A real paste: the system clipboard holds code, Ctrl+V into the box explains it in the panel.
