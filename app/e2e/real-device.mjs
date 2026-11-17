@@ -249,10 +249,12 @@ await companion.waitForLoadState('domcontentloaded');
 const appVersion = (await companion.evaluate(() => window.unvibe.appInfo())).version;
 log(true, 'App opens', `version ${appVersion}`);
 // An AI run needs 0.1.53+: before it, setup step 3 drops a paste while the sample's panel is still open (fixed by
-// #339), so the run would spend the sample's call and then fail. Refused here, before anything is sent.
+// #339), so the run would spend the sample's call and then fail. Refused here, before anything is sent. Only a plain
+// x.y.z version is read; anything else (a suffix, an empty answer) is refused too.
 if (!walkOnly) {
-  const [major, minor, patch] = String(appVersion).split('.').map(Number);
-  if (major === 0 && (minor < 1 || (minor === 1 && patch < 53))) {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(appVersion));
+  const [major, minor, patch] = m ? m.slice(1).map(Number) : [];
+  if (!m || (major === 0 && (minor < 1 || (minor === 1 && patch < 53)))) {
     log(false, 'AI mode (ai=true) needs Unvibe 0.1.53 or later', `this build is ${appVersion}; nothing was sent`);
     writeFileSync(path.join(out, 'report.txt'), `Unvibe real-device walkthrough (${os})\n\n${report.join('\n')}\n`);
     await app.close().catch(() => {});
