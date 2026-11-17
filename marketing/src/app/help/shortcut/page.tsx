@@ -24,7 +24,7 @@ export const metadata: Metadata = pageMetadata({
  * may also show come second: they can be skipped (notify.ts) and fade after a few seconds. Screenshots are
  * real macOS 15 captures (HelpShot.tsx). The administrator-window limit: selection.ts PS_COPY sends SendKeys,
  * which falls back to SendInput, and Windows blocks that for windows running as administrator (UIPI, Microsoft's
- * SendInput docs); not reproduced here.
+ * SendInput docs); not reproduced here. The quoted 0.1.52 notice is widget.tsx:207 at the v0.1.52 tag.
  */
 export default function ShortcutHelpPage() {
   return (
@@ -80,8 +80,8 @@ export default function ShortcutHelpPage() {
           <li>
             <b>You selected code, but the panel opens without it.</b> Some apps don&apos;t let Unvibe copy the selection, and
             Unvibe can&apos;t copy from a window running as administrator (it may also say &ldquo;Couldn&apos;t copy from&rdquo; that
-            app). Copy the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the
-            panel.
+            app; from 0.1.52 the panel says &ldquo;This window runs as administrator, so Unvibe can&apos;t copy from it.&rdquo;). Copy
+            the code yourself (Ctrl+C, or Ctrl+Insert in a terminal) and press <b>Explain my clipboard</b> in the panel.
           </li>
         </ul>
       </section>
