@@ -302,6 +302,9 @@ const SETUP_PASTE = 'function clamp(n, lo, hi) {\n  return Math.min(hi, Math.max
 // emulated through CDP for the check, then cleared.
 // 980x620 is the window's minimum. The lead's #338 review (FIX FIRST at 2b7aea27, M1/M2): the sticky footer must not
 // hide a control or a note at any size, so each size also checks that every control and note can scroll clear of it.
+// At 980x620 the forward button is only recorded (NOTE), not gated: BOSS's requirement is the two sizes above, and at
+// the minimum Hello and Windows step 3 need a scroll (QA's RC2 finding, with unvibe-app and Design).
+const FIT_GATED = (w, h) => !(w === 980 && h === 620);
 const FIT_SIZES = [[1180, 780], [1280, 720], [980, 620]];
 async function fitCheck(step) {
   const cdp = await companion.context().newCDPSession(companion);
@@ -320,9 +323,13 @@ async function fitCheck(step) {
         });
         await shot(companion, `onboarding-${step}-fit-${w}x${h}`);
         const ok = Boolean(r) && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw && r.onTop && r.scrolled === 0;
-        log(ok, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`,
-          r ? `'${r.label}' spans ${Math.round(r.top)}-${Math.round(r.bottom)} px of a ${r.vw}x${r.vh} viewport; on top ${r.onTop}; scrolled containers ${r.scrolled}` : 'no forward button in .onboard__foot');
-      } catch (e) { log(false, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`, e.message.split('\n')[0]); }
+        const detail = r ? `'${r.label}' spans ${Math.round(r.top)}-${Math.round(r.bottom)} px of a ${r.vw}x${r.vh} viewport; on top ${r.onTop}; scrolled containers ${r.scrolled}` : 'no forward button in .onboard__foot';
+        if (FIT_GATED(w, h)) log(ok, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`, detail);
+        else report.push(`NOTE  Onboarding step ${step} at ${w}x${h} (window minimum, not gated): the forward button is ${ok ? '' : 'NOT '}on screen without scrolling: ${detail}`);
+      } catch (e) {
+        if (FIT_GATED(w, h)) log(false, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`, e.message.split('\n')[0]);
+        else report.push(`NOTE  Onboarding step ${step} at ${w}x${h} (window minimum, not gated): forward button not measured (${e.message.split('\n')[0]})`);
+      }
       try {
         // Each control (focusable) and note (p, li, label) is scrolled into view as focus would, then must not overlap
         // the footer or leave the viewport. The first covered one stays scrolled for a still; then every scroller goes
