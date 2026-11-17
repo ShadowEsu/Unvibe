@@ -553,7 +553,8 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
       // The first code of the person's own (0.1.46+): the send agreement comes first. Continue does
       // nothing until all three boxes are ticked; nothing may stream before it.
       const consent = panel.locator('.consent-form');
-      await consent.or(panel.locator('#confirm-title')).or(panel.locator('.ob-code__all code').filter({ hasText: expectedCode })).first().waitFor({ timeout: 30000 });
+      // attached, not visible: since 0.1.52 the panel folds the selected code behind "Show code".
+      await consent.or(panel.locator('#confirm-title')).or(panel.locator('.ob-code__all code').filter({ hasText: expectedCode })).first().waitFor({ state: 'attached', timeout: 30000 });
       if (await consent.count()) {
         const boxes = consent.locator('input[type="checkbox"]');
         assert.equal(await boxes.count(), 3, 'the send agreement has three boxes');
@@ -577,8 +578,8 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
       await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
     }
     const preview = panel.locator('.ob-code__all code').filter({ hasText: expectedCode });
-    await preview.waitFor({ timeout: 30000 });
-    assert.equal((await preview.innerText()).trim(), expectedCode.trim());
+    await preview.waitFor({ state: 'attached', timeout: 30000 });
+    assert.equal((await preview.textContent()).trim(), expectedCode.trim());
     // The selected-code preview alone is not an AI explanation: the panel reaches its done phase and the typing
     // cursor is gone before the answer is read.
     await panel.locator('.ob.ob--done').waitFor({ timeout: 90000 });
