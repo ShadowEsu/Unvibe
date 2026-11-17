@@ -300,7 +300,9 @@ const SETUP_PASTE = 'function clamp(n, lo, hi) {\n  return Math.min(hi, Math.max
 // scrolling at the default window (1180x780) and at 1280x720. Both windows are frameless (Mac hiddenInset, Windows
 // hidden + overlay), so the page's viewport is the window's size; the runners' screens are 1024x768, so each size is
 // emulated through CDP for the check, then cleared.
-const FIT_SIZES = [[1180, 780], [1280, 720]];
+// 980x620 is the window's minimum. The lead's #338 review (FIX FIRST at 2b7aea27, M1/M2): the sticky footer must not
+// hide a control or a note at any size, so each size also checks that every control and note can scroll clear of it.
+const FIT_SIZES = [[1180, 780], [1280, 720], [980, 620]];
 async function fitCheck(step) {
   const cdp = await companion.context().newCDPSession(companion);
   try {
@@ -321,6 +323,86 @@ async function fitCheck(step) {
         log(ok, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`,
           r ? `'${r.label}' spans ${Math.round(r.top)}-${Math.round(r.bottom)} px of a ${r.vw}x${r.vh} viewport; on top ${r.onTop}; scrolled containers ${r.scrolled}` : 'no forward button in .onboard__foot');
       } catch (e) { log(false, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`, e.message.split('\n')[0]); }
+      try {
+        // Each control (focusable) and note (p, li, label) is scrolled into view as focus would, then must not overlap
+        // the footer or leave the viewport. The first covered one stays scrolled for a still; then every scroller goes
+        // back to the top.
+        const c = await companion.evaluate(() => {
+          const root = document.querySelector('.onboard');
+          const foot = document.querySelector('.onboard__foot');
+          if (!root || !foot) return null;
+          const items = [...root.querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), p, li, label')]
+            .filter((el) => !foot.contains(el) && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+          const covered = [];
+          for (const el of items) {
+            el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            const b = el.getBoundingClientRect();
+            const f = foot.getBoundingClientRect();
+            if (b.width === 0 || b.height === 0) continue;
+            if ((b.bottom > f.top + 1 && b.top < f.bottom - 1) || b.bottom > innerHeight + 1 || b.top < -1) {
+              covered.push({ el, what: `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : ''} '${(el.textContent || el.getAttribute('aria-label') || el.getAttribute('placeholder') || '').trim().replace(/\s+/g, ' ').slice(0, 48)}'` });
+            }
+          }
+          if (covered.length) covered[0].el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          return { checked: items.length, covered: covered.map((x) => x.what) };
+        });
+        if (c?.covered.length) await shot(companion, `onboarding-${step}-covered-${w}x${h}`);
+        await companion.evaluate(() => { for (const el of [document.scrollingElement, ...document.querySelectorAll('.onboard, .onboard *')]) if (el && el.scrollTop) el.scrollTop = 0; });
+        log(Boolean(c) && c.covered.length === 0, `Onboarding step ${step} at ${w}x${h}: every control and note can scroll clear of the footer`,
+          c ? (c.covered.length ? `covered: ${c.covered.join('; ')}` : `${c.checked} checked`) : 'no .onboard or .onboard__foot');
+      } catch (e) { log(false, `Onboarding step ${step} at ${w}x${h}: every control and note can scroll clear of the footer`, e.message.split('\n')[0]); }
+    }
+  } finally {
+    await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => {});
+    await cdp.detach().catch(() => {});
+    await sleep(300);
+  }
+}
+// BOSS (Mon 16 Nov, no AI): Hello's heard-from privacy note (Security 0046 relies on it) must be fully visible at 620 px
+// tall, and at 720 with the Google sign-in disclosure open (it sits in the footer, so it makes the footer taller).
+// "Fully visible" is read as the step renders, with nothing scrolled: inside the viewport, clear of the footer, and on
+// top at its centre. The detail also says whether focusing the heard-from field brings it fully into view. The
+// disclosure is opened by its open attribute (no sign-in starts), then closed again, and every scroller goes back up.
+async function heardNoteCheck() {
+  const cdp = await companion.context().newCDPSession(companion);
+  try {
+    for (const [w, h, google] of [[980, 620, false], [1280, 720, true]]) {
+      const what = `Hello at ${w}x${h}${google ? ' with Google sign-in open' : ''}: the heard-from privacy note is fully visible`;
+      try {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 0, mobile: false });
+        const opened = await companion.evaluate((google) => {
+          const d = document.querySelector('.onboard__foot details.onboard__google');
+          if (google && d) d.open = true;
+          return Boolean(d);
+        }, google);
+        await sleep(400);
+        const measure = () => companion.evaluate(() => {
+          const note = document.getElementById('heard-from-note');
+          const foot = document.querySelector('.onboard__foot');
+          if (!note || !foot) return null;
+          const n = note.getBoundingClientRect();
+          const f = foot.getBoundingClientRect();
+          const hit = document.elementFromPoint(n.left + n.width / 2, n.top + n.height / 2);
+          const onTop = Boolean(hit) && (hit === note || note.contains(hit));
+          return { top: Math.round(n.top), bottom: Math.round(n.bottom), footTop: Math.round(f.top), vh: innerHeight, onTop, ok: n.top >= 0 && n.bottom <= innerHeight && n.bottom <= f.top + 0.5 && onTop };
+        });
+        const rest = await measure();
+        await shot(companion, `onboarding-1-heard-note-${w}x${h}${google ? '-google' : ''}`);
+        await companion.evaluate(() => document.querySelector('[aria-describedby="heard-from-note"]')?.focus());
+        await sleep(300);
+        const focused = await measure();
+        if (focused && !focused.ok) await shot(companion, `onboarding-1-heard-note-focused-${w}x${h}${google ? '-google' : ''}`);
+        await companion.evaluate(() => {
+          document.querySelector('[aria-describedby="heard-from-note"]')?.blur();
+          const d = document.querySelector('.onboard__foot details.onboard__google');
+          if (d) d.open = false;
+          for (const el of [document.scrollingElement, ...document.querySelectorAll('.onboard, .onboard *')]) if (el && el.scrollTop) el.scrollTop = 0;
+        });
+        const describe = (m) => `${m.top}-${m.bottom} px, footer top ${m.footTop}, viewport ${m.vh}, on top ${m.onTop}`;
+        log(Boolean(rest?.ok) && (!google || opened), what, rest
+          ? `as rendered: ${describe(rest)}; with the field focused: ${focused ? `${focused.ok ? 'fully visible' : 'NOT fully visible'} (${describe(focused)})` : 'not measured'}${google && !opened ? '; no Google disclosure found' : ''}`
+          : 'no #heard-from-note or .onboard__foot');
+      } catch (e) { log(false, what, e.message.split('\n')[0]); }
     }
   } finally {
     await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => {});
@@ -357,6 +439,7 @@ try {
   await companion.locator('.onboard__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
   await fitCheck('1');
+  await heardNoteCheck();
   await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
   await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
