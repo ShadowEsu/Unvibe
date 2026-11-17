@@ -489,21 +489,26 @@
 :root[data-ui="v3"][data-v7] .onboard__quiet[aria-disabled="true"] { cursor: default; color: var(--u-ink-3); }
 :root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline, summary):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
 
-/* The footer row (Back, the forward action) sits on its own line under the step's content, at the column's width so
-   Back and the forward action line up with the content; margin-top auto puts it at the bottom when the step is short.
-   It has no veil or blur above it (Design S-1 whole-app MUST 5). It sticks to the window's foot on the plain ground
-   colour so the forward button is always in view (0.1.53 hotfix, Design J): Try it with the explanation open was 855 px
-   tall, so at 1180 × 780 "Next" sat under the foot. With the spacing below, Try it fits 1180 × 780 and 1280 × 720;
-   a step that is still taller than the window (a smaller screen) scrolls under the footer rather than hiding Next,
-   at the cost of MUST 4's "Back over the level chips" until the page is scrolled. */
+/* The footer row (Back, the forward action) sits in the flow on its own line under the step's content, at the column's
+   width so Back and the forward action line up with the content; margin-top auto puts it at the bottom when the step
+   is short. It doesn't stick over the content (Design S-1 whole-app MUST 4: Back sat under the level chips) and has
+   no veil above it (MUST 5: the blurred bar). A tall step scrolls, footer included. */
 :root[data-ui="v3"][data-v7] .onboard__foot {
-  position: sticky; bottom: 0; z-index: 1; display: flex; flex: none; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
-  width: min(560px, 100%); margin-top: auto; padding: 28px 0 36px; background: var(--u-paper);
+  position: static; display: flex; flex: none; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
+  width: min(560px, 100%); margin-top: auto; padding: 28px 0 36px; background: transparent;
 }
 :root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__foot { width: min(760px, 100%); }
+/* Try it is the one exception (0.1.53 hotfix, Design J): with the explanation open it was 855 px tall, so at 1180 × 780
+   "Next" sat under the window's foot. Its spacing tightens on short windows (below), so it fits 1180 × 780 and 1280 × 720
+   with no scrollbar; on a window shorter still (from about 713 px down) its footer sticks to the foot on the ground
+   colour so Next stays in view. The scroll padding reserves the footer's height, so a level chip that takes keyboard
+   focus scrolls clear of it instead of hiding under it (WCAG 2.4.11). The footer is 108 px tall, 80 px under 860 px,
+   70 px under 760 px. */
+:root[data-ui="v3"][data-v7] .onboard--step-1 { scroll-padding-bottom: 112px; }
+:root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__foot { position: sticky; bottom: 0; z-index: 1; background: var(--u-paper); }
 /* On windows under 860 px, Try it drops 94 px of spacing, so with the explanation open it fits 780 px with no scrollbar. */
 @media (max-height: 860px) {
-  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 28px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 28px; scroll-padding-bottom: 84px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__vibe { padding-top: 12px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__body { margin-top: 16px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__try { gap: 12px; }
