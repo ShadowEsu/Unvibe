@@ -218,7 +218,7 @@ const walkOnly = process.env.WALK_ONLY === '1';
 // code (step 3, which opens a Mac's step 4). Everything after setup stays walk-only, and the global-shortcut step is
 // skipped: with the agreement given in setup, the shortcut would explain the selection. 2 hosted calls per system.
 const onboardingAi = walkOnly && process.env.ONBOARDING_AI === '1';
-if (onboardingAi) report.push('NOTE  WALK_ONLY + ONBOARDING_AI: setup explains the sample and one pasted own code (2 hosted calls); nothing after setup requests an explanation');
+if (onboardingAi) report.push('NOTE  WALK_ONLY + ONBOARDING_AI: setup explains the sample and one pasted own code (2 hosted calls), each only after QA reads the meter (meter gate); nothing after setup requests an explanation');
 else if (walkOnly) report.push('NOTE  WALK_ONLY: no explanation is requested anywhere in this run (no hosted-AI call)');
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
@@ -328,6 +328,31 @@ async function fitCheck(step) {
     await sleep(300);
   }
 }
+// BOSS (Mon 16 Nov 21:4x PST): 8 hosted calls is a hard stop for 0.1.53, and the meter is read before each explaining
+// step. Each such step waits here until QA has read the lead's meter and pushed the tag qa-gate-<run id>-<system>-<step>
+// (go) or the same name ending in -skip; no answer in time means skip. A tag starts no workflow (app-release takes
+// app-v* tags only). A skipped step is reported, never run.
+async function meterGate(step, minutes) {
+  const run = process.env.GITHUB_RUN_ID;
+  const repo = process.env.GITHUB_WORKSPACE;
+  if (!run || !repo) { report.push(`NOTE  meter gate ${os}-${step}: no run id or checkout; step skipped`); return false; }
+  const go = `refs/tags/qa-gate-${run}-${os}-${step}`;
+  const skip = `${go}-skip`;
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < minutes * 60_000) {
+    let refs = '';
+    try { refs = execFileSync('git', ['-C', repo, 'ls-remote', 'origin', go, skip], { encoding: 'utf8', timeout: 30000 }); } catch { /* try again */ }
+    const waited = Math.round((Date.now() - startedAt) / 1000);
+    if (refs.includes(skip)) { report.push(`NOTE  meter gate ${os}-${step}: QA said skip after ${waited}s (the meter left no room); step not run`); return false; }
+    if (refs.includes(go)) { report.push(`NOTE  meter gate ${os}-${step}: go after ${waited}s`); return true; }
+    await sleep(15000);
+  }
+  report.push(`NOTE  meter gate ${os}-${step}: no answer in ${minutes} min; step not run`);
+  return false;
+}
+// Whether this run explains the sample (step 2) and the pasted own code (step 3).
+let sampleOn = !walkOnly;
+let ownCodeOn = false;
 try {
   await companion.locator('.onboard__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
@@ -337,19 +362,20 @@ try {
   await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
   await fitCheck('2');
-  if (walkOnly && !onboardingAi) {
-    // Walk only: the step's quiet forward button ("Skip for now") goes to step 3 without explaining.
+  if (onboardingAi) sampleOn = await meterGate('sample', 6);
+  if (!sampleOn) {
+    // Walk only (or the meter gate said no): the step's quiet forward button ("Skip for now") goes to step 3 without explaining.
     await clickText(companion, 'Skip for now');
-    log(true, 'Onboarding: hello, then the sample step skipped (walk only)');
+    log(true, `Onboarding: hello, then the sample step skipped (${walkOnly && !onboardingAi ? 'walk only' : 'meter gate'})`);
   } else {
     await clickText(companion, 'Explain this code');
     log(true, 'Onboarding: hello and sample');
   }
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
-if (walkOnly && !onboardingAi) {
+if (!sampleOn) {
   const toStep3 = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
-  report.push(`NOTE  first-run explanation and its time budget: skipped (walk only); launch to setup step 3 took ${toStep3}s`);
+  report.push(`NOTE  first-run explanation and its time budget: skipped (${walkOnly && !onboardingAi ? 'walk only' : 'meter gate'}); launch to setup step 3 took ${toStep3}s`);
 } else {
   const first = await waitForExplanation('first-run-explanation', FIRST_RUN_SAMPLE);
   const seconds = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
@@ -358,7 +384,7 @@ if (walkOnly && !onboardingAi) {
   writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
 }
 // The hotfix's case: step 2 after the sample's explanation, with the level question showing, then answered.
-if (onboardingAi) {
+if (onboardingAi && sampleOn) {
   try {
     const about = companion.locator('.onboard__level').getByRole('button', { name: 'About right', exact: true });
     await about.waitFor({ timeout: 30000 });
@@ -375,12 +401,13 @@ if (onboardingAi) {
 const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
-  if (!walkOnly || onboardingAi) await clickText(companion, 'Next');
+  if (sampleOn) await clickText(companion, 'Next');
   await companion.locator('.onboard__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
   await fitCheck('3');
-  if (onboardingAi) {
+  if (onboardingAi) ownCodeOn = await meterGate('own-code', 16);
+  if (ownCodeOn) {
     // One pasted own code on both systems, through the system clipboard (a release build has no main-process access).
     if (os === 'mac') execFileSync('pbcopy', { input: SETUP_PASTE });
     else execFileSync('powershell', ['-NoProfile', '-Command', '[Console]::In.ReadToEnd() | Set-Clipboard'], { input: SETUP_PASTE });
@@ -733,11 +760,11 @@ if (!local && !onboardingAi) log(globalShortcutWorked, 'Configured global shortc
 await sleep(3000); // one more pass of the dialog watcher
 clearInterval(dialogWatch);
 const askedAtEnd = readStore(userData).loginPromptAsked === true;
-if (walkOnly && !onboardingAi) report.push(`NOTE  launch-at-login checks: skipped (walk only: the question is due only after an own-code explanation); store flag at end: ${askedAtEnd}`);
+if (walkOnly && !ownCodeOn) report.push(`NOTE  launch-at-login checks: skipped (no own-code explanation in this run: the question is due only after one); store flag at end: ${askedAtEnd}`);
 else log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
 if (os === 'mac') {
   const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
-  if (!walkOnly || onboardingAi) log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
+  if (!walkOnly || ownCodeOn) log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
   else if (loginAsks) report.push(`NOTE  launch-at-login question shown ${loginAsks} time(s) in a walk-only run (answered No)`);
   for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
 } else report.push('NOTE  launch-at-login dialog count: not read on Windows (no main-process access); the store flag above covers when it is due.');
