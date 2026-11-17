@@ -257,7 +257,9 @@ p { font-size: 17px; }
 .try__bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--v-coral); }
 .try__bar i:nth-child(2) { background: var(--v-sun); }
 .try__bar i:nth-child(3) { background: var(--v-lime); }
-.try__bar span { margin-left: 6px; color: #9e9a92; font: 500 0.85rem var(--font-mono); }
+/* The file name stays on one line ("notes-app.zone" wrapped at its hyphen at 320 px; Design S-1 on #325): a name too
+   long for the bar ends in an ellipsis instead of growing the bar to 2 lines. */
+.try__bar span { min-width: 0; margin-left: 6px; overflow: hidden; color: #9e9a92; font: 500 0.85rem var(--font-mono); white-space: nowrap; text-overflow: ellipsis; }
 .try__levels { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.8rem 1rem 0; }
 .try__levels button { padding: 0.35rem 0.85rem; border: 1.5px solid #3a3a36; border-radius: 999px; background: transparent; color: #cfccc3; font: 600 0.9rem var(--font-sans); cursor: pointer; }
 .try__levels button.is-on { border-color: var(--v-lime); background: var(--v-lime); color: var(--v-ink); }
