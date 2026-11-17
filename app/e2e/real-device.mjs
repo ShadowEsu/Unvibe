@@ -566,6 +566,19 @@ async function waitForExplanation(label, expectedCode, { confirm = false, agree 
         assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams before the agreement');
         await agreeButton.click();
         report.push(`NOTE  first own code (${label}): send agreement shown, all three boxes ticked, Continue`);
+        if (!confirm) {
+          // A clipboard explain that waited on the agreement comes back on the confirm sheet (QA F1, Security
+          // U-F1-L2): the clipboard is read again and nothing is sent before Explain.
+          const sheet = panel.locator('#confirm-title');
+          await sheet.or(panel.locator('.ob-answer')).first().waitFor({ state: 'attached', timeout: 30000 });
+          if (await sheet.count()) {
+            await sleep(1500);
+            assert.equal(await panel.locator('.ob-answer').count(), 0, 'nothing streams before Explain on the confirm sheet');
+            await shot(panel, `${label}-confirm`);
+            await panel.locator('[aria-labelledby="confirm-title"]').getByRole('button', { name: 'Explain', exact: true }).click();
+            report.push(`NOTE  first own code (${label}): the held clipboard explain came back on the confirm sheet; Explain pressed`);
+          }
+        }
       }
     }
     if (confirm) {
