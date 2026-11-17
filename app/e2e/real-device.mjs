@@ -213,7 +213,13 @@ report.push(`NOTE  install id ${readStore(userData).installId}`);
 process.env.UNVIBE_USER_DATA = userData;
 const local = process.env.E2E_LOCAL === '1';
 const walkOnly = process.env.WALK_ONLY === '1';
-if (walkOnly) report.push('NOTE  WALK_ONLY: no explanation is requested anywhere in this run (no hosted-AI call)');
+// BOSS (Mon 16 Nov, 0.1.53 hotfix, at most 6 hosted calls): ONBOARDING_AI=1, a workflow constant on qa/rc-onboard-ai
+// only, lets setup explain for real twice: the sample (step 2, where the level question appears) and one pasted own
+// code (step 3, which opens a Mac's step 4). Everything after setup stays walk-only, and the global-shortcut step is
+// skipped: with the agreement given in setup, the shortcut would explain the selection. 2 hosted calls per system.
+const onboardingAi = walkOnly && process.env.ONBOARDING_AI === '1';
+if (onboardingAi) report.push('NOTE  WALK_ONLY + ONBOARDING_AI: setup explains the sample and one pasted own code (2 hosted calls); nothing after setup requests an explanation');
+else if (walkOnly) report.push('NOTE  WALK_ONLY: no explanation is requested anywhere in this run (no hosted-AI call)');
 const launchedAt = Date.now();
 // UNVIBE_APP_DIR lets a developer run this against `electron <app dir>` instead of an installed build.
 // The app under test never gets the founder stats token, even if this process has it.
@@ -290,14 +296,48 @@ desktopShot('first-launch');
 const setupSteps = os === 'windows' ? 3 : 4;
 // Windows pastes its own code at step 3 (F-16: the step that made Windows setup explain own code).
 const SETUP_PASTE = 'function clamp(n, lo, hi) {\n  return Math.min(hi, Math.max(lo, n));\n}';
+// 0.1.53 hotfix (BOSS, Mon 16 Nov): setup's forward button (Let's go / Skip for now / Next) must be on screen without
+// scrolling at the default window (1180x780) and at 1280x720. Both windows are frameless (Mac hiddenInset, Windows
+// hidden + overlay), so the page's viewport is the window's size; the runners' screens are 1024x768, so each size is
+// emulated through CDP for the check, then cleared.
+const FIT_SIZES = [[1180, 780], [1280, 720]];
+async function fitCheck(step) {
+  const cdp = await companion.context().newCDPSession(companion);
+  try {
+    for (const [w, h] of FIT_SIZES) {
+      try {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 0, mobile: false });
+        await sleep(400);
+        const r = await companion.evaluate(() => {
+          const btn = document.querySelector('.onboard__foot .onboard__primary, .onboard__foot .onboard__quiet');
+          if (!btn) return null;
+          const b = btn.getBoundingClientRect();
+          const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+          const scrolled = [document.scrollingElement, ...document.querySelectorAll('.onboard, .onboard *')].filter((el) => el && el.scrollTop > 0).length;
+          return { label: btn.textContent.trim(), top: b.top, bottom: b.bottom, left: b.left, right: b.right, vw: innerWidth, vh: innerHeight, onTop: Boolean(hit) && (hit === btn || btn.contains(hit)), scrolled };
+        });
+        await shot(companion, `onboarding-${step}-fit-${w}x${h}`);
+        const ok = Boolean(r) && r.top >= 0 && r.bottom <= r.vh && r.left >= 0 && r.right <= r.vw && r.onTop && r.scrolled === 0;
+        log(ok, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`,
+          r ? `'${r.label}' spans ${Math.round(r.top)}-${Math.round(r.bottom)} px of a ${r.vw}x${r.vh} viewport; on top ${r.onTop}; scrolled containers ${r.scrolled}` : 'no forward button in .onboard__foot');
+      } catch (e) { log(false, `Onboarding step ${step} at ${w}x${h}: the forward button is on screen without scrolling`, e.message.split('\n')[0]); }
+    }
+  } finally {
+    await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => {});
+    await cdp.detach().catch(() => {});
+    await sleep(300);
+  }
+}
 try {
   await companion.locator('.onboard__count').filter({ hasText: `1 / ${setupSteps}` }).waitFor({ timeout: 20000 });
   await shot(companion, 'onboarding-1-hello');
+  await fitCheck('1');
   await companion.getByPlaceholder('Your name').fill('Sam Test');
   await clickText(companion, "Let's go");
   await companion.locator('.onboard__count').filter({ hasText: `2 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-2-try-it');
-  if (walkOnly) {
+  await fitCheck('2');
+  if (walkOnly && !onboardingAi) {
     // Walk only: the step's quiet forward button ("Skip for now") goes to step 3 without explaining.
     await clickText(companion, 'Skip for now');
     log(true, 'Onboarding: hello, then the sample step skipped (walk only)');
@@ -307,7 +347,7 @@ try {
   }
 } catch (e) { log(false, 'Onboarding: hello and sample', e.message.split('\n')[0]); await shot(companion, 'onboarding-stuck'); }
 
-if (walkOnly) {
+if (walkOnly && !onboardingAi) {
   const toStep3 = Math.round((Date.now() - launchedAt - a11yMs) / 100) / 10;
   report.push(`NOTE  first-run explanation and its time budget: skipped (walk only); launch to setup step 3 took ${toStep3}s`);
 } else {
@@ -317,15 +357,50 @@ if (walkOnly) {
   log(first.ok && seconds <= FIRST_EXPLANATION_BUDGET_S, 'Time from launch to first explanation', `${seconds}s (budget ${FIRST_EXPLANATION_BUDGET_S}s)`);
   writeFileSync(path.join(out, 'time-to-first-explanation.txt'), `${seconds}\n`);
 }
+// The hotfix's case: step 2 after the sample's explanation, with the level question showing, then answered.
+if (onboardingAi) {
+  try {
+    const about = companion.locator('.onboard__level').getByRole('button', { name: 'About right', exact: true });
+    await about.waitFor({ timeout: 30000 });
+    await shot(companion, 'onboarding-2-level-question');
+    await fitCheck('2-level-question');
+    await about.click();
+    await companion.locator('.onboard__level').getByText('Got it.', { exact: false }).waitFor({ timeout: 10000 });
+    await shot(companion, 'onboarding-2-level-answered');
+    await fitCheck('2-level-answered');
+    log(true, 'Setup step 2: the level question shows after the sample, and About right is saved');
+  } catch (e) { log(false, 'Setup step 2: the level question shows after the sample, and About right is saved', e.message.split('\n')[0]); await shot(companion, 'onboarding-2-level-stuck'); }
+}
 // The built-in sample is not the user's own code, so the launch-at-login question is not due yet.
 const askedAfterSample = readStore(userData).loginPromptAsked === true;
 
 try {
-  if (!walkOnly) await clickText(companion, 'Next');
+  if (!walkOnly || onboardingAi) await clickText(companion, 'Next');
   await companion.locator('.onboard__count').filter({ hasText: `3 / ${setupSteps}` }).waitFor({ timeout: 8000 });
   await companion.locator('.paste-target__box').waitFor({ timeout: 8000 });
   await shot(companion, 'onboarding-3-anywhere');
-  if (os === 'windows' && !walkOnly) {
+  await fitCheck('3');
+  if (onboardingAi) {
+    // One pasted own code on both systems, through the system clipboard (a release build has no main-process access).
+    if (os === 'mac') execFileSync('pbcopy', { input: SETUP_PASTE });
+    else execFileSync('powershell', ['-NoProfile', '-Command', '[Console]::In.ReadToEnd() | Set-Clipboard'], { input: SETUP_PASTE });
+    await companion.locator('.paste-target__box').focus();
+    await companion.keyboard.press(os === 'mac' ? 'Meta+V' : 'Control+V');
+    const own = await waitForExplanation('setup-own-code', SETUP_PASTE, { agree: true });
+    log(own.ok, 'Setup step 3: pasting your own code explains it', own.why);
+    const forward = companion.locator('.onboard__foot').getByRole('button', { name: os === 'mac' ? 'Next' : 'Start using Unvibe', exact: true });
+    await forward.waitFor({ timeout: 15000 });
+    await shot(companion, 'onboarding-3-own-code-done');
+    await fitCheck('3-own-code-done');
+    await forward.click();
+    if (os === 'mac') {
+      await companion.locator('.onboard__count').filter({ hasText: `4 / ${setupSteps}` }).waitFor({ timeout: 8000 });
+      await shot(companion, 'onboarding-4-shortcut');
+      await fitCheck('4');
+      // The shortcut offer's quiet forward button; the walk never opens System Settings.
+      await clickText(companion, 'Not now');
+    }
+  } else if (os === 'windows' && !walkOnly) {
     // A real paste: the system clipboard holds code, Ctrl+V into the box explains it in the panel.
     await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), SETUP_PASTE);
     await companion.locator('.paste-target__box').focus();
@@ -568,6 +643,7 @@ let globalShortcutWorked = false;
 // the explanation is done (or failed).
 const recording = local ? null : startDesktopRecording('global-shortcut');
 if (local) report.push('NOTE  global shortcut in another app: skipped (E2E_LOCAL: no keystrokes into the person\'s own apps)');
+else if (onboardingAi) report.push('NOTE  global shortcut in another app: skipped (ONBOARDING_AI: the agreement was given in setup, so the shortcut would explain the selection; the no-AI walk covers the pop-up)');
 else try {
   const file = path.join(tmpdir(), 'unvibe-sample.js');
   const globalSample = sample.replace('function total', 'function selectedTotal');
@@ -635,7 +711,7 @@ else try {
 finally {
   if (recording) { await sleep(2000); await recording.stop(); }
 }
-if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered', `${shortcut} (shown by the step above)`);
+if (!local && !onboardingAi) log(globalShortcutWorked, 'Configured global shortcut is registered', `${shortcut} (shown by the step above)`);
 
 // Launch-at-login question: due after the first explanation of the user's own code (the setup paste
 // on Windows, the editor bridge above on a Mac), never after the built-in sample, and only once (the
@@ -643,11 +719,11 @@ if (!local) log(globalShortcutWorked, 'Configured global shortcut is registered'
 await sleep(3000); // one more pass of the dialog watcher
 clearInterval(dialogWatch);
 const askedAtEnd = readStore(userData).loginPromptAsked === true;
-if (walkOnly) report.push(`NOTE  launch-at-login checks: skipped (walk only: the question is due only after an own-code explanation); store flag at end: ${askedAtEnd}`);
+if (walkOnly && !onboardingAi) report.push(`NOTE  launch-at-login checks: skipped (walk only: the question is due only after an own-code explanation); store flag at end: ${askedAtEnd}`);
 else log(!askedAfterSample && askedAtEnd, 'Launch-at-login question becomes due after the first own-code explanation, not the sample', `after sample: ${askedAfterSample}, at end: ${askedAtEnd}`);
 if (os === 'mac') {
   const loginAsks = messageBoxes.filter((message) => /Open Unvibe when you log in/.test(message)).length;
-  if (!walkOnly) log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
+  if (!walkOnly || onboardingAi) log(loginAsks === 1, 'Launch-at-login question shown once (answered No)', `${loginAsks} time(s)${loginAsks ? '' : dialogWatchError ? `; watcher: ${dialogWatchError}` : '; the watcher saw no sheet (Accessibility or a locked screen)'}`);
   else if (loginAsks) report.push(`NOTE  launch-at-login question shown ${loginAsks} time(s) in a walk-only run (answered No)`);
   for (const message of messageBoxes.filter((m) => !/Open Unvibe when you log in/.test(m))) report.push(`      other native dialog: ${message}`);
 } else report.push('NOTE  launch-at-login dialog count: not read on Windows (no main-process access); the store flag above covers when it is due.');
