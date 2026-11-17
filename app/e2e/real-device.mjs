@@ -360,13 +360,15 @@ async function fitCheck(step) {
 }
 // BOSS (Mon 16 Nov, no AI): Hello's heard-from privacy note (Security 0046 relies on it) must be fully visible at 620 px
 // tall, and at 720 with the Google sign-in disclosure open (it sits in the footer, so it makes the footer taller).
+// Security SHOULD (2136): every height (620/720/780) with the disclosure closed and open; 980x620 open is the worst case.
 // "Fully visible" is read as the step renders, with nothing scrolled: inside the viewport, clear of the footer, and on
 // top at its centre. The detail also says whether focusing the heard-from field brings it fully into view. The
 // disclosure is opened by its open attribute (no sign-in starts), then closed again, and every scroller goes back up.
 async function heardNoteCheck() {
   const cdp = await companion.context().newCDPSession(companion);
   try {
-    for (const [w, h, google] of [[980, 620, false], [1280, 720, true]]) {
+    const states = [[980, 620], [1280, 720], [1180, 780]].flatMap(([w, h]) => [[w, h, false], [w, h, true]]);
+    for (const [w, h, google] of states) {
       const what = `Hello at ${w}x${h}${google ? ' with Google sign-in open' : ''}: the heard-from privacy note is fully visible`;
       try {
         await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 0, mobile: false });
