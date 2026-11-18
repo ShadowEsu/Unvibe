@@ -13,7 +13,7 @@ import { shortcutCaps } from '../shared/prettyShortcut';
 import { isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { selectionSource, selectionTitle } from '../shared/languageName';
 import { DepthControl, LEVELS } from './levelChip';
-import { AskField, CodeRow, ExplainChips, Findings, PanelToast, SQUASH_MS, StopButton, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
+import { AskField, CodeRow, ExplainActions, Findings, PanelToast, prefillAsk, QuestionChips, SQUASH_MS, StopButton, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
 import { QuizActions, QuizCard } from './panelQuiz';
 import { AskThread, followUpLive } from './askTab';
 import { SavedTab } from './savedTab';
@@ -573,6 +573,12 @@ function Widget() {
   }, []);
 
   const askInputRef = useRef<HTMLInputElement>(null);
+  // A finished explanation hands focus to "Ask your own question" (Design, Question it v1), inside the panel only:
+  // the panel never takes focus from the editor by itself.
+  useEffect(() => {
+    if (answerReady && view === 'explain') askInputRef.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when an answer becomes ready
+  }, [answerReady]);
   /** Sends a follow-up into the Ask thread; `consented` after "Send anyway" on a possible secret in it. */
   const askFollowUp = (question: string, consented = false) => {
     setS((prev) => ({
@@ -899,8 +905,27 @@ function Widget() {
     }
   };
 
+  /** A question chip: the question goes in the box (typed text is kept) and the box takes focus; the person sends it. */
+  const askQuestion = (question: string) => {
+    const ask = prefillAsk(s.ask, question);
+    if (ask !== s.ask) patch({ ask });
+    requestAnimationFrame(() => {
+      const box = askInputRef.current;
+      if (!box) return;
+      box.focus({ preventScroll: true });
+      box.setSelectionRange(box.value.length, box.value.length);
+    });
+  };
+
   const askField = (
-    <AskField value={s.ask} disabled={stillTyping || asking} inputRef={askInputRef} onChange={(ask) => patch({ ask })} onSend={sendAsk}>
+    <AskField
+      value={s.ask}
+      disabled={stillTyping || asking}
+      inputRef={askInputRef}
+      {...(view === 'explain' ? { placeholder: 'Ask your own question…', label: 'Ask your own question' } : {})}
+      onChange={(ask) => patch({ ask })}
+      onSend={sendAsk}
+    >
       {view === 'ask' && features.voice ? (
         <button
           type="button"
@@ -976,12 +1001,14 @@ function Widget() {
     if (view === 'explain') {
       if (phase === 'streaming') return <StopButton onStop={() => window.unvibe.cancel()} />;
       if (phase !== 'done') return null;
+      // 0.1.54 "Question it" (BOSS ruling, frame 4): the questions lead, then the box they fill, then the rest.
       return (
         <>
-          <ExplainChips busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
-            {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
-          </ExplainChips>
+          <QuestionChips busy={stillTyping || asking} ask={s.ask} onQuestion={askQuestion} />
           {askField}
+          <ExplainActions busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
+            {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
+          </ExplainActions>
         </>
       );
     }

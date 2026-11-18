@@ -29,12 +29,44 @@ export function CodeRow({ id, code, open, onToggle }: {
 }
 
 /**
- * The finished answer's actions (Mono, compact since 0.1.54): one row of frameless 28 px text buttons, so the Ask
- * field's send stays the panel's one filled control at 320 px (Design 633). Understand is the panel's existing
- * understood action (it stays pressed, with a tick, and a second press does nothing new); Save pins the lesson to
- * Saved (pressed again, it unpins); Explain differently asks again. While the answer is still being revealed, all wait.
+ * "Question it" (BOSS ruling, 0.1.54, the 633 frame 4; behaviour unvibe-pm v1, look Design v1): three one-tap
+ * questions that fill the existing Ask box and focus it. Nothing is sent until the person presses Ask, so the meter and
+ * consent work exactly as for any follow-up.
  */
-export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, onDifferent, children }: {
+export const QUESTION_CHIPS = ['Why this way?', 'What breaks if I remove it?', 'What would a reviewer flag?'] as const;
+
+/**
+ * What the Ask box holds after a chip (unvibe-pm rule 4, Design's proposal): the chip's question when the box is empty
+ * or holds another chip's question untouched; text the person typed or edited is never overwritten.
+ */
+export function prefillAsk(current: string, question: string): string {
+  return current.trim() === '' || (QUESTION_CHIPS as readonly string[]).includes(current) ? question : current;
+}
+
+/**
+ * The question chips, stacked full-width under a "Question it" label. A chip stays pressed while the box holds its
+ * question untouched (edited or sent, it lets go). While the answer is still being revealed, they wait.
+ */
+export function QuestionChips({ busy, ask, onQuestion }: { busy: boolean; ask: string; onQuestion: (question: string) => void }) {
+  return (
+    <div className="ob-questions" role="group" aria-labelledby="ob-questions-label">
+      <span className="ob-questions__label" id="ob-questions-label">Question it</span>
+      {QUESTION_CHIPS.map((question) => (
+        <button key={question} type="button" className="ob-question" aria-pressed={ask === question} disabled={busy} onClick={() => onQuestion(question)}>
+          {question}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The finished answer's other actions, after the Ask box: one row of frameless 28 px text buttons, so the Ask send is
+ * the panel's one filled control at 320 px (Design 633). Explain differently asks again; Save pins the lesson to Saved
+ * (pressed again, it unpins); Understood is the panel's existing understood action (it stays pressed, with a tick, and
+ * a second press does nothing new). While the answer is still being revealed, all wait.
+ */
+export function ExplainActions({ busy, understood, pinned, onUnderstand, onSave, onDifferent, children }: {
   busy: boolean;
   understood: boolean;
   pinned: boolean;
@@ -45,14 +77,14 @@ export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, o
 }) {
   return (
     <div className="ob-chips ob-chips--text">
-      <button type="button" className={`ob-chip${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
-        onClick={() => { if (!understood) onUnderstand(); }}>
-        {understood ? <Icon name="check" size={14} /> : null}Understand
-      </button>
+      <button type="button" className="ob-chip" disabled={busy} onClick={onDifferent}>Explain differently</button>
       <button type="button" className={`ob-chip${pinned ? ' is-on' : ''}`} aria-pressed={pinned} disabled={busy} onClick={onSave}>
         {pinned ? <Icon name="bookmark" size={14} /> : null}Save
       </button>
-      <button type="button" className="ob-chip" disabled={busy} onClick={onDifferent}>Explain differently</button>
+      <button type="button" className={`ob-chip${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
+        onClick={() => { if (!understood) onUnderstand(); }}>
+        {understood ? <Icon name="check" size={14} /> : null}Understood
+      </button>
       {children}
     </div>
   );
@@ -67,11 +99,16 @@ export function StopButton({ onStop }: { onStop: () => void }) {
   );
 }
 
-/** The 36 px Ask field, a pill with the control border and a 28 px round send button (Mono). */
-export function AskField({ value, disabled, inputRef, onChange, onSend, children }: {
+/**
+ * The 36 px Ask field, a pill with the control border and a 28 px round send button (Mono). Under a finished
+ * explanation it is "Ask your own question" (0.1.54, under the question chips); in the Ask tab, a follow-up.
+ */
+export function AskField({ value, disabled, inputRef, placeholder = 'Ask about this code', label = 'Follow-up question', onChange, onSend, children }: {
   value: string;
   disabled: boolean;
   inputRef?: Ref<HTMLInputElement>;
+  placeholder?: string;
+  label?: string;
   onChange: (value: string) => void;
   onSend: () => void;
   children?: ReactNode;
@@ -82,11 +119,11 @@ export function AskField({ value, disabled, inputRef, onChange, onSend, children
       <input
         ref={inputRef}
         className="ob-ask__input"
-        placeholder="Ask about this code"
+        placeholder={placeholder}
         value={value}
         maxLength={4000}
         disabled={disabled}
-        aria-label="Follow-up question"
+        aria-label={label}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && ready) onSend(); }}
       />
