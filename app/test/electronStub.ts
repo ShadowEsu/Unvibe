@@ -1,6 +1,7 @@
 /**
  * Minimal Electron stand-in for unit tests that import main-process modules.
- * Every network call through `net.fetch` is recorded and fails, so a test can prove nothing was sent.
+ * Every network call through `net.fetch` is recorded and fails the way an offline computer does (nothing reached a
+ * server), so a test can prove nothing was sent, and `networkFetch` still falls through to a test's own `fetch`.
  */
 import { tmpdir } from 'node:os';
 
@@ -9,7 +10,7 @@ export const netCalls: string[] = [];
 export const net = {
   fetch: async (input: string | URL | Request): Promise<Response> => {
     netCalls.push(String(input instanceof Request ? input.url : input));
-    throw new Error('Network is disabled in tests.');
+    throw new Error('net::ERR_INTERNET_DISCONNECTED');
   },
 };
 
