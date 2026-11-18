@@ -47,11 +47,15 @@ export function windowDragHandler(hooks: WindowDragHooks): (event: PointerEvent 
       }
       if (!frame) frame = requestAnimationFrame(flush);
     };
+    // Ends once: on release, on cancel, or when the page loses the pointer some other way (lostpointercapture: the
+    // window hid, another app took the mouse). A drag that never ends would leave main holding the window still.
+    let done = false;
     const finish = (event: PointerEvent) => {
-      if (event.pointerId !== pointerId) return;
-      surface.removeEventListener('pointermove', onMove as EventListener);
-      surface.removeEventListener('pointerup', finish as EventListener);
-      surface.removeEventListener('pointercancel', finish as EventListener);
+      if (done || event.pointerId !== pointerId) return;
+      done = true;
+      for (const type of ['pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
+        surface.removeEventListener(type, (type === 'pointermove' ? onMove : finish) as EventListener);
+      }
       if (surface.hasPointerCapture?.(pointerId)) surface.releasePointerCapture(pointerId);
       if (!dragging) return;
       if (frame) cancelAnimationFrame(frame);
@@ -63,8 +67,7 @@ export function windowDragHandler(hooks: WindowDragHooks): (event: PointerEvent 
       setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0);
     };
     surface.addEventListener('pointermove', onMove as EventListener);
-    surface.addEventListener('pointerup', finish as EventListener);
-    surface.addEventListener('pointercancel', finish as EventListener);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) surface.addEventListener(type, finish as EventListener);
   };
 }
 

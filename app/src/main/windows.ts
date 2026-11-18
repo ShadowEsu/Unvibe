@@ -208,6 +208,7 @@ export function createBar(): BrowserWindow {
   win.setFullScreenable(false);
   if (process.platform === 'darwin') win.setWindowButtonVisibility(false);
   lockNavigation(win);
+  endDragsOnLoss(win);
   void win.loadFile(page('bar'));
   return win;
 }
@@ -273,6 +274,27 @@ export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void
   if (!from || win.isDestroyed() || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
   if (Math.abs(dx) > MAX_TRAVEL_PX || Math.abs(dy) > MAX_TRAVEL_PX) return;
   win.setPosition(Math.round(from.x + dx), Math.round(from.y + dy));
+}
+
+/**
+ * A drag that ended without its drop (the window hid or lost focus, its page reloaded or crashed): forget it, so the
+ * window places, fits and nudges itself again, and apply a height that waited for the drop. Nothing is saved: the
+ * person didn't put it there. Lead review on #344.
+ */
+export function abandonWindowDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win)) return;
+  const waiting = heightAfterDrag.get(win);
+  heightAfterDrag.delete(win);
+  if (waiting !== undefined && !win.isDestroyed()) fitPanelHeight(win, waiting);
+}
+
+/** Wires abandonWindowDrag to every way a drag can lose its window. */
+export function endDragsOnLoss(win: Pick<BrowserWindow, 'on'> & { webContents: Pick<Electron.WebContents, 'on'> }): void {
+  const abandon = () => abandonWindowDrag(win as BrowserWindow);
+  win.on('hide', abandon);
+  win.on('blur', abandon);
+  win.webContents.on('render-process-gone', abandon);
+  win.webContents.on('did-start-loading', abandon);
 }
 
 /** The floating Island can be dragged; the notch Island stays on the screen edge. */
@@ -498,6 +520,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   win.on('focus', () => sendAway(win, false));
 
   lockNavigation(win);
+  endDragsOnLoss(win);
   win.once('ready-to-show', () => win.showInactive());
   // The theme rides in the URL so the panel's first paint matches Settings › Theme.
   void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light' } });
