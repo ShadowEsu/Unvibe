@@ -19,7 +19,7 @@ import { AskThread, followUpLive } from './askTab';
 import { SavedTab } from './savedTab';
 import { Icon, type IconName } from './icons';
 import { firstSymbol } from './selectionName';
-import { fadeStyle, HOVER_WAKE_MS, nextFade, NOT_FADED, type FadeEvent } from './clickAway';
+import { fadeStyle, HOVER_WAKE_MS, isFaded, nextFade, NOT_FADED, type FadeEvent } from './clickAway';
 import { PANEL_THEME_KEY, panelThemeMigration, type ThemePreference } from './themeMigration';
 import { useRevealedText } from './reveal';
 import { trackWindowAway } from '../shared/windowAway';
@@ -328,6 +328,8 @@ function Widget() {
   const [fade, setFade] = useState(NOT_FADED);
   const fadeTo = (event: FadeEvent) => setFade((prev) => nextFade(prev, event));
   const hoverTimer = useRef<number | undefined>(undefined);
+  /** The press that woke a faded pane: its click is swallowed (Security S5 on #344). */
+  const swallowClick = useRef(false);
 
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
   const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
@@ -997,6 +999,25 @@ function Widget() {
       className={`ob u-rim ob--${phase} ob--view-${view}${leaving ? ' is-leaving' : ''}`}
       aria-label="Unvibe"
       style={{ opacity: fadeNow.opacity, transition: `opacity ${fadeNow.transitionMs}ms var(--u-ease)` }}
+      // A press on a faded pane only wakes it; nothing inside sees the press or its click (isFaded).
+      onPointerDownCapture={(e) => {
+        swallowClick.current = isFaded(fade);
+        if (!swallowClick.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        fadeTo('press');
+      }}
+      // The click follows its pointerup in the same task; a release that brings none (the pointer left) clears it.
+      onPointerUpCapture={() => {
+        if (swallowClick.current) window.setTimeout(() => { swallowClick.current = false; }, 0);
+      }}
+      onKeyDownCapture={() => { swallowClick.current = false; }}
+      onClickCapture={(e) => {
+        if (!swallowClick.current) return;
+        swallowClick.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onPointerDown={() => fadeTo('press')}
       onMouseEnter={() => {
         window.clearTimeout(hoverTimer.current);
