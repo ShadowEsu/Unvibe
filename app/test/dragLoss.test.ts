@@ -1,8 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { endDragsOnLoss, moveWindowDrag, startWindowDrag } from '../src/main/windows';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { app } from 'electron';
+import { settings } from '../src/main/settings';
+import { endDragsOnLoss, endPanelDrag, moveWindowDrag, startWindowDrag } from '../src/main/windows';
 import { windowDragHandler } from '../src/renderer/shared/windowDrag';
+
+// This file gets its own userData, so the spots it reads are only its own.
+const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-drag-loss-'));
+app.getPath = (): string => userData;
 
 /** Just enough of a BrowserWindow for the drag state: bounds, setPosition and its events. */
 function fakeWindow() {
@@ -34,6 +43,16 @@ for (const [source, event] of [['window', 'hide'], ['window', 'blur'], ['page', 
     assert.equal(win.moves, 0);
   });
 }
+
+test('a drag that loses its window mid-way comes back on screen, and a drop that arrives after saves no spot', () => {
+  const win = fakeWindow();
+  startWindowDrag(win as never);
+  moveWindowDrag(win as never, -600, 2000);
+  win.emit('blur');
+  assert.deepEqual([win.bounds.x, win.bounds.y], [12, 1000 - 400 - 12], 'inside the 1600 × 1000 work area, 12 px in');
+  endPanelDrag(win as never);
+  assert.deepEqual(settings().all().overlaySpots ?? {}, {});
+});
 
 /** A pointer surface for the page-side handler (no DOM in node). */
 function surface() {
