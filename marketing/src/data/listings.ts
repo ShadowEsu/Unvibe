@@ -164,20 +164,12 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
   // Approved 12 Nov 04:39Z (first100, LIVE-LISTINGS); the listing links unvibe.site, so the href keeps its utm_source for their checker.
   { site: "Startup Fame", status: "live", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site" },
-  { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
+  // Live since 11 Nov (first100, 18 Nov re-check); the free listing stays only while this link does.
+  { site: "DodoDirectory", status: "live", href: "https://dododirectory.com/item/unvibe" },
   { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
-  { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true, submitted: "2026-11-07" },
   { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
-  {
-    site: "AI Tools Prime",
-    status: "pending",
-    href: "https://www.aitoolsprime.com?utm_source=badge&utm_medium=referral&utm_campaign=featured_badge",
-    linkRequired: true,
-    submitted: "2026-11-07",
-  },
+  // Security 18 Nov: approved, free listing scheduled 29 Nov-4 Dec, so it stays under "Submitted to" until 4 Dec.
   { site: "Dang.ai", status: "pending", href: "https://dang.ai", linkRequired: true, submitted: "2026-11-06" },
-  { site: "ToolPilot", status: "pending", href: "https://www.toolpilot.ai", linkRequired: true, submitted: "2026-11-06" },
-  { site: "Awesome Tools", status: "pending", href: "https://awesome.tools", linkRequired: true, submitted: "2026-11-06" },
 ];
 
 /** Badges of live listings, shown in the footer on every page and on /listed-on. */

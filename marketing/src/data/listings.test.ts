@@ -38,12 +38,8 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://startupfa.me",
   "https://dododirectory.com",
   "https://sumodir.com",
-  "https://postmake.io",
   "https://nicklaunches.com",
-  "https://www.aitoolsprime.com",
   "https://dang.ai",
-  "https://www.toolpilot.ai",
-  "https://awesome.tools",
 ];
 
 const BADGE_DIR = path.resolve("public/badges");
