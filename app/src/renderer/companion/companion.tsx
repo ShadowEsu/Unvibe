@@ -310,15 +310,15 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   const browserOpened = browserOpenedFor(browser);
   const done = useRef(onDone);
   done.current = onDone;
-  const waitingCode = useDeviceCodeDroppedOnClose();
-  useEffect(() => window.unvibe.onDeviceAuth((r) => { waitingCode.current = ''; setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
+  const cardCode = useDeviceCodeDroppedOnClose();
+  useEffect(() => window.unvibe.onDeviceAuth((r) => { cardCode.ended(); setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
   // The code shows as soon as main has it; the browser opens alongside and reports only a failure, for its own link.
   useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
-      waitingCode.current = r.userCode;
+      cardCode.arrived(r.userCode);
       dispatchBrowser({ type: 'code', url: r.verificationUri });
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);

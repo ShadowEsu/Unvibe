@@ -64,7 +64,7 @@ import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
-import { createDevicePoll } from './devicePoll';
+import { createDevicePoll, OWNER_GONE_EVENTS, type DevicePollOwner } from './devicePoll';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { SUPPORT_EMAIL } from '../core/support';
 import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
@@ -165,16 +165,24 @@ const isMac = process.platform === 'darwin';
 let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
-/** Google sign-in by device code: the one code main polls for, dropped when its card closes or the app quits. */
+/** Google sign-in by device code: the one code main polls for, dropped when its card or window closes or the app quits. */
 const devicePoll = createDevicePoll({
   redeem: redeemDeviceAuth,
   approved: async (token, stillCurrent) => {
     const account = await accountInfo(token);
     // The card closed while the account was read: nobody is signed in.
-    if (!stillCurrent()) return;
+    if (!stillCurrent()) return false;
     await persistAccount({ userId: account.userId, email: account.email ?? 'Signed-in user', token });
     void flush();
     companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
+    return true;
+  },
+  // Security NIT-3 on #354: no orphaned session for a token nobody holds.
+  abandoned: (token) => {
+    void revokeSession(token).then(
+      () => console.info('[auth] ended the session of a sign-in approved after its card closed'),
+      () => console.warn('[auth] could not end the session of a sign-in approved after its card closed'),
+    );
   },
   ended: (error) => companion?.webContents.send('account:device', { ok: false, error }),
 });
@@ -1748,10 +1756,20 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle('account:startDevice', async (e) => {
+    // The page may close, reload or crash while the server makes the code (seconds on a cold server): then no card
+    // shows it, so neither the browser nor the poll starts.
+    const page: DevicePollOwner = e.sender;
+    let pageGone = false;
+    const onPageGone = () => { pageGone = true; };
+    for (const event of OWNER_GONE_EVENTS) page.once(event, onPageGone);
     try {
       const asked = Date.now();
       const device = await startDeviceAuth();
       console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
+      if (pageGone || e.sender.isDestroyed()) {
+        console.info('[auth] device code not used: the page that asked for it is gone');
+        return { ok: false, error: 'Sign-in was closed.' };
+      }
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
       // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
@@ -1766,13 +1784,20 @@ app.whenReady().then(() => {
           if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
         },
       );
-      devicePoll.start(device, verificationUrl);
+      // Polling is tied to the page that asked: its window closing (Mac close, ⌘W), a reload or a crash drops the code,
+      // since none of those runs the card's own cleanup (lead M1 / Security SHOULD-1 on #354).
+      devicePoll.start(device, verificationUrl, e.sender);
       return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' };
+    } finally {
+      if (!e.sender.isDestroyed()) for (const event of OWNER_GONE_EVENTS) page.removeListener(event, onPageGone);
+    }
   });
-  // The sign-in card closed with its code still waiting: stop polling and forget it (only that card's own code).
-  ipcMain.handle('account:cancelDevice', (_e, userCode: unknown) => {
-    if (typeof userCode !== 'string') return { ok: false };
+  // The sign-in card closed with its code still waiting: stop polling and forget it. Only the page that started the
+  // code may drop it, and only that card's own code.
+  ipcMain.handle('account:cancelDevice', (e, userCode: unknown) => {
+    if (typeof userCode !== 'string' || e.sender !== devicePoll.owner()) return { ok: false };
     const dropped = devicePoll.cancel(userCode);
     if (dropped) console.info('[auth] device sign-in cancelled: the card closed');
     return { ok: dropped };

@@ -13,7 +13,7 @@ export function Gift() {
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
-  const [deviceCode, setDeviceCode] = useState('');
+  const [userCode, setUserCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
   const [browser, dispatchBrowser] = useReducer(deviceBrowserReducer, DEVICE_BROWSER_START);
   const browserOpened = browserOpenedFor(browser);
@@ -46,10 +46,10 @@ export function Gift() {
     };
   }, []);
 
-  const waitingCode = useDeviceCodeDroppedOnClose();
+  const cardCode = useDeviceCodeDroppedOnClose();
   // Unsubscribed on close, so a Share page that was left never hears a later sign-in.
   useEffect(() => window.unvibe.onDeviceAuth((result) => {
-    waitingCode.current = '';
+    cardCode.ended();
     setSignInBusy(false);
     if (result.ok && result.email) {
       setNeedsSignIn(false);
@@ -68,9 +68,9 @@ export function Gift() {
     setSignInError('');
     const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
-      waitingCode.current = result.userCode;
+      cardCode.arrived(result.userCode);
       dispatchBrowser({ type: 'code', url: result.verificationUri });
-      setDeviceCode(result.userCode);
+      setUserCode(result.userCode);
       setVerificationUrl(result.verificationUri);
     }
     else {
@@ -145,9 +145,9 @@ export function Gift() {
             {signInBusy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
           </button>
           {signInError && <div className="field-err" role="alert">{signInError}</div>}
-          {deviceCode ? <div className="signin__code"><span>Approve this code in your browser</span><b>{deviceCode}</b></div> : null}
+          {userCode ? <div className="signin__code"><span>Approve this code in your browser</span><b>{userCode}</b></div> : null}
           <p className="field-note">
-            {deviceCode
+            {userCode
               ? `${browserOpened ? 'Finish in your browser.' : 'Your browser did not open.'} Sign in with Google, then approve the code above.`
               : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
           </p>
