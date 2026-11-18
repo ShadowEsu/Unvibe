@@ -100,6 +100,15 @@ export function StopButton({ onStop }: { onStop: () => void }) {
 }
 
 /**
+ * Whether a key in the Ask box sends it: a fresh Enter only. A held Enter's repeats don't (a chip pressed with Enter
+ * moves focus into the box, and the repeat must not send its question: lead review on #346), nor an Enter that
+ * finishes an input-method composition.
+ */
+export function enterSends(e: { key: string; repeat: boolean; isComposing: boolean }): boolean {
+  return e.key === 'Enter' && !e.repeat && !e.isComposing;
+}
+
+/**
  * The 36 px Ask field, a pill with the control border and a 28 px round send button (Mono). Under a finished
  * explanation it is "Ask your own question" (0.1.54, under the question chips); in the Ask tab, a follow-up.
  */
@@ -125,7 +134,7 @@ export function AskField({ value, disabled, inputRef, placeholder = 'Ask about t
         disabled={disabled}
         aria-label={label}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && ready) onSend(); }}
+        onKeyDown={(e) => { if (ready && enterSends({ key: e.key, repeat: e.repeat, isComposing: e.nativeEvent.isComposing })) onSend(); }}
       />
       {children}
       {/* Design (Question it v1): Ask stays the filled main button while it only waits for text; it dims when the
