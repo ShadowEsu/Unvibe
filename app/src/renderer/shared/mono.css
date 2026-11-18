@@ -237,6 +237,18 @@
 :root[data-density="compact"][data-ui="v3"][data-v7] .search-palette__row { min-height: 28px; padding-block: 4px; }
 :root[data-density="compact"][data-ui="v3"][data-v7] .search-palette__row span { font-size: 13px; line-height: 20px; }
 :root[data-density="compact"][data-ui="v3"][data-v7] .search-palette__row small { font-size: 11px; }
+/* Reading surfaces (lead review on #347: "smaller text" means these too). Ask Vibe's thread, the lesson and the quiz at
+   13/20 body; the quiz question 18 px (from 22) and its answers 15 px in 44 px rows (from 17 px, 52). */
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout :is(.ask-user, .ask-hello p) { font-size: 13px; line-height: 20px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .ask-answer__body { font-size: 13px; line-height: 20px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .ask-saved__row .m-row__end { font-size: 11px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .mles-bar { font-size: 13px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .mles .mles-rich { font-size: 13px; line-height: 20px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-heading { font-size: 14px; line-height: 20px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .mles .mles-rich .rich-heading--4 { font-size: 13px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .qz-q__text { font-size: 18px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout .qz-option { min-height: 44px; font-size: 15px; }
+:root[data-density="compact"][data-ui="v3"][data-v7] .layout :is(.qz-lead, .qz-foot__why, .qz-why, .qz-tile__q, .qz-tile__a) { font-size: 13px; line-height: 20px; }
 /* The overlay: the answer and the Ask thread at 13/20 (inline code and code blocks stay 12), citations and the header's
    source line at 11. */
 :root[data-density="compact"] .ob :is(.ob-answer, .ob-answer .rich-heading, .ob-thread__q) { font-size: 13px; line-height: 20px; }
