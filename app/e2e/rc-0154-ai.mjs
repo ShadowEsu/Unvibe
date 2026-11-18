@@ -32,6 +32,8 @@ const PLAN = process.env.RC_AI_PLAN;
 const BUDGET = { full: 6, short: 3 }[PLAN];
 const out = path.resolve(process.env.SHOTS_DIR ?? 'rc-0154-ai');
 mkdirSync(out, { recursive: true });
+// Scripts, the sample file and local profiles go under the runner's own temp folder (Security N3).
+const TMP = process.env.RUNNER_TEMP ?? tmpdir();
 if (!exe) throw new Error('Set UNVIBE_EXE');
 if (process.env.QA_AI_OK !== '1') throw new Error('rc-0154-ai.mjs sends hosted explanations: it needs QA_AI_OK=1 (workflow input ai=true)');
 if (!BUDGET) throw new Error('RC_AI_PLAN must be full or short');
@@ -88,7 +90,7 @@ function desktop(label) {
 
 // --- The operating system's pointer (as rc-0154.mjs) ----------------------------------------------------------------
 let winScale = 1;
-const ptrScript = path.join(tmpdir(), 'unvibe-rc-ai-pointer.ps1');
+const ptrScript = path.join(TMP, 'unvibe-rc-ai-pointer.ps1');
 if (os === 'windows') writeFileSync(ptrScript, [
   'param([string]$op, [int]$x1, [int]$y1, [int]$x2, [int]$y2, [int]$n)',
   'Add-Type @"',
@@ -209,7 +211,7 @@ async function setDensity(d) {
 const dialogs = [];
 let dialogWatchError = ''; // shown if the watcher never saw the question (Accessibility, UI Automation)
 let dialogBusy = false;
-const winDialogScript = path.join(tmpdir(), 'unvibe-rc-ai-dialogs.ps1');
+const winDialogScript = path.join(TMP, 'unvibe-rc-ai-dialogs.ps1');
 if (os === 'windows') writeFileSync(winDialogScript, [
   'Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes',
   '$A = [System.Windows.Automation.AutomationElement]',
@@ -270,11 +272,11 @@ const dialogWatch = setInterval(answerDialogs, 2000);
 
 // --- The shortcut in another app ------------------------------------------------------------------------------------
 const CODE = 'function selectedTotal(items) {\n  return items.reduce((sum, item) => sum + item.price * item.qty, 0);\n}';
-const sampleFile = path.join(tmpdir(), 'unvibe-rc0154-sample.js');
+const sampleFile = path.join(TMP, 'unvibe-rc0154-sample.js');
 writeFileSync(sampleFile, CODE);
 let editorOpen = false;
 let shortcut = 'Control+U';
-const focusScript = path.join(tmpdir(), 'unvibe-rc-ai-focus.ps1');
+const focusScript = path.join(TMP, 'unvibe-rc-ai-focus.ps1');
 /** Select all in TextEdit / Notepad and press the global shortcut (rc-0154.mjs shortcutInEditor, without its checks). */
 async function pressShortcut() {
   if (os === 'mac') {
@@ -334,7 +336,7 @@ async function explanationDone(panel, ms = 120000) {
 let app = null;
 let companion = null;
 line(`NOTE  mode: AI run, plan ${PLAN} (at most ${BUDGET} hosted calls; each is listed as CALL n/${BUDGET})`);
-const A = profile(process.env.RC_AI_PROFILE ?? mkdtempSync(path.join(tmpdir(), 'unvibe-rc0154-ai-')), process.env.RC_AI_ID ?? `qa-rc0154-ai-local-${Date.now()}`);
+const A = profile(process.env.RC_AI_PROFILE ?? mkdtempSync(path.join(TMP, 'unvibe-rc0154-ai-')), process.env.RC_AI_ID ?? `qa-rc0154-ai-local-${Date.now()}`);
 try {
   ({ app, companion } = await start(A));
 } catch (e) { log(false, 'The RC opens', short(e)); await finish(); }
@@ -397,13 +399,125 @@ try {
 if (!stopped) {
   // The launch-at-login question comes right after the first own-code explanation (a sheet on the overlay); the
   // watcher answers No before anything here touches the overlay.
-  if (os !== 'linux' && !await waitFor(async () => dialogs.some((m) => /log in/.test(m)), 15000, 250)) note('The launch-at-login question', 'not seen within 15 s of the first explanation');
+  const loginAnswered = () => dialogs.some((m) => /log in/.test(m));
+  if (os !== 'linux' && !await waitFor(async () => loginAnswered(), 15000, 250)) note('The launch-at-login question', 'not seen within 15 s of the first explanation');
   await sleep(1000);
+
+  // Real pointer presses on the finished overlay (rows 4 and 2) must not send: next to the question chips are Explain
+  // differently, the depth picker, More detail, Ask and the Test me tab, and each of those sends (Security R1). So
+  // during these presses (1) a page guard blocks the click on any control but the one aimed at, and (2) the overlay
+  // is watched (a MutationObserver, so a request that starts and finishes between two looks is still seen: a local
+  // mock answers in 300 ms with the same text) and compared before and after: it must stay done, on Explain, with
+  // its answer untouched and no thread. If not, the press sent: it is counted as an unplanned call, the run FAILs
+  // and every later call step is skipped.
+  const panelState = () => panel.evaluate(() => {
+    const ob = document.querySelector('.ob');
+    return {
+      done: Boolean(ob?.classList.contains('ob--done')), explain: Boolean(ob?.classList.contains('ob--view-explain')),
+      // Every answer block: More detail streams into a second .ob-answer under the first, with the main phase still done.
+      answer: [...document.querySelectorAll('.ob-answer')].map((el) => el.textContent).join('\u0000'), turns: document.querySelectorAll('.ob-thread__turn').length,
+    };
+  });
+  const watchPanel = () => panel.evaluate(() => {
+    window.__qaWatch?.disconnect();
+    const seen = { left: false, answer: false, thread: false };
+    window.__qaSeen = seen;
+    const look = () => {
+      const ob = document.querySelector('.ob');
+      if (!ob || !ob.classList.contains('ob--done') || !ob.classList.contains('ob--view-explain')) seen.left = true;
+      if (document.querySelector('.ob-thread__turn')) seen.thread = true;
+    };
+    const scan = (records) => {
+      for (const r of records) {
+        if (r.type === 'attributes') continue;
+        const el = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+        if (el?.closest?.('.ob-answer') || [...r.addedNodes, ...r.removedNodes].some((x) => x.nodeType === 1 && (x.matches('.ob-answer') || x.querySelector('.ob-answer')))) seen.answer = true;
+      }
+      look();
+    };
+    const mo = new MutationObserver(scan);
+    mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+    window.__qaWatch = mo;
+    window.__qaScan = scan;
+    look();
+  });
+  const panelSaw = () => panel.evaluate(() => {
+    // Records not yet delivered to the callback are scanned too.
+    if (window.__qaWatch) window.__qaScan(window.__qaWatch.takeRecords());
+    window.__qaWatch?.disconnect();
+    const seen = window.__qaSeen ?? null;
+    window.__qaWatch = undefined;
+    window.__qaScan = undefined;
+    window.__qaSeen = undefined;
+    return seen;
+  });
+  /** `saw`: what the watcher saw meanwhile; null when no watcher ran (its answer is then left out, not assumed). */
+  const sentSince = (before, now, saw) => !now.done || !now.explain || now.answer !== before.answer || now.turns > before.turns
+    || Boolean(saw && (saw.left || saw.answer || saw.thread));
+  // For the report: the flags and the answer's length only (not its text).
+  const brief = (s) => (s ? `done ${s.done}, explain ${s.explain}, answer ${s.answer.length} chars, thread ${s.turns}` : 'unreadable');
+  const unplanned = (what, before, now, saw) => {
+    spent += 1;
+    line(`CALL  ${spent}/${BUDGET}: NOT PLANNED: ${what}`);
+    log(false, `${what}: a press on the finished overlay sent a request`, `before: ${brief(before)}; after: ${brief(now)}; seen meanwhile: ${JSON.stringify(saw)}`);
+    stop(what);
+  };
+  const finishedExplain = (s) => s.done && s.explain && s.turns === 0;
+  /** One real pointer action aimed at `allow` (a selector); returns false (after counting and stopping) if it sent. */
+  async function guardedPress(allow, what, act) {
+    const before = await panelState();
+    if (!finishedExplain(before)) throw new Error(`the overlay is not on its finished explanation (${brief(before)}); nothing was pressed`);
+    await panel.evaluate((sel) => {
+      window.__qaUnguard?.();
+      const block = (e) => {
+        const control = e.target?.closest?.('button, input, select, textarea, a, [role="tab"], [role="radio"]');
+        if (control && !control.closest(sel)) { e.preventDefault(); e.stopImmediatePropagation(); window.__qaBlocked = (window.__qaBlocked ?? 0) + 1; }
+      };
+      window.addEventListener('click', block, true);
+      window.__qaUnguard = () => { window.removeEventListener('click', block, true); window.__qaUnguard = undefined; };
+    }, allow);
+    await watchPanel();
+    try {
+      act();
+      await sleep(1200);
+    } finally {
+      await panel.evaluate(() => window.__qaUnguard?.()).catch(() => {});
+    }
+    // The watcher must have run: no answer from it counts as a send.
+    const saw = (await panelSaw()) ?? { left: true, answer: true, thread: true, unreadable: true };
+    const blocked = await panel.evaluate(() => { const b = window.__qaBlocked ?? 0; window.__qaBlocked = 0; return b; });
+    if (blocked) note(`${what}`, `the guard blocked ${blocked} click(s) on a control it wasn't aimed at`);
+    const now = await panelState();
+    if (sentSince(before, now, saw)) { unplanned(`${what} sent`, before, now, saw); return false; }
+    return true;
+  }
+  /** A press is made only at a point well inside the overlay's own window: off it, a press could reach the main window. */
+  async function insidePanel(point, what) {
+    if (!point) throw new Error(`${what}: the element to press was not found`);
+    const w = await where(panel);
+    if (point.x < w.x + 4 || point.x > w.x + w.w - 4 || point.y < w.y + 4 || point.y > w.y + w.h - 4) {
+      throw new Error(`${what}: ${Math.round(point.x)},${Math.round(point.y)} is outside the overlay (${w.x},${w.y} ${w.w}x${w.h}); nothing was pressed`);
+    }
+  }
+  const guardedTap = async (point, allow, what) => {
+    await insidePanel(point, what);
+    return guardedPress(allow, what, () => pointer.tap(point.x, point.y));
+  };
+  /** After an error mid-press: if the overlay can't be shown unchanged, it is treated as a send. */
+  async function checkAfterError(before, what) {
+    const now = panel && !panel.isClosed() ? await panelState().catch(() => null) : null;
+    if (!now) { note(what, 'the overlay could not be read after the error, so every later call step is skipped'); stop(`${what}: overlay unreadable`); }
+    else {
+      const saw = await panelSaw().catch(() => null);
+      if (sentSince(before, now, saw)) unplanned(`${what} sent`, before, now, saw);
+    }
+  }
 
   // Row 4 (no call: a question chip only fills the box). With the editor in front: (a) while the overlay is at full
   // opacity (it opened without focus), the first real press on a question chip works (acceptFirstMouse); (b) once it
   // has had focus and the editor takes focus back, it fades to 22 % and the first press only wakes it (the box stays
   // empty); the second press fills the box. Presses are the system's pointer with no rest first (a 150 ms rest wakes).
+  // Only after the launch-at-login sheet is answered: a press on it could hit its default Yes (Security N2).
   const opacity = () => panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity));
   const boxValue = () => panel.evaluate(() => document.querySelector('input.ob-ask__input')?.value ?? null);
   const at = (selector, text) => panel.evaluate(([sel, t]) => {
@@ -413,47 +527,60 @@ if (!stopped) {
     return { x: window.screenX + r.left + r.width / 2, y: window.screenY + r.top + r.height / 2 };
   }, [selector, text]);
   if (os === 'linux') untestable('Row 4: first press with the editor in front, faded first press', 'local run: no editor and no window manager');
+  else if (!loginAnswered()) untestable('Row 4: first press with the editor in front, faded first press', 'skipped: the launch-at-login question was not seen answered, so a press could land on it');
   else {
+    const start4 = await panelState();
     try {
       editorToFront();
       await sleep(800);
       const o1 = await opacity();
+      let ok = true;
       if (o1 > 0.99) {
         const c = await at('button.ob-question', 'Why this way?');
-        pointer.tap(c.x, c.y);
-        await sleep(500);
-        const v = await boxValue();
-        desktop('row4-first-press');
-        runnerEvidence(v === 'Why this way?', 'Row 4: with the editor in front, the first press on a question chip works (acceptFirstMouse)', `opacity ${o1}; box "${v}"`);
-        await panel.locator('input.ob-ask__input').fill('');
-        editorToFront();
-        await sleep(800);
+        ok = await guardedTap(c, 'button.ob-question', 'Row 4 first press on a chip');
+        if (ok) {
+          const v = await boxValue();
+          desktop('row4-first-press');
+          runnerEvidence(v === 'Why this way?', 'Row 4: with the editor in front, the first press on a question chip works (acceptFirstMouse)', `opacity ${o1}; box "${v}"`);
+          await panel.locator('input.ob-ask__input').fill('');
+          editorToFront();
+          await sleep(800);
+        }
       } else note('Row 4: the first press on an overlay at full opacity', `not reached: the overlay already had focus (opacity ${o1} with the editor in front)`);
-      let o2 = await opacity();
-      if (o2 > 0.3) {
+      let o2 = ok ? await opacity() : 1;
+      if (ok && o2 > 0.3) {
         // The press didn't give the overlay focus: a press on its title does, then the editor takes it back.
         const t = await at('.ob-head__title');
-        pointer.tap(t.x, t.y);
-        await sleep(500);
-        editorToFront();
-        await sleep(800);
-        o2 = await opacity();
+        ok = await guardedTap(t, '.ob-head', 'Row 4 press on the overlay title');
+        if (ok) {
+          editorToFront();
+          await sleep(800);
+          o2 = await opacity();
+        }
       }
-      if (o2 > 0.3) throw new Error(`the overlay did not fade with the editor in front (opacity ${o2})`);
-      desktop('row4-faded');
-      const c = await at('button.ob-question', 'What breaks if I remove it?');
-      pointer.tap(c.x, c.y);
-      await sleep(500);
-      const v1 = await boxValue();
-      const o3 = await opacity();
-      desktop('row4-faded-first-press');
-      runnerEvidence(v1 === '' && o3 > 0.99, 'Row 4: the first press on a faded overlay only wakes it (the chip under it is not pressed)', `opacity ${o2} → ${o3}; box "${v1}"`);
-      pointer.tap(c.x, c.y);
-      await sleep(500);
-      const v2 = await boxValue();
-      runnerEvidence(v2 === 'What breaks if I remove it?', 'Row 4: the second press then works', `box "${v2}"`);
-      await panel.locator('input.ob-ask__input').fill('');
-    } catch (e) { log(false, 'Row 4: the first press and the faded first press', short(e)); desktop('row4-stuck'); }
+      if (ok) {
+        if (o2 > 0.3) throw new Error(`the overlay did not fade with the editor in front (opacity ${o2})`);
+        desktop('row4-faded');
+        const c = await at('button.ob-question', 'What breaks if I remove it?');
+        ok = await guardedTap(c, 'button.ob-question', 'Row 4 first press on a faded overlay');
+        if (ok) {
+          const v1 = await boxValue();
+          const o3 = await opacity();
+          desktop('row4-faded-first-press');
+          runnerEvidence(v1 === '' && o3 > 0.99, 'Row 4: the first press on a faded overlay only wakes it (the chip under it is not pressed)', `opacity ${o2} → ${o3}; box "${v1}"`);
+          ok = await guardedTap(c, 'button.ob-question', 'Row 4 second press on the woken overlay');
+        }
+        if (ok) {
+          const v2 = await boxValue();
+          runnerEvidence(v2 === 'What breaks if I remove it?', 'Row 4: the second press then works', `box "${v2}"`);
+          await panel.locator('input.ob-ask__input').fill('');
+        }
+      }
+    } catch (e) {
+      log(false, 'Row 4: the first press and the faded first press', short(e));
+      desktop('row4-stuck');
+      await checkAfterError(start4, 'Row 4 press');
+    }
   }
 
   // Row 8: the layout under a finished explanation.
@@ -500,7 +627,8 @@ if (!stopped) {
 
   // Row 9: a chip fills the box and focuses it, nothing is sent; a second chip replaces an untouched question; typed
   // text is never replaced; Return held on a chip sends nothing. "Nothing sent": the overlay stays on its Explain
-  // view (a send switches it to Ask) with no thread turn, checked after each step.
+  // view (a send switches it to Ask) with no thread turn, checked after each step, and at the end the whole overlay
+  // is compared with its state before the row (done, Explain, the same answer, no thread).
   const sentNothing = () => panel.evaluate(() => ({ explainView: document.querySelector('.ob')?.classList.contains('ob--view-explain'), turns: document.querySelectorAll('.ob-thread__turn').length }));
   const box = () => panel.evaluate(() => {
     const input = document.querySelector('input.ob-ask__input');
@@ -509,7 +637,10 @@ if (!stopped) {
       pressed: [...document.querySelectorAll('button.ob-question')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()),
     };
   });
-  try {
+  const start9 = stopped ? null : await panelState();
+  if (stopped) note('Row 9: question chips', 'skipped: an earlier press on the overlay sent a request');
+  else try {
+    await watchPanel();
     const opacity = await panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity));
     if (opacity < 0.99) { const c = await centre(panel, '.ob-head__title'); await hover(c); note('Row 9', `the overlay was faded (${opacity}); woken by resting the pointer on it`); }
     const [q1, q2, q3] = ['Why this way?', 'What breaks if I remove it?', 'What would a reviewer flag?'];
@@ -539,15 +670,23 @@ if (!stopped) {
     const d = await box();
     const d0 = await sentNothing();
     await shot(panel, 'row9-held-return');
-    const nothingSent = [a0, c0, d0].every((s) => s.explainView && s.turns === 0);
-    if (!d0.explainView || d0.turns) { spent += 1; line(`CALL  ${spent}/${BUDGET}: NOT PLANNED: the held Return on a chip sent the question`); stop('row 9 sent a question'); }
+    const end9 = await panelState();
+    const saw9 = (await panelSaw()) ?? { left: true, answer: true, thread: true, unreadable: true };
+    const sent9 = sentSince(start9, end9, saw9);
+    if (sent9) unplanned('Row 9 (a chip or the held Return) sent', start9, end9, saw9);
+    const nothingSent = !sent9 && [a0, c0, d0].every((s) => s.explainView && s.turns === 0);
     log(a.value === q1 && a.focused && JSON.stringify(a.pressed) === JSON.stringify([q1]), 'Row 9: a question chip fills the box and focuses it', JSON.stringify(a));
     log(b.value === q2 && b.focused && JSON.stringify(b.pressed) === JSON.stringify([q2]), 'Row 9: a second chip replaces an untouched question', JSON.stringify(b));
     log(c.value === `${q2} (mine)` && c.focused && c.pressed.length === 0, 'Row 9: text you typed is never replaced by a chip', JSON.stringify(c));
     log(d.value === q1 && d0.explainView && d0.turns === 0, 'Row 9: Return held on a chip sends nothing (the box holds the question, focus in it)', `${JSON.stringify(d)}; ${JSON.stringify(d0)}`);
-    log(nothingSent, 'Row 9: nothing was sent by any chip (the overlay stayed on Explain with no thread)', JSON.stringify([a0, c0, d0]));
+    log(nothingSent, 'Row 9: nothing was sent by any chip (the overlay stayed done on Explain with its answer untouched and no thread, watched throughout)', `${JSON.stringify([a0, c0, d0])}; seen meanwhile ${JSON.stringify(saw9)}`);
     await panel.locator('input.ob-ask__input').fill('');
-  } catch (e) { log(false, 'Row 9: question chips', short(e)); }
+  } catch (e) {
+    // An error part-way could hide a send (Security R3): count one if the overlay shows it, and stop either way.
+    log(false, 'Row 9: question chips', short(e));
+    await checkAfterError(start9, 'Row 9');
+    stop('row 9 errored');
+  }
 
   // Row 11, finished overlay: the question chips and text chips are smaller in Compact, live.
   try {
@@ -561,18 +700,28 @@ if (!stopped) {
       'Row 11: the finished overlay goes Compact live (question chips, label, text chips)', `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
   } catch (e) { log(false, 'Row 11: finished overlay density', short(e)); }
 
-  // Row 2, done state: the header drag with the real pointer (the full row ran on the agreement form in Run W).
-  try {
-    const p0 = await where(panel);
-    const c = await centre(panel, '.ob-head__title');
-    await hover(c);
-    const dx = p0.x + p0.w / 2 > p0.area.x + p0.area.w / 2 ? -200 : 200;
-    pointer.drag(c.x, c.y, c.x + dx, c.y);
-    await sleep(900);
-    const p1 = await where(panel);
-    desktop('row2-done-dragged');
-    log(Math.abs(p1.x - p0.x - dx) <= 20, 'Row 2: a finished overlay moves by its header too', `${p0.x},${p0.y} → ${p1.x},${p1.y} (dragged ${dx})`);
-  } catch (e) { log(false, 'Row 2: done-state drag', short(e)); }
+  // Row 2, done state: the header drag with the real pointer (the full row ran on the agreement form in Run W),
+  // guarded and checked for a send like row 4's presses.
+  if (stopped) note('Row 2: done-state drag', 'skipped: an earlier step stopped the run\'s calls');
+  else if (os === 'linux') untestable('Row 2: done-state drag', 'local run: with no window manager the main window covers the overlay, so the real pointer would press the main window');
+  else {
+    const start2 = await panelState();
+    try {
+      const p0 = await where(panel);
+      const c = await centre(panel, '.ob-head__title');
+      await insidePanel(c, 'Row 2 done-state drag');
+      await hover(c);
+      const dx = p0.x + p0.w / 2 > p0.area.x + p0.area.w / 2 ? -200 : 200;
+      if (await guardedPress('.ob-head', 'Row 2 done-state drag', () => pointer.drag(c.x, c.y, c.x + dx, c.y))) {
+        const p1 = await where(panel);
+        desktop('row2-done-dragged');
+        log(Math.abs(p1.x - p0.x - dx) <= 20, 'Row 2: a finished overlay moves by its header too', `${p0.x},${p0.y} → ${p1.x},${p1.y} (dragged ${dx})`);
+      }
+    } catch (e) {
+      log(false, 'Row 2: done-state drag', short(e));
+      await checkAfterError(start2, 'Row 2 drag');
+    }
+  }
   await panel.locator('.ob-head__close').click().catch(() => {});
   await waitFor(async () => panel.isClosed(), 5000);
 }
@@ -603,9 +752,17 @@ let wrongSeen = null;
 let reachedResults = false;
 for (let q = 1; q <= questions && !stopped; q++) {
   try {
-    spend(`quiz question ${q} of the check`);
-    if (q === 1) await companion.locator('.qz-start button.qz-start__go').click();
-    else await companion.locator('button.qz-right__go').click();
+    if (q === 1) {
+      spend(`quiz question ${q} of the check`);
+      await companion.locator('.qz-start button.qz-start__go').click();
+    } else {
+      // Next question is the call; anything else on that button (the check ended early) is not pressed.
+      const go = companion.locator('button.qz-right__go');
+      const label = (await go.innerText()).trim();
+      if (!/^Next question/.test(label)) throw new Error(`the right-answer button says "${label}", not "Next question"; nothing was pressed`);
+      spend(`quiz question ${q} of the check`);
+      await go.click();
+    }
     await companion.locator('.qz-question .qz-q__text').waitFor({ timeout: 90000 });
     await companion.locator('.qz-question .qz-option').first().waitFor({ timeout: 10000 });
     const options = await companion.locator('.qz-question .qz-option').allInnerTexts();
@@ -620,15 +777,32 @@ for (let q = 1; q <= questions && !stopped; q++) {
       await setDensity('comfortable');
       log(parseFloat(after.option.font) < parseFloat(before.option.font) || after.option.h < before.option.h, 'Row 11: the quiz question goes Compact', `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
     }
-    // Answer by keys: a digit picks, Return checks; after a wrong answer, row 12's checks, then the arrows pick and
-    // Return checks again, until it is right (graded in the app: no call).
+    // Answer: a digit picks. The first check of the run is Return (row 12: "Return checks"); every later check is the
+    // Check answer button. Nothing is pressed unless the question screen is showing with no right-answer screen, and
+    // after each check its result (the right-answer screen, or one more wrong answer) is awaited before anything else:
+    // on the right-answer screen Return is Next, one more question (Security R2). Grading is in the app: no call.
+    const onQuestion = async () => (await companion.locator('.qz-right').count()) === 0 && (await companion.locator('.qz-question .qz-option').count()) > 0;
+    const wrongCount = () => companion.locator('.qz-question .qz-option.is-wrong').count();
+    const settle = async (wrongBefore) => {
+      const r = await waitFor(async () => ((await companion.locator('.qz-right').count()) ? 'right' : (await wrongCount()) > wrongBefore ? 'wrong' : null), 15000, 150);
+      if (!r) throw new Error('the check did not settle (no right-answer screen and no new wrong answer in 15 s)');
+      return r;
+    };
     await companion.locator('.qz-question .qz-options').click({ position: { x: 1, y: 1 } }).catch(() => {});
     await companion.keyboard.press('1');
     const chosen1 = await companion.locator('.qz-question .qz-option[aria-checked="true"]').innerText().catch(() => '');
     for (let attempt = 0; attempt < 4; attempt++) {
-      await companion.keyboard.press('Enter');
-      const right = await companion.locator('.qz-right').waitFor({ timeout: 4000 }).then(() => true, () => false);
-      if (right) break;
+      if (!(await onQuestion())) break;
+      const wrongBefore = await wrongCount();
+      if (q === 1 && attempt === 0) {
+        await companion.keyboard.press('Enter');
+        const result = await settle(wrongBefore);
+        log(true, 'Row 12: Return checks the chosen answer', `first pick "${chosen1.replace(/\s+/g, ' ')}": ${result}`);
+        if (result === 'right') break;
+      } else {
+        await companion.locator('.qz-foot button.m-btn--filled').filter({ hasText: 'Check answer' }).click();
+        if ((await settle(wrongBefore)) === 'right') break;
+      }
       const state = await companion.evaluate(() => {
         const wrong = [...document.querySelectorAll('.qz-question .qz-option.is-wrong')];
         const active = document.activeElement;
@@ -664,12 +838,16 @@ for (let q = 1; q <= questions && !stopped; q++) {
     }
     if (!(await companion.locator('.qz-right').count())) throw new Error('no answer was graded right after trying every option');
     await shot(companion, `quiz-q${q}-right`);
-    note(`Quiz question ${q}`, 'answered right (Return checks)');
+    note(`Quiz question ${q}`, 'answered right');
   } catch (e) { log(false, `Quiz question ${q}`, short(e)); await shot(companion, `quiz-q${q}-stuck`); stop(`quiz question ${q} failed`); }
 }
 if (!stopped && questions === 3) {
   try {
-    await companion.locator('button.qz-right__go').click(); // "See my score": no call (the last question is done)
+    // "See my score": no call (the last question is done). Any other label is not pressed: it would load a question.
+    const go = companion.locator('button.qz-right__go');
+    const label = (await go.innerText()).trim();
+    if (!/^See my score/.test(label)) throw new Error(`after question 3 the button says "${label}", not "See my score"; nothing was pressed`);
+    await go.click();
     await companion.locator('.qz-results').waitFor({ timeout: 10000 });
     const head = (await companion.locator('.qz-results .qz-title').first().innerText()).trim();
     await shot(companion, 'quiz-results');
@@ -823,7 +1001,7 @@ else {
 if (PLAN === 'full' && !stopped) {
   try {
     await app?.close(); // row 14 (before this) has already quit it in CI
-    const S = profile(process.env.RC_SAMPLE_PROFILE ?? mkdtempSync(path.join(tmpdir(), 'unvibe-rc0154-sample-')), process.env.RC_SAMPLE_ID ?? `qa-rc0154-sample-local-${Date.now()}`);
+    const S = profile(process.env.RC_SAMPLE_PROFILE ?? mkdtempSync(path.join(TMP, 'unvibe-rc0154-sample-')), process.env.RC_SAMPLE_ID ?? `qa-rc0154-sample-local-${Date.now()}`);
     ({ app, companion } = await start(S));
     line(`NOTE  sample profile install id ${readStore(S).installId}`);
     await companion.locator('.onboard__count').first().waitFor({ timeout: 20000 });
