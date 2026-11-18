@@ -45,8 +45,10 @@ export type WidgetEvent =
   /**
    * `part: 'detail'`: about a "More detail" run, shown under the short answer; the answer itself stays.
    * `short`: the answer on its way is the short default (its "Not sure:" line shows in the quiet style).
+   * `level`: the depth a new explanation runs at, so the panel's depth control shows the one main is running (a press
+   * main dropped while another explanation ran must not stay selected).
    */
-  | { type: 'status'; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean }
+  | { type: 'status'; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean; level?: ExplanationLevel }
   | { type: 'consent'; findings: SecretFinding[] }
   | { type: 'blocked'; findings: SecretFinding[] }
   | { type: 'token'; text: string; part?: 'detail' }
@@ -544,7 +546,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
     watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
   };
 
-  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question && !detailRun, short: shortRun, ...tag });
+  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question && !detailRun, short: shortRun, ...(!opts.question && !detailRun ? { level: opts.level } : {}), ...tag });
   try {
     const token = store().token();
     const usage = await cachedAppUsage();

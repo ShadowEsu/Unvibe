@@ -60,3 +60,12 @@ test('a new selection drops a held question', () => {
   const next = reduceEvent(held, { type: 'init', hasCode: true, providerName: 'Unvibe', level: 'beginner' } satisfies WidgetEvent);
   assert.equal(heldFollowUp(next), null);
 });
+
+test('a new explanation shows the depth main runs, so a later press main dropped does not stay selected', () => {
+  // Done at Intermediate; Advanced is pressed (main starts it), then Expert too before main answers (main drops it).
+  const pressedTwice: PanelState = { ...freshState(), phase: 'done', text: 'An answer.', level: 'expert' };
+  const running = reduceEvent(pressedTwice, { type: 'status', message: 'thinking', level: 'advanced' } satisfies WidgetEvent);
+  assert.deepEqual([running.phase, running.level], ['streaming', 'advanced']);
+  // A follow-up's or More detail's status carries no depth and leaves the control alone.
+  assert.equal(reduceEvent({ ...running, phase: 'done' }, { type: 'status', message: 'thinking', resetQuiz: false } satisfies WidgetEvent).level, 'advanced');
+});

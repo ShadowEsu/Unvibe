@@ -435,6 +435,9 @@ function Widget() {
   const phase = s.phase;
   const answerReady = phase === 'done' && !stillTyping && s.text.length > 0;
   const asking = followUpLive(s.followUps);
+  // A new explanation is on its way: main drops another one meanwhile (one answer is paid once), so the controls that
+  // would start one are off rather than silently doing nothing.
+  const explaining = phase === 'ready' || phase === 'streaming';
   // Vibe in the header (Mono): thinking while it writes, happy (2 hops) for REACTION_HOLD_MS when the answer lands.
   const [landed, setLanded] = useState(false);
   useEffect(() => {
@@ -473,8 +476,9 @@ function Widget() {
   // One run at a time: while a follow-up streams, a new explanation would cancel it silently and its events would land
   // in the Ask thread while main saved them as the lesson (review MUST). Explain's controls are disabled meanwhile too.
   const followUpBusy = () => followUpLive(stateRef.current.followUps);
+  const explainingNow = () => stateRef.current.phase === 'ready' || stateRef.current.phase === 'streaming';
   const request = (opts: Record<string, unknown>) => {
-    if (followUpBusy()) return;
+    if (followUpBusy() || explainingNow()) return;
     if (outOfExplanations) {
       patch({ phase: 'error', error: offer ? offer.body : 'You have reached your monthly explanation limit. Open Plan to upgrade.' });
       return;
@@ -502,7 +506,7 @@ function Widget() {
   };
 
   const pick = (l: ExplanationLevel) => {
-    if (outOfExplanations || followUpBusy()) return;
+    if (outOfExplanations || followUpBusy() || explainingNow()) return;
     patch({ level: l });
     if (stateRef.current.phase === 'done') window.unvibe.request({ level: l });
   };
@@ -729,7 +733,7 @@ function Widget() {
     }
     const top = showDepth ? (
       <>
-        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations || asking} onPick={(id) => { setProGate(false); pick(id); }} />
+        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations || asking || explaining} onPick={(id) => { setProGate(false); pick(id); }} />
         {s.meta.preview ? <CodeRow id="ob-code" code={s.meta.preview} open={s.codeOpen} onToggle={() => patch({ codeOpen: !stateRef.current.codeOpen })} /> : null}
       </>
     ) : null;
@@ -969,7 +973,7 @@ function Widget() {
       if (phase !== 'done') return null;
       return (
         <>
-          <ExplainChips busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
+          <ExplainChips busy={stillTyping || asking || explaining} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
             {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
           </ExplainChips>
           {askField}
