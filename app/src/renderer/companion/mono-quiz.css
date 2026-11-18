@@ -81,7 +81,8 @@
 }
 :root[data-ui="v3"][data-v7] .layout .qz-option:hover:not(:disabled, [aria-disabled="true"], .is-chosen, .is-right) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
 :root[data-ui="v3"][data-v7] .layout :is(.qz-option.is-chosen, .qz-option.is-right) { padding: 7px 13px; border: 2px solid var(--u-ink); font-weight: 600; }
-:root[data-ui="v3"][data-v7] .layout .qz-option.is-wrong { opacity: var(--u-off); cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option:is(.is-wrong, [aria-disabled="true"]) { cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option.is-wrong { opacity: var(--u-off); }
 :root[data-ui="v3"][data-v7] .layout .qz-option.is-right { margin-top: 0; cursor: default; }
 :root[data-ui="v3"][data-v7] .layout .qz-option__text { flex: 1; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .qz-keytile {
@@ -127,6 +128,8 @@
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-progress { text-align: left; }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-title { margin-top: 4px; }
 :root[data-ui="v3"][data-v7] .layout .qz-why { max-width: 500px; margin: 10px auto 18px; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+/* Vibe's "why" lines (rendered inline): code words as the Lesson's inline code, on the sunken grey in the code font */
+:root[data-ui="v3"][data-v7] .layout :is(.qz-why, .qz-foot__why) code.inline { padding: 0 6px; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink); font: 400 calc(1em - 1.5px)/20px var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-code { margin-bottom: 12px; text-align: left; }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-option { margin-bottom: 20px; }
 
