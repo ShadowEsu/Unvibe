@@ -573,10 +573,12 @@ function Widget() {
   }, []);
 
   const askInputRef = useRef<HTMLInputElement>(null);
-  // A finished explanation hands focus to "Ask your own question" (Design, Question it v1), inside the panel only:
-  // the panel never takes focus from the editor by itself.
+  // A finished explanation hands focus to "Ask your own question" (Design, Question it v1), inside the panel only (the
+  // panel never takes focus from the editor by itself), and only when nothing in it has focus: the depth picker or the
+  // scrolled answer keeps it (lead review on #346).
   useEffect(() => {
-    if (answerReady && view === 'explain') askInputRef.current?.focus({ preventScroll: true });
+    const idle = !document.activeElement || document.activeElement === document.body;
+    if (answerReady && view === 'explain' && idle) askInputRef.current?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when an answer becomes ready
   }, [answerReady]);
   /** Sends a follow-up into the Ask thread; `consented` after "Send anyway" on a possible secret in it. */

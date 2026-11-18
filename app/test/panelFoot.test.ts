@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, type ReactElement } from 'react';
-import { CodeRow, ExplainActions, prefillAsk, QUESTION_CHIPS, QuestionChips, StopButton } from '../src/renderer/widget/panelBody';
+import { AskField, CodeRow, ExplainActions, prefillAsk, QUESTION_CHIPS, QuestionChips, StopButton } from '../src/renderer/widget/panelBody';
 
 const noop = () => undefined;
 const chips = (over: Partial<Parameters<typeof ExplainActions>[0]> = {}) => ({
@@ -33,6 +33,23 @@ test('a question goes in an empty box or over another untouched question; typed 
   assert.equal(prefillAsk('Why this way?', 'What would a reviewer flag?'), 'What would a reviewer flag?');
   assert.equal(prefillAsk('Why this way? really', 'What would a reviewer flag?'), 'Why this way? really');
   assert.equal(prefillAsk('is this thread-safe', 'Why this way?'), 'is this thread-safe');
+});
+
+test('a chip never sends: it only hands its question over, and a held Enter that follows it into the box sends nothing', () => {
+  const handed: string[] = [];
+  let sent = 0;
+  const chipsTree = QuestionChips({ busy: false, ask: '', onQuestion: (q) => handed.push(q) }) as ReactElement<{ children: [ReactElement, ReactElement<{ onClick: () => void }>[]] }>;
+  for (const chip of chipsTree.props.children[1]) chip.props.onClick();
+  assert.deepEqual(handed, [...QUESTION_CHIPS]);
+  // The box now holds the question; the key handler is the real one.
+  const box = AskField({ value: 'Why this way?', disabled: false, onChange: noop, onSend: () => { sent += 1; } }) as ReactElement<{ children: ReactElement<{ onKeyDown?: (e: unknown) => void }>[] }>;
+  const keyDown = box.props.children.find((c) => c?.props?.onKeyDown)!.props.onKeyDown!;
+  const enter = (repeat: boolean, isComposing: boolean) => keyDown({ key: 'Enter', repeat, nativeEvent: { isComposing } });
+  enter(true, false);
+  enter(false, true);
+  assert.equal(sent, 0, 'a held Enter (repeat) or an input-method Enter does not send');
+  enter(false, false);
+  assert.equal(sent, 1, 'a fresh Enter is the person sending it');
 });
 
 test('after the box: Explain differently, Save, Understood as text buttons, none of them filled', () => {
