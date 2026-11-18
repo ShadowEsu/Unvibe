@@ -444,7 +444,7 @@ if (userCode) {
     await sleep(2500);
     await shot(page, 'google-signin-google-account-page');
     log(true, 'Google sign-in reaches the Google account page');
-  } catch (e) { log(false, 'Google sign-in reaches the Google account page', e.message.split('\n')[0].split(userCode).join('[code]')); }
+  } catch (e) { log(false, 'Google sign-in reaches the Google account page', e.message.split('\n')[0].split(encodeURIComponent(userCode)).join('[code]').split(userCode).join('[code]')); }
   await browser?.close();
 }
 
