@@ -400,7 +400,35 @@ type RunOutcome = 'explained' | 'failed' | 'waiting';
 const SELECTION_CREDITS_USED_UP = (limit: number) =>
   `Your 30-day beta includes ${limit} selected-code prompts. Your saved learning is still available.`;
 
+/** New explanations still running, per panel session, whoever started them (the panel, ⌃U, a held capture, Study, the sample). */
+const explaining = new WeakMap<ReviewSession, number>();
+
+/** A question or More detail goes on from the answer; anything else asks for a new explanation. */
+const newExplanation = (opts: RequestOpts) => !opts.question && !opts.moreDetail;
+
+/**
+ * Whether the panel's request would start a second new explanation while one is still running. A double press on
+ * Explain or Retry lands before the panel hears back. The second would abort the first after the service had already
+ * counted it, so the person would pay twice for one answer (Security, 0.1.55). A question or More detail passes: the
+ * panel allows one of those at a time itself. A new capture doesn't ask here; it starts over.
+ */
+export function panelRequestBusy(session: ReviewSession, opts: RequestOpts): boolean {
+  return newExplanation(opts) && (explaining.get(session) ?? 0) > 0;
+}
+
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  if (!newExplanation(opts)) return runReviewOnce(win, session, opts);
+  explaining.set(session, (explaining.get(session) ?? 0) + 1);
+  try {
+    await runReviewOnce(win, session, opts);
+  } finally {
+    const left = (explaining.get(session) ?? 1) - 1;
+    if (left > 0) explaining.set(session, left);
+    else explaining.delete(session);
+  }
+}
+
+async function runReviewOnce(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   // "More detail" goes on from the short answer this panel already has; anything else is a new answer.
   const detailRun = Boolean(opts.moreDetail) && !opts.question && Boolean(session.shortText?.trim());
   // Only a new explanation of the selection uses its credit; follow-ups and More detail never do.
@@ -419,30 +447,6 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
     // REG-83: the explanation this credit paid for never came (AI paused, a 5xx, offline...), so it goes back.
     store().refundBetaSelectedCodePrompt();
     session.selectionCredit = 'returned';
-  }
-}
-
-/** Panels with a new explanation they asked for still running (Explain, Retry, Explain differently, a depth change). */
-const panelExplaining = new WeakSet<ReviewSession>();
-
-/**
- * Whether the panel's request would start a second new explanation while its first is still running. A double press
- * on Explain or Retry lands before the panel hears back. The second would abort the first after the service had
- * already counted it, so the person would pay twice for one answer (Security, 0.1.55). A question or More detail
- * passes: the panel allows one of those at a time itself.
- */
-export function panelRequestBusy(session: ReviewSession, opts: RequestOpts): boolean {
-  return !opts.question && !opts.moreDetail && panelExplaining.has(session);
-}
-
-/** runReview for a request from the panel; a new explanation marks the panel busy until that run ends. */
-export async function runPanelRequest(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
-  const fresh = !opts.question && !opts.moreDetail;
-  if (fresh) panelExplaining.add(session);
-  try {
-    await runReview(win, session, opts);
-  } finally {
-    if (fresh) panelExplaining.delete(session);
   }
 }
 

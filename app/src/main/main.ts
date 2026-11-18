@@ -51,7 +51,6 @@ import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
   panelRequestBusy,
-  runPanelRequest,
   runReview,
   startComprehension,
   gradeComprehension,
@@ -986,7 +985,7 @@ app.whenReady().then(() => {
       if (credit === 'held') session.selectionCredit = 'held';
       session.awaitingConfirm = false;
     }
-    void runPanelRequest(win, session, opts);
+    void runReview(win, session, opts);
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
