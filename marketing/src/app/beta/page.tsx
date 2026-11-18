@@ -73,7 +73,7 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Select code and press {mac.anywhere} ({windows.anywhere} on Windows)</strong>
                   <p>
-                    {`On a Mac that's Control+U, not Command+U. A panel opens beside your editor and the explanation streams in. Ask why it was written that way or what breaks if you remove it, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
+                    {`On a Mac that's ${mac.anywhere}, not Command+U (${mac.editor} only works in Cursor and VS Code with the editor bridge). A panel opens beside your editor and the explanation streams in. Ask why it was written that way or what breaks if you remove it, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
                   </p>
                 </div>
               </li>
