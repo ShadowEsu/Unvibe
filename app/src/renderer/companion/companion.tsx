@@ -624,6 +624,17 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
               <pre>{SAMPLE_LINES.join('\n')}</pre>
             </div>
+            {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line says it. */}
+            {isWindows ? (
+              <div className="onboard__keys">
+                <span className="onboard__keys-caps" role="img" aria-label="Ctrl Alt U">{['Ctrl', 'Alt', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
+              </div>
+            ) : (
+              <div className="onboard__keys">
+                <span className="onboard__keys-caps" aria-hidden="true">{['⌃ control', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
+                <p className="onboard__keys-line">Hold Control, not Command, and press U.</p>
+              </div>
+            )}
             {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
             <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={explainSample} aria-disabled={explained}>
               {explained ? 'Explaining in the panel →' : 'Explain this code'}
