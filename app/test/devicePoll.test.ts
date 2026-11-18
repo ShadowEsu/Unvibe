@@ -128,26 +128,39 @@ test('a code nobody approves ends after ten minutes with the timed-out message',
   assert.deepEqual([s.ended, poll.verificationUrl()], [[DEVICE_TIMED_OUT], null]);
 });
 
-test('a card drops its waiting code when it closes, and a code that arrives after it closed is dropped at once', () => {
+test('a card drops its waiting code when it closes; one that closes while the code is made drops the start, and the code if it arrives anyway', () => {
   const dropped: string[] = [];
-  const card = createCardDeviceCode((userCode) => dropped.push(userCode));
+  const drops = { drop: (userCode: string) => { dropped.push(userCode); }, dropStart: () => { dropped.push('start'); } };
+  const card = createCardDeviceCode(drops);
   card.opened();
+  card.starting();
   card.arrived('ABCD-1234');
   card.closed();
   assert.deepEqual(dropped, ['ABCD-1234']);
 
-  // Continue with Google, then the card closes before the server's code arrives (seconds on a cold server).
-  const late = createCardDeviceCode((userCode) => dropped.push(userCode));
+  // Continue with Google, then the card closes before the server's code arrives (seconds on a cold server): main is
+  // told to open no browser; if its code was already on the way back, that code is dropped as it lands.
+  const late = createCardDeviceCode(drops);
   late.opened();
+  late.starting();
   late.closed();
   late.arrived('LATE-0000');
-  assert.deepEqual(dropped, ['ABCD-1234', 'LATE-0000']);
+  assert.deepEqual(dropped, ['ABCD-1234', 'start', 'LATE-0000']);
 
-  // A sign-in that finished or failed has nothing left to drop.
-  const finished = createCardDeviceCode((userCode) => dropped.push(userCode));
+  // A sign-in that finished or failed, or a start that failed, has nothing left to drop.
+  const finished = createCardDeviceCode(drops);
   finished.opened();
+  finished.starting();
   finished.arrived('DONE-0000');
   finished.ended();
   finished.closed();
-  assert.deepEqual(dropped, ['ABCD-1234', 'LATE-0000']);
+  const failed = createCardDeviceCode(drops);
+  failed.opened();
+  failed.starting();
+  failed.ended();
+  failed.closed();
+  const idle = createCardDeviceCode(drops);
+  idle.opened();
+  idle.closed();
+  assert.deepEqual(dropped, ['ABCD-1234', 'start', 'LATE-0000']);
 });

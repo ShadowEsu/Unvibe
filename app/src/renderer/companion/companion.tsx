@@ -316,13 +316,14 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
+    cardCode.starting();
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
       cardCode.arrived(r.userCode);
       dispatchBrowser({ type: 'code', url: r.verificationUri });
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);
-    } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
+    } else { cardCode.ended(); setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
   const openBrowser = async () => {
     const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };

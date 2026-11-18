@@ -66,6 +66,7 @@ export function Gift() {
   const startSignIn = async () => {
     setSignInBusy(true);
     setSignInError('');
+    cardCode.starting();
     const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
       cardCode.arrived(result.userCode);
@@ -74,6 +75,7 @@ export function Gift() {
       setVerificationUrl(result.verificationUri);
     }
     else {
+      cardCode.ended();
       setSignInBusy(false);
       setSignInError(result.error ?? 'Could not start secure sign-in.');
     }

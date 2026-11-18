@@ -169,7 +169,14 @@ let companion: BrowserWindow | null = null;
 const devicePoll = createDevicePoll({
   redeem: redeemDeviceAuth,
   approved: async (token, stillCurrent) => {
-    const account = await accountInfo(token);
+    let account: Awaited<ReturnType<typeof accountInfo>>;
+    try {
+      account = await accountInfo(token);
+    } catch (err) {
+      // Lead N3 on #354: the code is spent, so nobody will ever hold this token; end its session before giving up.
+      endUnheldSession(token, 'its account could not be read');
+      throw err;
+    }
     // The card closed while the account was read: nobody is signed in.
     if (!stillCurrent()) return false;
     await persistAccount({ userId: account.userId, email: account.email ?? 'Signed-in user', token });
@@ -178,14 +185,18 @@ const devicePoll = createDevicePoll({
     return true;
   },
   // Security NIT-3 on #354: no orphaned session for a token nobody holds.
-  abandoned: (token) => {
-    void revokeSession(token).then(
-      () => console.info('[auth] ended the session of a sign-in approved after its card closed'),
-      () => console.warn('[auth] could not end the session of a sign-in approved after its card closed'),
-    );
-  },
+  abandoned: (token) => endUnheldSession(token, 'it was approved after its card closed'),
   ended: (error) => companion?.webContents.send('account:device', { ok: false, error }),
 });
+/** End the server session of a device-code token nobody holds, so none is left orphaned. */
+function endUnheldSession(token: string, why: string): void {
+  void revokeSession(token).then(
+    () => console.info(`[auth] ended the session of a sign-in: ${why}`),
+    () => console.warn(`[auth] could not end the session of a sign-in: ${why}`),
+  );
+}
+/** Device-code starts still waiting on the server, by the page that asked; a card that closes meanwhile drops its start. */
+const deviceStarts = new Map<Electron.WebContents, () => void>();
 /** The one review session inside the single shared panel (overlay B has no review tabs). */
 let panelSession: ReviewSession | undefined;
 let panelReady = false;
@@ -1762,12 +1773,13 @@ app.whenReady().then(() => {
     let pageGone = false;
     const onPageGone = () => { pageGone = true; };
     for (const event of OWNER_GONE_EVENTS) page.once(event, onPageGone);
+    deviceStarts.set(e.sender, onPageGone);
     try {
       const asked = Date.now();
       const device = await startDeviceAuth();
       console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
       if (pageGone || e.sender.isDestroyed()) {
-        console.info('[auth] device code not used: the page that asked for it is gone');
+        console.info('[auth] device code not used: the card or page that asked for it is gone');
         return { ok: false, error: 'Sign-in was closed.' };
       }
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
@@ -1791,8 +1803,15 @@ app.whenReady().then(() => {
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' };
     } finally {
+      if (deviceStarts.get(e.sender) === onPageGone) deviceStarts.delete(e.sender);
       if (!e.sender.isDestroyed()) for (const event of OWNER_GONE_EVENTS) page.removeListener(event, onPageGone);
     }
+  });
+  // The sign-in card closed while its code was still being made: open no browser and poll nothing for it (lead N2).
+  ipcMain.handle('account:cancelDeviceStart', (e) => {
+    const drop = deviceStarts.get(e.sender);
+    drop?.();
+    return { ok: Boolean(drop) };
   });
   // The sign-in card closed with its code still waiting: stop polling and forget it. Only the page that started the
   // code may drop it, and only that card's own code.
