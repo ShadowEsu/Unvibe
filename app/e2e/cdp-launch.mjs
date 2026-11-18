@@ -40,7 +40,7 @@ export async function launchApp({ exe, userData, args = [], env = process.env, t
   const start = Date.now();
   let browser = null;
   while (!browser && Date.now() - start < timeout) {
-    if (exited) throw new Error(`the app exited before its debug port opened (${JSON.stringify(exited)})`);
+    if (exited) throw new Error(`the app exited before its debug port opened (${JSON.stringify(exited)}, after ${Date.now() - start} ms; its output: ${output.join('').trim().slice(-1200) || 'none'})`);
     const port = existsSync(portFile) ? Number(readFileSync(portFile, 'utf8').split('\n')[0]) : 0;
     if (port) browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`).catch(() => null);
     if (!browser) await sleep(300);

@@ -24,7 +24,7 @@ import { shot } from './media-window.mjs';
 import { captureStills, finishedPanel, panelState, wake } from './panel-take.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -72,19 +72,64 @@ const userData = mkdtempSync(path.join(tmpdir(), 'unvibe-s13-'));
 const installId = process.env.MEDIA_INSTALL_ID ?? `qa-s13-local-${Date.now()}`;
 writeFileSync(path.join(userData, 'unvibe-store.json'), JSON.stringify({ installId, loginPromptAsked: true }));
 console.log(`install id ${installId}`);
-let app = await launchApp({ exe, userData, timeout: 90000 });
+const oneLine = (e) => String(e?.message ?? e).replace(/\s+/g, ' ').slice(0, 1500);
+const unvibeProcesses = () => {
+  try { return execFileSync('pgrep', ['-f', 'Unvibe.app/Contents/'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean); } catch { return []; }
+};
+/**
+ * Waits (up to 20 s) until no Unvibe process is left and the profile's single-instance lock is gone. Dry run
+ * 44252042716 and take 44252681123 both lost the second launch, started right after closing the first
+ * (s13-take.mjs:87 at fd826500): the app exited with code 0 before its debug port opened. On the laptop, 0.1.52 does
+ * exactly that when a copy on the same profile still runs (lost single-instance lock, main.ts:706-707), and
+ * close() can return after its 10 s wait with the first copy not yet exited and its lock still there. A copy still
+ * there after 20 s is this script's own and is killed, with a NOTE.
+ */
+async function firstCopyGone(label) {
+  const lock = () => { try { lstatSync(path.join(userData, 'SingletonLock')); return true; } catch { return false; } };
+  for (let i = 0; i < 40; i++) {
+    if (!lock() && unvibeProcesses().length === 0) {
+      if (i > 0) log(null, `${label}: waited ${(i * 0.5).toFixed(1)} s for the earlier copy and its profile lock to go`);
+      return;
+    }
+    await sleep(500);
+  }
+  const left = unvibeProcesses();
+  log(null, `${label}: after 20 s, ${left.length} Unvibe process(es) left${lock() ? ' and the profile lock' : ''}; killing them`, left.join(' '));
+  for (const pid of left) { try { process.kill(Number(pid), 'SIGKILL'); } catch {} }
+  for (let i = 0; i < 20 && unvibeProcesses().length > 0; i++) await sleep(250);
+  const still = unvibeProcesses();
+  if (still.length > 0) log(null, `${label}: ${still.length} Unvibe process(es) still there 5 s after the kill`, still.join(' '));
+}
+/** A launch that exits before its debug port (no window, nothing sent) is tried again, up to 3 starts. */
+async function launch(label, args = []) {
+  for (let attempt = 1; ; attempt++) {
+    await firstCopyGone(label);
+    try {
+      return await launchApp({ exe, userData, args, env: { ...process.env, ELECTRON_ENABLE_LOGGING: '1' }, timeout: 90000 });
+    } catch (e) {
+      if (attempt === 3 || !/exited before its debug port/.test(String(e?.message))) {
+        log(false, `${label}: the app did not start`, oneLine(e));
+        finish(1);
+      }
+      log(null, `${label}: start ${attempt} of 3 exited before its debug port; trying again`, oneLine(e));
+    }
+  }
+}
+let app = await launch('first launch');
 const first = await app.windowWith('companion.html', 60000);
 if (!first) throw new Error('the companion did not open on the first launch');
 await first.waitForLoadState('domcontentloaded');
 result.version = (await first.evaluate(() => window.unvibe.appInfo())).version;
 await sleep(3000);
 await app.close();
+// Gone before the settings are merged, so a first copy still quitting can't write its own settings over them.
+await firstCopyGone('after the first launch');
 const settingsFile = path.join(userData, 'unvibe-settings.json');
 if (!existsSync(settingsFile)) throw new Error('the first launch wrote no settings');
 const settings = JSON.parse(readFileSync(settingsFile, 'utf8'));
 Object.assign(settings, { onboarded: true, ownCodeExplained: true, defaultExplanationLevel: 'beginner', theme: 'light' });
 writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
-app = await launchApp({ exe, userData, args: ['--force-device-scale-factor=2'], timeout: 90000 });
+app = await launch('second launch', ['--force-device-scale-factor=2']);
 const companion = await app.windowWith('companion.html', 60000);
 if (!companion) throw new Error('the companion did not open on the second launch');
 await companion.waitForLoadState('domcontentloaded');

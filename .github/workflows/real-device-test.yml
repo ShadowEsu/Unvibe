@@ -379,3 +379,14 @@ jobs:
           path: ${{ runner.temp }}/media
           if-no-files-found: ignore
           retention-days: 14
+
+      # The media step keeps going on error so the QA flag and the upload still run; an S13 run whose step failed
+      # would leave the job green, so this step turns it red.
+      - name: Fail the job if the S13 step failed
+        if: always() && matrix.label == 'mac' && inputs.s13_take != '' && steps.media.outcome != 'success'
+        shell: bash
+        env:
+          MEDIA_OUTCOME: ${{ steps.media.outcome }}
+        run: |
+          echo "::error::the S13 step ended '$MEDIA_OUTCOME'"
+          exit 1
