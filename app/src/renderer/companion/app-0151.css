@@ -506,9 +506,10 @@
    70 px under 760 px. */
 :root[data-ui="v3"][data-v7] .onboard--step-1 { scroll-padding-bottom: 112px; }
 :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__foot { position: sticky; bottom: 0; z-index: 1; background: var(--u-paper); }
-/* On windows under 860 px, Try it drops 126 px of spacing (32 of it pays for the Control keys row under the code), so
-   with the explanation open it fits 780 px with no scrollbar. */
-@media (max-height: 860px) {
+/* On windows under 890 px, Try it drops 126 px of spacing (32 of it pays for the Control keys row under the code), so
+   with the explanation open it fits 780 px with no scrollbar. At full spacing it needs 887 px (measured at 1280 × 870
+   on 0.1.54), hence 890, not 0.1.53's 860. */
+@media (max-height: 890px) {
   :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 20px; scroll-padding-bottom: 84px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__vibe { padding-top: 4px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__body { margin-top: 8px; }
