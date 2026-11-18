@@ -413,37 +413,40 @@ try {
 // The browser is watched from the operating system (a process, then a window) while the app's code is awaited; the
 // probes run as child processes without blocking, so the code's time is measured while they run. The walkthrough's
 // own sign-in left a browser open, so browsers are quit first: the window that counts is the one this click opens.
+// Run W (44271332415) showed the first probe blind on both systems and its Mac quit (tell application "Firefox")
+// starting Firefox's Gatekeeper prompt, so processes are now found with pgrep / tasklist and stopped with pkill /
+// taskkill; only System Events is asked about windows, by process name, which starts nothing.
 const run = promisify(execFile);
-const BROWSERS = ['Safari', 'Google Chrome', 'Microsoft Edge', 'Firefox'];
+const BROWSERS = os === 'windows' ? ['msedge.exe', 'chrome.exe', 'firefox.exe'] : ['Safari', 'Google Chrome', 'Microsoft Edge', 'firefox'];
 async function browserState() {
   try {
     if (os === 'mac') {
-      const script = [
-        'set out to ""',
-        'tell application "System Events"',
-        `  repeat with p in (every process whose name is in {${BROWSERS.map((b) => `"${b}"`).join(', ')}})`,
-        '    set out to out & (name of p) & ":" & (count of windows of p) & ";"',
-        '  end repeat',
-        'end tell',
-        'return out',
-      ];
-      const { stdout } = await run('osascript', script.flatMap((l) => ['-e', l]), { encoding: 'utf8', timeout: 5000 });
-      const rows = stdout.trim().split(';').filter(Boolean);
+      const rows = [];
+      for (const b of BROWSERS) {
+        if (!await run('pgrep', ['-x', b]).then(() => true, () => false)) continue;
+        const count = await run('osascript', ['-e', `tell application "System Events" to count windows of process "${b}"`], { encoding: 'utf8', timeout: 5000 })
+          .then(({ stdout }) => Number(stdout.trim()) || 0, () => 0);
+        rows.push(`${b}:${count}`);
+      }
       return { process: rows.length > 0, window: rows.some((r) => Number(r.split(':').pop()) > 0), what: rows.join(' ') };
     }
     if (os === 'windows') {
-      const { stdout } = await run('powershell', ['-NoProfile', '-Command', "Get-Process msedge,chrome,firefox -ErrorAction SilentlyContinue | ForEach-Object { \"$($_.ProcessName):$($_.MainWindowHandle)\" }"], { encoding: 'utf8', timeout: 8000 });
-      const rows = stdout.trim().split(/\r?\n/).filter(Boolean);
-      return { process: rows.length > 0, window: rows.some((r) => !r.endsWith(':0')), what: rows.slice(0, 3).join(' ') };
+      // tasklist /v: the last CSV column is the window title, "N/A" for a process with no window.
+      const { stdout } = await run('tasklist', ['/v', '/fo', 'csv', '/nh'], { encoding: 'utf8', timeout: 10000 });
+      const rows = stdout.split(/\r?\n/).filter((l) => BROWSERS.some((b) => l.toLowerCase().startsWith(`"${b}"`)));
+      const titles = rows.map((l) => l.replace(/"\s*$/, '').split('","').pop()).filter((t) => t && t !== 'N/A');
+      return { process: rows.length > 0, window: titles.length > 0, what: titles.slice(0, 2).join(' | ') };
     }
   } catch { /* none yet */ }
   return { process: false, window: false, what: '' };
 }
 async function quitBrowsers() {
-  try {
-    if (os === 'mac') for (const b of BROWSERS) execFileSync('osascript', ['-e', `if application "${b}" is running then tell application "${b}" to quit`], { timeout: 15000 });
-    else if (os === 'windows') execFileSync('powershell', ['-NoProfile', '-Command', 'Get-Process msedge,chrome,firefox -ErrorAction SilentlyContinue | Stop-Process -Force'], { timeout: 15000 });
-  } catch (e) { note('Row 14: quitting the open browser', short(e)); }
+  for (const b of BROWSERS) {
+    try {
+      if (os === 'mac') execFileSync('pkill', ['-x', b], { timeout: 10000 });
+      else if (os === 'windows') execFileSync('taskkill', ['/IM', b, '/F', '/T'], { timeout: 15000, stdio: 'ignore' });
+    } catch { /* not running */ }
+  }
   await sleep(2500);
 }
 /** The next open shows the own-code step (setup skipped the own code); its Not now goes to Today. */
@@ -471,15 +474,17 @@ else {
     await shot(companion, 'settings-account-signed-out');
     let browserProcessAt = 0;
     let browserWindowAt = 0;
+    let lastMiss = 0; // when the last probe that found no browser window started
     let codeAt = 0;
     const clickedAt = Date.now();
     started = true;
     await google.click();
     const watcher = (async () => {
       while (!browserWindowAt && Date.now() - clickedAt < 20000) {
+        const t = Date.now();
         const b = await browserState();
-        if (b.process && !browserProcessAt) browserProcessAt = Date.now();
-        if (b.window) browserWindowAt = Date.now();
+        if (b.process && !browserProcessAt) browserProcessAt = t;
+        if (b.window) browserWindowAt = Date.now(); else lastMiss = t;
         await sleep(100);
       }
     })();
@@ -487,18 +492,20 @@ else {
     codeAt = Date.now();
     const code = (await companion.locator('.modal .signin__code b').first().innerText()).trim();
     const shown = code ? `a code (${code.length} characters)` : 'no code';
-    await shot(companion, 'settings-account-code');
+    // No still here: the app and the browser both show the code (the lead's note on the walkthrough's artifact).
     await watcher;
-    desktop('sign-in-browser');
     const rel = (t) => (t ? `${t - clickedAt} ms` : 'not seen in 20 s');
     if (!browserWindowAt || before.window) {
       note('Row 14: Continue with Google shows the device code in the app; the browser window that click opened was not observed',
         `${shown} at ${rel(codeAt)}; browser process ${rel(browserProcessAt)}, window ${rel(browserWindowAt)} after the click; open before the click: ${before.window}`);
       log(Boolean(code), 'Row 14: the device code shows in the app after Continue with Google (order against the browser: see the NOTE)', `${shown} at ${rel(codeAt)}`);
-    } else {
-      log(Boolean(code) && codeAt <= browserWindowAt, 'Row 14: Continue with Google shows the device code in the app before the browser window opens',
-        `${shown} at ${rel(codeAt)}; browser process ${rel(browserProcessAt)}, first browser window ${rel(browserWindowAt)} after the click`);
-    }
+    } else if (code && codeAt <= lastMiss) {
+      // Proven: a probe that started after the code was on screen still found no browser window.
+      log(true, 'Row 14: Continue with Google shows the device code in the app before the browser window opens',
+        `${shown} at ${rel(codeAt)}; no browser window at ${rel(lastMiss)}; first window seen ${rel(browserWindowAt)} after the click (browser process ${rel(browserProcessAt)})`);
+    } else if (!code || browserWindowAt < codeAt) {
+      log(false, 'Row 14: Continue with Google shows the device code in the app before the browser window opens', `${shown} at ${rel(codeAt)}; a browser window was already seen ${rel(browserWindowAt)} after the click`);
+    } else note('Row 14: inconclusive', `${shown} at ${rel(codeAt)}; the window appeared between ${rel(lastMiss)} and ${rel(browserWindowAt)}, so the order is within one probe`);
   } catch (e) { log(false, 'Row 14: sign-in code before the browser', short(e)); await shot(companion, 'sign-in-stuck'); }
   if (started) {
     try {
@@ -811,7 +818,13 @@ if (os === 'mac') {
     const restored = settingsOf(B).shortcut;
     await companion.getByRole('button', { name: 'Close settings', exact: true }).click().catch(() => {});
     if (restored !== 'Control+U') throw new Error(`the shortcut could not be put back to Control+U (${restored})`);
-    note('Row 6 (Mac)', `shortcut put back to ${restored} after the recording check`);
+    // The settings IPC write doesn't refresh the main window's shortcut labels (the recorder's own save does; Security's
+    // Run W NIT: still 45 showed ⌘U on Today), so the main window is reloaded before the next stills.
+    await companion.reload();
+    await pastWelcome();
+    const cmdLabels = await companion.evaluate(() => document.body.innerText.includes('⌘U'));
+    if (cmdLabels) throw new Error('the main window still shows ⌘U labels after the reload');
+    note('Row 6 (Mac)', `shortcut put back to ${restored} after the recording check; the main window reloaded, no ⌘U labels`);
     await settle();
     const again = await commandU('sending-on-again', true);
     log(again, 'Row 6 (Mac): ⌘U hint shows again with sending on and Control+U (proves the silent checks are not the 15 s limit)');
