@@ -112,15 +112,39 @@ await sleep(3000);
 // itself timed out on the runner, dry run 43206019385).
 osa('tell application "TextEdit" to activate', 'delay 1', 'tell application "System Events" to keystroke "a" using command down');
 await sleep(800);
-execFileSync('pbcopy', { input: '' });
-keystroke('c', 'command down');
-await sleep(600);
-const copied = execFileSync('pbpaste', { encoding: 'utf8' });
-const exact = sha(Buffer.from(copied, 'utf8')) === SELECTION_SHA;
-const newline = !exact && copied.endsWith('\n') && sha(Buffer.from(copied.slice(0, -1), 'utf8')) === SELECTION_SHA;
-result.selection = exact ? 'exact' : newline ? 'the 7 lines + one trailing newline' : `${copied.length} chars, sha ${sha(Buffer.from(copied, 'utf8')).slice(0, 12)}`;
-log(exact || newline, 'TextEdit: the selection is exactly lines 8-14', result.selection);
-if (!exact && !newline) { try { grab('s13-not-selected'); } catch {} await app.close(); finish(1); }
+// The copy the way 0.1.52's own capture makes it (selection.ts): key code 8 (physical C) with Command, then the
+// pasteboard polled, here for up to 3 s. Dry run 44251372380 read an empty pasteboard 600 ms after one character
+// keystroke "c", with TextEdit in front and the 7 lines highlighted, so the check now makes up to 3 copies, says
+// what each one found, and selects all again before a retry. Copies send nothing; Control+U is still pressed once.
+const judge = (text) => {
+  const exact = sha(Buffer.from(text, 'utf8')) === SELECTION_SHA;
+  const newline = !exact && text.endsWith('\n') && sha(Buffer.from(text.slice(0, -1), 'utf8')) === SELECTION_SHA;
+  return { ok: exact || newline, how: exact ? 'exact' : newline ? 'the 7 lines + one trailing newline' : `${text.length} chars, sha ${sha(Buffer.from(text, 'utf8')).slice(0, 12)}` };
+};
+let copy = { ok: false, how: 'no copy made' };
+for (let attempt = 1; attempt <= 3 && !copy.ok; attempt++) {
+  if (attempt > 1) {
+    osa('tell application "TextEdit" to activate', 'delay 0.5', 'tell application "System Events" to keystroke "a" using command down');
+    await sleep(800);
+  }
+  execFileSync('pbcopy', { input: '' });
+  await sleep(150);
+  osa('tell application "System Events" to key code 8 using {command down}');
+  let copied = '';
+  for (let i = 0; i < 15 && !copied; i++) {
+    await sleep(200);
+    copied = execFileSync('pbpaste', { encoding: 'utf8' });
+  }
+  copy = judge(copied);
+  if (!copy.ok) {
+    let info = '';
+    try { info = osa('clipboard info'); } catch (e) { info = `clipboard info failed: ${String(e.message).split('\n')[0]}`; }
+    log(null, `TextEdit copy ${attempt} of 3 found ${copy.how}`, `front: ${frontmost()}; pasteboard: ${info || 'empty'}`);
+  }
+}
+result.selection = copy.how;
+log(copy.ok, 'TextEdit: the selection is exactly lines 8-14', copy.how);
+if (!copy.ok) { try { grab('s13-not-selected'); } catch {} await app.close(); finish(1); }
 const front = frontmost();
 if (front !== 'TextEdit') { log(false, 'TextEdit is in front before Control+U', `front: ${front}`); await app.close(); finish(1); }
 grab('s13-textedit-selected');
