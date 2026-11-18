@@ -624,15 +624,17 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
               <pre>{SAMPLE_LINES.join('\n')}</pre>
             </div>
-            {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line says it. */}
-            {isWindows ? (
-              <div className="onboard__keys">
-                <span className="onboard__keys-caps" role="img" aria-label="Ctrl Alt U">{['Ctrl', 'Alt', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
-              </div>
-            ) : (
+            {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line says it.
+                A Mac always registers Control+U next to a shortcut of the person's own (core/shortcutKeys.ts), so its row
+                is true for every Mac. Windows and Linux register only their own shortcut, so the caps show that one. */}
+            {isMac ? (
               <div className="onboard__keys">
                 <span className="onboard__keys-caps" aria-hidden="true">{['⌃ control', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
                 <p className="onboard__keys-line">Hold Control, not Command, and press U.</p>
+              </div>
+            ) : (
+              <div className="onboard__keys">
+                <span className="onboard__keys-caps" role="img" aria-label={shortcutCaps(shortcut, true).join(' ')}>{shortcutCaps(shortcut, true).map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}</span>
               </div>
             )}
             {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
@@ -1427,6 +1429,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const modalRef = useRef<HTMLDivElement>(null);
   const recRef = useRef(recording); recRef.current = recording;
   const closeRef = useRef(onClose); closeRef.current = onClose;
+  // While the shortcut recorder listens, ⌘U is a choice, not a mistake: main holds the ⌘U hint back.
+  useEffect(() => {
+    window.unvibe.setShortcutRecording(recording);
+    return () => { if (recording) window.unvibe.setShortcutRecording(false); };
+  }, [recording]);
 
   const chooseTab = (next: string) => {
     setTab(next);

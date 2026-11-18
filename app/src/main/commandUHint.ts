@@ -11,30 +11,34 @@ import { notify } from './notify';
 import { settings } from './settings';
 
 export const COMMAND_U_HINT = 'The shortcut is Control+U, not Command+U.';
-const HINT_GAP_MS = 10_000;
 
 export type HintInput = { type: string; key: string; meta: boolean; control: boolean; alt: boolean; shift: boolean };
 
 /**
  * Whether this key event earns the hint. Only plain ⌘U on a Mac, with sending on and the Mac default Control+U as
  * the shortcut: the notice names Control+U, so it would be wrong for any other shortcut, a Command+U one included.
+ * Never while Settings is recording a new shortcut: there ⌘U is the person choosing it, not missing it.
  */
-export function commandUHint(input: HintInput, { platform, sendingOff, shortcut }: { platform: NodeJS.Platform; sendingOff: boolean; shortcut: string }): boolean {
-  if (platform !== 'darwin' || sendingOff || shortcut !== 'Control+U') return false;
+export function commandUHint(input: HintInput, { platform, sendingOff, shortcut, recording }: { platform: NodeJS.Platform; sendingOff: boolean; shortcut: string; recording: boolean }): boolean {
+  if (platform !== 'darwin' || sendingOff || recording || shortcut !== 'Control+U') return false;
   return input.type === 'keyDown' && input.meta && !input.control && !input.alt && !input.shift && input.key.toLowerCase() === 'u';
 }
 
-let lastHintAt = -Infinity;
+/** Settings › Activation shortcut is listening for new keys (the companion says when it starts and stops). */
+let recordingShortcut = false;
+export function setShortcutRecording(on: boolean): void {
+  recordingShortcut = on;
+}
 
-/** Watches one of Unvibe's windows for ⌘U while it's focused; at most one hint per 10 s across windows. */
+/**
+ * Watches one of Unvibe's windows for ⌘U while it's focused. How often it shows is notify's information limit (one
+ * Island notice per 15 s), so repeated presses don't repeat it.
+ */
 export function watchCommandU(win: BrowserWindow): void {
   if (process.platform !== 'darwin') return;
   win.webContents.on('before-input-event', (_event, input) => {
     if (!input.meta) return;
-    if (!commandUHint(input, { platform: process.platform, sendingOff: sendingSwitchedOff(), shortcut: settings().all().shortcut })) return;
-    const now = Date.now();
-    if (now - lastHintAt < HINT_GAP_MS) return;
-    lastHintAt = now;
+    if (!commandUHint(input, { platform: process.platform, sendingOff: sendingSwitchedOff(), shortcut: settings().all().shortcut, recording: recordingShortcut })) return;
     notify(COMMAND_U_HINT, { problem: false });
   });
 }

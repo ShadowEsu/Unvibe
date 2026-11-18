@@ -75,11 +75,11 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
  * Control cap reads "⌃ control", since many people don't know ⌃ and press ⌘ instead (0.1.54).
  */
 function Keycaps({ accel }: { accel: string }) {
-  const caps = (accel ? shortcutCaps(accel) : isMac ? shortcutCaps('Control+U', false) : [reviewKeyHint])
-    .map((key) => (key === '⌃' ? '⌃ control' : key));
+  const keys = accel ? shortcutCaps(accel) : isMac ? shortcutCaps('Control+U', false) : [reviewKeyHint];
+  // The screen-reader name stays the plain keys ("⌃ U" reads "control U"); only the drawn cap gains the word.
   return (
-    <span className="ob-keys" aria-label={caps.join(' ')}>
-      {caps.map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}
+    <span className="ob-keys" aria-label={keys.join(' ')}>
+      {keys.map((key, i) => <kbd key={`${key}-${i}`}>{key === '⌃' ? '⌃ control' : key}</kbd>)}
     </span>
   );
 }

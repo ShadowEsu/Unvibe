@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { commandUHint, type HintInput } from '../src/main/commandUHint';
 
 const key = (over: Partial<HintInput> = {}): HintInput => ({ type: 'keyDown', key: 'u', meta: false, control: false, alt: false, shift: false, ...over });
-const mac = { platform: 'darwin' as NodeJS.Platform, sendingOff: false, shortcut: 'Control+U' };
+const mac = { platform: 'darwin' as NodeJS.Platform, sendingOff: false, shortcut: 'Control+U', recording: false };
 
 test('⌘U on a Mac shows the hint', () => {
   assert.equal(commandUHint(key({ meta: true }), mac), true);
@@ -37,4 +37,8 @@ test('sending switched off shows nothing (Security A1)', () => {
 test('a Command+U shortcut of their own shows nothing (Security A1)', () => {
   assert.equal(commandUHint(key({ meta: true }), { ...mac, shortcut: 'Command+U' }), false);
   assert.equal(commandUHint(key({ meta: true }), { ...mac, shortcut: 'CommandOrControl+U' }), false);
+});
+
+test('while Settings records a new shortcut, ⌘U is the person choosing it: no hint', () => {
+  assert.equal(commandUHint(key({ meta: true }), { ...mac, recording: true }), false);
 });
