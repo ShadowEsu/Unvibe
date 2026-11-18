@@ -115,9 +115,9 @@ const api = {
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
   /** Fade: main says the panel lost (true) or got back (false) focus; the page animates its own opacity. */
   onPanelAway: (cb: (away: boolean) => void) => ipcRenderer.on('panel:away', (_e, away: unknown) => cb(away === true)),
-  /** Settings › Theme or "When I click away" changed. */
-  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
-    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
+  /** Settings › Theme, Density or "When I click away" changed. */
+  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
+    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
