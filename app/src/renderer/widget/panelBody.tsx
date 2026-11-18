@@ -128,7 +128,9 @@ export function AskField({ value, disabled, inputRef, placeholder = 'Ask about t
         onKeyDown={(e) => { if (e.key === 'Enter' && ready) onSend(); }}
       />
       {children}
-      <button type="button" className="ob-ask__send" aria-label="Ask" disabled={!ready} onClick={() => { if (ready) onSend(); }}>
+      {/* Design (Question it v1): Ask stays the filled main button while it only waits for text; it dims when the
+          whole field is off (an answer still coming). */}
+      <button type="button" className="ob-ask__send" aria-label="Ask" disabled={!ready} data-waiting={disabled ? undefined : ''} onClick={() => { if (ready) onSend(); }}>
         <Icon name="arrow-up" size={16} />
       </button>
     </div>
