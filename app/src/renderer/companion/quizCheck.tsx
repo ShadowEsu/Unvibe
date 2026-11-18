@@ -477,11 +477,14 @@ export function QuizCheck({
               })}
             </div>
             <div className="qz-foot">
-              {reason ? (
-                <p className="qz-foot__why" role="status"><strong>Not quite.</strong> {renderInline(reason)}</p>
-              ) : (
-                <p className="qz-hint">{chosen === null ? `Press 1 to ${lastKey}, then Return` : 'Return to check, or press another number'}</p>
-              )}
+              {/* The live region stays mounted, so "Not quite." is announced when it arrives, even as focus moves on
+                  to the next open answer (lead review on #348). */}
+              <div className="qz-foot__msg">
+                <div role="status">
+                  {reason ? <p className="qz-foot__why"><strong>Not quite.</strong> {renderInline(reason)}</p> : null}
+                </div>
+                {reason ? null : <p className="qz-hint">{chosen === null ? `Press 1 to ${lastKey}, then Return` : 'Return to check, or press another number'}</p>}
+              </div>
               <button type="button" className="m-btn m-btn--filled" disabled={chosen === null || busy} onClick={() => void check()}>
                 Check answer <span className="m-key" aria-hidden="true">↵</span>
               </button>

@@ -100,6 +100,7 @@
 /* The foot: the hint, or one sentence on why, beside the Check button (which never moves) */
 :root[data-ui="v3"][data-v7] .layout .qz-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; margin-top: 16px; }
 :root[data-ui="v3"][data-v7] .layout .qz-foot .m-btn { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .qz-foot__msg { flex: 1 1 auto; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .qz-foot__why { margin: 0; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
 :root[data-ui="v3"][data-v7] .layout .qz-foot__why strong { font-weight: 600; }
 
@@ -218,6 +219,7 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__row, .qz-home__pick, .qz-home .row-trash, .qz-fold summary),
   :root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn) { transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease, opacity 120ms ease; }
-  :root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__pick, .qz-home .row-trash, .qz-fold summary):active,
-  :root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn):active { transform: none; }
+  /* Same selectors as the press rules above, :not() included, so this wins on weight. */
+  :root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__pick, .qz-home .row-trash, .qz-fold summary):active:not(:disabled, [aria-disabled="true"]),
+  :root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn):active:not(:disabled) { transform: none; }
 }
