@@ -435,9 +435,10 @@ function Widget() {
   const phase = s.phase;
   const answerReady = phase === 'done' && !stillTyping && s.text.length > 0;
   const asking = followUpLive(s.followUps);
-  // A new explanation is on its way: main drops another one meanwhile (one answer is paid once), so the controls that
-  // would start one are off rather than silently doing nothing.
-  const explaining = phase === 'ready' || phase === 'streaming';
+  // An answer is streaming: main drops another new explanation meanwhile (one answer is paid once), so the controls
+  // that would start one are off rather than silently doing nothing. Not in `ready`: after Stop the panel waits there
+  // with nothing running, and before the first words main's `status` sets the depth it runs anyway.
+  const explaining = phase === 'streaming';
   // Vibe in the header (Mono): thinking while it writes, happy (2 hops) for REACTION_HOLD_MS when the answer lands.
   const [landed, setLanded] = useState(false);
   useEffect(() => {
@@ -476,7 +477,7 @@ function Widget() {
   // One run at a time: while a follow-up streams, a new explanation would cancel it silently and its events would land
   // in the Ask thread while main saved them as the lesson (review MUST). Explain's controls are disabled meanwhile too.
   const followUpBusy = () => followUpLive(stateRef.current.followUps);
-  const explainingNow = () => stateRef.current.phase === 'ready' || stateRef.current.phase === 'streaming';
+  const explainingNow = () => stateRef.current.phase === 'streaming';
   const request = (opts: Record<string, unknown>) => {
     if (followUpBusy() || explainingNow()) return;
     if (outOfExplanations) {
