@@ -422,6 +422,30 @@ export async function runReview(win: BrowserWindow, session: ReviewSession, opts
   }
 }
 
+/** Panels with a new explanation they asked for still running (Explain, Retry, Explain differently, a depth change). */
+const panelExplaining = new WeakSet<ReviewSession>();
+
+/**
+ * Whether the panel's request would start a second new explanation while its first is still running. A double press
+ * on Explain or Retry lands before the panel hears back. The second would abort the first after the service had
+ * already counted it, so the person would pay twice for one answer (Security, 0.1.55). A question or More detail
+ * passes: the panel allows one of those at a time itself.
+ */
+export function panelRequestBusy(session: ReviewSession, opts: RequestOpts): boolean {
+  return !opts.question && !opts.moreDetail && panelExplaining.has(session);
+}
+
+/** runReview for a request from the panel; a new explanation marks the panel busy until that run ends. */
+export async function runPanelRequest(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  const fresh = !opts.question && !opts.moreDetail;
+  if (fresh) panelExplaining.add(session);
+  try {
+    await runReview(win, session, opts);
+  } finally {
+    if (fresh) panelExplaining.delete(session);
+  }
+}
+
 async function explain(win: BrowserWindow, session: ReviewSession, opts: RequestOpts, detailRun: boolean): Promise<RunOutcome> {
   // Fails closed: link-captured code is only sent after Explain (widget:request clears the flag first).
   if (session.awaitingConfirm) return 'waiting';
