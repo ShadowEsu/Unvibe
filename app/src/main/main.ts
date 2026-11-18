@@ -50,6 +50,7 @@ import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock,
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
+  panelRequestBusy,
   runReview,
   startComprehension,
   gradeComprehension,
@@ -975,6 +976,8 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = panelSession;
     if (!win || !session) return;
+    // A second press while the first new explanation runs is dropped, before it can take a credit or abort that run.
+    if (panelRequestBusy(session, opts)) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
       const credit = takeSelectionCredit();
