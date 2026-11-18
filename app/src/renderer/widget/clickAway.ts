@@ -30,7 +30,17 @@ export function nextFade(state: FadeState, event: FadeEvent): FadeState {
   }
 }
 
+/**
+ * The pane shows at 22 %: focus left and nothing has woken it since. A press on a faded pane only wakes it and its
+ * click is swallowed, so a click meant for the editor below can't press a depth chip, Explain differently, a question
+ * chip or Ask and start a new AI request (Security S5 on #344; on a Mac the panel takes the first click,
+ * acceptFirstMouse). A press on a pane at 100 % works as always.
+ */
+export function isFaded(state: FadeState): boolean {
+  return state.away && !state.woken;
+}
+
 export function fadeStyle(state: FadeState, reducedMotion: boolean): { opacity: number; transitionMs: number } {
-  const faded = state.away && !state.woken;
+  const faded = isFaded(state);
   return { opacity: faded ? FADE_OPACITY : 1, transitionMs: reducedMotion ? 0 : faded ? FADE_OUT_MS : FADE_IN_MS };
 }

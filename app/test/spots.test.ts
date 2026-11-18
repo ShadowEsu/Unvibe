@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampSpot, islandWindowAt, pillSpotIn, savedSpot, snapSpot, withSpot } from '../src/main/spots';
+import { clampSpot, islandWindowAt, keepOnDisplays, pillSpotIn, rendererSettingsPatch, savedSpot, snapSpot, withSpot } from '../src/main/spots';
 import { arrowStep, pastDragThreshold } from '../src/renderer/shared/windowDrag';
 
 const laptop = { x: 0, y: 25, width: 1440, height: 875 };
@@ -23,6 +23,32 @@ test('each display keeps its own spot; a spot for a display that is gone is not 
   // A spot saved on a larger screen than the one now under that id still lands on it.
   assert.deepEqual(savedSpot(withSpot(undefined, 1, { x: 3000, y: 1400 }), 1, panel, laptop), { x: 1108, y: 528 });
   assert.equal(savedSpot({ 1: { x: Number.NaN, y: 0 } }, 1, panel, laptop), null, 'a corrupt spot falls back to the default');
+});
+
+test('a spot on disk that is not an object with finite x and y is ignored', () => {
+  for (const bad of [5, 'x', null, true, [], { x: Infinity, y: 0 }, { x: 0, y: -Infinity }, { x: Number.NaN, y: 1 }, { x: '5', y: 5 }, { y: 5 }]) {
+    assert.equal(savedSpot({ 1: bad } as never, 1, panel, laptop), null, String(JSON.stringify(bad)));
+  }
+  assert.equal(savedSpot('{"1":{"x":1,"y":2}}' as never, 1, panel, laptop), null, 'a string where the spots belong');
+  assert.equal(savedSpot(42 as never, 1, panel, laptop), null);
+});
+
+test('a page can\'t write window spots through settings:set, and a new Island position forgets the Island\'s spots', () => {
+  const spots = { 1: { x: 1, y: 2 } };
+  assert.deepEqual(rendererSettingsPatch({ overlaySpots: spots, islandSpots: spots, theme: 'dark' }), { theme: 'dark' });
+  assert.deepEqual(rendererSettingsPatch({ barPosition: 'bottom-right', islandSpots: spots }), { barPosition: 'bottom-right', islandSpots: undefined });
+  assert.deepEqual(rendererSettingsPatch({ barSize: 'large' }), { barSize: 'large' }, 'other changes keep the Island where it is');
+  assert.deepEqual(rendererSettingsPatch(null), {});
+});
+
+test('a dragged window\'s centre stays on a display: it crosses between touching ones, and comes back from a gap', () => {
+  const displays = [laptop, external];
+  const tall = { width: 320, height: 400 };
+  assert.deepEqual(keepOnDisplays({ x: 1300, y: 100 }, tall, displays), { x: 1300, y: 100 }, 'centre on the external display');
+  assert.deepEqual(keepOnDisplays({ x: 1280, y: 100 }, tall, displays), { x: 1280, y: 100 }, 'centre on the edge both share');
+  // Below the laptop, beside the taller external display: off every screen, so it comes back to the nearer one.
+  assert.deepEqual(keepOnDisplays({ x: 840, y: 900 }, tall, displays), { x: 840, y: 700 });
+  assert.deepEqual(keepOnDisplays({ x: -9000, y: -9000 }, tall, displays), { x: -160, y: 25 - 200 });
 });
 
 test('forgetting one display\'s spot (double-click) leaves the others', () => {

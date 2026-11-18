@@ -3,6 +3,8 @@
  * "draggable, remembered per screen"). Pure geometry; windows.ts reads the displays and writes the settings.
  * A spot is the window's top-left corner in screen coordinates (for the Island, the compact pill's).
  */
+import type { Settings } from './settings';
+
 export interface Spot { x: number; y: number }
 export interface Box { x: number; y: number; width: number; height: number }
 export type SpotsByDisplay = Partial<Record<string, Spot>>;
@@ -39,11 +41,46 @@ export function snapSpot(spot: Spot, size: { width: number; height: number }, ar
 /**
  * The spot saved for this display, kept inside its work area (Security A3: a saved spot never puts a window off every
  * screen). A spot saved for a display that is no longer attached is not used; the window falls back to its default.
+ * The settings file is read as written on disk, so anything that isn't an object with finite x and y is ignored.
  */
 export function savedSpot(spots: SpotsByDisplay | undefined, displayId: number, size: { width: number; height: number }, area: Box): Spot | null {
-  const spot = spots?.[String(displayId)];
-  if (!spot || !Number.isFinite(spot.x) || !Number.isFinite(spot.y)) return null;
-  return clampSpot(spot, size, area);
+  const spot: unknown = spots && typeof spots === 'object' ? spots[String(displayId)] : undefined;
+  if (!spot || typeof spot !== 'object') return null;
+  const { x, y } = spot as Partial<Spot>;
+  if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return clampSpot({ x, y }, size, area);
+}
+
+/**
+ * A window of this size being dragged to this spot, moved the least so its centre is on one of the displays, so at
+ * least a quarter of it stays on screen (Security S3 on #344: a page that starts a drag and never ends it can't hold an
+ * always-on-top window off every screen). A centre that crosses between touching displays is never moved.
+ */
+export function keepOnDisplays(spot: Spot, size: { width: number; height: number }, displays: readonly Box[]): Spot {
+  const cx = spot.x + Math.round(size.width / 2);
+  const cy = spot.y + Math.round(size.height / 2);
+  let best: Spot | null = null;
+  let bestDistance = Infinity;
+  for (const d of displays) {
+    const x = Math.max(d.x, Math.min(cx, d.x + d.width));
+    const y = Math.max(d.y, Math.min(cy, d.y + d.height));
+    const distance = (x - cx) ** 2 + (y - cy) ** 2;
+    if (distance < bestDistance) {
+      best = { x, y };
+      bestDistance = distance;
+    }
+  }
+  if (!best || bestDistance === 0) return spot;
+  return { x: spot.x + best.x - cx, y: spot.y + best.y - cy };
+}
+
+/**
+ * A settings patch from a renderer, as main applies it. Window spots are main's to write (drag, nudge, always kept on
+ * screen), so a page's are dropped; a new Island position (Settings › Island position) starts the Island over.
+ */
+export function rendererSettingsPatch(raw: Partial<Settings> | null | undefined): Partial<Settings> {
+  const { overlaySpots: _overlay, islandSpots: _island, ...patch } = raw ?? {};
+  return patch.barPosition ? { ...patch, islandSpots: undefined } : patch;
 }
 
 /** The spots with this display's spot replaced (or removed with `null`); other displays keep theirs. */
