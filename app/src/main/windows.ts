@@ -673,8 +673,9 @@ export function companionChrome(theme: ThemePreference, osDark = nativeTheme.sho
   overlay: { color: string; symbolColor: string; height: number };
 } {
   // While the start stage (the sharks, dark in both themes) is up, the window-button strip and the first paint take
-  // the stage's ground so a light theme never shows a lilac strip over the dark ocean (Design S-1 whole-app MUST 14).
-  if (stage) return { background: '#16122a', overlay: { color: '#17122f', symbolColor: '#f3f1fa', height: 40 } };
+  // the stage's ground so a light theme never shows a white strip over the dark stage (Design S-1 whole-app MUST 14).
+  // Mono's stage ground is #0f0f0f (mono.css `.sharks-intro`); the strip's symbols are Mono's dark-theme ink.
+  if (stage) return { background: '#0f0f0f', overlay: { color: '#0f0f0f', symbolColor: '#f5f5f5', height: 40 } };
   const dark = theme === 'dark' || (theme === 'system' && osDark);
   return dark
     ? { background: '#000000', overlay: { color: '#000000', symbolColor: '#f5f5f5', height: 40 } }
