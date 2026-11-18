@@ -1012,6 +1012,9 @@ function Widget() {
         className="ob-head"
         ref={headRef}
         tabIndex={0}
+        // Focusable, so it needs a name: the panel's own title (no new string). Review NIT on #344.
+        role="group"
+        aria-labelledby="ob-head-title"
         title="Drag to move. Double-click to put it back."
         aria-description="Use the arrow keys to move the panel."
         onPointerDown={moveByHeader}
@@ -1027,7 +1030,7 @@ function Widget() {
           <Buddy mood={phase === 'streaming' ? 'thinking' : landed ? 'happy' : 'idle'} size={20} label="Vibe" listen />
         </span>
         <div className="ob-head__text">
-          <span className="ob-head__title">{title}</span>
+          <span className="ob-head__title" id="ob-head-title">{title}</span>
           {meta ? <span className="ob-meta">{meta}</span> : null}
         </div>
         <span className="sr-only" role="status">{phaseLabel}</span>

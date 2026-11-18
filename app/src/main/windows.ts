@@ -246,8 +246,10 @@ function applyBarSize(win: BrowserWindow, force: boolean, animate = true): void 
   win.moveTop();
 }
 
-/** Move the bar to a new position (called when the setting changes). */
+/** Move the bar to a new position (called when the setting changes, and on every show). */
 export function positionBar(win: BrowserWindow): void {
+  // Mid-drag the pointer places the Island (a notice or the review pulse shows it); the drag's end places it.
+  if (dragOrigins.has(win)) return;
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
   win.setMovable(!attachedIsland(position));
@@ -259,6 +261,8 @@ export function positionBar(win: BrowserWindow): void {
 
 /** Where a window was when a drag of it began; the drag moves it by the pointer's travel since then. */
 const dragOrigins = new WeakMap<BrowserWindow, Spot>();
+/** No pointer travels further than this in one drag; anything else is not a drag (review NIT: bound the IPC input). */
+const MAX_TRAVEL_PX = 20_000;
 export function startWindowDrag(win: BrowserWindow): void {
   if (win.isDestroyed()) return;
   const { x, y } = win.getBounds();
@@ -267,6 +271,7 @@ export function startWindowDrag(win: BrowserWindow): void {
 export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void {
   const from = dragOrigins.get(win);
   if (!from || win.isDestroyed() || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  if (Math.abs(dx) > MAX_TRAVEL_PX || Math.abs(dy) > MAX_TRAVEL_PX) return;
   win.setPosition(Math.round(from.x + dx), Math.round(from.y + dy));
 }
 
@@ -393,13 +398,17 @@ function placePanel(win: BrowserWindow, at: Spot, snapToEdges: boolean): void {
 /** A drag of the panel by its header ended: it lands inside the screen, near edges snap, and the spot is kept. */
 export function endPanelDrag(win: BrowserWindow): void {
   if (!dragOrigins.delete(win) || win.isDestroyed()) return;
+  // The answer may have grown during the drag: fit it first, so the spot saved is where the panel ends up.
+  const grown = heightAfterDrag.get(win);
+  heightAfterDrag.delete(win);
+  if (grown !== undefined) fitPanelHeight(win, grown);
   const { x, y } = win.getBounds();
   placePanel(win, { x, y }, true);
 }
 
 /** An arrow key on the focused header moves the panel by one step (16 px, Design 633). */
 export function nudgePanel(win: BrowserWindow, dx: number, dy: number): void {
-  if (win.isDestroyed()) return;
+  if (win.isDestroyed() || dragOrigins.has(win) || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
   const { x, y } = win.getBounds();
   placePanel(win, { x: x + Math.sign(dx) * NUDGE_PX, y: y + Math.sign(dy) * NUDGE_PX }, false);
 }
@@ -419,9 +428,17 @@ export function panelHeightFor(contentHeight: number): number {
   return Math.round(Math.min(PANEL_MAX_H, Math.max(PANEL_MIN_H, contentHeight)));
 }
 
+/** A content height that arrived while the panel was being dragged; the drag's end applies it. */
+const heightAfterDrag = new WeakMap<BrowserWindow, number>();
+
 /** Fits the panel to its content's height, kept inside the work area and clear of a top Island. */
 export function fitPanelHeight(win: BrowserWindow, contentHeight: number): void {
   if (win.isDestroyed()) return;
+  // Growing while the answer streams would move the panel under the pointer (and jitter near an edge): wait.
+  if (dragOrigins.has(win)) {
+    heightAfterDrag.set(win, contentHeight);
+    return;
+  }
   const current = win.getBounds();
   const height = panelHeightFor(contentHeight);
   if (current.height === height && current.width === PANEL_W) return;
@@ -457,6 +474,9 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
     roundedCorners: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    // macOS: the panel opens without focus and its header no longer is an OS drag region, so the first press must
+    // reach the page or a drag (or a button) would need a click to focus first (lead review S2 on #344).
+    acceptFirstMouse: true,
     show: false,
     webPreferences: secureWebPrefs(),
   });
