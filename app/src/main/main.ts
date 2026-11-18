@@ -46,7 +46,7 @@ import {
   showBar,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -634,9 +634,10 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
   const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
-  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e). Decided before the
-  // failure signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
-  const restoring = !code && !needsGrant && Boolean(currentWidget()) && Boolean(panelSession?.code);
+  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e), but only after a
+  // real read: before the agreement the panel opens on it instead (restoresOpenPanel). Decided before the failure
+  // signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
+  const restoring = restoresOpenPanel({ code, agreed, needsGrant, panelOpen: Boolean(currentWidget()), panelHasCode: Boolean(panelSession?.code) });
   if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
