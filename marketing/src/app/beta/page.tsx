@@ -31,7 +31,7 @@ export default function BetaDownloadsPage() {
     <article className="d d-page dd-page beta-page">
       <DiaMotion />
       <Download />
-      <p className="beta-page__lede paper-wrap paper-center">Select code, press {mac.anywhere} ({windows.anywhere} on Windows), understand what you ship.</p>
+      <p className="beta-page__lede paper-wrap paper-center">Select code your AI wrote, press {mac.anywhere} ({windows.anywhere} on Windows), and ask why before you accept it.</p>
 
       <section className="paper-section">
         <div className="paper-wrap">
@@ -73,7 +73,7 @@ export default function BetaDownloadsPage() {
                 <div>
                   <strong>Select code and press {mac.anywhere} ({windows.anywhere} on Windows)</strong>
                   <p>
-                    {`A panel opens beside your editor and the explanation streams in. Ask a follow-up, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
+                    {`On a Mac that's Control+U, not Command+U. A panel opens beside your editor and the explanation streams in. Ask why it was written that way or what breaks if you remove it, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
                   </p>
                 </div>
               </li>

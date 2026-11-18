@@ -23,7 +23,10 @@ export const D_NAV = [
 export const D_NAV_CTA = "Download free";
 
 export const D_HERO = {
-  h1: "Understand the code your AI writes.",
+  /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
+  h1: "Understand the code your AI writes, well enough to question it.",
+  /** Who it's for (ledger 636). One line at desktop widths; the H1 carries the promise. */
+  sub: "For junior and mid-level developers who build with AI tools.",
   wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
@@ -142,7 +145,7 @@ export const D_CLOSE = { h2: { before: "Ready to understand your", em: "code", a
 /** /beta (mock 11; Security 18:51Z GO, MUST-D12 OS-aware shortcut, SHOULD-D15 "allow access" Mac only). */
 export const D_GET = {
   h1: "Get Unvibe",
-  sub: "Free for Mac and Windows. Three steps.",
+  sub: "Free for Mac and Windows, for developers who build with AI tools.",
   steps: [
     "Download for your computer",
     { mac: "Open it and allow access", windows: "Open it" },
