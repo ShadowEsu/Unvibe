@@ -164,8 +164,7 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
   // Approved 12 Nov 04:39Z (first100, LIVE-LISTINGS); the listing links unvibe.site, so the href keeps its utm_source for their checker.
   { site: "Startup Fame", status: "live", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site" },
-  // Live since 11 Nov (first100, 18 Nov re-check); the free listing stays only while this link does.
-  { site: "DodoDirectory", status: "live", href: "https://dododirectory.com/item/unvibe" },
+  { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
   // Security 18 Nov: approved, free listing scheduled 29 Nov-4 Dec, so it stays under "Submitted to" until 4 Dec.
