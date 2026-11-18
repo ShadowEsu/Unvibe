@@ -34,11 +34,9 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://www.tinystartups.com",
   "https://www.indiehackers.com",
   "https://devhunt.org",
-  "https://daniellaunches.com",
   "https://startupfa.me",
   "https://dododirectory.com",
   "https://sumodir.com",
-  "https://nicklaunches.com",
   "https://dang.ai",
 ];
 

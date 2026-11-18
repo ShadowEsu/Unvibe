@@ -161,12 +161,10 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Tiny Startups", status: "live", href: "https://www.tinystartups.com/startup/unvibe" },
   { site: "Indie Hackers", status: "live", href: "https://www.indiehackers.com/product/unvibe" },
   { site: "DevHunt", status: "live", href: "https://devhunt.org/tool/unvibe" },
-  { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
   // Approved 12 Nov 04:39Z (first100, LIVE-LISTINGS); the listing links unvibe.site, so the href keeps its utm_source for their checker.
   { site: "Startup Fame", status: "live", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site" },
   { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
   { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
-  { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
   // Security 18 Nov: approved, free listing scheduled 29 Nov-4 Dec, so it stays under "Submitted to" until 4 Dec.
   { site: "Dang.ai", status: "pending", href: "https://dang.ai", linkRequired: true, submitted: "2026-11-06" },
 ];
