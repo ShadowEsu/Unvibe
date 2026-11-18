@@ -569,6 +569,7 @@ function noAgreement() {
   }
 }
 let editorOpen = false;
+const focusScript = path.join(tmpdir(), 'unvibe-rc-focus.ps1');
 async function shortcutInEditor() {
   noAgreement();
   if (os === 'mac') {
@@ -579,9 +580,8 @@ async function shortcutInEditor() {
   } else if (os === 'windows') {
     if (!editorOpen) { execFile('notepad', [sampleFile]); await sleep(3000); editorOpen = true; }
     const keys = `${/Control|CommandOrControl/i.test(shortcut) ? '^' : ''}${/Alt/i.test(shortcut) ? '%' : ''}${/Shift/i.test(shortcut) ? '+' : ''}u`;
-    const focus = path.join(tmpdir(), 'unvibe-rc-focus.ps1');
-    writeFileSync(focus, [
-      'param([string]$keys)',
+    writeFileSync(focusScript, [
+      'param([string]$keys, [switch]$frontOnly)',
       'Add-Type @"',
       'using System; using System.Text; using System.Runtime.InteropServices;',
       'public class Fg {',
@@ -601,12 +601,13 @@ async function shortcutInEditor() {
       '  [void][Fg]::ShowWindow($p.MainWindowHandle, 9); [void][Fg]::SetForegroundWindow($p.MainWindowHandle); Start-Sleep -Milliseconds 300',
       '}',
       'if ((Title) -notlike "*unvibe-rc0154-sample*") { throw "Notepad is not the foreground window (foreground: $(Title))" }',
+      'if ($frontOnly) { exit 0 }',
       '$w = New-Object -ComObject WScript.Shell',
       "$w.SendKeys('^a'); Start-Sleep -Milliseconds 500",
       'if ((Title) -notlike "*unvibe-rc0154-sample*") { throw "Notepad lost focus before the shortcut (foreground: $(Title))" }',
       '$w.SendKeys($keys)',
     ].join('\r\n'));
-    execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focus, '-keys', keys], { encoding: 'utf8', timeout: 30000 });
+    execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focusScript, '-keys', keys], { encoding: 'utf8', timeout: 30000 });
   } else {
     // Local run: no other app; the panel opens through the same IPC the Island's Understand uses.
     await companion.evaluate(() => window.unvibe.reviewSelection());
@@ -617,6 +618,11 @@ async function shortcutInEditor() {
   await sleep(600);
   if (await panel.locator('.ob-answer').count()) throw new Error('an answer is streaming in a walk-only run');
   return panel;
+}
+/** The editor in front again, so the overlay loses focus and fades; nothing is typed. */
+function editorFront() {
+  if (os === 'mac') execFileSync('osascript', ['-e', 'tell application "TextEdit" to activate'], { timeout: 15000 });
+  else if (os === 'windows') execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', focusScript, '-frontOnly'], { encoding: 'utf8', timeout: 30000 });
 }
 const spotOf = () => { const s = settingsOf(B).overlaySpots ?? {}; const keys = Object.keys(s); return keys.length ? s[keys[0]] : null; };
 let panel = null;
@@ -719,6 +725,38 @@ try {
   const right = p5.area.x + p5.area.w;
   log(p5.x + p5.w <= right - 11 && p5.x >= p5.area.x, 'Row 2: dropped partly off screen, the overlay lands fully on screen',
     `dropped toward x ${Math.round(targetX - (head4.x - p4.x))} (width ${p5.w}); landed at ${p5.x},${p5.y}, right edge ${p5.x + p5.w} of ${right}`);
+
+  // A faded overlay (Run A 44280703538: the done-state drag started on a faded overlay, and #344's Security S5
+  // swallowed that press, as designed). With the editor in front the overlay fades; one press on its header only wakes
+  // it (it stays where it is), and the header drag after that moves it. On the agreement form a header press ticks
+  // nothing, so nothing can be sent. mouse.swift's click warps with no move event, so no hover wakes it first.
+  if (os === 'linux') untestable('Row 2: a faded overlay, woken by one press, then dragged', 'local run: no editor and no window manager');
+  else {
+    const opacityOf = () => panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity));
+    editorFront();
+    await sleep(900);
+    const o1 = await opacityOf();
+    const q0 = await where(panel);
+    desktop('overlay-faded');
+    const h = await centre(panel, '.ob-head__title');
+    pointer.click(h.x, h.y, 1);
+    await sleep(600);
+    const o2 = await opacityOf();
+    const q1 = await where(panel);
+    const dx2 = q1.x + q1.w / 2 > q1.area.x + q1.area.w / 2 ? -200 : 200;
+    pointer.drag(h.x, h.y, h.x + dx2, h.y);
+    await sleep(900);
+    const q2 = await where(panel);
+    desktop('overlay-faded-woken-dragged');
+    const detail = `opacity ${o1} with the editor in front → ${o2} after one press (${q0.x},${q0.y} → ${q1.x},${q1.y}); then dragged ${dx2}: ${q1.x},${q1.y} → ${q2.x},${q2.y}`;
+    if (o1 > 0.3) {
+      note('Row 2: the overlay did not fade with the editor in front, so the faded case was not reached', detail);
+      log(near(q2.x - q1.x, dx2, 20), 'Row 2: the overlay drags by its header after the editor took focus', detail);
+    } else {
+      log(o2 > 0.99 && near(q1.x, q0.x) && near(q1.y, q0.y), 'Row 2: a faded overlay: one press on the header only wakes it (it stays where it is)', detail);
+      log(near(q2.x - q1.x, dx2, 20), 'Row 2: a faded overlay, once woken, drags by its header', detail);
+    }
+  }
   await panel.locator('.ob-head__close').click();
   await waitFor(async () => panel.isClosed(), 5000);
 } catch (e) { log(false, 'Row 2: the overlay', short(e)); if (panel && !panel.isClosed()) await shot(panel, 'overlay-stuck'); desktop('overlay-stuck'); }

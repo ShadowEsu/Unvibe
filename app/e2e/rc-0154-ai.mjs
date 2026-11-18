@@ -583,8 +583,18 @@ if (!stopped) {
     }
   }
 
+  // The system pointer off the overlay (a move only), so the stills show no chip in its hover grey (Design).
+  async function parkOff() {
+    if (os === 'linux') return;
+    const w = await where(panel);
+    const x = w.x + w.w / 2 > w.area.x + w.area.w / 2 ? w.area.x + 40 : w.area.x + w.area.w - 40;
+    pointer.move(x, w.area.y + w.area.h - 40);
+    await sleep(500);
+  }
+
   // Row 8: the layout under a finished explanation.
   try {
+    await parkOff();
     const layout = await panel.evaluate(() => {
       const q = document.querySelector('.ob-questions');
       const ask = document.querySelector('.ob-ask');
@@ -608,22 +618,36 @@ if (!stopped) {
     log(ok, 'Row 8: after an explanation: "Question it", the three questions, "Ask your own question…" with Ask, then Explain differently · Save · Understood', JSON.stringify(layout));
   } catch (e) { log(false, 'Row 8: Question it layout', short(e)); }
 
-  // Row 10 (Design S-1, Mac): the done state at 1x and 2x, light theme.
-  if (os === 'mac') {
+  // Row 10 (Design S-1): the done state at 1x and 2x, light. Captured through CDP (Page.captureScreenshot) under a
+  // scale override, and each PNG's pixel size is checked against the overlay's CSS size: in Run A 44280703538 the
+  // "2x" still came out 320x560, because Playwright's screenshot ignored the override. The pointer is parked off the
+  // overlay first, so no chip shows its hover grey (Design). Design took that run's Mac 1x still as enough; this run
+  // proves the capture on its own system.
+  try {
+    await parkOff();
+    const theme = await panel.evaluate(() => document.documentElement.dataset.theme ?? document.documentElement.getAttribute('data-theme'));
+    const shown = await opacity();
+    const size = await panel.evaluate(() => ({ w: innerWidth, h: innerHeight }));
+    const cdp = await panel.context().newCDPSession(panel);
+    const got = [];
     try {
-      const theme = await panel.evaluate(() => document.documentElement.dataset.theme ?? document.documentElement.getAttribute('data-theme'));
-      const dpr = (await where(panel)).dpr;
-      await shot(panel, `row10-done-${dpr}x-light`);
-      const size = await panel.evaluate(() => ({ w: innerWidth, h: innerHeight }));
-      const cdp = await panel.context().newCDPSession(panel);
-      await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.w, height: size.h, deviceScaleFactor: dpr === 2 ? 1 : 2, mobile: false });
-      await sleep(500);
-      await shot(panel, `row10-done-${dpr === 2 ? 1 : 2}x-light`);
-      await cdp.send('Emulation.clearDeviceMetricsOverride');
-      await cdp.detach();
-      log(theme !== 'dark', 'Row 10 (Design S-1, Mac): the done state, still at 1x and 2x, light', `screen at ${dpr}x; the other scale rendered by CDP at the same ${size.w}x${size.h}; theme ${theme ?? 'light (unset)'}`);
-    } catch (e) { log(false, 'Row 10: Design stills', short(e)); }
-  }
+      for (const scale of [1, 2]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: size.w, height: size.h, deviceScaleFactor: scale, mobile: false });
+        await sleep(500);
+        const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+        const png = Buffer.from(data, 'base64');
+        writeFileSync(path.join(out, `${String(++n).padStart(2, '0')}-row10-done-${scale}x-light.png`), png);
+        // A PNG's width and height are the IHDR chunk's first two 4-byte fields (bytes 16-23).
+        got.push({ scale, w: png.readUInt32BE(16), h: png.readUInt32BE(20) });
+      }
+    } finally {
+      await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => {});
+      await cdp.detach().catch(() => {});
+    }
+    const sized = got.every((g) => g.w === size.w * g.scale && g.h === size.h * g.scale);
+    log(sized && theme !== 'dark' && shown > 0.99, `Row 10 (Design S-1): the done state, stills at 1x and 2x, light${os === 'mac' ? '' : ` (on ${os}: proves the capture; Design's still is the Mac one)`}`,
+      `${got.map((g) => `${g.scale}x ${g.w}x${g.h}`).join(', ')} for ${size.w}x${size.h} CSS px; opacity ${shown}; theme ${theme ?? 'light (unset)'}; pointer parked off the overlay`);
+  } catch (e) { log(false, 'Row 10: Design stills', short(e)); }
 
   // Row 9: a chip fills the box and focuses it, nothing is sent; a second chip replaces an untouched question; typed
   // text is never replaced; Return held on a chip sends nothing. "Nothing sent": the overlay stays on its Explain
@@ -701,7 +725,9 @@ if (!stopped) {
   } catch (e) { log(false, 'Row 11: finished overlay density', short(e)); }
 
   // Row 2, done state: the header drag with the real pointer (the full row ran on the agreement form in Run W),
-  // guarded and checked for a send like row 4's presses.
+  // guarded and checked for a send like row 4's presses. A faded overlay is woken first with one press on its title:
+  // in Run A 44280703538 (Mac) the drag started on a faded overlay and #344's Security S5 swallowed that press, as
+  // designed (mouse.swift's move warps with no move event, so resting the pointer there doesn't wake it).
   if (stopped) note('Row 2: done-state drag', 'skipped: an earlier step stopped the run\'s calls');
   else if (os === 'linux') untestable('Row 2: done-state drag', 'local run: with no window manager the main window covers the overlay, so the real pointer would press the main window');
   else {
@@ -710,12 +736,21 @@ if (!stopped) {
       const p0 = await where(panel);
       const c = await centre(panel, '.ob-head__title');
       await insidePanel(c, 'Row 2 done-state drag');
-      await hover(c);
+      const before = await opacity();
+      let woke = true;
+      if (before < 0.99) {
+        woke = await guardedTap(c, '.ob-head', 'Row 2 wake press on the faded overlay');
+        if (woke) {
+          const after = await opacity();
+          const pw = await where(panel);
+          note('Row 2: the finished overlay was faded before the drag', `opacity ${before}; after one press on its title ${after}; it stayed at ${pw.x},${pw.y} (was ${p0.x},${p0.y})`);
+        }
+      }
       const dx = p0.x + p0.w / 2 > p0.area.x + p0.area.w / 2 ? -200 : 200;
-      if (await guardedPress('.ob-head', 'Row 2 done-state drag', () => pointer.drag(c.x, c.y, c.x + dx, c.y))) {
+      if (woke && await guardedPress('.ob-head', 'Row 2 done-state drag', () => pointer.drag(c.x, c.y, c.x + dx, c.y))) {
         const p1 = await where(panel);
         desktop('row2-done-dragged');
-        log(Math.abs(p1.x - p0.x - dx) <= 20, 'Row 2: a finished overlay moves by its header too', `${p0.x},${p0.y} → ${p1.x},${p1.y} (dragged ${dx})`);
+        log(Math.abs(p1.x - p0.x - dx) <= 20, 'Row 2: a finished overlay moves by its header too', `opacity before ${before}; ${p0.x},${p0.y} → ${p1.x},${p1.y} (dragged ${dx})`);
       }
     } catch (e) {
       log(false, 'Row 2: done-state drag', short(e));
