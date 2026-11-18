@@ -199,7 +199,8 @@
    send stays the one filled control. */
 :root .ob .ob-chips--text { gap: 12px; flex-wrap: nowrap; margin: 0 -4px; }
 :root .ob .ob-chips--text .ob-chip { padding: 0 4px; border-radius: 4px; background: transparent; box-shadow: none; font-size: 13px; font-weight: 500; }
-:root .ob .ob-chips--text .ob-chip:hover:not(:disabled) { background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
+/* .ob-foot: the generic chip hover above weighs (0,7,0) through its :is(… .pmf-card .btn.ghost), so this needs one more. */
+:root .ob .ob-foot .ob-chips--text .ob-chip:hover:not(:disabled) { background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
 :root .ob .ob-chips--text .ob-chip.is-on { background: transparent; }
 
 /* "Question it": a 13 px label, then the three questions as full-width 32 px rows 6 px apart, 13 px text 12 px in, the
