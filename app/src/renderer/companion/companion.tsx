@@ -95,7 +95,7 @@ interface Settings {
   followActiveDisplay: boolean; soundEffects: boolean; startAnimation?: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
   inactiveBehavior: 'fade' | 'hide';
-  launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
+  launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; density: 'comfortable' | 'compact'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
   displayName: string;
@@ -1510,6 +1510,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="settings-group" role="group" aria-labelledby="settings-group-device">
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Sharks</div><div className="sd">The sharks on the launch screen and behind every page of the main window. Drawn on this {deviceName}, nothing is downloaded.</div></div><Toggle label="Sharks" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
+              <div className="setrow settings-location"><div><div className="sl">Density</div><div className="sd">Compact uses smaller text and tighter rows.</div></div>
+                <div className="location-grid" role="group" aria-label="Density">
+                  {([['comfortable', 'Comfortable'], ['compact', 'Compact']] as const).map(([density, label]) => <button key={density} type="button" className={settings.density === density ? 'on' : ''} aria-pressed={settings.density === density} onClick={() => void onSettings({ density })}>{label}</button>)}
+                </div>
+              </div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow />
               </div>
@@ -1751,6 +1756,10 @@ function App() {
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [themePreference]);
+  const density = settings?.density ?? 'comfortable';
+  useEffect(() => {
+    document.documentElement.dataset.density = density;
+  }, [density]);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);

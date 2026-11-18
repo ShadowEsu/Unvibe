@@ -1420,10 +1420,10 @@ app.whenReady().then(() => {
       resizeBar(bar, false);
       if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
     }
-    // The panel follows Settings › Theme and "When I click away" live; the companion's window chrome follows the theme.
+    // The panel follows Settings › Theme, Density and "When I click away" live; the companion's window chrome follows the theme.
     const panel = currentWidget();
-    if ((patch.theme !== undefined || patch.inactiveBehavior !== undefined) && panel) {
-      panel.webContents.send('panel:settings', { theme: next.theme, inactiveBehavior: next.inactiveBehavior });
+    if ((patch.theme !== undefined || patch.density !== undefined || patch.inactiveBehavior !== undefined) && panel) {
+      panel.webContents.send('panel:settings', { theme: next.theme, density: next.density, inactiveBehavior: next.inactiveBehavior });
     }
     if (patch.theme !== undefined && companion) applyCompanionChrome(companion);
     return { settings: settings().all() };

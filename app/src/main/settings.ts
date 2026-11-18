@@ -14,6 +14,8 @@ export type BarVisibility = 'always' | 'during-review';
 export type BarSize = 'small' | 'medium' | 'large';
 export type InactiveBehavior = 'fade' | 'hide';
 export type ThemePreference = 'system' | 'light' | 'dark';
+/** Comfortable keeps the standard sizes; Compact uses smaller text and tighter rows (mono.css `[data-density="compact"]`). */
+export type Density = 'comfortable' | 'compact';
 
 export interface FeatureFlags {
   changeBrief: boolean;
@@ -106,6 +108,8 @@ export interface Settings {
   inactiveBehavior: InactiveBehavior;
   launchAtLogin: boolean;
   theme: ThemePreference;
+  /** Text and row size in the main window and the overlay. */
+  density: Density;
   /** Theme was set in Settings (or by the panel's one-time moon migration), so migrations leave it alone. */
   themeChosen?: true;
   /** Starting depth for new explanations. Users can still change it in every review. */
@@ -175,6 +179,7 @@ const DEFAULTS: Settings = {
   inactiveBehavior: 'fade',
   launchAtLogin: false,
   theme: 'light',
+  density: 'comfortable',
   defaultExplanationLevel: 'intermediate',
   displayName: '',
   profileEmail: '',
@@ -239,6 +244,7 @@ class SettingsStore {
       ...loaded,
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
+      density: loaded.density === 'compact' ? 'compact' : 'comfortable',
       features: mergeFeatures(loaded.features),
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 2,
@@ -361,6 +367,8 @@ class SettingsStore {
       ...(profileEmail !== undefined ? { profileEmail } : {}),
       // Only Fade or Hide; anything else keeps the current choice.
       inactiveBehavior: patch.inactiveBehavior === 'hide' || patch.inactiveBehavior === 'fade' ? patch.inactiveBehavior : this.data.inactiveBehavior,
+      // Only Comfortable or Compact; anything else keeps the current choice.
+      density: patch.density === 'compact' || patch.density === 'comfortable' ? patch.density : this.data.density,
       ...(patch.theme !== undefined ? { themeChosen: true as const } : {}),
     };
     delete this.data.aiModel;

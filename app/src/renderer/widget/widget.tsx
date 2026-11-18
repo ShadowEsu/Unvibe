@@ -270,9 +270,11 @@ function applyTheme(preference: ThemePreference) {
   document.documentElement.dataset.r2 = 'g1';
 }
 
-/** Main passes Settings › Theme in the page URL, so the first paint already has it (no light flash in dark mode). */
-const START_THEME: ThemePreference = ((t) => (t === 'dark' || t === 'system' ? t : 'light'))(new URLSearchParams(window.location.search).get('theme'));
+/** Main passes Settings › Theme and Density in the page URL, so the first paint already has them (no light flash in dark mode). */
+const START_PARAMS = new URLSearchParams(window.location.search);
+const START_THEME: ThemePreference = ((t) => (t === 'dark' || t === 'system' ? t : 'light'))(START_PARAMS.get('theme'));
 applyTheme(START_THEME);
+document.documentElement.dataset.density = START_PARAMS.get('density') === 'compact' ? 'compact' : 'comfortable';
 
 /** panelOut's length (widget.css). */
 const PANEL_EXIT_MS = 160;
@@ -339,13 +341,14 @@ function Widget() {
     window.setTimeout(() => window.unvibe.closeWidget(), PANEL_EXIT_MS);
   }, []);
 
-  // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon.
+  // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon; Density likewise.
   useEffect(() => {
     let theme: ThemePreference = START_THEME;
     // The last click-away setting seen; main sends the whole set (theme and click-away together) on any change.
     let behavior: string | undefined;
     void window.unvibe.getSettings().then(async (st) => {
-      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; inactiveBehavior?: string };
+      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; density?: string; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; inactiveBehavior?: string };
+      document.documentElement.dataset.density = settings.density === 'compact' ? 'compact' : 'comfortable';
       theme = settings.theme ?? 'light';
       behavior ??= settings.inactiveBehavior;
       configureTones({ enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' });
@@ -367,6 +370,7 @@ function Widget() {
         theme = next.theme;
         applyTheme(theme);
       }
+      if (next.density) document.documentElement.dataset.density = next.density;
       // Fade ↔ Hide changed: start from the solid panel instead of keeping an old fade. A theme change alone keeps
       // the fade.
       if (next.inactiveBehavior && behavior !== undefined && next.inactiveBehavior !== behavior) setFade((prev) => nextFade(prev, 'back'));

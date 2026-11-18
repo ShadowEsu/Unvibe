@@ -382,8 +382,8 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   lockNavigation(win);
   win.once('ready-to-show', () => win.showInactive());
-  // The theme rides in the URL so the panel's first paint matches Settings › Theme.
-  void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light' } });
+  // The theme and density ride in the URL so the panel's first paint matches Settings.
+  void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light', density: settings().all().density } });
   return win;
 }
 
