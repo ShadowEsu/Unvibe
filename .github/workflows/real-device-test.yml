@@ -28,6 +28,10 @@ on:
         description: "Optional: dry or take. Studio's S8: the same sample selected in TextEdit and Terminal, Control+U in each (Mac only, no walkthrough; dry = selections and grabs only, the app isn't started)"
         required: false
         default: ""
+      s13_take:
+        description: "Optional: dry or take. Studio's S13: Marketing's access-rule sample selected in TextEdit, Control+U, one Beginner explanation (Mac only, no walkthrough; dry = no send agreement, so Control+U only opens the agreement form and nothing is sent)"
+        required: false
+        default: ""
       desktop_recording:
         description: "Also record the whole screen around the global-shortcut step (demo video; Mac .mov, Windows JPEG frames)"
         type: boolean
@@ -43,8 +47,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # samples_only / two_app_take: the Mac job alone (its install and the media step); the Windows job would ask the AI again.
-        include: ${{ fromJSON((inputs.samples_only != '' || inputs.two_app_take != '') && '[{"os":"macos-latest","label":"mac"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        # samples_only / two_app_take / s13_take: the Mac job alone (its install and the media step); the Windows job would ask the AI again.
+        include: ${{ fromJSON((inputs.samples_only != '' || inputs.two_app_take != '' || inputs.s13_take != '') && '[{"os":"macos-latest","label":"mac"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -196,7 +200,7 @@ jobs:
           "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Walk through the app
-        if: inputs.samples_only == '' && inputs.two_app_take == ''
+        if: inputs.samples_only == '' && inputs.two_app_take == '' && inputs.s13_take == ''
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -328,13 +332,18 @@ jobs:
           MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
           MEDIA_ONLY: ${{ inputs.samples_only }}
           TWO_APP: ${{ inputs.two_app_take }}
+          S13_TAKE: ${{ inputs.s13_take }}
         run: |
           if [ -n "$MEDIA_ONLY" ] && ! [[ "$MEDIA_ONLY" =~ ^[A-Za-z0-9._-]+(,[A-Za-z0-9._-]+)*$ ]]; then echo "samples_only must be file names separated by commas"; exit 1; fi
           if [ -n "$TWO_APP" ] && [ "$TWO_APP" != dry ] && [ "$TWO_APP" != take ]; then echo "two_app_take must be dry or take"; exit 1; fi
-          if [ -n "$TWO_APP" ] && [ -n "$MEDIA_ONLY" ]; then echo "two_app_take and samples_only are separate runs"; exit 1; fi
-          cp app/e2e/marketing-media.mjs app/e2e/two-app-take.mjs app/e2e/media-window.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          if [ -n "$S13_TAKE" ] && [ "$S13_TAKE" != dry ] && [ "$S13_TAKE" != take ]; then echo "s13_take must be dry or take"; exit 1; fi
+          modes=0; for m in "$MEDIA_ONLY" "$TWO_APP" "$S13_TAKE"; do if [ -n "$m" ]; then modes=$((modes + 1)); fi; done
+          if [ "$modes" -gt 1 ]; then echo "samples_only, two_app_take and s13_take are separate runs"; exit 1; fi
+          cp app/e2e/marketing-media.mjs app/e2e/two-app-take.mjs app/e2e/s13-take.mjs app/e2e/panel-take.mjs app/e2e/media-window.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           cp -R app/e2e/media-samples "$RUNNER_TEMP/pw/"
-          if [ -n "$TWO_APP" ]; then
+          if [ -n "$S13_TAKE" ]; then
+            cd "$RUNNER_TEMP/pw" && node s13-take.mjs
+          elif [ -n "$TWO_APP" ]; then
             swiftc -O -o "$RUNNER_TEMP/pw/mouse" app/e2e/mouse.swift
             cd "$RUNNER_TEMP/pw" && MOUSE="$RUNNER_TEMP/pw/mouse" node two-app-take.mjs
           else

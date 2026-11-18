@@ -59,33 +59,34 @@ export async function resize(page, width, height, { center = false } = {}) {
 }
 
 /**
- * A still of the page at 2x into `file` (the site shows them at up to half their pixel width, ledger 530 spec §5).
+ * A still of the page at 2x into `file` (the site shows them at up to half their pixel width, ledger 530 spec §5), or
+ * at `scale`x when asked (S13: 3x, so a 380 px panel is 1140 px wide and fills a 1080 px reel frame without upscaling).
  * Chromium renders the capture itself at the clip's scale, so the text is sharp, not an upscaled image; the scale
- * makes the file twice the page's CSS size whatever the window's own pixel ratio is. Returns the PNG's size.
+ * makes the file that many times the page's CSS size whatever the window's own pixel ratio is. Returns the PNG's size.
  */
-export async function shot(page, file) {
+export async function shot(page, file, { scale: want = 2 } = {}) {
   const [width, height, ratio] = await page.evaluate(() => [window.innerWidth, window.innerHeight, window.devicePixelRatio || 1]);
   const cdp = await page.context().newCDPSession(page);
   // The PNG's own size, from its IHDR chunk.
   const size = (png) => [png.readUInt32BE(16), png.readUInt32BE(20)];
   const label = file.split(/[\\/]/).pop();
   try {
-    // Each capture is checked: if it isn't exactly twice the CSS size (run 43174610564's 4x stills, before resize() kept
-    // the window's own scale), it is taken again at the corrected scale (up to 3 tries), with a NOTE: a retake is a
-    // later moment. A still that never comes out right is kept and named in a NOTE, not thrown: a throw would end the
-    // step and its follow-up.
-    let scale = 2 / ratio;
+    // Each capture is checked: if it isn't exactly `want` times the CSS size (run 43174610564's 4x stills, before
+    // resize() kept the window's own scale), it is taken again at the corrected scale (up to 3 tries), with a NOTE: a
+    // retake is a later moment. A still that never comes out right is kept and named in a NOTE, not thrown: a throw
+    // would end the step and its follow-up.
+    let scale = want / ratio;
     let png;
     let w = 0;
     let h = 0;
     for (let attempt = 1; attempt <= 3; attempt++) {
       png = Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale } })).data, 'base64');
       [w, h] = size(png);
-      if (w === 2 * width && h === 2 * height) break;
+      if (w === want * width && h === want * height) break;
       console.log(`NOTE ${label}: capture ${attempt} came out ${w}x${h} for a ${width}x${height} page (ratio ${ratio}, scale ${scale})`);
-      scale *= (2 * width) / w;
+      scale *= (want * width) / w;
     }
-    if (w !== 2 * width || h !== 2 * height) console.log(`NOTE ${label}: still kept at ${w}x${h}, not ${2 * width}x${2 * height}`);
+    if (w !== want * width || h !== want * height) console.log(`NOTE ${label}: still kept at ${w}x${h}, not ${want * width}x${want * height}`);
     writeFileSync(file, png);
     return [w, h];
   } finally {
