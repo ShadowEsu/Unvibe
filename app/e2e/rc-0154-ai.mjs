@@ -42,6 +42,9 @@ const line = (s) => { report.push(s); console.log(s); };
 const log = (ok, step, detail = '') => line(`${ok ? 'PASS' : 'FAIL'}  ${step}${detail ? `: ${detail}` : ''}`);
 const note = (step, detail = '') => line(`NOTE  ${step}${detail ? `: ${detail}` : ''}`);
 const untestable = (step, why) => line(`NOT TESTABLE  ${step}: ${why}`);
+// Row 4 on a runner (BOSS, 18 Nov): synthetic presses are evidence, not a pass; the real-Mac check stays listed as a
+// gap. A broken result is still a FAIL.
+const runnerEvidence = (ok, step, detail) => (ok ? note(`${step} [runner evidence only, not a pass: the real-Mac check stays open]`, detail) : log(false, step, detail));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const short = (e) => String(e?.message ?? e).split('\n')[0];
 
@@ -421,7 +424,7 @@ if (!stopped) {
         await sleep(500);
         const v = await boxValue();
         desktop('row4-first-press');
-        log(v === 'Why this way?', 'Row 4: with the editor in front, the first press on a question chip works (acceptFirstMouse)', `opacity ${o1}; box "${v}"`);
+        runnerEvidence(v === 'Why this way?', 'Row 4: with the editor in front, the first press on a question chip works (acceptFirstMouse)', `opacity ${o1}; box "${v}"`);
         await panel.locator('input.ob-ask__input').fill('');
         editorToFront();
         await sleep(800);
@@ -444,11 +447,11 @@ if (!stopped) {
       const v1 = await boxValue();
       const o3 = await opacity();
       desktop('row4-faded-first-press');
-      log(v1 === '' && o3 > 0.99, 'Row 4: the first press on a faded overlay only wakes it (the chip under it is not pressed)', `opacity ${o2} → ${o3}; box "${v1}"`);
+      runnerEvidence(v1 === '' && o3 > 0.99, 'Row 4: the first press on a faded overlay only wakes it (the chip under it is not pressed)', `opacity ${o2} → ${o3}; box "${v1}"`);
       pointer.tap(c.x, c.y);
       await sleep(500);
       const v2 = await boxValue();
-      log(v2 === 'What breaks if I remove it?', 'Row 4: the second press then works', `box "${v2}"`);
+      runnerEvidence(v2 === 'What breaks if I remove it?', 'Row 4: the second press then works', `box "${v2}"`);
       await panel.locator('input.ob-ask__input').fill('');
     } catch (e) { log(false, 'Row 4: the first press and the faded first press', short(e)); desktop('row4-stuck'); }
   }
@@ -573,7 +576,7 @@ if (!stopped) {
   await panel.locator('.ob-head__close').click().catch(() => {});
   await waitFor(async () => panel.isClosed(), 5000);
 }
-untestable('Row 4: the same with a person\'s hand on a real Mac (pointer speed, a hover before the press)', 'runner presses are synthetic system events; checked above with no rest before the press');
+untestable('Row 4 (first click, faded first click) with a person\'s hand on a real Mac', 'a gap for a real-Mac check: runner presses are synthetic system events (see the runner evidence above)');
 
 // --- Calls 2-4 (full) or 2 (short): the quiz on that lesson (rows 12, 15, 11) ---------------------------------------
 const NOT_QUITE = /^Not quite\./;
