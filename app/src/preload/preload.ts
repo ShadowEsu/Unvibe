@@ -240,6 +240,12 @@ const api = {
     ipcRenderer.on('account:device', listener);
     return () => { ipcRenderer.removeListener('account:device', listener); };
   },
+  /** The browser could not be opened for this sign-in link (it may arrive before or after startDeviceAuth replies). */
+  onDeviceBrowserFailed: (cb: (result: { verificationUri: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, r: { verificationUri: string }) => cb(r);
+    ipcRenderer.on('account:deviceBrowserFailed', listener);
+    return () => { ipcRenderer.removeListener('account:deviceBrowserFailed', listener); };
+  },
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
 
