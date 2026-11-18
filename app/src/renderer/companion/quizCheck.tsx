@@ -1,13 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Buddy, setBuddyMood } from '../shared/buddy';
 import { playTone } from '../shared/tones';
 import { askForConsent } from '../shared/consentForm';
 import { ThinkingStatus } from '../shared/thinkingStatus';
+import { renderInline } from '../shared/richText';
 import { useRailFolded, useTopBar } from '../shared/shell';
 import type { ConsentProvider } from '../../core/consent';
 import { linesLabel } from '../../core/linesLabel';
 import { IC } from './icons';
 import { LineIcon } from './lineIcon';
+import { radioStep, radioTabStop } from './radioKeys';
 
 /** The fields of a saved lesson the Quiz reads (learn.tsx's LearningItem has them all). */
 export interface QuizLesson {
@@ -146,6 +148,9 @@ export function QuizCheck({
   const [left, setLeft] = useState<number | null>(null);
   const requestRef = useRef(false);
   const stepRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  // The answer that holds the group's one Tab stop: the last one focused (by Tab, arrows or a click).
+  const [roving, setRoving] = useState<number | null>(null);
 
   const byId = (id: string | undefined) => lessons.find((item) => item.id === id);
   const lesson = byId(ids[index]) ?? byId(ids[0]) ?? first;
@@ -158,7 +163,7 @@ export function QuizCheck({
   }, []);
 
   const loadQuestion = async (at: number, run: Answered[] | null = replay) => {
-    setCard(null); setChosen(null); setWrong([]); setReason(''); setError('');
+    setCard(null); setChosen(null); setWrong([]); setReason(''); setError(''); setRoving(null);
     if (run) {
       const again = run[at];
       if (again) setCard({ question: again.question, options: again.options });
@@ -281,7 +286,9 @@ export function QuizCheck({
   const keyRef = useRef<(event: KeyboardEvent) => void>(() => {});
   keyRef.current = (event: KeyboardEvent) => {
     const target = event.target as HTMLElement | null;
-    if (target?.matches('input, textarea, select, summary')) return;
+    if (target?.matches('input, textarea, select')) return;
+    // On Recall's "Show the code", Return and Space toggle the code; the answer keys still pick.
+    if (target?.matches('summary') && (event.key === 'Enter' || event.key === ' ')) return;
     if (event.metaKey || event.ctrlKey || event.altKey || event.key === 'Escape') return;
     const enter = event.key === 'Enter';
     if (step === 'start') {
@@ -320,6 +327,32 @@ export function QuizCheck({
   useEffect(() => {
     stepRef.current?.focus({ preventScroll: true });
   }, [screenKey]);
+
+  // A wrong answer turns its option off and empties the choice (the Check button goes off): focus stays in the answers,
+  // on the next one still open, so 1 to 4, the arrows and Return keep working.
+  useEffect(() => {
+    const last = wrong[wrong.length - 1];
+    const group = optionsRef.current;
+    if (last === undefined || !group) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && !stepRef.current?.contains(active)) return;
+    const buttons = group.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    const to = radioStep('ArrowDown', last, buttons.length, (i) => wrong.includes(i));
+    if (to !== null) buttons[to]?.focus();
+  }, [wrong]);
+
+  /** Arrow keys move through a radio group (and choose, as radios do); the group is one Tab stop. */
+  const radioKeys = (off: (i: number) => boolean, pick: (i: number) => void) => (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+    const from = buttons.indexOf(event.target as HTMLButtonElement);
+    if (from < 0) return;
+    const to = radioStep(event.key, from, buttons.length, off);
+    if (to === null) return;
+    event.preventDefault();
+    buttons[to]?.focus();
+    pick(to);
+  };
 
   const crumb = mix ? 'Quiz me on everything' : lesson.title;
   // The bar re-publishes whenever its node changes, and publishing re-renders the page (a new `onLeave` each time):
@@ -362,7 +395,7 @@ export function QuizCheck({
         <p className="qz-kicker">{levelName(lesson.level)}, {where}</p>
         <h2 className="qz-title">{lesson.title}</h2>
         <p className="qz-lead">One question at a time. Wrong answers stay open so you can keep trying. About 30 seconds each.</p>
-        <div className="qz-modes" role="radiogroup" aria-label="Quiz mode">
+        <div className="qz-modes" role="radiogroup" aria-label="Quiz mode" onKeyDown={radioKeys(() => busy, (i) => { const pick = QUIZ_MODES[i]; if (pick) setMode(pick.id); })}>
           {QUIZ_MODES.map((item, i) => (
             <button
               key={item.id}
@@ -370,6 +403,7 @@ export function QuizCheck({
               role="radio"
               aria-checked={mode === item.id}
               className={`qz-mode${mode === item.id ? ' is-on' : ''}`}
+              tabIndex={mode === item.id ? 0 : -1}
               disabled={busy}
               onClick={() => setMode(item.id)}
             >
@@ -389,6 +423,7 @@ export function QuizCheck({
     const recall = mode === 'recall' && !replay;
     const line = card ? namedLine(card.question, lesson.code) : null;
     const lastKey = card ? card.options.length : 4;
+    const stop = card ? radioTabStop(chosen ?? roving, card.options.length, (at) => wrong.includes(at)) : null;
     screen = (
       <div className="qz-box qz-question">
         {progress(`Question ${index + 1} of ${total}`, index)}
@@ -411,10 +446,17 @@ export function QuizCheck({
                 <QuizCode code={lesson.code} line={line} />
               </details>
             ) : <QuizCode code={lesson.code} line={line} />) : null}
-            <div className="qz-options" role="radiogroup" aria-label="Answers">
+            <div
+              className="qz-options"
+              role="radiogroup"
+              aria-label="Answers"
+              ref={optionsRef}
+              onKeyDown={radioKeys((i) => busy || wrong.includes(i), setChosen)}
+            >
               {card.options.map((option, i) => {
                 const isWrong = wrong.includes(i);
                 const isChosen = chosen === i;
+                const off = busy || isWrong;
                 return (
                   <button
                     key={i}
@@ -422,8 +464,10 @@ export function QuizCheck({
                     role="radio"
                     aria-checked={isChosen}
                     className={`qz-option${isChosen ? ' is-chosen' : ''}${isWrong ? ' is-wrong' : ''}`}
-                    disabled={busy || isWrong}
-                    onClick={() => setChosen(i)}
+                    tabIndex={i === stop ? 0 : -1}
+                    aria-disabled={off || undefined}
+                    onFocus={() => setRoving(i)}
+                    onClick={() => { if (!off) setChosen(i); }}
                   >
                     <span className="qz-keytile" aria-hidden="true">{i + 1}</span>
                     <span className="qz-option__text">{option}</span>
@@ -434,7 +478,7 @@ export function QuizCheck({
             </div>
             <div className="qz-foot">
               {reason ? (
-                <p className="qz-foot__why" role="status"><strong>Not quite.</strong> {reason}</p>
+                <p className="qz-foot__why" role="status"><strong>Not quite.</strong> {renderInline(reason)}</p>
               ) : (
                 <p className="qz-hint">{chosen === null ? `Press 1 to ${lastKey}, then Return` : 'Return to check, or press another number'}</p>
               )}
@@ -457,7 +501,7 @@ export function QuizCheck({
         <span className="qz-right__vibe"><Buddy mood="celebrate" size={64} label="Vibe is celebrating" /></span>
         <p className="qz-kicker qz-kicker--strong">Nice work</p>
         <h2 className="qz-title">You got it.</h2>
-        {done?.rationale ? <p className="qz-why">{done.rationale}</p> : null}
+        {done?.rationale ? <p className="qz-why">{renderInline(done.rationale)}</p> : null}
         {lesson.code ? <QuizCode code={lesson.code} line={done?.line ?? null} note="the line that matters" /> : null}
         {done ? (
           <div className="qz-option is-right" role="note">

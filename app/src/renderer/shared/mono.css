@@ -81,6 +81,15 @@
 :root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google,
 :root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google:not(:disabled):is(:hover, :active) { box-shadow: inset 0 0 0 1px var(--u-border-control); }
 :root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google:not(:disabled):hover { background: #f5f5f5; }
+/* No shadow on buttons, cards or boxes (Design second findings H, I, SHOULD 1): onboarding's primary pill and the
+   sign-in cards lose app-0151's drops (the cards keep a 1 px border); the paste box keeps its 2 px ink frame without
+   the 4 px lilac ring; the focused name field keeps one ring. */
+:root[data-ui="v3"][data-v7] .onboard__primary { box-shadow: none; }
+:root[data-ui="v3"][data-v7] .login :is(.login__card, .login__local),
+:root[data-ui="v3"][data-v7][data-theme="dark"] .login :is(.login__card, .login__local) { box-shadow: inset 0 0 0 1px var(--u-border); }
+:root[data-ui="v3"][data-v7] .login .login__local:hover { box-shadow: inset 0 0 0 1px var(--u-border-control); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box:is(:focus, :focus-visible) { box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard__form input:is(:focus, :focus-visible) { box-shadow: inset 0 0 0 1.5px var(--u-accent); }
 /* The ground: a flat colour, no aurora; no fade under the ask bar. */
 :root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout,
 :root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }

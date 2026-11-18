@@ -494,6 +494,7 @@ export function Chat({
           id="chatDraft"
           ref={areaRef}
           rows={1}
+          spellCheck={false}
           value={draft}
           disabled={busy}
           placeholder={empty ? 'Ask Vibe about your code…' : 'Follow up'}

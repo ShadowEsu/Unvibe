@@ -72,16 +72,17 @@
 :root[data-ui="v3"][data-v7] .layout .qz-fold[open] summary { margin-bottom: 8px; }
 :root[data-ui="v3"][data-v7] .layout .qz-fold .qz-code { margin: 0; }
 
-/* Answers: 52 px rows 8 px apart, 17 px text, a 24 px key tile; selecting is immediate (no transition) */
+/* Answers: 52 px rows 8 px apart, 17 px text, a 24 px key tile (hover, press and focus: "Control states" at the end) */
 :root[data-ui="v3"][data-v7] .layout .qz-options { display: grid; gap: 8px; }
 :root[data-ui="v3"][data-v7] .layout .qz-option {
   display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; margin: 0; padding: 8px 14px;
   border: 1px solid var(--u-border-control); border-radius: 10px; background: var(--u-paper); box-shadow: none;
-  color: var(--u-ink); font: 400 17px/1.35 var(--u-font); text-align: left; transform: none; transition: none; cursor: pointer;
+  color: var(--u-ink); font: 400 17px/1.35 var(--u-font); text-align: left; transform: none; cursor: pointer;
 }
-:root[data-ui="v3"][data-v7] .layout .qz-option:hover:not(:disabled):not(.is-chosen) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
+:root[data-ui="v3"][data-v7] .layout .qz-option:hover:not(:disabled, [aria-disabled="true"], .is-chosen, .is-right) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
 :root[data-ui="v3"][data-v7] .layout :is(.qz-option.is-chosen, .qz-option.is-right) { padding: 7px 13px; border: 2px solid var(--u-ink); font-weight: 600; }
-:root[data-ui="v3"][data-v7] .layout .qz-option.is-wrong { opacity: var(--u-off); cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option:is(.is-wrong, [aria-disabled="true"]) { cursor: default; }
+:root[data-ui="v3"][data-v7] .layout .qz-option.is-wrong { opacity: var(--u-off); }
 :root[data-ui="v3"][data-v7] .layout .qz-option.is-right { margin-top: 0; cursor: default; }
 :root[data-ui="v3"][data-v7] .layout .qz-option__text { flex: 1; min-width: 0; }
 :root[data-ui="v3"][data-v7] .layout .qz-keytile {
@@ -110,7 +111,7 @@
 :root[data-ui="v3"][data-v7] .layout .qz-mode {
   display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; margin: 0; padding: 8px 14px 8px 16px;
   border: 1px solid var(--u-border-control); border-radius: 10px; background: var(--u-paper); box-shadow: none;
-  color: var(--u-ink); text-align: left; transform: none; transition: none; cursor: pointer;
+  color: var(--u-ink); text-align: left; transform: none; cursor: pointer;
 }
 :root[data-ui="v3"][data-v7] .layout .qz-mode:hover:not(:disabled):not(.is-on) { background: color-mix(in srgb, var(--u-ink) 4%, var(--u-paper)); }
 :root[data-ui="v3"][data-v7] .layout .qz-mode.is-on { padding: 7px 13px 7px 15px; border: 2px solid var(--u-ink); }
@@ -127,6 +128,8 @@
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-progress { text-align: left; }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-title { margin-top: 4px; }
 :root[data-ui="v3"][data-v7] .layout .qz-why { max-width: 500px; margin: 10px auto 18px; color: var(--u-ink); font: 400 14px/22px var(--u-font); }
+/* Vibe's "why" lines (rendered inline): code words as the Lesson's inline code, on the sunken grey in the code font */
+:root[data-ui="v3"][data-v7] .layout :is(.qz-why, .qz-foot__why) code.inline { padding: 0 6px; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink); font: 400 calc(1em - 1.5px)/20px var(--u-font-mono); }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-code { margin-bottom: 12px; text-align: left; }
 :root[data-ui="v3"][data-v7] .layout .qz-right .qz-option { margin-bottom: 20px; }
 
@@ -188,4 +191,33 @@
 @media (max-width: 720px) {
   :root[data-ui="v3"][data-v7] .layout :is(.qz-home__head, .qz-home__continue) { flex-wrap: wrap; }
   :root[data-ui="v3"][data-v7] .layout .qz-home__day { display: none; }
+}
+
+/* ── Control states (Framer, Design 633 MAP.md "Controls"): every Quiz control changes colour on hover over 120 ms, a
+   press scales it to 0.97 over 100 ms, and focus is the generic 2 px ink ring 2 px out (summary included, so "Show the
+   code" gets one too). A chosen answer or kind already wears a 2 px ink border, so its ring sits flush on that border
+   (one thicker ring, not two). Quiz page rows fill on hover like a .m-row and show Remove like Library's.
+   Reduced motion: colour only, no scale. ── */
+:root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__row, .qz-home__pick, .qz-home .row-trash, .qz-fold summary),
+:root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn) {
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease, opacity 120ms ease, transform 100ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__pick, .qz-home .row-trash, .qz-fold summary):active:not(:disabled, [aria-disabled="true"]),
+:root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn):active:not(:disabled) { transform: scale(0.97); }
+:root[data-ui="v3"][data-v7] .layout .qz-fold summary:hover { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .qz-fold summary:focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .layout :is(.qz-option.is-chosen, .qz-mode.is-on):focus-visible { outline-offset: 0; }
+:root[data-ui="v3"][data-v7] .layout .qz-home__row:hover { background: color-mix(in srgb, var(--u-ink) 4%, transparent); }
+:root[data-ui="v3"][data-v7] .layout .qz-home .row-trash {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; box-shadow: none; color: var(--u-ink-2); opacity: 0; cursor: pointer;
+}
+:root[data-ui="v3"][data-v7] .layout .qz-home__row:is(:hover, :focus-within) .row-trash { opacity: 1; }
+:root[data-ui="v3"][data-v7] .layout .qz-home .row-trash:hover { background: var(--u-sunken); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .qz-home .row-trash svg { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__row, .qz-home__pick, .qz-home .row-trash, .qz-fold summary),
+  :root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn) { transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease, opacity 120ms ease; }
+  :root[data-ui="v3"][data-v7] .layout :is(button.qz-option, .qz-mode, .qz .m-btn, .qz-home .m-btn, .qz-home__pick, .qz-home .row-trash, .qz-fold summary):active,
+  :root[data-ui="v3"][data-v7] .qz-bar :is(.qz-bar__root, .m-btn):active { transform: none; }
 }
