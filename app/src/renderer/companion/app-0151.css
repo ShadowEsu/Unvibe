@@ -532,6 +532,17 @@
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward { width: min(420px, 100%); justify-items: stretch; }
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward > .onboard__primary { width: 100%; }
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward .onboard__google { justify-items: start; text-align: left; }
+/* Hello at the window's minimum 980 × 620: "Let's go" sat at y 590-634, under the window. Under 700 px tall about 112 px
+   of spacing goes, so Let's go and the Google line are in view with the disclosure closed. The footer stays static and
+   in the flow (Security S-2 on 0.1.53), so nothing ever covers the heard-from note. */
+@media (max-height: 700px) {
+  :root[data-ui="v3"][data-v7] .onboard--step-0 { padding-top: 28px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__vibe { gap: 8px; padding-top: 8px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__body { margin-top: 14px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 h1 { font-size: 34px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__form { gap: 16px; margin-top: 20px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot { padding: 18px 0 20px; }
+}
 :root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
 :root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
 /* Q11: the Google disclosure sits right under Let's go, quiet ink-2 13 px; open, its form lines up on the right. */
