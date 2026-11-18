@@ -278,14 +278,18 @@ export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void
 
 /**
  * A drag that ended without its drop (the window hid or lost focus, its page reloaded or crashed): forget it, so the
- * window places, fits and nudges itself again, and apply a height that waited for the drop. Nothing is saved: the
- * person didn't put it there. Lead review on #344.
+ * window places, fits and nudges itself again, apply a height that waited for the drop, and bring the window back
+ * inside its screen. Nothing is saved: the person didn't put it there. Lead review on #344.
  */
 export function abandonWindowDrag(win: BrowserWindow): void {
   if (!dragOrigins.delete(win)) return;
   const waiting = heightAfterDrag.get(win);
   heightAfterDrag.delete(win);
-  if (waiting !== undefined && !win.isDestroyed()) fitPanelHeight(win, waiting);
+  if (win.isDestroyed()) return;
+  if (waiting !== undefined) fitPanelHeight(win, waiting);
+  const b = win.getBounds();
+  const spot = clampSpot(b, b, displayOf(win).workArea);
+  if (spot.x !== b.x || spot.y !== b.y) win.setPosition(spot.x, spot.y);
 }
 
 /** Wires abandonWindowDrag to every way a drag can lose its window. */
