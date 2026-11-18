@@ -161,6 +161,8 @@ const api = {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
+  /** Settings › Activation shortcut started (true) or stopped (false) listening for new keys. */
+  setShortcutRecording: (on: boolean) => ipcRenderer.send('settings:recordingShortcut', on),
   integrations: () => ipcRenderer.invoke('integrations:status'),
   installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
 

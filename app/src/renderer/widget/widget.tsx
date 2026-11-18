@@ -10,7 +10,7 @@ import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { shortcutCaps } from '../shared/prettyShortcut';
-import { isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
+import { isMac, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { selectionSource, selectionTitle } from '../shared/languageName';
 import { DepthControl, LEVELS } from './levelChip';
 import { AskField, CodeRow, ExplainActions, Findings, PanelToast, prefillAsk, QuestionChips, SQUASH_MS, StopButton, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
@@ -79,11 +79,16 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
   );
 }
 
-/** The shortcut as one cap per key (Design Q8): ⌃ U on a Mac, Ctrl Alt U on Windows and Linux (Security N2). */
+/**
+ * The shortcut as one cap per key (Design Q8): ⌃ U on a Mac, Ctrl Alt U on Windows and Linux (Security N2). On a Mac the
+ * Control cap reads "⌃ control", since many people don't know ⌃ and press ⌘ instead (0.1.54).
+ */
 function Keycaps({ accel }: { accel: string }) {
+  const keys = accel ? shortcutCaps(accel) : isMac ? shortcutCaps('Control+U', false) : [reviewKeyHint];
+  // The screen-reader name stays the plain keys ("⌃ U" reads "control U"); only the drawn cap gains the word.
   return (
-    <span className="ob-keys" aria-label={accel ? shortcutCaps(accel).join(' ') : reviewKeyHint}>
-      {(accel ? shortcutCaps(accel) : [reviewKeyHint]).map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}
+    <span className="ob-keys" aria-label={keys.join(' ')}>
+      {keys.map((key, i) => <kbd key={`${key}-${i}`}>{key === '⌃' ? '⌃ control' : key}</kbd>)}
     </span>
   );
 }

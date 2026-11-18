@@ -5,6 +5,7 @@ import { ownCodeStepDueNow } from './ownCodeStep';
 import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
 import { clampSpot, islandWindowAt, NUDGE_PX, pillSpotIn, savedSpot, snapSpot, withSpot, type Spot } from './spots';
+import { watchCommandU } from './commandUHint';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
@@ -525,6 +526,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   lockNavigation(win);
   endDragsOnLoss(win);
+  watchCommandU(win);
   win.once('ready-to-show', () => win.showInactive());
   // The theme rides in the URL so the panel's first paint matches Settings › Theme.
   void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light' } });
@@ -719,6 +721,7 @@ export function createCompanion({ front = false }: { front?: boolean } = {}): Br
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
+  watchCommandU(win);
   // Setup is intentionally a full-window moment. Once it is complete, future
   // launches retain the normal companion size so the app stays out of the way.
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });

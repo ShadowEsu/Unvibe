@@ -103,6 +103,7 @@ import {
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
+import { setShortcutRecording } from './commandUHint';
 import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
@@ -1410,6 +1411,10 @@ app.whenReady().then(() => {
   ipcMain.handle('integrations:installBridge', (_e, editor: unknown) => {
     if (editor !== 'cursor' && editor !== 'vscode') return { ok: false, error: 'Choose Cursor or VS Code.' };
     return installDesktopBridge(editor);
+  });
+  // Settings is recording a new shortcut: the ⌘U hint stays quiet meanwhile (only the main window can say so).
+  ipcMain.on('settings:recordingShortcut', (e, on: unknown) => {
+    if (companion && BrowserWindow.fromWebContents(e.sender) === companion) setShortcutRecording(on === true);
   });
   ipcMain.handle('settings:set', (_e, rawPatch: Partial<Settings>) => {
     // Window spots are main's to write (drag/nudge, kept on screen); Settings › Island position starts the Island over.

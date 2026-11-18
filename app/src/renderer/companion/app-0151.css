@@ -506,19 +506,23 @@
    70 px under 760 px. */
 :root[data-ui="v3"][data-v7] .onboard--step-1 { scroll-padding-bottom: 112px; }
 :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__foot { position: sticky; bottom: 0; z-index: 1; background: var(--u-paper); }
-/* On windows under 860 px, Try it drops 94 px of spacing, so with the explanation open it fits 780 px with no scrollbar. */
-@media (max-height: 860px) {
-  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 28px; scroll-padding-bottom: 84px; }
-  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__vibe { padding-top: 12px; }
-  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__body { margin-top: 16px; }
-  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__try { gap: 12px; }
+/* On windows under 890 px, Try it drops 126 px of spacing (32 of it pays for the Control keys row under the code), so
+   with the explanation open it fits 780 px with no scrollbar. At full spacing it needs 887 px (measured at 1280 × 870
+   on 0.1.54), hence 890, not 0.1.53's 860. */
+@media (max-height: 890px) {
+  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 20px; scroll-padding-bottom: 84px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__vibe { padding-top: 4px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__body { margin-top: 8px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__try { gap: 8px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__keys { margin-top: -4px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__foot { padding: 16px 0 20px; }
 }
-/* Under 760 px (a 13-inch Mac's 1280 × 720 with the menu bar and Dock), another 48 px goes, so the level chips are not
+/* Under 760 px (a 13-inch Mac's 1280 × 720 with the menu bar and Dock), another 58 px goes, so the level chips are not
    left half under the footer. */
 @media (max-height: 760px) {
-  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 20px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 { padding-top: 14px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__vibe { gap: 6px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__editor-bar { height: 30px; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__editor pre { padding: 10px 18px; line-height: 1.45; }
   :root[data-ui="v3"][data-v7] .onboard--step-1 .onboard__foot { padding: 12px 0 14px; }
 }
@@ -529,6 +533,17 @@
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward { width: min(420px, 100%); justify-items: stretch; }
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward > .onboard__primary { width: 100%; }
 :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward .onboard__google { justify-items: start; text-align: left; }
+/* Hello at the window's minimum 980 × 620: "Let's go" sat at y 590-634, under the window. Under 700 px tall about 112 px
+   of spacing goes, so Let's go and the Google line are in view with the disclosure closed. The footer stays static and
+   in the flow (Security S-2 on 0.1.53), so nothing ever covers the heard-from note. */
+@media (max-height: 700px) {
+  :root[data-ui="v3"][data-v7] .onboard--step-0 { padding-top: 28px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__vibe { gap: 8px; padding-top: 8px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__body { margin-top: 14px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 h1 { font-size: 34px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__form { gap: 16px; margin-top: 20px; }
+  :root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot { padding: 18px 0 20px; }
+}
 :root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
 :root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
 /* Q11: the Google disclosure sits right under Let's go, quiet ink-2 13 px; open, its form lines up on the right. */
@@ -543,6 +558,15 @@
 :root[data-ui="v3"][data-v7] .onboard__editor-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--u-line); }
 :root[data-ui="v3"][data-v7] .onboard__editor-bar span { margin-left: 8px; font: 500 12.5px/1 var(--u-mono); color: var(--u-dark-ink-2); }
 :root[data-ui="v3"][data-v7] .onboard__editor pre { margin: 0; padding: 16px 18px; overflow-x: auto; font: 400 13px/1.6 var(--u-mono); color: var(--u-dark-ink); text-align: left; }
+/* The shortcut under the code (0.1.54, Control not Command): Today's hero caps at 28 px, then the line on a Mac. The row
+   costs 32 px with its gap: it sits 4 px under the code card (the try gap less the negative margin). */
+:root[data-ui="v3"][data-v7] .onboard__keys { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 28px; margin-top: -14px; }
+:root[data-ui="v3"][data-v7] .onboard__keys-caps { display: flex; flex: none; gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard__keys kbd {
+  display: grid; place-items: center; min-width: 28px; height: 28px; box-sizing: border-box; padding: 0 8px; border: 0; border-radius: 7px;
+  background: var(--u-solid); color: var(--u-ink); font: 500 13px/1 var(--u-sans); letter-spacing: 0; box-shadow: inset 0 0 0 1px var(--u-ink-2), 0 3px 0 var(--u-ink-2);
+}
+:root[data-ui="v3"][data-v7] .onboard__keys-line { margin: 0; font: 400 14px/1.4 var(--u-sans); color: var(--u-ink-2); }
 :root[data-ui="v3"][data-v7] .onboard__level { display: grid; gap: 12px; width: 100%; box-sizing: border-box; padding: 18px 20px; border-radius: var(--u-radius-card); background: var(--u-band); text-align: left; }
 :root[data-ui="v3"][data-v7] .onboard__level p { margin: 0; font: 500 15px/1.4 var(--u-sans); color: var(--u-ink); }
 :root[data-ui="v3"][data-v7] .onboard__choices { display: flex; flex-wrap: wrap; gap: 8px; }
