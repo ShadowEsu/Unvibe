@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FADE_IN_MS, FADE_OPACITY, FADE_OUT_MS, NOT_FADED, fadeStyle, nextFade } from '../src/renderer/widget/clickAway';
+import { FADE_IN_MS, FADE_OPACITY, FADE_OUT_MS, NOT_FADED, fadeStyle, isFaded, nextFade } from '../src/renderer/widget/clickAway';
 import { panelThemeMigration } from '../src/renderer/widget/themeMigration';
 import { clickAwayOnBlur } from '../src/main/windows';
 
@@ -19,6 +19,15 @@ test('a press or a rested pointer brings a faded pane back; leaving it unfocused
     assert.equal(fadeStyle(nextFade(woken, 'leave'), false).opacity, FADE_OPACITY, wake);
   }
   assert.deepEqual(nextFade(NOT_FADED, 'press'), NOT_FADED, 'a focused pane is never faded');
+});
+
+test('only the first press on a faded pane is swallowed: it wakes the pane, and the next press reaches its buttons (Security S5)', () => {
+  const away = nextFade(NOT_FADED, 'away');
+  assert.equal(isFaded(away), true, 'at 22 % the press only wakes it');
+  assert.equal(isFaded(nextFade(away, 'press')), false, 'woken by that press: the next one works');
+  assert.equal(isFaded(nextFade(away, 'hoverWake')), false, 'woken by a rested pointer: the press works');
+  assert.equal(isFaded(nextFade(nextFade(away, 'press'), 'leave')), true, 'faded again after the pointer leaves');
+  assert.equal(isFaded(NOT_FADED), false, 'a focused pane works as always');
 });
 
 test('with reduced motion the opacity changes at once', () => {

@@ -4,7 +4,7 @@ import { settings, type BarPosition, type BarSize, type InactiveBehavior, type T
 import { ownCodeStepDueNow } from './ownCodeStep';
 import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
-import { clampSpot, islandWindowAt, NUDGE_PX, pillSpotIn, savedSpot, snapSpot, withSpot, type Spot } from './spots';
+import { clampSpot, islandWindowAt, keepOnDisplays, NUDGE_PX, pillSpotIn, savedSpot, snapSpot, withSpot, type Spot } from './spots';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
@@ -273,7 +273,11 @@ export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void
   const from = dragOrigins.get(win);
   if (!from || win.isDestroyed() || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
   if (Math.abs(dx) > MAX_TRAVEL_PX || Math.abs(dy) > MAX_TRAVEL_PX) return;
-  win.setPosition(Math.round(from.x + dx), Math.round(from.y + dy));
+  // Each move stays on the screens (Security S3 on #344), not only the drop: a page may never send its dragEnd.
+  const { width, height } = win.getBounds();
+  const to = { x: Math.round(from.x + dx), y: Math.round(from.y + dy) };
+  const spot = keepOnDisplays(to, { width, height }, screen.getAllDisplays().map((d) => d.bounds));
+  win.setPosition(spot.x, spot.y);
 }
 
 /**
@@ -411,37 +415,64 @@ function displayOf(win: BrowserWindow): Electron.Display {
   return screen.getDisplayNearestPoint({ x: b.x + Math.round(b.width / 2), y: b.y + Math.round(b.height / 2) });
 }
 
-/** Keeps the panel inside its display's work area at this spot and remembers the spot for that display. */
-function placePanel(win: BrowserWindow, at: Spot, snapToEdges: boolean): void {
+/** Keeps the panel inside its display's work area at this spot; returns where it ended up and on which display. */
+function placePanel(win: BrowserWindow, at: Spot, snapToEdges: boolean): { displayId: number; spot: Spot } {
   const b = win.getBounds();
   const display = displayOf(win);
   const size = { width: b.width, height: b.height };
   const spot = clampSpot(snapToEdges ? snapSpot(at, size, display.workArea) : at, size, display.workArea);
   if (spot.x !== b.x || spot.y !== b.y) win.setPosition(spot.x, spot.y);
-  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, display.id, spot) });
+  return { displayId: display.id, spot };
+}
+
+/** Remembers the panel's spot for this display; a spot that is already the saved one doesn't touch the file. */
+function savePanelSpot(displayId: number, spot: Spot): void {
+  const saved = settings().all().overlaySpots?.[String(displayId)];
+  if (saved?.x === spot.x && saved?.y === spot.y) return;
+  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, displayId, spot) });
+}
+
+/**
+ * A held arrow key repeats fast: the panel moves at once, and its spot is saved this long after the last nudge, not
+ * once per key repeat (Security S1 on #344).
+ */
+export const NUDGE_SAVE_MS = 500;
+let nudgeSave: NodeJS.Timeout | null = null;
+/** A drop or a reset decides the spot now: a nudge's save still waiting must not overwrite it. */
+function cancelNudgeSave(): void {
+  clearTimeout(nudgeSave ?? undefined);
+  nudgeSave = null;
 }
 
 /** A drag of the panel by its header ended: it lands inside the screen, near edges snap, and the spot is kept. */
 export function endPanelDrag(win: BrowserWindow): void {
   if (!dragOrigins.delete(win) || win.isDestroyed()) return;
+  cancelNudgeSave();
   // The answer may have grown during the drag: fit it first, so the spot saved is where the panel ends up.
   const grown = heightAfterDrag.get(win);
   heightAfterDrag.delete(win);
   if (grown !== undefined) fitPanelHeight(win, grown);
   const { x, y } = win.getBounds();
-  placePanel(win, { x, y }, true);
+  const placed = placePanel(win, { x, y }, true);
+  savePanelSpot(placed.displayId, placed.spot);
 }
 
-/** An arrow key on the focused header moves the panel by one step (16 px, Design 633). */
+/** An arrow key on the focused header moves the panel by one step (16 px, Design 633); the spot is saved once it rests. */
 export function nudgePanel(win: BrowserWindow, dx: number, dy: number): void {
   if (win.isDestroyed() || dragOrigins.has(win) || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
   const { x, y } = win.getBounds();
-  placePanel(win, { x: x + Math.sign(dx) * NUDGE_PX, y: y + Math.sign(dy) * NUDGE_PX }, false);
+  const { displayId, spot } = placePanel(win, { x: x + Math.sign(dx) * NUDGE_PX, y: y + Math.sign(dy) * NUDGE_PX }, false);
+  cancelNudgeSave();
+  nudgeSave = setTimeout(() => {
+    nudgeSave = null;
+    savePanelSpot(displayId, spot);
+  }, NUDGE_SAVE_MS);
 }
 
 /** A double-click on the header: forget this display's spot and put the panel back beside the last ⌃U. */
 export function resetPanelPosition(win: BrowserWindow): void {
   if (win.isDestroyed()) return;
+  cancelNudgeSave();
   const display = displayOf(win);
   settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, display.id, null) });
   const { height } = win.getBounds();

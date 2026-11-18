@@ -55,6 +55,7 @@ import {
   whilePanelDialog,
 } from './windows';
 import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -860,7 +861,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
   // Dragging the floating Island (Vitalii via BOSS 636): its page reports the pointer's travel; the notch Island stays.
-  ipcMain.handle('bar:opensUp', () => islandDirection());
+  ipcMain.handle('bar:opensUp', (e) => (bar && BrowserWindow.fromWebContents(e.sender) === bar ? islandDirection() : false));
   ipcMain.on('bar:dragStart', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar && islandDraggable()) startWindowDrag(bar); });
   ipcMain.on('bar:dragMove', (e, dx: unknown, dy: unknown) => {
     if (bar && BrowserWindow.fromWebContents(e.sender) === bar && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(bar, dx, dy);
@@ -1412,10 +1413,9 @@ app.whenReady().then(() => {
     return installDesktopBridge(editor);
   });
   ipcMain.handle('settings:set', (_e, rawPatch: Partial<Settings>) => {
-    // Window spots are main's to write (drag/nudge, kept on screen); Settings › Island position starts the Island over.
-    const { overlaySpots: _overlay, islandSpots: _island, ...patch } = rawPatch ?? {};
+    const patch = rendererSettingsPatch(rawPatch);
     const before = settings().all().shortcut;
-    const next = settings().set(patch.barPosition ? { ...patch, islandSpots: undefined } : patch);
+    const next = settings().set(patch);
     if (patch.shortcut && patch.shortcut !== before) {
       const ok = registerShortcut(next.shortcut);
       if (!ok) {
