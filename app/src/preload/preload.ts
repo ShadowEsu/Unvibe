@@ -216,6 +216,8 @@ const api = {
   signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
   openDeviceAuth: () => ipcRenderer.invoke('account:openDeviceAuth'),
+  /** The sign-in card closed: drop its waiting code (`userCode`), so approving it later signs nobody in. */
+  cancelDeviceAuth: (userCode: string) => ipcRenderer.invoke('account:cancelDevice', userCode),
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; name?: string; error?: string }) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; name?: string; error?: string }) => cb(r);
     ipcRenderer.on('account:device', listener);

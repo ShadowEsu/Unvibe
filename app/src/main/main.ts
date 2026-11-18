@@ -64,6 +64,7 @@ import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
+import { createDevicePoll } from './devicePoll';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { SUPPORT_EMAIL } from '../core/support';
 import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
@@ -164,8 +165,19 @@ const isMac = process.platform === 'darwin';
 let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
-let devicePoll: NodeJS.Timeout | null = null;
-let currentDeviceVerificationUrl: string | null = null;
+/** Google sign-in by device code: the one code main polls for, dropped when its card closes or the app quits. */
+const devicePoll = createDevicePoll({
+  redeem: redeemDeviceAuth,
+  approved: async (token, stillCurrent) => {
+    const account = await accountInfo(token);
+    // The card closed while the account was read: nobody is signed in.
+    if (!stillCurrent()) return;
+    await persistAccount({ userId: account.userId, email: account.email ?? 'Signed-in user', token });
+    void flush();
+    companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
+  },
+  ended: (error) => companion?.webContents.send('account:device', { ok: false, error }),
+});
 /** The one review session inside the single shared panel (overlay B has no review tabs). */
 let panelSession: ReviewSession | undefined;
 let panelReady = false;
@@ -457,6 +469,7 @@ function repairAccessibilityAfterUpdate(): void {
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
+  devicePoll.cancel();
 });
 
 /** Menu items call this as `click`, so it takes no arguments (Electron passes the menu item first). */
@@ -1741,7 +1754,6 @@ app.whenReady().then(() => {
       console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
-      currentDeviceVerificationUrl = verificationUrl;
       // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
       // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
       // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
@@ -1754,46 +1766,22 @@ app.whenReady().then(() => {
           if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
         },
       );
-      if (devicePoll) clearInterval(devicePoll);
-      const expires = Date.now() + 10 * 60_000;
-      devicePoll = setInterval(() => void (async () => {
-        if (Date.now() > expires) {
-          if (devicePoll) clearInterval(devicePoll);
-          devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Use Retry to create a new secure link.' });
-          return;
-        }
-        try {
-          const redeemed = await redeemDeviceAuth(device.deviceCode);
-          if (!redeemed) return;
-          const account = await accountInfo(redeemed.token);
-          await persistAccount({
-            userId: account.userId,
-            email: account.email ?? 'Signed-in user',
-            token: redeemed.token,
-          });
-          if (devicePoll) clearInterval(devicePoll); devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          void flush();
-          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'The secure sign-in request ended.';
-          if (/expired|unknown|already redeemed/i.test(message)) {
-            if (devicePoll) clearInterval(devicePoll);
-            devicePoll = null;
-            currentDeviceVerificationUrl = null;
-            companion?.webContents.send('account:device', { ok: false, error: 'This sign-in link is no longer valid. Use Retry to create a new one.' });
-          }
-        }
-      })(), Math.max(2, device.interval) * 1000);
+      devicePoll.start(device, verificationUrl);
       return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
+  // The sign-in card closed with its code still waiting: stop polling and forget it (only that card's own code).
+  ipcMain.handle('account:cancelDevice', (_e, userCode: unknown) => {
+    if (typeof userCode !== 'string') return { ok: false };
+    const dropped = devicePoll.cancel(userCode);
+    if (dropped) console.info('[auth] device sign-in cancelled: the card closed');
+    return { ok: dropped };
+  });
   ipcMain.handle('account:openDeviceAuth', async () => {
-    if (!currentDeviceVerificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
+    const verificationUrl = devicePoll.verificationUrl();
+    if (!verificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
     try {
-      await shell.openExternal(currentDeviceVerificationUrl);
+      await shell.openExternal(verificationUrl);
       console.info('[auth] reopened device verification browser');
       return { ok: true };
     } catch {

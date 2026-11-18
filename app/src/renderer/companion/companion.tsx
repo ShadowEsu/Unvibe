@@ -3,6 +3,7 @@ import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
 import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
+import { useDeviceCodeDroppedOnClose } from '../shared/deviceCodeCard';
 import { Learn } from './learn';
 import { Chat } from './chat';
 import { Gift } from './gift';
@@ -309,13 +310,15 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   const browserOpened = browserOpenedFor(browser);
   const done = useRef(onDone);
   done.current = onDone;
-  useEffect(() => window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
+  const waitingCode = useDeviceCodeDroppedOnClose();
+  useEffect(() => window.unvibe.onDeviceAuth((r) => { waitingCode.current = ''; setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
   // The code shows as soon as main has it; the browser opens alongside and reports only a failure, for its own link.
   useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
     const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
+      waitingCode.current = r.userCode;
       dispatchBrowser({ type: 'code', url: r.verificationUri });
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);

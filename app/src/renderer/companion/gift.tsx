@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from 'react';
 import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
+import { useDeviceCodeDroppedOnClose } from '../shared/deviceCodeCard';
 import { GoogleMark } from '../shared/googleMark';
 import { InkTitle } from './inkTitle';
 
@@ -45,19 +46,20 @@ export function Gift() {
     };
   }, []);
 
-  useEffect(() => {
-    window.unvibe.onDeviceAuth((result) => {
-      setSignInBusy(false);
-      if (result.ok && result.email) {
-        setNeedsSignIn(false);
-        setEmail(result.email);
-        setSignInError('');
-        void window.unvibe.giftStatus().then((status) => applyStatus(status as GiftStatus, result.email));
-        return;
-      }
-      if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
-    });
-  }, []);
+  const waitingCode = useDeviceCodeDroppedOnClose();
+  // Unsubscribed on close, so a Share page that was left never hears a later sign-in.
+  useEffect(() => window.unvibe.onDeviceAuth((result) => {
+    waitingCode.current = '';
+    setSignInBusy(false);
+    if (result.ok && result.email) {
+      setNeedsSignIn(false);
+      setEmail(result.email);
+      setSignInError('');
+      void window.unvibe.giftStatus().then((status) => applyStatus(status as GiftStatus, result.email));
+      return;
+    }
+    if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
+  }), []);
   // The browser opens alongside the code and reports only a failure, for its own link.
   useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
 
@@ -66,6 +68,7 @@ export function Gift() {
     setSignInError('');
     const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
+      waitingCode.current = result.userCode;
       dispatchBrowser({ type: 'code', url: result.verificationUri });
       setDeviceCode(result.userCode);
       setVerificationUrl(result.verificationUri);
