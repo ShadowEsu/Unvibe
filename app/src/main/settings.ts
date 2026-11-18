@@ -8,6 +8,7 @@ import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
 import type { ExplanationLevel } from '../core/protocol';
 import { LOGIN_LAUNCH_ARG } from '../core/loginItem';
+import type { SpotsByDisplay } from './spots';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
@@ -112,7 +113,13 @@ export interface Settings {
   defaultExplanationLevel: ExplanationLevel;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
-  lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /**
+   * Where the person last left the overlay and the floating Island, per display id (screen coordinates of the
+   * window's, or the Island pill's, top-left). Written only by main when a drag or an arrow key moves them; read
+   * through spots.ts savedSpot, which keeps them inside an attached display (Security A3, 0.1.54).
+   */
+  overlaySpots?: SpotsByDisplay;
+  islandSpots?: SpotsByDisplay;
   /** Local greeting name for chat. Falls back to the Mac account name. */
   displayName: string;
   /** Optional local profile email. Not required to use the app. */
@@ -256,20 +263,20 @@ class SettingsStore {
       ...(needsIslandTiming ? { barHoverDelayMs: 160 } : {}),
       // Older builds dimmed (or kept solid, or collapsed) the panel on blur; overlay B fades it (Design ruling e).
       ...(needsClickAwayMigration ? { inactiveBehavior: 'fade' as const } : {}),
-      ...(needsOnboardingReset
-        ? {
-            onboarded: false,
-            // Fresh panel size for the new onboarding cohort.
-            lastWidgetBounds: undefined,
-          }
-        : {}),
+      ...(needsOnboardingReset ? { onboarded: false } : {}),
       ...(needsIdeShortcutMigration ? { shortcut: DEFAULT_SHORTCUT } : {}),
       ...(needsWindowsShortcut ? { shortcut: DEFAULT_SHORTCUT } : {}),
       ...(needsSidebarDensity ? { sidebarWidth: 216 } : {}),
     };
-    if (needsOnboardingReset) delete this.data.lastWidgetBounds;
+    // Fresh placement for the new onboarding cohort.
+    if (needsOnboardingReset) {
+      delete this.data.overlaySpots;
+      delete this.data.islandSpots;
+    }
     delete this.data.aiModel;
     Reflect.deleteProperty(this.data, 'widgetOpacityInactive');
+    // 0.1.54: the overlay's one remembered spot became one per display (overlaySpots).
+    Reflect.deleteProperty(this.data, 'lastWidgetBounds');
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
     if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || needsSetupProgressOff || needsClickAwayMigration || hadOpacitySlider || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }

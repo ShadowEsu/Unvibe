@@ -44,11 +44,28 @@ const api = {
   setBarNotice: (on: boolean) => ipcRenderer.send('bar:setNotice', on),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
+  /** The floating Island's card opens upward (main decides from where the Island sits on its screen). */
+  barOpensUp: (): Promise<boolean> => ipcRenderer.invoke('bar:opensUp'),
+  onBarOpensUp: (cb: (opensUp: boolean) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, opensUp: boolean) => cb(opensUp === true);
+    ipcRenderer.on('bar:opensUp', listener);
+    return () => ipcRenderer.removeListener('bar:opensUp', listener);
+  },
+  /** Dragging the floating Island: the pointer's travel since the drag began, in screen pixels. */
+  barDragStart: () => ipcRenderer.send('bar:dragStart'),
+  barDragMove: (dx: number, dy: number) => ipcRenderer.send('bar:dragMove', dx, dy),
+  barDragEnd: () => ipcRenderer.send('bar:dragEnd'),
 
   // widget review (one panel, one session)
   widgetReady: () => ipcRenderer.send('widget:ready'),
   /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
   fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** Moving the panel by its header: drag (pointer travel since the drag began), arrow keys, double-click to put it back. */
+  panelDragStart: () => ipcRenderer.send('widget:dragStart'),
+  panelDragMove: (dx: number, dy: number) => ipcRenderer.send('widget:dragMove', dx, dy),
+  panelDragEnd: () => ipcRenderer.send('widget:dragEnd'),
+  panelNudge: (dx: number, dy: number) => ipcRenderer.send('widget:nudge', dx, dy),
+  panelResetPosition: () => ipcRenderer.send('widget:resetPosition'),
   /** Saved tab: pinned lessons, then Recent, from this computer's store. */
   savedLessons: (): Promise<{ pinned: SavedRow[]; recent: SavedRow[] }> => ipcRenderer.invoke('widget:savedLessons'),
   /** One saved lesson's text as stored; never re-reads the file or runs a review. */

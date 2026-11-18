@@ -23,6 +23,15 @@ import { fadeStyle, HOVER_WAKE_MS, nextFade, NOT_FADED, type FadeEvent } from '.
 import { PANEL_THEME_KEY, panelThemeMigration, type ThemePreference } from './themeMigration';
 import { useRevealedText } from './reveal';
 import { trackWindowAway } from '../shared/windowAway';
+import { arrowStep, windowDragHandler } from '../shared/windowDrag';
+
+/** Dragging the panel by its header; its buttons (Close) keep working. */
+const moveByHeader = windowDragHandler({
+  ignore: 'button, a, input',
+  start: () => window.unvibe.panelDragStart(),
+  move: (dx, dy) => window.unvibe.panelDragMove(dx, dy),
+  end: () => window.unvibe.panelDragEnd(),
+});
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -998,7 +1007,22 @@ function Widget() {
         fadeTo('leave');
       }}
     >
-      <header className="ob-head" ref={headRef}>
+      {/* The panel moves by its header (0.1.54): drag, double-click to put it back beside the code, arrows by 16 px. */}
+      <header
+        className="ob-head"
+        ref={headRef}
+        tabIndex={0}
+        title="Drag to move. Double-click to put it back."
+        aria-description="Use the arrow keys to move the panel."
+        onPointerDown={moveByHeader}
+        onDoubleClick={(event) => { if (!(event.target as Element).closest('button')) window.unvibe.panelResetPosition(); }}
+        onKeyDown={(event) => {
+          const step = event.target === event.currentTarget ? arrowStep(event.key) : null;
+          if (!step) return;
+          event.preventDefault();
+          window.unvibe.panelNudge(step.dx, step.dy);
+        }}
+      >
         <span className="ob-head__vibe" aria-hidden="true">
           <Buddy mood={phase === 'streaming' ? 'thinking' : landed ? 'happy' : 'idle'} size={20} label="Vibe" listen />
         </span>

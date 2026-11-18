@@ -4,16 +4,17 @@ import { settings, type BarPosition, type BarSize, type InactiveBehavior, type T
 import { ownCodeStepDueNow } from './ownCodeStep';
 import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
+import { clampSpot, islandWindowAt, NUDGE_PX, pillSpotIn, savedSpot, snapSpot, withSpot, type Spot } from './spots';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
-const SNAP = 18;
 /**
- * Overlay B (Design b-refined SPEC, Pane): 380 wide; the height fits the content between 360 and 560, past which
- * the answer scrolls inside while the header and tabs stay. The renderer measures its content (widget:fitHeight).
+ * Overlay B (Design b-refined SPEC, Pane), compact since 0.1.54 (Vitalii via BOSS 636, Design 633): 320 wide in every
+ * Density; the height fits the content between 360 and 560, past which the answer scrolls inside while the header and
+ * tabs stay. The renderer measures its content (widget:fitHeight).
  */
-export const PANEL_W = 380;
+export const PANEL_W = 320;
 export const PANEL_MIN_H = 360;
 export const PANEL_MAX_H = 560;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
@@ -66,29 +67,56 @@ function attachedIsland(position: BarPosition): boolean {
   return position === 'top-center' && process.platform === 'darwin';
 }
 
-function barBounds(position: BarPosition, w: number, h: number): { x: number; y: number } {
-  const pointer = screen.getCursorScreenPoint();
-  const display = settings().all().followActiveDisplay
-    ? screen.getDisplayNearestPoint(pointer)
+/** The display the Island belongs on: the one under the pointer (Settings "Follow active display"), else the primary. */
+function islandDisplay(): Electron.Display {
+  return settings().all().followActiveDisplay
+    ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
     : screen.getPrimaryDisplay();
+}
+
+/**
+ * Where the Island window goes, and whether a floating one opens its card upward. The notch Island is fixed to the
+ * screen edge. A floating Island sits where the person last dragged it on this display (settings.islandSpots), else
+ * where its Settings position names; it opens upward from the lower half of the screen.
+ */
+function barPlacement(position: BarPosition, w: number, h: number): { x: number; y: number; opensUp: boolean } {
+  const display = islandDisplay();
   const { workArea, bounds } = display;
   const attached = attachedIsland(position);
+  if (!attached) {
+    const pill = { width: compactBarWidth(position), height: compactBarHeight(position) };
+    const spot = savedSpot(settings().all().islandSpots, display.id, pill, workArea);
+    if (spot) return islandWindowAt(spot, pill, { width: w, height: h }, workArea);
+  }
   const centerArea = attached ? bounds : workArea;
   const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
   // Keep every interactive pixel below the macOS camera/menu-bar safe area.
   const top = attached ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
+  const opensUp = position.startsWith('bottom');
   switch (position) {
     case 'top-center':
-      return { x: cx, y: top };
+      return { x: cx, y: top, opensUp };
     case 'top-right':
-      return { x: right, y: top };
+      return { x: right, y: top, opensUp };
     case 'bottom-right':
-      return { x: right, y: bottom };
+      return { x: right, y: bottom, opensUp };
     default:
-      return { x: cx, y: bottom };
+      return { x: cx, y: bottom, opensUp };
   }
+}
+
+/** The Island page draws its card above the pill when this is true (the Settings position alone can't say). */
+let islandOpensUp: boolean | null = null;
+function sendIslandDirection(win: BrowserWindow, opensUp: boolean): void {
+  if (win.isDestroyed() || islandOpensUp === opensUp) return;
+  islandOpensUp = opensUp;
+  win.webContents.send('bar:opensUp', opensUp);
+}
+/** The Island page asks once it has loaded (its first `bar:opensUp` may have gone before it listened). */
+export function islandDirection(): boolean {
+  return islandOpensUp ?? settings().all().barPosition.startsWith('bottom');
 }
 
 /** Compact top surface. Width leaves independent controls on both sides of a Mac notch. */
@@ -152,7 +180,8 @@ export function createBar(): BrowserWindow {
   const position = settings().all().barPosition;
   const compactWidth = compactBarWidth(position);
   const compactHeight = compactBarHeight(position);
-  const { x, y } = barBounds(position, compactWidth, compactHeight);
+  const { x, y, opensUp } = barPlacement(position, compactWidth, compactHeight);
+  islandOpensUp = opensUp;
   const win = new BrowserWindow({
     width: compactWidth,
     height: compactHeight,
@@ -201,15 +230,18 @@ export function setBarNotice(win: BrowserWindow | null, on: boolean): void {
   if (!barIsExpanded && win.isVisible()) applyBarSize(win, false);
 }
 
-function applyBarSize(win: BrowserWindow, force: boolean): void {
+function applyBarSize(win: BrowserWindow, force: boolean, animate = true): void {
+  // Mid-drag the pointer places the Island; the drag's end applies the size and spot.
+  if (dragOrigins.has(win)) return;
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
-  const { x, y } = barBounds(position, width, height);
+  const { x, y, opensUp } = barPlacement(position, width, height);
   // Hover previews must never activate the app or interrupt typing in the editor.
   win.setFocusable(false);
+  sendIslandDirection(win, opensUp);
   const prev = win.getBounds();
   if (force || prev.x !== x || prev.y !== y || prev.width !== width || prev.height !== height) {
-    win.setBounds({ x, y, width, height }, true);
+    win.setBounds({ x, y, width, height }, animate);
   }
   win.moveTop();
 }
@@ -219,9 +251,46 @@ export function positionBar(win: BrowserWindow): void {
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
   win.setMovable(!attachedIsland(position));
-  const { x, y } = barBounds(position, width, height);
+  const { x, y, opensUp } = barPlacement(position, width, height);
+  sendIslandDirection(win, opensUp);
   win.setBounds({ x, y, width, height });
   if (attachedIsland(position)) win.setPosition(x, y);
+}
+
+/** Where a window was when a drag of it began; the drag moves it by the pointer's travel since then. */
+const dragOrigins = new WeakMap<BrowserWindow, Spot>();
+export function startWindowDrag(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const { x, y } = win.getBounds();
+  dragOrigins.set(win, { x, y });
+}
+export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void {
+  const from = dragOrigins.get(win);
+  if (!from || win.isDestroyed() || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  win.setPosition(Math.round(from.x + dx), Math.round(from.y + dy));
+}
+
+/** The floating Island can be dragged; the notch Island stays on the screen edge. */
+export function islandDraggable(): boolean {
+  return !attachedIsland(settings().all().barPosition);
+}
+
+/**
+ * A drag of the floating Island ended: its pill stays inside the work area of the display it belongs on and that spot
+ * is remembered for that display. Without "Follow active display" the Island lives on the primary display, so it is
+ * kept there.
+ */
+export function endIslandDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win) || win.isDestroyed() || !islandDraggable()) return;
+  const position = settings().all().barPosition;
+  const pill = { width: compactBarWidth(position), height: compactBarHeight(position) };
+  const at = pillSpotIn(win.getBounds(), pill, islandDirection());
+  const centre = { x: at.x + Math.round(pill.width / 2), y: at.y + Math.round(pill.height / 2) };
+  const display = settings().all().followActiveDisplay ? screen.getDisplayNearestPoint(centre) : screen.getPrimaryDisplay();
+  const spot = clampSpot(snapSpot(at, pill, display.workArea), pill, display.workArea);
+  settings().set({ islandSpots: withSpot(settings().all().islandSpots, display.id, spot) });
+  // Straight to the kept spot: no glide after a drag (and none for people who turn motion down).
+  applyBarSize(win, true, false);
 }
 
 /** Quiet aisle — only show while a review is active. */
@@ -239,17 +308,6 @@ export function showBar(win: BrowserWindow | null): void {
 export function hideBar(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   win.hide();
-}
-
-function snap(win: BrowserWindow): void {
-  const b = win.getBounds();
-  const { workArea: wa } = screen.getDisplayNearestPoint({ x: b.x, y: b.y });
-  let { x, y } = b;
-  if (Math.abs(x - wa.x) < SNAP) x = wa.x;
-  if (Math.abs(x + b.width - (wa.x + wa.width)) < SNAP) x = wa.x + wa.width - b.width;
-  if (Math.abs(y - wa.y) < SNAP) y = wa.y;
-  if (Math.abs(y + b.height - (wa.y + wa.height)) < SNAP) y = wa.y + wa.height - b.height;
-  if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
 }
 
 /**
@@ -274,12 +332,12 @@ export function fitPanelBounds(bounds: Electron.Rectangle, workArea: Electron.Re
   return { x, y, width, height };
 }
 
-/** Where the compact Island is when it sits at the top of the display it's on; undefined for a bottom bar. */
+/** Where the compact Island is when it sits in the upper half of its display (the panel steps below it); else undefined. */
 function topIslandRect(): Electron.Rectangle | undefined {
   const position = settings().all().barPosition;
-  if (!position.startsWith('top')) return undefined;
   const { width, height } = barSize(position, false);
-  return { ...barBounds(position, width, height), width, height };
+  const { x, y, opensUp } = barPlacement(position, width, height);
+  return opensUp ? undefined : { x, y, width, height };
 }
 
 function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
@@ -291,24 +349,68 @@ function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
   return fitPanelBounds(bounds, (visible ?? screen.getPrimaryDisplay()).workArea, topIslandRect());
 }
 
-function defaultWidgetBounds(): Electron.Rectangle {
-  const cursor = screen.getCursorScreenPoint();
-  const { workArea } = screen.getDisplayNearestPoint(cursor);
+/**
+ * Where the pointer was at the last ⌃U: the selection is usually near it, so the panel opens beside it, and a
+ * double-click on the panel's header puts it back there.
+ */
+let panelAnchor: Electron.Point | null = null;
+
+function defaultWidgetBounds(anchor: Electron.Point): Electron.Rectangle {
+  const { workArea } = screen.getDisplayNearestPoint(anchor);
   const w = PANEL_W;
   const h = PANEL_MIN_H;
   return {
     width: w,
     height: h,
-    x: Math.min(Math.max(cursor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
-    y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
+    x: Math.min(Math.max(anchor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
+    y: Math.min(Math.max(anchor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
   };
 }
 
-/** Where the panel was last left; its size is always overlay B's (the content decides the height). */
-function resolveWidgetBounds(): Electron.Rectangle {
-  const saved = settings().all().lastWidgetBounds;
-  if (!saved) return defaultWidgetBounds();
-  return { x: saved.x, y: saved.y, width: PANEL_W, height: PANEL_MIN_H };
+/** Where the panel was last left on the display the ⌃U came from, else beside the pointer; its width is fixed. */
+function resolveWidgetBounds(anchor: Electron.Point): Electron.Rectangle {
+  const display = screen.getDisplayNearestPoint(anchor);
+  const spot = savedSpot(settings().all().overlaySpots, display.id, { width: PANEL_W, height: PANEL_MIN_H }, display.workArea);
+  return spot ? { ...spot, width: PANEL_W, height: PANEL_MIN_H } : defaultWidgetBounds(anchor);
+}
+
+/** The display a window's centre is on, which is where its spot is remembered. */
+function displayOf(win: BrowserWindow): Electron.Display {
+  const b = win.getBounds();
+  return screen.getDisplayNearestPoint({ x: b.x + Math.round(b.width / 2), y: b.y + Math.round(b.height / 2) });
+}
+
+/** Keeps the panel inside its display's work area at this spot and remembers the spot for that display. */
+function placePanel(win: BrowserWindow, at: Spot, snapToEdges: boolean): void {
+  const b = win.getBounds();
+  const display = displayOf(win);
+  const size = { width: b.width, height: b.height };
+  const spot = clampSpot(snapToEdges ? snapSpot(at, size, display.workArea) : at, size, display.workArea);
+  if (spot.x !== b.x || spot.y !== b.y) win.setPosition(spot.x, spot.y);
+  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, display.id, spot) });
+}
+
+/** A drag of the panel by its header ended: it lands inside the screen, near edges snap, and the spot is kept. */
+export function endPanelDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win) || win.isDestroyed()) return;
+  const { x, y } = win.getBounds();
+  placePanel(win, { x, y }, true);
+}
+
+/** An arrow key on the focused header moves the panel by one step (16 px, Design 633). */
+export function nudgePanel(win: BrowserWindow, dx: number, dy: number): void {
+  if (win.isDestroyed()) return;
+  const { x, y } = win.getBounds();
+  placePanel(win, { x: x + Math.sign(dx) * NUDGE_PX, y: y + Math.sign(dy) * NUDGE_PX }, false);
+}
+
+/** A double-click on the header: forget this display's spot and put the panel back beside the last ⌃U. */
+export function resetPanelPosition(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const display = displayOf(win);
+  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, display.id, null) });
+  const { height } = win.getBounds();
+  win.setBounds(clampToVisibleArea({ ...defaultWidgetBounds(panelAnchor ?? screen.getCursorScreenPoint()), height }), false);
 }
 
 /** The window height for content this tall: between 360 and 560 (past that the answer scrolls inside). */
@@ -365,12 +467,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
-  // Moving saves where the panel is; its size always comes from overlay B and the content.
-  win.on('moved', () => {
-    snap(win);
-    if (win.isDestroyed()) return;
-    settings().set({ lastWidgetBounds: win.getBounds() });
-  });
+  // Its spot is saved when a drag or an arrow key moves it (endPanelDrag, nudgePanel), per display.
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
@@ -389,6 +486,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
 /** Prefer the existing review panel; create only when needed. */
 export function getOrCreateWidget(): BrowserWindow {
+  panelAnchor = screen.getCursorScreenPoint();
   if (panelWin && !panelWin.isDestroyed()) {
     if (panelWin.isMinimized()) panelWin.restore();
     // A faded panel comes back before it is focused: the shortcut always shows a full panel.
@@ -397,7 +495,7 @@ export function getOrCreateWidget(): BrowserWindow {
     panelWin.focus();
     return panelWin;
   }
-  panelWin = buildWidgetWindow(resolveWidgetBounds());
+  panelWin = buildWidgetWindow(resolveWidgetBounds(panelAnchor));
   panelWin.on('closed', () => {
     panelWin = null;
   });

@@ -34,16 +34,24 @@ import {
   companionPainted,
   createCompanion,
   currentWidget,
+  endIslandDrag,
+  endPanelDrag,
   fitPanelHeight,
   focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
+  islandDirection,
+  islandDraggable,
+  moveWindowDrag,
+  nudgePanel,
   positionBar,
   raiseLimitPause,
+  resetPanelPosition,
   resizeBar,
   setBarNotice,
   setGrantFlowOpen,
   showBar,
+  startWindowDrag,
   whilePanelDialog,
 } from './windows';
 import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
@@ -851,6 +859,13 @@ app.whenReady().then(() => {
     resizeBar(bar, Boolean(expanded));
   });
   ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
+  // Dragging the floating Island (Vitalii via BOSS 636): its page reports the pointer's travel; the notch Island stays.
+  ipcMain.handle('bar:opensUp', () => islandDirection());
+  ipcMain.on('bar:dragStart', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar && islandDraggable()) startWindowDrag(bar); });
+  ipcMain.on('bar:dragMove', (e, dx: unknown, dy: unknown) => {
+    if (bar && BrowserWindow.fromWebContents(e.sender) === bar && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(bar, dx, dy);
+  });
+  ipcMain.on('bar:dragEnd', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar) endIslandDrag(bar); });
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
@@ -948,6 +963,20 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
+  // The panel moves by its header (0.1.54): drag, arrow keys (16 px) and a double-click that puts it back; the spot is
+  // remembered per display. Only the open panel can move itself.
+  const thePanel = (e: Electron.IpcMainEvent) => { const win = widgetOf(e); return win && win === currentWidget() ? win : null; };
+  ipcMain.on('widget:dragStart', (e) => { const win = thePanel(e); if (win) startWindowDrag(win); });
+  ipcMain.on('widget:dragMove', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(win, dx, dy);
+  });
+  ipcMain.on('widget:dragEnd', (e) => { const win = thePanel(e); if (win) endPanelDrag(win); });
+  ipcMain.on('widget:nudge', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') nudgePanel(win, dx, dy);
+  });
+  ipcMain.on('widget:resetPosition', (e) => { const win = thePanel(e); if (win) resetPanelPosition(win); });
   // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a). Only the panel
   // reads them (review NIT: any window could list or open saved lessons).
   const fromPanel = (e: Electron.IpcMainInvokeEvent) => { const win = widgetOf(e); return Boolean(win) && win === currentWidget(); };
@@ -1382,9 +1411,11 @@ app.whenReady().then(() => {
     if (editor !== 'cursor' && editor !== 'vscode') return { ok: false, error: 'Choose Cursor or VS Code.' };
     return installDesktopBridge(editor);
   });
-  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+  ipcMain.handle('settings:set', (_e, rawPatch: Partial<Settings>) => {
+    // Window spots are main's to write (drag/nudge, kept on screen); Settings › Island position starts the Island over.
+    const { overlaySpots: _overlay, islandSpots: _island, ...patch } = rawPatch ?? {};
     const before = settings().all().shortcut;
-    const next = settings().set(patch);
+    const next = settings().set(patch.barPosition ? { ...patch, islandSpots: undefined } : patch);
     if (patch.shortcut && patch.shortcut !== before) {
       const ok = registerShortcut(next.shortcut);
       if (!ok) {

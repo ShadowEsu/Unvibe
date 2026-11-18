@@ -6,6 +6,7 @@ import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 import { trackWindowAway } from '../shared/windowAway';
+import { windowDragHandler } from '../shared/windowDrag';
 import '../shared/tokens.css';
 
 type Snapshot = {
@@ -99,7 +100,10 @@ function Bar() {
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  /** Main says whether the card opens upward: a dragged Island may sit anywhere on the screen. */
+  const [opensUp, setOpensUp] = useState<boolean | null>(null);
   const expandedRef = useRef(false);
+  const draggingRef = useRef(false);
   const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,6 +187,8 @@ function Bar() {
     });
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
+    const offOpensUp = window.unvibe.onBarOpensUp(setOpensUp);
+    void window.unvibe.barOpensUp().then(setOpensUp);
     const offSettings = window.unvibe.onBarSettings((settings) => {
       if (settings.barPosition) { setAttached(isMac && settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
       if (settings.barSize) setBarSize(settings.barSize);
@@ -196,7 +202,7 @@ function Bar() {
     const onScheme = () => { if (theme === 'system') applyTheme('system'); };
     scheme.addEventListener('change', onScheme);
     return () => {
-      offNotify(); offPulse(); offCollapse(); offSettings();
+      offNotify(); offPulse(); offCollapse(); offSettings(); offOpensUp();
       scheme.removeEventListener('change', onScheme);
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
@@ -219,10 +225,10 @@ function Bar() {
 
   const openFromHover = () => {
     // A notice is showing: hovering to read it must not swap it for the overview's one-line note.
-    if (!hoverEnabled || expandedRef.current || note) return;
+    if (!hoverEnabled || expandedRef.current || note || draggingRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
-      if (document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
+      if (!draggingRef.current && document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
     }, hoverDelayMs);
   };
   const scheduleClose = () => {
@@ -244,7 +250,22 @@ function Bar() {
     else window.unvibe.openCompanion();
   };
 
-  const bottom = position.startsWith('bottom');
+  const bottom = opensUp ?? position.startsWith('bottom');
+  // The floating Island moves by its pill (0.1.54); the notch Island stays on the screen edge.
+  const startDrag = attached ? undefined : windowDragHandler({
+    ignore: 'button, a, input',
+    start: () => {
+      draggingRef.current = true;
+      clearTimeout(hoverOpenTimer.current ?? undefined);
+      setPanelExpanded(false, false);
+      window.unvibe.barDragStart();
+    },
+    move: (dx, dy) => window.unvibe.barDragMove(dx, dy),
+    end: () => {
+      draggingRef.current = false;
+      window.unvibe.barDragEnd();
+    },
+  });
   const active = phase !== 'idle';
   const shortcut = prettyShortcut(snapshot?.shortcut ?? 'Control+U');
   const heat = (snapshot?.heat ?? []).slice(-14);
@@ -255,7 +276,7 @@ function Bar() {
 
   return (
     <div
-      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
+      className={`island island--${barSize}${attached ? ' island--attached' : ' island--movable'}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
       style={{ '--safe-top': `${attached ? notchSafeTop() : 38}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
@@ -264,7 +285,7 @@ function Bar() {
       role="region"
       aria-label="Unvibe Island"
     >
-      <div className="island__compact">
+      <div className="island__compact" onPointerDown={startDrag} title={attached ? undefined : 'Drag to move.'}>
         <div className="island__wing island__wing--left">
           <span className="island__mark" aria-hidden="true"><Buddy mood={WORKING[phase] ? 'thinking' : phase === 'ready' || phase === 'understood' ? 'happy' : 'idle'} size={20} label="Vibe" /></span>
           <button className="island__tool" type="button" aria-label={`Understand selected code, ${shortcut}`} title={`Understand selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>

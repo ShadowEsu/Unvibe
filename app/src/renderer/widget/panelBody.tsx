@@ -29,7 +29,8 @@ export function CodeRow({ id, code, open, onToggle }: {
 }
 
 /**
- * The finished answer's actions (Mono): 28 px pills. Understand is the one filled button and the panel's existing
+ * The finished answer's actions (Mono, compact since 0.1.54): one row of frameless 28 px text buttons, so the Ask
+ * field's send stays the panel's one filled control at 320 px (Design 633). Understand is the panel's existing
  * understood action (it stays pressed, with a tick, and a second press does nothing new); Save pins the lesson to
  * Saved (pressed again, it unpins); Explain differently asks again. While the answer is still being revealed, all wait.
  */
@@ -43,8 +44,8 @@ export function ExplainChips({ busy, understood, pinned, onUnderstand, onSave, o
   children?: ReactNode;
 }) {
   return (
-    <div className="ob-chips">
-      <button type="button" className={`ob-btn ob-btn--small${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
+    <div className="ob-chips ob-chips--text">
+      <button type="button" className={`ob-chip${understood ? ' is-on' : ''}`} aria-pressed={understood} disabled={busy}
         onClick={() => { if (!understood) onUnderstand(); }}>
         {understood ? <Icon name="check" size={14} /> : null}Understand
       </button>

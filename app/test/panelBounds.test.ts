@@ -7,8 +7,8 @@ const inside = (b: { x: number; y: number; width: number; height: number }, wa: 
 const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
   a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 
-test('overlay B is 380 wide and its height fits the content between 360 and 560', () => {
-  assert.equal(PANEL_W, 380);
+test('overlay B is 320 wide and its height fits the content between 360 and 560', () => {
+  assert.equal(PANEL_W, 320);
   assert.equal(panelHeightFor(120), PANEL_MIN_H);
   assert.equal(panelHeightFor(431.4), 431);
   assert.equal(panelHeightFor(2000), PANEL_MAX_H, 'past 560 the answer scrolls inside instead');
