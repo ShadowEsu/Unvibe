@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, Fragment } from 'react';
-import { renderSummary, RichText } from '../src/renderer/shared/richText';
+import { renderInline, renderSummary, RichText } from '../src/renderer/shared/richText';
 
 function markup(text: string, streaming = false): string {
   return renderToStaticMarkup(createElement(RichText, { text, streaming }));
@@ -151,4 +151,9 @@ test('a saved explanation preview shows no raw heading or citation markup (QA 0.
   const html = renderToStaticMarkup(createElement(Fragment, null, ...renderSummary(summary)));
   assert.doesNotMatch(html, /##|\[\[|cite:|\*\*/);
   assert.match(html, /^What it does Retries <code class="inline">fetch<\/code> up to 3 times <span class="cite"[^>]*>[^<]*retry\.ts[^<]*<\/span> with <strong>backoff<\/strong>\.$/);
+});
+
+test('code keeps its brackets and braces; only prose loses leftover [[…]] and {{…}} (lead review on #348)', () => {
+  const html = renderToStaticMarkup(createElement(Fragment, null, ...renderInline("Pick the column with `df[['a']]` or `{{ name }}` [[junk]] {{x}} here.")));
+  assert.equal(html, 'Pick the column with <code class="inline">df[[&#x27;a&#x27;]]</code> or <code class="inline">{{ name }}</code>   here.');
 });
