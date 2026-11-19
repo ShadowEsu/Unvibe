@@ -34,19 +34,28 @@ import {
   companionPainted,
   createCompanion,
   currentWidget,
+  endIslandDrag,
+  endPanelDrag,
   fitPanelHeight,
   focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
+  islandDirection,
+  islandDraggable,
+  moveWindowDrag,
+  nudgePanel,
   positionBar,
   raiseLimitPause,
+  resetPanelPosition,
   resizeBar,
   setBarNotice,
   setGrantFlowOpen,
   showBar,
+  startWindowDrag,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -95,6 +104,7 @@ import {
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
+import { setShortcutRecording } from './commandUHint';
 import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
@@ -634,9 +644,10 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
   const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
-  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e). Decided before the
-  // failure signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
-  const restoring = !code && !needsGrant && Boolean(currentWidget()) && Boolean(panelSession?.code);
+  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e), but only after a
+  // real read: before the agreement the panel opens on it instead (restoresOpenPanel). Decided before the failure
+  // signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
+  const restoring = restoresOpenPanel({ code, agreed, needsGrant, panelOpen: Boolean(currentWidget()), panelHasCode: Boolean(panelSession?.code) });
   if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
@@ -850,6 +861,13 @@ app.whenReady().then(() => {
     resizeBar(bar, Boolean(expanded));
   });
   ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
+  // Dragging the floating Island (Vitalii via BOSS 636): its page reports the pointer's travel; the notch Island stays.
+  ipcMain.handle('bar:opensUp', (e) => (bar && BrowserWindow.fromWebContents(e.sender) === bar ? islandDirection() : false));
+  ipcMain.on('bar:dragStart', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar && islandDraggable()) startWindowDrag(bar); });
+  ipcMain.on('bar:dragMove', (e, dx: unknown, dy: unknown) => {
+    if (bar && BrowserWindow.fromWebContents(e.sender) === bar && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(bar, dx, dy);
+  });
+  ipcMain.on('bar:dragEnd', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar) endIslandDrag(bar); });
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
@@ -947,6 +965,20 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
+  // The panel moves by its header (0.1.54): drag, arrow keys (16 px) and a double-click that puts it back; the spot is
+  // remembered per display. Only the open panel can move itself.
+  const thePanel = (e: Electron.IpcMainEvent) => { const win = widgetOf(e); return win && win === currentWidget() ? win : null; };
+  ipcMain.on('widget:dragStart', (e) => { const win = thePanel(e); if (win) startWindowDrag(win); });
+  ipcMain.on('widget:dragMove', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(win, dx, dy);
+  });
+  ipcMain.on('widget:dragEnd', (e) => { const win = thePanel(e); if (win) endPanelDrag(win); });
+  ipcMain.on('widget:nudge', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') nudgePanel(win, dx, dy);
+  });
+  ipcMain.on('widget:resetPosition', (e) => { const win = thePanel(e); if (win) resetPanelPosition(win); });
   // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a). Only the panel
   // reads them (review NIT: any window could list or open saved lessons).
   const fromPanel = (e: Electron.IpcMainInvokeEvent) => { const win = widgetOf(e); return Boolean(win) && win === currentWidget(); };
@@ -1381,7 +1413,12 @@ app.whenReady().then(() => {
     if (editor !== 'cursor' && editor !== 'vscode') return { ok: false, error: 'Choose Cursor or VS Code.' };
     return installDesktopBridge(editor);
   });
-  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+  // Settings is recording a new shortcut: the ⌘U hint stays quiet meanwhile (only the main window can say so).
+  ipcMain.on('settings:recordingShortcut', (e, on: unknown) => {
+    if (companion && BrowserWindow.fromWebContents(e.sender) === companion) setShortcutRecording(on === true);
+  });
+  ipcMain.handle('settings:set', (_e, rawPatch: Partial<Settings>) => {
+    const patch = rendererSettingsPatch(rawPatch);
     const before = settings().all().shortcut;
     const next = settings().set(patch);
     if (patch.shortcut && patch.shortcut !== before) {
@@ -1419,10 +1456,10 @@ app.whenReady().then(() => {
       resizeBar(bar, false);
       if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
     }
-    // The panel follows Settings › Theme and "When I click away" live; the companion's window chrome follows the theme.
+    // The panel follows Settings › Theme, Density and "When I click away" live; the companion's window chrome follows the theme.
     const panel = currentWidget();
-    if ((patch.theme !== undefined || patch.inactiveBehavior !== undefined) && panel) {
-      panel.webContents.send('panel:settings', { theme: next.theme, inactiveBehavior: next.inactiveBehavior });
+    if ((patch.theme !== undefined || patch.density !== undefined || patch.inactiveBehavior !== undefined) && panel) {
+      panel.webContents.send('panel:settings', { theme: next.theme, density: next.density, inactiveBehavior: next.inactiveBehavior });
     }
     if (patch.theme !== undefined && companion) applyCompanionChrome(companion);
     return { settings: settings().all() };
@@ -1734,20 +1771,26 @@ app.whenReady().then(() => {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
     }
   });
-  ipcMain.handle('account:startDevice', async () => {
+  ipcMain.handle('account:startDevice', async (e) => {
     try {
+      const asked = Date.now();
       const device = await startDeviceAuth();
+      console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
       currentDeviceVerificationUrl = verificationUrl;
-      let browserOpened = true;
-      try {
-        await shell.openExternal(verificationUrl);
-        console.info('[auth] opened device verification browser');
-      } catch {
-        browserOpened = false;
-        console.warn('[auth] could not open device verification browser');
-      }
+      // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
+      // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
+      // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
+      // in these log lines are there to tell a slow server from a slow browser.
+      const opening = Date.now();
+      void shell.openExternal(verificationUrl).then(
+        () => console.info(`[auth] opened device verification browser in ${Date.now() - opening} ms`),
+        () => {
+          console.warn(`[auth] could not open device verification browser (after ${Date.now() - opening} ms)`);
+          if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
+        },
+      );
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {
@@ -1781,7 +1824,7 @@ app.whenReady().then(() => {
           }
         }
       })(), Math.max(2, device.interval) * 1000);
-      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl, browserOpened };
+      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
   ipcMain.handle('account:openDeviceAuth', async () => {

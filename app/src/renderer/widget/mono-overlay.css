@@ -38,6 +38,11 @@
 :root .ob .ob-meta { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--u-ink-2); }
 :root .ob .ob-head__close { width: 28px; height: 28px; border-radius: 999px; color: var(--u-ink-2); }
 :root .ob .ob-head__close:hover { background: var(--u-sunken); color: var(--u-ink); }
+/* 0.1.54: the header moves the panel (drag, double-click, arrow keys while it has focus). Close keeps its pointer. */
+:root .ob .ob-head { cursor: grab; touch-action: none; user-select: none; }
+:root .ob .ob-head:active { cursor: grabbing; }
+:root .ob .ob-head:focus-visible { outline: 2px solid var(--u-focus); outline-offset: -2px; }
+:root .ob .ob-head__close { cursor: pointer; }
 
 /* Tabs, 36 px under the header: four equal columns, icon 14 + label 12 semibold. Active: text colour with a 2 px
    underline 12 px in from each side; others grey; not available yet at 35 %. A hairline under the row. */
@@ -109,6 +114,11 @@
 :root .ob .ob-depth__lock { flex: none; }
 :root .ob .ob-depth .ob-pro,
 :root .ob .ob-depth__item.is-on .ob-pro { padding: 0; background: none; color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+/* 0.1.54, 320 px wide (Design 633): the five depths stay on one line that scrolls sideways (no scroll bar; the arrow
+   keys, a trackpad or a wheel move it, and the current depth is kept in view). Each takes its label's width. */
+:root .ob .ob-depth { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; flex-wrap: nowrap; }
+:root .ob .ob-depth::-webkit-scrollbar { display: none; }
+:root .ob .ob-depth__item { flex: 0 0 auto; padding: 0 10px; white-space: nowrap; }
 
 /* Code line, 36 px: grey fill, no bar, the first line in mono 12; "Show code" a semibold link with a chevron. */
 :root .ob .ob-code { margin: 0 -4px; border-radius: 8px; background: var(--u-sunken); box-shadow: none; }
@@ -162,8 +172,8 @@
 @keyframes monoBars { 50% { opacity: 0.5; } }
 :root[data-away] .ob .ob-skeleton i { animation-play-state: paused; }
 
-/* Buttons: 28 px pills, 12 px semibold. Filled (Understand, Check, a state's main action) in the action colour;
-   outlined with the control border; pressed on the strong grey fill; off at 35 %. */
+/* Buttons: 28 px pills, 12 px semibold. Filled (Check, a state's main action) in the action colour; outlined with
+   the control border; pressed on the strong grey fill; off at 35 %. */
 :root .ob :is(.ob-chip, .ob-btn, .pmf-card .btn) {
   gap: 6px;
   height: 28px;
@@ -184,6 +194,31 @@
 :root .ob :is(.ob-chip, .ob-btn, .pmf-card .btn):disabled,
 :root .ob .consent-form__actions [aria-disabled="true"] { opacity: var(--u-off); }
 :root .ob .ob-actions, :root .ob .ob-chips { gap: 8px; }
+/* The finished answer's last row (0.1.54, Design "Question it" v1): Explain differently, Save, Understood as frameless
+   text buttons, 13 px ink, underline on hover, 12 px apart; the ring sits around the text with 4 px padding. The Ask
+   send stays the one filled control. */
+:root .ob .ob-chips--text { gap: 12px; flex-wrap: nowrap; margin: 0 -4px; }
+:root .ob .ob-chips--text .ob-chip { padding: 0 4px; border-radius: 4px; background: transparent; box-shadow: none; font-size: 13px; font-weight: 500; }
+/* .ob-foot: the generic chip hover above weighs (0,7,0) through its :is(… .pmf-card .btn.ghost), so this needs one more. */
+:root .ob .ob-foot .ob-chips--text .ob-chip:hover:not(:disabled) { background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
+:root .ob .ob-chips--text .ob-chip.is-on { background: transparent; }
+
+/* "Question it": a 13 px label, then the three questions as full-width 32 px rows 6 px apart, 13 px text 12 px in, the
+   control edge, pill radius. Hover fills 4 % ink, press and "in the box" 8 %. 16 px under the foot's divider. */
+:root .ob .ob-questions { display: grid; gap: 6px; margin-top: 6px; }
+:root .ob .ob-questions__label { font: 600 13px/18px var(--u-font); color: var(--u-ink); }
+:root .ob .ob-question {
+  display: flex; align-items: center; width: 100%; height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--u-ink); font: 400 13px/18px var(--u-font); text-align: left;
+  box-shadow: inset 0 0 0 1px var(--u-border-control); cursor: pointer;
+}
+:root .ob .ob-question:hover:not(:disabled) { background: color-mix(in srgb, var(--u-ink) 4%, transparent); }
+:root .ob .ob-question:is(:active:not(:disabled), [aria-pressed="true"]) { background: color-mix(in srgb, var(--u-ink) 8%, transparent); }
+:root .ob .ob-question:disabled { opacity: var(--u-off); cursor: default; }
+/* Compact density: 12 px text, 28 px rows, 4 px gaps. */
+:root[data-density="compact"] .ob .ob-questions { gap: 4px; }
+:root[data-density="compact"] .ob .ob-question { height: 28px; font-size: 12px; }
+:root[data-density="compact"] .ob :is(.ob-questions__label, .ob-chips--text .ob-chip) { font-size: 12px; }
 /* The small key inside a button (Check ↵). */
 :root .ob .ob-key { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 4px; font: 600 12px/1 var(--u-font-mono); }
 :root .ob .ob-btn .ob-pro { padding: 0 6px; border-radius: 999px; background: var(--u-sunken); color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
@@ -199,6 +234,8 @@
 :root .ob .ob-ask .ob-chip { height: 24px; padding: 0 8px; }
 :root .ob .ob-ask__send { width: 28px; height: 28px; border-radius: 999px; background: var(--u-action); color: var(--u-action-on); }
 :root .ob .ob-ask__send:disabled { opacity: var(--u-off); }
+/* Waiting only for text, Ask stays the filled main button (Design, Question it v1); it does nothing until there is text. */
+:root .ob .ob-ask__send:disabled[data-waiting] { opacity: 1; cursor: default; }
 
 /* The toast: a floating pill on the solid ground, the tick in the text colour. */
 :root .ob .ob-toast { padding: 4px 12px 4px 10px; background: var(--u-solid-surface); box-shadow: inset 0 0 0 1px var(--u-border), var(--u-shadow-float); color: var(--u-ink); font-size: 12px; line-height: 20px; }

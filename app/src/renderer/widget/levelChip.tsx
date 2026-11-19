@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import type { ExplanationLevel } from '../../core/protocol';
 import { isProPlan } from '../../core/plan';
 import { Icon } from './icons';
@@ -30,6 +30,17 @@ export function DepthControl({ level, plan, disabled, onPick }: {
   onPick: (id: ExplanationLevel) => void;
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const track = useRef<HTMLDivElement>(null);
+  // At 320 px the five depths are one line that scrolls sideways (0.1.54): keep the current one in view.
+  useLayoutEffect(() => {
+    const row = track.current;
+    const on = refs.current[LEVELS.findIndex((l) => l.id === level)];
+    if (!row || !on) return;
+    const box = row.getBoundingClientRect();
+    const item = on.getBoundingClientRect();
+    if (item.left < box.left) row.scrollLeft -= box.left - item.left + 8;
+    else if (item.right > box.right) row.scrollLeft += item.right - box.right + 8;
+  }, [level]);
   const open = LEVELS.filter((l) => !(l.id === 'expert' && expertLocked(plan)));
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
@@ -41,7 +52,7 @@ export function DepthControl({ level, plan, disabled, onPick }: {
     refs.current[LEVELS.findIndex((l) => l.id === next.id)]?.focus();
   };
   return (
-    <div className="ob-depth" role="radiogroup" aria-label="Explanation depth" onKeyDown={onKey}><SegThumb />
+    <div className="ob-depth" ref={track} role="radiogroup" aria-label="Explanation depth" onKeyDown={onKey}><SegThumb />
       {LEVELS.map((l, i) => {
         const locked = l.id === 'expert' && expertLocked(plan);
         const on = l.id === level;

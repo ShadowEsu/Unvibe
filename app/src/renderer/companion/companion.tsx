@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
+import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
 import { Learn } from './learn';
 import { Chat } from './chat';
 import { Gift } from './gift';
@@ -95,7 +96,7 @@ interface Settings {
   followActiveDisplay: boolean; soundEffects: boolean; startAnimation?: boolean;
   soundVolume: number; soundStyle: 'soft' | 'pixel';
   inactiveBehavior: 'fade' | 'hide';
-  launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; notifications: boolean;
+  launchAtLogin: boolean; theme: 'system' | 'light' | 'dark'; density: 'comfortable' | 'compact'; notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string };
   defaultExplanationLevel: typeof STUDY_LEVELS[number]['id'];
   displayName: string;
@@ -304,23 +305,26 @@ function SignInForm({ onDone, label }: { onDone: (email: string, name?: string) 
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
-  const [browserOpened, setBrowserOpened] = useState(true);
+  const [browser, dispatchBrowser] = useReducer(deviceBrowserReducer, DEVICE_BROWSER_START);
+  const browserOpened = browserOpenedFor(browser);
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => window.unvibe.onDeviceAuth((r) => { setBusy(false); if (r.ok && r.email) done.current(r.email, r.name); else if (!r.ok) setErr(r.error ?? 'Secure sign-in failed.'); }), []);
+  // The code shows as soon as main has it; the browser opens alongside and reports only a failure, for its own link.
+  useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
   const startDevice = async () => {
     setBusy(true); setErr('');
-    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    const r = (await window.unvibe.startDeviceAuth()) as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (r.ok && r.userCode && r.verificationUri) {
+      dispatchBrowser({ type: 'code', url: r.verificationUri });
       setCode(r.userCode);
       setVerificationUrl(r.verificationUri);
-      setBrowserOpened(r.browserOpened !== false);
     } else { setBusy(false); setErr(r.error ?? 'Could not start secure sign-in.'); }
   };
   const openBrowser = async () => {
     const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
     if (!result.ok) setErr(result.error ?? 'Could not open your browser.');
-    else setBrowserOpened(true);
+    else dispatchBrowser({ type: 'opened', url: verificationUrl });
   };
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(verificationUrl); }
@@ -624,6 +628,19 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
               <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
               <pre>{SAMPLE_LINES.join('\n')}</pre>
             </div>
+            {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line says it.
+                A Mac always registers Control+U next to a shortcut of the person's own (core/shortcutKeys.ts), so its row
+                is true for every Mac. Windows and Linux register only their own shortcut, so the caps show that one. */}
+            {isMac ? (
+              <div className="onboard__keys">
+                <span className="onboard__keys-caps" aria-hidden="true">{['⌃ control', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
+                <p className="onboard__keys-line">Hold Control, not Command, and press U.</p>
+              </div>
+            ) : (
+              <div className="onboard__keys">
+                <span className="onboard__keys-caps" role="img" aria-label={shortcutCaps(shortcut, true).join(' ')}>{shortcutCaps(shortcut, true).map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}</span>
+              </div>
+            )}
             {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
             <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={explainSample} aria-disabled={explained}>
               {explained ? 'Explaining in the panel →' : 'Explain this code'}
@@ -1416,6 +1433,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
   const modalRef = useRef<HTMLDivElement>(null);
   const recRef = useRef(recording); recRef.current = recording;
   const closeRef = useRef(onClose); closeRef.current = onClose;
+  // While the shortcut recorder listens, ⌘U is a choice, not a mistake: main holds the ⌘U hint back.
+  useEffect(() => {
+    window.unvibe.setShortcutRecording(recording);
+    return () => { if (recording) window.unvibe.setShortcutRecording(false); };
+  }, [recording]);
 
   const chooseTab = (next: string) => {
     setTab(next);
@@ -1510,6 +1532,11 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               <div className="settings-group" role="group" aria-labelledby="settings-group-device">
               <div className="setrow"><div><div className="sl">Launch at login</div><div className="sd">Start Unvibe automatically when you log in to your {deviceName}.</div></div><Toggle label="Launch at login" on={settings.launchAtLogin} onClick={() => onSettings({ launchAtLogin: !settings.launchAtLogin })} /></div>
               <div className="setrow"><div><div className="sl">Sharks</div><div className="sd">The sharks on the launch screen and behind every page of the main window. Drawn on this {deviceName}, nothing is downloaded.</div></div><Toggle label="Sharks" on={settings.startAnimation !== false} onClick={() => onSettings({ startAnimation: settings.startAnimation === false })} /></div>
+              <div className="setrow settings-location"><div><div className="sl">Density</div><div className="sd">Compact uses smaller text and tighter rows.</div></div>
+                <div className="location-grid" role="group" aria-label="Density">
+                  {([['comfortable', 'Comfortable'], ['compact', 'Compact']] as const).map(([density, label]) => <button key={density} type="button" className={settings.density === density ? 'on' : ''} aria-pressed={settings.density === density} onClick={() => void onSettings({ density })}>{label}</button>)}
+                </div>
+              </div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow />
               </div>
@@ -1751,6 +1778,10 @@ function App() {
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [themePreference]);
+  const density = settings?.density ?? 'comfortable';
+  useEffect(() => {
+    document.documentElement.dataset.density = density;
+  }, [density]);
   useEffect(() => {
     configureTones({ enabled: settings?.soundEffects ?? true, volume: settings?.soundVolume ?? 0.3, style: settings?.soundStyle ?? 'soft' });
   }, [settings?.soundEffects, settings?.soundVolume, settings?.soundStyle]);
