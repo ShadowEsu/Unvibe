@@ -51,7 +51,8 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
 - The desktop app has no analytics SDK. Its build has no PostHog, Mixpanel or other analytics
   client, and `productEvent` (`app/src/core/productEvents.ts`) does nothing. What it does send
   about setup is listed below (setup progress, off by default from 0.1.45, with a switch to turn it
-  on). The
+  on; two once-only messages, `window_shown` and the optional `heard_from` answer, are sent with
+  that switch off too). The
   website's Mixpanel tracking is described on unvibe.site/privacy. Incident-response
   alerting is still not configured.
 - Without an account, each cloud explanation and the launch usage check carry a random install ID
@@ -69,6 +70,14 @@ Legal drafts in `docs/legal/` still require attorney and founder approval.
   progress" and starts on); it does not
   cover the rows above, which come from requests the app makes anyway. Both are described on
   unvibe.site/privacy and in `app/PRIVACY.md`.
+- From 0.1.52, sealed trial builds send one more write-once step on the same route, `window_shown`,
+  with "Send setup progress" on or off: the companion window was revealed and is still visible 3 s
+  later (`noteWindowShown` in `app/src/main/progress.ts`, called from `createCompanion` in
+  `app/src/main/windows.ts`). It carries the step name with the install ID, OS family and app
+  version; the server keeps only the step and its arrival time, in `trial_activation`, whose
+  app-reported rows are deleted after 180 days by a monthly manual run (no cron yet;
+  `web/supabase/migrations/20261025120000_trial_funnel.sql`). It tells an install a person opened
+  apart from an automatic one.
 - If you type an answer to the optional first-run question "Where did you hear about Unvibe?" and
   press Continue, it is sent once to Unvibe with this install's random ID, even with setup progress
   off, and kept with the anonymous install record for 12 months after the install started, with any

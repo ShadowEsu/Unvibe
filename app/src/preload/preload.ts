@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { ConsentProvider } from '../core/consent';
 import type { PmfDraft, PmfTextKey } from '../core/pmf';
 import type { ConsentStatus } from '../main/consent';
+import type { SavedLesson, SavedRow } from '../main/panelSaved';
 
 type ConsentAnswer = { ok: true; status: ConsentStatus } | { ok: false; error: string };
 
@@ -12,6 +13,10 @@ const api = {
   openCompanion: () => ipcRenderer.send('bar:openCompanion'),
   openSettings: () => ipcRenderer.send('bar:openSettings'),
   companionReview: () => ipcRenderer.send('companion:review'),
+  // The start stage left (or never showed): main restores the window chrome it darkened for it (Windows/Linux).
+  companionStageDone: () => ipcRenderer.send('companion:stage-done'),
+  // The companion drew its first real screen; main shows the window then (#208).
+  companionPainted: () => ipcRenderer.send('companion:painted'),
   appInfo: (): Promise<{ version: string; user: string; shortcut: string; sendsSetupProgress: boolean }> => ipcRenderer.invoke('app:info'),
   onBarNotify: (cb: (notice: { text: string; problem: boolean }) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, notice: { text: string; problem: boolean }) =>
@@ -29,8 +34,8 @@ const api = {
     ipcRenderer.on('bar:collapse', listener);
     return () => ipcRenderer.removeListener('bar:collapse', listener);
   },
-  onBarSettings: (cb: (settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' }) => cb(settings);
+  onBarSettings: (cb: (settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; theme?: 'system' | 'light' | 'dark' }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, settings: { barPosition?: string; barSize?: 'small' | 'medium' | 'large'; barHoverPreview?: boolean; barHoverDelayMs?: number; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; theme?: 'system' | 'light' | 'dark' }) => cb(settings);
     ipcRenderer.on('bar:settings', listener);
     return () => ipcRenderer.removeListener('bar:settings', listener);
   },
@@ -39,12 +44,36 @@ const api = {
   setBarNotice: (on: boolean) => ipcRenderer.send('bar:setNotice', on),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
+  /** The floating Island's card opens upward (main decides from where the Island sits on its screen). */
+  barOpensUp: (): Promise<boolean> => ipcRenderer.invoke('bar:opensUp'),
+  onBarOpensUp: (cb: (opensUp: boolean) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, opensUp: boolean) => cb(opensUp === true);
+    ipcRenderer.on('bar:opensUp', listener);
+    return () => ipcRenderer.removeListener('bar:opensUp', listener);
+  },
+  /** Dragging the floating Island: the pointer's travel since the drag began, in screen pixels. */
+  barDragStart: () => ipcRenderer.send('bar:dragStart'),
+  barDragMove: (dx: number, dy: number) => ipcRenderer.send('bar:dragMove', dx, dy),
+  barDragEnd: () => ipcRenderer.send('bar:dragEnd'),
 
-  // widget review (single panel + tabs)
+  // widget review (one panel, one session)
   widgetReady: () => ipcRenderer.send('widget:ready'),
-  setActiveTab: (tabId: string) => ipcRenderer.send('widget:setActiveTab', tabId),
-  addTab: (tabId: string) => ipcRenderer.send('widget:addTab', tabId),
-  closeTab: (tabId: string) => ipcRenderer.send('widget:closeTab', tabId),
+  /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
+  fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** Moving the panel by its header: drag (pointer travel since the drag began), arrow keys, double-click to put it back. */
+  panelDragStart: () => ipcRenderer.send('widget:dragStart'),
+  panelDragMove: (dx: number, dy: number) => ipcRenderer.send('widget:dragMove', dx, dy),
+  panelDragEnd: () => ipcRenderer.send('widget:dragEnd'),
+  panelNudge: (dx: number, dy: number) => ipcRenderer.send('widget:nudge', dx, dy),
+  panelResetPosition: () => ipcRenderer.send('widget:resetPosition'),
+  /** Saved tab: pinned lessons, then Recent, from this computer's store. */
+  savedLessons: (): Promise<{ pinned: SavedRow[]; recent: SavedRow[] }> => ipcRenderer.invoke('widget:savedLessons'),
+  /** One saved lesson's text as stored; never re-reads the file or runs a review. */
+  savedLesson: (id: string): Promise<{ ok: true; lesson: SavedLesson } | { ok: false; error: string }> => ipcRenderer.invoke('widget:savedLesson', id),
+  /** Save: pins (or unpins) the current explanation's lesson. */
+  saveLesson: (pinned: boolean): Promise<{ ok: boolean; pinned?: boolean }> => ipcRenderer.invoke('widget:saveLesson', pinned),
+  /** Save/unsave a lesson opened from the Saved tab, by its id. */
+  pinSaved: (id: string, pinned: boolean): Promise<{ ok: boolean; pinned?: boolean }> => ipcRenderer.invoke('widget:pinSaved', id, pinned),
   request: (opts: unknown) => ipcRenderer.send('widget:request', opts),
   cancel: () => ipcRenderer.send('widget:cancel'),
   useClipboard: (opts: unknown) => ipcRenderer.send('widget:useClipboard', opts),
@@ -54,6 +83,8 @@ const api = {
   explainDiff: (opts?: unknown) => ipcRenderer.invoke('review:explainDiff', opts),
   explainCompare: (opts?: unknown) => ipcRenderer.invoke('review:explainCompare', opts),
   buildChangeBrief: (opts?: unknown) => ipcRenderer.invoke('brief:build', opts),
+  /** The working-tree brief the user last built in Briefs, or null. Runs no git. */
+  lastChangeBrief: () => ipcRenderer.invoke('brief:last'),
   lookupOrigin: () => ipcRenderer.invoke('origin:lookup'),
   listKnowledge: () => ipcRenderer.invoke('knowledge:list'),
   verifyKnowledge: (input: unknown) => ipcRenderer.invoke('knowledge:verify', input),
@@ -67,8 +98,6 @@ const api = {
   testMe: () => ipcRenderer.send('widget:testMe'),
   answer: (choice: number) => ipcRenderer.send('widget:answer', choice),
   gotIt: () => ipcRenderer.send('widget:gotIt'),
-  pin: (pinned: boolean) => ipcRenderer.send('widget:pin', pinned),
-  collapse: (collapsed: boolean) => ipcRenderer.send('widget:collapse', collapsed),
   closeWidget: () => ipcRenderer.send('widget:close'),
   openStudy: () => ipcRenderer.send('widget:openStudy'),
   openPlan: () => ipcRenderer.send('companion:openPlan'),
@@ -83,15 +112,15 @@ const api = {
     ipcRenderer.on('companion:showPage', listener);
     return () => ipcRenderer.removeListener('companion:showPage', listener);
   },
-  widgetResizeStart: (edge: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw') =>
-    ipcRenderer.send('widget:resizeStart', edge),
-  widgetResizeEnd: () => ipcRenderer.send('widget:resizeEnd'),
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
-  onAutocollapse: (cb: (v: boolean) => void) => ipcRenderer.on('widget:autocollapse', (_e, v) => cb(v)),
+  /** Fade: main says the panel lost (true) or got back (false) focus; the page animates its own opacity. */
+  onPanelAway: (cb: (away: boolean) => void) => ipcRenderer.on('panel:away', (_e, away: unknown) => cb(away === true)),
+  /** Settings › Theme, Density or "When I click away" changed. */
+  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
+    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
-  feed: (limit: number) => ipcRenderer.invoke('learning:feed', limit),
   history: (limit: number) => ipcRenderer.invoke('learning:history', limit),
   learningItem: (id: string) => ipcRenderer.invoke('learning:item', id),
   setLearningNote: (input: { id: string; note: string }) => ipcRenderer.invoke('learning:setNote', input),
@@ -132,6 +161,8 @@ const api = {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
+  /** Settings › Activation shortcut started (true) or stopped (false) listening for new keys. */
+  setShortcutRecording: (on: boolean) => ipcRenderer.send('settings:recordingShortcut', on),
   integrations: () => ipcRenderer.invoke('integrations:status'),
   installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
 
@@ -145,9 +176,9 @@ const api = {
   /** After the Accessibility grant: explain the selection the shortcut could not read. */
   explainAfterGrant: (): Promise<{ explained: boolean }> => ipcRenderer.invoke('perms:explainAfterGrant'),
   /** macOS: why the last shortcut press read nothing, when System Events (Automation) was the cause. */
-  captureBlock: (): Promise<'automation_denied' | 'automation_timeout' | null> => ipcRenderer.invoke('perms:captureBlock'),
-  onCaptureBlock: (cb: (block: 'automation_denied' | 'automation_timeout' | null) => void) => {
-    const listener = (_e: Electron.IpcRendererEvent, block: 'automation_denied' | 'automation_timeout' | null) => cb(block);
+  captureBlock: (): Promise<'automation_denied' | 'automation_timeout' | 'elevated' | null> => ipcRenderer.invoke('perms:captureBlock'),
+  onCaptureBlock: (cb: (block: 'automation_denied' | 'automation_timeout' | 'elevated' | null) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, block: 'automation_denied' | 'automation_timeout' | 'elevated' | null) => cb(block);
     ipcRenderer.on('perms:captureBlock', listener);
     return () => ipcRenderer.removeListener('perms:captureBlock', listener);
   },
@@ -208,6 +239,12 @@ const api = {
     const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; name?: string; error?: string }) => cb(r);
     ipcRenderer.on('account:device', listener);
     return () => { ipcRenderer.removeListener('account:device', listener); };
+  },
+  /** The browser could not be opened for this sign-in link (it may arrive before or after startDeviceAuth replies). */
+  onDeviceBrowserFailed: (cb: (result: { verificationUri: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, r: { verificationUri: string }) => cb(r);
+    ipcRenderer.on('account:deviceBrowserFailed', listener);
+    return () => { ipcRenderer.removeListener('account:deviceBrowserFailed', listener); };
   },
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),

@@ -39,6 +39,7 @@ function Hero() {
       <div className="d-hero__bg" data-d-hero-bg="" aria-hidden="true" />
       <div className="d-hero__top" data-d-hero-rise="h1">
         <h1 id="d-hero-h" className="d-hero__h1 d-serif">{D_HERO.h1}</h1>
+        <p className="d-hero__sub">{D_HERO.sub}</p>
         <TryWeb />
       </div>
       <p className="d-hero__mark" aria-hidden="true" data-d-hero-rise="wordmark">{D_HERO.wordmark}</p>

@@ -1,18 +1,11 @@
 import { betaWindowsInstallScript } from "@/lib/betaInstallScript";
-import { recordBetaInstallEvent, recordInstallScriptDay } from "@/lib/betaInstallStats";
+import { countInstallScriptFetch } from "@/lib/betaInstallStats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  // Started first so it runs alongside the all-time write; it never throws and waits at most 1 s.
-  const dayCount = recordInstallScriptDay("win_fetched");
-  try {
-    await recordBetaInstallEvent("fetched");
-  } catch (error) {
-    console.error("install fetch count failed", error);
-  }
-  await dayCount;
+export async function GET(req: Request) {
+  await countInstallScriptFetch(req.url, "win_fetched");
   return new Response(betaWindowsInstallScript(), {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

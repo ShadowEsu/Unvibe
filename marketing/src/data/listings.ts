@@ -5,7 +5,8 @@
  *
  * Security rules (requests/security/20261106-1849-footer-badges-wording.md):
  * - A badge only for a live listing. A pending site that requires a link gets plain text under "Submitted to", with no
- *   "Featured" or "Listed" words.
+ *   "Featured" or "Listed" words. Exception (Preston, 18 Nov, ledger 637): a site that unpublished Unvibe for lack of
+ *   its badge shows that badge while we ask it to re-list (`badgeWhilePending`).
  * - No hotlinked images (B1): every badge is a copy in public/badges, so a page view sends nothing to the directories.
  * - Every badge file is recorded in public/badges/BADGES.md with its source URL, fetch date and sha256 (B2).
  * - Remove a pending site in the next site PR if it rejects Unvibe or has not listed it within 14 days.
@@ -31,8 +32,11 @@ export interface Listing {
   status: ListingStatus;
   /** live: our listing URL. pending: the href the site's checker requires. */
   href: string;
-  /** Shown only while live. Tool Index has two: its listing badge and its verification badge. */
+  /** Shown only while live (or with `badgeWhilePending`). Tool Index has two: its listing badge and its verification badge. */
   badges?: readonly ListingBadgeFile[];
+  /** Show the badge while pending: the site's free listing requires its badge on our page (Preston, ledger 637). Such a
+   *  site isn't also named under "Submitted to"; the badge already links it. */
+  badgeWhilePending?: true;
   /** A pending site that requires a link back before approving. */
   linkRequired?: boolean;
   /** YYYY-MM-DD (UTC) we submitted Unvibe (first100's LISTINGS-500.md). "Submitted to" names a site only once this is set
@@ -161,28 +165,54 @@ export const LISTINGS: readonly Listing[] = [
   { site: "Tiny Startups", status: "live", href: "https://www.tinystartups.com/startup/unvibe" },
   { site: "Indie Hackers", status: "live", href: "https://www.indiehackers.com/product/unvibe" },
   { site: "DevHunt", status: "live", href: "https://devhunt.org/tool/unvibe" },
-  { site: "Daniel Launches", status: "pending", href: "https://daniellaunches.com", linkRequired: true },
   // Approved 12 Nov 04:39Z (first100, LIVE-LISTINGS); the listing links unvibe.site, so the href keeps its utm_source for their checker.
   { site: "Startup Fame", status: "live", href: "https://startupfa.me/s/unvibe?utm_source=unvibe.site" },
-  { site: "DodoDirectory", status: "pending", href: "https://dododirectory.com", linkRequired: true, submitted: "2026-11-07" },
-  { site: "SumoDir", status: "pending", href: "https://sumodir.com", linkRequired: true, submitted: "2026-11-07" },
-  { site: "Postmake", status: "pending", href: "https://postmake.io/submit", linkRequired: true, submitted: "2026-11-07" },
-  { site: "Nick Launches", status: "pending", href: "https://nicklaunches.com/", linkRequired: true },
+  // DodoDirectory and SumoDir: unpublished after 11 Nov, most likely for lack of their badge. Preston (ledger 637): show
+  // the badge and ask them to re-list. It links their homepage, as their snippet asks, with no nofollow. Security 637
+  // sunset: if a listing isn't live again (its page shows Unvibe) by Wed 25 Nov, its badge comes off in the next site PR.
   {
-    site: "AI Tools Prime",
+    site: "DodoDirectory",
     status: "pending",
-    href: "https://www.aitoolsprime.com?utm_source=badge&utm_medium=referral&utm_campaign=featured_badge",
+    href: "https://dododirectory.com",
     linkRequired: true,
     submitted: "2026-11-07",
+    badgeWhilePending: true,
+    badges: [
+      {
+        src: "/badges/dododirectory-badge-light.png",
+        alt: "Featured on DodoDirectory",
+        width: 200,
+        height: 54,
+        source: "https://dododirectory.com/badge-light.png",
+        fetched: "2026-11-18",
+      },
+    ],
   },
+  {
+    site: "SumoDir",
+    status: "pending",
+    href: "https://sumodir.com",
+    linkRequired: true,
+    submitted: "2026-11-07",
+    badgeWhilePending: true,
+    badges: [
+      {
+        src: "/badges/sumodir-badge.png",
+        alt: "Featured on SumoDir",
+        width: 200,
+        height: 54,
+        source: "https://sumodir.com/badge.png",
+        fetched: "2026-11-18",
+      },
+    ],
+  },
+  // Security 18 Nov: approved, free listing scheduled 29 Nov-4 Dec, so it stays under "Submitted to" until 4 Dec.
   { site: "Dang.ai", status: "pending", href: "https://dang.ai", linkRequired: true, submitted: "2026-11-06" },
-  { site: "ToolPilot", status: "pending", href: "https://www.toolpilot.ai", linkRequired: true, submitted: "2026-11-06" },
-  { site: "Awesome Tools", status: "pending", href: "https://awesome.tools", linkRequired: true, submitted: "2026-11-06" },
 ];
 
-/** Badges of live listings, shown in the footer on every page and on /listed-on. */
-export const listingBadges = LISTINGS.flatMap(({ site, status, href, badges = [] }) =>
-  status === "live"
+/** Badges of live listings (and of `badgeWhilePending` sites), shown in the footer on every page and on /listed-on. */
+export const listingBadges = LISTINGS.flatMap(({ site, status, href, badges = [], badgeWhilePending }) =>
+  status === "live" || badgeWhilePending
     ? badges.map((badge, index) => ({
         name: index === 0 ? site : `${site} ${index + 1}`,
         href: badge.href ?? href,
@@ -198,7 +228,9 @@ export const listingBadges = LISTINGS.flatMap(({ site, status, href, badges = []
 export const listingLinks = LISTINGS.filter(({ status }) => status === "live").map(({ site, href }) => ({ name: site, href }));
 
 /** Pending sites we have submitted to that require a link back while they review a listing: plain text under
- *  "Submitted to". A site we haven't submitted to yet (no date) isn't named. */
-export const submittedTo = LISTINGS.filter(({ status, linkRequired, submitted }) => status === "pending" && linkRequired && submitted).map(
+ *  "Submitted to". A site we haven't submitted to yet (no date) isn't named, nor is one shown by its badge. */
+export const submittedTo = LISTINGS.filter(
+  ({ status, linkRequired, submitted, badgeWhilePending }) => status === "pending" && linkRequired && submitted && !badgeWhilePending,
+).map(
   ({ site, href }) => ({ name: site, href }),
 );

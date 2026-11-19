@@ -14,14 +14,15 @@ import { store } from './store';
 /** The open the user started last leads with the step; decided when it opened. */
 let offered = false;
 
-function due(): boolean {
+/** Whether an open now would lead with the step (the open itself decides through noteCompanionOpen). */
+export function ownCodeStepDueNow(): boolean {
   const s = settings().all();
   return ownCodeStepDue({ onboarded: s.onboarded, ownCodeExplained: s.ownCodeExplained === true, events: store().events() });
 }
 
 /** A companion open the user started: a new window, or one brought back from minimized. */
 export function noteCompanionOpen(): void {
-  offered = due();
+  offered = ownCodeStepDueNow();
 }
 
 export function ownCodeStepNotNow(): void {
@@ -44,5 +45,5 @@ export function firstRunEvent(sample: boolean): 'onboarding:sampleDone' | 'onboa
 }
 
 export function ownCodeStepShown(): boolean {
-  return offered && due();
+  return offered && ownCodeStepDueNow();
 }

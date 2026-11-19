@@ -6,6 +6,7 @@ import { ExplainDownload, Prose } from "@/components/paper/ExplainParts";
 import { explainHeading, explainHeadingText, explainLanguage, explainLinks, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { explainCard, pageMetadata } from "@/lib/pageMeta";
+import { pathForUseCase, useCases } from "@/lib/useCases";
 import { explainMono } from "../mono";
 import "../explain.css";
 
@@ -37,6 +38,8 @@ export default function ExplainLanguagePage({ params }: Params) {
   if (!page) notFound();
   const { name } = explainLanguage(page);
   const { related, others } = explainLinks(page);
+  // The use cases whose worked example is in this language (useCases.ts explainId); each links back here.
+  const cases = useCases.filter((entry) => entry.explainId === page.id);
 
   return (
     <article className={`explain-page ${explainMono.variable}`}>
@@ -85,26 +88,44 @@ export default function ExplainLanguagePage({ params }: Params) {
 
       <ExplainDownload subject={explainHeadingText(page)} />
 
-      <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
-        {related.length > 0 && (
+      {/* One nav per row, each named by its own heading (Design S-1 on #320); the rules between them keep the old single-card look. */}
+      <div className="explain-card explain-more">
+        {cases.length > 0 && (
           <>
-            <h2 id="explain-related-title">Related</h2>
-            <ul>
-              {related.map((other) => (
-                <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
-              ))}
-            </ul>
+            <nav aria-labelledby="explain-cases-title">
+              <h2 id="explain-cases-title">Use cases with a {name} example</h2>
+              <ul>
+                {cases.map((entry) => (
+                  <li key={entry.slug}><Link href={pathForUseCase(entry)}>{entry.pillLabel ?? entry.name}</Link></li>
+                ))}
+              </ul>
+            </nav>
             <hr className="explain-more__rule" />
           </>
         )}
-        <h2 id="explain-more-title">Explain code in another language</h2>
-        <ul>
-          {others.map((other) => (
-            <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
-          ))}
-          <li><Link href="/explain">All languages</Link></li>
-        </ul>
-      </nav>
+        {related.length > 0 && (
+          <>
+            <nav aria-labelledby="explain-related-title">
+              <h2 id="explain-related-title">Related</h2>
+              <ul>
+                {related.map((other) => (
+                  <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
+                ))}
+              </ul>
+            </nav>
+            <hr className="explain-more__rule" />
+          </>
+        )}
+        <nav aria-labelledby="explain-more-title">
+          <h2 id="explain-more-title">Explain code in another language</h2>
+          <ul>
+            {others.map((other) => (
+              <li key={other.id}><Link href={`/explain/${other.id}`}>{explainLanguage(other).name}</Link></li>
+            ))}
+            <li><Link href="/explain">All languages</Link></li>
+          </ul>
+        </nav>
+      </div>
     </article>
   );
 }

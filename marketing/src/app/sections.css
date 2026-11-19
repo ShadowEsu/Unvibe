@@ -30,6 +30,11 @@
 .try__code { position: relative; display: flex; flex: 1; min-height: 0; timeline-scope: --try-code; }
 .try__editor textarea { flex: 1; min-width: 0; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; scroll-timeline: --try-code inline; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
+/* Phones (Design on /explain at 390, 19 Nov): long lines wrap instead of running off the right edge. Beats the
+   textarea's wrap="off" (a presentational hint); with nothing to scroll sideways, the cue below stays off. */
+@media (max-width: 480px) {
+  .try__editor textarea { white-space: pre-wrap; overflow-wrap: anywhere; }
+}
 /* Scroll cue (Design), as on /use-cases: the right edge fades into the editor's fill while a line runs past it, and
    clears once you reach the end. A sample that fits has no active scroll timeline, so the cue stays at opacity 0.
    It stops above the bottom edge so the resize grip and a horizontal scrollbar stay clear, and hides while the
@@ -93,6 +98,8 @@
 .try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 .try__after p { margin: 0 0 0.9rem; }
+/* The accuracy line under the answer: secondary ink, one step under the answer's 1.08rem, plain weight. */
+.try__answer p.try__caveat { margin: 0.2rem 0 0; color: #4a4740; font: 400 0.95rem/1.5 var(--font-sans); }
 /* Right after the answer: the measured time, then this visitor's download (or the emailed link on a phone). */
 .try__after p.try__took { margin-bottom: 0.7rem; color: #141414; font: 800 1.1rem/1.35 var(--font-sans); }
 .try__after .get-unvibe { margin-bottom: 1rem; }

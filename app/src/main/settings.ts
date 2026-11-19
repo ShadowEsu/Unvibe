@@ -8,12 +8,15 @@ import path from 'node:path';
 import { DEFAULT_LOCAL_AI_PROVIDER, normalizeLocalAiProvider, type LocalAiProviderId } from './localAi';
 import type { ExplanationLevel } from '../core/protocol';
 import { LOGIN_LAUNCH_ARG } from '../core/loginItem';
+import type { SpotsByDisplay } from './spots';
 
 export type BarPosition = 'top-center' | 'bottom-center' | 'top-right' | 'bottom-right';
 export type BarVisibility = 'always' | 'during-review';
 export type BarSize = 'small' | 'medium' | 'large';
-export type InactiveBehavior = 'dim' | 'stay';
+export type InactiveBehavior = 'fade' | 'hide';
 export type ThemePreference = 'system' | 'light' | 'dark';
+/** Comfortable keeps the standard sizes; Compact uses smaller text and tighter rows (mono.css `[data-density="compact"]`). */
+export type Density = 'comfortable' | 'compact';
 
 export interface FeatureFlags {
   changeBrief: boolean;
@@ -47,8 +50,8 @@ const SETTINGS_REVISION = 8;
 const ISLAND_BEHAVIOR_REVISION = 4;
 /** Keeps the editor-owned ⌘U migration separate from product onboarding. */
 const IDE_BRIDGE_SHORTCUT_REVISION = 2;
-/** Makes the companion navigation quieter without overriding custom widths. */
-const SIDEBAR_DENSITY_REVISION = 2;
+/** Moves the former default widths (204, and 216/232 before them) to the A Rail's open 216 px; custom widths stay. */
+const SIDEBAR_DENSITY_REVISION = 3;
 /** Moves Windows installs off Ctrl+U, which belongs to the editor bridge and other apps. */
 const WINDOWS_SHORTCUT_REVISION = 1;
 /**
@@ -96,20 +99,31 @@ export interface Settings {
   followActiveDisplay: boolean;
   /** Locally synthesized UI cues. Never records or plays remote audio. */
   soundEffects: boolean;
+  /** The ascii-sharks ocean on a cold launch of the companion (Design r2-motion SPEC §2.1). Local canvas only. */
+  startAnimation: boolean;
   /** Local UI-sound gain (0–1). */
   soundVolume: number;
   /** A restrained synthesized voice; no remote audio is used. */
   soundStyle: 'soft' | 'pixel';
-  /** Opacity of an unfocused, unpinned widget (0.35–1). */
-  widgetOpacityInactive: number;
+  /** Settings › Panel › "When I click away": fade the panel to 22 % (default), or hide it and keep its state. */
   inactiveBehavior: InactiveBehavior;
   launchAtLogin: boolean;
   theme: ThemePreference;
+  /** Text and row size in the main window and the overlay. */
+  density: Density;
+  /** Theme was set in Settings (or by the panel's one-time moon migration), so migrations leave it alone. */
+  themeChosen?: true;
   /** Starting depth for new explanations. Users can still change it in every review. */
   defaultExplanationLevel: ExplanationLevel;
   notifications: boolean;
   quietHours: { enabled: boolean; start: string; end: string }; // "HH:MM"
-  lastWidgetBounds?: { x: number; y: number; width: number; height: number };
+  /**
+   * Where the person last left the overlay and the floating Island, per display id (screen coordinates of the
+   * window's, or the Island pill's, top-left). Written only by main when a drag or an arrow key moves them; read
+   * through spots.ts savedSpot, which keeps them inside an attached display (Security A3, 0.1.54).
+   */
+  overlaySpots?: SpotsByDisplay;
+  islandSpots?: SpotsByDisplay;
   /** Local greeting name for chat. Falls back to the Mac account name. */
   displayName: string;
   /** Optional local profile email. Not required to use the app. */
@@ -124,8 +138,10 @@ export interface Settings {
   lastProjectRoot?: string;
   /** Companion sidebar width in pixels. */
   sidebarWidth: number;
-  /** Hide the companion sidebar while keeping its small reveal control available. */
+  /** Fold the companion's left side to its 56 px rail (Mono's A Rail; ⌘\ / Ctrl+\). */
   sidebarHidden: boolean;
+  /** Hide the companion's 296 px right side on the pages that have one (⇧⌘\ / Ctrl+Shift+\). */
+  rightPaneHidden: boolean;
   /** Local 8 character gift code when the Mac is not signed in. */
   giftCode: string;
   /** Incomplete B2B work stays behind flags so existing users keep the current loop. */
@@ -164,13 +180,13 @@ const DEFAULTS: Settings = {
   barSize: 'medium',
   followActiveDisplay: true,
   soundEffects: true,
+  startAnimation: true,
   soundVolume: 0.3,
   soundStyle: 'soft',
-  // Enough transparency to show the editor beneath without making text feel disabled.
-  widgetOpacityInactive: 0.72,
-  inactiveBehavior: 'dim',
+  inactiveBehavior: 'fade',
   launchAtLogin: false,
   theme: 'light',
+  density: 'comfortable',
   defaultExplanationLevel: 'intermediate',
   displayName: '',
   profileEmail: '',
@@ -178,8 +194,9 @@ const DEFAULTS: Settings = {
   quietHours: { enabled: false, start: '22:00', end: '08:00' },
   useOwnAi: false,
   aiProvider: DEFAULT_LOCAL_AI_PROVIDER,
-  sidebarWidth: 204,
+  sidebarWidth: 216,
   sidebarHidden: false,
+  rightPaneHidden: false,
   giftCode: '',
   features: DEFAULT_FEATURES,
   shareSetupProgress: false,
@@ -216,11 +233,15 @@ class SettingsStore {
     const needsIslandTiming = needsIslandRevision &&
       (loaded.barHoverDelayMs === undefined || loaded.barHoverDelayMs === 220);
     const needsSidebarDensity = (loaded.sidebarDensityRevision ?? 0) < SIDEBAR_DENSITY_REVISION &&
-      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 216 || loaded.sidebarWidth === 232);
+      (loaded.sidebarWidth === undefined || loaded.sidebarWidth === 204 || loaded.sidebarWidth === 232);
     // Only the former defaults move; a deliberately chosen shortcut stays as it is.
     const needsWindowsShortcut = IS_WIN && (loaded.windowsShortcutRevision ?? 0) < WINDOWS_SHORTCUT_REVISION &&
       (loaded.shortcut === 'Control+U' || loaded.shortcut === 'CommandOrControl+U');
     const needsSetupProgressOff = (loaded.setupProgressRevision ?? 0) < SETUP_PROGRESS_REVISION;
+    // 'dim', 'stay' and 'collapse' came before overlay B's Fade / Hide; the dimmed-opacity slider went with them.
+    const loadedBehavior: string | undefined = loaded.inactiveBehavior;
+    const needsClickAwayMigration = loadedBehavior !== undefined && loadedBehavior !== 'fade' && loadedBehavior !== 'hide';
+    const hadOpacitySlider = 'widgetOpacityInactive' in loaded;
     this.freshStart = needsOnboardingReset;
     const aiProvider = normalizeLocalAiProvider(
       loaded.aiProvider ?? loaded.aiModel ?? DEFAULT_LOCAL_AI_PROVIDER,
@@ -230,6 +251,7 @@ class SettingsStore {
       ...loaded,
       quietHours: { ...DEFAULTS.quietHours, ...loaded.quietHours },
       aiProvider,
+      density: loaded.density === 'compact' ? 'compact' : 'comfortable',
       features: mergeFeatures(loaded.features),
       settingsRevision: SETTINGS_REVISION,
       appearanceRevision: 2,
@@ -245,26 +267,24 @@ class SettingsStore {
         : {}),
       ...(needsTopIsland ? { barPosition: 'top-center' as const, barHoverPreview: true } : {}),
       ...(needsIslandTiming ? { barHoverDelayMs: 160 } : {}),
-      // Older builds could collapse the whole panel on blur. Preserve the panel
-      // size and simply dim it when focus returns to Cursor or VS Code.
-      ...((loaded.inactiveBehavior as string | undefined) === 'collapse' ? { inactiveBehavior: 'dim' as const } : {}),
-      // The old default (0.84) barely looked see-through; move it to the new default.
-      ...(loaded.widgetOpacityInactive === 0.84 ? { widgetOpacityInactive: 0.72 } : {}),
-      ...(needsOnboardingReset
-        ? {
-            onboarded: false,
-            // Fresh panel size for the new onboarding cohort.
-            lastWidgetBounds: undefined,
-          }
-        : {}),
+      // Older builds dimmed (or kept solid, or collapsed) the panel on blur; overlay B fades it (Design ruling e).
+      ...(needsClickAwayMigration ? { inactiveBehavior: 'fade' as const } : {}),
+      ...(needsOnboardingReset ? { onboarded: false } : {}),
       ...(needsIdeShortcutMigration ? { shortcut: DEFAULT_SHORTCUT } : {}),
       ...(needsWindowsShortcut ? { shortcut: DEFAULT_SHORTCUT } : {}),
-      ...(needsSidebarDensity ? { sidebarWidth: 204 } : {}),
+      ...(needsSidebarDensity ? { sidebarWidth: 216 } : {}),
     };
-    if (needsOnboardingReset) delete this.data.lastWidgetBounds;
+    // Fresh placement for the new onboarding cohort.
+    if (needsOnboardingReset) {
+      delete this.data.overlaySpots;
+      delete this.data.islandSpots;
+    }
     delete this.data.aiModel;
+    Reflect.deleteProperty(this.data, 'widgetOpacityInactive');
+    // 0.1.54: the overlay's one remembered spot became one per display (overlaySpots).
+    Reflect.deleteProperty(this.data, 'lastWidgetBounds');
     this.data.sidebarWidth = Math.min(340, Math.max(168, Math.round(this.data.sidebarWidth || DEFAULTS.sidebarWidth)));
-    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || needsSetupProgressOff || (loaded.inactiveBehavior as string | undefined) === 'collapse' || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
+    if (needsOnboardingReset || needsLightDefault || needsFullscreenIsland || needsIslandRevision || needsIdeShortcutMigration || needsWindowsShortcut || needsSidebarDensity || needsSetupProgressOff || needsClickAwayMigration || hadOpacitySlider || loaded.aiProvider !== aiProvider || loaded.aiModel) this.persist();
   }
 
   all(): Settings {
@@ -352,6 +372,11 @@ class SettingsStore {
       ...(sidebarWidth !== undefined ? { sidebarWidth } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
       ...(profileEmail !== undefined ? { profileEmail } : {}),
+      // Only Fade or Hide; anything else keeps the current choice.
+      inactiveBehavior: patch.inactiveBehavior === 'hide' || patch.inactiveBehavior === 'fade' ? patch.inactiveBehavior : this.data.inactiveBehavior,
+      // Only Comfortable or Compact; anything else keeps the current choice.
+      density: patch.density === 'compact' || patch.density === 'comfortable' ? patch.density : this.data.density,
+      ...(patch.theme !== undefined ? { themeChosen: true as const } : {}),
     };
     delete this.data.aiModel;
     this.persist();

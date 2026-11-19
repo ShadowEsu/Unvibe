@@ -640,6 +640,7 @@ html.consent-known .consent-bar:not([data-live]), html:not(.js) .consent-bar:not
 .ninst__shot img { display: block; max-width: 100%; height: auto; border: 1px solid var(--ninst-line); border-radius: calc(10px * var(--squircle-k, 1)); corner-shape: squircle; }
 .ninst[data-os="windows"] .ninst__shot img { max-width: min(100%, 360px); }
 .ninst__shot figcaption { margin-top: 4px; font: 500 12px/1.4 var(--font-mono); color: var(--ninst-ink-2); }
+.ninst__shot-note { display: block; margin-top: 2px; font: 400 13px/1.45 var(--font-sans); }
 .ninst__help { margin: 6px 0 0; font: 400 14px/1.5 var(--font-sans); }
 /* Centred in the hero's call to action. */
 .vhero__cta .ninst { margin: 0 auto; }

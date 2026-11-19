@@ -127,7 +127,7 @@ export default async function InheritedCodePage() {
 
       <ExplainDownload surface="use_cases" />
 
-      <UseCaseMore current={page} explain={{ id: "javascript", name: "JavaScript" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }

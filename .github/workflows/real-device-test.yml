@@ -1,9 +1,16 @@
 name: Real device test
 
 # Installs Unvibe on real macOS and Windows machines (a published release, or the artifacts of a
-# build-only "Desktop app release" run so a change is proven before it ships), walks through the
-# timed first run, Google sign-in (up to Google's own page), every page, the editor shortcut path
-# and the global shortcut, and uploads a screenshot of every step plus a pass/fail report.
+# build-only "Desktop app release" run so a change is proven before it ships), walks through setup,
+# Google sign-in (up to Google's own page), every page and the global shortcut, and uploads a
+# screenshot of every step plus a pass/fail report.
+# The ai input (default false) decides whether anything is sent for a hosted explanation. With ai=false (every routine
+# run) the walk makes no hosted-AI call: real-device.mjs gets QA_AI_OK=0, skips setup's sample and own code and the
+# editor-bridge explanation, only checks that the global shortcut pops the send agreement up (on a profile without
+# one), and refuses any step that would send; the Mac website media steps (marketing-media.mjs, about $0.09 of
+# explanations on their own) are skipped. With ai=true (Unvibe 0.1.53 or later only): the timed first explanation,
+# one pasted own code, the editor shortcut path and the global shortcut explain for real (4 hosted explanations per
+# system), plus the Mac website media.
 on:
   workflow_dispatch:
     inputs:
@@ -15,8 +22,13 @@ on:
         description: "Optional: id of a build-only Desktop app release run to test instead of a release"
         required: false
         default: ""
+      ai:
+        description: "Explain for real (hosted AI: 4 explanations per system, plus the Mac website media; needs Unvibe 0.1.53+, an older build is refused before sending). Off: walk only, no hosted-AI call"
+        type: boolean
+        required: false
+        default: false
       media_samples:
-        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media"
+        description: "Also record marketing's sample files (app/e2e/media-samples/) in the website media (needs ai)"
         type: boolean
         required: false
         default: false
@@ -29,6 +41,10 @@ on:
 permissions:
   contents: read
   actions: read
+
+# The only switch for hosted explanations. Anything but a dispatch with ai=true leaves it at 0.
+env:
+  QA_AI_OK: ${{ inputs.ai && '1' || '0' }}
 
 jobs:
   walkthrough:
@@ -44,6 +60,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Say which mode runs
+        shell: bash
+        env:
+          MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
+        run: |
+          if [ "$QA_AI_OK" = 1 ]; then
+            echo "Mode: ai=true: the walkthrough explains for real (4 hosted calls on this system); the Mac also records the website media"
+          else
+            echo "Mode: ai=false: walk only, no hosted-AI call; the website media steps are skipped"
+            if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples needs ai=true; with ai=false nothing is recorded"; fi
+          fi
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
       # funnel (29 Oct: a deleted secret made the flag steps skip and 12 CI installs counted as real).
@@ -75,7 +103,10 @@ jobs:
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
           ids="$WALK_INSTALL_ID"
-          if [ "$OS_LABEL" = mac ]; then ids="$ids $MEDIA_INSTALL_ID"; else ids="$ids $PORTABLE_INSTALL_ID"; fi
+          if [ "$OS_LABEL" = mac ]; then
+            # The media install exists only when the website media runs (ai=true).
+            if [ "$QA_AI_OK" = 1 ]; then ids="$ids $MEDIA_INSTALL_ID"; fi
+          else ids="$ids $PORTABLE_INSTALL_ID"; fi
           for id in $ids; do
             # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
             answer=$(printf 'authorization: Bearer %s\n' "$UNVIBE_QA_FLAG_TOKEN" | curl -s -m 30 -w '\n%{http_code}' \
@@ -104,7 +135,8 @@ jobs:
         run: |
           if [ -n "$INPUT_BUILD_RUN" ] && ! [[ "$INPUT_BUILD_RUN" =~ ^[0-9]+$ ]]; then echo "build_run must be a run id (digits only)"; exit 1; fi
           v="$INPUT_VERSION"
-          if [ -z "$v" ]; then v=$(curl -fsSL https://unvibe.site/install.sh | sed -n 's/^TAG=".*:-v\([0-9.]*\)}"$/\1/p' | head -1); fi
+          # ?notrack=1: our own fetch, served the same script but left out of the install-script fetch count.
+          if [ -z "$v" ]; then v=$(curl -fsSL "https://unvibe.site/install.sh?notrack=1" | sed -n 's/^TAG=".*:-v\([0-9.]*\)}"$/\1/p' | head -1); fi
           if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "version must look like 0.1.44"; exit 1; fi
           echo "Testing Unvibe $v"
           echo "v=$v" >> "$GITHUB_OUTPUT"
@@ -310,7 +342,7 @@ jobs:
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
         continue-on-error: true
         shell: bash
         env:
@@ -326,7 +358,7 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != ''
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -347,7 +379,7 @@ jobs:
           echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
-        if: always() && matrix.label == 'mac'
+        if: always() && matrix.label == 'mac' && env.QA_AI_OK == '1'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-mac-website-media
