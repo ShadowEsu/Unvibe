@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const KEYWORDS =
   /\b(const|let|var|function|return|if|else|for|while|class|import|export|from|def|fn|pub|async|await|new|try|catch|throw|interface|type|extends|implements|switch|case|break|continue|struct|impl|match|use|package|func|select|where|in|of|not|and|or|None|null|undefined|true|false|self|this)\b/;
@@ -249,11 +249,38 @@ function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[
   return aligns ? { header, aligns } : null;
 }
 
+/**
+ * A table wider than its pane (a narrow overlay, 4+ columns) scrolls sideways in its own frame. Then, and only then,
+ * the frame is a focusable region the arrow keys scroll, and one line under it says so: macOS hides scrollbars, and the
+ * column off to the right is often the one that explains (Design S-1, 0.1.55). Rows, streaming and density re-check.
+ */
+function RichTable({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const check = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    check();
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <>
+      <div ref={box} className="rich-table" {...(overflows ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
+        {children}
+      </div>
+      {overflows ? <p className="rich-table__cue">Scroll sideways for the rest of the table.</p> : null}
+    </>
+  );
+}
+
 function renderTable(header: string[], aligns: Align[], rows: string[][], key: string): ReactNode {
   const cls = (c: number) => (aligns[c] ? `is-${aligns[c]}` : undefined);
   return (
-    // Wide tables scroll sideways inside a narrow panel; the region is focusable so the keyboard can scroll it.
-    <div key={key} className="rich-table" role="region" aria-label={`Table: ${header.join(', ').replace(/[`*]/g, '')}`} tabIndex={0}>
+    <RichTable key={key}>
       <table>
         <thead>
           <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell, undefined, true)}</th>)}</tr>
@@ -266,7 +293,7 @@ function renderTable(header: string[], aligns: Align[], rows: string[][], key: s
           </tbody>
         ) : null}
       </table>
-    </div>
+    </RichTable>
   );
 }
 

@@ -140,14 +140,15 @@
 :root .ob .ob-answer strong { font-weight: 600; text-decoration: none; }
 :root .ob .ob-answer .rich-table { border: 1px solid var(--u-border); border-radius: 8px; }
 /* Tables fit the 320 pane (Design, 0.1.55): no minimum column widths; 13 px body, 12 px headers in the second ink; code
-   in a cell wraps at its seams (richText `codeSeams`) and anywhere as a last resort, while numbers and words keep
-   break-word, so "~500" stays whole. A table that still doesn't fit scrolls sideways in its frame, and is logged. */
+   in a cell wraps only at its seams (richText `codeSeams`), never mid-name, and numbers and words keep break-word, so
+   "~500" stays whole. A table that still doesn't fit scrolls sideways in its frame (system scrollbar, no edge fade),
+   with one line under it saying so (Design S-1: option B plus the cue), and its width is logged locally. */
 :root .ob .ob-answer table { font-size: 13px; line-height: 18px; }
 :root .ob .ob-answer th, :root .ob .ob-answer td { padding: 6px 8px; }
 :root .ob .ob-answer td { border-top: 1px solid var(--u-border); }
 :root .ob .ob-answer :is(th, td) + :is(th, td) { border-left: 1px solid var(--u-border); }
 :root .ob .ob-answer th { background: color-mix(in srgb, var(--u-ink) 5%, transparent); color: var(--u-ink-2); font-size: 12px; font-weight: 600; }
-:root .ob .ob-answer :is(th, td) code.inline { overflow-wrap: anywhere; }
+:root .ob .ob-answer .rich-table__cue { margin: -4px 0 0; color: var(--u-ink-2); font-size: 12px; line-height: 16px; }
 :root[data-density="compact"] .ob .ob-answer table { font-size: 12px; line-height: 17px; }
 :root[data-density="compact"] .ob .ob-answer :is(th, td) { padding: 5px 6px; }
 :root .ob .ob-answer .cite { color: var(--u-ink-2); font-size: 12px; }

@@ -966,9 +966,11 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
-  // Whether a finished answer's tables fit the pane after 0.1.55's wrap; real answers decide if stacking is ever built.
+  // Whether a finished answer's tables fit the pane; real answers decide if stacking is ever built. Only the open panel
+  // reports (every window shares the preload).
   ipcMain.on('widget:tableFit', (e, fit: unknown) => {
-    const line = widgetOf(e) ? tableFitLine(fit) : null;
+    const win = widgetOf(e);
+    const line = win && win === currentWidget() ? tableFitLine(fit) : null;
     if (line) console.info(line);
   });
   // The panel moves by its header (0.1.54): drag, arrow keys (16 px) and a double-click that puts it back; the spot is
