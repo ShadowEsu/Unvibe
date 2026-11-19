@@ -43,7 +43,8 @@ describe("install box: the Terminal line first, the file second", () => {
 
   it("never claims Apple approval or a bypass (Security S-2: 'not notarized by Apple yet' and stop there)", () => {
     const thanks = [D_THANKS.fastest, D_THANKS.fastLine, D_THANKS.orFile, D_THANKS.ledeWindows].join(" ");
-    const texts = Object.values(INSTALL_COPY).map((copy) => [copy.title, copy.line, copy.fileLink, copy.stepsTitle, ...copy.steps, copy.note].join(" "));
+    const shots = (copy: (typeof INSTALL_COPY)[keyof typeof INSTALL_COPY]) => copy.stepShots.flatMap((s) => (s ? [s.caption, s.note ?? ""] : []));
+    const texts = Object.values(INSTALL_COPY).map((copy) => [copy.title, copy.line, copy.fileLink, copy.stepsTitle, ...copy.steps, copy.note, ...shots(copy)].join(" "));
     for (const text of [...texts, thanks]) {
       assert.doesNotMatch(text, /\bverified\b|\bsafe\b|apple-approved|bypass|(?<!self-)\bsigned by\b/i);
     }
