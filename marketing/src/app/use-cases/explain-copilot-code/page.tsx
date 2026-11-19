@@ -152,7 +152,7 @@ export default async function ExplainCopilotCodePage() {
         </p>
       </section>
 
-      <UseCaseMore current={page} explain={{ id: "python", name: "Python" }} />
+      <UseCaseMore current={page} />
     </article>
   );
 }

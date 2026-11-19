@@ -274,6 +274,34 @@ export function isBetaInstallStatsEmail(email: string | null | undefined): boole
 }
 
 /**
+ * Whether an install script request counts as a fetch. Our own fetches (fleet health checks, QA runs, CI) add
+ * `?notrack=1` and are left out; they get the same script. Exactly "1", like the site's other counters
+ * (downloadCounter.ts isCountedDownload). A URL that won't parse still counts.
+ */
+export function isCountedInstallScriptFetch(url: string): boolean {
+  try {
+    return new URL(url).searchParams.get("notrack") !== "1";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Counts one install script fetch (all-time and per day) unless it's one of ours. Never throws, so counting can't
+ * stop the script being served; the day count runs alongside the all-time write and waits at most 1 s.
+ */
+export async function countInstallScriptFetch(url: string, event: InstallScriptDayEvent): Promise<void> {
+  if (!isCountedInstallScriptFetch(url)) return;
+  const dayCount = recordInstallScriptDay(event);
+  try {
+    await recordBetaInstallEvent("fetched");
+  } catch (error) {
+    console.error("install fetch count failed", error);
+  }
+  await dayCount;
+}
+
+/**
  * Install script requests per Pacific day (migration 0012), beside the all-time counts above:
  * the server's day, the event and +1. Nothing about the request (IP, user agent, headers) is passed.
  */

@@ -29,8 +29,6 @@
 }
 .shortcut-pill i { width: 9px; height: 9px; box-sizing: border-box; border: 2px solid #141414; border-radius: 50%; }
 .shortcut-pill--busy i { border: 0; background: #6f45d2; box-shadow: 0 0 0 4px rgb(111 69 210 / 0.22); }
-.shortcut-pill--on { background: #d6f45a; }
-.shortcut-pill--on i { background: #141414; }
 
 /* The drawing of the Accessibility list. Drawn, not a screenshot: other apps are blank rows. */
 .shortcut-art { display: grid; gap: 8px; margin: 0; }

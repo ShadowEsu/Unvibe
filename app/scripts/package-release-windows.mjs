@@ -17,7 +17,7 @@ let backendUrl;
 try { backendUrl = new URL(backend); } catch { fail('UNVIBE_BACKEND must be an absolute URL.'); }
 if (backendUrl.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(backendUrl.hostname)) fail('UNVIBE_BACKEND must be a non-local HTTPS URL.');
 if (!certificate || !certificatePassword) fail('configure WIN_CSC_LINK (or CSC_LINK) and its certificate password before a public Windows build.');
-if (!existsSync('build/icon.png')) fail('tracked build/icon.png is missing.');
+if (!existsSync('build/icon.ico')) fail('tracked build/icon.ico is missing.');
 
 const env = { ...process.env, UNVIBE_BACKEND: backend, UNVIBE_TRIAL_TOKEN: trialToken };
 for (const [command, args] of [

@@ -22,7 +22,8 @@
 .ud-side__f--on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgb(40 20 110 / 0.08); }
 .ud-code { position: absolute; left: 210px; right: 0; top: 44px; bottom: 0; margin: 0; padding: 20px 0 0; background: #f7f6f3; font: 400 15.5px/1.6 var(--d-mono); white-space: pre; font-variant-ligatures: none; }
 .ud-line { display: block; position: relative; height: 24.8px; padding-left: 58px; }
-.ud-ln { position: absolute; left: 0; width: 36px; text-align: right; color: #a9a4b4; }
+/* line numbers: #716a81 on the editor's #f7f6f3 is 4.76:1 (WCAG AA text; was #a9a4b4 at 2.24:1, axe 15 Nov), same hue */
+.ud-ln { position: absolute; left: 0; width: 36px; text-align: right; color: #716a81; }
 /* selection: lime (#D6F45A) behind the selected text only, ink text (gate 1 SHOULD 2) */
 .ud-src { position: relative; z-index: 1; }
 .ud-line[data-sel-i] .ud-src::before { content: ""; position: absolute; z-index: -1; inset: 0 -4px; background: var(--lime); opacity: 0; transition: opacity 110ms linear; }

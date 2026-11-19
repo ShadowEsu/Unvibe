@@ -70,7 +70,7 @@ function panel(): { win: BrowserWindow; events: Array<Record<string, unknown>> }
 }
 
 function ownCode(): ReviewSession {
-  return { reviewId: `rv-${Math.random().toString(36).slice(2)}`, tabId: '1', code: 'const total = items.reduce((a, b) => a + b, 0);', sourceApp: 'Code', abort: null, recorded: false, level: 'intermediate', mode: 'selection' };
+  return { reviewId: `rv-${Math.random().toString(36).slice(2)}`, code: 'const total = items.reduce((a, b) => a + b, 0);', sourceApp: 'Code', abort: null, recorded: false, level: 'intermediate', mode: 'selection' };
 }
 
 async function refused(run: () => Promise<unknown>, provider: string): Promise<void> {

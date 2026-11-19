@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { allowanceUsedPct } from '../../core/allowance';
-import { Buddy, buddyMoodForPhase } from '../shared/buddy';
+import { Buddy } from '../shared/buddy';
 import { isMac } from '../shared/platform';
 import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
+import { trackWindowAway } from '../shared/windowAway';
+import { windowDragHandler } from '../shared/windowDrag';
 import '../shared/tokens.css';
 
 type Snapshot = {
@@ -27,22 +29,55 @@ type PulsePhase =
   | 'understood' | 'error' | 'offline';
 
 function CodeIcon() {
-  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m8 9-3 3 3 3" /><path d="m16 9 3 3-3 3" /><path d="m14 5-4 14" /></svg>;
 }
 
 function SettingsIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3h3.4l.6 2.1 1.6.7 1.9-1 2.4 2.4-1 1.9.7 1.6 2.1.6v3.4l-2.1.6-.7 1.6 1 1.9-2.4 2.4-1.9-1-1.6.7-.6 2.1h-3.4l-.6-2.1-1.6-.7-1.9 1-2.4-2.4 1-1.9-.7-1.6-2.1-.6v-3.4l2.1-.6.7-1.6-1-1.9 2.4-2.4 1.9 1 1.6-.7z"/><circle cx="12" cy="12" r="2.7"/></svg>;
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.3 3h3.4l.6 2.1 1.6.7 1.9-1 2.4 2.4-1 1.9.7 1.6 2.1.6v3.4l-2.1.6-.7 1.6 1 1.9-2.4 2.4-1.9-1-1.6.7-.6 2.1h-3.4l-.6-2.1-1.6-.7-1.9 1-2.4-2.4 1-1.9-.7-1.6-2.1-.6v-3.4l2.1-.6.7-1.6-1-1.9 2.4-2.4 1.9 1 1.6-.7z"/><circle cx="12" cy="12" r="2.7"/></svg>;
 }
 
-function StatusDots() {
-  return <span className="island__dots" aria-hidden="true"><i /><i /><i /><i /></span>;
+function TickIcon() {
+  return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
 }
 
-const STATUS_WORD: Record<PulsePhase, string> = {
-  idle: 'ready', loading: 'loading', working: 'working', analyzing: 'analyzing', searching: 'searching',
-  thinking: 'thinking', generating: 'generating', contextualizing: 'learning',
-  finalizing: 'finalising', ready: 'ready', understood: 'understood', error: 'issue', offline: 'offline',
+/**
+ * Working (Mono): the three steps the overlay shows, one word each, and which of the three dots leads under reduced
+ * motion (otherwise one dot at full strength steps across them). Done and problem phases have their own marks.
+ */
+const WORKING: Partial<Record<PulsePhase, { word: string; step: 0 | 1 | 2 }>> = {
+  loading: { word: 'Reading', step: 0 },
+  working: { word: 'Reading', step: 0 },
+  contextualizing: { word: 'Reading', step: 0 },
+  searching: { word: 'Checking', step: 1 },
+  analyzing: { word: 'Checking', step: 1 },
+  thinking: { word: 'Checking', step: 1 },
+  generating: { word: 'Writing', step: 2 },
+  finalizing: { word: 'Writing', step: 2 },
 };
+
+function Status({ phase }: { phase: PulsePhase }) {
+  const working = WORKING[phase];
+  if (working) {
+    return (
+      <span className="island__status" data-step={working.step}>
+        <span className="island__dots" aria-hidden="true"><i /><i /><i /></span>
+        {working.word}
+      </span>
+    );
+  }
+  if (phase === 'ready' || phase === 'understood') {
+    return <span className="island__status"><span className="island__done" aria-hidden="true"><TickIcon /></span>{phase === 'ready' ? 'Ready' : 'Understood'}</span>;
+  }
+  return <span className="island__status island__status--problem"><span className="island__problem" aria-hidden="true" />{phase === 'offline' ? 'Offline' : 'Issue'}</span>;
+}
+
+type ThemePreference = 'light' | 'dark' | 'system';
+
+/** The floating Island takes the app's theme ground (Mono); attached to the notch it is black in both. */
+function applyTheme(preference: ThemePreference) {
+  const dark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+}
 
 function notchSafeTop(): number {
   const display = window.screen as Screen & { availTop?: number };
@@ -65,7 +100,10 @@ function Bar() {
   const [soundVolume, setSoundVolume] = useState(0.3);
   const [soundStyle, setSoundStyle] = useState<'soft' | 'pixel'>('soft');
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  /** Main says whether the card opens upward: a dragged Island may sit anywhere on the screen. */
+  const [opensUp, setOpensUp] = useState<boolean | null>(null);
   const expandedRef = useRef(false);
+  const draggingRef = useRef(false);
   const actionLockUntil = useRef(0);
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,8 +160,11 @@ function Bar() {
 
   useEffect(() => {
     refresh();
+    let theme: ThemePreference = 'light';
     void window.unvibe.getSettings().then((value) => {
-      const settings = value as { barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; barSize?: 'small' | 'medium' | 'large'; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      const settings = value as { theme?: ThemePreference; barHoverPreview?: boolean; barHoverDelayMs?: number; barPosition?: string; barSize?: 'small' | 'medium' | 'large'; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel' };
+      theme = settings.theme ?? 'light';
+      applyTheme(theme);
       setHoverEnabled(settings.barHoverPreview ?? true);
       setHoverDelayMs(Math.min(600, Math.max(120, settings.barHoverDelayMs ?? 160)));
       setAttached(isMac && (settings.barPosition ?? 'top-center') === 'top-center');
@@ -146,6 +187,8 @@ function Bar() {
     });
     const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
+    const offOpensUp = window.unvibe.onBarOpensUp(setOpensUp);
+    void window.unvibe.barOpensUp().then(setOpensUp);
     const offSettings = window.unvibe.onBarSettings((settings) => {
       if (settings.barPosition) { setAttached(isMac && settings.barPosition === 'top-center'); setPosition(settings.barPosition); }
       if (settings.barSize) setBarSize(settings.barSize);
@@ -155,8 +198,12 @@ function Bar() {
       if (settings.soundVolume !== undefined) setSoundVolume(settings.soundVolume);
       if (settings.soundStyle !== undefined) setSoundStyle(settings.soundStyle);
     });
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const onScheme = () => { if (theme === 'system') applyTheme('system'); };
+    scheme.addEventListener('change', onScheme);
     return () => {
-      offNotify(); offPulse(); offCollapse(); offSettings();
+      offNotify(); offPulse(); offCollapse(); offSettings(); offOpensUp();
+      scheme.removeEventListener('change', onScheme);
       if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
       if (collapseTimer.current) clearTimeout(collapseTimer.current);
       if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -178,10 +225,10 @@ function Bar() {
 
   const openFromHover = () => {
     // A notice is showing: hovering to read it must not swap it for the overview's one-line note.
-    if (!hoverEnabled || expandedRef.current || note) return;
+    if (!hoverEnabled || expandedRef.current || note || draggingRef.current) return;
     if (hoverOpenTimer.current) clearTimeout(hoverOpenTimer.current);
     hoverOpenTimer.current = setTimeout(() => {
-      if (document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
+      if (!draggingRef.current && document.querySelector('.island')?.matches(':hover')) setPanelExpanded(true);
     }, hoverDelayMs);
   };
   const scheduleClose = () => {
@@ -203,7 +250,22 @@ function Bar() {
     else window.unvibe.openCompanion();
   };
 
-  const bottom = position.startsWith('bottom');
+  const bottom = opensUp ?? position.startsWith('bottom');
+  // The floating Island moves by its pill (0.1.54); the notch Island stays on the screen edge.
+  const startDrag = attached ? undefined : windowDragHandler({
+    ignore: 'button, a, input',
+    start: () => {
+      draggingRef.current = true;
+      clearTimeout(hoverOpenTimer.current ?? undefined);
+      setPanelExpanded(false, false);
+      window.unvibe.barDragStart();
+    },
+    move: (dx, dy) => window.unvibe.barDragMove(dx, dy),
+    end: () => {
+      draggingRef.current = false;
+      window.unvibe.barDragEnd();
+    },
+  });
   const active = phase !== 'idle';
   const shortcut = prettyShortcut(snapshot?.shortcut ?? 'Control+U');
   const heat = (snapshot?.heat ?? []).slice(-14);
@@ -214,7 +276,7 @@ function Bar() {
 
   return (
     <div
-      className={`island island--${barSize}${attached ? ' island--attached' : ''}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
+      className={`island island--${barSize}${attached ? ' island--attached' : ' island--movable'}${bottom ? ' island--bottom' : ''}${expanded ? ' island--expanded' : ''}${closing ? ' island--closing' : ''}${note && !expanded ? ' island--notice' : ''} island--phase-${phase}`}
       style={{ '--safe-top': `${attached ? notchSafeTop() : 38}px` } as React.CSSProperties}
       onMouseEnter={() => { playLaunchOnce(); openFromHover(); }}
       onMouseLeave={scheduleClose}
@@ -223,14 +285,14 @@ function Bar() {
       role="region"
       aria-label="Unvibe Island"
     >
-      <div className="island__compact">
+      <div className="island__compact" onPointerDown={startDrag} title={attached ? undefined : 'Drag to move.'}>
         <div className="island__wing island__wing--left">
-          <span className="island__mark" aria-hidden="true"><Buddy mood={buddyMoodForPhase(phase)} size={20} label="Vibe" /></span>
+          <span className="island__mark" aria-hidden="true"><Buddy mood={WORKING[phase] ? 'thinking' : phase === 'ready' || phase === 'understood' ? 'happy' : 'idle'} size={20} label="Vibe" /></span>
           <button className="island__tool" type="button" aria-label={`Understand selected code, ${shortcut}`} title={`Understand selected code · ${shortcut}`} onClick={() => act('review')}><CodeIcon /></button>
         </div>
         <span className="island__notch" aria-hidden="true" />
         <div className="island__wing island__wing--right" aria-live="polite">
-          {active ? <><StatusDots /><span className="island__status">{STATUS_WORD[phase]}</span></> : expanded || aiLeft === undefined ? null : <span className="island__left" title="AI explanations left"><b>{aiLeft}</b> left</span>}
+          {active ? <Status phase={phase} /> : aiLeft === undefined ? null : <span className="island__left" title="AI explanations left"><b>{aiLeft}</b> left</span>}
         </div>
       </div>
 
@@ -241,20 +303,20 @@ function Bar() {
       {expanded ? (
         <div className="island__overview">
           <header className="island__header">
-            <div><strong>Unvibe</strong><span>your learning, at a glance</span></div>
+            <div><strong>Unvibe</strong><span>Your learning, at a glance</span></div>
             <div className="island__header-actions">
               <button className="island__settings" type="button" aria-label="Island settings" title="Island settings" onClick={() => act('settings')}><SettingsIcon /></button>
             </div>
           </header>
           <div className="island__metrics" role="group" aria-label="Learning metrics">
-            <span data-tone="sky"><b>{value(snapshot?.explanations)}</b> reviews</span>
-            <span data-tone="lime"><b>{value(snapshot?.understood)}</b> understood</span>
-            <span data-tone="sun"><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
-            <span data-tone="lilac"><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> AI used</span>
+            <span><b>{value(snapshot?.explanations)}</b> reviews</span>
+            <span><b>{value(snapshot?.understood)}</b> understood</span>
+            <span><b>{value(snapshot?.linesUnderstood)}</b> lines</span>
+            <span><b>{usagePct === undefined ? '–' : `${usagePct}%`}</b> AI used</span>
           </div>
-          <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14d</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
-          <div className="island__allowance"><span><b>{value(aiLeft)}</b> AI</span><i /><span><b>{value(selectLeft)}</b> Select</span></div>
-          <p className="island__hint">Select code · press {shortcut} · Unvibe explains</p>
+          <div className="island__activity" role="img" aria-label="Activity over the last 14 days"><span aria-hidden="true">14 days</span><div aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} data-level={heat[index] ?? 0} />)}</div></div>
+          <div className="island__allowance"><span><b>{value(aiLeft)}</b> explanations left</span><i aria-hidden="true">·</i><span><b>{value(selectLeft)}</b> selections left</span></div>
+          <p className="island__hint">Select code · press <kbd>{shortcut}</kbd> · Unvibe explains</p>
           {note ? <p className="island__note" aria-hidden="true">{note}</p> : null}
           <div className="island__actions">
             <button type="button" onClick={() => act('review')}>Understand change</button>
@@ -266,4 +328,5 @@ function Bar() {
   );
 }
 
+trackWindowAway();
 createRoot(document.getElementById('root')!).render(<Bar />);
