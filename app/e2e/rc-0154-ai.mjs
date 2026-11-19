@@ -144,9 +144,9 @@ const watch = (page) => {
   page.on('console', (msg) => { if (msg.type() === 'error' && ours(page.url())) runtimeErrors.push(`console ${page.url().split('/').pop()}: ${msg.text()}`); });
   page.on('pageerror', (err) => { if (ours(page.url())) runtimeErrors.push(`pageerror ${page.url().split('/').pop()}: ${err.message}`); });
 };
-function profile(dir, installId) {
+function profile(dir, installId, extra = {}) {
   mkdirSync(dir, { recursive: true });
-  if (!existsSync(path.join(dir, 'unvibe-store.json'))) writeFileSync(path.join(dir, 'unvibe-store.json'), JSON.stringify({ installId }));
+  if (!existsSync(path.join(dir, 'unvibe-store.json'))) writeFileSync(path.join(dir, 'unvibe-store.json'), JSON.stringify({ installId, ...extra }));
   return dir;
 }
 async function start(userData) {
@@ -336,7 +336,10 @@ async function explanationDone(panel, ms = 120000) {
 let app = null;
 let companion = null;
 line(`NOTE  mode: AI run, plan ${PLAN} (at most ${BUDGET} hosted calls; each is listed as CALL n/${BUDGET})`);
-const A = profile(process.env.RC_AI_PROFILE ?? mkdtempSync(path.join(TMP, 'unvibe-rc0154-ai-')), process.env.RC_AI_ID ?? `qa-rc0154-ai-local-${Date.now()}`);
+// The launch-at-login question is seeded as already asked (store.ts `loginPromptAsked`; loginItem.ts loginPromptStep
+// returns 'none'), so it never shows: it is modal to the overlay (default Yes), and in Run B 44425517304 (Windows) it
+// sat unanswered (the watcher never saw it) and blocked row 2's real-pointer drag. It is not an RC row.
+const A = profile(process.env.RC_AI_PROFILE ?? mkdtempSync(path.join(TMP, 'unvibe-rc0154-ai-')), process.env.RC_AI_ID ?? `qa-rc0154-ai-local-${Date.now()}`, { loginPromptAsked: true });
 try {
   ({ app, companion } = await start(A));
 } catch (e) { log(false, 'The RC opens', short(e)); await finish(); }
@@ -397,11 +400,12 @@ try {
 
 // --- No-call rows on the finished overlay: 8, 10, 9, 2 (done state), 11 (overlay) ----------------------------------
 if (!stopped) {
-  // The launch-at-login question comes right after the first own-code explanation (a sheet on the overlay); the
-  // watcher answers No before anything here touches the overlay.
-  const loginAnswered = () => dialogs.some((m) => /log in/.test(m));
-  if (os !== 'linux' && !await waitFor(async () => loginAnswered(), 15000, 250)) note('The launch-at-login question', 'not seen within 15 s of the first explanation');
-  await sleep(1000);
+  // The launch-at-login question is seeded as asked (above), so no native dialog should be over the overlay. The real
+  // pointer rows (4 and 2) run only if the store still says so and the watcher saw no dialog; a desktop still records it.
+  const loginClear = () => readStore(A).loginPromptAsked === true && !dialogs.some((m) => /log in/.test(m));
+  await sleep(2500); // one pass of the dialog watcher after the first explanation
+  desktop('before-real-pointer-rows');
+  if (!loginClear()) note('The launch-at-login question', `not cleared: store loginPromptAsked ${readStore(A).loginPromptAsked}; dialogs seen ${JSON.stringify(dialogs)}`);
 
   // Real pointer presses on the finished overlay (rows 4 and 2) must not send: next to the question chips are Explain
   // differently, the depth picker, More detail, Ask and the Test me tab, and each of those sends (Security R1). So
@@ -527,7 +531,7 @@ if (!stopped) {
     return { x: window.screenX + r.left + r.width / 2, y: window.screenY + r.top + r.height / 2 };
   }, [selector, text]);
   if (os === 'linux') untestable('Row 4: first press with the editor in front, faded first press', 'local run: no editor and no window manager');
-  else if (!loginAnswered()) untestable('Row 4: first press with the editor in front, faded first press', 'skipped: the launch-at-login question was not seen answered, so a press could land on it');
+  else if (!loginClear()) untestable('Row 4: first press with the editor in front, faded first press', 'skipped: the launch-at-login question may be open, so a press could land on it');
   else {
     const start4 = await panelState();
     try {
@@ -730,6 +734,7 @@ if (!stopped) {
   // designed (mouse.swift's move warps with no move event, so resting the pointer there doesn't wake it).
   if (stopped) note('Row 2: done-state drag', 'skipped: an earlier step stopped the run\'s calls');
   else if (os === 'linux') untestable('Row 2: done-state drag', 'local run: with no window manager the main window covers the overlay, so the real pointer would press the main window');
+  else if (!loginClear()) untestable('Row 2: done-state drag', 'skipped: the launch-at-login question may be open (it is modal to the overlay)');
   else {
     const start2 = await panelState();
     try {
@@ -1078,5 +1083,8 @@ if (PLAN === 'full' && !stopped) {
 await sleep(2500); // one more pass of the dialog watcher
 const asks = dialogs.filter((m) => /Open Unvibe when you log in/.test(m));
 note('Native dialogs answered', dialogs.length ? dialogs.join(' | ') : `none seen${dialogWatchError ? ` (watcher error: ${dialogWatchError})` : ''}`);
-if (spent > 0 && os !== 'linux') log(asks.length <= 1, 'The launch-at-login question shows at most once (answered No)', `${asks.length} time(s)`);
+// Run B's watcher missed a dialog on Windows, so "none seen" alone proves nothing: the PASS rests on the store keeping
+// the seeded answer (loginPromptStep is then 'none'), with the desktop still before the real-pointer rows as the picture.
+if (spent > 0 && os !== 'linux') log(readStore(A).loginPromptAsked === true && asks.length === 0, 'The launch-at-login question stayed away (seeded as asked in the QA profile, kept by the app)',
+  `store loginPromptAsked ${readStore(A).loginPromptAsked}; questions seen by the watcher ${asks.length}; see the desktop still "before-real-pointer-rows"`);
 await finish();
