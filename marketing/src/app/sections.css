@@ -30,6 +30,11 @@
 .try__code { position: relative; display: flex; flex: 1; min-height: 0; timeline-scope: --try-code; }
 .try__editor textarea { flex: 1; min-width: 0; min-height: 16rem; padding: 1rem 1.1rem; border: 0; outline: none; resize: vertical; background: transparent; color: #f4f2ea; font: 0.95rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; scroll-timeline: --try-code inline; }
 .try__editor textarea:focus-visible { outline: 3px solid var(--v-lime); outline-offset: -4px; }
+/* Phones (Design on /explain at 390, 19 Nov): long lines wrap instead of running off the right edge. Beats the
+   textarea's wrap="off" (a presentational hint); with nothing to scroll sideways, the cue below stays off. */
+@media (max-width: 480px) {
+  .try__editor textarea { white-space: pre-wrap; overflow-wrap: anywhere; }
+}
 /* Scroll cue (Design), as on /use-cases: the right edge fades into the editor's fill while a line runs past it, and
    clears once you reach the end. A sample that fits has no active scroll timeline, so the cue stays at opacity 0.
    It stops above the bottom edge so the resize grip and a horizontal scrollbar stay clear, and hides while the
