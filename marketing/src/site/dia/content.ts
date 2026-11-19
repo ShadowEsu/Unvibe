@@ -23,7 +23,10 @@ export const D_NAV = [
 export const D_NAV_CTA = "Download free";
 
 export const D_HERO = {
-  h1: "Understand the code your AI writes.",
+  /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
+  h1: "Understand the code your AI writes, well enough to question it.",
+  /** Who it's for (ledger 636; Design: no "junior" on the page). One line at every width; the H1 carries the promise. */
+  sub: "For developers who build with AI tools.",
   wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
