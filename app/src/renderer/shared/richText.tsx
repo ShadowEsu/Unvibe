@@ -100,10 +100,33 @@ function wrapWords(text: string, words: WordCounter): ReactNode[] {
 }
 
 /**
+ * Break opportunities inside code at its own seams (Design, 0.1.55 tables): after `(`, `,`, `;`, an assignment `=`
+ * (not inside `==` or `=>`) and a member-access `.` (not a spread's dots). So `fn(...argsFromCall5)` can wrap as
+ * "fn(" / "...argsFromCall5)" in a narrow table cell instead of pushing the table wider than the pane.
+ */
+export function codeSeams(code: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let start = 0;
+  for (let i = 0; i < code.length - 1; i += 1) {
+    const ch = code[i]!;
+    const next = code[i + 1]!;
+    const seam = ch === '(' || ch === ',' || ch === ';'
+      || (ch === '=' && next !== '=' && next !== '>')
+      || (ch === '.' && /[\w)\]]/.test(code[i - 1] ?? '') && /[\w$]/.test(next));
+    if (!seam) continue;
+    out.push(code.slice(start, i + 1), <wbr key={i} />);
+    start = i + 1;
+  }
+  out.push(code.slice(start));
+  return out;
+}
+
+/**
  * Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk outside code spans only,
  * so code like df[['a']] or {{ name }} stays as written (lead review on #348). With `words`, plain words fade in one by one.
+ * With `seams` (table cells), code gets break opportunities at its seams.
  */
-export function renderInline(text: string, words?: WordCounter): ReactNode[] {
+export function renderInline(text: string, words?: WordCounter, seams = false): ReactNode[] {
   const cleaned = text
     .split(/(`[^`\n]+`)/)
     .map((part, i) => (i % 2 === 1 ? part : part
@@ -139,14 +162,14 @@ export function renderInline(text: string, words?: WordCounter): ReactNode[] {
     } else if (m[3]) {
       out.push(
         <code key={k++} className={words ? 'inline rich-w' : 'inline'}>
-          {m[3]}
+          {seams ? codeSeams(m[3]) : m[3]}
         </code>,
       );
     } else if (m[4]) {
       // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too, word by word.
-      out.push(<strong key={k++}>{renderInline(m[4], words)}</strong>);
+      out.push(<strong key={k++}>{renderInline(m[4], words, seams)}</strong>);
     } else {
-      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words)}</em>);
+      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words, seams)}</em>);
     }
     last = m.index + m[0].length;
   }
@@ -233,12 +256,12 @@ function renderTable(header: string[], aligns: Align[], rows: string[][], key: s
     <div key={key} className="rich-table" role="region" aria-label={`Table: ${header.join(', ').replace(/[`*]/g, '')}`} tabIndex={0}>
       <table>
         <thead>
-          <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell)}</th>)}</tr>
+          <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell, undefined, true)}</th>)}</tr>
         </thead>
         {rows.length ? (
           <tbody>
             {rows.map((row, r) => (
-              <tr key={r}>{header.map((_, c) => <td key={c} className={cls(c)}>{renderInline(row[c] ?? '')}</td>)}</tr>
+              <tr key={r}>{header.map((_, c) => <td key={c} className={cls(c)}>{renderInline(row[c] ?? '', undefined, true)}</td>)}</tr>
             ))}
           </tbody>
         ) : null}

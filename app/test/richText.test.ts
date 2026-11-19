@@ -103,11 +103,22 @@ test('a markdown table in an answer renders as a table, with no raw | rows', () 
   assert.equal(html.match(/<th scope="col">/g)?.length, 3);
   assert.equal(html.match(/<tr>/g)?.length, 7);
   assert.match(html, /<th scope="col">t \(ms\)<\/th>/);
-  assert.match(html, /<td>call 1: <code class="inline">clearTimeout\(undefined\)<\/code> is a no-op; schedule A for t=300<\/td>/);
-  assert.match(html, /<td>~500<\/td><td>E fires: <code class="inline">fn\(\.\.\.argsFromCall5\)<\/code><\/td><td>none<\/td>/);
+  // Code in a cell can wrap at its seams (0.1.55: the 320 px overlay), so a long call never widens the table.
+  assert.match(html, /<td>call 1: <code class="inline">clearTimeout\(<wbr\/>undefined\)<\/code> is a no-op; schedule A for t=300<\/td>/);
+  assert.match(html, /<td>~500<\/td><td>E fires: <code class="inline">fn\(<wbr\/>\.\.\.argsFromCall5\)<\/code><\/td><td>none<\/td>/);
   assert.doesNotMatch(html, /\|/);
   // The line after the last row isn't a row: it stays its own paragraph.
   assert.match(html, /<\/table><\/div><p>Each call resets the countdown/);
+});
+
+test('code in a table cell breaks only at its seams, never inside a name, a spread, == or =>', () => {
+  const seams = (code: string) => markup(`| c |\n|---|\n| \`${code}\` |`).match(/<code class="inline">(.*?)<\/code>/)![1]!.replace(/<wbr\/>/g, '|');
+  assert.equal(seams('fn(...argsFromCall5)'), 'fn(|...argsFromCall5)');
+  assert.equal(seams('this.timer = setTimeout(run, wait);'), 'this.|timer =| setTimeout(|run,| wait);');
+  assert.equal(seams('a === b && f => f.x'), 'a ===| b &amp;&amp; f =&gt; f.|x');
+  assert.equal(seams('items[0].price'), 'items[0].|price');
+  // Outside tables, code is untouched: prose already wraps around it.
+  assert.doesNotMatch(markup('Call `fn(a, b)` once.'), /<wbr/);
 });
 
 test('a pipe inside a code span or escaped as \\| stays in its cell', () => {
