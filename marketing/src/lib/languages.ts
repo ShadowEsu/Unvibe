@@ -757,6 +757,36 @@ export const languages: Language[] = [
     learningPath: ["Reading a row", "Ports and connections", "Names and numbers", "Stopping the right process"],
     sample: `lsof -i :3000`,
   },
+  {
+    id: "git-stash",
+    name: "git stash",
+    categories: ["systems", "scripting"],
+    blurb: "The git command that puts half-done changes aside and brings them back: what push saves, what pop restores, and the conflict pop can stop on.",
+    concepts: ["stash push -u -m", "stash@{0}", "pop stops on a conflict", "Updated upstream and Stashed changes"],
+    frameworks: ["git", "GitHub", "VS Code", "git worktree"],
+    learningPath: ["Saving work", "The stash stack", "Popping", "Conflicts on pop"],
+    sample: `git stash push -u -m "wip"`,
+  },
+  {
+    id: "react-usestate",
+    name: "React useState",
+    categories: ["web"],
+    blurb: "The React hook that holds a value between renders: the setter that replaces, objects that need the spread, and why two set calls can count once.",
+    concepts: ["useState and the setter", "{ ...form, [field]: value }", "tries + 1, twice", "Controlled inputs"],
+    frameworks: ["React", "Next.js", "React Native", "Vite"],
+    learningPath: ["Values and setters", "Objects in state", "Updater functions", "Controlled inputs"],
+    sample: `const [count, setCount] = useState(0);`,
+  },
+  {
+    id: "docker-compose",
+    name: "docker-compose.yml",
+    categories: ["backend", "systems"],
+    blurb: "The file that runs an app's containers together: services, published ports, volumes that survive a restart, and depends_on with a healthcheck.",
+    concepts: ["services, build and image", "ports", "depends_on with condition: service_healthy", "Bind mount and named volume"],
+    frameworks: ["Docker", "Docker Desktop", "Podman", "Postgres"],
+    learningPath: ["Services", "Ports and networks", "Volumes", "Startup order"],
+    sample: `docker compose up -d`,
+  },
 ];
 
 export const allCategories: LanguageCategory[] = [
