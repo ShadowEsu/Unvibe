@@ -7,6 +7,7 @@
 // the first failed call step stops every later one (cheapest first, so an early failure costs nothing more):
 //   full (6): ⌃U explanation 1 · quiz check, questions 1-3 (3) · Ask Vibe 1 · setup's sample on a new profile 1
 //   short (3): ⌃U explanation 1 · quiz question 1 (then Leave, never Next) · Ask Vibe 1
+//   row2 (1): ⌃U explanation 1, then only the finished-overlay drag (row 2): BOSS's narrow re-check after Run B
 // Everything else here sends nothing: the agreement form, the question chips (they only fill the box), Save,
 // density, the quiz's answer checks (graded in the app), drags, stills. Not pressed anywhere: Ask, Return in the ask
 // box, Explain differently, More detail, the depth picker, Test me, Retry. Row 9's held Return on a chip is the one
@@ -14,7 +15,7 @@
 // question, and a send there is reported as a FAIL and counted.
 //
 // Env: UNVIBE_EXE, SHOTS_DIR, UNVIBE_OS (mac | windows; linux = a local run against a mock backend), QA_AI_OK=1,
-//      RC_AI_PLAN (full | short), RC_AI_PROFILE + RC_AI_ID, RC_SAMPLE_PROFILE + RC_SAMPLE_ID (full only; qa- ids the
+//      RC_AI_PLAN (full | short | row2), RC_AI_PROFILE + RC_AI_ID, RC_SAMPLE_PROFILE + RC_SAMPLE_ID (full only; qa- ids the
 //      workflow pre-flags and flags again after), MOUSE (mouse.swift, Mac), UNVIBE_APP_DIR (local run only).
 // The helpers (pointer, launch, the shortcut in TextEdit / Notepad) are rc-0154.mjs's, copied so Run W's reviewed
 // file stays as it ran.
@@ -29,14 +30,15 @@ const exe = process.env.UNVIBE_EXE;
 const appDir = process.env.UNVIBE_APP_DIR;
 const os = process.env.UNVIBE_OS ?? (process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'mac' : 'linux');
 const PLAN = process.env.RC_AI_PLAN;
-const BUDGET = { full: 6, short: 3 }[PLAN];
+const BUDGET = { full: 6, short: 3, row2: 1 }[PLAN];
+const ONLY_ROW2 = PLAN === 'row2';
 const out = path.resolve(process.env.SHOTS_DIR ?? 'rc-0154-ai');
 mkdirSync(out, { recursive: true });
 // Scripts, the sample file and local profiles go under the runner's own temp folder (Security N3).
 const TMP = process.env.RUNNER_TEMP ?? tmpdir();
 if (!exe) throw new Error('Set UNVIBE_EXE');
 if (process.env.QA_AI_OK !== '1') throw new Error('rc-0154-ai.mjs sends hosted explanations: it needs QA_AI_OK=1 (workflow input ai=true)');
-if (!BUDGET) throw new Error('RC_AI_PLAN must be full or short');
+if (!BUDGET) throw new Error('RC_AI_PLAN must be full, short or row2');
 
 const report = [];
 let n = 0;
@@ -530,7 +532,8 @@ if (!stopped) {
     const r = el.getBoundingClientRect();
     return { x: window.screenX + r.left + r.width / 2, y: window.screenY + r.top + r.height / 2 };
   }, [selector, text]);
-  if (os === 'linux') untestable('Row 4: first press with the editor in front, faded first press', 'local run: no editor and no window manager');
+  if (ONLY_ROW2) { /* plan row2: row 4 is not part of it */ }
+  else if (os === 'linux') untestable('Row 4: first press with the editor in front, faded first press', 'local run: no editor and no window manager');
   else if (!loginClear()) untestable('Row 4: first press with the editor in front, faded first press', 'skipped: the launch-at-login question may be open, so a press could land on it');
   else {
     const start4 = await panelState();
@@ -597,7 +600,7 @@ if (!stopped) {
   }
 
   // Row 8: the layout under a finished explanation.
-  try {
+  if (!ONLY_ROW2) try {
     await parkOff();
     const layout = await panel.evaluate(() => {
       const q = document.querySelector('.ob-questions');
@@ -627,7 +630,7 @@ if (!stopped) {
   // "2x" still came out 320x560, because Playwright's screenshot ignored the override. The pointer is parked off the
   // overlay first, so no chip shows its hover grey (Design). Design took that run's Mac 1x still as enough; this run
   // proves the capture on its own system.
-  try {
+  if (!ONLY_ROW2) try {
     await parkOff();
     const theme = await panel.evaluate(() => document.documentElement.dataset.theme ?? document.documentElement.getAttribute('data-theme'));
     const shown = await opacity();
@@ -665,8 +668,9 @@ if (!stopped) {
       pressed: [...document.querySelectorAll('button.ob-question')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()),
     };
   });
-  const start9 = stopped ? null : await panelState();
-  if (stopped) note('Row 9: question chips', 'skipped: an earlier press on the overlay sent a request');
+  const start9 = stopped || ONLY_ROW2 ? null : await panelState();
+  if (ONLY_ROW2) { /* plan row2: row 9 is not part of it */ }
+  else if (stopped) note('Row 9: question chips', 'skipped: an earlier press on the overlay sent a request');
   else try {
     await watchPanel();
     const opacity = await panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity));
@@ -717,7 +721,7 @@ if (!stopped) {
   }
 
   // Row 11, finished overlay: the question chips and text chips are smaller in Compact, live.
-  try {
+  if (!ONLY_ROW2) try {
     const before = { q: await css(panel, 'button.ob-question'), label: await css(panel, '.ob-questions__label'), chip: await css(panel, '.ob-chips--text .ob-chip'), answer: await css(panel, '.ob-answer') };
     await setDensity('compact');
     const after = { q: await css(panel, 'button.ob-question'), label: await css(panel, '.ob-questions__label'), chip: await css(panel, '.ob-chips--text .ob-chip'), answer: await css(panel, '.ob-answer') };
@@ -764,6 +768,11 @@ if (!stopped) {
   }
   await panel.locator('.ob-head__close').click().catch(() => {});
   await waitFor(async () => panel.isClosed(), 5000);
+}
+if (ONLY_ROW2) {
+  note('Plan row2', 'only the ⌃U explanation (1 call) and the finished-overlay drag (row 2) ran; rows 4, 8, 9, 10 and 11, the quiz, Ask Vibe, the Library, row 14 and the sample did not');
+  await endDialogs();
+  await finish();
 }
 untestable('Row 4 (first click, faded first click) with a person\'s hand on a real Mac', 'a gap for a real-Mac check: runner presses are synthetic system events (see the runner evidence above)');
 
@@ -1080,11 +1089,15 @@ if (PLAN === 'full' && !stopped) {
   } catch (e) { log(false, 'Row 5: the sample explained, Next in view', short(e)); stop('the setup sample failed'); }
 } else if (PLAN === 'short') note('Row 5: explained state', 'short plan: the sample is not sent');
 
-await sleep(2500); // one more pass of the dialog watcher
-const asks = dialogs.filter((m) => /Open Unvibe when you log in/.test(m));
-note('Native dialogs answered', dialogs.length ? dialogs.join(' | ') : `none seen${dialogWatchError ? ` (watcher error: ${dialogWatchError})` : ''}`);
-// Run B's watcher missed a dialog on Windows, so "none seen" alone proves nothing: the PASS rests on the store keeping
-// the seeded answer (loginPromptStep is then 'none'), with the desktop still before the real-pointer rows as the picture.
-if (spent > 0 && os !== 'linux') log(readStore(A).loginPromptAsked === true && asks.length === 0, 'The launch-at-login question stayed away (seeded as asked in the QA profile, kept by the app)',
-  `store loginPromptAsked ${readStore(A).loginPromptAsked}; questions seen by the watcher ${asks.length}; see the desktop still "before-real-pointer-rows"`);
+await endDialogs();
 await finish();
+
+async function endDialogs() {
+  await sleep(2500); // one more pass of the dialog watcher
+  const asks = dialogs.filter((m) => /Open Unvibe when you log in/.test(m));
+  note('Native dialogs answered', dialogs.length ? dialogs.join(' | ') : `none seen${dialogWatchError ? ` (watcher error: ${dialogWatchError})` : ''}`);
+  // Run B's watcher missed a dialog on Windows, so "none seen" alone proves nothing: the PASS rests on the store keeping
+  // the seeded answer (loginPromptStep is then 'none'), with the desktop still before the real-pointer rows as the picture.
+  if (spent > 0 && os !== 'linux') log(readStore(A).loginPromptAsked === true && asks.length === 0, 'The launch-at-login question stayed away (seeded as asked in the QA profile, kept by the app)',
+    `store loginPromptAsked ${readStore(A).loginPromptAsked}; questions seen by the watcher ${asks.length}; see the desktop still "before-real-pointer-rows"`);
+}

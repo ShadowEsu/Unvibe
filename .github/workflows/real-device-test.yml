@@ -18,7 +18,8 @@ name: Real device test
 # rc0154=ai-<mac|windows>-<full|short> (with build_run and ai=true) runs the RC rows that need hosted AI
 # (app/e2e/rc-0154-ai.mjs) on that one system only, instead of the usual walk: at most 6 hosted calls (full) or 3
 # (short), counted by the script, which refuses any past the plan. The usual walk (4 calls with ai=true), the website
-# media and the portable exe are skipped, and no 0.1.52 is installed first.
+# media and the portable exe are skipped, and no 0.1.52 is installed first. rc0154=ai-windows-row2 (BOSS's narrow
+# re-check after Run B) is 1 hosted call: the ⌃U explanation, then only the finished-overlay drag (row 2).
 on:
   workflow_dispatch:
     inputs:
@@ -46,7 +47,7 @@ on:
         required: false
         default: false
       rc0154:
-        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on). Empty: off"
+        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. Empty: off"
         required: false
         default: ""
 
@@ -94,14 +95,14 @@ jobs:
               if [ "$QA_AI_OK" = 1 ]; then echo "::error::rc0154=walk makes no hosted-AI call: run it with ai off"; exit 1; fi
               if [ -z "$BUILD_RUN" ]; then echo "::error::rc0154=walk needs build_run (the RC's build-only run)"; exit 1; fi
               echo "RC rows: 0.1.52 first, the RC over it, then app/e2e/rc-0154.mjs (walk only, no hosted-AI call)" ;;
-            ai-mac-full|ai-mac-short|ai-windows-full|ai-windows-short)
+            ai-mac-full|ai-mac-short|ai-windows-full|ai-windows-short|ai-windows-row2)
               if [ "$QA_AI_OK" != 1 ]; then echo "::error::rc0154=$RC0154 sends hosted explanations: run it with ai on"; exit 1; fi
               if [ -z "$BUILD_RUN" ]; then echo "::error::rc0154=$RC0154 needs build_run (the RC's build-only run)"; exit 1; fi
               case "$RC0154" in ai-"$OS_LABEL"-*) ;; *) echo "::error::rc0154=$RC0154 is not for $OS_LABEL"; exit 1 ;; esac
               if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with rc0154=$RC0154 (no website media)"; fi
               plan=${RC0154##*-}
-              echo "Mode: RC rows with hosted AI on $OS_LABEL only, plan $plan (at most $([ "$plan" = full ] && echo 6 || echo 3) hosted calls, counted by app/e2e/rc-0154-ai.mjs). The usual walk, the website media and the portable exe are skipped" ;;
-            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full or ai-windows-short"; exit 1 ;;
+              echo "Mode: RC rows with hosted AI on $OS_LABEL only, plan $plan (at most $(case $plan in (full) echo 6 ;; (short) echo 3 ;; (row2) echo 1 ;; esac) hosted calls, counted by app/e2e/rc-0154-ai.mjs). The usual walk, the website media and the portable exe are skipped" ;;
+            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short or ai-windows-row2"; exit 1 ;;
           esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
@@ -387,7 +388,8 @@ jobs:
       # explanation, the finished overlay's rows (Question it, chips, Design stills, density, the done-state drag, the
       # first press), the quiz check, Ask Vibe and, with full, setup's sample on a new profile; then row 14 again with
       # the fixed browser probe. Not always(): any failed step before it (the mode check, the install) means nothing
-      # is sent. The script counts each call and refuses past the plan (full 6, short 3).
+      # is sent. The script counts each call and refuses past the plan (full 6, short 3, row2 1: the ⌃U explanation and
+      # the done-state drag only).
       - name: Run the 0.1.54 RC rows with hosted AI (rc0154 ai)
         if: startsWith(inputs.rc0154, 'ai-') && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
         shell: bash
