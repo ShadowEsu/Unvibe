@@ -34,16 +34,10 @@ const ALLOWED_LISTING_ORIGINS = [
   "https://www.tinystartups.com",
   "https://www.indiehackers.com",
   "https://devhunt.org",
-  "https://daniellaunches.com",
   "https://startupfa.me",
   "https://dododirectory.com",
   "https://sumodir.com",
-  "https://postmake.io",
-  "https://nicklaunches.com",
-  "https://www.aitoolsprime.com",
   "https://dang.ai",
-  "https://www.toolpilot.ai",
-  "https://awesome.tools",
 ];
 
 const BADGE_DIR = path.resolve("public/badges");
@@ -58,18 +52,27 @@ describe("footer listings", () => {
     }
   });
 
-  it("shows a badge only for a live listing, and names a pending site with no listing claim (Security B1)", () => {
-    for (const { site, status, badges } of LISTINGS) {
-      if (status === "pending") assert.equal(badges, undefined, `${site} is pending and has a badge`);
+  it("shows a badge only for a live listing or a dated badgeWhilePending site, and names a pending site with no listing claim (Security B1, ledger 637)", () => {
+    for (const { site, status, badges, badgeWhilePending, submitted } of LISTINGS) {
+      if (status === "pending" && !badgeWhilePending) assert.equal(badges, undefined, `${site} is pending and has a badge`);
+      if (badgeWhilePending) {
+        assert.equal(status, "pending", `${site}: badgeWhilePending is for pending sites`);
+        assert.ok(badges?.length && submitted, `${site}: badgeWhilePending needs its badge and a submission date`);
+      }
     }
+    const shown = new Set(listingBadges.map(({ name }) => name));
+    for (const { site, badgeWhilePending } of LISTINGS) if (badgeWhilePending) assert.ok(shown.has(site), `${site}'s badge is not shown`);
     for (const { name } of submittedTo) assert.doesNotMatch(name, /featured|listed|as seen on/i, name);
   });
 
-  it("names a pending site under 'Submitted to' only once its submission date is recorded (Security MUST-D20, D21)", () => {
+  it("names a pending site under 'Submitted to' only once its submission date is recorded, unless its badge shows it (Security MUST-D20, D21)", () => {
     const named = new Set(submittedTo.map(({ name }) => name));
-    for (const { site, status, linkRequired, submitted } of LISTINGS) {
+    for (const { site, status, linkRequired, submitted, badgeWhilePending } of LISTINGS) {
       if (submitted !== undefined) assert.match(submitted, /^\d{4}-\d{2}-\d{2}$/, `${site}: submitted is YYYY-MM-DD`);
-      if (status === "pending" && linkRequired) assert.equal(named.has(site), submitted !== undefined, `${site}: named ${named.has(site)}, submitted ${submitted}`);
+      if (status === "pending" && linkRequired) {
+        const expected = submitted !== undefined && !badgeWhilePending;
+        assert.equal(named.has(site), expected, `${site}: named ${named.has(site)}, submitted ${submitted}, badge ${Boolean(badgeWhilePending)}`);
+      }
     }
   });
 

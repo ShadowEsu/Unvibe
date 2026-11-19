@@ -15,6 +15,7 @@ import {
   globalShortcut,
   ipcMain,
   nativeImage,
+  nativeTheme,
   powerMonitor,
   screen,
   shell,
@@ -27,22 +28,34 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { homedir, userInfo } from 'node:os';
 import {
-  applyWidgetResize,
+  applyCompanionChrome,
   createBar,
   companionLoading,
+  companionPainted,
   createCompanion,
   currentWidget,
+  endIslandDrag,
+  endPanelDrag,
+  fitPanelHeight,
   focusPanelForPaste,
   getOrCreateWidget,
   hideBar,
+  islandDirection,
+  islandDraggable,
+  moveWindowDrag,
+  nudgePanel,
   positionBar,
   raiseLimitPause,
+  resetPanelPosition,
   resizeBar,
   setBarNotice,
+  setGrantFlowOpen,
   showBar,
-  type WidgetResizeEdge,
+  startWindowDrag,
+  whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
@@ -50,10 +63,12 @@ import {
   startComprehension,
   gradeComprehension,
   markUnderstood,
+  pinLesson,
   applyBuiltReview,
   type ReviewSession,
   type RequestOpts,
 } from './review';
+import { openSavedLesson, savedLessons } from './panelSaved';
 import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
@@ -89,7 +104,8 @@ import {
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
 import { setBar, notify, pulseBar } from './notify';
-import { computeProfile, computeFeed, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
+import { setShortcutRecording } from './commandUHint';
+import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
 import { cachedAppUsage, invalidateAppUsage, refreshAppUsage, resolveAppUsage } from './usage';
 import { installHardening } from './hardening';
@@ -118,7 +134,7 @@ import { startLiveWatch } from './liveWatch';
 import { checkForUpdate, cleanupPortableUpdate, installUpdate, isNewer } from './updater';
 import { knowledgeStore } from './knowledgeStore';
 import { deleteAccountAndLocalData } from './accountDeletion';
-import { briefRepoLabel, buildChangeBrief, type BriefScope } from '../core/changeBrief';
+import { briefRepoLabel, buildChangeBrief, type BriefScope, type ChangeBrief } from '../core/changeBrief';
 import { buildOriginReport } from '../core/codeOrigin';
 import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
@@ -160,12 +176,12 @@ let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
 let devicePoll: NodeJS.Timeout | null = null;
 let currentDeviceVerificationUrl: string | null = null;
-/** Per-tab review sessions inside the single shared panel. */
-const tabSessions = new Map<string, ReviewSession>();
-let activeTabId = '1';
+/** The one review session inside the single shared panel (overlay B has no review tabs). */
+let panelSession: ReviewSession | undefined;
 let panelReady = false;
-const normalBounds = new Map<number, Electron.Rectangle>();
 let pendingExternalReview: { preferClipboard: boolean } | null = null;
+/** The working-tree brief the user last built (Briefs), which Home and Chat show without running git. */
+let lastWorkingBrief: { ok: true; brief: ChangeBrief; repoLabel: string; branch: string; detached: boolean } | null = null;
 
 /**
  * The IDE bridge deliberately carries no code. The desktop app captures the current selection
@@ -197,14 +213,12 @@ function handleExternalReviewUrl(rawUrl: string): void {
 }
 
 function makeSession(
-  tabId: string,
   code: string | null,
   sourceApp: string | null,
   level: ExplanationLevel = settings().all().defaultExplanationLevel,
 ): ReviewSession {
   const session: ReviewSession = {
     reviewId: randomUUID(),
-    tabId,
     code,
     sourceApp,
     abort: null,
@@ -243,9 +257,10 @@ async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
     detail: 'You can turn this off in Settings.',
   };
   const panel = currentWidget();
-  const { response } = panel && !panel.isDestroyed()
-    ? await dialog.showMessageBox(panel, question)
-    : await dialog.showMessageBox(question);
+  // Like the file dialogs: the panel neither fades nor hides behind its own question (review SHOULD).
+  const { response } = await whilePanelDialog(() => (panel && !panel.isDestroyed()
+    ? dialog.showMessageBox(panel, question)
+    : dialog.showMessageBox(question)));
   if (response !== 0) return;
   settings().set({ launchAtLogin: true });
   reportProgress('login_prompt_accepted');
@@ -253,29 +268,22 @@ async function askLaunchAtLogin(ownCode: boolean): Promise<void> {
   if (fallback) await dialog.showMessageBox({ type: 'info', buttons: ['OK'], message: fallback });
 }
 
-function sessionFor(tabId = activeTabId): ReviewSession | undefined {
-  return tabSessions.get(tabId);
-}
-
 function clearPanelSessions(): void {
-  for (const session of tabSessions.values()) session.abort?.abort();
-  tabSessions.clear();
-  activeTabId = '1';
+  panelSession?.abort?.abort();
+  panelSession = undefined;
   panelReady = false;
 }
 
 /**
- * The review panel, opened if needed. A fresh panel starts with no tab sessions, and the session the
- * caller then puts on its active tab is started once by the renderer's widget:ready, never twice.
+ * The review panel, opened if needed. A fresh panel starts with no session, and the session the
+ * caller then puts on it is started once by the renderer's widget:ready, never twice.
  */
 function openPanel(): { win: BrowserWindow; fresh: boolean } {
   if (currentWidget()) return { win: getOrCreateWidget(), fresh: false };
   const win = getOrCreateWidget();
-  const windowId = win.id;
   clearPanelSessions();
   win.on('closed', () => {
     clearPanelSessions();
-    normalBounds.delete(windowId);
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
     // The companion's paste step stops saying the explanation is opening if none came.
     if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
@@ -294,7 +302,11 @@ function applyFileMeta(session: ReviewSession, meta: FileMeta | undefined): void
   session.snapshotText = meta.sourceFilePath && session.code ? session.code.slice(0, 12_000) : undefined;
 }
 
-function beginCaptureOnActiveTab(
+/**
+ * A new capture replaces the panel's session: its follow-ups, depth and Test me belong to the selection they were
+ * about, so the new one starts at the Settings depth (Design ruling b).
+ */
+function beginCapture(
   win: BrowserWindow,
   code: string | null,
   sourceApp: string | null,
@@ -302,17 +314,15 @@ function beginCaptureOnActiveTab(
   meta?: FileMeta,
   credit: SelectionCredit = 'free',
 ): void {
-  const prev = sessionFor(activeTabId);
-  prev?.abort?.abort();
-  // Keep the depth chosen in this tab; a fresh tab starts at the Settings default (makeSession's default).
-  const session = makeSession(activeTabId, code, sourceApp, prev?.level);
+  panelSession?.abort?.abort();
+  const session = makeSession(code, sourceApp);
   applyFileMeta(session, meta);
   if (credit === 'held') session.selectionCredit = 'held';
   if (confirmFrom && code) {
     session.awaitingConfirm = true;
     session.confirmFrom = confirmFrom;
   }
-  tabSessions.set(activeTabId, session);
+  panelSession = session;
   if (!panelReady) return;
   // No selection → calm picker UI (never auto-error / auto-run). A link or Linux-highlight capture waits for Explain.
   const start = Boolean(code) && !session.awaitingConfirm;
@@ -363,12 +373,11 @@ function loadCodeIntoSession(
 }
 
 /** True on Pro. Otherwise the panel, when given, shows the upgrade prompt; callers return 'Pro required'. */
-async function requireProOrError(win: BrowserWindow | null, tabId: string, feature: string): Promise<boolean> {
+async function requireProOrError(win: BrowserWindow | null, feature: string): Promise<boolean> {
   const usage = await resolveAppUsage();
   if (isProPlan(usage.plan)) return true;
   win?.webContents.send('review:event', {
     type: 'error',
-    tabId,
     code: 'pro_required',
     upgradePath: '/plan',
     message: `${feature} is included with Unvibe Pro. Pro connects explanations across diffs, nearby files, and what you already understood.`,
@@ -389,7 +398,7 @@ async function startBuiltReview(
     session.sourceApp = sourceLabel;
     session.reviewId = randomUUID();
     applyBuiltReview(session, built);
-    // A panel that is still loading starts this tab itself on widget:ready.
+    // A panel that is still loading starts this session itself on widget:ready.
     if (!panelReady) return { ok: true };
     initWidget(win, session, { autoStart: true });
     void runReview(win, session, { level: session.level });
@@ -465,12 +474,12 @@ function openCompanion(): void {
   openCompanionWindow(false);
 }
 
-/** `front`: a new companion window is brought in front of other apps once painted (first-run launch only). */
+/** `front`: a new companion window is brought in front of other apps once its first real screen is drawn (first-run launch only). */
 function openCompanionWindow(front: boolean): void {
   // Always keep a Dock icon on macOS so Unvibe can be clicked like any other app.
   if (isMac) void app.dock?.show();
   if (companion && !companion.isDestroyed()) {
-    // Still loading (hidden until painted): its own reveal shows it, so don't show a blank window now.
+    // Still loading (hidden until its first real screen): its own reveal shows it, so don't show a blank window now.
     if (companionLoading(companion)) return;
     if (companion.isMinimized()) companion.restore();
     companion.show();
@@ -599,7 +608,6 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     raiseLimitPause(win);
     win.webContents.send('review:event', {
       type: 'usage',
-      tabId: '1',
       used: usage.used,
       limit: usage.limit,
       remaining: usage.remaining,
@@ -608,7 +616,6 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     });
     win.webContents.send('review:event', {
       type: 'error',
-      tabId: '1',
       code: 'plan_limit_reached',
       upgradePath: '/plan',
       message: 'You have reached your monthly explanation limit.',
@@ -636,17 +643,21 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     ? capture.sourceApp
     : options.preferClipboard && !settings().all().onboarded ? null : await frontmostApp();
   const captureFailed = !code && agreed;
-  if (captureFailed) pulseBar({ phase: 'error', label: 'Select code first' });
+  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
+  // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e), but only after a
+  // real read: before the agreement the panel opens on it instead (restoresOpenPanel). Decided before the failure
+  // signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
+  const restoring = restoresOpenPanel({ code, agreed, needsGrant, panelOpen: Boolean(currentWidget()), panelHasCode: Boolean(panelSession?.code) });
+  if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
   if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
-  if (captureFailed && process.platform === 'win32' && !options.preferClipboard) {
+  if (captureFailed && !restoring && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';
     notify(`Couldn't copy from ${from}. Select the code and press the shortcut again, or use Explain my clipboard.`, { problem: true });
   }
-  const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   if (needsGrant) {
     // The panel leads with its paste box; Turn on the shortcut asks for the grant.
     reportProgress('accessibility_asked');
@@ -663,19 +674,13 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (!fresh) win.webContents.send('perms:captureBlock', captureBlock);
   // Only this empty state takes focus, so ⌘V lands in the paste box instead of the editor.
   if (needsGrant) focusPanelForPaste(win, fresh);
-  if (fresh) {
-    // Fresh panel — seed the default tab; auto-start runs once the renderer is ready.
-    const session = makeSession(activeTabId, code, sourceApp);
-    applyFileMeta(session, options.captured?.meta);
-    if (credit === 'held') session.selectionCredit = 'held';
-    if (confirmFrom && code) {
-      session.awaitingConfirm = true;
-      session.confirmFrom = confirmFrom;
-    }
-    tabSessions.set(activeTabId, session);
+  // A fresh panel's session is started by widget:ready. A restore ends the "Loading" pulse sent above, as the failure
+  // pulse used to (review MUST).
+  if (restoring) {
+    pulseBar({ phase: 'idle', label: 'Ready' });
     return;
   }
-  beginCaptureOnActiveTab(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
+  beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -754,6 +759,10 @@ if (process.defaultApp) {
 
 app.whenReady().then(() => {
   cleanupPortableUpdate();
+  // Theme "system": the companion's window chrome follows the OS appearance as it changes.
+  nativeTheme.on('updated', () => {
+    if (companion && settings().all().theme === 'system') applyCompanionChrome(companion);
+  });
   // Open the backend connection and fetch usage early so the first explanation starts faster.
   setTimeout(() => {
     warmBackend();
@@ -790,11 +799,10 @@ app.whenReady().then(() => {
     if (!dockIcon.isEmpty()) app.dock?.setIcon(dockIcon);
   }
 
-  // The black template image only suits the macOS menu bar; the Windows tray gets the colour icon.
-  let trayImage = process.platform === 'win32' && !dockIcon.isEmpty()
-    ? dockIcon.resize({ width: 16, height: 16 })
-    : nativeImage.createFromPath(asset('trayTemplate.png'));
-  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 18, height: 18 });
+  // Design's tray art (build.mjs copies it to assets/): the black template for the macOS menu bar, the colour 16 px
+  // icon for the Windows tray. Electron picks the @2x file beside each on a 2x display.
+  let trayImage = nativeImage.createFromPath(asset(process.platform === 'win32' ? 'tray.png' : 'trayTemplate.png'));
+  if (trayImage.isEmpty()) trayImage = dockIcon.resize({ width: 16, height: 16 });
   else if (isMac) trayImage.setTemplateImage(true);
   tray = new Tray(trayImage);
   tray.setIgnoreDoubleClickEvents(true);
@@ -853,6 +861,13 @@ app.whenReady().then(() => {
     resizeBar(bar, Boolean(expanded));
   });
   ipcMain.on('bar:setNotice', (_e, on: unknown) => setBarNotice(bar, on === true));
+  // Dragging the floating Island (Vitalii via BOSS 636): its page reports the pointer's travel; the notch Island stays.
+  ipcMain.handle('bar:opensUp', (e) => (bar && BrowserWindow.fromWebContents(e.sender) === bar ? islandDirection() : false));
+  ipcMain.on('bar:dragStart', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar && islandDraggable()) startWindowDrag(bar); });
+  ipcMain.on('bar:dragMove', (e, dx: unknown, dy: unknown) => {
+    if (bar && BrowserWindow.fromWebContents(e.sender) === bar && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(bar, dx, dy);
+  });
+  ipcMain.on('bar:dragEnd', (e) => { if (bar && BrowserWindow.fromWebContents(e.sender) === bar) endIslandDrag(bar); });
   ipcMain.on('bar:contextMenu', (_e, state: { hasRecent?: boolean }) => {
     if (!bar || bar.isDestroyed()) return;
     Menu.buildFromTemplate([
@@ -891,6 +906,10 @@ app.whenReady().then(() => {
     };
   });
   ipcMain.on('companion:review', () => void startReview());
+  // The start stage is gone: the window chrome goes back to the theme's (it was the stage's ground for the sharks).
+  ipcMain.on('companion:stage-done', () => { if (companion) applyCompanionChrome(companion); });
+  // The companion drew its first real screen: show it (#208). Only the companion's own page can say so.
+  ipcMain.on('companion:painted', (e) => { if (companion && e.sender === companion.webContents) companionPainted(companion); });
 
   // --- consent before the user's own code is sent (BOSS ledger 299) ---
   ipcMain.handle('consent:status', () => consentStatus());
@@ -930,49 +949,63 @@ app.whenReady().then(() => {
     return { ok: true as const, status: consentStatus() };
   });
 
-  // --- widget lifecycle (single panel + tabs) ---
+  // --- widget lifecycle (one panel, one session) ---
   ipcMain.on('widget:ready', (e) => {
     const win = widgetOf(e);
     if (!win) return;
     panelReady = true;
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!session) return;
     const start = Boolean(session.code) && !session.awaitingConfirm;
     initWidget(win, session, { autoStart: start });
     if (start) void runReview(win, session, { level: session.level });
   });
-  ipcMain.on('widget:setActiveTab', (_e, tabId: string) => {
-    if (typeof tabId !== 'string' || !tabId) return;
-    activeTabId = tabId;
-    if (!tabSessions.has(tabId)) tabSessions.set(tabId, makeSession(tabId, null, null));
-  });
-  ipcMain.on('widget:addTab', (e, tabId: string) => {
+  // Overlay B's height fits its content (360–560); the renderer measures it.
+  ipcMain.on('widget:fitHeight', (e, height: unknown) => {
     const win = widgetOf(e);
-    if (!win || typeof tabId !== 'string' || !tabId) return;
-    activeTabId = tabId;
-    const session = makeSession(tabId, null, null);
-    tabSessions.set(tabId, session);
-    initWidget(win, session, { autoStart: false });
+    if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
-  ipcMain.on('widget:closeTab', (e, tabId: string) => {
+  // The panel moves by its header (0.1.54): drag, arrow keys (16 px) and a double-click that puts it back; the spot is
+  // remembered per display. Only the open panel can move itself.
+  const thePanel = (e: Electron.IpcMainEvent) => { const win = widgetOf(e); return win && win === currentWidget() ? win : null; };
+  ipcMain.on('widget:dragStart', (e) => { const win = thePanel(e); if (win) startWindowDrag(win); });
+  ipcMain.on('widget:dragMove', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') moveWindowDrag(win, dx, dy);
+  });
+  ipcMain.on('widget:dragEnd', (e) => { const win = thePanel(e); if (win) endPanelDrag(win); });
+  ipcMain.on('widget:nudge', (e, dx: unknown, dy: unknown) => {
+    const win = thePanel(e);
+    if (win && typeof dx === 'number' && typeof dy === 'number') nudgePanel(win, dx, dy);
+  });
+  ipcMain.on('widget:resetPosition', (e) => { const win = thePanel(e); if (win) resetPanelPosition(win); });
+  // Saved tab: pinned lessons, then Recent; opening one reads the saved text only (Design ruling a). Only the panel
+  // reads them (review NIT: any window could list or open saved lessons).
+  const fromPanel = (e: Electron.IpcMainInvokeEvent) => { const win = widgetOf(e); return Boolean(win) && win === currentWidget(); };
+  const goneHere = `That lesson is no longer on this ${isMac ? 'Mac' : 'PC'}.`;
+  ipcMain.handle('widget:savedLessons', (e) => (fromPanel(e) ? savedLessons(store().events(), store().pinnedIds()) : { pinned: [], recent: [] }));
+  ipcMain.handle('widget:savedLesson', (e, id: unknown) => (fromPanel(e)
+    ? openSavedLesson((lessonId) => store().eventById(lessonId), store().pinnedIds(), id, goneHere)
+    : { ok: false as const, error: goneHere }));
+  ipcMain.handle('widget:saveLesson', (e, pinned: unknown) => {
     const win = widgetOf(e);
-    if (!win || typeof tabId !== 'string') return;
-    const closing = tabSessions.get(tabId);
-    closing?.abort?.abort();
-    tabSessions.delete(tabId);
-    if (tabSessions.size === 0) {
-      win.close();
-      return;
-    }
-    if (activeTabId === tabId) {
-      activeTabId = [...tabSessions.keys()][0]!;
-      const next = sessionFor(activeTabId);
-      if (next) initWidget(win, next, { autoStart: false });
-    }
+    const session = panelSession;
+    if (!fromPanel(e) || !win || !session || typeof pinned !== 'boolean') return { ok: false as const };
+    return pinLesson(win, session, pinned) ? { ok: true as const, pinned } : { ok: false as const };
+  });
+  // Save/unsave a lesson opened from the Saved tab, by id: the panel's current selection may be another one (review
+  // SHOULD). Only the panel may ask; the store refuses ids it doesn't have.
+  ipcMain.handle('widget:pinSaved', (e, id: unknown, pinned: unknown) => {
+    const win = widgetOf(e);
+    if (!win || win !== currentWidget() || typeof id !== 'string' || typeof pinned !== 'boolean') return { ok: false as const };
+    if (!store().setPinned(id, pinned)) return { ok: false as const };
+    // The same lesson as the panel's current selection: Explain's Save chip follows.
+    if (panelSession?.reviewId === id) win.webContents.send('review:event', { type: 'pinned', pinned });
+    return { ok: true as const, pinned };
   });
   ipcMain.on('widget:request', (e, opts: RequestOpts) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
@@ -985,7 +1018,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:useClipboard', (e, opts: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     const text = clipboard.readText().trim();
     if (!text) {
@@ -997,9 +1030,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('widget:pickFile', async (e, opts?: { level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return { ok: false as const };
-    const picked = await chooseCodeFile(win);
+    const picked = await whilePanelDialog(() => chooseCodeFile(win));
     if (!picked.ok) return picked;
     const { filePath, text } = picked;
     const root = await resolveRepoRoot(path.dirname(filePath));
@@ -1047,7 +1080,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:usePaste', (e, payload: { text?: string; level?: ExplanationLevel }) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
     if (!text) {
@@ -1058,96 +1091,29 @@ app.whenReady().then(() => {
   });
   ipcMain.on('widget:cancel', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (!win || !session) return;
     session.abort?.abort();
-    win.webContents.send('review:event', { type: 'cancelled', tabId: session.tabId });
+    win.webContents.send('review:event', { type: 'cancelled' });
   });
   ipcMain.on('widget:testMe', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) void startComprehension(win, session);
   });
   ipcMain.on('widget:answer', (e, choice: number) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) gradeComprehension(win, session, choice);
   });
   ipcMain.on('widget:gotIt', (e) => {
     const win = widgetOf(e);
-    const session = sessionFor(activeTabId);
+    const session = panelSession;
     if (win && session) markUnderstood(win, session);
-  });
-  ipcMain.on('widget:pin', (e, pinned: boolean) => {
-    const win = widgetOf(e);
-    if (!win) return;
-    win.setAlwaysOnTop(true, pinned ? 'screen-saver' : 'pop-up-menu');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-    if (isMac) win.setHiddenInMissionControl(true);
-    win.moveTop();
-  });
-  ipcMain.on('widget:collapse', (e, collapsed: boolean) => {
-    const win = widgetOf(e);
-    if (!win) return;
-    endWidgetResize();
-    if (collapsed) {
-      normalBounds.set(win.id, win.getBounds());
-      win.setBounds({ ...win.getBounds(), height: 52 });
-    } else {
-      const prev = normalBounds.get(win.id);
-      if (prev) win.setBounds(prev);
-    }
   });
   ipcMain.on('widget:close', (e) => widgetOf(e)?.close());
   ipcMain.on('widget:openStudy', () => openCompanion());
   ipcMain.on('companion:openPlan', () => openCompanionPage('Plan'));
-
-  // Border-aligned resize (grips sit on the visible card edges, not an invisible outer rim).
-  let resizeTick: ReturnType<typeof setInterval> | null = null;
-  let resizeSession: {
-    win: BrowserWindow;
-    edge: WidgetResizeEdge;
-    startBounds: Electron.Rectangle;
-    startCursor: Electron.Point;
-  } | null = null;
-  const endWidgetResize = () => {
-    if (resizeTick) {
-      clearInterval(resizeTick);
-      resizeTick = null;
-    }
-    if (resizeSession && !resizeSession.win.isDestroyed()) {
-      settings().set({ lastWidgetBounds: resizeSession.win.getBounds() });
-    }
-    resizeSession = null;
-  };
-  ipcMain.on('widget:resizeStart', (e, edge: WidgetResizeEdge) => {
-    const win = widgetOf(e);
-    if (!win || win.isDestroyed()) return;
-    const ok: WidgetResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
-    if (!ok.includes(edge)) return;
-    endWidgetResize();
-    resizeSession = {
-      win,
-      edge,
-      startBounds: win.getBounds(),
-      startCursor: screen.getCursorScreenPoint(),
-    };
-    resizeTick = setInterval(() => {
-      if (!resizeSession || resizeSession.win.isDestroyed()) {
-        endWidgetResize();
-        return;
-      }
-      const cur = screen.getCursorScreenPoint();
-      const next = applyWidgetResize(
-        resizeSession.startBounds,
-        resizeSession.edge,
-        cur.x - resizeSession.startCursor.x,
-        cur.y - resizeSession.startCursor.y,
-      );
-      resizeSession.win.setBounds(next, false);
-    }, 16);
-  });
-  ipcMain.on('widget:resizeEnd', () => endWidgetResize());
 
   // --- app info + learning reads ---
   ipcMain.handle('app:info', async () => ({
@@ -1158,7 +1124,6 @@ app.whenReady().then(() => {
     shortcut: settings().all().shortcut,
   }));
   ipcMain.handle('learning:profile', () => computeProfile(store().events(), todayKey()));
-  ipcMain.handle('learning:feed', (_e, limit: number) => computeFeed(store().events(), limit ?? 8));
   ipcMain.handle('learning:history', (_e, limit: number) => computeLearningItems(store().events(), Math.max(1, Math.min(limit ?? 100, 250))));
   ipcMain.handle('learning:queue', (_e, limit: number) => computeReviewQueue(store().events(), new Date(), Math.max(1, Math.min(limit ?? 20, 50))));
   ipcMain.handle('learning:today', () => computeToday(store().events(), new Date()));
@@ -1172,7 +1137,7 @@ app.whenReady().then(() => {
     if (typeof input?.note !== 'string') return { ok: false, error: 'Note must be text.' };
     try {
       const saved = store().updateLesson(input.id, { note: input.note });
-      return saved ? { ok: true } : { ok: false, error: 'That lesson is no longer on this Mac.' };
+      return saved ? { ok: true } : { ok: false, error: goneHere };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Could not save this note.' };
     }
@@ -1215,12 +1180,12 @@ app.whenReady().then(() => {
     // Only the panel renders the upgrade prompt; Briefs gets `proRequired` and shows its own Pro card.
     const panel = currentWidget();
     const askedFromPanel = panel !== null && widgetOf(e) === panel;
-    if (!(await requireProOrError(askedFromPanel ? panel : null, activeTabId, feature))) {
+    if (!(await requireProOrError(askedFromPanel ? panel : null, feature))) {
       return { ok: false, error: 'Pro required', proRequired: true };
     }
     let root = await resolveRepoRoot();
     if (!root) {
-      const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
+      const picked = await whilePanelDialog(() => dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' }));
       if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
       root = await resolveRepoRoot(picked.filePaths[0]);
     }
@@ -1228,8 +1193,8 @@ app.whenReady().then(() => {
     // Briefs asks from the companion window, which does not render reviews; the review always goes to the panel.
     const { win } = openPanel();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
-    tabSessions.set(activeTabId, session);
+    const session = panelSession ?? makeSession(null, null, opts?.level);
+    panelSession = session;
     if (opts?.level) session.level = opts.level;
     const scope = opts?.scope ?? 'working';
     return startBuiltReview(
@@ -1240,10 +1205,13 @@ app.whenReady().then(() => {
     );
   });
 
+  // Only a user action builds a brief: opening Briefs or pressing its buttons. Home and Chat show the
+  // last one built (brief:last) and never run git themselves (Security F-P1: the privacy page says
+  // Unvibe does not read your repository in the background).
   ipcMain.handle('brief:build', async (_e, input?: { scope?: BriefScope; pick?: boolean }) => {
     const scope = input?.scope ?? 'working';
     let root = await resolveRepoRoot();
-    // Only ever open a folder dialog when the user asked for it. Background refreshes stay silent.
+    // Only ever open a folder dialog when the user asked for it.
     if (input?.pick) {
       const picked = await dialog.showOpenDialog({ properties: ['openDirectory'], title: 'Choose a git project' });
       if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
@@ -1258,15 +1226,19 @@ app.whenReady().then(() => {
       const brief = buildChangeBrief({ repo: root, scope, hunks });
       productEvent('change_brief_opened', { files: brief.filesChanged });
       pulseBar({ phase: 'ready', label: 'Ready' });
-      return { ok: true, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
+      const result = { ok: true as const, brief, repoLabel: briefRepoLabel(root, homedir()), branch: head.branch, detached: head.detached };
+      if (scope === 'working') lastWorkingBrief = result;
+      return result;
     } catch (error) {
       pulseBar({ phase: 'error', label: 'Issue' });
       return { ok: false, error: error instanceof Error ? error.message : 'Could not read git changes.' };
     }
   });
+  // The working-tree brief the user last built in this session, or null. No git: it's a copy.
+  ipcMain.handle('brief:last', () => lastWorkingBrief);
 
   ipcMain.handle('origin:lookup', async () => {
-    const session = sessionFor();
+    const session = panelSession;
     const file = session?.payload?.context.primaryFile ?? session?.file;
     const root = await resolveRepoRoot(session?.sourceFilePath ? path.dirname(session.sourceFilePath) : undefined);
     if (!root || !file) {
@@ -1319,7 +1291,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('teachback:grade', (_e, input: { answer?: string }) => {
-    const session = sessionFor();
+    const session = panelSession;
     const explanation = session?.explanationText?.trim() ?? '';
     const answer = String(input?.answer ?? '');
     const result = gradeTeachBack(explanation, answer);
@@ -1347,16 +1319,16 @@ app.whenReady().then(() => {
   ipcMain.handle('review:explainCompare', async (e, opts?: { level?: ExplanationLevel }) => {
     const win = widgetOf(e) ?? getOrCreateWidget();
     showBar(bar);
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, opts?.level);
-    tabSessions.set(activeTabId, session);
+    const session = panelSession ?? makeSession(null, null, opts?.level);
+    panelSession = session;
     if (opts?.level) session.level = opts.level;
-    if (!(await requireProOrError(win, session.tabId, 'Since last understood'))) {
+    if (!(await requireProOrError(win, 'Since last understood'))) {
       return { ok: false, error: 'Pro required' };
     }
-    const picked = await dialog.showOpenDialog({
+    const picked = await whilePanelDialog(() => dialog.showOpenDialog({
       properties: ['openFile'],
       title: 'Choose a file to compare with what you last understood',
-    });
+    }));
     if (picked.canceled || !picked.filePaths[0]) return { ok: false, cancelled: true };
     return startBuiltReview(
       win,
@@ -1370,9 +1342,9 @@ app.whenReady().then(() => {
     const { win } = openPanel();
     showBar(bar);
     const level = (item.level as ExplanationLevel) || 'intermediate';
-    const session = sessionFor() ?? makeSession(activeTabId, null, null, level);
+    const session = panelSession ?? makeSession(null, null, level);
     session.level = level;
-    tabSessions.set(activeTabId, session);
+    panelSession = session;
     const saved = item.id ? store().eventById(item.id) : undefined;
     const savedCode = saved?.code?.trim();
 
@@ -1400,7 +1372,7 @@ app.whenReady().then(() => {
       return openFromCode(savedCode, saved?.file);
     }
     if (!item.file) {
-      beginCaptureOnActiveTab(win, null, null);
+      beginCapture(win, null, null);
       return { ok: true };
     }
     let root = await resolveRepoRoot();
@@ -1441,7 +1413,12 @@ app.whenReady().then(() => {
     if (editor !== 'cursor' && editor !== 'vscode') return { ok: false, error: 'Choose Cursor or VS Code.' };
     return installDesktopBridge(editor);
   });
-  ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
+  // Settings is recording a new shortcut: the ⌘U hint stays quiet meanwhile (only the main window can say so).
+  ipcMain.on('settings:recordingShortcut', (e, on: unknown) => {
+    if (companion && BrowserWindow.fromWebContents(e.sender) === companion) setShortcutRecording(on === true);
+  });
+  ipcMain.handle('settings:set', (_e, rawPatch: Partial<Settings>) => {
+    const patch = rendererSettingsPatch(rawPatch);
     const before = settings().all().shortcut;
     const next = settings().set(patch);
     if (patch.shortcut && patch.shortcut !== before) {
@@ -1459,7 +1436,7 @@ app.whenReady().then(() => {
     } else if (patch.followActiveDisplay && bar && !bar.isDestroyed()) {
       positionBar(bar);
     }
-    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined) && bar && !bar.isDestroyed()) {
+    if ((patch.barPosition || patch.barSize || patch.barHoverPreview !== undefined || patch.barHoverDelayMs !== undefined || patch.soundEffects !== undefined || patch.soundVolume !== undefined || patch.soundStyle !== undefined || patch.theme !== undefined) && bar && !bar.isDestroyed()) {
       bar.webContents.send('bar:settings', {
         barPosition: next.barPosition,
         barSize: next.barSize,
@@ -1468,6 +1445,7 @@ app.whenReady().then(() => {
         soundEffects: next.soundEffects,
         soundVolume: next.soundVolume,
         soundStyle: next.soundStyle,
+        theme: next.theme,
       });
     }
     if (patch.barVisibility && bar && !bar.isDestroyed()) {
@@ -1478,6 +1456,12 @@ app.whenReady().then(() => {
       resizeBar(bar, false);
       if (bar && !bar.isDestroyed()) bar.webContents.send('bar:collapse');
     }
+    // The panel follows Settings › Theme, Density and "When I click away" live; the companion's window chrome follows the theme.
+    const panel = currentWidget();
+    if ((patch.theme !== undefined || patch.density !== undefined || patch.inactiveBehavior !== undefined) && panel) {
+      panel.webContents.send('panel:settings', { theme: next.theme, density: next.density, inactiveBehavior: next.inactiveBehavior });
+    }
+    if (patch.theme !== undefined && companion) applyCompanionChrome(companion);
     return { settings: settings().all() };
   });
 
@@ -1571,9 +1555,19 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('app:restart', () => { quitting = true; app.relaunch(); app.exit(0); });
   ipcMain.handle('perms:promptAccessibility', () => ({ granted: accessibilityGranted(true) }));
-  ipcMain.handle('perms:openAccessibility', () => {
-    if (isMac)
+  ipcMain.handle('perms:openAccessibility', (event) => {
+    if (isMac) {
       void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+      // Opened from the panel's guide: System Settings takes focus, and that is not a click away (the panel would
+      // fade or hide under the person following the guide). Held until the grant lands or the panel closes.
+      const panel = currentWidget();
+      if (panel && event.sender === panel.webContents) {
+        setGrantFlowOpen(true);
+        const poll = setInterval(() => {
+          if (accessibilityGranted(false) || !currentWidget()) { setGrantFlowOpen(false); clearInterval(poll); }
+        }, 2000);
+      }
+    }
     return { ok: true };
   });
   ipcMain.handle('perms:captureBlock', () => captureBlock);
@@ -1777,20 +1771,26 @@ app.whenReady().then(() => {
       return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed.' };
     }
   });
-  ipcMain.handle('account:startDevice', async () => {
+  ipcMain.handle('account:startDevice', async (e) => {
     try {
+      const asked = Date.now();
       const device = await startDeviceAuth();
+      console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
       currentDeviceVerificationUrl = verificationUrl;
-      let browserOpened = true;
-      try {
-        await shell.openExternal(verificationUrl);
-        console.info('[auth] opened device verification browser');
-      } catch {
-        browserOpened = false;
-        console.warn('[auth] could not open device verification browser');
-      }
+      // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
+      // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
+      // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
+      // in these log lines are there to tell a slow server from a slow browser.
+      const opening = Date.now();
+      void shell.openExternal(verificationUrl).then(
+        () => console.info(`[auth] opened device verification browser in ${Date.now() - opening} ms`),
+        () => {
+          console.warn(`[auth] could not open device verification browser (after ${Date.now() - opening} ms)`);
+          if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
+        },
+      );
       if (devicePoll) clearInterval(devicePoll);
       const expires = Date.now() + 10 * 60_000;
       devicePoll = setInterval(() => void (async () => {
@@ -1824,7 +1824,7 @@ app.whenReady().then(() => {
           }
         }
       })(), Math.max(2, device.interval) * 1000);
-      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl, browserOpened };
+      return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
     } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
   });
   ipcMain.handle('account:openDeviceAuth', async () => {
@@ -1861,6 +1861,7 @@ app.whenReady().then(() => {
       const panel = currentWidget();
       if (panel && !panel.isDestroyed()) panel.close();
       clearPanelSessions();
+      lastWorkingBrief = null;
     });
     if (result.ok) invalidateAppUsage();
     return result;

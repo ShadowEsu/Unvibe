@@ -1,0 +1,24 @@
+/** The companion's line icons: SVG path data on a 20 × 20 grid, drawn by `Icon` in companion.tsx. */
+export const IC = {
+  home: 'M3 9.5 10 3l7 6.5V17H3z M8 17v-5h4v5',
+  progress: 'M4 16V9 M10 16V4 M16 16v-6',
+  projects: 'M3 6a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
+  study: 'M4 4h9a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H4z M4 4v9',
+  history: 'M10 3a7 7 0 1 0 7 7 M10 6v4l3 2',
+  quiz: 'M10 3a7 7 0 1 0 7 7 M8.2 8.1a2 2 0 1 1 3.4 1.4c-.8.7-1.6 1.1-1.6 2.3 M10 15h.01',
+  chat: 'M4 5h12v8H8l-4 4z',
+  concepts: 'M10 3l2.1 4.9L17 10l-4.9 2.1L10 17l-2.1-4.9L3 10l4.9-2.1z',
+  notebook: 'M5 3h9a1 1 0 0 1 1 1v13l-3-2-3 2-3-2V4a1 1 0 0 1 1-1z M8 7h5 M8 10h5',
+  briefings: 'M5 3h10v14H5z M8 7h4 M8 10h4 M8 13h2',
+  library: 'M4 3h3v14H4z M9 3h3v14H9z M14 4l3 .8-3.4 12.6-2.9-.8z',
+  profile: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5',
+  /** Lucide `code` (</>) on the 20 grid. Was a four-point spark; Security bans the spark motif (pre-rules 20261106-2102). */
+  code: 'M13.3 15l5-5-5-5 M6.7 5l-5 5 5 5',
+  eye: 'M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z M10 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  layers: 'M10 3l7 4-7 4-7-4z M3 11l7 4 7-4',
+  check: 'M4 10l4 4 8-9',
+  clock: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M10 6v4l3 2',
+  map: 'M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2z M8 3v12 M12 5v12',
+  plan: 'M3 5h14v10H3z M3 8h14 M6 12h3',
+  gift: 'M4 9h12v8H4z M10 9v8 M4 9l6-5 6 5 M7 5c0-1.4 3-1.4 3 1.2 M13 5c0-1.4-3-1.4-3 1.2',
+};

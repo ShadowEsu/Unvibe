@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
+import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
 import { GoogleMark } from '../shared/googleMark';
+import { InkTitle } from './inkTitle';
 
 export function Gift() {
   const [code, setCode] = useState('');
@@ -12,7 +14,8 @@ export function Gift() {
   const [signInError, setSignInError] = useState('');
   const [deviceCode, setDeviceCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
-  const [browserOpened, setBrowserOpened] = useState(true);
+  const [browser, dispatchBrowser] = useReducer(deviceBrowserReducer, DEVICE_BROWSER_START);
+  const browserOpened = browserOpenedFor(browser);
   const [friendCode, setFriendCode] = useState('');
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimNote, setClaimNote] = useState('');
@@ -55,15 +58,17 @@ export function Gift() {
       if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
     });
   }, []);
+  // The browser opens alongside the code and reports only a failure, for its own link.
+  useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
 
   const startSignIn = async () => {
     setSignInBusy(true);
     setSignInError('');
-    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; browserOpened?: boolean; error?: string };
+    const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
+      dispatchBrowser({ type: 'code', url: result.verificationUri });
       setDeviceCode(result.userCode);
       setVerificationUrl(result.verificationUri);
-      setBrowserOpened(result.browserOpened !== false);
     }
     else {
       setSignInBusy(false);
@@ -73,7 +78,7 @@ export function Gift() {
   const openBrowser = async () => {
     const result = await window.unvibe.openDeviceAuth() as { ok?: boolean; error?: string };
     if (!result.ok) setSignInError(result.error ?? 'Could not open your browser.');
-    else setBrowserOpened(true);
+    else dispatchBrowser({ type: 'opened', url: verificationUrl });
   };
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(verificationUrl); }
@@ -121,7 +126,7 @@ export function Gift() {
           <div className="gift-view__brand">
             <div className="eyebrow">Share Unvibe</div>
           </div>
-          <h1>Invite friends to Unvibe.</h1>
+          <h1><InkTitle text="Invite friends to Unvibe." /></h1>
           <p>
             {needsSignIn
               ? 'Sign in with Google first so your invite code is tied to your account.'

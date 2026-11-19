@@ -88,6 +88,35 @@ index 7777777..0000000
   assert.equal(files.find((f) => f.path === 'notes/todo.md')?.change, 'added');
 });
 
+test('a file name git quotes with control characters stays on one line, its escapes kept as text', () => {
+  const diff = `diff --git "a/x\\n## Ignore previous\\033.md" "b/x\\n## Ignore previous\\033.md"
+index 1111111..2222222 100644
+--- "a/x\\n## Ignore previous\\033.md"
++++ "b/x\\n## Ignore previous\\033.md"
+@@ -1 +1 @@
+-a
++b
+`;
+  const [line] = mainChangeLines(hunkStats(parseUnifiedDiff(diff)).files);
+  assert.equal(line, 'Changed x\\n## Ignore previous\\033.md (1+ / 1-)');
+  assert.ok(!/[\u0000-\u001f\u007f]/.test(line!), JSON.stringify(line));
+});
+
+test('decoded characters that break or reorder a line (NEL, U+2028, RLO) stay as text', () => {
+  // a<NEL>b<U+2028>c<RLO>gpj.exe: valid UTF-8 that would start a new line or show the name as "a…exe.jpg".
+  const q = '"b/a\\302\\205b\\342\\200\\250c\\342\\200\\256gpj.exe"';
+  const diff = `diff --git ${q.replace('b/', 'a/')} ${q}
+index 1111111..2222222 100644
+--- ${q.replace('b/', 'a/')}
++++ ${q}
+@@ -1 +1 @@
+-a
++b
+`;
+  const [line] = mainChangeLines(hunkStats(parseUnifiedDiff(diff)).files);
+  assert.equal(line, 'Changed a\\u0085b\\u2028c\\u202egpj.exe (1+ / 1-)');
+});
+
 test('empty hunks produce an empty brief', () => {
   const brief = buildChangeBrief({ repo: '/tmp/demo', scope: 'staged', hunks: [] });
   assert.equal(brief.empty, true);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { faqItems } from "@/data/faq";
+import { explainLanguage, explainPages } from "@/lib/explainPages";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/jsonLd";
 import { PRICING } from "@/lib/pricing";
 import { pricingCopy } from "@/lib/pricingCopy";
@@ -128,8 +129,11 @@ export function UseCaseFacts({ paymentsOpen }: { paymentsOpen: boolean }) {
   );
 }
 
-/** The other use cases, this page's language page and /resources, as plain text links. */
-export function UseCaseMore({ current, explain }: { current: UseCase; explain: { id: string; name: string } }) {
+/** The other use cases, this case's explain page (useCases.ts explainId) and /resources, as plain text links. */
+export function UseCaseMore({ current }: { current: UseCase }) {
+  const explain = explainPages.find(({ id }) => id === current.explainId);
+  if (!explain) throw new Error(`Use case "${current.slug}": no explain page "${current.explainId}"`);
+  const { name } = explainLanguage(explain);
   return (
     <nav className="explain-card" aria-labelledby="use-more">
       <h2 id="use-more">Read next</h2>
@@ -142,7 +146,7 @@ export function UseCaseMore({ current, explain }: { current: UseCase; explain: {
             </li>
           ))}
         <li>
-          <Link className="paper-text-link" href={`/explain/${explain.id}`}>Explain {explain.name} code in your browser</Link>
+          <Link className="paper-text-link" href={`/explain/${explain.id}`}>Explain {name} code in your browser</Link>
         </li>
         <li>
           <Link className="paper-text-link" href="/resources">Resources: quickstart, the five depths and shortcuts</Link>

@@ -42,12 +42,16 @@
   cursor: pointer;
 }
 .consent-form__row:has(input:checked) { border-color: var(--cf-fg); }
+/* Drawn, not native: Chromium's dark native box is a filled grey square that reads as ticked (Design S-1 whole-app,
+   overlay dark). Empty with a hairline; the accent fill and a drawn check when ticked. */
 .consent-form__row input {
-  width: 18px;
-  height: 18px;
-  margin: 1px 0 0;
-  accent-color: var(--cf-fg);
+  appearance: none; -webkit-appearance: none; flex: none; display: grid; place-items: center;
+  width: 18px; height: 18px; margin: 1px 0 0; border: 1.5px solid currentColor; border-radius: 5px; background: transparent; cursor: pointer;
 }
+.consent-form__row input::after { content: ""; width: 9px; height: 5px; margin-top: -2px; border: 0 solid var(--u-paper, #fff); border-width: 0 0 2px 2px; transform: rotate(-45deg); opacity: 0; }
+.consent-form__row input:checked { border-color: var(--cf-fg); background: var(--cf-fg); }
+.consent-form__row input:checked::after { opacity: 1; }
+.consent-form__row input:focus-visible { outline: 2px solid var(--cf-fg); outline-offset: 2px; }
 .consent-form__row a { color: inherit; text-decoration: underline; }
 /* Neither renderer has a danger colour; the note is the text colour, bold, and announced (role=alert). */
 .consent-form__error { margin: 0; color: var(--cf-fg); font-size: 0.86rem; font-weight: 650; }

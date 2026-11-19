@@ -77,7 +77,12 @@ function Thanks() {
                     <figure className="dt__shot">
                       {/* eslint-disable-next-line @next/next/no-img-element -- a real screenshot at its native size */}
                       <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
-                      <figcaption className="d-mono">{shot.caption}</figcaption>
+                      <figcaption>
+                        <span className="dt__shot-label d-mono">{shot.caption}</span>
+                        {/* a hidden full stop and a space keep "…macOS 26. On macOS 15…" two sentences for screen readers and
+                            textContent; the label stays unpunctuated on screen */}
+                        {shot.note ? <><span className="sr-only">.</span>{" "}<span className="dt__shot-note">{shot.note}</span></> : null}
+                      </figcaption>
                     </figure>
                   ) : null}
                 </div>

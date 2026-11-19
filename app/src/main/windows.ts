@@ -1,22 +1,48 @@
-import { app, BrowserWindow, screen, shell, type WebContents } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import path from 'node:path';
-import { settings, type BarPosition, type BarSize } from './settings';
+import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
+import { ownCodeStepDueNow } from './ownCodeStep';
 import { noteWindowShown } from './progress';
 import { isSafeExternalUrl } from '../core/permissions';
+import { clampSpot, islandWindowAt, keepOnDisplays, NUDGE_PX, pillSpotIn, savedSpot, snapSpot, withSpot, type Spot } from './spots';
+import { watchCommandU } from './commandUHint';
 
 const preload = () => path.join(__dirname, '../preload/preload.cjs');
 const page = (name: string) => path.join(__dirname, `../renderer/${name}/${name}.html`);
 
-const SNAP = 18;
-/** Opening size for the review panel. Big enough to read, not a full window. */
-const DEFAULT_WIDGET_W = 560;
-const DEFAULT_WIDGET_H = 640;
+/**
+ * Overlay B (Design b-refined SPEC, Pane), compact since 0.1.54 (Vitalii via BOSS 636, Design 633): 320 wide in every
+ * Density; the height fits the content between 360 and 560, past which the answer scrolls inside while the header and
+ * tabs stay. The renderer measures its content (widget:fitHeight).
+ */
+export const PANEL_W = 320;
+export const PANEL_MIN_H = 360;
+export const PANEL_MAX_H = 560;
 /** One shared review panel — ⌘U reuses this instead of stacking windows. */
 let panelWin: BrowserWindow | null = null;
 let barIsExpanded = false;
 /** A notice's text is showing under the compact Island (renderer bar:setNotice). */
 let barHasNotice = false;
 let limitPauseActive = false;
+/** A file or folder dialog the panel opened is up: its blur is not a click away. */
+let panelDialogs = 0;
+
+/** Runs a dialog the panel opened; meanwhile losing focus neither fades nor hides the panel. */
+export async function whilePanelDialog<T>(work: () => Promise<T>): Promise<T> {
+  panelDialogs += 1;
+  try {
+    return await work();
+  } finally {
+    panelDialogs -= 1;
+  }
+}
+
+/** The panel's guide opened System Settings for Accessibility: losing focus to it is not a click away. Cleared when
+ * the grant arrives (or the panel closes). */
+let grantFlowOpen = false;
+export function setGrantFlowOpen(open: boolean): void {
+  grantFlowOpen = open;
+}
 
 const secureWebPrefs = () => ({
   preload: preload(),
@@ -42,29 +68,56 @@ function attachedIsland(position: BarPosition): boolean {
   return position === 'top-center' && process.platform === 'darwin';
 }
 
-function barBounds(position: BarPosition, w: number, h: number): { x: number; y: number } {
-  const pointer = screen.getCursorScreenPoint();
-  const display = settings().all().followActiveDisplay
-    ? screen.getDisplayNearestPoint(pointer)
+/** The display the Island belongs on: the one under the pointer (Settings "Follow active display"), else the primary. */
+function islandDisplay(): Electron.Display {
+  return settings().all().followActiveDisplay
+    ? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
     : screen.getPrimaryDisplay();
+}
+
+/**
+ * Where the Island window goes, and whether a floating one opens its card upward. The notch Island is fixed to the
+ * screen edge. A floating Island sits where the person last dragged it on this display (settings.islandSpots), else
+ * where its Settings position names; it opens upward from the lower half of the screen.
+ */
+function barPlacement(position: BarPosition, w: number, h: number): { x: number; y: number; opensUp: boolean } {
+  const display = islandDisplay();
   const { workArea, bounds } = display;
   const attached = attachedIsland(position);
+  if (!attached) {
+    const pill = { width: compactBarWidth(position), height: compactBarHeight(position) };
+    const spot = savedSpot(settings().all().islandSpots, display.id, pill, workArea);
+    if (spot) return islandWindowAt(spot, pill, { width: w, height: h }, workArea);
+  }
   const centerArea = attached ? bounds : workArea;
   const cx = centerArea.x + Math.round((centerArea.width - w) / 2);
   const right = workArea.x + workArea.width - w - 12;
   // Keep every interactive pixel below the macOS camera/menu-bar safe area.
   const top = attached ? bounds.y : workArea.y + 12;
   const bottom = workArea.y + workArea.height - h - 12;
+  const opensUp = position.startsWith('bottom');
   switch (position) {
     case 'top-center':
-      return { x: cx, y: top };
+      return { x: cx, y: top, opensUp };
     case 'top-right':
-      return { x: right, y: top };
+      return { x: right, y: top, opensUp };
     case 'bottom-right':
-      return { x: right, y: bottom };
+      return { x: right, y: bottom, opensUp };
     default:
-      return { x: cx, y: bottom };
+      return { x: cx, y: bottom, opensUp };
   }
+}
+
+/** The Island page draws its card above the pill when this is true (the Settings position alone can't say). */
+let islandOpensUp: boolean | null = null;
+function sendIslandDirection(win: BrowserWindow, opensUp: boolean): void {
+  if (win.isDestroyed() || islandOpensUp === opensUp) return;
+  islandOpensUp = opensUp;
+  win.webContents.send('bar:opensUp', opensUp);
+}
+/** The Island page asks once it has loaded (its first `bar:opensUp` may have gone before it listened). */
+export function islandDirection(): boolean {
+  return islandOpensUp ?? settings().all().barPosition.startsWith('bottom');
 }
 
 /** Compact top surface. Width leaves independent controls on both sides of a Mac notch. */
@@ -72,8 +125,12 @@ const FLOATING_BAR_W = 184;
 const BOTTOM_BAR_COMPACT_W = 184;
 /** Floating (not attached) bars open into a card this wide, above or below the pill. */
 const FLOATING_EXPANDED_W = 372;
-/** Height of the expanded overview under (or above) the compact row. Fits note + actions. */
-const BAR_EXPANDED_BODY_H = 244;
+/**
+ * Height of the expanded overview under (or above) the compact row: header, tiles, ramp, allowance, hint, an
+ * optional note and the actions with no dead band above the buttons (Design Spectral island S-1, 07 Nov: ~220).
+ * 230 leaves room for the note when the card opens upward from a bottom bar (11 px top padding there).
+ */
+const BAR_EXPANDED_BODY_H = 230;
 const FLOATING_ROW_H = 38;
 /**
  * A notice (notify()) shows its text under the compact row (above it at the bottom) without
@@ -124,7 +181,8 @@ export function createBar(): BrowserWindow {
   const position = settings().all().barPosition;
   const compactWidth = compactBarWidth(position);
   const compactHeight = compactBarHeight(position);
-  const { x, y } = barBounds(position, compactWidth, compactHeight);
+  const { x, y, opensUp } = barPlacement(position, compactWidth, compactHeight);
+  islandOpensUp = opensUp;
   const win = new BrowserWindow({
     width: compactWidth,
     height: compactHeight,
@@ -151,6 +209,7 @@ export function createBar(): BrowserWindow {
   win.setFullScreenable(false);
   if (process.platform === 'darwin') win.setWindowButtonVisibility(false);
   lockNavigation(win);
+  endDragsOnLoss(win);
   void win.loadFile(page('bar'));
   return win;
 }
@@ -173,27 +232,101 @@ export function setBarNotice(win: BrowserWindow | null, on: boolean): void {
   if (!barIsExpanded && win.isVisible()) applyBarSize(win, false);
 }
 
-function applyBarSize(win: BrowserWindow, force: boolean): void {
+function applyBarSize(win: BrowserWindow, force: boolean, animate = true): void {
+  // Mid-drag the pointer places the Island; the drag's end applies the size and spot.
+  if (dragOrigins.has(win)) return;
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
-  const { x, y } = barBounds(position, width, height);
+  const { x, y, opensUp } = barPlacement(position, width, height);
   // Hover previews must never activate the app or interrupt typing in the editor.
   win.setFocusable(false);
+  sendIslandDirection(win, opensUp);
   const prev = win.getBounds();
   if (force || prev.x !== x || prev.y !== y || prev.width !== width || prev.height !== height) {
-    win.setBounds({ x, y, width, height }, true);
+    win.setBounds({ x, y, width, height }, animate);
   }
   win.moveTop();
 }
 
-/** Move the bar to a new position (called when the setting changes). */
+/** Move the bar to a new position (called when the setting changes, and on every show). */
 export function positionBar(win: BrowserWindow): void {
+  // Mid-drag the pointer places the Island (a notice or the review pulse shows it); the drag's end places it.
+  if (dragOrigins.has(win)) return;
   const position = settings().all().barPosition;
   const { width, height } = barSize(position, barIsExpanded);
   win.setMovable(!attachedIsland(position));
-  const { x, y } = barBounds(position, width, height);
+  const { x, y, opensUp } = barPlacement(position, width, height);
+  sendIslandDirection(win, opensUp);
   win.setBounds({ x, y, width, height });
   if (attachedIsland(position)) win.setPosition(x, y);
+}
+
+/** Where a window was when a drag of it began; the drag moves it by the pointer's travel since then. */
+const dragOrigins = new WeakMap<BrowserWindow, Spot>();
+/** No pointer travels further than this in one drag; anything else is not a drag (review NIT: bound the IPC input). */
+const MAX_TRAVEL_PX = 20_000;
+export function startWindowDrag(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const { x, y } = win.getBounds();
+  dragOrigins.set(win, { x, y });
+}
+export function moveWindowDrag(win: BrowserWindow, dx: number, dy: number): void {
+  const from = dragOrigins.get(win);
+  if (!from || win.isDestroyed() || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  if (Math.abs(dx) > MAX_TRAVEL_PX || Math.abs(dy) > MAX_TRAVEL_PX) return;
+  // Each move stays on the screens (Security S3 on #344), not only the drop: a page may never send its dragEnd.
+  const { width, height } = win.getBounds();
+  const to = { x: Math.round(from.x + dx), y: Math.round(from.y + dy) };
+  const spot = keepOnDisplays(to, { width, height }, screen.getAllDisplays().map((d) => d.bounds));
+  win.setPosition(spot.x, spot.y);
+}
+
+/**
+ * A drag that ended without its drop (the window hid or lost focus, its page reloaded or crashed): forget it, so the
+ * window places, fits and nudges itself again, apply a height that waited for the drop, and bring the window back
+ * inside its screen. Nothing is saved: the person didn't put it there. Lead review on #344.
+ */
+export function abandonWindowDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win)) return;
+  const waiting = heightAfterDrag.get(win);
+  heightAfterDrag.delete(win);
+  if (win.isDestroyed()) return;
+  if (waiting !== undefined) fitPanelHeight(win, waiting);
+  const b = win.getBounds();
+  const spot = clampSpot(b, b, displayOf(win).workArea);
+  if (spot.x !== b.x || spot.y !== b.y) win.setPosition(spot.x, spot.y);
+}
+
+/** Wires abandonWindowDrag to every way a drag can lose its window. */
+export function endDragsOnLoss(win: Pick<BrowserWindow, 'on'> & { webContents: Pick<Electron.WebContents, 'on'> }): void {
+  const abandon = () => abandonWindowDrag(win as BrowserWindow);
+  win.on('hide', abandon);
+  win.on('blur', abandon);
+  win.webContents.on('render-process-gone', abandon);
+  win.webContents.on('did-start-loading', abandon);
+}
+
+/** The floating Island can be dragged; the notch Island stays on the screen edge. */
+export function islandDraggable(): boolean {
+  return !attachedIsland(settings().all().barPosition);
+}
+
+/**
+ * A drag of the floating Island ended: its pill stays inside the work area of the display it belongs on and that spot
+ * is remembered for that display. Without "Follow active display" the Island lives on the primary display, so it is
+ * kept there.
+ */
+export function endIslandDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win) || win.isDestroyed() || !islandDraggable()) return;
+  const position = settings().all().barPosition;
+  const pill = { width: compactBarWidth(position), height: compactBarHeight(position) };
+  const at = pillSpotIn(win.getBounds(), pill, islandDirection());
+  const centre = { x: at.x + Math.round(pill.width / 2), y: at.y + Math.round(pill.height / 2) };
+  const display = settings().all().followActiveDisplay ? screen.getDisplayNearestPoint(centre) : screen.getPrimaryDisplay();
+  const spot = clampSpot(snapSpot(at, pill, display.workArea), pill, display.workArea);
+  settings().set({ islandSpots: withSpot(settings().all().islandSpots, display.id, spot) });
+  // Straight to the kept spot: no glide after a drag (and none for people who turn motion down).
+  applyBarSize(win, true, false);
 }
 
 /** Quiet aisle — only show while a review is active. */
@@ -213,15 +346,34 @@ export function hideBar(win: BrowserWindow | null): void {
   win.hide();
 }
 
-function snap(win: BrowserWindow): void {
-  const b = win.getBounds();
-  const { workArea: wa } = screen.getDisplayNearestPoint({ x: b.x, y: b.y });
-  let { x, y } = b;
-  if (Math.abs(x - wa.x) < SNAP) x = wa.x;
-  if (Math.abs(x + b.width - (wa.x + wa.width)) < SNAP) x = wa.x + wa.width - b.width;
-  if (Math.abs(y - wa.y) < SNAP) y = wa.y;
-  if (Math.abs(y + b.height - (wa.y + wa.height)) < SNAP) y = wa.y + wa.height - b.height;
-  if (x !== b.x || y !== b.y) win.setBounds({ x, y, width: b.width, height: b.height });
+/**
+ * The panel inside a work area: 12 px from every edge (24 in all, Design Q3) and, when the Island sits at the
+ * top, clear of it: a panel that would reach under the Island starts 8 px below it and gets shorter instead.
+ * (At 1024 px wide a 440 px panel can't step aside, and QA saw its corner under the Island there.) Only a real
+ * overlap counts (the Island may be on another display), and only if the room below still fits the minimum height.
+ */
+export function fitPanelBounds(bounds: Electron.Rectangle, workArea: Electron.Rectangle, island?: Electron.Rectangle): Electron.Rectangle {
+  const width = Math.min(bounds.width, workArea.width - 24);
+  let height = Math.min(bounds.height, workArea.height - 24);
+  const x = Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12);
+  let y = Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12);
+  if (island && x < island.x + island.width && x + width > island.x && y < island.y + island.height && y + height > island.y) {
+    const below = island.y + island.height + 8;
+    const room = workArea.y + workArea.height - 12 - below;
+    if (room >= Math.min(height, PANEL_MIN_H)) {
+      y = below;
+      height = Math.min(height, room);
+    }
+  }
+  return { x, y, width, height };
+}
+
+/** Where the compact Island is when it sits in the upper half of its display (the panel steps below it); else undefined. */
+function topIslandRect(): Electron.Rectangle | undefined {
+  const position = settings().all().barPosition;
+  const { width, height } = barSize(position, false);
+  const { x, y, opensUp } = barPlacement(position, width, height);
+  return opensUp ? undefined : { x, y, width, height };
 }
 
 function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
@@ -230,134 +382,159 @@ function clampToVisibleArea(bounds: Electron.Rectangle): Electron.Rectangle {
     bounds.x < workArea.x + workArea.width && bounds.x + bounds.width > workArea.x &&
     bounds.y < workArea.y + workArea.height && bounds.y + bounds.height > workArea.y,
   );
-  const workArea = (visible ?? screen.getPrimaryDisplay()).workArea;
-  const width = Math.min(bounds.width, workArea.width - 24);
-  const height = Math.min(bounds.height, workArea.height - 24);
-  return {
-    width,
-    height,
-    x: Math.min(Math.max(bounds.x, workArea.x + 12), workArea.x + workArea.width - width - 12),
-    y: Math.min(Math.max(bounds.y, workArea.y + 12), workArea.y + workArea.height - height - 12),
-  };
+  return fitPanelBounds(bounds, (visible ?? screen.getPrimaryDisplay()).workArea, topIslandRect());
 }
 
-function defaultWidgetBounds(): Electron.Rectangle {
-  const cursor = screen.getCursorScreenPoint();
-  const { workArea } = screen.getDisplayNearestPoint(cursor);
-  const w = DEFAULT_WIDGET_W;
-  const h = DEFAULT_WIDGET_H;
+/**
+ * Where the pointer was at the last ⌃U: the selection is usually near it, so the panel opens beside it, and a
+ * double-click on the panel's header puts it back there.
+ */
+let panelAnchor: Electron.Point | null = null;
+
+function defaultWidgetBounds(anchor: Electron.Point): Electron.Rectangle {
+  const { workArea } = screen.getDisplayNearestPoint(anchor);
+  const w = PANEL_W;
+  const h = PANEL_MIN_H;
   return {
     width: w,
     height: h,
-    x: Math.min(Math.max(cursor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
-    y: Math.min(Math.max(cursor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
+    x: Math.min(Math.max(anchor.x + 24, workArea.x), workArea.x + workArea.width - w - 12),
+    y: Math.min(Math.max(anchor.y - 40, workArea.y), workArea.y + workArea.height - h - 12),
   };
 }
 
-/** Restore user size/position. Stock tiny panels get the current opening size. */
-function resolveWidgetBounds(): Electron.Rectangle {
-  const saved = settings().all().lastWidgetBounds;
-  if (!saved) return defaultWidgetBounds();
-  const stockTiny =
-    (saved.width === 300 && saved.height === 360) ||
-    (saved.width === 280 && saved.height === 240) ||
-    (saved.width === 340 && saved.height === 440) ||
-    (saved.width === 360 && saved.height === 480) ||
-    (saved.width === 440 && saved.height === 560) ||
-    (saved.width === 480 && saved.height === 600) ||
-    (saved.width === 540 && saved.height === 720) ||
-    (saved.width === 680 && saved.height === 720);
-  if (stockTiny) {
-    return { ...saved, width: DEFAULT_WIDGET_W, height: DEFAULT_WIDGET_H };
-  }
-  return { ...saved };
+/** Where the panel was last left on the display the ⌃U came from, else beside the pointer; its width is fixed. */
+function resolveWidgetBounds(anchor: Electron.Point): Electron.Rectangle {
+  const display = screen.getDisplayNearestPoint(anchor);
+  const spot = savedSpot(settings().all().overlaySpots, display.id, { width: PANEL_W, height: PANEL_MIN_H }, display.workArea);
+  return spot ? { ...spot, width: PANEL_W, height: PANEL_MIN_H } : defaultWidgetBounds(anchor);
 }
 
-/** Edges for border-aligned custom resize (OS chrome resize is disabled — too far from the visible card). */
-export type WidgetResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-
-const WIDGET_MIN_W = 420;
-const WIDGET_MIN_H = 460;
-
-export function applyWidgetResize(
-  start: Electron.Rectangle,
-  edge: WidgetResizeEdge,
-  dx: number,
-  dy: number,
-): Electron.Rectangle {
-  let { x, y, width, height } = start;
-  if (edge.includes('e')) width = Math.max(WIDGET_MIN_W, start.width + dx);
-  if (edge.includes('s')) height = Math.max(WIDGET_MIN_H, start.height + dy);
-  if (edge.includes('w')) {
-    width = Math.max(WIDGET_MIN_W, start.width - dx);
-    x = start.x + (start.width - width);
-  }
-  if (edge.includes('n')) {
-    height = Math.max(WIDGET_MIN_H, start.height - dy);
-    y = start.y + (start.height - height);
-  }
-  return { x, y, width, height };
+/** The display a window's centre is on, which is where its spot is remembered. */
+function displayOf(win: BrowserWindow): Electron.Display {
+  const b = win.getBounds();
+  return screen.getDisplayNearestPoint({ x: b.x + Math.round(b.width / 2), y: b.y + Math.round(b.height / 2) });
 }
 
-/** The review panel parts setPanelOpacity touches (a structural type so tests can pass a fake). */
-export type DimmablePanel = Pick<BrowserWindow, 'isDestroyed' | 'setOpacity'> & {
-  webContents: Pick<WebContents, 'isDestroyed' | 'insertCSS' | 'removeInsertedCSS'>;
-};
+/** Keeps the panel inside its display's work area at this spot; returns where it ended up and on which display. */
+function placePanel(win: BrowserWindow, at: Spot, snapToEdges: boolean): { displayId: number; spot: Spot } {
+  const b = win.getBounds();
+  const display = displayOf(win);
+  const size = { width: b.width, height: b.height };
+  const spot = clampSpot(snapToEdges ? snapSpot(at, size, display.workArea) : at, size, display.workArea);
+  if (spot.x !== b.x || spot.y !== b.y) win.setPosition(spot.x, spot.y);
+  return { displayId: display.id, spot };
+}
 
-/** Settings allow 0.35–1 for a dimmed panel; anything else is clamped before it reaches the page. */
-const MIN_PANEL_OPACITY = 0.35;
-const panelDim = new WeakMap<object, { queue: Promise<void>; key: string | null }>();
+/** Remembers the panel's spot for this display; a spot that is already the saved one doesn't touch the file. */
+function savePanelSpot(displayId: number, spot: Spot): void {
+  const saved = settings().all().overlaySpots?.[String(displayId)];
+  if (saved?.x === spot.x && saved?.y === spot.y) return;
+  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, displayId, spot) });
+}
 
 /**
- * Sets how see-through the review panel is.
- *
- * On Windows the panel is a transparent window. Without a usable GPU (software compositing), Chromium
- * draws each new frame of a transparent window with UpdateLayeredWindow. BrowserWindow.setOpacity
- * calls SetLayeredWindowAttributes, and after that Windows refuses every UpdateLayeredWindow call:
- * the panel stays frozen on screen with the old review while the page keeps updating underneath
- * (Electron issue #32555; real-device runs 40266232417 and 40266929130). Even setOpacity(1) does it.
- * So on Windows the window's own opacity is never touched; the page dims itself with a stylesheet.
- * Stylesheet changes run strictly one after another, so the last call wins: a quick blur then
- * focus ends undimmed. Other platforms keep win.setOpacity exactly as before.
+ * A held arrow key repeats fast: the panel moves at once, and its spot is saved this long after the last nudge, not
+ * once per key repeat (Security S1 on #344).
  */
-export function setPanelOpacity(win: DimmablePanel, opacity: number, platform: NodeJS.Platform = process.platform): Promise<void> {
-  if (win.isDestroyed()) return Promise.resolve();
-  if (platform !== 'win32') {
-    win.setOpacity(opacity);
-    return Promise.resolve();
+export const NUDGE_SAVE_MS = 500;
+let nudgeSave: NodeJS.Timeout | null = null;
+/** A drop or a reset decides the spot now: a nudge's save still waiting must not overwrite it. */
+function cancelNudgeSave(): void {
+  clearTimeout(nudgeSave ?? undefined);
+  nudgeSave = null;
+}
+
+/** A drag of the panel by its header ended: it lands inside the screen, near edges snap, and the spot is kept. */
+export function endPanelDrag(win: BrowserWindow): void {
+  if (!dragOrigins.delete(win) || win.isDestroyed()) return;
+  cancelNudgeSave();
+  // The answer may have grown during the drag: fit it first, so the spot saved is where the panel ends up.
+  const grown = heightAfterDrag.get(win);
+  heightAfterDrag.delete(win);
+  if (grown !== undefined) fitPanelHeight(win, grown);
+  const { x, y } = win.getBounds();
+  const placed = placePanel(win, { x, y }, true);
+  savePanelSpot(placed.displayId, placed.spot);
+}
+
+/** An arrow key on the focused header moves the panel by one step (16 px, Design 633); the spot is saved once it rests. */
+export function nudgePanel(win: BrowserWindow, dx: number, dy: number): void {
+  if (win.isDestroyed() || dragOrigins.has(win) || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  const { x, y } = win.getBounds();
+  const { displayId, spot } = placePanel(win, { x: x + Math.sign(dx) * NUDGE_PX, y: y + Math.sign(dy) * NUDGE_PX }, false);
+  cancelNudgeSave();
+  nudgeSave = setTimeout(() => {
+    nudgeSave = null;
+    savePanelSpot(displayId, spot);
+  }, NUDGE_SAVE_MS);
+}
+
+/** A double-click on the header: forget this display's spot and put the panel back beside the last ⌃U. */
+export function resetPanelPosition(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  cancelNudgeSave();
+  const display = displayOf(win);
+  settings().set({ overlaySpots: withSpot(settings().all().overlaySpots, display.id, null) });
+  const { height } = win.getBounds();
+  win.setBounds(clampToVisibleArea({ ...defaultWidgetBounds(panelAnchor ?? screen.getCursorScreenPoint()), height }), false);
+}
+
+/** The window height for content this tall: between 360 and 560 (past that the answer scrolls inside). */
+export function panelHeightFor(contentHeight: number): number {
+  if (!Number.isFinite(contentHeight)) return PANEL_MIN_H;
+  return Math.round(Math.min(PANEL_MAX_H, Math.max(PANEL_MIN_H, contentHeight)));
+}
+
+/** A content height that arrived while the panel was being dragged; the drag's end applies it. */
+const heightAfterDrag = new WeakMap<BrowserWindow, number>();
+
+/** Fits the panel to its content's height, kept inside the work area and clear of a top Island. */
+export function fitPanelHeight(win: BrowserWindow, contentHeight: number): void {
+  if (win.isDestroyed()) return;
+  // Growing while the answer streams would move the panel under the pointer (and jitter near an edge): wait.
+  if (dragOrigins.has(win)) {
+    heightAfterDrag.set(win, contentHeight);
+    return;
   }
-  const value = Number.isFinite(opacity) ? Math.min(1, Math.max(MIN_PANEL_OPACITY, opacity)) : 1;
-  const contents = win.webContents;
-  const state = panelDim.get(contents) ?? { queue: Promise.resolve(), key: null };
-  panelDim.set(contents, state);
-  state.queue = state.queue
-    .then(async () => {
-      if (contents.isDestroyed()) return;
-      if (state.key) {
-        const key = state.key;
-        state.key = null;
-        await contents.removeInsertedCSS(key);
-      }
-      if (value < 1 && !contents.isDestroyed()) state.key = await contents.insertCSS(`html { opacity: ${value} !important; }`);
-    })
-    .catch((error: unknown) => console.warn('[unvibe] review panel opacity not applied', error));
-  return state.queue;
+  const current = win.getBounds();
+  const height = panelHeightFor(contentHeight);
+  if (current.height === height && current.width === PANEL_W) return;
+  win.setBounds(clampToVisibleArea({ ...current, width: PANEL_W, height }), false);
+}
+
+/**
+ * What the panel does when it loses focus: Fade (the default) drops the pane to 22 % but keeps it clickable;
+ * Hide closes the window and keeps its state for ⌃U. While the explanation limit holds the panel up, it stays.
+ */
+export function clickAwayOnBlur(behavior: InactiveBehavior, limitPause: boolean): InactiveBehavior | 'stay' {
+  if (limitPause) return 'stay';
+  return behavior === 'hide' ? 'hide' : 'fade';
+}
+
+/** Tells the panel page whether it is faded (it animates the opacity itself, so reduced motion is honoured). */
+function sendAway(win: BrowserWindow, away: boolean): void {
+  if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('panel:away', away);
 }
 
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
-    minWidth: WIDGET_MIN_W,
-    minHeight: WIDGET_MIN_H,
+    minWidth: PANEL_W,
+    minHeight: PANEL_MIN_H,
+    maxWidth: PANEL_W,
+    maxHeight: PANEL_MAX_H,
     frame: false,
     transparent: true,
-    // System resize hits a thick invisible rim outside the card. Resize is handled
-    // from the visible border grips in the renderer instead.
+    // The content decides the height (widget:fitHeight); the width is fixed.
     resizable: false,
     hasShadow: false,
     roundedCorners: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    // macOS: the panel opens without focus and its header no longer is an OS drag region, so the first press must
+    // reach the page or a drag (or a button) would need a click to focus first (lead review S2 on #344).
+    acceptFirstMouse: true,
     show: false,
     webPreferences: secureWebPrefs(),
   });
@@ -368,45 +545,37 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   if (process.platform === 'darwin') win.setHiddenInMissionControl(true);
   win.setFullScreenable(false);
 
-  const persist = () => {
-    if (win.isDestroyed()) return;
-    settings().set({ lastWidgetBounds: win.getBounds() });
-  };
-  win.on('moved', () => {
-    snap(win);
-    persist();
-  });
-  win.on('resized', persist);
+  // Its spot is saved when a drag or an arrow key moves it (endPanelDrag, nudgePanel), per display.
 
   win.on('blur', () => {
     if (win.isDestroyed()) return;
-    if (limitPauseActive) {
-      void setPanelOpacity(win, 1);
-      return;
-    }
-    const behavior = settings().all().inactiveBehavior;
-    if (behavior === 'dim') void setPanelOpacity(win, settings().all().widgetOpacityInactive);
+    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0 || grantFlowOpen);
+    if (action === 'hide') win.hide();
+    else if (action === 'fade') sendAway(win, true);
   });
-  win.on('focus', () => {
-    if (win.isDestroyed()) return;
-    void setPanelOpacity(win, 1);
-  });
+  win.on('focus', () => sendAway(win, false));
 
   lockNavigation(win);
+  endDragsOnLoss(win);
+  watchCommandU(win);
   win.once('ready-to-show', () => win.showInactive());
-  void win.loadFile(page('widget'));
+  // The theme and density ride in the URL so the panel's first paint matches Settings.
+  void win.loadFile(page('widget'), { query: { theme: settings().all().theme ?? 'light', density: settings().all().density } });
   return win;
 }
 
 /** Prefer the existing review panel; create only when needed. */
 export function getOrCreateWidget(): BrowserWindow {
+  panelAnchor = screen.getCursorScreenPoint();
   if (panelWin && !panelWin.isDestroyed()) {
     if (panelWin.isMinimized()) panelWin.restore();
+    // A faded panel comes back before it is focused: the shortcut always shows a full panel.
+    sendAway(panelWin, false);
     panelWin.showInactive();
     panelWin.focus();
     return panelWin;
   }
-  panelWin = buildWidgetWindow(resolveWidgetBounds());
+  panelWin = buildWidgetWindow(resolveWidgetBounds(panelAnchor));
   panelWin.on('closed', () => {
     panelWin = null;
   });
@@ -444,7 +613,7 @@ export function raiseLimitPause(win: BrowserWindow | null): void {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-  void setPanelOpacity(win, 1);
+  sendAway(win, false);
   if (win.isMinimized()) win.restore();
   win.show();
   win.moveTop();
@@ -465,9 +634,9 @@ export interface CompanionRevealer {
 }
 
 /**
- * The companion's one reveal, once its page has painted: maximized first on a first run, then shown,
- * and with `front` (a first-run launch the user started) brought above other apps. Later calls do
- * nothing, so the paint and the 5 s fallback can both call it.
+ * The companion's one reveal, once its page has drawn its first real screen (companionPainted): maximized first
+ * on a first run, then shown, and with `front` (a first-run launch the user started) brought above other apps.
+ * Later calls do nothing, so that signal and the 5 s fallback can both call it.
  */
 export function companionRevealer(win: RevealTarget, { maximize, front, platform }: { maximize: boolean; front: boolean; platform: NodeJS.Platform }): CompanionRevealer {
   let shown = false;
@@ -489,51 +658,112 @@ export function companionRevealer(win: RevealTarget, { maximize, front, platform
   return { reveal, revealed: () => shown };
 }
 
-/** Companions whose reveal hasn't run yet: their page is still loading. */
+/** Companions whose reveal hasn't run yet: their page hasn't drawn its first real screen. */
 const companionReveals = new WeakMap<BrowserWindow, CompanionRevealer>();
 
 /**
- * Whether this companion is still loading, hidden until its page paints. Reopening it then must not
- * show it early (blank) or out of turn: its reveal shows it once painted.
+ * Whether this companion is still loading, hidden until its first real screen (companionPainted). Reopening it
+ * then must not show it early (blank) or out of turn: its reveal shows it.
  */
 export function companionLoading(win: BrowserWindow): boolean {
   return companionReveals.get(win)?.revealed() === false;
 }
 
+/** The window events armCompanionReveal listens to (a BrowserWindow, or a stand-in in tests). */
+export interface RevealWiring { once(event: 'show' | 'closed', listener: () => void): unknown }
+
 /**
- * The home window. It stays hidden until its page has painted, so nobody sees a blank (on first run,
- * maximized) window while it loads; if the page never paints, it shows anyway after 5 s. `front` (a
- * first-run launch the user started) then brings it above other apps.
+ * The hidden companion's fallback: it shows after `fallbackMs` unless it showed or closed first. Nothing else here
+ * reveals it; in particular not ready-to-show, which fires on the empty 'checking' frame (#208). The page's own
+ * signal (companionPainted) is the normal reveal.
+ */
+export function armCompanionReveal(win: RevealWiring, reveal: () => void, fallbackMs = 5000): void {
+  const fallback = setTimeout(reveal, fallbackMs);
+  win.once('show', () => clearTimeout(fallback));
+  win.once('closed', () => clearTimeout(fallback));
+}
+
+/**
+ * The companion's page has drawn its first real screen (setup, sign-in or the app; not the empty frame it shows
+ * while it reads its settings): show it now. Chromium's ready-to-show fires on that empty frame, which is the blank
+ * first window QA measured on Windows (#208), so the reveal waits for the page instead.
+ */
+export function companionPainted(win: BrowserWindow): void {
+  companionReveals.get(win)?.reveal();
+}
+
+/**
+ * The companion's own chrome (Mono): the window background behind the first paint and, on Windows and Linux, the
+ * min/max/close overlay take the theme's ground (#ffffff / #000000) with the text colour for the symbols. Flat
+ * colours only: Electron 36 ignores the overlay colour's alpha on Linux (it painted black) and Windows is unverified.
+ * The top bar's box stops short of the overlay (mono-frame.css), so the strip sits on open ground. "system" follows
+ * the OS appearance.
+ */
+export function companionChrome(theme: ThemePreference, osDark = nativeTheme.shouldUseDarkColors, stage = false): {
+  background: string;
+  overlay: { color: string; symbolColor: string; height: number };
+} {
+  // While the start stage (the sharks, dark in both themes) is up, the window-button strip and the first paint take
+  // the stage's ground so a light theme never shows a white strip over the dark stage (Design S-1 whole-app MUST 14).
+  // Mono's stage ground is #0f0f0f (mono.css `.sharks-intro`); the strip's symbols are Mono's dark-theme ink.
+  if (stage) return { background: '#0f0f0f', overlay: { color: '#0f0f0f', symbolColor: '#f5f5f5', height: 40 } };
+  const dark = theme === 'dark' || (theme === 'system' && osDark);
+  return dark
+    ? { background: '#000000', overlay: { color: '#000000', symbolColor: '#f5f5f5', height: 40 } }
+    : { background: '#ffffff', overlay: { color: '#ffffff', symbolColor: '#111111', height: 40 } };
+}
+
+/**
+ * The stage shows on a launch into the app proper with the Settings row on: not the first run, and not an open
+ * that leads with the own-code step (the renderer ends the stage for both).
+ */
+function stageAtLaunch(): boolean {
+  const all = settings().all();
+  return all.onboarded && all.startAnimation && !ownCodeStepDueNow();
+}
+
+/** Re-colour an open companion after a theme change (Settings › Theme, or the OS when the theme is "system"). */
+export function applyCompanionChrome(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const chrome = companionChrome(settings().all().theme);
+  win.setBackgroundColor(chrome.background);
+  if (process.platform !== 'darwin') win.setTitleBarOverlay(chrome.overlay);
+}
+
+/**
+ * The home window. It stays hidden until its page has drawn its first real screen (companionPainted), so nobody
+ * sees a blank (on first run, maximized) window while it loads; if the page never says so, it shows anyway after
+ * 5 s. `front` (a first-run launch the user started) then brings it above other apps.
  */
 export function createCompanion({ front = false }: { front?: boolean } = {}): BrowserWindow {
+  const stage = stageAtLaunch();
   const win = new BrowserWindow({
     width: 1180,
     height: 780,
     minWidth: 980,
     minHeight: 620,
     // 'hiddenInset' is macOS-only; elsewhere it would drop the min/max/close buttons, so draw
-    // them as an overlay in the companion's paper colour (v7 --v-bg).
+    // them as an overlay in the theme's ground colour (the companion reserves 150 px for it).
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
-      : { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#f5f2ea', symbolColor: '#141414', height: 40 } }),
-    backgroundColor: settings().all().theme === 'light' ? '#ffffff' : '#0c1020',
+      : { titleBarStyle: 'hidden' as const, titleBarOverlay: companionChrome(settings().all().theme, undefined, stage).overlay }),
+    backgroundColor: companionChrome(settings().all().theme, undefined, stage).background,
     skipTaskbar: false,
     show: false,
     webPreferences: secureWebPrefs(),
   });
   lockNavigation(win);
+  watchCommandU(win);
   // Setup is intentionally a full-window moment. Once it is complete, future
   // launches retain the normal companion size so the app stays out of the way.
   const revealer = companionRevealer(win, { maximize: !settings().all().onboarded, front, platform: process.platform });
   companionReveals.set(win, revealer);
-  // `window_shown` (progress.ts): the marker that a person saw the window, 3 s after it is revealed.
-  const reveal = () => { revealer.reveal(); void noteWindowShown(win); };
-  const fallback = setTimeout(reveal, 5000);
-  win.once('ready-to-show', () => {
-    clearTimeout(fallback);
-    reveal();
-  });
-  win.once('closed', () => clearTimeout(fallback));
-  void win.loadFile(page('companion'));
+  armCompanionReveal(win, revealer.reveal);
+  // `window_shown` (progress.ts): the marker that a person saw the window, 3 s after it is revealed (by the page's
+  // first paint or the fallback; both show the window).
+  win.once('show', () => void noteWindowShown(win));
+  // The page draws its loading frame on the ground of the screen to come (the stage's, or the app's). A window
+  // hidden at creation gets no frames, so that frame is the one on screen for the moment after the reveal (#208).
+  void win.loadFile(page('companion'), { query: { first: stage ? 'stage' : 'app' } });
   return win;
 }

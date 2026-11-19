@@ -40,10 +40,20 @@ export class BrowserWindow {
   }
 }
 
+const testDisplay = () => ({ id: 1, bounds: { x: 0, y: 0, width: 1600, height: 1000 }, workArea: { x: 0, y: 0, width: 1600, height: 1000 } });
+
+/** One 1600 × 1000 display, under the pointer, for code that keeps a window on its screen (window drag tests). */
 export const screen = {
-  getPrimaryDisplay: (): never => {
-    throw new Error('Displays are not available in tests.');
-  },
+  getPrimaryDisplay: () => testDisplay(),
+  getDisplayNearestPoint: () => testDisplay(),
+  getAllDisplays: () => [testDisplay()],
+  getCursorScreenPoint: () => ({ x: 800, y: 500 }),
+};
+
+/** The OS appearance: light in tests (the companion's Windows title-bar colours read it). */
+export const nativeTheme = {
+  shouldUseDarkColors: false,
+  on: () => nativeTheme,
 };
 
 export const shell = {
