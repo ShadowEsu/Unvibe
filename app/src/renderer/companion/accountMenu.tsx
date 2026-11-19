@@ -5,8 +5,13 @@ interface AccountMenuProps {
   name: string;
   email?: string;
   planLabel: string;
+  /** The sync line under the name in the rail's account row ("Saved on this Mac", "Syncing…", …). */
+  syncLine: string;
+  /** The sync phase, for the line's dot (problems keep the app's warning colour). */
+  syncPhase: string;
   signedIn: boolean;
-  compact?: boolean;
+  /** The rail is folded to 56 px: only the avatar shows, and the name is the row's tooltip. */
+  rail?: boolean;
   version: string;
   onSettings: () => void;
   onShortcuts: () => void;
@@ -15,6 +20,8 @@ interface AccountMenuProps {
   onFeedback: () => void;
   onSignIn: () => void;
   onSignOut: () => Promise<void>;
+  /** Offered while sync needs a retry (it used to be the sync button's click). */
+  onRetrySync?: () => void;
 }
 
 const HELP = 'https://unvibe.site/beta#help';
@@ -40,12 +47,13 @@ const ICONS = {
   feedback: 'M4 4h12v9H8l-4 3z',
   signout: 'M8 4H4v12h4 M12 6l4 4-4 4 M16 10H8',
   signin: 'M12 4h4v12h-4 M8 6l-4 4 4 4 M4 10h8',
+  sync: 'M4 10a6 6 0 0 1 10.5-4 M16 10a6 6 0 0 1-10.5 4 M14.5 3v3h-3 M5.5 17v-3h3',
   external: 'M8 4H4v12h12v-4 M11 3h6v6 M17 3l-8 8',
 };
 
 /** Granola-style account popover anchored to the profile button at the bottom of the sidebar. */
 export function AccountMenu(props: AccountMenuProps) {
-  const { name, email, planLabel, signedIn, compact, version } = props;
+  const { name, email, planLabel, syncLine, syncPhase, signedIn, rail, version } = props;
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; bottom: number }>({ left: 12, bottom: 64 });
   const rootRef = useRef<HTMLDivElement>(null);
@@ -137,6 +145,11 @@ export function AccountMenu(props: AccountMenuProps) {
           </div>
 
           <div className="acct-menu__group">
+            {props.onRetrySync ? (
+              <button type="button" role="menuitem" className="acct-menu__item" onClick={run(props.onRetrySync)}>
+                <MenuIcon d={ICONS.sync} /><span>{syncLine}</span>
+              </button>
+            ) : null}
             {signedIn ? (
               <button type="button" role="menuitem" className="acct-menu__item" onClick={run(() => void props.onSignOut())}>
                 <MenuIcon d={ICONS.signout} /><span>Sign out</span>
@@ -157,13 +170,14 @@ export function AccountMenu(props: AccountMenuProps) {
         className={`acct-trigger${open ? ' is-open' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={compact ? name : undefined}
+        aria-label={`${name}. ${syncLine}`}
+        data-tip={rail ? name : undefined}
         onClick={() => { place(); setOpen((value) => !value); }}
       >
         <span className="acct-avatar" aria-hidden="true">{initials(name)}</span>
-        <span className="acct-trigger__text nav-label">
+        <span className="acct-trigger__text nav-label" aria-hidden="true">
           <strong>{name}</strong>
-          <small>{planLabel}</small>
+          <small className={`acct-trigger__sync acct-trigger__sync--${syncPhase}`}><i />{syncLine}</small>
         </span>
         <svg className="acct-trigger__chev nav-label" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 8l3-3 3 3 M7 12l3 3 3-3" /></svg>
       </button>

@@ -1,0 +1,25 @@
+/* Vibe's signed speech bubble, in Spectral (Design spectral README §1): a chip on the glass, the name in the accent. */
+.vibe-bubble {
+  position: relative;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--u-line);
+  border-radius: 14px;
+  background: var(--u-chip);
+  color: var(--u-ink);
+  font: var(--u-w-body) 13px/20px var(--u-font);
+  letter-spacing: 0;
+}
+.vibe-bubble__name {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--u-accent);
+  font: var(--u-w-title) 11px/1 var(--u-font);
+}
+.vibe-bubble--large {
+  padding: 14px 18px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 22px;
+}
+.vibe-bubble--large .vibe-bubble__name { font-size: 12px; }

@@ -25,7 +25,7 @@ export async function launchApp({ exe, userData, args = [], env = process.env, t
   delete appEnv.NODE_OPTIONS;
   const child = spawn(exe, [...args, '--remote-debugging-port=0'], {
     env: appEnv,
-    // Its own process group on macOS, so close() stops every helper process with it.
+    // Its own process group on macOS, so a last-resort kill reaches every helper process with it.
     detached: process.platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -34,8 +34,8 @@ export async function launchApp({ exe, userData, args = [], env = process.env, t
   child.stderr.on('data', (d) => output.push(String(d)));
   let exited = null;
   child.on('exit', (code, signal) => { exited = { code, signal }; });
-  // A script that throws must not leave the app (and its debug port) running.
-  process.on('exit', () => { if (!exited) stop(child); });
+  // A script that throws must not leave the app (and its debug port) running. It can't wait here, so it's a kill.
+  process.on('exit', () => { if (!exited) kill(child); });
 
   const start = Date.now();
   let browser = null;
@@ -46,7 +46,7 @@ export async function launchApp({ exe, userData, args = [], env = process.env, t
     if (!browser) await sleep(300);
   }
   if (!browser) {
-    stop(child);
+    kill(child);
     throw new Error(`no debug port after ${timeout} ms`);
   }
   const context = browser.contexts()[0];
@@ -68,19 +68,36 @@ export async function launchApp({ exe, userData, args = [], env = process.env, t
       }
       return null;
     },
+    /**
+     * Quits the app the way the OS does (a quit Apple event, logout or `kill <pid>`): SIGTERM to the main process
+     * only, then waits up to 10 s for it to exit; its helpers go with it. Only an app still running after that is
+     * killed, the whole process group with SIGKILL. A SIGTERM to the whole group also hits the GPU process and the
+     * zygote, so Chromium aborts ("GPU process isn't usable") and spends about 40 s dying while it still holds the
+     * profile's single-instance lock (unvibe-app, agents/unvibe-app/evidence/sigterm-0154): a relaunch on the same
+     * profile in that window exits with code 0 (S13 dry run 44252042716, take 44252681123).
+     */
     async close() {
       await browser.close().catch(() => {});
-      stop(child);
-      const t = Date.now();
-      while (!exited && Date.now() - t < 10000) await sleep(200);
+      const wait = async (ms) => { const t = Date.now(); while (!exited && Date.now() - t < ms) await sleep(100); };
+      if (process.platform === 'win32') {
+        kill(child);
+        await wait(10000);
+        return;
+      }
+      try { process.kill(child.pid, 'SIGTERM'); } catch { /* already gone */ }
+      await wait(10000);
+      if (exited) return;
+      kill(child);
+      await wait(5000);
     },
   };
 }
 
-function stop(child) {
+/** Ends the app now: the main process and every helper (Windows: the process tree; elsewhere: its process group). */
+function kill(child) {
   try {
     if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-    else process.kill(-child.pid, 'SIGTERM');
+    else process.kill(-child.pid, 'SIGKILL');
   } catch { /* already gone */ }
 }
 

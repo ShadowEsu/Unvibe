@@ -1,0 +1,340 @@
+/* ── Mono: the overlay window (Design OPTIONS.md "Overlay window and Island" + Round 2 "The overlay window"; mocks
+   mono/surfaces/). Solid ground, 14 px corners, one 1 px control-border outline and the floating shadow; no blur,
+   gradient, sheen or fade inside it. Header 48, tabs 36 under it, the depth track a 32 px pill, buttons 28 px pills
+   (Understand, Check and the state's main action the one filled), the ask field a 36 px pill. Type 12, 14 and 17 px at
+   400 and 600; mono 12 for code and keys. Overrides widget.css and mono.css; loaded after both. ── */
+
+/* The window: solid, outline on top of everything inside it (the u-rim layer), the floating shadow. */
+:root .ob {
+  border-radius: 14px;
+  background: var(--u-solid-surface);
+  box-shadow: var(--u-shadow-float);
+  font-size: 14px;
+  line-height: 22px;
+}
+:root .ob.u-rim::before {
+  z-index: 6;
+  padding: 0;
+  border: 1px solid var(--u-border-control);
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+  pointer-events: none;
+}
+:root .ob :focus-visible { outline-color: var(--u-focus); }
+:root .ob .ob-scroll { background: var(--u-solid-surface); }
+:root .ob .ob-scroll:focus-visible { outline: 2px solid var(--u-focus); outline-offset: -2px; }
+
+/* Header, 48 px: Vibe 20 at 12 px, title 14 semibold, source line 12 grey, close 28 × 28. */
+:root .ob .ob-head {
+  height: 48px;
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  background: var(--u-solid-surface);
+  box-shadow: none;
+}
+:root .ob .ob-head__text { gap: 0; }
+:root .ob .ob-head__title { font: 600 14px/18px var(--u-font); letter-spacing: 0; }
+:root .ob .ob-meta { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--u-ink-2); }
+:root .ob .ob-head__close { width: 28px; height: 28px; border-radius: 999px; color: var(--u-ink-2); }
+:root .ob .ob-head__close:hover { background: var(--u-sunken); color: var(--u-ink); }
+
+/* Tabs, 36 px under the header: four equal columns, icon 14 + label 12 semibold. Active: text colour with a 2 px
+   underline 12 px in from each side; others grey; not available yet at 35 %. A hairline under the row. */
+:root .ob .ob-tabs {
+  height: 36px;
+  padding: 0;
+  background: var(--u-solid-surface);
+  box-shadow: inset 0 -1px 0 var(--u-border);
+}
+:root .ob .ob-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--u-ink-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+:root .ob .ob-tab:hover:not([aria-disabled="true"]) { background: transparent; color: var(--u-ink); }
+:root .ob .ob-tab.is-on { background: transparent; color: var(--u-ink); font-weight: 600; }
+:root .ob .ob-tab.is-on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 1px; background: var(--u-ink); }
+:root .ob .ob-tab[aria-disabled="true"] { opacity: var(--u-off); }
+:root .ob .ob-tab:focus-visible { outline-offset: -2px; }
+
+/* The body and the foot: the foot is solid with a hairline above; the answer scrolls under it. */
+:root .ob .ob-body { gap: 12px; padding: 12px 16px 16px; }
+:root .ob .ob-foot {
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--u-solid-surface);
+  box-shadow: inset 0 1px 0 var(--u-border);
+}
+/* No actions and no note: no foot band. */
+:root .ob .ob-foot:not(:has(> :nth-child(2))):has(> .ob-toast-region:empty) { display: none; }
+
+/* Depth track: a 32 px pill, 1 px segment border; the selected level on the selected-segment fill 3 px inside (the
+   sliding thumb), its label semibold. The locked Expert: a 12 px lock and grey, tooltip as today. */
+:root .ob .ob-depth {
+  align-self: stretch;
+  max-width: none;
+  height: 32px;
+  margin: 0 -4px;
+  padding: 2px;
+  border: 1px solid var(--u-border-seg);
+  border-radius: 999px;
+  background: transparent;
+}
+:root .ob .ob-depth__item {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 2px;
+  border-radius: 999px;
+  color: var(--u-ink-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+:root .ob .ob-depth__item.is-on { background: transparent; color: var(--u-ink); font-weight: 600; }
+:root .ob .ob-depth:not(:has(.seg-thumb)) .ob-depth__item.is-on { background: var(--u-seg); }
+:root .ob .ob-depth .seg-thumb { top: 2px; left: -1px; height: 26px; border-radius: 999px; background: var(--u-seg); }
+:root .ob .ob-depth__lock { flex: none; }
+:root .ob .ob-depth .ob-pro,
+:root .ob .ob-depth__item.is-on .ob-pro { padding: 0; background: none; color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+
+/* Code line, 36 px: grey fill, no bar, the first line in mono 12; "Show code" a semibold link with a chevron. */
+:root .ob .ob-code { margin: 0 -4px; border-radius: 8px; background: var(--u-sunken); box-shadow: none; }
+:root .ob .ob-depth + .ob-code { margin-top: -4px; }
+:root .ob .ob-code__row { height: 36px; gap: 8px; padding: 0 10px 0 12px; }
+:root .ob .ob-code__line { padding: 0; border-radius: 0; background: transparent; color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); }
+:root .ob .ob-code__all { padding: 8px 12px 10px; border-top: 1px solid var(--u-border); background: transparent; font: 400 12px/18px var(--u-font-mono); }
+:root .ob .ob-link { display: inline-flex; align-items: center; gap: 2px; color: var(--u-ink); font-size: 12px; line-height: 16px; font-weight: 600; }
+:root .ob .ob-link:hover { text-decoration: none; }
+:root .ob .ob-link__chev { transition: transform 120ms var(--u-ease); }
+:root .ob .ob-code.is-open .ob-link__chev { transform: rotate(-90deg); }
+
+/* The answer: headings 14 semibold, body 14/22, inline code on the grey fill (radius 5), tables on hairlines with the
+   header row on text at 5 %, emphasis upright 600, code in the text colour with comments grey. */
+:root .ob .ob-answer { gap: 8px; font-size: 14px; line-height: 22px; }
+:root .ob .ob-answer .rich-heading { margin: 8px 0 0; font-size: 14px; line-height: 22px; font-weight: 600; }
+:root .ob .ob-answer .rich-heading:first-child { margin-top: 0; }
+:root .ob .ob-answer code.inline { padding: 1px 4px; border: 0; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); }
+:root .ob .ob-answer strong { font-weight: 600; text-decoration: none; }
+:root .ob .ob-answer .rich-table { border: 1px solid var(--u-border); border-radius: 8px; }
+:root .ob .ob-answer table { font-size: 12px; line-height: 18px; }
+:root .ob .ob-answer th, :root .ob .ob-answer td { padding: 6px 8px; }
+:root .ob .ob-answer td { border-top: 1px solid var(--u-border); }
+:root .ob .ob-answer :is(th, td) + :is(th, td) { border-left: 1px solid var(--u-border); }
+:root .ob .ob-answer th { background: color-mix(in srgb, var(--u-ink) 5%, transparent); font-weight: 600; }
+:root .ob .ob-answer .cite { color: var(--u-ink-2); font-size: 12px; }
+:root .ob .codeblock { border: 1px solid var(--u-border); border-radius: 8px; background: var(--u-sunken); }
+:root .ob .codeblock .cb-head { border-bottom-color: var(--u-border); color: var(--u-ink-2); font-size: 12px; font-weight: 400; }
+:root .ob .codeblock .cb-head button { color: var(--u-ink); font-size: 12px; font-weight: 600; }
+:root .ob .codeblock pre { font: 400 12px/18px var(--u-font-mono); }
+:root .ob :is(.tk-k, .tk-s, .tk-n) { color: var(--u-ink); }
+:root .ob .tk-c { color: var(--u-ink-2); }
+:root .ob .short-answer__unsure { color: var(--u-ink-2); }
+
+/* Loading: Vibe 28 thinking and one line; the three steps 26 px apart (done = a disc in the text colour with the tick
+   in the ground colour, now = a ring with a dot and semibold, next = an empty ring in grey); three 12 px bars on the
+   grey fill that fade 100 ↔ 50 % over 1.2 s (opacity only, so it stays under reduced motion; no moving gradient). */
+:root .ob .ob-thinking { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+:root .ob .ob-thinking__head { display: flex; align-items: center; gap: 10px; }
+:root .ob .ob-thinking__note { color: var(--u-ink-2); font-size: 14px; line-height: 22px; }
+:root .ob .ob-steps { gap: 8px; color: var(--u-ink-2); font-size: 14px; line-height: 18px; }
+:root .ob .ob-steps li { gap: 10px; }
+:root .ob .ob-steps i { width: 18px; height: 18px; border: 1.5px solid var(--u-border-seg); background: transparent; box-shadow: none; }
+:root .ob .ob-steps .is-done { color: var(--u-ink); }
+:root .ob .ob-steps .is-done i { border-color: var(--u-ink); background: var(--u-ink); color: var(--u-solid-surface); }
+:root .ob .ob-steps .is-now { color: var(--u-ink); font-weight: 600; }
+:root .ob .ob-steps .is-now i { border-color: var(--u-ink); background: transparent; box-shadow: inset 0 0 0 4px var(--u-solid-surface), inset 0 0 0 10px var(--u-ink); }
+:root .ob .ob-skeleton { gap: 8px; margin-top: 4px; }
+:root .ob .ob-skeleton i { height: 12px; border-radius: 6px; background: var(--u-select); animation: monoBars 1.2s ease-in-out infinite; }
+:root .ob .ob-skeleton i::after { content: none; }
+@keyframes monoBars { 50% { opacity: 0.5; } }
+:root[data-away] .ob .ob-skeleton i { animation-play-state: paused; }
+
+/* Buttons: 28 px pills, 12 px semibold. Filled (Understand, Check, a state's main action) in the action colour;
+   outlined with the control border; pressed on the strong grey fill; off at 35 %. */
+:root .ob :is(.ob-chip, .ob-btn, .pmf-card .btn) {
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--u-ink);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--u-border-control);
+}
+:root .ob :is(.ob-chip, .ob-btn.ghost, .pmf-card .btn.ghost):hover:not(:disabled) { background: var(--u-sunken); box-shadow: inset 0 0 0 1px var(--u-border-control); }
+:root .ob :is(.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost)) { background: var(--u-action); color: var(--u-action-on); box-shadow: none; }
+:root .ob :is(.ob-btn:not(.ghost), .pmf-card .btn:not(.ghost)):hover:not(:disabled) { background: var(--u-action-hover); box-shadow: none; filter: none; }
+:root .ob .ob-chip.is-on { background: var(--u-select); color: var(--u-ink); }
+:root .ob :is(.ob-chip, .ob-btn, .pmf-card .btn):disabled,
+:root .ob .consent-form__actions [aria-disabled="true"] { opacity: var(--u-off); }
+:root .ob .ob-actions, :root .ob .ob-chips { gap: 8px; }
+/* The small key inside a button (Check ↵). */
+:root .ob .ob-key { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 4px; font: 600 12px/1 var(--u-font-mono); }
+:root .ob .ob-btn .ob-pro { padding: 0 6px; border-radius: 999px; background: var(--u-sunken); color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
+:root .ob .ob-btn:not(.ghost) .ob-pro { background: color-mix(in srgb, var(--u-action-on) 20%, transparent); color: var(--u-action-on); }
+
+/* The ask field: a 36 px pill with the control border, 14 px placeholder, a 28 px round filled send (35 % until text). */
+:root .ob .ob-ask { gap: 6px; height: 36px; padding: 0 3px 0 14px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--u-border-control); }
+:root .ob .ob-ask:focus-within { box-shadow: inset 0 0 0 1px var(--u-border-control); }
+:root .ob .ob-ask:has(.ob-ask__input:focus-visible) { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root .ob .ob-ask__input { font-size: 14px; }
+:root .ob .ob-ask__input:focus-visible { outline: none; }
+:root .ob .ob-ask__input::placeholder { color: var(--u-ink-2); }
+:root .ob .ob-ask .ob-chip { height: 24px; padding: 0 8px; }
+:root .ob .ob-ask__send { width: 28px; height: 28px; border-radius: 999px; background: var(--u-action); color: var(--u-action-on); }
+:root .ob .ob-ask__send:disabled { opacity: var(--u-off); }
+
+/* The toast: a floating pill on the solid ground, the tick in the text colour. */
+:root .ob .ob-toast { padding: 4px 12px 4px 10px; background: var(--u-solid-surface); box-shadow: inset 0 0 0 1px var(--u-border), var(--u-shadow-float); color: var(--u-ink); font-size: 12px; line-height: 20px; }
+:root .ob .ob-toast__tick { color: var(--u-ink); }
+
+/* States (picker, consent, confirm, secret, blocked, error, saved): today's layout and strings in Mono's tokens. The
+   problem badge keeps the warning colour. */
+:root .ob .ob-title { font-size: 14px; line-height: 20px; font-weight: 600; }
+:root .ob .ob-sub { color: var(--u-ink-2); font-size: 14px; line-height: 20px; }
+:root .ob .ob-label { color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 600; }
+:root .ob :is(.ob-findings, .ob-note, .ob-preview, .pmf-card) { border: 1px solid var(--u-border); border-radius: 8px; background: transparent; }
+:root .ob .ob-findings, :root .ob .ob-note { font-size: 12px; line-height: 18px; }
+:root .ob .ob-preview pre { font: 400 12px/18px var(--u-font-mono); }
+:root .ob .ob-picker__pro { border-top-color: var(--u-border); }
+:root .ob .ob-keys kbd { height: 22px; min-width: 22px; border: 1px solid var(--u-border); border-bottom-color: var(--u-border-control); border-radius: 6px; background: var(--u-solid-surface); box-shadow: none; color: var(--u-ink); font: 600 12px/1 var(--u-font-mono); }
+:root .ob :is(.ob-paste, .pmf-card__field) { border: 1px solid var(--u-border-control); border-radius: 8px; background: transparent; color: var(--u-ink); font-size: 14px; line-height: 20px; }
+:root .ob :is(.ob-paste, .pmf-card__field)::placeholder { color: var(--u-ink-2); }
+:root .ob .ob-paste:focus { border-color: var(--u-border-control); }
+:root .ob .ob-paste:focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root .ob .ob-progress { color: var(--u-ink-2); font-size: 12px; }
+:root .ob .ob-progress span { border-color: var(--u-border); }
+:root .ob .ob-progress .on { border-color: var(--u-ink); color: var(--u-ink); font-weight: 600; }
+
+/* The agreement: rows on the box border; ticked = the text colour; links in the text colour, semibold; its actions
+   pinned on the solid ground with a hairline. */
+:root .ob .consent-form__title { font-size: 14px; line-height: 20px; font-weight: 600; }
+:root .ob .consent-form__lead, :root .ob .consent-form__note { color: var(--u-ink-2); font-size: 12px; line-height: 18px; }
+:root .ob .consent-form__row { border-color: var(--u-border); border-radius: 8px; background: transparent; font-size: 12px; line-height: 18px; }
+:root .ob .consent-form__row:has(input:checked) { border-color: var(--u-ink); }
+:root .ob .consent-form__row input { border-color: var(--u-border-control); }
+:root .ob .consent-form__row input:checked { border-color: var(--u-ink); background: var(--u-ink); }
+:root .ob .consent-form__row input::after { border-color: var(--u-solid-surface); }
+:root .ob .consent-form__row a { color: var(--u-ink); font-weight: 600; }
+:root .ob .consent-form__error { font-weight: 600; }
+:root .ob .consent-form__actions { border-top-color: var(--u-border); background: var(--u-solid-surface); }
+
+/* The paste box and the shortcut guide (no-Accessibility picker) in the overlay: greys of the text colour. */
+:root .ob .paste-target__box { border: 2px dashed var(--u-border-control); background: transparent; color: var(--u-ink); }
+:root .ob .paste-target__box:is(:focus, :focus-visible) { border-style: solid; border-color: var(--u-ink); box-shadow: none; }
+:root .ob .paste-target__box b { font: 600 17px/1.3 var(--u-font); letter-spacing: 0; }
+:root .ob :is(.paste-target__hint, .paste-target__or) { color: var(--u-ink-2); font: 400 14px/1.45 var(--u-font); }
+:root .ob .paste-target__key { border: 1px solid var(--u-border-control); background: var(--u-solid-surface); box-shadow: 0 2px 0 var(--u-border-control); color: var(--u-ink); font: 600 17px/1 var(--u-font); }
+:root .ob .paste-target__box pre { border-color: var(--u-border); background: var(--u-sunken); color: var(--u-ink); font: 400 12px/1.6 var(--u-font-mono); }
+:root .ob :is(.paste-target__pill, .shortcut-pill) { border: 1px solid var(--u-border-control); background: transparent; color: var(--u-ink); font: 600 12px/1 var(--u-font); }
+:root .ob :is(.paste-target__pill i, .shortcut-pill--busy i) { background: var(--u-ink); box-shadow: none; }
+:root .ob .paste-target__link { color: var(--u-ink); font: 600 14px/1.4 var(--u-font); }
+:root .ob .shortcut-guide__steps li.is-done::before { border-color: var(--u-ink); background-color: var(--u-ink); background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
+:root[data-theme="dark"] .ob .shortcut-guide__steps li.is-done::before { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='%23000000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
+:root .ob .shortcut-art__row.is-you { outline-color: var(--u-ink); outline-width: 2px; font-weight: 600; }
+
+/* Test me, the Quiz at this size: a 3-part bar, "Question 1 of 3" and the depth at 12, the question 17 semibold,
+   42 px answer rows 8 px apart with key tiles 1 to 4. Selected: 2 px border in the text colour, the key tile filled.
+   Right: a filled disc with a tick; wrong: grey with an outlined disc and a cross; the rest switched off. The window
+   is 420 px tall in this state (48 header + 36 tabs + 288 body + 48 foot; main fits 360 to 560). */
+:root .ob.ob--view-test .ob-body { min-height: 288px; padding-bottom: 8px; }
+:root .ob .ob-quiz { gap: 10px; }
+:root .ob .ob-quiz__bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; height: 4px; }
+:root .ob .ob-quiz__bar i { border-radius: 2px; background: var(--u-seg); }
+:root .ob .ob-quiz__bar i.is-now { background: color-mix(in srgb, var(--u-ink) 55%, transparent); }
+:root .ob .ob-quiz__bar i.is-done { background: var(--u-ink); }
+:root .ob .ob-quiz__kicker { color: var(--u-ink-2); font-size: 12px; line-height: 16px; font-weight: 400; }
+:root .ob .ob-quiz__kicker > span:first-child { color: var(--u-ink); font-weight: 600; }
+:root .ob .ob-quiz__q { font-size: 17px; line-height: 24px; font-weight: 600; }
+:root .ob .ob-quiz__opts { gap: 8px; margin: 2px -4px 0; }
+:root .ob .ob-opt {
+  gap: 12px;
+  min-height: 42px;
+  padding: 8px 12px 8px 9px;
+  border: 1px solid var(--u-border-seg);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--u-ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+:root .ob .ob-opt:hover:not(:disabled) { border-color: var(--u-border-control); }
+:root .ob .ob-opt__key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--u-border-seg);
+  border-radius: 6px;
+  background: var(--u-solid-surface);
+  box-shadow: inset 0 -1.5px 0 var(--u-border-seg);
+  color: var(--u-ink);
+  font: 600 12px/1 var(--u-font-mono);
+}
+:root .ob .ob-opt.is-picked, :root .ob .ob-opt.is-right { border-color: var(--u-ink); background: transparent; box-shadow: inset 0 0 0 1px var(--u-ink); font-weight: 600; }
+:root .ob .ob-opt.is-picked .ob-opt__key { border-color: var(--u-ink); background: var(--u-ink); box-shadow: none; color: var(--u-solid-surface); }
+:root .ob .ob-opt.is-wrong { border-color: var(--u-border); box-shadow: none; color: var(--u-ink-2); font-weight: 400; }
+:root .ob .ob-opt.is-wrong .ob-opt__key { border-color: var(--u-border); background: transparent; color: var(--u-ink-2); }
+:root .ob .ob-opt.is-off { opacity: var(--u-off); }
+:root .ob .ob-opt__mark { width: 20px; height: 20px; }
+:root .ob .ob-opt__mark--right { background: var(--u-ink); color: var(--u-solid-surface); }
+:root .ob .ob-opt__mark--wrong { border: 1.5px solid var(--u-ink-2); background: transparent; color: var(--u-ink-2); }
+:root .ob .ob-verdict { gap: 10px; }
+:root .ob .ob-verdict__line { font-weight: 600; }
+:root .ob :is(.ob-quiz__why, .ob-quiz__end) { color: var(--u-ink-2); font-size: 12px; line-height: 18px; }
+:root .ob .ob-quiz--wait { color: var(--u-ink-2); }
+:root .ob .ob-quiz--wait i { background: var(--u-ink-2); }
+:root .ob .ob-quiz__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+:root .ob .ob-quiz__hint { color: var(--u-ink-2); font-size: 12px; line-height: 16px; }
+
+/* Ask: the question in a strong-grey tile at the right (radius 10, 36 px for one line, at most 85 % wide); "Vibe"
+   12 semibold beside Vibe 20; the answer as body text. */
+:root .ob .ob-thread { gap: 12px; }
+:root .ob .ob-thread__turn { gap: 10px; }
+:root .ob .ob-thread__q { max-width: 85%; padding: 7px 14px; border-radius: 10px; background: var(--u-select); color: var(--u-ink); font-size: 14px; line-height: 22px; font-weight: 400; }
+:root .ob .ob-thread__who { display: flex; align-items: center; gap: 8px; color: var(--u-ink); font-size: 12px; line-height: 16px; font-weight: 600; }
+
+/* Saved: rows in box borders; the empty place has Vibe asleep. */
+:root .ob .ob-saved__row { padding: 10px 12px; border: 1px solid var(--u-border); border-radius: 8px; background: transparent; }
+:root .ob .ob-saved__row:hover { border-color: var(--u-border-control); }
+:root .ob .ob-saved__name { font-weight: 600; }
+:root .ob .ob-saved__empty { display: flex; align-items: center; gap: 12px; }
+:root .ob .ob-saved-lesson__title { font-size: 14px; line-height: 20px; font-weight: 600; }
+
+/* The survey card: Mono controls. */
+:root .ob .pmf-card .quiz__kicker { color: var(--u-ink-2); font-size: 12px; font-weight: 600; }
+:root .ob .pmf-card .opt { border-color: var(--u-border); border-radius: 8px; }
+:root .ob .pmf-card .opt.sel { border-color: var(--u-ink); background: var(--u-sunken); }
+:root .ob .pmf-card .opt input { accent-color: var(--u-ink); }
+:root .ob .pmf-card__close:hover:not(:disabled) { background: var(--u-sunken); }
+:root .ob .pmf-card .btn.pmf-card__copy { height: 24px; padding: 0 8px; font-size: 12px; }
+
+/* Motion. The window appears in 200 ms: opacity 0 → 1, scale 0.96 → 1, 8 px upward, ease-out cubic; reduced motion:
+   opacity only. Quiz screens cross-fade in 160 ms. */
+:root[data-r2] .ob { animation: monoObIn 200ms cubic-bezier(0.215, 0.61, 0.355, 1) both; }
+:root[data-r2] .ob.is-leaving { animation: obOut var(--m-exit) var(--m-ease-sharp) both; }
+@keyframes monoObIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+@keyframes monoFadeIn { from { opacity: 0; } }
+:root[data-r2] .ob .ob-quiz { animation: monoFadeIn 160ms cubic-bezier(0.2, 0, 0, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-r2] .ob.ob { animation: monoFadeIn 200ms linear both; }
+  :root[data-r2] .ob.is-leaving, :root[data-r2] .ob .ob-quiz { animation: none; }
+  :root .ob .ob-link__chev { transition: none; }
+}

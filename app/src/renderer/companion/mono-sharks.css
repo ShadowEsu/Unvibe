@@ -1,0 +1,9 @@
+/* ── Mono: the sharks behind everything (Design r3-flat OPTIONS.md "Sharks: behind everything", as Mono amends it).
+   SharksBackdrop is the layout's first child, one canvas fixed to the window on every page. The layout is its own
+   stacking context and the layer sits at its bottom (-1), so the sidebar, the top bar, the page and the right side all
+   paint over it without being positioned. No reserved column, no mask fade, no minimum width. ── */
+:root[data-ui="v3"][data-v7] .layout { isolation: isolate; }
+:root[data-ui="v3"][data-v7] .layout > .sharks-backdrop {
+  position: fixed; inset: 0; width: auto; height: auto; z-index: -1; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: none; mask-image: none;
+}

@@ -1,0 +1,1071 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Unvibe companion, round 2 glass (Design requests/unvibe-app/20261107-1939-design-r2-options-glass.md on the
+   6 Nov app-0151-glass system): every window on the brand aurora under a veil, a floating glass-1 sidebar, the
+   content straight on the ground, glass-2 cards and controls, anything you read on a solid plate, violet on every
+   action, lime only on the selected code line, Inter for the UI and display, mono for code and keycaps only.
+   Less on screen: Today is the greeting, one primary and two lists. Loads after v7.css; every rule starts at
+   `.layout` (first run: `.onboard`) so it beats v7's own shape by one class.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Glass values for the older layers' names. v7.css (and v3/v5 under it) still draw most pages; this block, loaded
+   after them at v7's specificity, gives their variables the shared tokens' values. Each name goes once nothing reads
+   it. ── */
+:root[data-ui="v3"][data-v7] {
+  color-scheme: light;
+  /* companion.css's base theme names */
+  --shell: var(--u-sheet);
+  --panel: var(--u-sheet);
+  --paper: var(--u-paper);
+  --ink: var(--u-ink);
+  --muted: var(--u-ink-2);
+  --faint: var(--u-ink-3);
+  --line: var(--u-line);
+  --line-soft: var(--u-line);
+  --hover: var(--u-fill);
+  --accent: var(--u-accent);
+  --accent-strong: var(--u-accent);
+  --accent-soft: var(--u-mist);
+  --on-accent: var(--u-accent-on);
+  --card-shadow: var(--u-shadow);
+  /* v7's names (0.1.49's paper and ink, now from the shared tokens so dark follows) */
+  --font-sans: var(--u-font);
+  --font-display: var(--u-font-display);
+  --font-hand: var(--u-font-hand);
+  --font-mono: var(--u-font-mono);
+  --v-bg: var(--u-paper);
+  --v-surface: var(--u-glass);
+  --v-sunken: var(--u-raised);
+  --v-ink: var(--u-ink);
+  --v-ink-2: var(--u-ink-2);
+  --v-muted: var(--u-ink-3);
+  --v-faint: var(--u-ink-3);
+  --v-line: var(--u-line);
+  --v-line-2: var(--u-line);
+  --v-hover: var(--u-fill);
+  --v-active: var(--u-glass);
+  --v-btn: var(--u-accent);
+  --v-btn-ink: var(--u-accent-on);
+  --v-radius: var(--u-radius-pane);
+  --v-radius-sm: var(--u-radius-field);
+  --v-edge: var(--u-hair);
+  --v-sel: var(--u-accent);
+  --v-sel-ink: var(--u-accent-on);
+  --v-edge-hi: var(--u-accent);
+  --v-glow: var(--u-accent);
+  --v-tint-base: var(--u-glass);
+  --v-hand-style: italic;
+  --lime: var(--u-lime);
+  --sky: var(--u-sky);
+  --sun: var(--u-sky);
+  --coral: var(--u-blush);
+  --lilac: var(--u-lilac);
+  --mint: var(--u-mist);
+  --hard: var(--u-shadow);
+  --hard-sm: var(--u-shadow-sm);
+  --c-violet: var(--u-accent);
+  --grad: var(--u-accent);
+  --focus-ring: color-mix(in srgb, var(--u-accent) 22%, transparent);
+  --u-violet: var(--u-accent);
+  --u-violet-text: var(--u-accent-text);
+  --u-on-violet: var(--u-accent-on);
+  --u-violet-tint: var(--u-mist);
+  --u-glass-2: var(--u-glass);
+  --u-shadow-glass: var(--u-shadow);
+  --u-canvas: var(--u-solid);
+  --u-band: var(--u-fill);
+  --u-plate: var(--u-hair);
+  --u-sans: var(--u-font);
+  --u-display: var(--u-font-display);
+  --u-label: var(--u-w-label) 12px/1 var(--u-font);
+  --u-radius-window: var(--u-radius-pane);
+  --u-radius-card: 14px;
+  --u-radius-control: var(--u-radius-field);
+  /* Read by the first-run rules below. The try-it editor is a sheet in the theme (o-try), not a dark panel. */
+  --u-mono: var(--u-font-mono);
+  --u-violet-lip: color-mix(in srgb, var(--u-accent) 78%, #000);
+  --u-dark-ink: var(--u-ink);
+  --u-dark-ink-2: var(--u-ink-3);
+  --u-dark-line: var(--u-line);
+  --u-shadow-whisper: 0 0 0 1px var(--u-hair);
+  --u-shadow-float: var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ── Ground and shell: the aurora under a veil fills the window; the sidebar floats as glass-1 (inset 10 px, radius 14,
+   rim, hairline, shadow); the content sits straight on the ground with a transparent top bar; the ask dock floats at
+   the bottom as glass-2. v7's dusk wash, white working card and ink edges go. ── */
+:root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout {
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center / cover no-repeat, var(--u-paper);
+}
+/* Dark: the aurora at 170 % so its features are ≥ 240 px wide and read as light, not blotches (Design S5). The body
+   carries the same ground for the screens without a .layout: the first run, sign-in and the paste step. */
+:root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout {
+  background: linear-gradient(var(--u-veil), var(--u-veil)), url("./aurora.webp") center 30% / 170% auto no-repeat, var(--u-paper);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root[data-ui="v3"][data-v7] body, :root[data-ui="v3"][data-v7] .layout, :root[data-ui="v3"][data-v7][data-theme="dark"] body, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout { background: var(--u-paper); }
+  :root[data-ui="v3"][data-v7] { --u-glass-1: var(--u-paper); --u-glass: var(--u-sheet); --u-solid: var(--u-sheet); --u-blur: none; }
+}
+/* Scrollbars (Design M1): an 8 px rounded thumb on a transparent track, no arrow buttons, stronger while the pane is
+   hovered. `scrollbar-width`/`scrollbar-color` are reset to auto because either one set turns the ::-webkit styling off
+   in Chromium (the classic arrow bar in the first r2 stills). */
+:root[data-ui="v3"][data-v7] :is(.content, .side, .mbody, .lib-list, .study-pane, .search-palette__body, .lesson-doc) { scrollbar-width: auto; scrollbar-color: auto; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar { width: 8px; height: 8px; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-track, :root[data-ui="v3"][data-v7] ::-webkit-scrollbar-corner { background: transparent; }
+:root[data-ui="v3"][data-v7] ::-webkit-scrollbar-thumb { border: 0; border-radius: 999px; background: rgb(90 63 224 / 0.18); background-clip: padding-box; }
+:root[data-ui="v3"][data-v7] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(90 63 224 / 0.32); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.22); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.content, .side, .lib-list, .study-pane, .lesson-doc):hover::-webkit-scrollbar-thumb { background: rgb(184 166 255 / 0.4); }
+/* The glass recipe, once: tint, blur, the 1 px inner rim, the hairline outside, the top sheen and the soft shadow. */
+:root[data-ui="v3"][data-v7] .layout .side,
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-card.limit-banner, .home-list, .history-continue, .lib-group__rows, .agent-review, .briefings__card, .panel-card, .rail-card, .tile, .how-card, .feature, .plan-pick__card, .metric-card),
+:root[data-ui="v3"][data-v7] .layout .ask-dock,
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) {
+  border: 0; background: var(--u-sheen), var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow);
+}
+/* Pop-ups you read are solid (Design S-1 whole-app MUST 1): the palette, the account menu and the feedback card on
+   --u-solid (.93) with no blur, so the page never shows through the text. The sidebar's stacking context sits above
+   the content column so the account menu (fixed, inside the sidebar) is never cut by a page card. */
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette, .fbk) { background: var(--u-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-ui="v3"][data-v7] .fbk { border: 0; border-radius: var(--u-radius-card); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow); animation: mPop var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .fbk__close { border: 0; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .fbk h2 { font: 700 20px/1.2 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .fbk h2 em { font: inherit; font-style: normal; }
+:root[data-ui="v3"][data-v7] .layout .side { z-index: 5; }
+:root[data-ui="v3"][data-v7] .layout .side {
+  margin: 10px 0 10px 10px; padding: 44px 10px 10px; border-radius: var(--u-radius-pane); background: var(--u-sheen), var(--u-glass-1);
+}
+:root[data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .side { padding-top: 14px; }
+:root[data-ui="v3"][data-v7] .layout .brand .name { font: 700 17px/1 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .brand .badge { border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 10.5px/18px var(--u-font); padding: 0 7px; }
+:root[data-ui="v3"][data-v7] .layout .side-search {
+  border: 0; border-radius: var(--u-radius-field); background: var(--u-glass); color: var(--u-ink-3);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
+}
+:root[data-ui="v3"][data-v7] .layout .side-search:hover { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent); }
+/* Section labels: 12 px Inter 600 sentence case, ink-3 (Design: no serif eyebrows, no mono caps). */
+:root[data-ui="v3"][data-v7] .layout .side-spaces { margin: 16px 0 4px; padding: 0 8px; color: var(--u-ink-3); font: 600 12px/1 var(--u-font); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button,
+:root[data-ui="v3"][data-v7] .layout .side-settings { border: 0; border-radius: var(--u-radius-field); color: var(--u-ink-2); font: 500 13.5px var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button:hover,
+:root[data-ui="v3"][data-v7] .layout .side-settings:hover { background: var(--u-fill); color: var(--u-ink); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .nav button:hover svg { transform: none; }
+/* The active item: violet at 12 % (Design M4: the mist tint vanished on the light glass; dark keeps the lifted fill). */
+:root[data-ui="v3"][data-v7] .layout .nav button.on { background: rgb(90 63 224 / 0.12); color: var(--u-accent-text); font-weight: 600; box-shadow: none; transform: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: rgb(184 166 255 / 0.16); }
+:root[data-ui="v3"][data-v7] .layout .nav button svg,
+:root[data-ui="v3"][data-v7] .layout .nav button:nth-child(n) svg,
+:root[data-ui="v3"][data-v7] .layout .nav button.on svg,
+:root[data-ui="v3"][data-v7] .layout .nav--top button:nth-child(n).on svg,
+:root[data-ui="v3"][data-v7] .layout .nav--spaces button:nth-child(n).on svg { width: 18px; height: 18px; padding: 0; border-radius: 0; background: none; box-shadow: none; color: currentColor; }
+:root[data-ui="v3"][data-v7] .layout .side-usage { border: 0; border-radius: var(--u-radius-field); background: var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .side-usage:hover { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .side-usage__bar { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout .side-usage__bar i { background: var(--u-accent); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .content { margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .topbar { height: 54px; padding: 0 16px 0 24px; border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .topbar__title { color: var(--u-ink-3); font: 600 13px/1 var(--u-font); letter-spacing: 0; }
+/* Windows and Linux draw min/max/close (titleBarOverlay, 138 px) over the top-right corner: keep Search and Explain
+   clear of it. Only macOS puts its controls on the left (createCompanion in main/windows.ts). */
+:root[data-ui="v3"][data-v7]:not([data-platform="mac"]) .layout .topbar { padding-right: 150px; }
+:root[data-ui="v3"][data-v7] .layout .topbar__explain {
+  height: 34px; border: 0; border-radius: 999px; background: var(--u-glass); color: var(--u-ink-2); font: 600 13px var(--u-font);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm); transform: none;
+  transition: box-shadow 140ms ease, transform 160ms var(--u-press);
+}
+:root[data-ui="v3"][data-v7] .layout .topbar__explain { padding: 0 14px 0 6px; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .topbar__explain:hover:not(:disabled) { color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); transform: none; }
+:root[data-ui="v3"][data-v7] .layout .topbar__explain:active:not(:disabled) { transform: scale(0.97); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+/* Keycaps: white caps with a 3 px ink-2 lip, mono (keys and code are the exception to "no mono UI"). */
+:root[data-ui="v3"][data-v7] .layout kbd,
+:root[data-ui="v3"][data-v7] .layout .topbar kbd,
+:root[data-ui="v3"][data-v7] .layout .side-search kbd,
+:root[data-ui="v3"][data-v7] .layout .topbar__explain kbd {
+  padding: 0 6px; border: 1px solid var(--u-hair); border-bottom: 3px solid var(--u-ink-2); border-radius: 6px; background: #fff; color: var(--u-ink);
+  font: 700 11px/18px var(--u-font-mono); box-shadow: none;
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout kbd { background: #2a2542; border-bottom-color: #3a3454; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock { width: min(680px, calc(100% - 48px)); margin: 0 auto 18px; padding: 6px 6px 6px 10px; border-radius: 999px; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock:focus-within { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 2px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .ask-dock__shortcut { flex: none; padding: 0 6px; border: 1px solid var(--u-hair); border-bottom: 3px solid var(--u-ink-2); border-radius: 6px; background: #fff; color: var(--u-ink); font: 700 11px/18px var(--u-font-mono); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .ask-dock__shortcut { background: #2a2542; border-bottom-color: #3a3454; }
+:root[data-ui="v3"][data-v7] .layout .ask-dock input::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .ask-dock button { height: 36px; border-radius: 999px; }
+
+/* ── Buttons: one filled primary per view (violet, white 600 text, radius 10, 36 high, a soft shadow); secondary is a
+   glass pill with ink text and a hairline; quiet is violet text. Hover brightens, press scales to 97 % (transform
+   only; reduced motion keeps the colour change and drops the scale). ── */
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button),
+:root[data-ui="v3"][data-v7] .layout .home-card .primary-btn {
+  min-height: 36px; height: auto; padding: 0 16px; border: 0; border-radius: var(--u-radius-field);
+  background: var(--u-accent); color: var(--u-accent-on); font: 600 13.5px/36px var(--u-font); letter-spacing: -0.006em;
+  filter: none; box-shadow: var(--u-shadow-sm); transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press), filter 140ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout :is(.soft-btn, .act, .field-btn, .btn.ghost),
+:root[data-ui="v3"][data-v7] .layout .home-card .soft-btn {
+  min-height: 36px; height: auto; padding: 0 14px; border: 0; border-radius: var(--u-radius-field);
+  background: var(--u-glass); color: var(--u-ink); font: 600 13.5px/36px var(--u-font); letter-spacing: -0.006em;
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), var(--u-shadow-sm); transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press), background 140ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn:not(.ghost), .ask-dock button):hover:not(:disabled) { background: var(--u-accent); filter: brightness(1.08); transform: none; box-shadow: var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout :is(.soft-btn, .act, .field-btn, .btn.ghost):hover:not(:disabled) { background: var(--u-solid); transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn):active:not(:disabled) { transform: scale(0.97); filter: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .soft-btn, .btn):disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* Text buttons for secondary actions inside prose: violet, with a visible hit area. */
+:root[data-ui="v3"][data-v7] .layout .link-btn {
+  min-height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--u-accent-text); font: 600 13px/28px var(--u-font);
+  text-decoration: none;
+}
+:root[data-ui="v3"][data-v7] .layout .link-btn:hover { background: var(--u-mist); text-decoration: none; }
+
+/* Every page starts at the same edge as Today and runs the full width of the content. */
+:root[data-ui="v3"][data-v7] .layout .page { max-width: none; margin: 0; padding: 12px 36px 150px; }
+:root[data-ui="v3"][data-v7] .layout .page > .fade-in { max-width: 980px; margin: 0 auto; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) { width: 100%; max-width: 980px; margin: 0 auto; padding: 0; }
+
+/* ── Today, less on screen: Vibe and the greeting, the one primary (Explain any code, as a glass card with its keys),
+   then Up next beside Recently understood on glass-2. The stat stickers and the goal line are gone (Design 1939). ── */
+:root[data-ui="v3"][data-v7] .layout .home { display: grid; gap: 24px; }
+:root[data-ui="v3"][data-v7] .layout .home-hero { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+:root[data-ui="v3"][data-v7] .layout .home-hero .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .layout .home-hero__copy { min-width: 0; }
+/* Upright display, no accent word: the name is the same face and weight as the greeting. */
+:root[data-ui="v3"][data-v7] .layout .home-hero h1 { margin: 0 0 4px; font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-hero h1 em { font: inherit; letter-spacing: inherit; font-style: normal; }
+/* Vibe's voice: Instrument Serif Italic, 15 px, ink-2, under the headline, never inside it. */
+:root[data-ui="v3"][data-v7] .layout .home-hero__note { margin: 0; transform: none; color: var(--u-ink-2); font: italic 400 17px/1.3 var(--u-font-hand); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-stats, :root[data-ui="v3"][data-v7] .layout .home-goal { display: none; }
+
+/* The one action: a glass-2 card with the keys on the right; the whole card is the button. */
+:root[data-ui="v3"][data-v7] .layout .home-cta {
+  display: flex; align-items: center; gap: 16px; width: 100%; margin: 0; padding: 20px 22px; text-align: left; cursor: pointer;
+  border-radius: var(--u-radius-card); color: var(--u-ink); transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
+}
+:root[data-ui="v3"][data-v7] .layout .home-cta:hover { transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .home-cta:active { transform: scale(0.99); }
+:root[data-ui="v3"][data-v7] .layout .home-cta:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .layout .home-card__text { display: grid; gap: 4px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text b { font: 600 17px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-cta .home-card__text small { color: var(--u-ink-2); font: 400 13.5px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-cta__keys { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; padding: 0; border: 0; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-cta__keys kbd { padding: 0 10px; font: 700 13px/30px var(--u-font-mono); }
+
+/* The free limit's card takes the action card's place, with the survey filled and the plan on glass. */
+:root[data-ui="v3"][data-v7] .layout .home-card.limit-banner { display: flex; align-items: center; gap: 20px; margin: 0; padding: 20px 22px; border-radius: var(--u-radius-card); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text strong { font: 600 17px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .limit-banner .home-card__text p { margin: 0; font: 400 13.5px/1.5 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .home-card.limit-banner .limit-banner__actions { display: grid; gap: 10px; flex: none; margin-left: auto; }
+
+/* Up next and Recently understood: two glass-2 cards side by side; rows inside sit on hairlines. */
+:root[data-ui="v3"][data-v7] .layout .home-cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-cols--one { grid-template-columns: minmax(0, 1fr); }
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .home-cols { grid-template-columns: minmax(0, 1fr); } }
+:root[data-ui="v3"][data-v7] .layout .home-list { min-width: 0; margin: 0; padding: 18px 20px 14px; border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .layout .home-list > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0; padding: 0 0 10px; }
+:root[data-ui="v3"][data-v7] .layout .home-list h2 { margin: 0; font: 600 15px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .home-list__count { color: var(--u-ink-3); font: 500 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-list .link-btn { margin-right: -6px; }
+/* One track sized to the column (an implicit track grows to the nowrap text and spills into the next column). */
+:root[data-ui="v3"][data-v7] .layout .home-list :is(ul, ol) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; padding: 0; list-style: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row) {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0; padding: 8px 8px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--u-ink-2); text-align: left; cursor: pointer; box-shadow: none; transform: none;
+  transition: background 120ms ease, transform 160ms var(--u-press);
+}
+:root[data-ui="v3"][data-v7] .layout .home-list li + li :is(.home-step, .home-row) { box-shadow: 0 -1px 0 var(--u-hair); border-radius: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row):hover { background: var(--u-fill); color: var(--u-ink); transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.home-step, .home-row):active { transform: scale(0.99); }
+/* The next step: a solid row with a violet mark. */
+:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step { background: var(--u-solid); color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .home-step__icon { flex: none; width: 24px; height: 24px; padding: 4px; box-sizing: border-box; border-radius: 7px; background: var(--u-fill); fill: none; stroke: var(--u-ink-2); stroke-width: 1.8; }
+:root[data-ui="v3"][data-v7] .layout .home-list--next li:first-child .home-step__icon { background: var(--u-mist); stroke: var(--u-accent-text); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .home-row__text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .home-row__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink); font: 500 13.5px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-row__source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--u-ink-3); font: 400 12.5px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .home-row__pill { flex: none; margin-left: auto; color: var(--u-ink-3); font: 500 12px/1 var(--u-font); background: none; }
+:root[data-ui="v3"][data-v7] .layout .home-row__pill[data-tone="review"] { padding: 3px 8px; border: 0; border-radius: 999px; background: var(--u-amber-tint); color: var(--u-amber); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .layout .home-list__empty { margin: 0; padding: 6px 8px 10px; color: var(--u-ink-3); font: 400 13.5px/1.5 var(--u-font); }
+
+/* ── Page heads: Inter 700 28, the lead in Inter 14 ink-2; section labels 12 px Inter 600 sentence case ── */
+:root[data-ui="v3"][data-v7] .layout .topline { margin: 8px 0 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.topline, .page-head, .briefings__head) h1 { max-width: none; margin: 0; font: 700 28px/1.15 var(--u-font-display); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout :is(.topline .lead, .page-head p, .briefings__head p) { max-width: 72ch; margin: 6px 0 0; font: 400 14px/1.55 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .page-head { max-width: none; margin: 0 0 6px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.eyebrow, .kicker, .agent-review__eyebrow, .history-continue__kicker) { margin: 0 0 4px; color: var(--u-ink-3); font: 600 12px/1.2 var(--u-font); letter-spacing: 0; text-transform: none; font-style: normal; }
+
+/* ── Library, less on screen: the search and the filters on one line, the continue card, then one glass-2 container
+   per day with rows on hairlines ── */
+:root[data-ui="v3"][data-v7] .layout .history-tools { display: flex; align-items: center; gap: 10px; margin: 18px 0 16px; }
+:root[data-ui="v3"][data-v7] .layout .history-search { flex: 0 1 360px; max-width: 360px; margin-left: auto; }
+:root[data-ui="v3"][data-v7] .layout .history-search input {
+  height: 36px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; outline: none;
+  background: var(--u-glass); color: var(--u-ink); font: 400 13.5px/1 var(--u-font);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
+}
+:root[data-ui="v3"][data-v7] .layout .history-search input::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .history-search input:focus-visible { box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 2px var(--u-accent); }
+/* Filters and Briefs' scopes: one segmented glass track with a solid thumb on the chosen one. */
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) {
+  display: inline-flex; flex: none; flex-wrap: nowrap; gap: 2px; padding: 3px; border-radius: 999px; background: var(--u-glass-1);
+  box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair);
+}
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button {
+  height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2);
+  font: 600 13px/1 var(--u-font); box-shadow: none; transform: none; transition: background 120ms ease, color 120ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:hover { color: var(--u-ink); background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: var(--u-solid); color: var(--u-accent-text); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); }
+:root[data-ui="v3"][data-v7] .layout .learn-filters button em { margin-left: 6px; font: 500 12px/1 var(--u-font); font-style: normal; color: inherit; opacity: 1; }
+/* Dark: the selected segment on the lighter glass fill, not the dark plate (Design S6). */
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.learn-filters, .briefings__scopes) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: rgb(184 166 255 / 0.18); }
+:root[data-ui="v3"][data-v7] .layout .history-continue {
+  display: flex; align-items: center; gap: 16px; width: 100%; margin: 0 0 20px; padding: 16px 16px 16px 20px;
+  border-radius: var(--u-radius-card); text-align: left; text-decoration: none; white-space: normal; cursor: pointer;
+  color: var(--u-ink); font: inherit; transform: none;
+  transition: transform 160ms var(--u-press), box-shadow 160ms var(--u-press);
+}
+:root[data-ui="v3"][data-v7] .layout .history-continue:hover { text-decoration: none; transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .history-continue:active { transform: scale(0.99); }
+:root[data-ui="v3"][data-v7] .layout .history-continue:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__text { display: grid; gap: 4px; flex: 1; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson strong { font: 600 16px/1.3 var(--u-font); letter-spacing: -0.015em; color: var(--u-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__lesson span { font: 400 12.5px/1.3 var(--u-font-mono); color: var(--u-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout .history-continue__go {
+  display: grid; place-items: center; flex: none; width: 38px; height: 38px; border: 0; border-radius: 999px;
+  background: var(--u-accent); color: var(--u-accent-on); box-shadow: var(--u-shadow-sm);
+}
+:root[data-ui="v3"][data-v7] .layout .history-continue__go svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+:root[data-ui="v3"][data-v7] .layout .learn-page:not(.learn-page--lesson) .lib-feed { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-group { margin: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-group + .lib-group { margin-top: 18px; }
+:root[data-ui="v3"][data-v7] .layout .page h2.lib-group__label,
+:root[data-ui="v3"][data-v7] .layout .lib-group__label { margin: 0 0 8px; padding: 0 4px; border: 0; color: var(--u-ink-3); font: 600 12px/1.2 var(--u-font); letter-spacing: 0; text-transform: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows { display: grid; gap: 0; padding: 4px; border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-line, .survey-line) {
+  display: flex; align-items: center; margin: 0; border: 0; border-radius: 10px; background: transparent;
+  box-shadow: none; overflow: hidden; transform: none; animation: none; transition: background 120ms ease;
+}
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > :last-child { border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > * + * { box-shadow: 0 -1px 0 var(--u-hair); border-radius: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-line, .survey-line):hover { background: var(--u-fill); transform: none; box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-group__rows > * + *:hover { box-shadow: 0 -1px 0 var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .lib-line .lib-row,
+:root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: center; gap: 0 14px; flex: 1; min-width: 0;
+  margin: 0; padding: 11px 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none;
+}
+:root[data-ui="v3"][data-v7] .layout .lib-line .lib-row:hover,
+:root[data-ui="v3"][data-v7] .layout .survey-line .survey-pick:hover { background: transparent; transform: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-row__icon { width: 24px; height: 24px; padding: 4px; box-sizing: border-box; border-radius: 7px; background: var(--u-mist); fill: none; stroke: var(--u-accent-text); stroke-width: 1.7; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-row__body, .survey-pick__body) { display: grid; gap: 2px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-row__body, .survey-pick__body) strong { font: 600 14px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout :is(.know-meta, .survey-pick__body > span) { min-width: 0; overflow: hidden; font: 400 12.5px/1.3 var(--u-font); color: var(--u-ink-3); white-space: nowrap; text-overflow: ellipsis; }
+:root[data-ui="v3"][data-v7] .layout :is(.lib-row time, .survey-pick__day) { font: 500 12px/1 var(--u-font); color: var(--u-ink-3); white-space: nowrap; }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill { min-width: 0; height: auto; padding: 0 9px; border: 0; border-radius: 999px; text-align: center; font: 600 11px/20px var(--u-font); animation: none; }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="current"] { background: var(--u-mist); color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7] .layout .lib-row .status-pill[data-tone="review"] { background: var(--u-amber-tint); color: var(--u-amber); }
+:root[data-ui="v3"][data-v7] .layout .survey-pick__go { height: auto; padding: 5px 12px; border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 12px/1.3 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .survey-line:hover .survey-pick__go { background: var(--u-accent); color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .row-trash { flex: none; width: 28px; height: 28px; margin: 0 8px 0 0; border-radius: 8px; background: transparent; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .row-trash:hover { background: var(--u-fill); color: var(--u-ink); }
+
+/* ── Popovers (account menu, search palette): glass-2 with the rim and the floating shadow ── */
+:root[data-ui="v3"][data-v7] :is(.acct-menu, .search-palette) { border-radius: var(--u-radius-card); }
+/* "Saved on this computer" (or the email) wraps to a second line instead of hiding behind the plan pill (S-1 23:25). */
+:root[data-ui="v3"][data-v7] .acct-menu__who span { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+
+/* ── Cards on every other page: glass-2 with the rim; a card you can act on marks hover with the violet hairline ── */
+:root[data-ui="v3"][data-v7] .layout :is(.panel-card, .rail-card, .tile, .how-card, .feature, .briefings__card, .plan-pick__card, .metric-card) { border-radius: var(--u-radius-card); transform: none; }
+:root[data-ui="v3"][data-v7] .layout :is(.tile, .briefings__card, .metric-card):hover { transform: none; box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-accent), var(--u-shadow); }
+
+/* ── Briefs (Change brief), less on screen: the head with the repo picker, the scopes, then the review card and the
+   brief's files on glass-2 ── */
+:root[data-ui="v3"][data-v7] .layout .agent-review { border-radius: var(--u-radius-card); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input { border: 1.5px solid var(--u-ink-3); border-radius: 6px; background: var(--u-solid); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked { border-color: var(--u-accent); background: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { color: var(--u-accent-on); }
+:root[data-ui="v3"][data-v7] .layout .briefings__card h2 { font: 600 15px/1.3 var(--u-font); letter-spacing: -0.01em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .briefings__file { border-radius: 10px; background: var(--u-solid); }
+:root[data-ui="v3"][data-v7] .layout .briefings__file span:first-child { font: 500 12.5px/1.3 var(--u-font-mono); color: var(--u-ink); }
+/* ── Momentum (c-momentum): four metric cards in one row, the heat map in the accent ramp ── */
+:root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 24px 0 22px; }
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+:root[data-ui="v3"][data-v7] .layout .metric-card { padding: 20px 22px; }
+/* ── Plan (c-plan): the three plans side by side; the current one tinted mist with an accent label ── */
+:root[data-ui="v3"][data-v7] .layout .plan-board:not(.plan-board--compact) { max-width: none; }
+:root[data-ui="v3"][data-v7] .layout .plan-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+@container pane (max-width: 760px) { :root[data-ui="v3"][data-v7] .layout .plan-pick { grid-template-columns: minmax(0, 1fr); } }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current {
+  background: linear-gradient(160deg, var(--u-mist) 0%, var(--u-glass) 85%);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px color-mix(in srgb, var(--u-accent) 30%, transparent), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card > span:first-child { font: var(--u-w-label) 11.5px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card.is-current > span:first-child { color: var(--u-accent); }
+
+/* ── First run (rounds/06 screens 6-7): steps, Vibe and a big bubble, one heading, one forward button ── */
+/* Vibe and the footer both take the free height (margin-top: auto), so a short step sits in the middle of the window
+   and a tall one (the shortcut guide) scrolls. Steps change without a transition: SPEC §6 names no step motion. */
+:root[data-ui="v3"][data-v7] .onboard {
+  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; overflow-y: auto;
+  padding: 56px clamp(24px, 8vw, 80px) 0; background: transparent; color: var(--u-ink); font-family: var(--u-sans); letter-spacing: 0;
+}
+/* The shortcut guide (shared/shortcutGuide.css) in Spectral: the done check and "you" row in the accent, the
+   illustration's switch the accent rather than macOS green (o-shortcut). */
+:root[data-ui="v3"][data-v7] .shortcut-guide__steps li.is-done::before {
+  border-color: var(--u-accent);
+  background: var(--u-accent) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 14px no-repeat;
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .shortcut-guide__steps li.is-done::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='%2315141A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+:root[data-ui="v3"][data-v7] .shortcut-art__row.is-you { outline: 2px solid var(--u-accent); background: var(--u-mist); }
+:root[data-ui="v3"][data-v7] .shortcut-art__switch.is-on { background: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .onboard__top { display: grid; justify-items: center; gap: 14px; }
+:root[data-ui="v3"][data-v7] .onboard__steps { display: flex; gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard__steps i { width: 56px; height: 4px; border-radius: 4px; background: var(--u-plate); }
+:root[data-ui="v3"][data-v7] .onboard__steps i.on { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .onboard__count { font: 500 13px/1 var(--u-mono); color: var(--u-ink-3); }
+/* One centred column (Design, first run): Vibe at 56 px above the bubble, the column at most 560 px. */
+:root[data-ui="v3"][data-v7] .onboard__vibe { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: auto; padding-top: 24px; }
+:root[data-ui="v3"][data-v7] .onboard__vibe .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .onboard__vibe .vibe-bubble { max-width: 420px; margin: 0; text-align: center; text-wrap: balance; }
+:root[data-ui="v3"][data-v7] .onboard__top,
+:root[data-ui="v3"][data-v7] .onboard__vibe { width: min(560px, 100%); align-self: center; }
+:root[data-ui="v3"][data-v7] .onboard .fade-in { animation: none; }
+:root[data-ui="v3"][data-v7] .onboard__body { display: flex; flex-direction: column; align-items: center; width: min(560px, 100%); margin-top: 24px; }
+/* The shortcut step shows its steps beside the System Settings illustration: wider than the column. */
+:root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__body { width: min(760px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard h1 {
+  max-width: 600px; margin: 0; font: 600 40px/1.12 var(--u-sans); letter-spacing: -0.035em; color: var(--u-ink); text-align: center; text-wrap: balance; outline: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__lead { max-width: 520px; margin: 12px 0 0; font: 400 15px/1.5 var(--u-sans); color: var(--u-ink-2); text-align: center; }
+
+/* Hello: the name, then where they heard of Unvibe with Security 0046's line under it (Q4). */
+:root[data-ui="v3"][data-v7] .onboard__form { display: grid; gap: 22px; width: min(420px, 100%); margin-top: 30px; }
+:root[data-ui="v3"][data-v7] .onboard__form label { display: grid; gap: 10px; }
+:root[data-ui="v3"][data-v7] .onboard__form label > span:first-child { font: 500 14px/1 var(--u-sans); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__form small { font: inherit; font-weight: 400; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .onboard__form input {
+  width: 100%; height: 50px; box-sizing: border-box; margin: 0; padding: 0 16px; border: 0; border-radius: var(--u-radius-control);
+  background: var(--u-sheet); color: var(--u-ink); font: var(--u-w-body) 15px/1 var(--u-font); box-shadow: inset 0 0 0 1.5px var(--u-line); outline: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__form input::placeholder { color: var(--u-ink-3); }
+/* The violet edge (6.5:1 on white) is the focus mark, so v7's global ink outline would draw a second ring. */
+:root[data-ui="v3"][data-v7] .onboard__form input:is(:focus, :focus-visible) { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-accent), 0 0 0 4px color-mix(in srgb, var(--u-accent) 14%, transparent); }
+:root[data-ui="v3"][data-v7] .onboard__note { font: 400 13px/1.45 var(--u-sans); color: var(--u-ink-3); }
+
+/* Buttons: the primary (one per step), the quiet ones (Back and the ways out) and outline pills (the level choices and the
+   shortcut guide's fixes). */
+:root[data-ui="v3"][data-v7] .onboard__primary,
+:root[data-ui="v3"][data-v7] .onboard__quiet,
+:root[data-ui="v3"][data-v7] .onboard__back,
+:root[data-ui="v3"][data-v7] .onboard__outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; border: 0; border-radius: 999px;
+  font: var(--u-w-label) 14.5px/1 var(--u-font); letter-spacing: 0; white-space: nowrap; cursor: pointer; transform: none; transition: none;
+}
+/* Spectral: the one forward action is a filled accent pill; no lip, no press drop. */
+:root[data-ui="v3"][data-v7] .onboard__primary { height: 44px; padding: 0 20px; background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); }
+:root[data-ui="v3"][data-v7] .onboard__primary:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .onboard__primary:active:not(:disabled) { transform: none; }
+:root[data-ui="v3"][data-v7] .onboard__quiet,
+:root[data-ui="v3"][data-v7] .onboard__back { height: 36px; padding: 0 12px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard__quiet:hover:not(:disabled, [aria-disabled="true"]),
+:root[data-ui="v3"][data-v7] .onboard__back:hover:not(:disabled) { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__outline {
+  height: 40px; padding: 0 16px; background: var(--u-chip); color: var(--u-ink); font-size: 14px;
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .onboard__outline:hover:not(:disabled) { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline):disabled { cursor: default; opacity: 0.55; }
+/* "Explaining in the panel →" keeps focus and stays readable: a status, so ink-3 rather than a faded control. */
+:root[data-ui="v3"][data-v7] .onboard__quiet[aria-disabled="true"] { cursor: default; color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .onboard :is(.onboard__primary, .onboard__quiet, .onboard__back, .onboard__outline, summary):focus-visible { outline: 2px solid var(--u-violet); outline-offset: 3px; }
+
+/* The footer row (Back, the forward action) sits in the flow on its own line under the step's content, at the column's
+   width so Back and the forward action line up with the content; margin-top auto puts it at the bottom when the step
+   is short. It no longer sticks over the content (Design S-1 whole-app MUST 4: Back sat under the level chips) and
+   has no veil above it (MUST 5: the blurred bar). A tall step scrolls, footer included. */
+:root[data-ui="v3"][data-v7] .onboard__foot {
+  position: static; display: flex; flex: none; align-self: center; justify-content: space-between; align-items: flex-start; gap: 16px;
+  width: min(560px, 100%); margin-top: auto; padding: 28px 0 36px; background: transparent;
+}
+:root[data-ui="v3"][data-v7] .onboard--step-3 .onboard__foot { width: min(760px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard__forward { display: grid; justify-items: end; gap: 12px; }
+/* Hello: one primary at the form's full width (420 px, centred), the Google disclosure under it on the column's left. */
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot { justify-content: center; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__foot > span:empty { display: none; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward { width: min(420px, 100%); justify-items: stretch; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward > .onboard__primary { width: 100%; }
+:root[data-ui="v3"][data-v7] .onboard--step-0 .onboard__forward .onboard__google { justify-items: start; text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 500 13px/1.4 var(--u-sans); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
+/* Q11: the Google disclosure sits right under Let's go, quiet ink-2 13 px; open, its form lines up on the right. */
+:root[data-ui="v3"][data-v7] .onboard__google { display: grid; justify-items: end; gap: 10px; text-align: right; }
+:root[data-ui="v3"][data-v7] .onboard__signed { margin: 0; font: 500 13px/1.4 var(--u-sans); color: var(--u-ink-2); }
+
+/* Try it: the sample in a dark code card, one primary to explain it, then the one level question. */
+:root[data-ui="v3"][data-v7] .onboard__try { display: grid; justify-items: center; gap: 18px; width: min(560px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard__try .onboard__lead { margin: 0; }
+:root[data-ui="v3"][data-v7] .onboard__editor { width: 100%; overflow: hidden; border-radius: 16px; background: var(--u-code); color: var(--u-dark-ink); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-bottom: 1px solid var(--u-dark-line); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar span { margin-left: 8px; font: 500 12.5px/1 var(--u-mono); color: var(--u-dark-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__editor pre { margin: 0; padding: 16px 18px; overflow-x: auto; font: 400 13px/1.6 var(--u-mono); color: var(--u-dark-ink); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__level { display: grid; gap: 12px; width: 100%; box-sizing: border-box; padding: 18px 20px; border-radius: var(--u-radius-card); background: var(--u-band); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__level p { margin: 0; font: 500 15px/1.4 var(--u-sans); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__choices { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Your code: one paste target in the band look; the keys are the same caps as Home's. */
+:root[data-ui="v3"][data-v7] .onboard__paste { display: grid; gap: 14px; width: min(560px, 100%); }
+:root[data-ui="v3"][data-v7] .onboard__paste .onboard__lead { justify-self: center; margin: 0; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box {
+  border: 2px dashed rgb(110 107 100 / 0.45); border-radius: var(--u-radius-card); background: var(--u-band); color: var(--u-ink); font-family: var(--u-sans);
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box:is(:focus, :focus-visible) { outline: none; border-style: solid; border-color: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.12); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box b { font: 600 19px/1.3 var(--u-sans); letter-spacing: -0.01em; }
+/* Keycaps here and in the shortcut card share Today's hero keys (Design S-1 r2 MUST 1): the solid cap and ink-2 rim of
+   the theme, so dark mode gets a dark cap with light glyphs instead of a white cap with near-white glyphs. */
+:root[data-ui="v3"][data-v7] .onboard .paste-target__key {
+  min-width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--u-solid); color: var(--u-ink);
+  font: 500 17px/1 var(--u-sans); box-shadow: inset 0 0 0 1px var(--u-ink-2), 0 4px 0 var(--u-ink-2);
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__hint { color: var(--u-ink-2); font: 400 14px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill { border: 0; background: var(--u-sheet); color: var(--u-ink); font: var(--u-w-label) 13px/1 var(--u-font); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill i { background: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.16); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__or { color: var(--u-ink-2); font: 400 14px/1.4 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__link { color: var(--u-ink); font: 500 14px/1.4 var(--u-sans); text-decoration-color: var(--u-plate); text-decoration-thickness: 1.5px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box pre { border: 0; border-radius: 12px; background: var(--u-sheet); color: var(--u-ink); font-family: var(--u-mono); box-shadow: var(--u-shadow-whisper); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__error { color: #b42318; font: 500 13.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard__paste > .onboard__more { justify-self: center; }
+/* The Integrations panel inside setup, as before: no lead sentence or card blurbs (first run shows names and states
+   only), and a capped height that scrolls, so the step keeps its footer in view. */
+:root[data-ui="v3"][data-v7] .onboard__integrations { max-height: 290px; overflow: auto; margin-top: 12px; padding-right: 5px; text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__integrations :is(.integ__lead, .integ-card__body p) { display: none; }
+
+/* Shortcut (Mac): the permission card of screen 7 (keycaps, what it does, "Allowed" once on), the why, one primary. */
+:root[data-ui="v3"][data-v7] .onboard__perm {
+  display: flex; align-items: center; gap: 16px; width: min(560px, 100%); box-sizing: border-box; margin-top: 32px; padding: 22px 24px;
+  border-radius: var(--u-radius-card); background: var(--u-band); text-align: left;
+}
+:root[data-ui="v3"][data-v7] .onboard__caps { display: flex; flex: none; gap: 8px; padding-bottom: 4px; }
+:root[data-ui="v3"][data-v7] .onboard__caps kbd {
+  display: grid; place-items: center; min-width: 52px; height: 52px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 10px;
+  background: var(--u-solid); color: var(--u-ink); font: 500 18px/1 var(--u-sans); letter-spacing: 0; box-shadow: inset 0 0 0 1px var(--u-ink-2), 0 4px 0 var(--u-ink-2);
+}
+:root[data-ui="v3"][data-v7] .onboard__perm-text { display: grid; gap: 2px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .onboard__perm-text b { font: 600 15px/1.3 var(--u-sans); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__perm-text small { font: 400 13px/1.4 var(--u-sans); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__ok { flex: none; margin-left: auto; padding: 7px 10px; border-radius: var(--u-radius-chip); background: #eef6cf; color: #3c5200; font: 500 13px/1 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard__why { display: flex; gap: 10px; width: min(560px, 100%); box-sizing: border-box; margin: 16px 0 0; padding: 0 4px; font: 400 13px/1.5 var(--u-sans); color: var(--u-ink-2); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__why svg { flex: none; margin-top: 2px; }
+:root[data-ui="v3"][data-v7] .onboard__why + .onboard__primary { margin-top: 24px; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide { width: min(860px, 100%); color: var(--u-ink); font-family: var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__steps li { font: 400 14.5px/1.45 var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__fix,
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art figcaption { color: var(--u-ink-2); font-family: var(--u-sans); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill { border: 0; background: var(--u-sheet); color: var(--u-ink); font: var(--u-w-label) 13px/1 var(--u-font); box-shadow: var(--u-shadow-whisper); }
+/* The System Settings illustration follows the theme: rows on the sheet, the bar a fill, the off switch the line. */
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__window { background: var(--u-sheet); border-color: var(--u-line); color: var(--u-ink); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar { background: var(--u-fill); border-bottom-color: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar i { background: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__row { background: var(--u-chip); border-color: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__row.is-you { background: var(--u-mist); }
+:root[data-ui="v3"][data-v7] .onboard :is(.shortcut-art__icon, .shortcut-art__name) { background: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__switch:not(.is-on) { background: var(--u-line); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill--busy i { background: var(--u-violet); box-shadow: 0 0 0 4px rgb(90 63 224 / 0.16); }
+
+/* Finish: 48 pieces fall once (SPEC §4); setup skips them under reduced motion and companion.css stops every animation.
+   Only the action and understood colours plus neutrals: amber means a problem and lilac is Vibe's own (tokens.css). */
+:root[data-ui="v3"][data-v7] .onboard__confetti { position: fixed; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i {
+  position: absolute; top: -20px; left: calc(var(--i) * 2.1%); width: 10px; height: 16px; border-radius: 3px; background: var(--u-accent);
+  animation: onboardConfetti 1.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; animation-delay: calc(var(--i) * 18ms);
+}
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+2) { background: var(--u-violet-lip); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+3) { background: var(--u-violet); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(4n+4) { width: 12px; height: 12px; border-radius: 50%; background: var(--u-plate); }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n) { animation-duration: 2s; margin-left: -30px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(3n+1) { animation-duration: 1.3s; margin-left: 20px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(5n) { top: -60px; }
+:root[data-ui="v3"][data-v7] .onboard__confetti i:nth-child(7n) { top: -120px; }
+@keyframes onboardConfetti { to { transform: translateY(105vh) rotate(540deg); } }
+
+/* ── Sign in (Spectral o-login): the story on the left, the card and "Open Unvibe on this Mac" on the right, on the
+   app's ground (body). One column, story hidden, under 820 px as before. The Google button stays Google's own white
+   button with the standard G (Google's branding rules), not the mock's accent fill. ── */
+:root[data-ui="v3"][data-v7] .login { background: transparent; color: var(--u-ink); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .login :is(.login__grid, .sanFranWash, .login__island) { display: none; }
+:root[data-ui="v3"][data-v7] .login__layout { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 64px; align-items: center; width: min(1000px, 88vw); }
+:root[data-ui="v3"][data-v7] .login__story { display: block; max-width: 520px; }
+:root[data-ui="v3"][data-v7] .login__eyebrow { margin: 0 0 16px; color: var(--u-accent); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.08em; }
+:root[data-ui="v3"][data-v7] .login .login__story h1 { margin: 0; color: var(--u-ink); font: var(--u-w-title) 34px/1.35 var(--u-font); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .login__story > p { margin: 18px 0 22px; color: var(--u-ink-2); font: var(--u-w-body) 13px/20px var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__features { display: grid; gap: 0; }
+:root[data-ui="v3"][data-v7] .login__feature { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--u-line); color: var(--u-ink-2); font: var(--u-w-body) 12.5px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__feature .lf-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--u-mist); color: var(--u-accent); font: var(--u-w-label) 11.5px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__feature b { color: var(--u-ink); font: var(--u-w-label) 13px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__feature small { color: var(--u-ink-3); font: var(--u-w-body) 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__actions { gap: 12px; }
+:root[data-ui="v3"][data-v7] .login :is(.login__card, .login__local) {
+  border: 0; border-radius: 20px; background: var(--u-sheet); color: var(--u-ink); animation: none; transform: none;
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 24px 60px -24px rgb(40 24 110 / 0.3);
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .login :is(.login__card, .login__local) { box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 24px 60px -24px rgb(0 0 0 / 0.6); }
+:root[data-ui="v3"][data-v7] .login__card { padding: 28px 28px 22px; text-align: center; }
+:root[data-ui="v3"][data-v7] .login__mark { justify-content: center; margin: 0 0 10px; }
+:root[data-ui="v3"][data-v7] .login .login__brand { margin: 0 0 8px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); font-style: normal; letter-spacing: 0.12em; }
+:root[data-ui="v3"][data-v7] .login .login__tag { margin: 0 0 14px; color: var(--u-ink); font: var(--u-w-title) 17px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .login .login__tag em { font: inherit; font-style: normal; letter-spacing: inherit; }
+:root[data-ui="v3"][data-v7] .login .login__card-copy { margin: 0 0 16px; color: var(--u-ink-2); font: var(--u-w-body) 12.5px/1.6 var(--u-font); }
+/* Google's own button, white with the standard G, wherever it shows: sign in, Settings › Account & Plan, Share
+   (Design S-1 r3 SHOULD 1). The doubled class outranks Settings' outline-pill rule for .field-btn. */
+:root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google,
+:root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google:not(:disabled):is(:hover, :active) {
+  height: 44px; border: 0; border-radius: 999px; background: #fff; color: #1f1f1f; font: var(--u-w-label) 13px/1 var(--u-font);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14), 0 6px 16px -10px rgb(40 24 110 / 0.5); transform: none;
+}
+:root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google:not(:disabled):hover { background: #f4f3f8; }
+:root[data-ui="v3"][data-v7] :is(.login, .modal, .gift-signin) .field-btn.field-btn--google:disabled { background: #fff; color: #4c4854; opacity: 0.7; }
+:root[data-ui="v3"][data-v7] .login .field-note { margin-top: 12px; color: var(--u-ink-3); font: var(--u-w-body) 11.5px/1.6 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login__local {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 14px; row-gap: 3px; align-items: center;
+  min-height: 0; padding: 16px 18px; text-align: left; transition: none;
+}
+:root[data-ui="v3"][data-v7] .login .login__local:hover { transform: none; box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px color-mix(in srgb, var(--u-accent) 35%, transparent), 0 24px 60px -24px rgb(40 24 110 / 0.3); }
+:root[data-ui="v3"][data-v7] .login .login__local-icon { grid-row: 1 / 3; width: 40px; height: 40px; border: 0; border-radius: 11px; background: var(--u-mist); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .login .login__local-icon svg { width: 20px; height: 20px; stroke: currentColor; }
+:root[data-ui="v3"][data-v7] .login .login__local strong { align-self: end; color: var(--u-ink); font: var(--u-w-label) 13.5px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .login .login__local small { align-self: start; color: var(--u-ink-3); font: var(--u-w-body) 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .login .login__local:focus-visible { outline: 2px solid var(--u-accent); outline-offset: 3px; }
+@media (max-width: 820px) {
+  :root[data-ui="v3"][data-v7] .login__layout { grid-template-columns: 1fr; width: min(440px, 88vw); }
+  :root[data-ui="v3"][data-v7] .login__story { display: none; }
+}
+
+/* ── Settings (Spectral s-*): a glass frame on a lilac, blurred scrim; the nav on the glass, the page an inset sheet ── */
+/* Opens and switches tabs without motion. Every run of sibling rows is one group on hairlines, drawn with :has(), so the
+   sub-panels (AI, Account & Plan) group without wrappers. */
+:root[data-ui="v3"][data-v7] .overlay { background: rgb(60 44 140 / 0.16); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .overlay { background: rgb(0 0 0 / 0.42); }
+:root[data-ui="v3"][data-v7] .modal {
+  border: 0; border-radius: 20px; background: var(--u-glass); color: var(--u-ink); font-family: var(--u-font); letter-spacing: 0;
+  -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), 0 30px 80px -24px rgb(40 24 110 / 0.35); animation: none;
+}
+:root[data-ui="v3"][data-v7] .modal .mside { width: 220px; padding: 26px 12px 16px; border-right: 0; background: transparent; }
+:root[data-ui="v3"][data-v7] .modal .settings-brand { padding: 0 10px; color: var(--u-ink); font: var(--u-w-title) 16px/1.2 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .mside-group { gap: 0; margin: 10px 0 0; }
+:root[data-ui="v3"][data-v7] .modal .mside .mh { padding: 14px 10px 8px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
+:root[data-ui="v3"][data-v7] .modal .mside button {
+  display: flex; align-items: center; gap: 10px;
+  height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--u-ink-2);
+  font: var(--u-w-label) 13.5px/1 var(--u-font); letter-spacing: 0; box-shadow: none; transform: none; transition: none;
+}
+/* Lucide icons (s-*), 16 px, in the label's colour; the current tab's in the accent with its label. */
+:root[data-ui="v3"][data-v7] .modal .mside .settings-icon { flex: none; width: 16px; height: 16px; }
+:root[data-ui="v3"][data-v7] .modal .mside button:hover { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mside button.on { background: var(--u-mist); color: var(--u-accent); font-weight: var(--u-w-title); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .mside .ver { margin-top: auto; padding: 10px; color: var(--u-ink-3); font: var(--u-w-body) 12px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .settings-close {
+  top: 18px; right: 18px; width: 34px; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal .settings-close:hover { background: var(--u-fill); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .mbody { margin: 8px 8px 8px 0; padding: 40px 44px 36px; border-radius: 14px; background: var(--u-sheet); }
+:root[data-ui="v3"][data-v7] .modal .mbody h2 { margin: 0; padding-right: 48px; color: var(--u-ink); font: var(--u-w-title) 24px/1.2 var(--u-font); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label { margin: 28px 0 0 2px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Rows: label and helper on the left, the control on the right, hairlines between, none at a group's ends. */
+:root[data-ui="v3"][data-v7] .modal .setrow {
+  grid-template-columns: minmax(0, 1fr) auto; gap: 16px; min-height: 60px; box-sizing: border-box; margin: 0; padding: 14px 2px;
+  border: 0; border-bottom: 1px solid var(--u-line); border-radius: 0; background: transparent;
+}
+:root[data-ui="v3"][data-v7] .modal :not(.setrow) + .setrow,
+:root[data-ui="v3"][data-v7] .modal .setrow:first-child { margin-top: 16px; }
+:root[data-ui="v3"][data-v7] .modal .settings-section-label + .setrow { margin-top: 6px; }
+:root[data-ui="v3"][data-v7] .modal .setrow:not(:has(+ .setrow)) { border-bottom: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sl { color: var(--u-ink); font: var(--u-w-label) 14px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sl--danger { color: #b42318; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .modal .setrow .sl--danger { color: #ff8a80; }
+:root[data-ui="v3"][data-v7] .modal .setrow .sd { max-width: 40rem; margin-top: 4px; color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow--stack { padding-top: 14px; padding-bottom: 16px; }
+:root[data-ui="v3"][data-v7] .modal .setrow__end { display: flex; align-items: center; gap: 10px; }
+
+/* Controls: fields on the sheet with a hairline, the accent toggle, keycap shortcut, outline pills; the accent fill
+   only on the screen's one action (as "Allow Accessibility" is while it shows). */
+:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input) {
+  height: 36px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: var(--u-radius-field); background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-body) 13.5px/1 var(--u-font); letter-spacing: 0; box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .modal .setrow-field { width: 240px; }
+:root[data-ui="v3"][data-v7] .modal :is(.field, .sel-input, .time-input):focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--u-accent), 0 0 0 4px color-mix(in srgb, var(--u-accent) 14%, transparent); }
+:root[data-ui="v3"][data-v7] .modal .field::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .modal .range { accent-color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .modal .toggle { width: 40px; height: 24px; border: 0; border-radius: 999px; background: var(--u-line); box-shadow: inset 0 0 0 1px var(--u-line); transition: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle.on { background: var(--u-accent); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle .knob { top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: none; }
+:root[data-ui="v3"][data-v7] .modal .toggle.on .knob { left: 19px; }
+:root[data-ui="v3"][data-v7] .modal .act {
+  display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 13px/1 var(--u-font); letter-spacing: 0; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal .act:is(:hover, :active):not(:disabled, .act--primary, .kbd-cap) { background: var(--u-fill); border: 0; transform: none; box-shadow: inset 0 0 0 1px var(--u-line); }
+:root[data-ui="v3"][data-v7] .modal .act:disabled { background: var(--u-fill); color: var(--u-ink-3); box-shadow: none; opacity: 1; }
+:root[data-ui="v3"][data-v7] .modal .act.danger { color: #b42318; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .modal .act.danger { color: #ff8a80; }
+:root[data-ui="v3"][data-v7] .modal .act--primary,
+:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .modal .act--primary:active:not(:disabled) { transform: none; }
+/* The shortcut is one keycap with a lip, like Today's. */
+:root[data-ui="v3"][data-v7] .modal .kbd-cap,
+:root[data-ui="v3"][data-v7] .modal .kbd-cap:is(:hover, :active):not(:disabled) {
+  min-width: 0; height: 34px; padding: 0 12px; border-radius: 8px; background: var(--u-chip); color: var(--u-ink); transform: none;
+  box-shadow: inset 0 0 0 1px var(--u-ink-3), 0 3px 0 var(--u-ink-3); font: 600 13px/1 var(--u-font);
+}
+/* Recording: the accent with "Press keys…", under the pointer too (the click that starts it leaves the pointer there). */
+:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec,
+:root[data-ui="v3"][data-v7] .modal .kbd-cap.rec:is(:hover, :active):not(:disabled) { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal :is(.act, .toggle, .mside button, .settings-close, .location-grid button):focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .modal .link-btn { padding: 0; border: 0; background: none; color: var(--u-accent); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Status chips: neutral; Accessibility's "Allowed" takes the accent on mist (lime is only the code selection). */
+:root[data-ui="v3"][data-v7] .modal :is(.perm-chip, .setting-status) {
+  display: inline-block; padding: 7px 11px; border: 0; border-radius: 999px; background: var(--u-fill); color: var(--u-ink-2);
+  font: var(--u-w-label) 12.5px/1 var(--u-font); letter-spacing: 0; white-space: nowrap;
+}
+:root[data-ui="v3"][data-v7] .modal .perm-chip--ok { background: var(--u-mist); color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .modal .perm-steps { margin: 8px 0 0; color: var(--u-ink); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix { margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .perm-fix p { margin: 0 0 10px; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .perm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Island: the preview is a small desktop on the brand aurora (unveiled, so it reads in light too: Design S-1 whole-app,
+   Settings); the choices as a segmented control with the accent on the chosen one. */
+:root[data-ui="v3"][data-v7] .modal .settings-preview { margin-top: 10px; border: 1px solid var(--u-hair); border-radius: 16px; background: url("./aurora.webp") center 40% / cover no-repeat, var(--u-accent); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .settings-preview__window span { background: rgb(255 255 255 / 0.55); }
+:root[data-ui="v3"][data-v7] .modal .location-grid { display: inline-flex; width: auto; gap: 2px; padding: 3px; border-radius: 999px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); font: var(--u-w-label) 12.5px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .location-grid button:hover { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .modal .location-grid button.on { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+
+/* AI: the intro, the cost table on hairlines. */
+:root[data-ui="v3"][data-v7] .modal .ai-container { display: block; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+/* "AI on your terms": a mist card with the cpu icon (s-ai). */
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro {
+  display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 4px; margin: 14px 0 0; padding: 14px 16px;
+  border: 0; border-radius: 12px; background: var(--u-mist);
+}
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro span { display: contents; color: var(--u-ink); font: var(--u-w-title) 14.5px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__icon { grid-row: 1; width: 18px; height: 18px; color: var(--u-accent); align-self: center; }
+:root[data-ui="v3"][data-v7] .modal .ai-container__intro p { grid-column: 2; margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .cost-table { border: 1px solid var(--u-line); border-radius: 12px; background: transparent; }
+:root[data-ui="v3"][data-v7] .modal .cost-row { border-top-color: var(--u-line); font: var(--u-w-body) 12.5px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .cost-row > span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .cost-row.head > span { color: var(--u-ink-3); font-weight: var(--u-w-label); }
+:root[data-ui="v3"][data-v7] .modal .cost-row > span:first-child { color: var(--u-ink); font-weight: var(--u-w-label); }
+:root[data-ui="v3"][data-v7] .modal .cost-note { color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); }
+
+/* Integrations: one hairline card per tool; the state as a chip (the accent on mist for what is set up). */
+:root[data-ui="v3"][data-v7] .modal .integ { gap: 24px; margin-top: 14px; }
+:root[data-ui="v3"][data-v7] .modal .integ__lead { margin: 0; color: var(--u-ink-2); font: var(--u-w-body) 13.5px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ__message { border: 0; border-radius: 10px; background: var(--u-fill); color: var(--u-ink-2); font: var(--u-w-body) 13px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ__group h3 { margin: 0 0 10px 2px; color: var(--u-ink-3); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
+:root[data-ui="v3"][data-v7] .modal .integ-card,
+:root[data-ui="v3"][data-v7] .modal .integ-card:hover { padding: 14px 16px; border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__mark { border: 0; border-radius: 10px; background: var(--u-fill); color: var(--u-ink); font: var(--u-w-title) 14px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body b { color: var(--u-ink); font: var(--u-w-label) 14px/1.3 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body small { color: var(--u-ink-2); font: var(--u-w-label) 12px/1.3 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integ-card__body p { color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integration-state { padding: 6px 10px; border: 0; border-radius: 999px; background: var(--u-fill); color: var(--u-ink-2); font: var(--u-w-label) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .integration-state:is(.detected, .available) { background: var(--u-mist); color: var(--u-accent); }
+
+/* Account & Plan: the plan cards and usage on the same hairline cards. */
+:root[data-ui="v3"][data-v7] .modal .plan-board--compact > .settings-section-label:first-child { margin-top: 28px; }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle { padding: 3px; border: 0; border-radius: 999px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button { border: 0; border-radius: 999px; background: transparent; color: var(--u-ink-2); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button span { color: var(--u-ink-3); font: var(--u-w-label) 11px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on { background: var(--u-accent); color: var(--u-accent-on); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-toggle button.on span { color: inherit; opacity: 0.8; }
+:root[data-ui="v3"][data-v7] .modal .signin__code { border: 0; border-radius: 12px; background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .modal .signin__code span { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .modal .signin__code b { color: var(--u-ink); font: 600 22px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card { border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); transform: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-current { background: linear-gradient(160deg, var(--u-mist) 0%, var(--u-chip) 85%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--u-accent) 30%, transparent); }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card.is-upgrade { background: var(--u-fill); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card h2 { color: var(--u-ink); font: var(--u-w-title) 20px/1.15 var(--u-font); letter-spacing: -0.02em; }
+:root[data-ui="v3"][data-v7] .modal .plan-pick__card :is(p, .plan-pick__terms) { color: var(--u-ink-2); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .modal :is(.plan-board__signin, .plan-usage-card) { border: 0; border-radius: 16px; background: var(--u-chip); box-shadow: inset 0 0 0 1px var(--u-line); }
+/* The sign-in and plan buttons inside Settings follow the same rule as .act: an outline pill unless it is the one action. */
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn),
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):is(:hover, :active):not(:disabled) {
+  height: 38px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 13.5px/1 var(--u-font); letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px var(--u-line); transform: none; transition: none;
+}
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):is(:hover, :active):not(:disabled) { background: var(--u-fill); }
+/* The current plan's status ("Included" and the like) is a disabled button: readable ink-2, not v7's 40 % fade. */
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn):disabled { background: var(--u-fill); color: var(--u-ink-2); box-shadow: none; opacity: 1; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn,
+:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--u-accent) 70%, transparent); transform: none; transition: none; }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--u-accent) 88%, var(--u-ink)); }
+:root[data-ui="v3"][data-v7] .modal .primary-btn:active:not(:disabled) { transform: none; }
+:root[data-ui="v3"][data-v7] .modal :is(.field-btn, .soft-btn, .primary-btn):focus-visible { outline: 2px solid var(--u-accent); outline-offset: 2px; }
+
+/* ── Rich text in the companion (lesson, Ask Vibe, Briefs): code words are mist chips in accent ink; code blocks are
+   the light sheet, keywords in the accent (no green/yellow: lime and amber have their own jobs). ── */
+:root[data-ui="v3"][data-v7] .layout .rich-text code.inline {
+  padding: 1px 6px; border-radius: 6px; background: var(--u-mist); color: var(--u-accent); font: var(--u-w-body) 0.92em/1.4 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock {
+  margin: 6px 0 12px; border: 0; border-radius: 12px; background: var(--u-sheet); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head { padding: 8px 14px 0; color: var(--u-ink-3); font: var(--u-w-label) 11px/1.2 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head button { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock .cb-head button:hover { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .codeblock pre { padding: 8px 14px 12px; color: var(--u-ink); font: var(--u-w-body) 13px/1.65 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .tk-k { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .rich-text :is(.tk-s, .tk-n) { color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .rich-text .tk-c { color: var(--u-ink-3); }
+
+/* ── Ask Vibe thread (c-ask-thread): the page title and New question on top; your question a pill on the right;
+   Vibe's reply a sheet card beside the ghost; the composer one glass card. ── */
+:root[data-ui="v3"][data-v7] .layout .chat-top { padding: 18px clamp(20px, 3vw, 36px) 8px; }
+:root[data-ui="v3"][data-v7] .layout .chat-title { margin: 0; color: var(--u-ink); font: var(--u-w-title) 20px/1.2 var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .layout .chat-top .ghost-link {
+  height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink);
+  font: var(--u-w-label) 13px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line); text-decoration: none;
+}
+:root[data-ui="v3"][data-v7] .layout .chat-top .ghost-link:hover { background: var(--u-fill); }
+:root[data-ui="v3"][data-v7] .layout .chat-page:not(.chat-page--empty) .chat-stage { width: min(820px, calc(100% - 48px)); }
+/* Ask Vibe before the first question: the greeting sits in the flow under the top bar (v7 centred it in the column and
+   Vibe's head was cut off at 780 px tall); 24 px title, Vibe at 56, the saved conversations as a glass card. */
+:root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-stage { justify-content: flex-start; margin-top: 8px; gap: 18px; width: min(640px, calc(100% - 48px)); overflow: visible; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello { animation: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello__vibe { display: block; height: 56px; margin: 0 0 12px; }
+:root[data-ui="v3"][data-v7] .layout .chat-hello h2 { margin: 6px 0 6px; font: 700 24px/1.2 var(--u-font); letter-spacing: -0.02em; color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .layout .chat-hello p { font: 400 14px/1.5 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .layout .chat-page--empty .chat-dock { margin-bottom: 0; }
+/* Soft edges where the thread scrolls: 12 px under the title, 16 px above the composer (Design S-1 r2 SHOULD 3). */
+:root[data-ui="v3"][data-v7] .layout .chat-log {
+  gap: 22px; padding: 16px 2px 24px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 16px), transparent 100%);
+}
+/* Your question: a pill on the right; 20 px corners rather than 999 so a question that wraps stays a soft card. */
+:root[data-ui="v3"][data-v7] .layout .chat-user {
+  max-width: min(34rem, 72%); padding: 10px 18px; border: 0; border-radius: 20px; background: var(--u-chip);
+  box-shadow: inset 0 0 0 1px var(--u-line), 0 4px 12px -8px rgb(40 24 110 / 0.18); color: var(--u-ink); font: var(--u-w-label) 14px/1.5 var(--u-font);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-assistant { display: flex; align-items: flex-start; gap: 12px; width: 100%; max-width: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__vibe { flex: 0 0 auto; margin-top: 2px; }
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__card {
+  display: grid; gap: 8px; flex: 1; min-width: 0; padding: 16px 20px 12px; border-radius: 16px; background: var(--u-sheet);
+  box-shadow: inset 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-assistant__who { color: var(--u-accent); font: var(--u-w-label) 11px/1 var(--u-font); letter-spacing: 0.06em; text-transform: uppercase; }
+:root[data-ui="v3"][data-v7] .layout :is(.chat-assistant__body, .chat-assistant .rich-text) { color: var(--u-ink); font: var(--u-w-body) 14px/1.75 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-copy { justify-self: start; margin: 0; color: var(--u-ink-3); font: var(--u-w-label) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-copy:hover { color: var(--u-accent); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer {
+  padding: 14px 16px 10px; border: 0; border-radius: 18px; background: var(--u-glass); -webkit-backdrop-filter: var(--u-blur); backdrop-filter: var(--u-blur);
+  box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 1px var(--u-line), var(--u-shadow);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-composer:focus-within { border: 0; box-shadow: inset 0 0 0 1px var(--u-card-rim), 0 0 0 2px color-mix(in srgb, var(--u-accent) 45%, transparent), var(--u-shadow); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer textarea { color: var(--u-ink); font: var(--u-w-body) 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer textarea::placeholder { color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .chat-composer__hint { color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-mic {
+  height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--u-chip); color: var(--u-ink); font: var(--u-w-label) 12.5px/1 var(--u-font); box-shadow: inset 0 0 0 1px var(--u-line);
+}
+:root[data-ui="v3"][data-v7] .layout .chat-send { width: 34px; height: 34px; border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: 600 16px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .layout .chat-send:disabled { background: var(--u-fill); color: var(--u-ink-3); }
+:root[data-ui="v3"][data-v7] .layout .chat-dock .chat-meter { color: var(--u-ink-3); font: var(--u-w-body) 12px/1 var(--u-font); }
+
+/* ── SP6: page titles ink in once per view (InkTitle): each letter 15 % → full ink over 140 ms, left to right, opacity
+   only; the last letter starts within 100 ms of the first, so every title, however long, is fully inked by 240 ms
+   (Design motion review 07 Nov SHOULD 1). Reduced motion: the global rule in companion.css drops the animation. ── */
+.ink-title__ch { animation: inkIn 140ms var(--u-ease) both; animation-delay: var(--ink-delay, 0ms); }
+@keyframes inkIn { from { opacity: 0.15; } }
+/* Reduced motion: buttons, rows and cards still show lifted and pressed states, without moving (Design r2). */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .home-cta, .home-step, .home-row, .history-continue, .lib-line, .survey-line, .topbar__explain, .nav button):is(:hover, :active, .on) { transform: none; }
+}
+
+/* ─────────────────────────────────────────────────
+   Motion (Design agents/design/r2-motion/SPEC.md, ledger 601). One token set under html[data-r2]; transform and
+   opacity only; every new or changed rule below uses these names. Vibe's buddy.css keyframes and the overlay's
+   pinned behaviour keep their own values.
+   ───────────────────────────────────────────────── */
+html[data-r2] {
+  --m-instant: 80ms; --m-fast: 180ms; --m-exit: 150ms;
+  --m-normal: 350ms; --m-slow: 600ms; --m-stagger: 70ms;
+  --m-ease-smooth: cubic-bezier(.22, 1, .36, 1);
+  --m-ease-sharp: cubic-bezier(.4, 0, .2, 1);
+  --m-ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --m-dist-sm: 8px; --m-dist-md: 16px;
+  --m-scale-press: .95; --m-scale-card: .98; --m-scale-pop: 1.04;
+}
+@keyframes mArrive { from { opacity: 0; transform: translateY(var(--m-dist-sm)); } }
+@keyframes mArriveMd { from { opacity: 0; transform: translateY(var(--m-dist-md)); } }
+@keyframes mPop { from { opacity: 0; transform: scale(.98); } }
+@keyframes mGrow { from { transform: scaleX(0); } }
+
+/* §2 The start stage: the G1 dark ground in both themes, the violet sharks on a canvas (shared/sharks, our palette
+   copy of the vendored renderer), the lockup on a dark glass-2 pill. In: canvas over --m-fast; lockup 250–600 ms.
+   Out: --m-normal (timeout) or --m-exit (skip), --m-ease-sharp; the app arrives under it (.layout--arrive). */
+.sharks-intro {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; overflow: hidden; cursor: default;
+  background: linear-gradient(rgb(16 12 34 / 0.8), rgb(16 12 34 / 0.8)), url("./aurora.webp") center 30% / 170% auto no-repeat, #16122a;
+}
+.sharks-intro__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); }
+@keyframes mFade { from { opacity: 0; } }
+.sharks-intro__lockup {
+  position: relative; display: inline-flex; align-items: center; gap: 12px; padding: 12px 20px 12px 14px; border-radius: 999px;
+  background: linear-gradient(rgb(255 255 255 / 0.08), transparent 35%), rgb(40 35 62 / 0.75); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.3), 0 16px 36px -12px rgb(0 0 0 / 0.5);
+  color: #f3f1fa; font: 700 22px/1 var(--u-font); letter-spacing: -0.01em;
+  animation: mArrive var(--m-normal) var(--m-ease-smooth) 250ms both;
+}
+.sharks-intro--out { animation: mOut var(--m-normal) var(--m-ease-sharp) forwards; }
+.sharks-intro--out-skip { animation-duration: var(--m-exit); }
+@keyframes mOut { to { opacity: 0; } }
+/* The in-app sharks' canvas fills its layer; the layer's place (fixed, under the whole layout) is in mono-sharks.css
+   and the canvas's opacity (--u-sharks-alpha) in mono.css. */
+.sharks-band__canvas { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--u-font-mono); }
+:root[data-ui="v3"][data-v7] .layout .page { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .page > :not(.sharks-backdrop) { position: relative; z-index: 1; }
+/* The app under the stage: sidebar, then the top bar, then the content, --m-stagger apart (§2.4). Only once, as the
+   stage leaves; without the stage (setting off, reopened from the tray) the app is simply there. */
+:root[data-ui="v3"][data-v7] .layout--arrive .side { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .topbar { animation: mArrive var(--m-normal) var(--m-ease-smooth) var(--m-stagger) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .page { animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--m-stagger) * 2) both; }
+:root[data-ui="v3"][data-v7] .layout--arrive .ask-dock { animation: mArrive var(--m-normal) var(--m-ease-smooth) calc(var(--m-stagger) * 3) both; }
+
+/* §3 row 1: a new screen's content arrives over --m-fast (v7's 720 ms fadeInUp goes). */
+:root[data-ui="v3"][data-v7] .layout .fade-in { animation: mArrive var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .layout .fade-in--side { animation: none; }
+/* §3 row 3 and 17: the first eight rows or cards of a screen (and an empty state's message and button) arrive
+   --m-stagger apart over --m-normal; the rest, and anything re-rendered by a filter or search, appear at once. */
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *) { animation: mArrive var(--m-normal) var(--m-ease-smooth) both; animation-delay: calc(var(--m-stagger) * var(--m-i, 0)); }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(2) { --m-i: 1; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(3) { --m-i: 2; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(4) { --m-i: 3; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(5) { --m-i: 4; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(6) { --m-i: 5; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(7) { --m-i: 6; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(8) { --m-i: 7; }
+:root[data-ui="v3"][data-v7] .layout .fade-in :is(.home-list li, .lib-line, .survey-line, .briefings__card, .metric-card, .tile, .plan-pick__card, .empty-state > *, .learning-empty > *):nth-child(n+9) { animation: none; }
+/* A list re-rendered in place (filter, search): no arrival. learn.tsx and briefings.tsx set data-m-settled after the
+   first paint. */
+:root[data-ui="v3"][data-v7] .layout .fade-in [data-m-settled] :is(.lib-line, .survey-line, .briefings__card) { animation: none; }
+
+/* §3 row 2: the sidebar's active pill is one element (violet 12 %, M4) that slides to the current item with
+   translateY over --m-fast; the buttons themselves keep no fill. Label and icon colour change over --m-instant. */
+:root[data-ui="v3"][data-v7] .layout .side-navs { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .nav-pill { position: absolute; left: 0; right: 0; top: 0; height: var(--pill-h, 36px); border-radius: var(--u-radius-field); background: rgb(90 63 224 / 0.12); pointer-events: none; transform: translateY(var(--pill-y, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), opacity var(--m-instant) linear; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav-pill { background: rgb(184 166 255 / 0.16); }
+:root[data-ui="v3"][data-v7] .layout .nav-pill[hidden] { display: block; opacity: 0; }
+:root[data-ui="v3"][data-v7] .layout .nav button { position: relative; z-index: 1; transition: color var(--m-instant) linear, transform var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout .nav button.on, :root[data-ui="v3"][data-v7][data-theme="dark"] .layout .nav button.on { background: transparent; }
+
+/* §3 row 4: clickable cards lift 2 px with a deeper shadow and a brighter top sheen over --m-fast; no sweep. */
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue, .briefings__card, .plan-pick__card, .tile) { transition: transform var(--m-fast) var(--m-ease-sharp), box-shadow var(--m-fast) var(--m-ease-sharp), background var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: translateY(-2px); background: linear-gradient(rgb(255 255 255 / 0.34), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(40 24 110 / 0.32); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout :is(.home-cta, .history-continue):hover { background: linear-gradient(rgb(255 255 255 / 0.14), transparent 35%), var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair), 0 16px 36px -12px rgb(0 0 0 / 0.5); }
+/* §3 row 5: press. Buttons, chips and nav rows to .95 in --m-instant, back over --m-fast; cards and rows to .98. */
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings) { transition-duration: var(--m-fast); transition-timing-function: var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout :is(.primary-btn, .btn, .ask-dock button, .soft-btn, .act, .field-btn, .topbar__explain, .learn-filters button, .briefings__scopes button, .nav button, .side-search, .side-settings):active:not(:disabled) { transform: scale(var(--m-scale-press)); transition-duration: var(--m-instant); }
+:root[data-ui="v3"][data-v7] .layout :is(.home-cta, .home-step, .home-row, .history-continue, .lib-row, .survey-pick, .briefings__card):active { transform: scale(var(--m-scale-card)); transition-duration: var(--m-instant); }
+/* §3 row 7: the plan meter grows from the left once per visit. */
+:root[data-ui="v3"][data-v7] .layout :is(.side-usage__bar i, .plan-usage-row > i > em) { transform-origin: left center; animation: mGrow var(--m-slow) var(--m-ease-smooth) both; }
+/* §3 row 8: menus and the palette open from the trigger's corner over --m-fast; closing is the owner's unmount. */
+:root[data-ui="v3"][data-v7] .acct-menu { transform-origin: top left; animation: mPop var(--m-fast) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .search-palette { transform-origin: top center; animation: mPop var(--m-instant) linear both; }
+/* §3 row 9: the segmented thumb (Library filters, Briefs scopes) is one element sliding with translateX. */
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) { position: relative; }
+:root[data-ui="v3"][data-v7] .layout .seg-thumb { position: absolute; top: 3px; left: 0; height: calc(100% - 6px); width: var(--thumb-w, 0px); border-radius: 999px; background: var(--u-solid); box-shadow: 0 0 0 1px var(--u-hair), var(--u-shadow-sm); pointer-events: none; transform: translateX(var(--thumb-x, 0px)); transition: transform var(--m-fast) var(--m-ease-smooth), width var(--m-fast) var(--m-ease-smooth); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .seg-thumb { background: rgb(184 166 255 / 0.18); }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes) button { position: relative; z-index: 1; }
+:root[data-ui="v3"][data-v7] .layout :is(.learn-filters, .briefings__scopes):has(.seg-thumb) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: transparent; box-shadow: none; }
+/* §3 row 15: toasts in from the bottom over --m-normal; out over --m-exit. */
+:root[data-ui="v3"][data-v7] .toast { animation: mArriveMd var(--m-normal) var(--m-ease-smooth) both; }
+:root[data-ui="v3"][data-v7] .toast.is-leaving { animation: mToastOut var(--m-exit) var(--m-ease-sharp) forwards; }
+@keyframes mToastOut { to { opacity: 0; transform: translate(-50%, var(--m-dist-sm)); } }
+/* §3 row 16: a reviewed item's text goes to ink-3 over --m-fast. */
+:root[data-ui="v3"][data-v7] .layout .agent-review label span { transition: color var(--m-fast) var(--m-ease-sharp); }
+/* The check is a 10×6 L-stroke (border on a rotated box) revealed left to right by clip-path over --m-fast. */
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input { transition: background var(--m-fast) var(--m-ease-sharp), border-color var(--m-fast) var(--m-ease-sharp); }
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input::after {
+  content: ""; display: block; width: 10px; height: 5px; margin-top: -2px; border: 0 solid var(--u-accent-on); border-width: 0 0 2px 2px;
+  transform: rotate(-45deg); clip-path: inset(0 100% 0 0); transition: clip-path var(--m-fast) var(--m-ease-sharp);
+}
+:root[data-ui="v3"][data-v7] .layout .agent-review__checks input:checked::after { content: ""; clip-path: inset(0 0 0 0); }
+/* §3 row 14: the contained celebration on a finished quiz: eight 8–10 px shapes (squares and rounds, violet and lilac)
+   fly out from the card's centre over 900 ms and fade; clipped to the card; once per trigger per day (Burst). */
+:root[data-ui="v3"][data-v7] .layout .survey__end { position: relative; overflow: hidden; }
+.m-burst { position: absolute; inset: 0; pointer-events: none; }
+.m-burst i {
+  position: absolute; left: 50%; top: 42%; width: 9px; height: 9px; border-radius: 2px; background: var(--u-accent);
+  transform: translate(-50%, -50%); opacity: 0;
+  animation: mBurst 900ms var(--m-ease-smooth) both; animation-delay: calc(var(--i) * 20ms);
+}
+.m-burst i:nth-child(2n) { border-radius: 50%; background: var(--u-lilac); width: 8px; height: 8px; }
+.m-burst i:nth-child(3n) { width: 10px; height: 10px; }
+.m-burst i:nth-child(1) { --dx: -120px; --dy: -70px; }
+.m-burst i:nth-child(2) { --dx: 110px; --dy: -80px; }
+.m-burst i:nth-child(3) { --dx: -150px; --dy: 10px; }
+.m-burst i:nth-child(4) { --dx: 140px; --dy: 20px; }
+.m-burst i:nth-child(5) { --dx: -80px; --dy: 90px; }
+.m-burst i:nth-child(6) { --dx: 90px; --dy: 100px; }
+.m-burst i:nth-child(7) { --dx: -30px; --dy: -110px; }
+.m-burst i:nth-child(8) { --dx: 40px; --dy: 120px; }
+@keyframes mBurst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(140deg) scale(0.8); }
+}
+
+/* ── Design S-1 whole-app fix loop (requests/boss/20261110-2234-design-r2-whole-app.md) ── */
+/* MUST 6: no caps labels anywhere; sentence case, Inter 600, no letter-spacing (Today and the overlay already do). */
+:root[data-ui="v3"][data-v7] :is(.chat-saved h3, .plan-pick__card span, .plan-pick__card > span:first-child, .mh, .settings-section-label, .integ__group h3, .learning-kicker, .lesson-code__bar, .status-pill, .pill, .survey__kicker, .quiz-result__eyebrow, .quiz-code summary, .chat-assistant__who, .search-palette section h2, .login__eyebrow, .login__brand, .lib-group__label, .usage-board__title, .kicker, .eyebrow, .d2, .brand .badge) {
+  text-transform: none; letter-spacing: 0; font-weight: 600; font-style: normal;
+}
+/* MUST 7: code in JetBrains Mono on the lesson and in Ask threads (the overlay already does). */
+:root[data-ui="v3"][data-v7] .layout :is(.lesson-code, .lesson-code pre, .lesson-code code, .lesson-card--code code, .lesson-explain code, .chat-assistant code, .chat-assistant pre, .chat-assistant pre code, .chat-user code, .rich-text code, .rich-text pre, .lesson-doc code, .lesson-doc pre) {
+  font-family: var(--u-font-mono); font-variant-ligatures: none;
+}
+/* MUST 10: violet as text goes through --u-accent-text (lilac in dark: 6a50f5 on the dark ground is 2.4–3.3:1); the
+   login step chips and "Included" as readable pills. */
+:root[data-ui="v3"][data-v7] :is(.layout .chat-assistant__who, .login__eyebrow, .login__feature .lf-icon, .layout .plan-pick__card > span:first-child, .layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .rich-text code, .layout .lesson-explain code, .layout .chat-assistant code, .layout .lesson-doc code, .layout .chat-user code) { background: rgb(184 166 255 / 0.12); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .login__feature .lf-icon { background: rgb(184 166 255 / 0.14); }
+:root[data-ui="v3"][data-v7] .layout .plan-pick__card .soft-btn:disabled { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--u-mist); color: var(--u-accent-text); font: 600 12px/1 var(--u-font); opacity: 1; box-shadow: none; }
+:root[data-ui="v3"][data-v7][data-theme="dark"] .layout .plan-pick__card .soft-btn:disabled { background: rgb(184 166 255 / 0.14); }
+/* MUST 11: no green or lime as a status colour; the Understood badge and the Allowed chip are violet tints. */
+:root[data-ui="v3"][data-v7] :is(.layout .pill.pill--understood, .onboard__ok) { border-color: transparent; background: var(--u-mist); color: var(--u-accent-text); }
+:root[data-ui="v3"][data-v7][data-theme="dark"] :is(.layout .pill.pill--understood, .onboard__ok) { background: rgb(184 166 255 / 0.14); color: var(--u-lilac); }
+/* MUST 13: the empty-state action is the primary pill, one line. */
+:root[data-ui="v3"][data-v7] .layout .learning-empty .primary-btn { display: inline-flex; align-items: center; width: auto; height: 40px; padding: 0 18px; border-radius: 999px; white-space: nowrap; }
+/* MUST 12: a failed reply is one sentence beside an amber mark with Retry (the overlay's error pattern). */
+:root[data-ui="v3"][data-v7] .layout .chat-error { display: flex; align-items: center; gap: 12px; margin: 8px 0 0; padding: 12px 14px; border-radius: var(--u-radius-card); background: var(--u-glass); box-shadow: inset 0 0 0 1px var(--u-rim-line), 0 0 0 1px var(--u-hair); }
+:root[data-ui="v3"][data-v7] .layout .chat-error__mark { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--u-amber-tint); color: var(--u-amber); font: 700 13px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-error p { flex: 1 1 auto; margin: 0; color: var(--u-ink); font: 500 13px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .layout .chat-error__retry { flex: none; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--u-accent); color: var(--u-accent-on); font: 600 13px/1 var(--u-font); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="v3"][data-v7] :is(.layout .fade-in, .layout .fade-in *, .layout--arrive *, .sharks-intro__lockup, .m-burst i, .acct-menu, .search-palette, .toast, .layout .quiz-options button, .layout :is(.side-usage__bar i, .plan-usage-row > i > em)) { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .sharks-intro--out { animation-duration: 200ms; }
+  :root[data-ui="v3"][data-v7] .layout :is(.nav-pill, .seg-thumb, .nav button, .home-cta, .history-continue, .agent-review__checks input, .agent-review__checks input::after) { transition: none; }
+  :root[data-ui="v3"][data-v7] .layout :is(.home-cta, .history-continue):hover { transform: none; }
+}
