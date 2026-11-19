@@ -80,10 +80,10 @@ export default function ExplainLanguagePage({ params }: Params) {
         <ul className="explain-notes">
           {page.notes.map((note) => <li key={note}><Prose text={note} /></li>)}
         </ul>
-        <p className="explain-watch"><b>Watch out:</b> <Prose text={page.watchOut} /></p>
+        <p className="explain-watch"><b>Before you trust it:</b> <Prose text={page.watchOut} /></p>
       </section>
 
-      <ExplainDownload subject={explainHeadingText(page)} />
+      <ExplainDownload subject={explainHeadingText(page)} forAiCode />
 
       <nav className="explain-card explain-more" aria-labelledby="explain-more-title">
         {related.length > 0 && (

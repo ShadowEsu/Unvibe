@@ -61,7 +61,7 @@ export const explainPages: ExplainPage[] = [
     fileName: "sales_report.py",
     published: "2026-10-26",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
-    lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
+    lead: "Paste Python your AI wrote, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English, so you can tell whether it does what you asked.",
     description:
       "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
     sampleSummary: "A timing decorator, a generator that reads a CSV file and a dict comprehension.",
@@ -3200,7 +3200,7 @@ GROUP BY c.id;`,
     published: "2026-11-06",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
-    lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
+    lead: "A policy can look finished and still show the wrong rows. Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
     description:
       "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each user sees only their own rows.",
     sampleSummary: "SQL of the kind an AI app builder writes for a Supabase todos table: the table, row level security switched on, and 3 policies that tie each row to the signed-in user.",
@@ -3259,7 +3259,7 @@ create policy "update own todos" on todos
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json"],
-    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
+    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and why the fix goes on the server, so you can check a suggested fix before you accept it.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end got from its own API, with the API's code.",
     sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: a common setup, with the front end and the API on different ports.",
