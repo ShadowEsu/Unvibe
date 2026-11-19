@@ -255,14 +255,18 @@ function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[
  * A table wider than its pane (a narrow overlay, 4+ columns) scrolls sideways in its own frame. Then, and only then,
  * the frame is a focusable region the arrow keys scroll, and one line under it says so: macOS hides scrollbars, and the
  * column off to the right is often the one that explains (Design S-1, 0.1.55). Rows, streaming and density re-check;
- * a focused frame stays a region until it loses focus, so a switch to Compact never drops focus to the page.
+ * a focused frame stays a region until it loses focus, so a switch to Compact never drops focus to the page, but the
+ * line under it shows only while the table really overflows.
  */
 function RichTable({ children }: { children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
+  const [focused, setFocused] = useState(false);
   const check = () => {
     const el = box.current;
-    if (el) setOverflows(el.scrollWidth > el.clientWidth + 1 || el === document.activeElement);
+    if (!el) return;
+    setOverflows(el.scrollWidth > el.clientWidth + 1);
+    setFocused(el === document.activeElement);
   };
   useEffect(() => {
     const el = box.current;
@@ -275,7 +279,7 @@ function RichTable({ children }: { children: ReactNode }) {
   }, []);
   return (
     <>
-      <div ref={box} className="rich-table" onBlur={check} {...(overflows ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
+      <div ref={box} className="rich-table" onBlur={check} {...(overflows || focused ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
         {children}
       </div>
       {overflows ? <p className="rich-table__cue">Scroll sideways for the rest of the table.</p> : null}
