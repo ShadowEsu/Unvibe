@@ -10,19 +10,28 @@ import { linesLabel } from '../../core/linesLabel';
 import { BETA_SURVEY_URL, limitOfferCopy } from '../shared/limitOffer';
 import { freePlanLine } from '../shared/planStatus';
 import { shortcutCaps } from '../shared/prettyShortcut';
-import { isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
+import { isMac, isWindows, reviewKeyHint, voiceHowTo } from '../shared/platform';
 import { selectionSource, selectionTitle } from '../shared/languageName';
 import { DepthControl, LEVELS } from './levelChip';
-import { AskField, CodeRow, ExplainChips, Findings, PanelToast, SQUASH_MS, StopButton, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
+import { AskField, CodeRow, ExplainActions, Findings, PanelToast, prefillAsk, QuestionChips, SQUASH_MS, StopButton, TOAST_EXIT_MS, TOAST_MS } from './panelBody';
 import { QuizActions, QuizCard } from './panelQuiz';
 import { AskThread, followUpLive } from './askTab';
 import { SavedTab } from './savedTab';
 import { Icon, type IconName } from './icons';
 import { firstSymbol } from './selectionName';
-import { fadeStyle, HOVER_WAKE_MS, nextFade, NOT_FADED, type FadeEvent } from './clickAway';
+import { fadeStyle, HOVER_WAKE_MS, isFaded, nextFade, NOT_FADED, type FadeEvent } from './clickAway';
 import { PANEL_THEME_KEY, panelThemeMigration, type ThemePreference } from './themeMigration';
 import { useRevealedText } from './reveal';
 import { trackWindowAway } from '../shared/windowAway';
+import { arrowStep, windowDragHandler } from '../shared/windowDrag';
+
+/** Dragging the panel by its header; its buttons (Close) keep working. */
+const moveByHeader = windowDragHandler({
+  ignore: 'button, a, input',
+  start: () => window.unvibe.panelDragStart(),
+  move: (dx, dy) => window.unvibe.panelDragMove(dx, dy),
+  end: () => window.unvibe.panelDragEnd(),
+});
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut } from '../shared/shortcutGuide';
 import { ConsentForm } from '../shared/consentForm';
@@ -70,11 +79,16 @@ function ThinkingCard({ hasCode }: { hasCode: boolean }) {
   );
 }
 
-/** The shortcut as one cap per key (Design Q8): ⌃ U on a Mac, Ctrl Alt U on Windows and Linux (Security N2). */
+/**
+ * The shortcut as one cap per key (Design Q8): ⌃ U on a Mac, Ctrl Alt U on Windows and Linux (Security N2). On a Mac the
+ * Control cap reads "⌃ control", since many people don't know ⌃ and press ⌘ instead (0.1.54).
+ */
 function Keycaps({ accel }: { accel: string }) {
+  const keys = accel ? shortcutCaps(accel) : isMac ? shortcutCaps('Control+U', false) : [reviewKeyHint];
+  // The screen-reader name stays the plain keys ("⌃ U" reads "control U"); only the drawn cap gains the word.
   return (
-    <span className="ob-keys" aria-label={accel ? shortcutCaps(accel).join(' ') : reviewKeyHint}>
-      {(accel ? shortcutCaps(accel) : [reviewKeyHint]).map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}
+    <span className="ob-keys" aria-label={keys.join(' ')}>
+      {keys.map((key, i) => <kbd key={`${key}-${i}`}>{key === '⌃' ? '⌃ control' : key}</kbd>)}
     </span>
   );
 }
@@ -270,9 +284,11 @@ function applyTheme(preference: ThemePreference) {
   document.documentElement.dataset.r2 = 'g1';
 }
 
-/** Main passes Settings › Theme in the page URL, so the first paint already has it (no light flash in dark mode). */
-const START_THEME: ThemePreference = ((t) => (t === 'dark' || t === 'system' ? t : 'light'))(new URLSearchParams(window.location.search).get('theme'));
+/** Main passes Settings › Theme and Density in the page URL, so the first paint already has them (no light flash in dark mode). */
+const START_PARAMS = new URLSearchParams(window.location.search);
+const START_THEME: ThemePreference = ((t) => (t === 'dark' || t === 'system' ? t : 'light'))(START_PARAMS.get('theme'));
 applyTheme(START_THEME);
+document.documentElement.dataset.density = START_PARAMS.get('density') === 'compact' ? 'compact' : 'comfortable';
 
 /** panelOut's length (widget.css). */
 const PANEL_EXIT_MS = 160;
@@ -319,6 +335,8 @@ function Widget() {
   const [fade, setFade] = useState(NOT_FADED);
   const fadeTo = (event: FadeEvent) => setFade((prev) => nextFade(prev, event));
   const hoverTimer = useRef<number | undefined>(undefined);
+  /** The press that woke a faded pane: its click is swallowed (Security S5 on #344). */
+  const swallowClick = useRef(false);
 
   const outOfExplanations = usage ? usage.remaining <= 0 : false;
   const offer = usage ? limitOfferCopy(usage.plan, usage, proOpen) : null;
@@ -339,13 +357,14 @@ function Widget() {
     window.setTimeout(() => window.unvibe.closeWidget(), PANEL_EXIT_MS);
   }, []);
 
-  // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon.
+  // Theme follows Settings › Theme (Design ruling c), with the one-time move of the old panel moon; Density likewise.
   useEffect(() => {
     let theme: ThemePreference = START_THEME;
     // The last click-away setting seen; main sends the whole set (theme and click-away together) on any change.
     let behavior: string | undefined;
     void window.unvibe.getSettings().then(async (st) => {
-      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; inactiveBehavior?: string };
+      const settings = st as { theme?: ThemePreference; themeChosen?: boolean; density?: string; features?: typeof features; soundEffects?: boolean; soundVolume?: number; soundStyle?: 'soft' | 'pixel'; inactiveBehavior?: string };
+      document.documentElement.dataset.density = settings.density === 'compact' ? 'compact' : 'comfortable';
       theme = settings.theme ?? 'light';
       behavior ??= settings.inactiveBehavior;
       configureTones({ enabled: settings.soundEffects ?? true, volume: settings.soundVolume ?? 0.3, style: settings.soundStyle ?? 'soft' });
@@ -367,6 +386,7 @@ function Widget() {
         theme = next.theme;
         applyTheme(theme);
       }
+      if (next.density) document.documentElement.dataset.density = next.density;
       // Fade ↔ Hide changed: start from the solid panel instead of keeping an old fade. A theme change alone keeps
       // the fade.
       if (next.inactiveBehavior && behavior !== undefined && next.inactiveBehavior !== behavior) setFade((prev) => nextFade(prev, 'back'));
@@ -564,6 +584,14 @@ function Widget() {
   }, []);
 
   const askInputRef = useRef<HTMLInputElement>(null);
+  // A finished explanation hands focus to "Ask your own question" (Design, Question it v1), inside the panel only (the
+  // panel never takes focus from the editor by itself), and only when nothing in it has focus: the depth picker or the
+  // scrolled answer keeps it (lead review on #346).
+  useEffect(() => {
+    const idle = !document.activeElement || document.activeElement === document.body;
+    if (answerReady && view === 'explain' && idle) askInputRef.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when an answer becomes ready
+  }, [answerReady]);
   /** Sends a follow-up into the Ask thread; `consented` after "Send anyway" on a possible secret in it. */
   const askFollowUp = (question: string, consented = false) => {
     setS((prev) => ({
@@ -890,8 +918,27 @@ function Widget() {
     }
   };
 
+  /** A question chip: the question goes in the box (typed text is kept) and the box takes focus; the person sends it. */
+  const askQuestion = (question: string) => {
+    const ask = prefillAsk(s.ask, question);
+    if (ask !== s.ask) patch({ ask });
+    requestAnimationFrame(() => {
+      const box = askInputRef.current;
+      if (!box) return;
+      box.focus({ preventScroll: true });
+      box.setSelectionRange(box.value.length, box.value.length);
+    });
+  };
+
   const askField = (
-    <AskField value={s.ask} disabled={stillTyping || asking} inputRef={askInputRef} onChange={(ask) => patch({ ask })} onSend={sendAsk}>
+    <AskField
+      value={s.ask}
+      disabled={stillTyping || asking}
+      inputRef={askInputRef}
+      {...(view === 'explain' ? { placeholder: 'Ask your own question…', label: 'Ask your own question' } : {})}
+      onChange={(ask) => patch({ ask })}
+      onSend={sendAsk}
+    >
       {view === 'ask' && features.voice ? (
         <button
           type="button"
@@ -967,12 +1014,14 @@ function Widget() {
     if (view === 'explain') {
       if (phase === 'streaming') return <StopButton onStop={() => window.unvibe.cancel()} />;
       if (phase !== 'done') return null;
+      // 0.1.54 "Question it" (BOSS ruling, frame 4): the questions lead, then the box they fill, then the rest.
       return (
         <>
-          <ExplainChips busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
-            {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
-          </ExplainChips>
+          <QuestionChips busy={stillTyping || asking} ask={s.ask} onQuestion={askQuestion} />
           {askField}
+          <ExplainActions busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
+            {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
+          </ExplainActions>
         </>
       );
     }
@@ -988,6 +1037,25 @@ function Widget() {
       className={`ob u-rim ob--${phase} ob--view-${view}${leaving ? ' is-leaving' : ''}`}
       aria-label="Unvibe"
       style={{ opacity: fadeNow.opacity, transition: `opacity ${fadeNow.transitionMs}ms var(--u-ease)` }}
+      // A press on a faded pane only wakes it; nothing inside sees the press or its click (isFaded).
+      onPointerDownCapture={(e) => {
+        swallowClick.current = isFaded(fade);
+        if (!swallowClick.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        fadeTo('press');
+      }}
+      // The click follows its pointerup in the same task; a release that brings none (the pointer left) clears it.
+      onPointerUpCapture={() => {
+        if (swallowClick.current) window.setTimeout(() => { swallowClick.current = false; }, 0);
+      }}
+      onKeyDownCapture={() => { swallowClick.current = false; }}
+      onClickCapture={(e) => {
+        if (!swallowClick.current) return;
+        swallowClick.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onPointerDown={() => fadeTo('press')}
       onMouseEnter={() => {
         window.clearTimeout(hoverTimer.current);
@@ -998,12 +1066,30 @@ function Widget() {
         fadeTo('leave');
       }}
     >
-      <header className="ob-head" ref={headRef}>
+      {/* The panel moves by its header (0.1.54): drag, double-click to put it back beside the code, arrows by 16 px. */}
+      <header
+        className="ob-head"
+        ref={headRef}
+        tabIndex={0}
+        // Focusable, so it needs a name: the panel's own title (no new string). Review NIT on #344.
+        role="group"
+        aria-labelledby="ob-head-title"
+        title="Drag to move. Double-click to put it back."
+        aria-description="Use the arrow keys to move the panel."
+        onPointerDown={moveByHeader}
+        onDoubleClick={(event) => { if (!(event.target as Element).closest('button')) window.unvibe.panelResetPosition(); }}
+        onKeyDown={(event) => {
+          const step = event.target === event.currentTarget ? arrowStep(event.key) : null;
+          if (!step) return;
+          event.preventDefault();
+          window.unvibe.panelNudge(step.dx, step.dy);
+        }}
+      >
         <span className="ob-head__vibe" aria-hidden="true">
           <Buddy mood={phase === 'streaming' ? 'thinking' : landed ? 'happy' : 'idle'} size={20} label="Vibe" listen />
         </span>
         <div className="ob-head__text">
-          <span className="ob-head__title">{title}</span>
+          <span className="ob-head__title" id="ob-head-title">{title}</span>
           {meta ? <span className="ob-meta">{meta}</span> : null}
         </div>
         <span className="sr-only" role="status">{phaseLabel}</span>

@@ -106,3 +106,7 @@
   :root .island [data-step="1"] .island__dots i:nth-child(2),
   :root .island [data-step="2"] .island__dots i:nth-child(3) { opacity: 1; }
 }
+
+/* 0.1.54: the floating Island moves by its pill (the notch Island stays put). Its buttons keep the pointer cursor. */
+:root .island--movable .island__compact { cursor: grab; touch-action: none; }
+:root .island--movable .island__compact:active { cursor: grabbing; }

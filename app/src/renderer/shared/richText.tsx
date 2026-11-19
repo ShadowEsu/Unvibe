@@ -99,15 +99,21 @@ function wrapWords(text: string, words: WordCounter): ReactNode[] {
   return out;
 }
 
-/** Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk. With `words`, plain words fade in one by one. */
+/**
+ * Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk outside code spans only,
+ * so code like df[['a']] or {{ name }} stays as written (lead review on #348). With `words`, plain words fade in one by one.
+ */
 export function renderInline(text: string, words?: WordCounter): ReactNode[] {
   const cleaned = text
-    .replace(/\{\{[^}]+\}\}/g, '')
-    .replace(/\[\[(?:cite:)?([^\]]+?)\]\]/gi, (_full, inner: string) => {
-      const m = String(inner).match(/^(?:cite:)?(.+?):(\d+(?:-\d+)?)$/i);
-      if (!m) return '';
-      return `\u0000CITE:${m[1]}:${m[2]}\u0000`;
-    });
+    .split(/(`[^`\n]+`)/)
+    .map((part, i) => (i % 2 === 1 ? part : part
+      .replace(/\{\{[^}]+\}\}/g, '')
+      .replace(/\[\[(?:cite:)?([^\]]+?)\]\]/gi, (_full, inner: string) => {
+        const m = String(inner).match(/^(?:cite:)?(.+?):(\d+(?:-\d+)?)$/i);
+        if (!m) return '';
+        return `\u0000CITE:${m[1]}:${m[2]}\u0000`;
+      })))
+    .join('');
 
   // Bold text may hold code spans, and a code span may hold `*` (e.g. **`n * n`**); a bare `*` still ends
   // the match, so the inner renderInline pass can't find bold again. The two alternatives share no

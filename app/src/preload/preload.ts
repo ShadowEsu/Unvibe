@@ -44,11 +44,28 @@ const api = {
   setBarNotice: (on: boolean) => ipcRenderer.send('bar:setNotice', on),
   barContextMenu: (state: { hasRecent: boolean }) => ipcRenderer.send('bar:contextMenu', state),
   barSnapshot: () => ipcRenderer.invoke('bar:snapshot'),
+  /** The floating Island's card opens upward (main decides from where the Island sits on its screen). */
+  barOpensUp: (): Promise<boolean> => ipcRenderer.invoke('bar:opensUp'),
+  onBarOpensUp: (cb: (opensUp: boolean) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, opensUp: boolean) => cb(opensUp === true);
+    ipcRenderer.on('bar:opensUp', listener);
+    return () => ipcRenderer.removeListener('bar:opensUp', listener);
+  },
+  /** Dragging the floating Island: the pointer's travel since the drag began, in screen pixels. */
+  barDragStart: () => ipcRenderer.send('bar:dragStart'),
+  barDragMove: (dx: number, dy: number) => ipcRenderer.send('bar:dragMove', dx, dy),
+  barDragEnd: () => ipcRenderer.send('bar:dragEnd'),
 
   // widget review (one panel, one session)
   widgetReady: () => ipcRenderer.send('widget:ready'),
   /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
   fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** Moving the panel by its header: drag (pointer travel since the drag began), arrow keys, double-click to put it back. */
+  panelDragStart: () => ipcRenderer.send('widget:dragStart'),
+  panelDragMove: (dx: number, dy: number) => ipcRenderer.send('widget:dragMove', dx, dy),
+  panelDragEnd: () => ipcRenderer.send('widget:dragEnd'),
+  panelNudge: (dx: number, dy: number) => ipcRenderer.send('widget:nudge', dx, dy),
+  panelResetPosition: () => ipcRenderer.send('widget:resetPosition'),
   /** Saved tab: pinned lessons, then Recent, from this computer's store. */
   savedLessons: (): Promise<{ pinned: SavedRow[]; recent: SavedRow[] }> => ipcRenderer.invoke('widget:savedLessons'),
   /** One saved lesson's text as stored; never re-reads the file or runs a review. */
@@ -98,9 +115,9 @@ const api = {
   onReviewEvent: (cb: (ev: unknown) => void) => ipcRenderer.on('review:event', (_e, ev) => cb(ev)),
   /** Fade: main says the panel lost (true) or got back (false) focus; the page animates its own opacity. */
   onPanelAway: (cb: (away: boolean) => void) => ipcRenderer.on('panel:away', (_e, away: unknown) => cb(away === true)),
-  /** Settings › Theme or "When I click away" changed. */
-  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
-    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
+  /** Settings › Theme, Density or "When I click away" changed. */
+  onPanelSettings: (cb: (settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => void) =>
+    ipcRenderer.on('panel:settings', (_e, settings: { theme?: 'system' | 'light' | 'dark'; density?: 'comfortable' | 'compact'; inactiveBehavior?: 'fade' | 'hide' }) => cb(settings)),
 
   // learning (companion)
   profile: () => ipcRenderer.invoke('learning:profile'),
@@ -144,6 +161,8 @@ const api = {
   // settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch: unknown) => ipcRenderer.invoke('settings:set', patch),
+  /** Settings › Activation shortcut started (true) or stopped (false) listening for new keys. */
+  setShortcutRecording: (on: boolean) => ipcRenderer.send('settings:recordingShortcut', on),
   integrations: () => ipcRenderer.invoke('integrations:status'),
   installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
 
@@ -220,6 +239,12 @@ const api = {
     const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; name?: string; error?: string }) => cb(r);
     ipcRenderer.on('account:device', listener);
     return () => { ipcRenderer.removeListener('account:device', listener); };
+  },
+  /** The browser could not be opened for this sign-in link (it may arrive before or after startDeviceAuth replies). */
+  onDeviceBrowserFailed: (cb: (result: { verificationUri: string }) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, r: { verificationUri: string }) => cb(r);
+    ipcRenderer.on('account:deviceBrowserFailed', listener);
+    return () => { ipcRenderer.removeListener('account:deviceBrowserFailed', listener); };
   },
   signOut: () => ipcRenderer.invoke('account:signOut'),
   deleteAccount: () => ipcRenderer.invoke('account:delete'),
