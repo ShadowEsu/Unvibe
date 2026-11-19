@@ -339,6 +339,9 @@ export function TryIt({
           ) : (
             <div className="try__answer">
               <div dangerouslySetInnerHTML={{ __html: render(answer) }} />
+              {/* Security SHOULD (ig-click test, 19 Nov): the end card's accuracy line, word for word, under the answer and
+                  above the dashed rule (Design 04:19). */}
+              <p className="try__caveat">AI explanations can be wrong. Check the important ones.</p>
               <div className="try__after">
                 {timeLine ? <p className="try__took">{timeLine}</p> : null}
                 <GetUnvibe surface={answerSurface} />
