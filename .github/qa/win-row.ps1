@@ -128,7 +128,8 @@ if ($Kind -eq 'ps1') {
   # The site's command, run as a person pastes it into Windows PowerShell; only the anonymous count goes nowhere.
   # -OutFile keeps the bytes as served, so the sha256 below is the served file's (run 43566157848 hashed a
   # Set-Content -Encoding utf8 re-save: BOM + bytes + CRLF, 813cb468 for the served 179a3e6f).
-  Invoke-WebRequest -Uri 'https://unvibe.site/install.ps1' -OutFile "$Out\install.ps1.live" -UseBasicParsing
+  # ?notrack=1: the same script, left out of the site's install-script fetch count (AGENT_CONTEXT L59; #355).
+  Invoke-WebRequest -Uri 'https://unvibe.site/install.ps1?notrack=1' -OutFile "$Out\install.ps1.live" -UseBasicParsing
   $live = [IO.File]::ReadAllText("$Out\install.ps1.live")
   $run = $live -replace '(?m)^\$track = .*$', '$track = "http://127.0.0.1:9/qa-no-count"'
   Set-Content "$Out\install.ps1.run" $run -Encoding utf8

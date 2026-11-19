@@ -57,8 +57,9 @@ prompts() { # <label>: every system prompt window on screen: picture, text, butt
 
 case "$path_kind" in
 curl)
-  # The site's one-liner, as given, with only its anonymous 'installed' count sent nowhere.
-  curl -fsSL https://unvibe.site/install.sh -o "$out/install.sh.live"
+  # The site's one-liner, as given, with only its anonymous 'installed' count sent nowhere. ?notrack=1: the site serves
+  # the same script but leaves our fetch out of its install-script fetch count (AGENT_CONTEXT L59; #355).
+  curl -fsSL "https://unvibe.site/install.sh?notrack=1" -o "$out/install.sh.live"
   sed 's#^TRACK=.*#TRACK="http://127.0.0.1:9/qa-no-count"#' "$out/install.sh.live" > "$out/install.sh.run"
   r "install.sh sha256 $(shasum -a 256 "$out/install.sh.live" | cut -d' ' -f1); run copy differs only in: $(diff "$out/install.sh.live" "$out/install.sh.run" | grep '^[<>]' | tr '\n' ' ')"
   start=$(date +%s)

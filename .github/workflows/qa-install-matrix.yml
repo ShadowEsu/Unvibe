@@ -27,7 +27,7 @@ concurrency:
 # commit message: mac-row.sh / win-row.ps1 skip the explanation with NO_EXPLAIN=1, and first-explain.mjs refuses unless
 # QA_AI_OK is "1". Turning either back on takes a reviewed change to this file, not a marker.
 env:
-  V: "0.1.52"
+  V: "0.1.54"
   QA_AI_OK: "0"
   NO_EXPLAIN: "1"
 
@@ -47,9 +47,9 @@ jobs:
     timeout-minutes: 35
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
-      # 0.1.52 before the site moves its pin (lead, Mon 16 Nov): the live install.sh run with its own UNVIBE_BETA_TAG
-      # override, so the curl rows install the published v0.1.52; once the site pins v0.1.52 this changes nothing.
-      UNVIBE_BETA_TAG: v0.1.52
+      # 0.1.54 before the site moves its pin (ledger 639, Thu 19 Nov): the live install.sh run with its own UNVIBE_BETA_TAG
+      # override, so the curl rows install the published v0.1.54; once the site pins v0.1.54 this changes nothing.
+      UNVIBE_BETA_TAG: v0.1.54
       WANT_ASAR: 3858a8999b6c5db2fdf879bfe59b94271fdb1555fa50de5b7a0fbaa659635b10
     steps:
       # Opt-in: only rows named by "[only:<path>]" in the commit message run (a push with no marker ran all 14 rows with
