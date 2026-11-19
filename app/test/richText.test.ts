@@ -117,6 +117,9 @@ test('code in a table cell breaks only at its seams, never inside a name, a spre
   assert.equal(seams('this.timer = setTimeout(run, wait);'), 'this.|timer =| setTimeout(|run,| wait);');
   assert.equal(seams('a === b && f => f.x'), 'a ===| b &amp;&amp; f =&gt; f.|x');
   assert.equal(seams('items[0].price'), 'items[0].|price');
+  // Digits on both sides of a dot are a number or a version, never a member: they stay whole.
+  assert.equal(seams('scale(0.97)'), 'scale(|0.97)');
+  assert.equal(seams('1.5e3 v1.2.3 row1.cells'), '1.5e3 v1.2.3 row1.|cells');
   // Outside tables, code is untouched: prose already wraps around it.
   assert.doesNotMatch(markup('Call `fn(a, b)` once.'), /<wbr/);
 });
@@ -154,7 +157,10 @@ test('a line with pipes but no matching separator row is not a table', () => {
   }
   for (const text of prose.slice(4, 8)) assert.doesNotMatch(markup(text, true), /<table/, `${text} (streaming)`);
   // A paragraph line directly above a table stays a paragraph; the table still renders.
-  assert.match(markup('Here it is:\n| a | b |\n|---|---|\n| 1 | 2 |'), /<p>Here it is:<\/p><div class="rich-table"[^>]*><table>/);
+  // A table that fits (the only state without layout) is plain: no region, no tab stop, no scroll cue.
+  const fits = markup('Here it is:\n| a | b |\n|---|---|\n| 1 | 2 |');
+  assert.match(fits, /<p>Here it is:<\/p><div class="rich-table"><table>/);
+  assert.doesNotMatch(fits, /tabindex|role=|aria-label|rich-table__cue|Scroll sideways/);
 });
 
 test('a saved explanation preview shows no raw heading or citation markup (QA 0.1.46 P3)', () => {

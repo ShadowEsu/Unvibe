@@ -101,8 +101,9 @@ function wrapWords(text: string, words: WordCounter): ReactNode[] {
 
 /**
  * Break opportunities inside code at its own seams (Design, 0.1.55 tables): after `(`, `,`, `;`, an assignment `=`
- * (not inside `==` or `=>`) and a member-access `.` (not a spread's dots). So `fn(...argsFromCall5)` can wrap as
- * "fn(" / "...argsFromCall5)" in a narrow table cell instead of pushing the table wider than the pane.
+ * (not inside `==` or `=>`) and a member-access `.` (not a spread's dots, nor a dot between digits, so `0.97` and
+ * `1.2.3` stay whole). So `fn(...argsFromCall5)` can wrap as "fn(" / "...argsFromCall5)" in a narrow table cell
+ * instead of pushing the table wider than the pane.
  */
 export function codeSeams(code: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -112,7 +113,8 @@ export function codeSeams(code: string): ReactNode[] {
     const next = code[i + 1]!;
     const seam = ch === '(' || ch === ',' || ch === ';'
       || (ch === '=' && next !== '=' && next !== '>')
-      || (ch === '.' && /[\w)\]]/.test(code[i - 1] ?? '') && /[\w$]/.test(next));
+      || (ch === '.' && /[\w)\]]/.test(code[i - 1] ?? '') && /[\w$]/.test(next)
+        && !(/\d/.test(code[i - 1] ?? '') && /\d/.test(next)));
     if (!seam) continue;
     out.push(code.slice(start, i + 1), <wbr key={i} />);
     start = i + 1;
@@ -252,15 +254,19 @@ function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[
 /**
  * A table wider than its pane (a narrow overlay, 4+ columns) scrolls sideways in its own frame. Then, and only then,
  * the frame is a focusable region the arrow keys scroll, and one line under it says so: macOS hides scrollbars, and the
- * column off to the right is often the one that explains (Design S-1, 0.1.55). Rows, streaming and density re-check.
+ * column off to the right is often the one that explains (Design S-1, 0.1.55). Rows, streaming and density re-check;
+ * a focused frame stays a region until it loses focus, so a switch to Compact never drops focus to the page.
  */
 function RichTable({ children }: { children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
+  const check = () => {
+    const el = box.current;
+    if (el) setOverflows(el.scrollWidth > el.clientWidth + 1 || el === document.activeElement);
+  };
   useEffect(() => {
     const el = box.current;
     if (!el) return undefined;
-    const check = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
     const observer = new ResizeObserver(check);
     observer.observe(el);
     if (el.firstElementChild) observer.observe(el.firstElementChild);
@@ -269,7 +275,7 @@ function RichTable({ children }: { children: ReactNode }) {
   }, []);
   return (
     <>
-      <div ref={box} className="rich-table" {...(overflows ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
+      <div ref={box} className="rich-table" onBlur={check} {...(overflows ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
         {children}
       </div>
       {overflows ? <p className="rich-table__cue">Scroll sideways for the rest of the table.</p> : null}
