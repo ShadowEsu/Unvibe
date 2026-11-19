@@ -29,6 +29,12 @@ export interface ExplainPage {
    */
   heading?: string;
   /**
+   * The sample is output, an error or a file a tool generates (lsof output, a traceback, package-lock.json, compiled
+   * assembly), not code an AI tool writes for you. The download card then keeps its plain wording instead of
+   * "When your AI tool writes {subject}, select it…" (ledger 636).
+   */
+  sampleIsOutput?: true;
+  /**
    * The <title> and link-preview title without the " · Unvibe" suffix, for pages whose target query is a command,
    * error or pattern: it starts with the words people type ("ps aux output explained, column by column"), at most
    * 51 characters so the whole title is at most 60. Without it the title is "Explain {heading} in plain English".
@@ -655,6 +661,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    sampleIsOutput: true,
     published: "2026-11-05",
     heading: "git log output",
     related: ["git-diff", "git-rebase", "gitignore"],
@@ -2797,6 +2804,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "git diff output",
     title: "git diff output explained, line by line",
@@ -2921,6 +2929,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "Python tracebacks",
     title: "Python traceback explained: read the stack trace",
@@ -2972,6 +2981,7 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    sampleIsOutput: true,
     published: "2026-11-06",
     title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
@@ -3255,6 +3265,7 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
@@ -3468,6 +3479,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
+    sampleIsOutput: true,
     published: "2026-11-06",
     title: "git rebase -i explained: the interactive todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
@@ -3571,6 +3583,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "ps aux output",
     title: "ps aux output explained, column by column",
@@ -3732,6 +3745,7 @@ output "app_name" {
   {
     id: "assembly",
     fileName: "sum.s",
+    sampleIsOutput: true,
     published: "2026-11-08",
     title: "Assembly code explained: arm64 from a C function",
     related: ["c", "cpp", "make"],
@@ -3793,6 +3807,7 @@ LBB0_4:
   {
     id: "git-merge-conflict",
     fileName: "shipping.js",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "git merge conflicts",
     title: "git merge conflict explained: the markers",
@@ -3844,6 +3859,7 @@ export function deliveryDays(country) {
   {
     id: "npm-error",
     fileName: "npm-install.txt",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "npm errors",
     title: "npm error code 1, ENOENT and node-gyp explained",
@@ -3899,6 +3915,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
   {
     id: "lsof",
     fileName: "lsof.txt",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "lsof output",
     title: "lsof command explained: find what holds a port",

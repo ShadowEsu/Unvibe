@@ -19,7 +19,7 @@ export function ExplainDownload({ subject = "code", surface = "explain", forAiCo
       <h2 id="explain-get-title">Explain {subject} beside your editor</h2>
       {forAiCode ? (
         <p>
-          {`When your AI tool writes ${subject}, select it in any app and press the shortcut. On a Mac that's ${mac.anywhere}, not Command+U (${mac.editor} only works in Cursor and VS Code with the editor bridge). On Windows it's ${windows.anywhere}. Vibe explains it beside your editor, you can ask it why, and Test me checks that you followed. Unvibe is a free app for Mac and Windows.`}
+          {`When your AI tool writes ${subject}, select it in any app and press the shortcut. On a Mac that's ${mac.anywhere}, not Command+U (${mac.editor} only works in Cursor and VS Code with the editor bridge). On Windows it's ${windows.anywhere}. Vibe explains it beside your editor, you can ask it why, and Test me checks that you followed. Free for Mac and Windows.`}
         </p>
       ) : (
         <p>
