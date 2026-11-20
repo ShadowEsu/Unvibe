@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useId, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useId, useState } from "react";
 import { EmailMeLink } from "@/components/paper/EmailMeLink";
 import { INSTALL_COPY, InstallBox, InstallCommand } from "@/components/paper/InstallBox";
 import { ReminderInline } from "@/components/paper/ReminderToast";
@@ -51,8 +51,8 @@ function Thanks() {
   return (
     <section className="dt" id="thanks" tabIndex={-1} aria-labelledby="dt-h" data-os={file.os}>
       <div className="dt__in">
-        <p className="d-label d-mono d-left">{D_THANKS.file(file.label)}</p>
-        <h2 id="dt-h" className="dt__h d-serif">{D_THANKS.h1}</h2>
+        <p className="d-label">{D_THANKS.file(file.label)}</p>
+        <h2 id="dt-h" className="dt__h">{D_THANKS.h1}</h2>
         {file.os === "mac" ? (
           <>
             {/* the Terminal line first (Design 11 Nov), the steps after it for anyone who opens the download */}
@@ -69,16 +69,18 @@ function Thanks() {
           {copy.steps.map((step, i) => {
             const shot = copy.stepShots[i];
             return (
-              <li key={step} style={{ "--i": i } as CSSProperties}>
+              <li key={step}>
                 <span className="dt__n" aria-hidden="true">{i + 1}</span>
                 <div>
                   <p>{step}</p>
                   {shot ? (
                     <figure className="dt__shot">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- a real screenshot at its native size */}
-                      <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
+                      <div className="d-frame">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- a real screenshot at its native size */}
+                        <img src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} decoding="async" />
+                      </div>
                       <figcaption>
-                        <span className="dt__shot-label d-mono">{shot.caption}</span>
+                        <span className="dt__shot-label">{shot.caption}</span>
                         {/* a hidden full stop and a space keep "…macOS 26. On macOS 15…" two sentences for screen readers and
                             textContent; the label stays unpunctuated on screen */}
                         {shot.note ? <><span className="sr-only">.</span>{" "}<span className="dt__shot-note">{shot.note}</span></> : null}
@@ -139,9 +141,9 @@ function Install() {
 }
 
 /**
- * /beta, direction D (plan mock 11; the Aurora prompt's layout): a bubbles panel with "Get Unvibe" and three step
- * pills (ANIMATIONS #32), and the cream right column with the live InstallBox, restyled, never replaced. The
- * thank-you state sits above it after a one-click download.
+ * /beta in Option A (Design §5): "Get Unvibe" at 60/36 and its three steps as a numbered list with 1 px rules on the
+ * left, the live InstallBox (restyled, never replaced) on the right. The thank-you state sits above it after a
+ * one-click download.
  */
 export function Download() {
   return (
@@ -151,24 +153,16 @@ export function Download() {
       </Suspense>
       <div className="dd" id="install">
         <section className="dd__panel" aria-labelledby="dd-h">
-          <div className="dd__bg" aria-hidden="true" />
-          <p className="dd__mark" aria-hidden="true">
-            {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our own mark */}
-            <img src="/brand/vibe.svg" width={34} height={34} alt="" />
-            <span className="dd__word">Unvibe</span>
-          </p>
-          <div className="dd__copy">
-            <h1 id="dd-h" className="dd__h1 d-serif">{D_GET.h1}</h1>
-            <p className="dd__sub">{D_GET.sub}</p>
-            <ol className="dd__pills" data-d-pills="">
-              {D_GET.steps.map((step, i) => (
-                <li key={i} className={i === 0 ? "dd__pill dd__pill--on" : "dd__pill"}>
-                  <span className="dd__n">{i + 1}</span>
-                  <Os v={step} />
-                </li>
-              ))}
-            </ol>
-          </div>
+          <h1 id="dd-h" className="dd__h1">{D_GET.h1}</h1>
+          <p className="dd__sub">{D_GET.sub}</p>
+          <ol className="dd__steps">
+            {D_GET.steps.map((step, i) => (
+              <li key={i}>
+                <span className="dd__n">{i + 1}</span>
+                <Os v={step} />
+              </li>
+            ))}
+          </ol>
         </section>
         <div className="dd__install">
           <Install />
