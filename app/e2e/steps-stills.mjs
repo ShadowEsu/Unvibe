@@ -123,9 +123,20 @@ let selectionOk = false; // the calls go only on a real selection, so a failed s
 let browser = null;
 const PORT = 9339;
 try {
-  spawn(code, ['--user-data-dir', codeData, '--extensions-dir', path.join(codeData, 'extensions'), '--disable-extensions', '--new-window', `--remote-debugging-port=${PORT}`, sampleFile], { stdio: 'ignore', detached: true }).unref();
-  browser = await waitFor(() => chromium.connectOverCDP(`http://127.0.0.1:${PORT}`).catch(() => null), 60000, 1000);
-  if (!browser) throw new Error('VS Code did not open its debug port');
+  // VS Code's own environment, as the D5 rows start it (d5-button.mjs openVsCode): no ELECTRON_RUN_AS_NODE (it would
+  // start as plain Node), and none of the run's tokens or Unvibe's variables.
+  const codeEnv = { ...process.env };
+  delete codeEnv.ELECTRON_RUN_AS_NODE;
+  for (const key of Object.keys(codeEnv)) if (/^(UNVIBE_|GITHUB_TOKEN|GH_TOKEN|ACTIONS_)/.test(key)) delete codeEnv[key];
+  spawn(code, ['--user-data-dir', codeData, '--extensions-dir', path.join(codeData, 'extensions'), '--disable-extensions', '--new-window', `--remote-debugging-port=${PORT}`, sampleFile], { stdio: 'ignore', detached: true, env: codeEnv }).unref();
+  browser = await waitFor(() => chromium.connectOverCDP(`http://127.0.0.1:${PORT}`).catch(() => null), 90000, 1000);
+  if (!browser) {
+    // Run 44683184081 stopped here with nothing else to go on: whether VS Code runs at all, and the screen.
+    let running = 'no';
+    try { running = execFileSync('pgrep', ['-f', 'Visual Studio Code.app/Contents/MacOS/'], { encoding: 'utf8' }).trim().split('\n').length + ' process(es)'; } catch { /* none */ }
+    try { execFileSync('screencapture', ['-x', path.join(out, 'steps-vscode-no-port.png')]); } catch { /* no still */ }
+    throw new Error(`VS Code did not open its debug port in 90 s (VS Code running: ${running}; screen: steps-vscode-no-port.png)`);
+  }
   editor = await waitFor(() => browser.contexts().flatMap((c) => c.pages()).find((p) => /workbench/.test(p.url())), 30000, 500);
   if (!editor) throw new Error('no VS Code window');
   await editor.locator('.monaco-editor .view-line').first().waitFor({ timeout: 30000 });

@@ -596,7 +596,9 @@ jobs:
 
       # rc0154=steps: the site's three Steps stills (Design's option C; BOSS: 2 hosted calls on the published 0.1.54).
       # VS Code comes from Homebrew's cask (Microsoft's signed app, checksum-checked by brew) with a fresh profile under
-      # $RUNNER_TEMP. Not always(): any failed step before it means nothing is sent.
+      # $RUNNER_TEMP, its quarantine flag removed and its signature and team checked, as the D5 rows' install does (run
+      # 44683184081: without that, VS Code never opened its debug port; [INFERENCE] the first-open dialog of a
+      # quarantined app held it). Not always(): any failed step before it means nothing is sent.
       - name: Shoot the site's Steps stills (rc0154 steps)
         if: inputs.rc0154 == 'steps' && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
         shell: bash
@@ -616,7 +618,13 @@ jobs:
           if [ "$got" != "$want" ]; then echo "::error::the installed dmg is not v0.1.54's ($got); nothing sent"; exit 1; fi
           echo "0.1.54 dmg sha256 $got (matches the release)"
           brew install --cask visual-studio-code
-          export VSCODE_CLI="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+          app="/Applications/Visual Studio Code.app"
+          xattr -dr com.apple.quarantine "$app" || true
+          codesign --verify --deep --strict "$app" && echo "VS Code signature valid"
+          team=$(codesign -dv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+          echo "VS Code $(defaults read "$app/Contents/Info" CFBundleShortVersionString), team $team"
+          if [ "$team" != UBF8T346G9 ]; then echo "::error::VS Code is not signed by Microsoft's team; nothing sent"; exit 1; fi
+          export VSCODE_CLI="$app/Contents/Resources/app/bin/code"
           "$VSCODE_CLI" --version | head -n 1
           cp app/e2e/steps-stills.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           swiftc -O -o "$RUNNER_TEMP/pw/mouse" app/e2e/mouse.swift
