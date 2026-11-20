@@ -21,6 +21,14 @@ test('Vibe does not react when it first appears, only when something happens lat
   assert.doesNotMatch(html, /buddy--react/);
 });
 
+test('Vibe beside words that already say it is hidden from screen readers, not an unnamed image; otherwise it is named', () => {
+  const decoration = renderToStaticMarkup(createElement(Buddy, { mood: 'thinking', label: '' }));
+  assert.match(decoration, /^<span class="buddy buddy--thinking" style="[^"]*" aria-hidden="true">/);
+  assert.doesNotMatch(decoration, /role="img"/);
+  const named = renderToStaticMarkup(createElement(Buddy, { mood: 'thinking' }));
+  assert.match(named, /role="img" aria-label="Vibe is thinking"/);
+});
+
 test("Vibe's bubble is signed with its name and is announced only when live", () => {
   const live = renderToStaticMarkup(createElement(VibeBubble, null, 'Nice, that\'s it.'));
   assert.equal(live, '<p class="vibe-bubble" role="status"><span class="vibe-bubble__name">Vibe</span>Nice, that&#x27;s it.</p>');
