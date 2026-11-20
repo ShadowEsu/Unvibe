@@ -11,7 +11,10 @@
 //      ≤ 150 ms; the first one also creates the window); the button (its own box in its page, 32 px) placed 8 px
 //      right of the mouse-up, centred on it. It leaves after 4 s untouched (round 1) and on a click elsewhere
 //      (rounds 2-5). Placing, hovering and pressing go by the button's box: on Windows its window was 64×64 px.
-//   A2b when the button's window is larger than the button: a click on it beside the button reaches VS Code.
+//   A2b the old invisible strip: clicks 20 px right of, below, and right of and below the button land in VS Code
+//      (its selection goes, its caret moves there) while the button shows; on Windows the button's window is
+//      clipped to the button (GetWindowRgnBox = its 32 px box; GetWindowRect stays 64×64, unvibe-app 438db5df).
+//      Windows turns MouseKeys on first so the VM shows a cursor (unvibe-app's idea); the reads say whether it did.
 //   A3 the I-beam check: a drag in the line-number gutter (VS Code selects the lines; the press wasn't on text) shows
 //      no button. Every press first settles on its point (three small moves, 300 ms). On Windows the harness reads
 //      the cursor as the helper does (GetCursorInfo flags, NULL handle, I-beam) before the press and 40 ms after it;
@@ -36,7 +39,8 @@
 //      far has no answered request; else launch C stops there, with no agreement and no press.
 //   C1 N6: VS Code's password prompt (a development extension's showInputBox({ password: true })), double-clicked.
 //      Mac: no button (secure input). Windows: the button may show (Security N6); pressed with Quick look off, then
-//      on: nothing of the box reaches the clipboard or the panel, and nothing is sent.
+//      on: nothing of the box reaches the clipboard or the panel, and nothing is sent; the Island is out of its working
+//      phases by +4 s after that empty press (read at +1 s and +4 s; Security SHOULD-366c).
 //   C2 Quick look on: a selection, the button, the card (its request fails at the block), Esc closes it, VS Code keeps
 //      focus, and the next Esc reaches VS Code (its find box closes): Unvibe let go of Esc (SHOULD-366a).
 //
@@ -177,6 +181,11 @@ if (os === 'windows') writeFileSync(ptrScript, [
   '  public static void To(int x, int y) { SetCursorPos(x, y); mouse_event(1, 0, 0, 0, UIntPtr.Zero); }',
   '  // The race: the move and the press back to back in this process; returns the ms between them.',
   '  public static double MoveAndPress(int x, int y) { var sw = System.Diagnostics.Stopwatch.StartNew(); SetCursorPos(x, y); mouse_event(1, 0, 0, 0, UIntPtr.Zero); mouse_event(2, 0, 0, 0, UIntPtr.Zero); return sw.Elapsed.TotalMilliseconds; }',
+  '  // MouseKeys on (MKF_MOUSEKEYSON | MKF_AVAILABLE) gives a VM with no mouse a pointing device, so Windows shows a',
+  '  // cursor (unvibe-app 2026-11-20, untested). SPI_SETMOUSEKEYS 0x37, SPIF_SENDCHANGE only (not saved).',
+  '  [StructLayout(LayoutKind.Sequential)] public struct MOUSEKEYS { public uint cbSize, dwFlags, iMaxSpeed, iTimeToMaxSpeed, iCtrlSpeed, dwReserved1, dwReserved2; }',
+  '  [DllImport("user32.dll")] public static extern bool SystemParametersInfo(uint a, uint b, ref MOUSEKEYS mk, uint f);',
+  '  public static string MouseKeys() { var mk = new MOUSEKEYS(); mk.cbSize = (uint)Marshal.SizeOf(mk); mk.dwFlags = 3; mk.iMaxSpeed = 10; mk.iTimeToMaxSpeed = 1000; return "mousekeys=" + (SystemParametersInfo(0x37, mk.cbSize, ref mk, 2) ? 1 : 0); }',
   '}',
   '"@',
   '[void][Ptr]::SetProcessDPIAware()',
@@ -184,6 +193,7 @@ if (os === 'windows') writeFileSync(ptrScript, [
   'function Settle([int]$x, [int]$y) { [Ptr]::To($x - 2, $y); Start-Sleep -Milliseconds 60; [Ptr]::To($x + 2, $y); Start-Sleep -Milliseconds 60; [Ptr]::To($x, $y); Start-Sleep -Milliseconds 300 }',
   'function Steps([int]$ax, [int]$ay, [int]$bx, [int]$by) { for ($i = 1; $i -le 24; $i++) { [Ptr]::To([int]($ax + ($bx - $ax) * $i / 24), [int]($ay + ($by - $ay) * $i / 24)); Start-Sleep -Milliseconds 20 } }',
   'if ($op -eq "move") { [Ptr]::To($x1, $y1) }',
+  'if ($op -eq "mousekeys") { "before: $([Ptr]::Cur())"; [Ptr]::MouseKeys(); [Ptr]::To($x1, $y1); Start-Sleep -Milliseconds 300; "after: $([Ptr]::Cur())" }',
   'if ($op -eq "click") { Settle $x1 $y1; "press: $([Ptr]::Cur())"; for ($i = 0; $i -lt $n; $i++) { [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 30; [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 60 } }',
   'if ($op -eq "drag") {',
   '  Settle $x1 $y1; $before = [Ptr]::Cur()',
@@ -271,28 +281,40 @@ if (os === 'windows') writeFileSync(zScript, [
   '  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);',
   '  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }',
   '  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);',
+  '  // The region a window really has (SetWindowRgn, Electron setShape): 0 error / no region, 1 empty, 2 simple, 3 complex;',
+  '  // its box is relative to the window rect (unvibe-app 438db5df: the ghost clipped to 32×32 inside a 64×64 window).',
+  '  [DllImport("user32.dll")] public static extern int GetWindowRgnBox(IntPtr h, out RECT r);',
   '  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();',
   '  public static List<string> All() {',
   '    var o = new List<string>();',
-  '    EnumWindows((h, l) => { if (IsWindowVisible(h)) { uint p; GetWindowThreadProcessId(h, out p); RECT r; GetWindowRect(h, out r); if (r.R > r.L && r.B > r.T) o.Add(p + "\\t" + r.L + " " + r.T + " " + (r.R - r.L) + " " + (r.B - r.T)); } return true; }, IntPtr.Zero);',
+  '    EnumWindows((h, l) => { if (IsWindowVisible(h)) { uint p; GetWindowThreadProcessId(h, out p); RECT r; GetWindowRect(h, out r); RECT g; int t = GetWindowRgnBox(h, out g); if (r.R > r.L && r.B > r.T) o.Add(p + "\\t" + r.L + " " + r.T + " " + (r.R - r.L) + " " + (r.B - r.T) + "\\t" + t + " " + g.L + " " + g.T + " " + (g.R - g.L) + " " + (g.B - g.T)); } return true; }, IntPtr.Zero);',
   '    return o;',
   '  }',
   '}',
   '"@',
   '[void][Z]::SetProcessDPIAware()',
-  'foreach ($l in [Z]::All()) { $p = [int]($l.Split("`t")[0]); $name = (Get-Process -Id $p -ErrorAction SilentlyContinue).ProcessName; "$p`t$name`t0`t$($l.Split("`t")[1])" }',
+  'foreach ($l in [Z]::All()) { $f = $l.Split("`t"); $p = [int]$f[0]; $name = (Get-Process -Id $p -ErrorAction SilentlyContinue).ProcessName; "$p`t$name`t0`t$($f[1])`t$($f[2])" }',
 ].join('\r\n'));
-/** Every visible window, front to back: { pid, owner, layer, x, y, w, h } (Mac points, Windows physical px). */
+/** Every visible window, front to back: { pid, owner, layer, x, y, w, h } (Mac points, Windows physical px); on
+ * Windows also `rgn`: the window's region box relative to it ({ type, x, y, w, h }; type 0 = no region). */
 function screenWindows() {
   const text = os === 'mac'
     ? execFileSync(process.env.MOUSE, ['list'], { encoding: 'utf8' })
     : execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', zScript], { encoding: 'utf8', timeout: 60000 });
   return text.split(/\r?\n/).filter(Boolean).map((l) => {
-    const [pid, owner, layer, rect] = l.split('\t');
+    const [pid, owner, layer, rect, region] = l.split('\t');
     const [x, y, w, h] = (rect ?? '').split(' ').map(Number);
-    return { pid: Number(pid), owner: owner ?? '', layer: Number(layer), x, y, w, h };
+    const [type, rx, ry, rw, rh] = (region ?? '').split(' ').map(Number);
+    return { pid: Number(pid), owner: owner ?? '', layer: Number(layer), x, y, w, h, rgn: region ? { type, x: rx, y: ry, w: rw, h: rh } : null };
   });
 }
+/** Windows: the button's own window (Unvibe's, at the page's window position) with its region, or null. */
+function ghostWindow(app, g) {
+  if (os !== 'windows') return null;
+  const pids = new Set(processTree(app.process.pid).map((p) => p.pid));
+  return screenWindows().filter((w) => pids.has(w.pid) && Math.abs(w.x - g.x) <= 2 && Math.abs(w.y - g.y) <= 2).sort((a, b) => a.w * a.h - b.w * b.h)[0] ?? null;
+}
+const rgnText = (w) => (!w ? 'its window not found' : `GetWindowRect ${w.w}×${w.h}; region ${w.rgn?.type === 2 || w.rgn?.type === 3 ? `${w.rgn.w}×${w.rgn.h} at +${w.rgn.x},+${w.rgn.y} (type ${w.rgn.type})` : `none (type ${w.rgn?.type ?? '?'})`}`);
 
 // --- Processes and CPU ---------------------------------------------------------------------------------------------
 /** Unvibe's process tree (the main process and every child, the helper too) with its CPU seconds so far. */
@@ -512,6 +534,12 @@ async function vsLines() {
   };
 }
 const vsSelected = () => vs.page.evaluate(() => document.querySelectorAll('.monaco-editor .selected-text').length);
+/** VS Code's caret on the screen (screen units): the primary cursor's middle, or null. */
+async function vsCaret() {
+  const o = await vsOrigin();
+  const c = await vs.page.evaluate(() => { const r = document.querySelector('.monaco-editor .cursors-layer .cursor')?.getBoundingClientRect(); return r && r.height ? { x: r.left, y: r.top + r.height / 2, h: r.height } : null; });
+  return c ? { x: o.x + c.x * o.k, y: o.y + c.y * o.k, h: c.h * o.k } : null;
+}
 
 // --- Unvibe -------------------------------------------------------------------------------------------------------
 const baseEnv = { ...process.env };
@@ -640,9 +668,11 @@ const hiddenAt = (g, since) => g?.log?.find((e) => !e.s && e.t >= since)?.t ?? n
 const waitShown = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g?.shown ? g : null; }, ms, 10);
 const waitHidden = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g && !g.shown ? g : null; }, ms, 20);
 const aiPosts = (launchTag) => apiRequests(netlogs.find((l) => l.tag === launchTag).file, host).filter((q) => q.method === 'POST' && /^\/api\/v1\/(reviews|comprehension|previews)\b/.test(q.path));
-/** A 1:1 crop of the button's window with 8 px around it, and whether its corners are see-through (the editor's own
- * colour just inside the window's corner, as just outside it). */
-function cropGhost(label, g) {
+/** A 1:1 crop of the button (its own box in its page: the button, the pill or the card) with 8 px around it, and
+ * whether its corners are see-through (the editor's own colour just inside the box's corner, as just outside it).
+ * The box, not the window: on Windows the window is 64×64 around a 32 px button (run 44671864693). */
+function cropGhost(label, s) {
+  const g = s.b ?? s;
   const m = Math.round(8 * (os === 'windows' ? scale : 1));
   const f = grab(file(label), g.x - m, g.y - m, g.w + 2 * m, g.h + 2 * m);
   const img = readPng(f);
@@ -742,35 +772,46 @@ async function runA(app, companion, tag) {
   log(near(rounds[0].idleMs, 4000, 400), `A2 ${tag}: an untouched button leaves after 4 s`, rounds[0].leave ?? 'not shown');
   log(rounds.slice(1).every((r) => r.clickOk), `A2 ${tag}: a click elsewhere hides the button`, rounds.slice(1).map((r) => r.leave ?? 'not shown').join('; '));
 
-  // A2b: run 44671864693 found the button's window 64×64 px around a 32 px button on Windows. A click on that window
-  // outside the button has to reach VS Code (its selection goes), as it would with no window there.
-  {
-    const rowT = (await vsLines()).lines[17];
+  // A2b (lead, unvibe-app 2026-11-20): on Windows the button's window stays 64×64 (GetWindowRect) around a 32 px button;
+  // 438db5df clips it to the button with a window region. Clicks 20 px right of, below, and right of and below the
+  // button (the old invisible strip) have to land in VS Code: its selection goes and its caret moves there. The
+  // button is measured by its own box in its page and, on Windows, by the window's region (GetWindowRgnBox).
+  const strips = [];
+  for (const [where, li, ox, oy] of [['right of', 17, 20, 0], ['below', 18, 0, 20], ['right of and below', 21, 20, 20]]) {
+    const Ls = await vsLines();
+    const rowT = Ls.lines[li];
     const toT = { x: Math.min(rowT.right - 2, rowT.left + 420), y: rowT.y };
     pointer.drag(rowT.left + 2, rowT.y, toT.x, toT.y);
     const gt = await waitShown(app, 3000);
-    if (!gt?.b) log(false, `A2b ${tag}: a click on the button's window beside the button`, 'no button for the drag on line 18');
-    else {
-      const spareH = gt.y + gt.h - (gt.b.y + gt.b.h);
-      const spareW = gt.x + gt.w - (gt.b.x + gt.b.w);
-      const sizes = `window ${r1(gt.w)}×${r1(gt.h)} at (${r1(gt.x)}, ${r1(gt.y)}), the button ${r1(gt.b.w)}×${r1(gt.b.h)} at (${r1(gt.b.x)}, ${r1(gt.b.y)})`;
-      if (spareH < 8 && spareW < 8) note(`A2b ${tag}: the button's window is the button's size`, sizes);
-      else {
-        const at = spareH >= 8 ? { x: gt.b.x + gt.b.w / 2, y: gt.b.y + gt.b.h + spareH / 2 } : { x: gt.b.x + gt.b.w + spareW / 2, y: gt.b.y + gt.b.h / 2 };
-        const selBefore = await vsSelected();
-        pointer.click(at.x, at.y);
-        await sleep(600);
-        const selAfter = await vsSelected();
-        const gone = await waitHidden(app, 2000);
-        log(selBefore > 0 && selAfter === 0, `A2b ${tag}: a click on the button's window outside the button reaches VS Code`,
-          `${sizes}; click at (${Math.round(at.x)}, ${Math.round(at.y)}); VS Code selection boxes ${selBefore} → ${selAfter}; button ${gone ? 'gone' : 'still shown'}; panel ${panelPage(app) ? 'open' : 'none'}`);
-      }
+    if (!gt?.b) { strips.push({ where, ok: false, text: `no button for the drag on line ${li + 1}` }); continue; }
+    const k1 = os === 'windows' ? scale : 1;
+    if (strips.length === 0 && os === 'windows') {
+      const w = ghostWindow(app, gt);
+      const clipped = Boolean(w?.rgn && (w.rgn.type === 2 || w.rgn.type === 3) && near(w.x + w.rgn.x, gt.b.x, 1.5) && near(w.y + w.rgn.y, gt.b.y, 1.5) && near(w.rgn.w, gt.b.w, 1.5) && near(w.rgn.h, gt.b.h, 1.5));
+      log(clipped, `A2 ${tag}: the button's window is clipped to the button (its region = the button's ${r1(32 * k1)} px box)`,
+        `${rgnText(w)}${w ? ` at (${w.x}, ${w.y})` : ''}; the button ${r1(gt.b.w)}×${r1(gt.b.h)} at (${r1(gt.b.x)}, ${r1(gt.b.y)})`);
     }
+    const at = { x: gt.b.x + gt.b.w + (ox ? ox * k1 : -gt.b.w / 2), y: gt.b.y + gt.b.h + (oy ? oy * k1 : -gt.b.h / 2) };
+    const lineAt = Ls.lines.reduce((best, l) => (Math.abs(l.y - at.y) < Math.abs(best.y - at.y) ? l : best), Ls.lines[0]);
+    const selBefore = await vsSelected();
+    const shownAtClick = Boolean((await ghost(app))?.shown);
+    pointer.click(at.x, at.y);
+    await sleep(600);
+    const selAfter = await vsSelected();
+    const caret = await vsCaret();
+    const gone = await waitHidden(app, 2000);
+    const onLine = Boolean(caret) && Math.abs(caret.y - lineAt.y) <= caret.h * 0.75;
+    const atX = Boolean(caret) && (lineAt.right < at.x + 12 || Math.abs(caret.x - at.x) <= 12);
+    strips.push({
+      where, ok: shownAtClick && selBefore > 0 && selAfter === 0 && onLine && atX,
+      text: `click (${Math.round(at.x)}, ${Math.round(at.y)}) with the button ${shownAtClick ? 'shown' : 'already gone (row not proven)'}: the button ${r1(gt.b.w)}×${r1(gt.b.h)} at (${r1(gt.b.x)}, ${r1(gt.b.y)}) in a ${r1(gt.w)}×${r1(gt.h)} window; selection boxes ${selBefore} → ${selAfter}; caret ${caret ? `(${Math.round(caret.x)}, ${Math.round(caret.y)})` : 'not found'}, the clicked line's y ${Math.round(lineAt.y)}; button ${gone ? 'gone' : 'still shown'}; panel ${panelPage(app) ? 'open' : 'none'}`,
+    });
     pointer.click(L.lines[1].right + 80, L.lines[1].y);
     await waitHidden(app, 2000);
     const opened = panelPage(app);
     if (opened) await opened.locator('button[aria-label="Close"], .ob-close').first().click({ timeout: 3000 }).catch(() => {});
   }
+  for (const s of strips) log(s.ok, `A2b ${tag}: a click 20 px ${s.where} the button lands in VS Code (its selection goes, its caret moves there)`, s.text);
 
   // A3: the I-beam check: a drag in the line-number gutter selects lines but didn't start on text.
   const Ln = await vsLines();
@@ -968,14 +1009,13 @@ async function runB(app, companion) {
   const gb = g.b ?? g;
   const dx = gb.x - to.x;
   const cy = gb.y + gb.h / 2 - to.y;
-  // The window's own rectangle (GetWindowRect via EnumWindows, physical px), next to what its page reports × 1.5.
-  const pids = new Set(processTree(app.process.pid).map((p) => p.pid));
-  const rect = screenWindows().filter((w) => pids.has(w.pid) && Math.abs(w.x - g.x) < 40 && Math.abs(w.y - g.y) < 40).sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  // The window's own rectangle and region (GetWindowRect, GetWindowRgnBox; physical px), next to the button's box.
+  const rect = ghostWindow(app, g);
   const r = await pillThenButton(app, g, '150', { x: to.x, y: to.y + 80 });
   desktop('150-button');
   log(Boolean(r.cb?.clear) && Boolean(r.cp?.clear), 'B 150: under a forced 150 % the button shows for a real drag, with see-through corners', crops(r));
   note('B 150: size and place under --force-device-scale-factor=1.5 (not a Windows display scale, so no PASS/FAIL; expected 32 DIP × 1.5 = 48 px, 8 DIP = 12 px right)',
-    `mouse-up (${Math.round(to.x)}, ${Math.round(to.y)}) physical; the button ${r1(gb.w)}×${r1(gb.h)} at mouse-up x + ${r1(dx)}, its centre ${r1(cy)} from its y (its box in its page × 1.5); the window: GetWindowRect ${rect ? `${rect.w}×${rect.h} at (${rect.x}, ${rect.y})` : 'not found'}, the page's outer size × 1.5 ${r1(g.w)}×${r1(g.h)}; pill ${r.pill ? `${r1(r.pill.b?.w ?? r.pill.w)}×${r1(r.pill.b?.h ?? r.pill.h)}` : 'none'}`);
+    `mouse-up (${Math.round(to.x)}, ${Math.round(to.y)}) physical; the button ${r1(gb.w)}×${r1(gb.h)} at mouse-up x + ${r1(dx)}, its centre ${r1(cy)} from its y (its box in its page × 1.5); the window: ${rgnText(rect)}${rect ? ` at (${rect.x}, ${rect.y})` : ''}, the page's outer size × 1.5 ${r1(g.w)}×${r1(g.h)}; pill ${r.pill ? `${r1(r.pill.b?.w ?? r.pill.w)}×${r1(r.pill.b?.h ?? r.pill.h)}` : 'none'}`);
   pointer.click(L.lines[1].right + 80, L.lines[1].y);
   await waitHidden(app, 2000);
 }
@@ -1073,7 +1113,13 @@ async function runC(app, companion) {
         const g2 = await ghost(app);
         const posts = aiPosts('c').length;
         pointer.click(mid(g2).x, mid(g2).y);
-        await sleep(4000);
+        // The Island at +1 s and +4 s (Security SHOULD-366c, unvibe-app 2026-11-20): with the agreement given, an empty
+        // capture shows Issue, then idle; never a working phase ("Reading") at +4 s.
+        const phase = async () => ((await barPage(app)?.evaluate(() => [...(document.querySelector('[class*="island--phase-"]')?.classList ?? [])].find((c) => c.startsWith('island--phase-')) ?? '').catch(() => '')) ?? '').replace('island--phase-', '');
+        await sleep(1000);
+        const p1 = await phase();
+        await sleep(3000);
+        const p4 = await phase();
         const clip = readClipboard();
         const bar = (await barPage(app)?.evaluate(() => document.body.innerText).catch(() => '')) ?? '';
         const card = (await ghost(app))?.quickText ?? '';
@@ -1083,15 +1129,9 @@ async function runC(app, companion) {
         log(!clip.includes(PROMPT_WORD) && !panelText.includes(PROMPT_WORD) && !card.includes(PROMPT_WORD) && aiPosts('c').length === posts,
           `C1 N6 (Windows): pressing it over the password prompt (Quick look ${quick ? 'on' : 'off'}) reads nothing of the box and sends nothing`,
           `clipboard after: "${clip.slice(0, 40)}"; the Island says "${bar.replace(/\s+/g, ' ').trim().slice(0, 120)}"; card "${card.replace(/\s+/g, ' ').trim().slice(0, 140)}"; AI POST attempts ${aiPosts('c').length - posts}`);
-        // Security SHOULD-366c: an empty capture should move the Island off Reading at once. This build has no fix
-        // for it yet, so a NOTE: the Island's phase 4 s after the press, and whether it leaves the working phases
-        // within 10 s more.
-        const phase = async () => ((await barPage(app)?.evaluate(() => [...(document.querySelector('[class*="island--phase-"]')?.classList ?? [])].find((c) => c.startsWith('island--phase-')) ?? '').catch(() => '')) ?? '').replace('island--phase-', '');
-        const at4 = await phase();
-        const leftAt = Date.now();
-        const settled = await waitFor(async () => { const p = await phase(); return /^(loading|working|contextualizing|searching|analyzing|thinking|generating|finalizing)$/.test(p) ? null : p || null; }, 10000, 100);
-        note(`C1 N6 (Windows) Quick look ${quick ? 'on' : 'off'}: the Island after the empty press (Security SHOULD-366c)`,
-          `phase 4 s after the press "${at4 || '?'}"; ${settled ? `"${settled}" ${Date.now() - leftAt <= 150 ? 'already' : `${Date.now() - leftAt} ms later`}` : 'still in a working phase 10 s later'}`);
+        const WORKING = /^(loading|working|contextualizing|searching|analyzing|thinking|generating|finalizing)$/;
+        log(Boolean(p4) && !WORKING.test(p4), `C1 N6 (Windows): after the empty press (Quick look ${quick ? 'on' : 'off'}) the Island is out of its working phases by +4 s`,
+          `+1 s "${p1 || '?'}", +4 s "${p4 || '?'}" (expected Issue or idle, then idle)`);
         if (quick) keys.escape(); // the card's Esc (Unvibe holds it only while the card shows); off: nothing to close
         await sleep(800);
       }
@@ -1134,6 +1174,10 @@ async function runC(app, companion) {
 
 // --- The runs ----------------------------------------------------------------------------------------------------------
 wideScreen();
+if (os === 'windows') {
+  // Run 44671864693: GetCursorInfo found no showing cursor on the runner, so the I-beam rows couldn't be judged.
+  try { note('The runner\'s cursor, MouseKeys turned on', winPtr('mousekeys', '960', '540', '0', '0', '1').split(/\r?\n/).join('; ')); } catch (e) { note('The runner\'s cursor', `MouseKeys not set (${short(e)})`); }
+}
 vsSettings('light');
 let failedLaunch = false;
 const plan = os === 'windows' ? ['a', 'b', 'c'] : ['a', 'c'];
