@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { app } from 'electron';
 import { settings } from '../src/main/settings';
-import { NUDGE_SAVE_MS, endDragsOnLoss, endPanelDrag, moveWindowDrag, nudgePanel, resetPanelPosition, startWindowDrag } from '../src/main/windows';
+import { NUDGE_SAVE_MS, endDragsOnLoss, endPanelDrag, keepWindowOnDisplays, moveWindowDrag, nudgePanel, resetPanelPosition, startWindowDrag } from '../src/main/windows';
 import { windowDragHandler } from '../src/renderer/shared/windowDrag';
 
 // This file gets its own userData, so the spots it reads are only its own.
@@ -75,6 +75,28 @@ test('a drag that loses its window mid-way comes back on screen, and a drop that
   assert.deepEqual([win.bounds.x, win.bounds.y], [12, 1000 - 400 - 12], 'inside the 1600 × 1000 work area, 12 px in');
   endPanelDrag(win as never);
   assert.deepEqual(settings().all().overlaySpots ?? {}, {});
+});
+
+test('an overlay left on an unplugged display comes back whole onto the nearest one, and nothing is saved', () => {
+  const win = fakeWindow();
+  win.bounds = { ...win.bounds, x: 2000, y: 100 };
+  keepWindowOnDisplays(win as never);
+  assert.deepEqual([win.bounds.x, win.bounds.y], [1600 - 320 - 12, 100], 'inside the 1600 × 1000 work area, 12 px in');
+  assert.deepEqual(settings().all().overlaySpots ?? {}, {});
+});
+
+test('after a display change, a window whose centre is still on a display, or one mid-drag, stays where it is', () => {
+  const partlyOff = fakeWindow();
+  partlyOff.bounds = { ...partlyOff.bounds, x: 1400, y: 100 };
+  keepWindowOnDisplays(partlyOff as never);
+  assert.deepEqual([partlyOff.bounds.x, partlyOff.moves], [1400, 0]);
+
+  const dragging = fakeWindow();
+  startWindowDrag(dragging as never);
+  dragging.bounds = { ...dragging.bounds, x: 2000 };
+  keepWindowOnDisplays(dragging as never);
+  assert.deepEqual([dragging.bounds.x, dragging.moves], [2000, 0]);
+  dragging.emit('blur');
 });
 
 /** A pointer surface for the page-side handler (no DOM in node). */
