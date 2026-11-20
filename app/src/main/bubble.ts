@@ -242,7 +242,12 @@ function apply(next: GhostState): void {
   const work = screen.getDisplayNearestPoint(next.at).workArea;
   anchor ??= ghostPlacement(next.at, work, pillWidth, restingPointer ?? undefined);
   const win = ensureWindow();
-  win.setBounds(ghostWindowBounds(anchor, next.look, work, previewHeight, pillWidth));
+  const bounds = ghostWindowBounds(anchor, next.look, work, previewHeight, pillWidth);
+  win.setBounds(bounds);
+  // Windows keeps a transparent frameless window at least about 64 px on each side (electron#23200), so a 32 px
+  // button got an invisible strip to its right and below it that took clicks meant for the editor. The shape clips the
+  // window, both what's drawn and what takes the pointer, to the bounds asked for.
+  if (process.platform === 'win32') win.setShape([{ x: 0, y: 0, width: bounds.width, height: bounds.height }]);
   if (ghostReady) win.webContents.send('ghost:view', view());
   if (!win.isVisible()) win.showInactive();
   win.moveTop();
