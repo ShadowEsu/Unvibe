@@ -243,6 +243,69 @@ const noOverlay = () => {
   const m = mainProcesses();
   return new Error(`the overlay did not open for the link${m !== null && m > 1 ? ` (${m} Unvibe main processes: a second Unvibe started instead of handing the link over)` : ''}`);
 };
+/**
+ * #375 (RC3): the link's own copy hands the link over and quits without making a window. The 3 s process check can't
+ * show that (unvibe-app: the losing copy lives about 1.2 s with or without the fix), so a PowerShell watcher, started
+ * just before the link, lists every 100 ms for 4 s each Unvibe main process other than the running app (`appPid`) with
+ * its top-level windows (EnumWindows: class, visible or hidden, title). Chromium's BrowserWindows are class
+ * Chrome_WidgetWin_1: unvibe-app's Linux probe saw RC2's losing copy make three (Island, companion, panel) and #375's
+ * none. Windows only; null elsewhere. Nothing here touches the app.
+ */
+function watchLinkCopy(appPid) {
+  if (os !== 'windows') return null;
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "Add-Type -TypeDefinition @'",
+    'using System; using System.Collections.Generic; using System.Runtime.InteropServices; using System.Text;',
+    'public static class QaWin {',
+    '  public delegate bool Cb(IntPtr h, IntPtr l);',
+    '  [DllImport("user32.dll")] static extern bool EnumWindows(Cb f, IntPtr l);',
+    '  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);',
+    '  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);',
+    '  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);',
+    '  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);',
+    '  public static string Of(uint want) {',
+    '    var r = new List<string>();',
+    '    EnumWindows((h, l) => { uint p; GetWindowThreadProcessId(h, out p); if (p == want) { var c = new StringBuilder(256); GetClassName(h, c, 256); var t = new StringBuilder(256); GetWindowText(h, t, 256); r.Add(c + (IsWindowVisible(h) ? " visible" : " hidden") + (t.Length > 0 ? " \\"" + t + "\\"" : "")); } return true; }, IntPtr.Zero);',
+    '    return string.Join("; ", r);',
+    '  }',
+    '}',
+    "'@",
+    "'ready'",
+    '$t0 = [DateTime]::UtcNow',
+    'while (([DateTime]::UtcNow - $t0).TotalMilliseconds -lt 4000) {',
+    '  $ms = [int]([DateTime]::UtcNow - $t0).TotalMilliseconds',
+    `  foreach ($p in @(Get-CimInstance Win32_Process -Filter "Name='Unvibe.exe'" | Where-Object { $_.CommandLine -notmatch '--type=' -and $_.ProcessId -ne ${Number(appPid)} })) {`,
+    "    'seen ' + $ms + ' ' + $p.ProcessId + ' ' + [QaWin]::Of([uint32]$p.ProcessId)",
+    '  }',
+    '  Start-Sleep -Milliseconds 100',
+    '}',
+    "'end'",
+  ].join('\n');
+  const child = spawn('powershell', ['-NoProfile', '-Command', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = '';
+  let err = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { err += d; });
+  const done = new Promise((r) => child.on('close', () => r({ out, err })));
+  return { ready: () => waitFor(async () => out.includes('ready'), 30000, 100), done, stop: () => child.kill() };
+}
+/** The watcher's lines, per process: when it was seen and the most BrowserWindows (Chrome_WidgetWin_1) it had. */
+function linkCopyRow(res) {
+  const seen = new Map();
+  for (const l of res.out.split(/\r?\n/)) {
+    const m = l.match(/^seen (\d+) (\d+) ?(.*)$/);
+    if (!m) continue;
+    const s = seen.get(m[2]) ?? { first: Number(m[1]), last: 0, most: 0, windows: new Set() };
+    s.last = Number(m[1]);
+    const wins = m[3] ? m[3].split('; ') : [];
+    s.most = Math.max(s.most, wins.filter((w) => w.startsWith('Chrome_WidgetWin_1')).length);
+    for (const w of wins) s.windows.add(w);
+    seen.set(m[2], s);
+  }
+  const detail = [...seen].map(([pid, s]) => `pid ${pid} seen +${s.first}..+${s.last} ms, at most ${s.most} BrowserWindow(s); its windows: ${[...s.windows].join('; ') || 'none'}`).join(' | ');
+  return { seen: seen.size, most: Math.max(0, ...[...seen.values()].map((s) => s.most)), detail, ended: res.out.includes('end') };
+}
 /** Two clicks on the same button in one task; returns how many reached it. */
 const pressTwice = (panel, phaseClass, label) => panel.evaluate(({ phaseClass, label }) => {
   const button = [...document.querySelectorAll(`.ob.${phaseClass} .ob-actions button`)].find((b) => b.textContent.trim() === label);
@@ -295,13 +358,34 @@ let panel = null;
 const t1 = {};
 if (!stopped) try {
   await setClipboard(CODE);
+  const watch = watchLinkCopy(app.process.pid);
+  const watchReady = watch ? await watch.ready() : false;
   const linkAt = Date.now();
   await openLink();
   panel = await waitFor(async () => panelWindow(), 20000, 250);
   if (!panel) throw noOverlay();
+  const panelMs = Date.now() - linkAt;
   const after = await mainAfterLink(linkAt);
   note('#353: Unvibe main processes after the link', after.seen);
   if (after.left !== null && after.left !== 1) throw new Error(`${after.left} Unvibe main processes 3 s after the link (expected the one running): ${after.seen}`);
+  // #375 (the lead): the running app still opens the panel for the link; no "shortcut is in use" notice (notify() shows
+  // it only on an Island, notify.ts:39-47: the running app's is read here, and a link copy with no window has none);
+  // the link copy makes no window. Read ≥ 3 s after the link, inside the notice's 9 s on the Island.
+  log(true, '#375: the running app opens the panel for the link', `${panelMs} ms after the link, in the running app (pid ${app.process.pid})`);
+  const island = app.windows().find((w) => w.url().includes('bar.html') && !w.isClosed());
+  const islandText = island ? ((await island.evaluate(() => document.body.innerText).catch(() => '')) ?? '').replace(/\s+/g, ' ').trim() : null;
+  if (islandText === null) note('#375: the running app\'s Island', 'no Island page to read');
+  else log(!/in use by another app/i.test(islandText), '#375: no "That shortcut is in use" notice on the running app\'s Island after the link', `Island text: "${islandText.slice(0, 120)}"`);
+  if (watch) {
+    const res = await Promise.race([watch.done, sleep(15000).then(() => null)]);
+    if (!res) { watch.stop(); note('#375: the link\'s own copy', 'the window watcher did not finish in 15 s'); }
+    else if (!watchReady || !res.out.includes('ready')) note('#375: the link\'s own copy', `the window watcher did not start: ${short(res.err) || 'no output'}`);
+    else {
+      const r = linkCopyRow(res);
+      if (!r.seen) note('#375: the link\'s own copy', 'not caught: no second Unvibe main process in any 100 ms reading over 4 s');
+      else log(r.most === 0, '#375: the link\'s own copy hands the link over and quits without a window (0 BrowserWindows, so no Island of its own and no shortcut notice)', r.detail);
+    }
+  }
   const consent = panel.locator('.ob.ob--aiConsent .consent-form');
   await consent.waitFor({ timeout: 20000 });
   const boxes = consent.locator('input[type="checkbox"]');
