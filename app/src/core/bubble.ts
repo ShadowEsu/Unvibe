@@ -115,8 +115,11 @@ export interface Point { x: number; y: number }
 /** Design NOTE §1: a 32 pt circle, 8 pt right of where the selection ended, centred on that line. */
 export const GHOST_SIZE = 32;
 export const GHOST_GAP = 8;
-/** The hover pill: Vibe · "Explain" · the shortcut keycap. */
-export const PILL_WIDTH = 148;
+/**
+ * The hover pill (Vibe · "Explain" · the shortcut's caps) sized to its content, Design S-1 SHOULD 2: 130 measured
+ * with ⌃ U. The renderer reports the real width (other shortcuts have wider caps); this is the start value.
+ */
+export const PILL_WIDTH = 130;
 /** The Quick look card (Design NOTE §3: about 320 pt). */
 export const PREVIEW_WIDTH = 320;
 
@@ -130,9 +133,9 @@ function within(value: number, min: number, max: number): number {
  * cursor and the drag's own mouse-up are never over it (G7), and it never leaves the work area (below the
  * menu bar). `flipped` tells the pill and the card which way to grow.
  */
-export function ghostPlacement(at: Point, workArea: Rect): { x: number; y: number; flipped: boolean } {
+export function ghostPlacement(at: Point, workArea: Rect, pillWidth = PILL_WIDTH): { x: number; y: number; flipped: boolean } {
   const right = at.x + GHOST_GAP;
-  const flipped = right + PILL_WIDTH > workArea.x + workArea.width;
+  const flipped = right + pillWidth > workArea.x + workArea.width;
   const x = flipped ? at.x - GHOST_GAP - GHOST_SIZE : right;
   const y = at.y - GHOST_SIZE / 2;
   return {
@@ -148,11 +151,12 @@ export function ghostWindowBounds(
   look: 'ghost' | 'pill' | 'preview',
   workArea: Rect,
   previewHeight = 120,
+  pillWidth = PILL_WIDTH,
 ): Rect {
   if (look === 'ghost') return { x: anchor.x, y: anchor.y, width: GHOST_SIZE, height: GHOST_SIZE };
   if (look === 'pill') {
-    const x = anchor.flipped ? anchor.x + GHOST_SIZE - PILL_WIDTH : anchor.x;
-    return { x, y: anchor.y, width: PILL_WIDTH, height: GHOST_SIZE };
+    const x = anchor.flipped ? anchor.x + GHOST_SIZE - pillWidth : anchor.x;
+    return { x, y: anchor.y, width: pillWidth, height: GHOST_SIZE };
   }
   const height = Math.round(within(previewHeight, 80, Math.min(420, workArea.height)));
   const x = anchor.flipped ? anchor.x + GHOST_SIZE - PREVIEW_WIDTH : anchor.x;
@@ -201,6 +205,9 @@ export function reduceGhost(
   const same = { state, effect: 'none' as GhostEffect };
   switch (input.e) {
     case 'select':
+      // A drag or double-click on the button or card itself (the editor stays frontmost under a non-activating window)
+      // is not a new selection: it keeps the card and its result (lead S2).
+      if (state.look !== 'hidden' && ctx.inside(input)) return same;
       if (!ghostAllowedIn(ctx.platform, input.app)) return state.look === 'hidden' ? same : hidden;
       // A new selection while the card is open leaves the card (its request is for the old one): A4.
       return { state: { look: 'ghost', at: { x: input.x, y: input.y }, app: input.app, hovered: false }, effect: 'show' };
@@ -256,14 +263,17 @@ export function previewTitle(code: string): string {
   return name ? `${name.slice(0, 40)} · ${count}` : count;
 }
 
-/** The two Settings controls (Security file 1235, verbatim). Bump the version when either text changes. */
-export const BUBBLE_COPY_VERSION = '2026-11-11';
+/**
+ * The two Settings controls, verbatim: the button's help from Security's S-1 on #366 (SHOULD-366b, editors only, no
+ * text read before a press), Quick look's from file 1235. Bump the version when either text changes.
+ */
+export const BUBBLE_COPY_VERSION = '2026-11-19';
 
 export function bubbleCopy(shortcut: string): { ghost: { label: string; help: string }; preview: { label: string; help: string } } {
   return {
     ghost: {
       label: 'Show the Unvibe button when I select code',
-      help: `Off until you turn it on. When it's on, Unvibe notices when you select with the mouse in the apps you allow (code editors to start) and shows a small button. In code editors it reads nothing until you press it; in other apps it checks the selected text on your computer to see if it looks like code. Nothing is sent until you press the button, and pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
+      help: `Off until you turn it on. When it's on, Unvibe watches your mouse clicks, on your computer, to notice when you select code in a code editor, and shows a small button. It reads nothing until you press it. Nothing is sent until you press the button, and pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
     },
     preview: {
       label: 'Quick look when I press the button',

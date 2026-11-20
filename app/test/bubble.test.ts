@@ -78,6 +78,14 @@ test('a click, right click or scroll elsewhere, or another app, dismisses it; on
   assert.equal(reduceGhost(shown(), { e: 'app', app: 'com.microsoft.VSCode' }, mac).effect, 'none');
 });
 
+test('selecting text on the open card keeps the card and its result; a selection elsewhere in the editor replaces it', () => {
+  const card = reduceGhost(shown(), { e: 'press' }, { ...mac, previewOn: true }).state;
+  assert.equal(card.look, 'preview');
+  const select = { e: 'select' as const, x: 420, y: 320, app: 'com.microsoft.VSCode', g: 'double' as const };
+  assert.deepEqual(reduceGhost(card, select, { ...mac, inside: () => true }), { state: card, effect: 'none' });
+  assert.equal(reduceGhost(card, select, mac).state.look, 'ghost');
+});
+
 test('an untouched ghost leaves after its idle time, but not while the pointer is on it', () => {
   assert.equal(reduceGhost(shown(), { e: 'idle' }, mac).state.look, 'hidden');
   const hovered = reduceGhost(shown(), { e: 'hover', on: true }, mac).state;

@@ -176,6 +176,7 @@ const api = {
   ghostClose: () => ipcRenderer.send('ghost:close'),
   ghostOpenFull: () => ipcRenderer.send('ghost:openFull'),
   ghostHeight: (height: number) => ipcRenderer.send('ghost:height', height),
+  ghostWidth: (width: number) => ipcRenderer.send('ghost:width', width),
 
   // permissions
   accessibility: () => ipcRenderer.invoke('perms:accessibility'),

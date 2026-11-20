@@ -18,8 +18,8 @@
 :root .ghost .buddy { flex: 0 0 auto; }
 :root .ghost__word { flex: 0 0 auto; white-space: nowrap; }
 :root .ghost__keys, :root .quick__full .ghost__keys { display: inline-flex; gap: 2px; }
-:root .ghost--pill .ghost__keys { margin-left: auto; }
-:root .ghost--pill.ghost--flipped .ghost__keys { margin-left: 0; margin-right: auto; }
+:root .ghost--pill .ghost__keys { margin-left: 2px; }
+:root .ghost--pill.ghost--flipped .ghost__keys { margin-left: 0; margin-right: 2px; }
 :root .ghost__key {
   display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px;
   box-sizing: border-box; border: 1px solid var(--u-border-control); border-radius: 5px;
@@ -28,13 +28,13 @@
 
 :root .quick {
   box-sizing: border-box; width: 320px; padding: 12px 14px 10px;
-  border: 1px solid var(--u-border); border-radius: 12px; background: var(--u-paper);
+  border: 1px solid var(--u-border-control); border-radius: 12px; background: var(--u-paper);
   font-size: 13px; line-height: 18px; animation: ghostIn 120ms ease-out both;
 }
 :root .quick__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 :root .quick__title { font-weight: 600; white-space: nowrap; }
 :root .quick__meta { color: var(--u-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-:root .quick__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; user-select: text; -webkit-user-select: text; }
+:root .quick__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
 :root .quick__item { position: relative; padding-left: 14px; overflow-wrap: anywhere; }
 :root .quick__item::before { content: ''; position: absolute; left: 2px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--u-ink); }
 :root .quick__item--skeleton { height: 10px; margin: 4px 0; border-radius: 5px; background: var(--u-sunken); width: 82%; }

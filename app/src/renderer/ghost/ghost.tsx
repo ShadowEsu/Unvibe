@@ -26,6 +26,7 @@ function Keycaps({ shortcut }: { shortcut: string }) {
 
 function Button({ view }: { view: GhostView }) {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
   const label = `Explain this selection (${prettyShortcut(view.shortcut)})`;
   const enter = () => {
     hoverTimer.current = setTimeout(() => window.unvibe.ghostHover(true), HOVER_DELAY_MS);
@@ -35,8 +36,18 @@ function Button({ view }: { view: GhostView }) {
     window.unvibe.ghostHover(false);
   };
   useEffect(() => () => clearTimeout(hoverTimer.current ?? undefined), []);
+  // The pill is as wide as its content (Design S-1 SHOULD 2): main sizes the window to the width reported here.
+  useLayoutEffect(() => {
+    const el = button.current;
+    if (view.look !== 'pill' || !el) return;
+    el.style.width = 'max-content';
+    const natural = el.offsetWidth;
+    el.style.width = '';
+    window.unvibe.ghostWidth(natural);
+  }, [view.look, view.shortcut]);
   return (
     <button
+      ref={button}
       type="button"
       className={`ghost${view.look === 'pill' ? ' ghost--pill' : ''}${view.flipped ? ' ghost--flipped' : ''}`}
       aria-label={label}
@@ -66,7 +77,9 @@ function QuickLook({ view }: { view: GhostView }) {
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return undefined;
-    const report = () => window.unvibe.ghostHeight(Math.ceil(el.getBoundingClientRect().height));
+    // offsetHeight, not getBoundingClientRect: the card scales in from 0.9, and a one-shot state (the limit message)
+    // measured mid-animation left the window 10% short (Design S-1 MUST).
+    const report = () => window.unvibe.ghostHeight(el.offsetHeight);
     const observer = new ResizeObserver(report);
     observer.observe(el);
     report();
