@@ -102,6 +102,11 @@ static BOOL pointer_is_beam(void) {
   return ci.hCursor == LoadCursorW(NULL, IDC_IBEAM);
 }
 
+/* How long after a press the I-beam is read. Editors (Chromium) set the cursor asynchronously, so at the press itself
+ * it can still be the shape of where the pointer just was: a quick move-and-press would miss text or count the gutter
+ * (SHOULD-D5-cursor). By now the editor's cursor for the press point has landed, and a drag keeps it. */
+#define BEAM_SETTLE_MS 40
+
 static void emit_point(const char *e, POINT pt) {
   printf("{\"e\":\"%s\",\"x\":%ld,\"y\":%ld}\n", e, (long)pt.x, (long)pt.y);
   fflush(stdout);
@@ -137,8 +142,10 @@ static DWORD WINAPI worker(LPVOID arg) {
         last_click_at = now;
         down = pt;
         have_down = TRUE;
-        down_over_text = pointer_is_beam();
         emit_point("down", pt);
+        /* The worker only: the hook keeps posting, and the release is handled after this read. */
+        Sleep(BEAM_SETTLE_MS);
+        down_over_text = pointer_is_beam();
         break;
       }
       case WM_LBUTTONUP: {
