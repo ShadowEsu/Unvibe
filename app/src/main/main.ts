@@ -744,20 +744,25 @@ if (!isMac && hasSingleInstanceLock) {
   if (launchUrl) handleExternalReviewUrl(launchUrl);
 }
 
-// Register before Electron becomes ready: macOS can deliver an open-url event during launch.
+// Register before Electron becomes ready: macOS can deliver an open-url event during launch. The copy that lost the
+// lock drops it: a link that cold-starts a second Mac bundle reaches that copy's open-url, not the running app's
+// second-instance argv, so it isn't forwarded (it never was; Launch Services normally hands links to the running copy).
 app.on('open-url', (event, url) => {
   event.preventDefault();
-  handleExternalReviewUrl(url);
+  if (hasSingleInstanceLock) handleExternalReviewUrl(url);
 });
 
 // CFBundleURLTypes below registers packaged builds. A dev launch (npm start, electron .) would
 // otherwise re-point every unvibe:// link on the machine at the bare Electron binary, so local
-// development registers only when asked: UNVIBE_DEV_PROTOCOL=1.
-if (process.defaultApp) {
-  const entry = process.argv[1];
-  if (entry && process.env.UNVIBE_DEV_PROTOCOL === '1') app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
-} else {
-  app.setAsDefaultProtocolClient('unvibe');
+// development registers only when asked: UNVIBE_DEV_PROTOCOL=1. Only the running copy registers: on Windows a copy
+// that lost the lock from another path (an old install, the portable exe, a dev build) re-pointed unvibe:// at itself.
+if (hasSingleInstanceLock) {
+  if (process.defaultApp) {
+    const entry = process.argv[1];
+    if (entry && process.env.UNVIBE_DEV_PROTOCOL === '1') app.setAsDefaultProtocolClient('unvibe', process.execPath, [path.resolve(entry)]);
+  } else {
+    app.setAsDefaultProtocolClient('unvibe');
+  }
 }
 
 app.whenReady().then(() => {
