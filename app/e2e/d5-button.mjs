@@ -30,7 +30,12 @@
 //   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent
 //      (the mouse-up on plain background: on the Mac's 1280 px screen, right of a short row between short rows);
 //      a press opens the panel on the agreement (no agreement in this profile: nothing is read) and sends nothing.
-//      The press row lists the helper's lines (down, press, app) and the pointer events the button's page saw.
+//      The press row lists the helper's lines (down, press, app) and the pointer events the button's page saw; those
+//      listeners go on after the light crops and off after the press row (unvibe-app 2026-11-20: the ring on runs 6
+//      and 7's Mac light crops came with them). Until then the page holds only the show/hide log (as in run 5).
+//   F  the focus right after the button appears (unvibe-app, the ring is drawn only on :focus-visible): A2's 5 rounds
+//      and A4 before its crops, then A6 and A7 after A4's press; each read has document.activeElement BODY and the
+//      button not :focus-visible. The A4/A6/A7 crop rows also give the focus at each crop.
 //   A5 stacking: that panel focused, then VS Code clicked (Mac: and activated by name, since synthesized clicks don't
 //      move activation on macOS 26+), and the panel fades (its own row; NOT TESTABLE if the header click never gave the
 //      panel focus); then a selection whose button lands over the panel's edge: the button is in front (window order)
@@ -732,9 +737,19 @@ async function ghost(app) {
     const r = el?.getBoundingClientRect();
     const ow = el?.offsetWidth ?? 0;
     const oh = el?.offsetHeight ?? 0;
+    // The focus in the button's page (unvibe-app 2026-11-20: a ring on the Mac light crops of runs 6 and 7, drawn only
+    // on :focus-visible): what has focus, whether the button matches :focus or :focus-visible, and its outline. Read
+    // only. hasFocus() is true under Playwright's focus emulation, so it says nothing about the OS window.
+    const a = document.activeElement;
+    const cs = b ? getComputedStyle(b) : null;
+    const focus = {
+      active: a ? `${a.nodeName}${typeof a.className === 'string' && a.className.trim() ? `.${a.className.trim().split(/\s+/).join('.')}` : ''}`.slice(0, 60) : 'none',
+      fo: Boolean(b?.matches(':focus')), fv: Boolean(b?.matches(':focus-visible')),
+      outline: cs ? `${cs.outlineStyle} ${cs.outlineWidth}` : '-', has: document.hasFocus(),
+    };
     return {
       shown: Boolean(b || q), pill: Boolean(b?.classList.contains('ghost--pill')), flipped: Boolean(b?.classList.contains('ghost--flipped')),
-      quick: Boolean(q), quickText: q ? q.innerText : '', x: screenX, y: screenY, w: outerWidth, h: outerHeight, t: Date.now(), log: window.__qaLog ?? null, ev: window.__qaEv ?? null,
+      quick: Boolean(q), quickText: q ? q.innerText : '', x: screenX, y: screenY, w: outerWidth, h: outerHeight, t: Date.now(), log: window.__qaLog ?? null, ev: window.__qaEv ?? null, focus,
       b: r ? { x: screenX + r.left + r.width / 2 - ow / 2, y: screenY + r.top + r.height / 2 - oh / 2, w: ow, h: oh, drawn: r.width } : null,
     };
   }).catch(() => null);
@@ -775,14 +790,12 @@ const cursorReadable = (said) => {
 };
 /** The middle of the button's own box (the window's when the page gave none). */
 const mid = (g) => (g.b ? { x: g.b.x + g.b.w / 2, y: g.b.y + g.b.h / 2 } : { x: g.x + g.w / 2, y: g.y + g.h / 2 });
-/** Records each show and hide in the button's page with its time, and each pointer event that reaches the page (type,
- * time, the target's class: Mac A4 run 44677798585, a press on the button that opened nothing). Read only; listeners
- * in the capture phase, passive, never stopping anything; installed once the page exists. */
+/** Records each show and hide in the button's page with its time (a MutationObserver, as in run 5's 57af963d: no
+ * event listeners); installed once the page exists. */
 async function watchGhost(app) {
   await ghostPage(app)?.evaluate(() => {
     if (window.__qaLog) return;
     window.__qaLog = [];
-    window.__qaEv = [];
     const mark = () => {
       const s = Boolean(document.querySelector('.ghost, .quick'));
       const l = window.__qaLog;
@@ -790,24 +803,50 @@ async function watchGhost(app) {
     };
     new MutationObserver(mark).observe(document.getElementById('root'), { childList: true, subtree: true, attributes: true });
     mark();
-    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'focus', 'blur']) {
-      window.addEventListener(type, (e) => {
-        const ev = window.__qaEv;
-        const on = e.target === window ? 'window' : String(e.target?.getAttribute?.('class') ?? e.target?.nodeName ?? '');
-        if (ev.length < 400) ev.push({ type, t: Date.now(), on: on.slice(0, 40) });
-      }, { capture: true, passive: true });
-    }
   }).catch(() => {});
 }
+/** A4's trail: each pointer, focus and blur event that reaches the button's page (type, time, the target's class:
+ * Mac A4 run 44677798585, a press on the button that opened nothing). Read only; listeners in the capture phase,
+ * passive, never stopping anything. Installed only after the light crops and removed after the press row
+ * (unvibe-app 2026-11-20: the ring on the Mac light crops came with these listeners, runs 6 and 7, not run 5). */
+async function trailOn(app) {
+  await ghostPage(app)?.evaluate(() => {
+    if (window.__qaTrailOff) return;
+    window.__qaEv = window.__qaEv ?? [];
+    const types = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'focus', 'blur'];
+    const on = (e) => {
+      const ev = window.__qaEv;
+      const at = e.target === window ? 'window' : String(e.target?.getAttribute?.('class') ?? e.target?.nodeName ?? '');
+      if (ev.length < 400) ev.push({ type: e.type, t: Date.now(), on: at.slice(0, 40) });
+    };
+    for (const type of types) window.addEventListener(type, on, { capture: true, passive: true });
+    window.__qaTrailOff = () => {
+      for (const type of types) window.removeEventListener(type, on, { capture: true });
+      window.__qaTrailOff = null;
+    };
+  }).catch(() => {});
+}
+const trailOff = (app) => ghostPage(app)?.evaluate(() => window.__qaTrailOff?.()).catch(() => {});
 /** The pointer events that reached the button's page from `since`: "pointerdown@+12 ms (ghost)…", or 'none'. */
 const pageEvents = (g, since) => {
   if (!g?.ev) return 'not watched';
   const got = g.ev.filter((e) => e.t >= since);
   return got.length ? got.map((e) => `${e.type}@+${e.t - since} ms${e.on ? ` (${e.on})` : ''}`).join(', ') : 'none';
 };
+/** The focus in the button's page, short: "BODY", or "BUTTON.ghost :focus-visible, outline auto 1px". */
+const focusText = (f) => (f ? `${f.active}${f.fv ? ' :focus-visible' : f.fo ? ' :focus' : ''}${f.outline && !/^none /.test(f.outline) ? `, outline ${f.outline}` : ''}` : '-');
+/** The focus right after the button appears, read by labelled waitShown calls (the F rows). */
+const focusReads = [];
+/** One F row: every read in `reads` has BODY as the page's active element and the button not :focus-visible. */
+const focusRow = (row, reads) => log(reads.length > 0 && reads.every((x) => x.f?.active === 'BODY' && !x.f.fv), row,
+  reads.length ? `${reads.map((x) => `${x.label}: ${focusText(x.f)}`).join('; ')} (document.hasFocus() ${[...new Set(reads.map((x) => x.f?.has))].join('/')}: Playwright's focus emulation)` : 'no read');
 const shownAt = (g, since) => g?.log?.find((e) => e.s && e.t >= since)?.t ?? null;
 const hiddenAt = (g, since) => g?.log?.find((e) => !e.s && e.t >= since)?.t ?? null;
-const waitShown = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g?.shown ? g : null; }, ms, 10);
+const waitShown = async (app, ms = 3000, label = null) => {
+  const g = await waitFor(async () => { const s = await ghost(app); return s?.shown ? s : null; }, ms, 10);
+  if (g && label) focusReads.push({ label, f: g.focus });
+  return g;
+};
 const waitHidden = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g && !g.shown ? g : null; }, ms, 20);
 const aiPosts = (launchTag) => apiRequests(netlogs.find((l) => l.tag === launchTag).file, host).filter((q) => q.method === 'POST' && /^\/api\/v1\/(reviews|comprehension|previews)\b/.test(q.path));
 /** A 1:1 crop of the button (its own box in its page: the button, the pill or the card) with 8 px around it, and
@@ -823,7 +862,7 @@ function cropGhost(label, s) {
   const inside = [[m + 1, m + 1], [m + Math.round(g.w) - 2, m + 1], [m + 1, m + Math.round(g.h) - 2], [m + Math.round(g.w) - 2, m + Math.round(g.h) - 2]];
   const outside = [[m - 3, m + 1], [m + Math.round(g.w) + 2, m + 1], [m - 3, m + Math.round(g.h) - 2], [m + Math.round(g.w) + 2, m + Math.round(g.h) - 2]];
   const diffs = inside.map((p, i) => rgbDiff(img.rgb(...p), img.rgb(...outside[i])));
-  return { f, size: `${img.w}×${img.h}`, sha: sha(f).slice(0, 12), clear: diffs.every((d) => d <= 24), diffs };
+  return { f, size: `${img.w}×${img.h}`, sha: sha(f).slice(0, 12), clear: diffs.every((d) => d <= 24), diffs, focus: s.focus };
 }
 /**
  * Hover the shown button until the pill opens and crop the pill; then the pointer off it (to `rest`) and crop the
@@ -853,10 +892,11 @@ async function pillThenButton(app, g, label, rest) {
   const cb = back ? cropGhost(`${label}-button-1to1`, await ghost(app)) : null;
   return { pill, cp, back, cb, nudged };
 }
-const crops = (r) => `${r.nudged ? `pill ${r.pill ? 'opened after a 1 px nudge' : 'not open after a 1 px nudge either'}; ` : ''}button crop ${r.cb ? `${r.cb.size} sha ${r.cb.sha} (corner diffs ${r.cb.diffs.join('/')})` : 'none (gone)'}; pill crop ${r.cp ? `${r.cp.size} sha ${r.cp.sha} (${r.cp.diffs.join('/')})` : 'none'}`;
+const crops = (r) => `${r.nudged ? `pill ${r.pill ? 'opened after a 1 px nudge' : 'not open after a 1 px nudge either'}; ` : ''}button crop ${r.cb ? `${r.cb.size} sha ${r.cb.sha} (corner diffs ${r.cb.diffs.join('/')})` : 'none (gone)'}; pill crop ${r.cp ? `${r.cp.size} sha ${r.cp.sha} (${r.cp.diffs.join('/')})` : 'none'}; focus at the crops: pill ${focusText(r.cp?.focus)}, button ${focusText(r.cb?.focus)}`;
 
 // --- Launch A: the button in VS Code --------------------------------------------------------------------------------
 async function runA(app, companion, tag) {
+  focusReads.length = 0;
   const L = await vsLines();
   if (L.lines.length < 20) throw new Error(`VS Code shows ${L.lines.length} code lines`);
   note(`VS Code (${tag})`, `${L.theme}; content at (${L.o.x}, ${L.o.y}), CSS → screen ×${r1(L.o.k)}; ${L.lines.length} code lines on screen; editor ${L.editor ? `${Math.round(L.editor.x)}..${Math.round(L.editor.right)} × ${Math.round(L.editor.y)}..${Math.round(L.editor.bottom)}` : '?'}`);
@@ -888,7 +928,7 @@ async function runA(app, companion, tag) {
     const to = { x: Math.min(row.right - 2, from.x + 420), y: row.y };
     const since = Date.now();
     const up = pointer.drag(from.x, from.y, to.x, to.y);
-    const g = await waitShown(app, 3000);
+    const g = await waitShown(app, 3000, `A2 round ${i + 1}`);
     if (i === 0) await watchGhost(app);
     const g2 = g ? await ghost(app) : null;
     // Round 1: the page's show/hide log is installed only after the button first shows (the window is created then),
@@ -1053,12 +1093,17 @@ async function runA(app, companion, tag) {
   const { row, x: endX } = plainEnd(L, 20);
   const to = { x: endX, y: row.y };
   pointer.drag(row.left + 2, row.y, to.x, to.y);
-  let g = await waitShown(app, 3000);
+  let g = await waitShown(app, 3000, 'A4');
   if (!g) { log(false, `A4 ${tag}: hover, crops and press`, `no button for the drag on line ${L.lines.indexOf(row) + 1}`); return; }
   const r = await pillThenButton(app, g, `${tag}-light`, { x: to.x, y: to.y + 60 });
   log(Boolean(r.pill) && (r.pill.b?.w ?? r.pill.w) > (g.b?.w ?? g.w), `A4 ${tag}: hovering the button opens the pill`, r.pill ? `the button ${r1(g.b?.w ?? g.w)}×${r1(g.b?.h ?? g.h)} → the pill ${r1(r.pill.b?.w ?? r.pill.w)}×${r1(r.pill.b?.h ?? r.pill.h)}, grown ${near(r.pill.b?.x ?? r.pill.x, g.b?.x ?? g.x, 1.5) ? 'right' : 'left'}; hovered at the button's middle (${Math.round(mid(g).x)}, ${Math.round(mid(g).y)})` : `no pill in 2 s (hovered at the button's middle (${Math.round(mid(g).x)}, ${Math.round(mid(g).y)}))`);
   log(Boolean(r.cb?.clear) && Boolean(r.cp?.clear), `A4 ${tag}: 1:1 crops over VS Code light, corners see-through`, crops(r));
+  // unvibe-app 2026-11-20 (the ring on run 6's and 7's Mac light crops): the button's focus right after each show,
+  // read with nothing but the show/hide log in its page; A4's trail listeners go on only now, after the crops.
+  const lightReads = focusReads.length;
+  focusRow(`F ${tag}: right after the button appears (A2's 5 rounds, A4 before its crops), the button's page has document.activeElement BODY and the button doesn't match :focus-visible`, focusReads.slice(0, lightReads));
   if (!r.back) { log(false, `A4 ${tag}: the press`, 'the button was gone when the pointer left the pill'); return; }
+  await trailOn(app);
   const before2 = os === 'mac' ? screenWindows() : [];
   const sentBefore = aiPosts('a').length;
   const pressAt = Date.now();
@@ -1080,6 +1125,7 @@ async function runA(app, companion, tag) {
   log(Boolean(panel) && /aiConsent/.test(view) && form === 1 && !after?.shown && aiPosts('a').length === sentBefore,
     `A4 ${tag}: pressing the button opens the panel on the agreement (the Control+U path, nothing read or sent)`,
     `panel ${panel ? `view "${view}", agreement form ${form}` : 'did not open in 8 s'}; button ${after?.shown ? 'still shown' : 'gone'}; AI POSTs ${aiPosts('a').length}; ${trail}`);
+  await trailOff(app);
   if (os === 'mac') {
     const owners = new Set(before2.map((w) => w.owner));
     const fresh = screenWindows().filter((w) => !owners.has(w.owner) && !/^(Unvibe|Code|Visual Studio Code|Electron)$/.test(w.owner));
@@ -1165,7 +1211,7 @@ async function runA(app, companion, tag) {
   const rowF = L3.lines[4];
   const endF = { x: right - 30, y: rowF.y };
   pointer.drag(rowF.left + 2, rowF.y, endF.x, endF.y);
-  const gf = await waitShown(app, 3000);
+  const gf = await waitShown(app, 3000, "A6 flipped (after A4's press)");
   if (!gf) log(false, `A6 ${tag}: the flip at the right edge`, `no button for the drag ending at x ${Math.round(endF.x)} (work area right ${Math.round(right)})`);
   else {
     const r = await pillThenButton(app, gf, `${tag}-flipped`, { x: endF.x, y: endF.y + 60 });
@@ -1188,7 +1234,7 @@ async function runA(app, companion, tag) {
   const { row: rowD, x: endD } = plainEnd(L4, 8);
   const toD = { x: endD, y: rowD.y };
   pointer.drag(rowD.left + 2, rowD.y, toD.x, toD.y);
-  const gd = await waitShown(app, 3000);
+  const gd = await waitShown(app, 3000, 'A7 dark (its page reloaded)');
   if (!gd) log(false, `A7 ${tag}: the button and the pill over VS Code dark`, 'no button');
   else {
     const theme = await ghostPage(app).evaluate(() => document.documentElement.dataset.theme);
@@ -1198,6 +1244,7 @@ async function runA(app, companion, tag) {
   }
   pointer.click(L4.lines[1].right + 80, L4.lines[1].y);
   await waitHidden(app, 2000);
+  focusRow(`F ${tag}: after A4's press, the same when the button appears again (A6 flipped; A7 dark, its page reloaded)`, focusReads.slice(lightReads));
   await companion.evaluate(() => window.unvibe.setSettings({ theme: 'light' }));
   await ghostPage(app)?.reload().catch(() => {});
   vsSettings('light');
