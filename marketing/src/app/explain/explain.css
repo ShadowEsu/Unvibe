@@ -1,11 +1,16 @@
-/* /explain pages only: loaded by these routes, so no other page downloads it.
+/* /explain, use-case and code-explainer pages: loaded by these routes, so no other page downloads it.
    The heading and the notes sit on reading cards built from the site's card tokens (--v-card, --v-ink,
    --v-shadow, --v-radius), so they follow the site theme. The Try it box keeps its own styles. */
 
 /* Exactly as wide as the Try it box (min(1120px, 100%)), so every card shares its width and left edge.
-   --font-mono uses the face from mono.ts, loaded with the page, in the same stack globals.css builds. */
+   --font-mono uses the face from mono.ts, loaded with the page, in the same stack globals.css builds.
+   Option A's tokens (ledger 633, Design's content spec) are set here, on these pages only, so the rest of the
+   site keeps its own until unvibe-site's pass: ink #111, a second ink #555 (7.46:1 on white), radius 10 px. */
 .explain-page {
-  --explain-muted: color-mix(in srgb, var(--v-ink) 78%, var(--v-card));
+  --v-ink: #111111;
+  --v-ink-2: #555555;
+  --v-radius: 10px;
+  --explain-muted: var(--v-ink-2);
   --font-mono: var(--explain-mono-face), var(--font-mono-fallback), ui-monospace, monospace;
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
@@ -30,20 +35,21 @@
   gap: 0.55rem;
 }
 
+/* 36 px at 390 wide, 60 px at 1440 and up; Inter 560 at −0.025em, Option A's display style. */
 .explain-head h1 {
   margin: 0;
   color: var(--v-ink);
-  font: 700 clamp(2rem, 4.4vw, 3.1rem) / 1.05 var(--font-sans);
-  letter-spacing: -0.03em;
+  font: 560 clamp(2.25rem, 1.693rem + 2.286vw, 3.75rem) / 1.05 var(--font-sans);
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
 .explain-head p {
-  max-width: 46rem;
+  max-width: 680px;
   margin: 0;
   color: var(--explain-muted);
-  font-size: 1.08rem;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.6;
   text-wrap: pretty;
 }
 
@@ -55,23 +61,44 @@
 
 .explain-crumb {
   color: var(--explain-muted);
-  font-size: 0.95rem;
+  font-size: 13px;
 }
 
-/* Text links only: the download buttons in .explain-get keep their own look. */
+/* Text links only: the download buttons in .explain-get keep their own look. Ink underline, 1 px, going to 2 px on
+   hover in 100 ms (Option A; no lime on these pages). */
 .explain-crumb a,
 .explain-langs a,
-.explain-more a {
+.explain-more a,
+.explain-page .paper-text-link {
   color: var(--v-ink);
   text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+  transition: text-decoration-thickness 100ms ease;
+}
+
+.explain-crumb a:hover,
+.explain-langs a:hover,
+.explain-page .paper-text-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.explain-page :focus-visible {
+  outline: 2px solid var(--v-ink);
+  outline-offset: 2px;
 }
 
 .explain-card h2 {
   margin: 0 0 0.9rem;
   color: var(--v-ink);
-  font: 700 clamp(1.4rem, 2.6vw, 1.85rem) / 1.15 var(--font-sans);
+  font: 560 28px / 1.2 var(--font-sans);
   letter-spacing: -0.02em;
+}
+
+.explain-page h3 {
+  font: 600 18px / 1.35 var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 .explain-card h2:not(:first-child),
@@ -84,11 +111,12 @@
   margin: 0 0 6px;
 }
 
+/* Body 17 px on 1.6, in a 680 px reading column. */
 .explain-card p,
 .explain-card li,
 .explain-card dd {
-  max-width: 48rem;
-  font-size: 1.02rem;
+  max-width: 680px;
+  font-size: 17px;
   line-height: 1.6;
 }
 
@@ -201,4 +229,49 @@
   margin: 1.4rem 0;
   border: 0;
   border-top: 1px solid color-mix(in srgb, var(--v-ink) 18%, transparent);
+}
+
+/* Option A retires lime and the sticker colours on these pages (Design's content spec §1 and §4). The rules they
+   replace live in vibe.css and sections.css, which other pages share, so each is overridden here under
+   .explain-page. "On" states are an ink fill with white text; on the Try it box's dark half the Explain it button
+   is white with ink text and the window dots are grey, until the parts pass makes that half light. */
+.explain-page .try__bar i,
+.explain-page .try__bar i:nth-child(2),
+.explain-page .try__bar i:nth-child(3) {
+  background: rgb(255 255 255 / 0.28);
+}
+
+.explain-page .try__levels button.is-on,
+.explain-page .try__levels button[aria-pressed="true"] {
+  border-color: var(--v-ink);
+  background: var(--v-ink);
+  color: #fff;
+}
+
+.explain-page .try__go {
+  background: #fff;
+  color: var(--v-ink);
+}
+
+.explain-page .try__go:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: #e6e6e6;
+}
+
+.explain-page .try__editor textarea:focus-visible,
+.explain-page .try__room input:focus-visible {
+  outline: 2px solid #fff;
+}
+
+.explain-page .try__consent input {
+  accent-color: #fff;
+}
+
+.explain-page .try__answer strong {
+  background: linear-gradient(transparent 60%, color-mix(in srgb, var(--v-ink) 12%, transparent) 60%);
+}
+
+.explain-page .get-unvibe .paper-join--mac,
+.explain-page .try .paper-join--mac {
+  background: var(--v-ink);
+  color: #fff;
 }
