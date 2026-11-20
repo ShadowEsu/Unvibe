@@ -145,7 +145,7 @@
     "watch": "node esbuild.js --watch",
     "package": "vsce package --out release/unvibe-desktop-bridge-0.1.2.vsix",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
