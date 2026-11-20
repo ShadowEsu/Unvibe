@@ -316,8 +316,10 @@
   box-shadow: none;
 }
 
+/* Solid #f3f3f3 (5 % ink on white), not the translucent tint: the editor sits straight on the page, and a see-through
+   fill let the page's background show behind the code. */
 .explain-page .try__editor {
-  background: var(--explain-tint);
+  background: #f3f3f3;
   color: var(--v-ink);
 }
 
