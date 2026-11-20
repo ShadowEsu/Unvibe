@@ -635,6 +635,10 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
+  // At once, before the usage round trip, so ⌃U is answered instantly; but only when something will be read. Past the
+  // limit check below `remaining` is above 0, where the provider doesn't depend on it, so this is the same answer as
+  // `agreed` there.
+  if (readsOnStart({ agreed: codeConsented(providerInUse()), sample: options.sample })) pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
   const usage = await cachedAppUsage();
   if (usage.remaining <= 0) {
@@ -666,7 +670,6 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
   const agreed = codeConsented(providerInUse(usage.remaining));
-  if (readsOnStart({ agreed, sample: options.sample })) pulseBar({ phase: 'loading', label: 'Loading' });
   if (!options.sample && !options.captured) {
     heldClipboardReview = !agreed && options.preferClipboard ? { at: Date.now() } : null;
   }
