@@ -121,6 +121,8 @@ writeFileSync(settingsFile, JSON.stringify({
   'editor.minimap.enabled': false,
   // No path above the code: the breadcrumbs would show the runner's folders in still 1 (Security SHOULD-ST1).
   'breadcrumbs.enabled': false,
+  // No lightbulb beside the selection: drag-only run 44839422898 showed one at line 2 (Security NIT-ST5).
+  'editor.lightbulb.enabled': 'off',
   'window.restoreWindows': 'none',
 }, null, 2));
 let editor = null;
