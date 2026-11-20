@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, panelRequestBusy, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 import { computeToday } from '../src/core/learning';
 import { CONSENT_ITEMS } from '../src/core/consent';
@@ -562,4 +562,54 @@ test('REG-83: trying again after a refund takes the credit again, and is refused
   assert.equal(reviewBodies().length, 0, 'no request without a credit');
   assert.match(String(events.find((ev) => ev.type === 'error')?.message), /selected-code prompts/);
   assert.equal(t.selectionCredit, 'returned');
+});
+
+test('a second Explain or Retry press while the first explanation runs is dropped; a question or More detail is not', async () => {
+  const { win } = panel();
+  const s = session('beginner');
+  const other = session('beginner');
+  const seen: Record<string, boolean> = {};
+  // The press arrives while the first request is already out (a double-click lands before the panel hears back).
+  beforeReviewAnswer = () => {
+    seen.explain = panelRequestBusy(s, { level: 'beginner' });
+    seen.different = panelRequestBusy(s, { level: 'beginner', variant: 'different' });
+    seen.question = panelRequestBusy(s, { level: 'beginner', question: 'Why wait?' });
+    seen.detail = panelRequestBusy(s, { level: 'beginner', moreDetail: true });
+    seen.otherPanel = panelRequestBusy(other, { level: 'beginner' });
+  };
+  try {
+    await runReview(win, s, { level: 'beginner' });
+  } finally {
+    beforeReviewAnswer = null;
+  }
+  assert.deepEqual(seen, { explain: true, different: true, question: false, detail: false, otherPanel: false });
+  assert.equal(panelRequestBusy(s, { level: 'beginner' }), false, 'once it has ended, the next press runs');
+});
+
+test('a run started outside the panel (⌃U, Study, the sample) holds a mid-run press too; a question does not', async () => {
+  const { win } = panel();
+  const s = session('beginner');
+  const busy: boolean[] = [];
+  beforeReviewAnswer = () => busy.push(panelRequestBusy(s, { level: 'beginner' }));
+  try {
+    // A new capture that starts over while one runs: both are marked, and the panel is free only after both end.
+    await Promise.all([runReview(win, s, { level: 'beginner' }), runReview(win, s, { level: 'intermediate' })]);
+    assert.equal(panelRequestBusy(s, { level: 'beginner' }), false);
+    await runReview(win, s, { level: 'beginner', question: 'Why wait?' });
+  } finally {
+    beforeReviewAnswer = null;
+  }
+  assert.deepEqual(busy, [true, true, false]);
+});
+
+test('a refused explanation frees the panel, so Retry runs', async () => {
+  const { win } = panel();
+  const s = session('beginner');
+  reviewRefusal = { status: 503, body: { error: 'unavailable' } };
+  try {
+    await runReview(win, s, { level: 'beginner' });
+  } finally {
+    reviewRefusal = null;
+  }
+  assert.equal(panelRequestBusy(s, { level: 'beginner' }), false);
 });

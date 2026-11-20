@@ -203,6 +203,7 @@ export function reduceEvent(s: PanelState, ev: WidgetEvent): PanelState {
       return { ...s, pinned: ev.pinned };
     case 'status':
       // A new explanation (Explain differently, another depth) starts afresh; one about the same lesson keeps Test me.
+      // Its depth is the one main runs, not a later press it dropped.
       return {
         ...s,
         text: '',
@@ -211,6 +212,7 @@ export function reduceEvent(s: PanelState, ev: WidgetEvent): PanelState {
         understood: ev.resetQuiz === false ? s.understood : false,
         phase: 'streaming',
         quiz: ev.resetQuiz === false ? s.quiz : null,
+        level: ev.level ?? s.level,
       };
     case 'consentNeeded':
       return { ...s, phase: 'aiConsent', consentProvider: ev.provider };
