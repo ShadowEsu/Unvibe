@@ -31,8 +31,10 @@
 //      (the mouse-up on plain background: on the Mac's 1280 px screen, right of a short row between short rows);
 //      a press opens the panel on the agreement (no agreement in this profile: nothing is read) and sends nothing.
 //      The press row lists the helper's lines (down, press, app) and the pointer events the button's page saw.
-//   A5 stacking: that panel focused, then VS Code clicked (the panel fades), then a selection whose button lands over
-//      the panel's edge: the button is in front (window order) and takes the pointer (hover → pill over the panel).
+//   A5 stacking: that panel focused, then VS Code clicked (Mac: and activated by name, since synthesized clicks don't
+//      move activation on macOS 26+), and the panel fades (its own row; NOT TESTABLE if the header click never gave the
+//      panel focus); then a selection whose button lands over the panel's edge: the button is in front (window order)
+//      and takes the pointer (hover → pill over the panel). Its geometry is read once it has settled.
 //   A6 the flip at the screen's right edge: the button and the pill grow left of the mouse-up.
 //   A7 dark: Unvibe and VS Code dark, the button and the pill again (crops, transparent corners).
 //   A8 idle CPU of Unvibe's processes over 60 s with the button on (ghost hidden), then 60 s with it off.
@@ -1094,16 +1096,26 @@ async function runA(app, companion, tag) {
   const away = L2.lines.find((l) => l.y < P.y - 20 || l.y > P.y + P.h + 20) ?? L2.lines[0];
   const elsewhere = () => pointer.click(away.left + 30, away.y);
   elsewhere(); // back into VS Code: the panel loses focus
+  // macOS 26+: a synthesized click on the panel activates Unvibe, and later synthesized clicks don't move activation
+  // until an app switch (unvibe-app, run 44679910340: the panel never lost focus). A person's click would; here VS Code
+  // is brought to the front by name, as an app switch does.
+  if (os === 'mac') osa('tell application "Visual Studio Code" to activate');
   const faded = await waitFor(async () => { const o = await panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity)); return o < 0.5 ? o : null; }, 3000, 100);
   const focusedAfterAway = await panel.evaluate(() => document.hasFocus()).catch(() => null);
-  const focusNote = `panel focused after the header click ${focusedAfterHead}, after the click into VS Code ${focusedAfterAway}`;
+  const focusNote = `panel focused after the header click ${focusedAfterHead}, after the click into VS Code${os === 'mac' ? ' and its activation' : ''} ${focusedAfterAway}`;
+  // The fade, its own row (lead 2026-11-20): it happens on the panel window's blur, so it is judged only when the header
+  // click gave the panel focus; a panel that never had focus has nothing to lose.
+  const fadeRow = `A5 ${tag}: the panel fades once it has lost focus (a click into VS Code)`;
+  const fadeDetail = `opacity ${faded !== null ? r1(faded) : 'stayed at or above 0.5 for 3 s'}; ${focusNote}`;
+  if (faded !== null || focusedAfterHead === true) log(faded !== null, fadeRow, fadeDetail);
+  else untestable(fadeRow, `the header click didn't give the panel focus (document.hasFocus() ${focusedAfterHead}), so there was no blur to fade on; ${fadeDetail}`);
   // A selection whose button lands over the panel's edge: ending 12 px left of the panel (the button covers its left
   // 28 px), or, if no line has room there, ending 20 px inside its right edge (the button covers its right 12 px).
   const besideLeft = L2.lines.find((l) => l.y > P.y + 30 && l.y < P.y + P.h - 30 && P.x - 12 - (l.left + 2) > 40);
   const besideRight = L2.lines.find((l) => l.y > P.y + 30 && l.y < P.y + P.h - 30 && l.left + 2 < P.x - 4 && P.x + P.w - 20 - (l.left + 2) > 40);
   const target = besideLeft ?? besideRight;
   if (!target) {
-    log(false, `A5 ${tag}: the button over the faded panel`, `no code line beside the panel (panel ${Math.round(P.w)}×${Math.round(P.h)} at (${Math.round(P.x)}, ${Math.round(P.y)})); not run (harness)`);
+    log(false, `A5 ${tag}: the button over the panel`, `no code line beside the panel (panel ${Math.round(P.w)}×${Math.round(P.h)} at (${Math.round(P.x)}, ${Math.round(P.y)})); not run (harness)`);
   } else {
     const edge = besideLeft ? 'left' : 'right';
     const end = { x: besideLeft ? P.x - 12 : P.x + P.w - 20, y: target.y };
@@ -1113,7 +1125,7 @@ async function runA(app, companion, tag) {
     // spot, while the still showed it at the drag's end): the geometry is read again once it has settled.
     if (gs0) await sleep(400);
     const gs = gs0 ? ((await ghost(app)) ?? gs0) : null;
-    if (!gs) log(false, `A5 ${tag}: the button over the faded panel`, `no button for the drag ending at the panel's ${edge} edge (panel faded: ${faded ?? 'no'}; ${focusNote})`);
+    if (!gs) log(false, `A5 ${tag}: the button over the panel`, `no button for the drag ending at the panel's ${edge} edge (panel faded: ${faded ?? 'no'}; ${focusNote})`);
     else {
       const gb = gs.b ?? gs;
       const firstSeen = `first seen at (${r1((gs0.b ?? gs0).x)}, ${r1((gs0.b ?? gs0).y)}), settled at (${r1(gb.x)}, ${r1(gb.y)}) for the mouse-up at (${r1(end.x)}, ${r1(end.y)})`;
@@ -1132,7 +1144,7 @@ async function runA(app, companion, tag) {
       const crop = grab(file(`${tag}-over-faded-panel-1to1`), gs.x - 32, gs.y - 16, (hovered?.w ?? gs.w) + 64, gs.h + 32);
       const opacity = await panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity));
       log(gi !== -1 && pi !== -1 && gi < pi && overlap > 0 && Boolean(hovered),
-        `A5 ${tag}: the button stays in front of an open, faded panel and takes the pointer there`,
+        `A5 ${tag}: the button stays in front of the open panel and takes the pointer there`,
         `panel opacity ${faded !== null ? r1(faded) : 'not faded'} (with the pointer on the button ${r1(opacity)}; ${focusNote}); button ${r1(gb.w)}×${r1(gb.h)} at (${r1(gb.x)}, ${r1(gb.y)}) (its window ${r1(gs.w)}×${r1(gs.h)}; ${firstSeen}), ${r1(overlap)} px over the panel's ${edge} edge (panel ${Math.round(P.w)}×${Math.round(P.h)} at (${Math.round(P.x)}, ${Math.round(P.y)})); hover over the overlap → ${hovered ? `pill ${r1(hovered.b?.w ?? hovered.w)} wide` : 'no pill in 2 s'}; window order: button ${gi}, panel ${pi} of Unvibe's ${own.length} (0 = front); crop sha ${sha(crop).slice(0, 12)}`);
     }
   }
