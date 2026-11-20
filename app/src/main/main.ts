@@ -140,6 +140,7 @@ import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
 import { isProPlan } from '../core/plan';
+import { refreshBubble, registerBubble } from './bubble';
 
 function osUserName(): string {
   try {
@@ -685,6 +686,8 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
 
 function registerShortcut(accel: string): boolean {
   globalShortcut.unregisterAll();
+  // The Unvibe button follows the same off switch as the shortcut (sending switched off: neither runs).
+  refreshBubble();
   const keys = shortcutKeys(accel, isMac, sendingSwitchedOff());
   // None while sending is switched off in Settings, Privacy & Data; that isn't a "shortcut taken" failure.
   if (keys.length === 0) return true;
@@ -1404,6 +1407,12 @@ app.whenReady().then(() => {
   ipcMain.handle('sync:retry', async () => {
     await retrySync();
     return syncStatus();
+  });
+
+  // --- the Unvibe button (D5): its press is exactly the shortcut's path ---
+  registerBubble({
+    explain: () => void startReview(),
+    explainCaptured: (code, sourceApp) => void startReview({ captured: { code, sourceApp } }),
   });
 
   // --- settings ---

@@ -32,6 +32,7 @@ import { askForConsent, ConsentDialog } from '../shared/consentForm';
 import { CONSENT_PROVIDERS } from '../../core/consent';
 import { SUPPORT_EMAIL } from '../../core/support';
 import type { ConsentStatus } from '../../main/consent';
+import type { BubbleSettings } from '../../main/bubble';
 import { PasteTarget } from '../shared/pasteTarget';
 import { ShortcutGuide, turnOnShortcut, watchGrant } from '../shared/shortcutGuide';
 import { SettingsIcon } from './settingsIcons';
@@ -392,6 +393,29 @@ function PermRow() {
         {row.canAllow ? <button className="act act--primary" onClick={() => void allow()}>Allow Accessibility</button> : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * The Unvibe button (D5 A) and Quick look (T3): each its own unticked switch with Security's words (file 1235); main
+ * keeps every choice with its version and time. Quick look shows only while the button is on. Mac and Windows only.
+ */
+function BubbleRows() {
+  const [bubble, setBubble] = useState<BubbleSettings | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    void window.unvibe.bubbleSettings().then(setBubble);
+  }, []);
+  if (!bubble?.available) return null;
+  const flip = (item: 'ghost' | 'preview', on: boolean) => {
+    setError('');
+    window.unvibe.setBubble(item, on).then(setBubble, () => setError("Couldn't save that. Try again."));
+  };
+  return (
+    <>
+      <div className="setrow"><div><div className="sl">{bubble.copy.ghost.label}</div><div className="sd">{bubble.copy.ghost.help}</div><div className="sd">Works in {bubble.editors}.</div>{error && <div className="field-err" role="alert">{error}</div>}</div><Toggle label={bubble.copy.ghost.label} on={bubble.ghost} onClick={() => flip('ghost', !bubble.ghost)} /></div>
+      {bubble.ghost && <div className="setrow"><div><div className="sl">{bubble.copy.preview.label}</div><div className="sd">{bubble.copy.preview.help}</div></div><Toggle label={bubble.copy.preview.label} on={bubble.preview} onClick={() => flip('preview', !bubble.preview)} /></div>}
+    </>
   );
 }
 
@@ -1539,6 +1563,7 @@ function Settings({ info, account, settings, onAccountChange, onSettings, onClos
               </div>
               <div className="setrow"><div><div className="sl">Activation shortcut</div><div className="sd">Select code in any app, then press this.{isMac ? ' Control+U is always registered as well.' : ''}{recording ? ' Press Escape to cancel.' : ''}</div>{shortcutErr && <div className="field-err" role="alert">{shortcutErr}</div>}</div><button type="button" className={`act kbd-cap${recording ? ' rec' : ''}`} aria-label={recording ? 'Recording shortcut. Press the new keys' : `Activation shortcut ${prettyAccel(settings.shortcut)}. Change`} onClick={() => { setShortcutErr(''); setRecording(true); }}>{recording ? 'Press keys…' : prettyAccel(settings.shortcut)}</button></div>
               <PermRow />
+              <BubbleRows />
               </div>
             </>
           )}
