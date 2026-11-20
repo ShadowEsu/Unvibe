@@ -9,9 +9,11 @@ import {
   ghostPlacement,
   ghostWindowBounds,
   GHOST_IDLE_MS,
+  GHOST_SIZE,
   parseHelperLine,
   previewBullets,
   previewTitle,
+  PILL_WIDTH,
   reduceGhost,
   type BubbleItem,
   type BubblePlatform,
@@ -85,6 +87,8 @@ export interface BubbleDeps {
   explain: () => void;
   /** The full explanation of a selection Quick look already read: counts as one explanation. */
   explainCaptured: (code: string, sourceApp: string) => void;
+  /** Whether a sender is Settings (the companion): only it may change the switches. */
+  fromSettings: (sender: Electron.WebContents) => boolean;
 }
 
 let deps: BubbleDeps | null = null;
@@ -97,6 +101,8 @@ let state: GhostState = { look: 'hidden' };
 let anchor: { x: number; y: number; flipped: boolean } | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let previewHeight = 120;
+// The pill's measured width (the renderer reports it: the shortcut's caps differ by platform and setting).
+let pillWidth = PILL_WIDTH;
 let preview: { run: number; abort: AbortController; code: string | null; sourceApp: string; view: NonNullable<GhostView['preview']> } | null = null;
 let previewRuns = 0;
 let escapeHeld = false;
@@ -109,6 +115,11 @@ function active(): boolean {
 export function refreshBubble(): void {
   if (active()) startHelper();
   else stopBubble();
+  // registerShortcut's unregisterAll() also drops a card's Esc: take it back while the card still shows (NIT N3).
+  if (escapeHeld && !globalShortcut.isRegistered('Escape')) {
+    escapeHeld = false;
+    holdEscape(true);
+  }
 }
 
 export function stopBubble(): void {
@@ -165,8 +176,6 @@ function onInput(input: GhostInput): void {
   const before = state;
   const next = reduceGhost(state, event, { platform, previewOn: bubbleStore().state().preview, inside: insideBubble });
   if (next.effect === 'none' && next.state === before) return;
-  // Leaving the card for any reason drops its request and its result (Security A4).
-  if (before.look === 'preview' && next.state.look !== 'preview') endPreview();
   if (next.effect === 'explain') {
     apply(next.state);
     deps?.explain();
@@ -212,6 +221,9 @@ function scheduleIdle(): void {
 }
 
 function apply(next: GhostState): void {
+  // Leaving the card for any reason, from any path (an event, the switch going off, the helper exiting), drops its
+  // request, its result and its Esc (Security A4; SHOULD-366a / lead S1).
+  if (state.look === 'preview' && next.look !== 'preview') endPreview();
   state = next;
   scheduleIdle();
   if (next.look === 'hidden') {
@@ -223,9 +235,9 @@ function apply(next: GhostState): void {
     return;
   }
   const work = screen.getDisplayNearestPoint(next.at).workArea;
-  anchor ??= ghostPlacement(next.at, work);
+  anchor ??= ghostPlacement(next.at, work, pillWidth);
   const win = ensureWindow();
-  win.setBounds(ghostWindowBounds(anchor, next.look, work, previewHeight));
+  win.setBounds(ghostWindowBounds(anchor, next.look, work, previewHeight, pillWidth));
   if (ghostReady) win.webContents.send('ghost:view', view());
   if (!win.isVisible()) win.showInactive();
   win.moveTop();
@@ -263,7 +275,16 @@ function endPreview(): void {
  * from the preview route (or the person's own key). Nothing is saved to the Library (A8). A selection with any
  * secret-scan finding goes to the full panel instead, which shows the scan's own question.
  */
+/** Quick look's run; a throw before the request (usage, capture, payload) shows the error, never a stuck card (lead N3). */
 async function runPreview(run: number): Promise<void> {
+  try {
+    await previewSteps(run);
+  } catch {
+    if (preview?.run === run) sendPreview({ phase: 'error', message: 'Quick look could not finish just now. Open the full explanation instead.' });
+  }
+}
+
+async function previewSteps(run: number): Promise<void> {
   const abort = new AbortController();
   preview = { run, abort, code: null, sourceApp: '', view: { phase: 'reading', title: '', bullets: [] } };
   holdEscape(true);
@@ -409,9 +430,16 @@ export function registerBubble(d: BubbleDeps): void {
     previewHeight = Math.round(height);
     apply(state);
   });
+  ipcMain.on('ghost:width', (e, width: unknown) => {
+    if (!fromGhost(e) || typeof width !== 'number' || !Number.isFinite(width)) return;
+    const next = Math.round(Math.min(240, Math.max(GHOST_SIZE, width)));
+    if (next === pillWidth) return;
+    pillWidth = next;
+    if (state.look === 'pill') apply(state);
+  });
   ipcMain.handle('bubble:get', () => bubbleSettings());
-  ipcMain.handle('bubble:set', (_e, item: unknown, on: unknown) => {
-    if ((item !== 'ghost' && item !== 'preview') || typeof on !== 'boolean') return bubbleSettings();
+  ipcMain.handle('bubble:set', (e, item: unknown, on: unknown) => {
+    if (!deps?.fromSettings(e.sender) || (item !== 'ghost' && item !== 'preview') || typeof on !== 'boolean') return bubbleSettings();
     bubbleStore().set(item as BubbleItem, on);
     refreshBubble();
     return bubbleSettings();

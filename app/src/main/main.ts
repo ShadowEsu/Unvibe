@@ -1470,6 +1470,8 @@ app.whenReady().then(() => {
   registerBubble({
     explain: () => void startReview(),
     explainCaptured: (code, sourceApp) => void startReview({ captured: { code, sourceApp } }),
+    // Only Settings (the companion) may change the two switches (lead and Security NIT N1).
+    fromSettings: (sender) => Boolean(companion && BrowserWindow.fromWebContents(sender) === companion),
   });
 
   // --- settings ---
