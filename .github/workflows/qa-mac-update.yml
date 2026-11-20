@@ -37,7 +37,7 @@ jobs:
       INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
       FROM: "0.1.52"
       TO: "0.1.54"
-      WANT_ASAR: 3858a8999b6c5db2fdf879bfe59b94271fdb1555fa50de5b7a0fbaa659635b10
+      WANT_ASAR: ad942b3e82a182e976512b773a6d7c257df91c45c425523b8304e2f3b8720be5
       ARCH: ${{ matrix.arch }}
     steps:
       - name: Require the QA flag token

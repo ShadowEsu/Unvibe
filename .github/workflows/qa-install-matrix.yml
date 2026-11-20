@@ -50,7 +50,7 @@ jobs:
       # 0.1.54 before the site moves its pin (ledger 639, Thu 19 Nov): the live install.sh run with its own UNVIBE_BETA_TAG
       # override, so the curl rows install the published v0.1.54; once the site pins v0.1.54 this changes nothing.
       UNVIBE_BETA_TAG: v0.1.54
-      WANT_ASAR: 3858a8999b6c5db2fdf879bfe59b94271fdb1555fa50de5b7a0fbaa659635b10
+      WANT_ASAR: ad942b3e82a182e976512b773a6d7c257df91c45c425523b8304e2f3b8720be5
     steps:
       # Opt-in: only rows named by "[only:<path>]" in the commit message run (a push with no marker ran all 14 rows with
       # hosted-AI explanations in run 42749193594); the others skip every step. "[no-explain]" stops each row at first
@@ -136,7 +136,7 @@ jobs:
     timeout-minutes: 30
     env:
       INSTALL_ID: qa-matrix-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}-${{ matrix.path }}
-      WANT_ASAR: db61b7622f27eb0dfffe153720c2fe99f68fd80e10f7f7058718b7d942521a4c
+      WANT_ASAR: e8227459d4d2e232df065b9d6d6a0f7eb16c33e686fa9b399204cb3f1dcd6747
     steps:
       - name: Pick this row
         shell: bash
