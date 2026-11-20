@@ -43,6 +43,11 @@ func pointerIsBeam() -> Bool {
     return current.hotSpot == beamHotSpot
 }
 
+/// How long after a press the I-beam is read. Editors (Chromium) set the cursor asynchronously, so at the press itself
+/// it can still be the shape of where the pointer just was: a quick move-and-press would miss text or count the gutter
+/// (SHOULD-D5-cursor). By now the editor's cursor for the press point has landed, and a drag keeps it.
+let beamSettleMicros: useconds_t = 40_000
+
 func round1(_ v: CGFloat) -> Double { (Double(v) * 10).rounded() / 10 }
 
 var downAt: NSPoint? = nil
@@ -55,8 +60,10 @@ let monitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { event in
     switch event.type {
     case .leftMouseDown:
         downAt = at
-        downOverText = pointerIsBeam()
         emit(["e": "down", "x": round1(at.x), "y": round1(at.y)])
+        // Blocks this helper's own run loop only; the release that follows is handled after this read.
+        usleep(beamSettleMicros)
+        downOverText = pointerIsBeam()
     case .leftMouseUp:
         guard let start = downAt else { return }
         downAt = nil
