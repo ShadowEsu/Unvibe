@@ -143,6 +143,16 @@ export function restoresOpenPanel(start: { code: string | null; agreed: boolean;
 }
 
 /**
+ * Whether a review start shows the Island's "Loading" (it says Reading): only when something is really read. Before the
+ * person agrees to sending code nothing is read at all (Security CC-4) and the panel opens on the agreement, so the
+ * Island stays as it was; the first-run sample is Unvibe's own code and needs no agreement (CC-6). Otherwise the Island
+ * said Reading over the agreement and kept saying it after Not now (QA setup-0157 still mac-11; Security SHOULD-372c).
+ */
+export function readsOnStart(start: { agreed: boolean; sample?: boolean }): boolean {
+  return start.agreed || Boolean(start.sample);
+}
+
+/**
  * Sets $name to the foreground process name. ($pid is PowerShell's read-only automatic
  * variable, so the window's process id goes in $procId.)
  */

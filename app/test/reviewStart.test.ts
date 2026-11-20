@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { reviewCapture } from '../src/core/consent';
-import { restoresOpenPanel } from '../src/main/selection';
+import { readsOnStart, restoresOpenPanel } from '../src/main/selection';
 
 // startReview's first decisions in order: what the capture returns, then whether the open panel is only brought back.
 async function start(agreed: boolean, panel: { open: boolean; hasCode: boolean }, read: () => Promise<{ code: string | null }>) {
@@ -29,4 +29,13 @@ test('a real selection always starts a new explanation, and an empty panel is ne
 
 test('a missing Mac Accessibility grant is shown, not restored over', () => {
   assert.equal(restoresOpenPanel({ code: null, agreed: true, needsGrant: true, panelOpen: true, panelHasCode: true }), false);
+});
+
+test('the Island says Reading only when something is read: never before the agreement, always for the sample', () => {
+  // Security SHOULD-372c: ⌃U before the agreement opened the agreement while the Island said Reading, and kept saying it
+  // after Not now.
+  assert.equal(readsOnStart({ agreed: false }), false);
+  assert.equal(readsOnStart({ agreed: true }), true);
+  // The first-run sample is Unvibe's own code and runs without the agreement (CC-6).
+  assert.equal(readsOnStart({ agreed: false, sample: true }), true);
 });

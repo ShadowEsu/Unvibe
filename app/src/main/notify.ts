@@ -53,9 +53,14 @@ export type BarPulse = {
   label: string;
 };
 
+/** The phases in which the Island says Reading, Checking or Writing: a review is under way. */
+const WORKING_PHASES: ReadonlySet<BarPulse['phase']> = new Set(['loading', 'working', 'analyzing', 'searching', 'thinking', 'generating', 'contextualizing', 'finalizing']);
+let lastPhase: BarPulse['phase'] = 'idle';
+
 /** Island activity. Not rate limited. Never includes source. */
 export function pulseBar(pulse: BarPulse): void {
   if (!bar || bar.isDestroyed()) return;
+  lastPhase = pulse.phase;
   pulseSequence += 1;
   const sequence = pulseSequence;
   if (pendingReady) {
@@ -77,4 +82,12 @@ export function pulseBar(pulse: BarPulse): void {
   }
   showBar(bar);
   bar.webContents.send('bar:pulse', pulse);
+}
+
+/**
+ * The panel closed: whatever it was doing stopped with it (its session is aborted), so an Island still saying Reading,
+ * Checking or Writing goes idle. A finished one keeps its Ready tick, which clears itself.
+ */
+export function settleBar(): void {
+  if (WORKING_PHASES.has(lastPhase)) pulseBar({ phase: 'idle', label: 'Ready' });
 }
