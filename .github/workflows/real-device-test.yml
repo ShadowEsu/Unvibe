@@ -610,6 +610,11 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: "1"
           HOMEBREW_NO_ANALYTICS: "1"
         run: |
+          # The release's own digests (SHA256SUMS of v0.1.54); the stills are of that build only.
+          case "$(uname -m)" in arm64) want=fd9b7e58a9d0257ed3c1e761e60cbcc110a7f2ae3c0bab5fc57bf1bc0c19ddc9 ;; *) want=b02c635c92470d70ee95a99a36e7b4fcbd94d37faab8a4b0896740227303ccb3 ;; esac
+          got=$(shasum -a 256 "$RUNNER_TEMP/Unvibe.dmg" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then echo "::error::the installed dmg is not v0.1.54's ($got); nothing sent"; exit 1; fi
+          echo "0.1.54 dmg sha256 $got (matches the release)"
           brew install --cask visual-studio-code
           export VSCODE_CLI="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
           "$VSCODE_CLI" --version | head -n 1

@@ -114,6 +114,8 @@ writeFileSync(settingsFile, JSON.stringify({
   'workbench.secondarySideBar.defaultVisibility': 'hidden',
   'workbench.welcomePage.walkthroughs.openOnInstall': false,
   'editor.minimap.enabled': false,
+  // No path above the code: the breadcrumbs would show the runner's folders in still 1 (Security SHOULD-ST1).
+  'breadcrumbs.enabled': false,
   'window.restoreWindows': 'none',
 }, null, 2));
 let editor = null;
