@@ -724,7 +724,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 Windows names it here. */}
             {pasteStep && (
               <div className="onboard__paste">
-                <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} clipboardEmpty={paste.clipboardEmpty} />
+                <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} clipboardEmpty={paste.clipboardEmpty}
+                  explainedCode={ownCodeDone && !paste.started ? paste.explainedCode : ''} />
                 {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
                 {isWindows ? <p className="onboard__lead">Or select code in any app and press {keys}.</p> : null}
                 <details className="onboard__more">
@@ -794,15 +795,20 @@ function useOwnCodePaste() {
   const [fileError, setFileError] = useState('');
   // Explain my clipboard found nothing copied: the paste box says so.
   const [clipboardEmpty, setClipboardEmpty] = useState(false);
-  // Bumped to remount the paste target without its preview and "Explaining in the panel" pill.
+  // Bumped to remount the paste target without its "Explaining in the panel" pill (and, unless it was explained, its code).
   const [attempt, setAttempt] = useState(0);
   // A paste or file went to the panel and hasn't been explained yet.
   const waiting = useRef(false);
-  const explainPaste = () => {
+  // The pasted code on its way to the panel, and the last one explained: the box keeps showing it afterwards (Design
+  // S-1 SHOULD 1). Explain my clipboard and Choose a file leave the renderer without the code, so they keep none.
+  const pending = useRef('');
+  const [explainedCode, setExplainedCode] = useState('');
+  const explainPaste = (text?: string) => {
     setFileError('');
     setClipboardEmpty(false);
     setStarted(true);
     waiting.current = true;
+    pending.current = text ?? '';
     window.unvibe.explainClipboard();
   };
   const chooseFile = async () => {
@@ -812,9 +818,13 @@ function useOwnCodePaste() {
     if (result.ok) {
       setStarted(true);
       waiting.current = true;
+      pending.current = '';
     } else if (result.error) setFileError(result.error);
   };
-  useEffect(() => window.unvibe.onOwnCodeDone(() => { waiting.current = false; }), []);
+  useEffect(() => window.unvibe.onOwnCodeDone(() => {
+    waiting.current = false;
+    setExplainedCode(pending.current);
+  }), []);
   useEffect(() => window.unvibe.onClipboardEmpty(() => {
     if (!waiting.current) return;
     waiting.current = false;
@@ -829,7 +839,7 @@ function useOwnCodePaste() {
     setStarted(false);
     setAttempt((n) => n + 1);
   }), []);
-  // A fresh target, for another paste after one was explained.
+  // A target ready for another paste after one was explained (setup's step 3 still shows the explained code in it).
   const reset = () => {
     setStarted(false);
     setAttempt((n) => n + 1);
@@ -839,7 +849,7 @@ function useOwnCodePaste() {
     setClipboardEmpty(false);
     setFileError('');
   };
-  return { started, setStarted, fileError, clipboardEmpty, explainPaste, chooseFile, attempt, reset, clearNotice };
+  return { started, setStarted, fileError, clipboardEmpty, explainPaste, chooseFile, attempt, reset, clearNotice, explainedCode };
 }
 
 function LockGlyph() {
