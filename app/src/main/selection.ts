@@ -9,8 +9,11 @@
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
+import { clipboardHolder } from '../core/clipboardHold';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Every synthetic copy, from the shortcut, the button or Quick look, goes through this one at a time (SHOULD-366d).
+const holdClipboard = clipboardHolder(clipboard);
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
 const isLinux = process.platform === 'linux';
@@ -271,7 +274,11 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
   }
   if (isLinux) return readLinuxPrimary();
   if (!isMac && !isWindows) return { code: null, error: 'unsupported' };
-  const previous = clipboard.readText();
+  return holdClipboard(() => copySelection(options));
+}
+
+/** The synthetic copy itself; holdClipboard has saved the person's clipboard and puts it back after. */
+async function copySelection(options: { fromApp?: string }): Promise<CaptureResult> {
   // Let Control+U / the saved shortcut release before synthesizing Copy.
   await delay(90);
   // Empty the text pasteboard so an unchanged clipboard cannot be mistaken for a selection.
@@ -319,7 +326,5 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
     return { code: null, sourceApp, error: elevated ? 'elevated' : 'empty' };
   } catch (error) {
     return { code: null, sourceApp, error: isMac ? macCaptureFailure(error) : 'failed' };
-  } finally {
-    clipboard.writeText(previous);
   }
 }

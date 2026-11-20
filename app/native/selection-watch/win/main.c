@@ -13,6 +13,8 @@
  *        a mouse selection ended over text: x/y its end, px/py where the pointer rests
  *   {"e":"down"|"right"|"scroll","x":..,"y":..}                                 so the button can leave
  *   {"e":"app","app":"<exe name>"}                                              another app came to the front
+ *   {"e":"press","x":..,"y":..,"beam":0|1,"known":0|1}
+ *        after each left press's I-beam read: what the helper saw, for QA's logs. Main drops it (no such event).
  * Points are physical screen pixels (the process is per-monitor DPI aware); main converts them to DIPs.
  */
 #undef _WIN32_WINNT
@@ -97,10 +99,11 @@ static void exe_of(HWND hwnd, char *out, size_t cap) {
  * not on a tab, a scrollbar or a sidebar. When Windows can't say (no cursor handle: touch or pen hides it, and a PC with
  * no mouse has none), it counts as text on purpose (lead): a missed button is the bigger miss there, and a stray one is
  * harmless (it never sends anything, and it leaves after 4 s or on any click). */
-static BOOL pointer_is_beam(void) {
+static BOOL pointer_is_beam(BOOL *known) {
   CURSORINFO ci;
   ci.cbSize = sizeof ci;
-  if (!GetCursorInfo(&ci) || !ci.hCursor) return TRUE;
+  *known = GetCursorInfo(&ci) && ci.hCursor;
+  if (!*known) return TRUE;
   return ci.hCursor == LoadCursorW(NULL, IDC_IBEAM);
 }
 
@@ -147,7 +150,11 @@ static DWORD WINAPI worker(LPVOID arg) {
         emit_point("down", pt);
         /* The worker only: the hook keeps posting, and the release is handled after this read. */
         Sleep(BEAM_SETTLE_MS);
-        down_over_text = pointer_is_beam();
+        BOOL known = FALSE;
+        down_over_text = pointer_is_beam(&known);
+        printf("{\"e\":\"press\",\"x\":%ld,\"y\":%ld,\"beam\":%d,\"known\":%d}\n", (long)pt.x, (long)pt.y,
+               down_over_text ? 1 : 0, known ? 1 : 0);
+        fflush(stdout);
         break;
       }
       case WM_LBUTTONUP: {

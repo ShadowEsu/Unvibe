@@ -51,7 +51,6 @@ function Button({ view }: { view: GhostView }) {
       type="button"
       className={`ghost${view.look === 'pill' ? ' ghost--pill' : ''}${view.flipped ? ' ghost--flipped' : ''}`}
       aria-label={label}
-      title={label}
       onMouseEnter={enter}
       onMouseLeave={leave}
       onClick={() => window.unvibe.ghostPress()}
@@ -92,7 +91,8 @@ function QuickLook({ view }: { view: GhostView }) {
     <div ref={box} className="quick" role="dialog" aria-label="Quick look">
       <div className="quick__head">
         <Buddy mood={working ? 'thinking' : 'idle'} size={20} label="" />
-        <span className="quick__title">{working ? 'Explaining…' : 'Quick look'}</span>
+        {/* "Reading…" until the selection is read (its title arrives): a copy that comes back empty never said "Explaining" (Security 366c). */}
+        <span className="quick__title">{!p || (p.phase === 'reading' && !p.title) ? 'Reading…' : working ? 'Explaining…' : 'Quick look'}</span>
         {p?.title ? <span className="quick__meta">· {p.title}</span> : null}
       </div>
       {p?.phase === 'error' ? (
