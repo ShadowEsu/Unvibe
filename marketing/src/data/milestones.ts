@@ -1745,6 +1745,16 @@ const MONTH_NAMES: Record<string, string> = {
   JUL: "July", AUG: "August", SEP: "September", OCT: "October", NOV: "November", DEC: "December",
 };
 
+/** The date as the site shows it: "16 NOV 2026" → "16 Nov 2026" (Option A sets no capitals; the data keeps its form). */
+export function milestoneDateLabel(date: string): string {
+  return date.replace(/\b([A-Z])([A-Z]{2})\b/, (_, first: string, rest: string) => first + rest.toLowerCase());
+}
+
+/** The category as the site shows it: "PRODUCT" → "Product". */
+export function milestoneCategoryLabel(category: MilestoneCategory): string {
+  return category.charAt(0) + category.slice(1).toLowerCase();
+}
+
 export interface ChangelogMonth {
   label: string;
   items: Milestone[];

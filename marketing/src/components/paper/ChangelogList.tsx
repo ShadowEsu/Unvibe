@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Arrive } from "@/components/paper/Arrive";
 import { ChangelogHashOpen } from "@/components/paper/ChangelogHashOpen";
-import { changelogAnchors, changelogArchive, changelogEntries, type Milestone } from "@/data/milestones";
+import { changelogAnchors, changelogArchive, changelogEntries, milestoneCategoryLabel, milestoneDateLabel, type Milestone } from "@/data/milestones";
 
 interface ChangelogListProps {
   items?: Milestone[];
@@ -28,7 +28,7 @@ function Entry({ item, id, Heading = "h3" }: { item: Milestone; id?: string; Hea
   return (
     <article id={id} className={item.pinned ? "is-pinned" : undefined}>
       <div>
-        <p className="paper-meta">{item.category}</p>
+        <p className="paper-meta">{milestoneCategoryLabel(item.category)}</p>
         <Heading>
           {item.pinned ? (
             <span className="paper-log__star" role="img" aria-label="Highlighted">
@@ -50,7 +50,7 @@ function Entry({ item, id, Heading = "h3" }: { item: Milestone; id?: string; Hea
       </div>
       <aside>
         {item.figure ? <strong>{item.figure}</strong> : null}
-        <time>{item.date}</time>
+        <time>{milestoneDateLabel(item.date)}</time>
       </aside>
     </article>
   );

@@ -219,7 +219,8 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .dp .marketing-plan-card.featured { border-color: var(--d-ink); }
 .dp .plan-badge { align-self: flex-start; padding: 6px 10px; border-radius: 999px; background: var(--d-tint); font: 500 var(--d-small)/1 var(--d-sans); letter-spacing: 0; text-transform: none; color: var(--d-ink); }
 .dp .marketing-plan-card h3 { margin: 16px 0 0; font: 600 var(--d-lead)/1.2 var(--d-sans); letter-spacing: -0.01em; }
-.dp .plan-kicker { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--d-ink-2); }
+/* two lines tall in the three-card row, so a one-line kicker doesn't lift its price above the others (Design S-1 r2) */
+.dp .plan-kicker { margin: 8px 0 0; min-height: calc(2em * 1.4); font-size: 15px; line-height: 1.4; color: var(--d-ink-2); }
 /* flex + wrap + baseline: at any width where the per text doesn't fit beside the figure (with the closed copy, Teams
    at 821-965 px and Pro at 821), "a seat a month, or $72 a year" drops under the figure as one block, right under it,
    instead of leaving "a year" alone 44 px down (F-25). pre-wrap keeps the per text's own leading space
@@ -367,6 +368,7 @@ html[data-dl]:not([data-dl-ready]) :is(.dd-page > :not(.dt), .d-foot) { display:
   .d-table td, .d-table thead th + th { width: 52px; }
   .dp { padding: calc(64px + 40px) 16px 80px; }
   .dp .marketing-plan-grid { grid-template-columns: minmax(0, 1fr); }
+  .dp .plan-kicker { min-height: 0; }
   .dd { --dd-top: calc(64px + 32px); grid-template-columns: minmax(0, 1fr); gap: 40px; padding: var(--dd-top) 16px 24px; }
   .dt ~ .dd { --dd-top: 40px; }
   .dd__panel { position: static; }

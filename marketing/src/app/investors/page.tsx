@@ -12,7 +12,7 @@ import {
   supportRows,
 } from "@/data/compensation";
 import { listingLinks } from "@/data/listings";
-import { milestones } from "@/data/milestones";
+import { milestoneDateLabel, milestones } from "@/data/milestones";
 import { BETA_INSTALL_VERSION } from "@/lib/betaOffer";
 import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
@@ -109,7 +109,7 @@ export default async function InvestorsPage() {
         <h2 id="inv-shipped">What shipped, and what&apos;s next.</h2>
         <ol className="dgi-releases">
           {latest.map((m) => (
-            <li key={m.figure}><span className="dgi-mono">{m.figure}</span><span>{m.title}</span><time>{m.date}</time></li>
+            <li key={m.figure}><span className="dgi-mono">{m.figure}</span><span>{m.title}</span><time>{milestoneDateLabel(m.date)}</time></li>
           ))}
         </ol>
         <p><Link href="/releases">Every release in the changelog <span aria-hidden="true">→</span></Link></p>

@@ -26,7 +26,7 @@
 .dg-log .paper-log article { padding: 32px; border: 1px solid var(--d-line); border-radius: calc(var(--d-radius) * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; box-shadow: none; }
 .dg-log .paper-log article:first-child { border-top: 1px solid var(--d-line); }
 .dg-log .paper-log article:hover { background: #fff; }
-.dg-log .paper-log .paper-lead { font-size: var(--d-body); line-height: 1.6; color: var(--d-ink-2); }
+.dg-log .paper-log .paper-lead { font-size: var(--d-body) !important; line-height: 1.6; color: var(--d-ink-2) !important; }
 .dg-log .paper-log .paper-meta { margin: 0 0 8px; font: 500 var(--d-small)/1.4 var(--d-sans) !important; letter-spacing: 0; text-transform: none; color: var(--d-ink-2) !important; }
 .dg-log .paper-log :is(h2, h3, h4) { font: var(--display-weight) 28px/1.15 var(--font-display); letter-spacing: -0.02em; color: var(--d-ink); }
 .dg-log .paper-log aside strong, .dg-log .paper-log article.is-pinned aside strong { font: var(--display-weight) 22px/1.1 var(--font-display); letter-spacing: -0.02em; color: var(--d-ink); }

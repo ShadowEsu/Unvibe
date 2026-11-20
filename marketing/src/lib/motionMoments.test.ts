@@ -118,3 +118,17 @@ describe("staggered arrival", () => {
     }
   });
 });
+
+describe("changelog meta (Option A: no capitals)", () => {
+  it("shows each entry's category and date in sentence case, on /releases and /investors", async () => {
+    const log = renderToStaticMarkup(createElement(ChangelogList, { expanded: 400 }));
+    const metas = Array.from(log.matchAll(/<p class="paper-meta">([^<]+)<\/p>/g), (m) => m[1]);
+    const dates = Array.from(log.matchAll(/<time>([^<]+)<\/time>/g), (m) => m[1]);
+    assert.ok(metas.length > 0 && dates.length === metas.length, "every entry renders its meta and date");
+    for (const meta of metas) assert.match(meta, /^[A-Z][a-z]+$/, meta);
+    for (const date of dates) assert.match(date, /^\d{1,2} [A-Z][a-z]{2} \d{4}$/, date);
+    const investors = renderToStaticMarkup(await InvestorsPage());
+    assert.doesNotMatch(investors, /<time>\d{1,2} [A-Z]{3} \d{4}<\/time>/);
+    assert.match(investors, /<time>\d{1,2} [A-Z][a-z]{2} \d{4}<\/time>/);
+  });
+});
