@@ -34,6 +34,11 @@ name: Real device test
 # the usual walk: at most 3 hosted calls (BOSS), counted by the script (#353 Explain and Retry each pressed twice, #358
 # a table answer at 320 px). For the Retry row api.unvibe.site points at the runner in the hosts file for a moment;
 # an always() step removes that line again. The usual walk, the website media and the portable exe are skipped.
+# rc0155=link (with build_run, ai off; Windows only) probes the unvibe:// link with no hosted-AI call
+# (app/e2e/rc-0155-link.mjs; Run A Windows 44658289654 saw no overlay for it): Unvibe 0.1.54 is installed first
+# (digest-pinned) and probed, then the RC goes over it and is probed: each build, the link from a process without and
+# with UNVIBE_USER_DATA, with Unvibe.exe counts before and after. The app's default profile is seeded with a pre-flagged
+# qa- id first, in case a second Unvibe starts on it. The usual walk and the portable exe are skipped.
 on:
   workflow_dispatch:
     inputs:
@@ -65,7 +70,7 @@ on:
         required: false
         default: ""
       rc0155:
-        description: "Unvibe 0.1.55 RC rows: 'walk' installs 0.1.54 first, then the build_run's RC over it, and runs the usual walk, app/e2e/rc-0154.mjs and app/e2e/rc-0155.mjs with no hosted-AI call (needs build_run, ai off, rc0154 empty). 'ai-mac' or 'ai-windows' runs app/e2e/rc-0155-ai.mjs on that system only, at most 3 hosted calls (needs build_run, ai on, rc0154 empty). Empty: off"
+        description: "Unvibe 0.1.55 RC rows: 'walk' installs 0.1.54 first, then the build_run's RC over it, and runs the usual walk, app/e2e/rc-0154.mjs and app/e2e/rc-0155.mjs with no hosted-AI call (needs build_run, ai off, rc0154 empty). 'ai-mac' or 'ai-windows' runs app/e2e/rc-0155-ai.mjs on that system only, at most 3 hosted calls (needs build_run, ai on, rc0154 empty). 'link' probes the unvibe:// link on 0.1.54 and the RC on Windows, no hosted-AI call (needs build_run, ai off). Empty: off"
         required: false
         default: ""
 
@@ -83,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         # rc0154=ai-<os>-<plan> and rc0155=ai-<os> run on that one system: their hosted calls are planned per system.
-        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
     timeout-minutes: ${{ inputs.rc0155 == 'walk' && 45 || 30 }}
@@ -142,7 +147,12 @@ jobs:
               if [ "$RC0155" != "ai-$OS_LABEL" ]; then echo "::error::rc0155=$RC0155 is not for $OS_LABEL"; exit 1; fi
               if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with rc0155=$RC0155 (no website media)"; fi
               echo "Mode: 0.1.55 RC rows with hosted AI on $OS_LABEL only (at most 3 hosted calls, counted by app/e2e/rc-0155-ai.mjs). The usual walk, the website media and the portable exe are skipped" ;;
-            *) echo "::error::rc0155 must be empty, walk, ai-mac or ai-windows"; exit 1 ;;
+            link)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::rc0155=link makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::rc0155=link needs build_run (the RC's build-only run)"; exit 1; fi
+              if [ "$OS_LABEL" != windows ]; then echo "::error::rc0155=link is Windows only"; exit 1; fi
+              echo "Mode: the unvibe:// link probe on Windows (app/e2e/rc-0155-link.mjs): 0.1.54 first, then the RC; no hosted-AI call. The usual walk and the portable exe are skipped" ;;
+            *) echo "::error::rc0155 must be empty, walk, ai-mac, ai-windows or link"; exit 1 ;;
           esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
@@ -179,6 +189,9 @@ jobs:
           RC55_CONTROL_ID: qa-rc0155-control-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC55_ID: qa-rc0155-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC55_AI_ID: qa-rc0155-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_LINK54_ID: qa-rc0155-link54-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_LINK_ID: qa-rc0155-link-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_LINK_DEFAULT_ID: qa-rc0155-link-default-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC0154: ${{ inputs.rc0154 }}
           RC0155: ${{ inputs.rc0155 }}
           OS_LABEL: ${{ matrix.label }}
@@ -187,6 +200,8 @@ jobs:
           case "$RC0154$RC0155" in
             # rc0155 ai: only rc-0155-ai.mjs launches the app (the walk, media and portable steps are skipped).
             ai-mac|ai-windows) ids="$RC55_AI_ID" ;;
+            # rc0155 link: the probe's profiles on 0.1.54 and on the RC, and the default profile it seeds.
+            link) ids="$RC55_LINK54_ID $RC55_LINK_ID $RC55_LINK_DEFAULT_ID" ;;
             # rc0154 ai: only rc-0154-ai.mjs launches the app (the walk, media and portable steps are skipped): its
             # profile, and with the full plan the sample's new profile.
             ai-*-full) ids="$RC_AI_ID $RC_SAMPLE_ID" ;;
@@ -421,6 +436,54 @@ jobs:
           Get-Content "$env:RUNNER_TEMP\rc0155\report-control.txt" -ErrorAction SilentlyContinue
           exit $code
 
+      # rc0155=link: Unvibe 0.1.54 (the release's own digest) and the link probe on it, before the RC goes over it. The
+      # default profile (%APPDATA%\Unvibe) gets a pre-flagged qa- id first, so a second Unvibe that starts there is QA.
+      - name: Install Unvibe 0.1.54 first and probe the unvibe:// link (rc0155 link, Windows)
+        if: inputs.rc0155 == 'link' && matrix.label == 'windows'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          UNVIBE_OS: windows
+          RC_PHASE: release
+          RC55_LINK_PROFILE: ${{ runner.temp }}/rc0155-link54-profile
+          RC55_LINK_ID: qa-rc0155-link54-${{ github.run_id }}-${{ github.run_attempt }}-windows
+          RC55_LINK_DEFAULT_ID: qa-rc0155-link-default-${{ github.run_id }}-${{ github.run_attempt }}-windows
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          $def = Join-Path $env:APPDATA 'Unvibe'
+          if (Test-Path (Join-Path $def 'unvibe-store.json')) { "default profile already holds a store: $(Get-Content (Join-Path $def 'unvibe-store.json') -Raw)" }
+          else {
+            New-Item -ItemType Directory -Force $def | Out-Null
+            Set-Content -Path (Join-Path $def 'unvibe-store.json') -Value (@{ installId = $env:RC55_LINK_DEFAULT_ID; loginPromptAsked = $true } | ConvertTo-Json -Compress) -Encoding utf8NoBOM
+            "default profile $def seeded with $env:RC55_LINK_DEFAULT_ID"
+          }
+          $setup = "$env:RUNNER_TEMP\Unvibe-0.1.54-setup.exe"
+          Invoke-WebRequest -Uri 'https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.54/Unvibe-0.1.54-win-x64-setup.exe' -OutFile $setup
+          # The release's own digest (SHA256SUMS-windows.txt of v0.1.54); anything else is not run.
+          $got = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          if ($got -ne '8f1bbd07eb6b393fc6a0123d504611511fc47fba6029685c848810e06b6eb05b') { Write-Error "Unvibe-0.1.54-win-x64-setup.exe sha256 $got does not match the release; not run"; exit 1 }
+          "0.1.54 setup sha256 $got (matches the release)"
+          $proc = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+          "0.1.54 setup exit code: $($proc.ExitCode)"
+          $exe = $null
+          for ($i = 0; $i -lt 30 -and -not $exe; $i++) {
+            $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { Start-Sleep -Seconds 2 }
+          }
+          if (-not $exe) { Write-Error 'Unvibe 0.1.54 was not installed'; exit 1 }
+          "installed Unvibe $($exe.VersionInfo.ProductVersion) at $($exe.FullName)"
+          Copy-Item app/e2e/rc-0155-link.mjs, app/e2e/netlog.mjs, app/e2e/cdp-launch.mjs "$env:RUNNER_TEMP\pw\"
+          $env:UNVIBE_EXE = $exe.FullName
+          $env:SHOTS_DIR = "$env:RUNNER_TEMP\rc0155"
+          $env:DEFAULT_PROFILE = $def
+          Push-Location "$env:RUNNER_TEMP\pw"
+          node rc-0155-link.mjs
+          $code = $LASTEXITCODE
+          Pop-Location
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Content "$env:RUNNER_TEMP\rc0155\report-link-release.txt" -ErrorAction SilentlyContinue
+          exit $code
+
       - name: Install Unvibe (Mac)
         if: matrix.label == 'mac'
         shell: bash
@@ -519,9 +582,9 @@ jobs:
           "PASS  Windows app.asar: the setup's = the installed one = $inner"
 
       # Skipped with rc0154 ai and rc0155 ai: with ai=true it would send its own 4 explanations, outside the RC plan's
-      # count. Skipped with rc0154 hero: that run only shoots the hero still.
+      # count. Skipped with rc0154 hero (that run only shoots the hero still) and rc0155 link (the probe only).
       - name: Walk through the app
-        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && !startsWith(inputs.rc0155, 'ai-') }}
+        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link' }}
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -657,6 +720,28 @@ jobs:
           cat "$SHOTS_DIR/report-ai.txt" || true
           exit $status
 
+      # rc0155=link: the same probe on the RC (installed over 0.1.54 above), no hosted-AI call.
+      - name: Probe the unvibe:// link on the RC (rc0155 link, Windows)
+        if: always() && inputs.rc0155 == 'link' && env.UNVIBE_EXE != '' && matrix.label == 'windows'
+        shell: pwsh
+        env:
+          UNVIBE_OS: windows
+          RC_PHASE: rc
+          SHOTS_DIR: ${{ runner.temp }}/rc0155
+          RC55_LINK_PROFILE: ${{ runner.temp }}/rc0155-link-profile
+          RC55_LINK_ID: qa-rc0155-link-${{ github.run_id }}-${{ github.run_attempt }}-windows
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          Copy-Item app/e2e/rc-0155-link.mjs, app/e2e/netlog.mjs, app/e2e/cdp-launch.mjs "$env:RUNNER_TEMP\pw\"
+          $env:DEFAULT_PROFILE = Join-Path $env:APPDATA 'Unvibe'
+          Push-Location "$env:RUNNER_TEMP\pw"
+          node rc-0155-link.mjs
+          $code = $LASTEXITCODE
+          Pop-Location
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Content "$env:RUNNER_TEMP\rc0155\report-link-rc.txt" -ErrorAction SilentlyContinue
+          exit $code
+
       # rc0155: whatever happened above, the hosts file is back byte for byte (from the copy rc-0155-ai.mjs saved before
       # its block, sha256 printed before and after) or, without a copy, holds none of this run's lines; and no raw net
       # log is left.
@@ -705,7 +790,7 @@ jobs:
 
       # The website's Windows download is the portable exe, so open that exact file too.
       - name: Open the portable exe the website serves (Windows)
-        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
+        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link'
         shell: pwsh
         env:
           V: ${{ steps.ver.outputs.v }}
@@ -767,11 +852,15 @@ jobs:
         env:
           # CI-only: this token can flag a test install as QA and nothing else.
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+          RC0155: ${{ inputs.rc0155 }}
         run: |
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          foreach ($name in 'walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile') {
+          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile')
+          # rc0155 link: the probe's per-way profiles, and the app's default profile it seeded (Combine keeps a rooted path).
+          if ($env:RC0155 -eq 'link') { $names += @('rc0155-link54-profile-A', 'rc0155-link54-profile-B', 'rc0155-link-profile-A', 'rc0155-link-profile-B', (Join-Path $env:APPDATA 'Unvibe')) }
+          foreach ($name in $names) {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
             try {
