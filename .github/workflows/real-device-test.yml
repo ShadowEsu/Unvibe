@@ -27,6 +27,8 @@ name: Real device test
 # Design's option C): the sample selected with the mouse in VS Code (installed for the run) at 1x, then the overlay at
 # Beginner with its real explanation and Test me with its real question, both at 2x: 2 hosted calls (BOSS), counted by
 # the script. The usual walk, the website media and the portable exe are skipped, and no 0.1.52 is installed first.
+# rc0154=steps-drag (Mac only, ai OFF, a published version) is the same run up to Still 1 (the selection in VS Code),
+# then stops before anything is pressed in Unvibe: no agreement form and no hosted call (Security SHOULD-ST4).
 # rc0155=walk (with build_run, ai off) is the 0.1.55 RC walk, with no hosted-AI call: Unvibe 0.1.54 is installed first
 # (digest-pinned), sets up profile U and runs the sign-in control of app/e2e/rc-0155.mjs (RC_PHASE=control); the RC
 # goes over it; after the usual walk come 0.1.54's RC rows (app/e2e/rc-0154.mjs) and then the 0.1.55 rows (#354: the
@@ -65,7 +67,7 @@ on:
         required: false
         default: false
       rc0154:
-        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. 'hero': the site hero's Today still on the Mac (needs version, no build_run, ai off). 'steps': the site's three Steps stills on the Mac, 2 hosted calls (needs version, no build_run, ai on). Empty: off"
+        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. 'hero': the site hero's Today still on the Mac (needs version, no build_run, ai off). 'steps': the site's three Steps stills on the Mac, 2 hosted calls (needs version, no build_run, ai on). 'steps-drag': the Steps run up to Still 1 only, no hosted call (needs version, no build_run, ai off). Empty: off"
         required: false
         default: ""
       rc0155:
@@ -87,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         # rc0154=ai-<os>-<plan> and rc0155=ai-<os> run on that one system: their hosted calls are planned per system.
-        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0154 == 'steps' || inputs.rc0155 == 'ai-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0154 == 'steps' || inputs.rc0154 == 'steps-drag' || inputs.rc0155 == 'ai-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
     timeout-minutes: ${{ inputs.rc0155 == 'walk' && 45 || 30 }}
@@ -105,7 +107,7 @@ jobs:
           OS_LABEL: ${{ matrix.label }}
         run: |
           case "$RC0154$RC0155" in
-            ai-*|hero|steps) ;;
+            ai-*|hero|steps|steps-drag) ;;
             *)
               if [ "$QA_AI_OK" = 1 ]; then
                 echo "Mode: ai=true: the walkthrough explains for real (4 hosted calls on this system); the Mac also records the website media"
@@ -137,7 +139,12 @@ jobs:
               if [ "$OS_LABEL" != mac ]; then echo "::error::rc0154=steps is Mac only"; exit 1; fi
               if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with rc0154=steps (no website media)"; fi
               echo "Mode: the site's three Steps stills on the Mac (app/e2e/steps-stills.mjs), Unvibe $VERSION as published; at most 2 hosted calls, counted by the script. The usual walk and the website media are skipped" ;;
-            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short, ai-windows-row2, hero or steps"; exit 1 ;;
+            steps-drag)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::rc0154=steps-drag makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -n "$BUILD_RUN" ] || [ -z "$VERSION" ]; then echo "::error::rc0154=steps-drag runs a published release: give version, not build_run"; exit 1; fi
+              if [ "$OS_LABEL" != mac ]; then echo "::error::rc0154=steps-drag is Mac only"; exit 1; fi
+              echo "Mode: the Steps run up to Still 1 (the selection in VS Code) on the Mac, Unvibe $VERSION as published; no hosted-AI call, nothing pressed in Unvibe. The usual walk and the website media are skipped" ;;
+            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short, ai-windows-row2, hero, steps or steps-drag"; exit 1 ;;
           esac
           if [ -n "$RC0155" ] && [ -n "$RC0154" ]; then echo "::error::rc0154 and rc0155 can't run together: give one"; exit 1; fi
           case "$RC0155" in
@@ -204,8 +211,8 @@ jobs:
             ai-*) ids="$RC_AI_ID" ;;
             # rc0154 hero: only hero-today.mjs launches the app (the walk is skipped).
             hero) ids="$RC_HERO_ID" ;;
-            # rc0154 steps: only steps-stills.mjs launches the app (the walk and the media are skipped).
-            steps) ids="$RC_STEPS_ID" ;;
+            # rc0154 steps and steps-drag: only steps-stills.mjs launches the app (the walk and the media are skipped).
+            steps|steps-drag) ids="$RC_STEPS_ID" ;;
             *)
               ids="$WALK_INSTALL_ID"
               if [ "$OS_LABEL" = mac ]; then
@@ -532,9 +539,9 @@ jobs:
           "PASS  Windows app.asar: the setup's = the installed one = $inner"
 
       # Skipped with rc0154 ai and rc0155 ai: with ai=true it would send its own 4 explanations, outside the RC plan's
-      # count. Skipped with rc0154 hero and steps: those runs only shoot the site's stills.
+      # count. Skipped with rc0154 hero, steps and steps-drag: those runs only shoot the site's stills.
       - name: Walk through the app
-        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && inputs.rc0154 != 'steps' && !startsWith(inputs.rc0155, 'ai-') }}
+        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && inputs.rc0154 != 'steps' && inputs.rc0154 != 'steps-drag' && !startsWith(inputs.rc0155, 'ai-') }}
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -599,8 +606,9 @@ jobs:
       # $RUNNER_TEMP, its quarantine flag removed and its signature and team checked, as the D5 rows' install does (run
       # 44683184081: without that, VS Code never opened its debug port; [INFERENCE] the first-open dialog of a
       # quarantined app held it). Not always(): any failed step before it means nothing is sent.
+      # rc0154=steps-drag runs the same step with ai off and STEPS_DRAG_ONLY=1: Still 1 only, no agreement, no call.
       - name: Shoot the site's Steps stills (rc0154 steps)
-        if: inputs.rc0154 == 'steps' && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
+        if: matrix.label == 'mac' && env.UNVIBE_EXE != '' && ((inputs.rc0154 == 'steps' && env.QA_AI_OK == '1') || (inputs.rc0154 == 'steps-drag' && env.QA_AI_OK != '1'))
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/rc0154
@@ -608,6 +616,7 @@ jobs:
           RC_STEPS_PROFILE: ${{ runner.temp }}/rc0154-steps-profile
           # Seeded into the profile and pre-flagged above.
           RC_STEPS_ID: qa-rc0154-steps-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          STEPS_DRAG_ONLY: ${{ inputs.rc0154 == 'steps-drag' && '1' || '' }}
           VSCODE_DATA: ${{ runner.temp }}/vscode-profile
           HOMEBREW_NO_AUTO_UPDATE: "1"
           HOMEBREW_NO_ANALYTICS: "1"

@@ -7,6 +7,7 @@
 //   3. the overlay's Test me with its real question (CALL 2), captured at 2x, nothing answered.
 // Run by real-device-test.yml with rc0154=steps (Mac only, ai on, a published version). Nothing is edited after
 // capture; the stills keep the panel's or the editor's own bounds.
+// With rc0154=steps-drag (ai off, STEPS_DRAG_ONLY=1) the run stops after still 1: no agreement form, no call.
 //
 // Hosted calls, counted: spend() refuses a 3rd, and the first failed call step stops the other. The agreement form
 // (before the first explanation) sends nothing.
@@ -29,7 +30,11 @@ const codeData = process.env.VSCODE_DATA;
 const TMP = process.env.RUNNER_TEMP ?? tmpdir();
 if (!exe || !dir || !installId || !code || !codeData || !process.env.MOUSE) throw new Error('Set UNVIBE_EXE, RC_STEPS_PROFILE, RC_STEPS_ID, VSCODE_CLI, VSCODE_DATA and MOUSE');
 if (process.platform !== 'darwin') throw new Error('steps-stills.mjs runs on a Mac only (the stills are Mac stills)');
-if (process.env.QA_AI_OK !== '1') throw new Error('steps-stills.mjs sends 2 hosted calls: it needs QA_AI_OK=1 (workflow input ai=true)');
+// STEPS_DRAG_ONLY=1 (workflow rc0154=steps-drag, ai off; Security SHOULD-ST4, the lead): Unvibe and VS Code exactly as
+// in the real run, Still 1 only, then it stops before the shortcut: no agreement form, no call (a budget of 0).
+const DRAG_ONLY = process.env.STEPS_DRAG_ONLY === '1';
+if (DRAG_ONLY && process.env.QA_AI_OK === '1') throw new Error('the drag-only mode (STEPS_DRAG_ONLY=1) runs with ai off');
+if (!DRAG_ONLY && process.env.QA_AI_OK !== '1') throw new Error('steps-stills.mjs sends 2 hosted calls: it needs QA_AI_OK=1 (workflow input ai=true)');
 mkdirSync(out, { recursive: true });
 
 const report = [];
@@ -46,7 +51,7 @@ async function waitFor(fn, ms = 5000, every = 150) {
     await sleep(every);
   }
 }
-const BUDGET = 2;
+const BUDGET = DRAG_ONLY ? 0 : 2;
 let spent = 0;
 let stopped = '';
 function spend(what) {
@@ -174,7 +179,11 @@ try {
   const k = fw / geo.iw;
   if (Math.abs(fh / geo.ih - k) > 0.05) throw new Error(`the window ${fw}x${fh} does not match the page ${geo.iw}x${geo.ih} at one zoom`);
   const P = (x, y) => [Math.round(fx + x * k), Math.round(fy + y * k)];
-  const [x1, y1] = P(rows[0].text.left - 1, rows[0].y + rows[0].h / 2);
+  // The press goes 1 CSS px INSIDE line 1's first character (its left half, so the selection still starts at column 1).
+  // Runs 44835239941 and 44838266533 pressed 1 px left of it: that is the editor's line-decorations gutter (the folding
+  // icon), where Monaco starts no text selection, so the caret stayed at 1:1 with every pointer event delivered. A local
+  // Monaco 0.52 repro gave 0 selection boxes for the old start and the whole sample (1:1 to 7:2) for this one.
+  const [x1, y1] = P(rows[0].text.left + 1, rows[0].y + rows[0].h / 2);
   const [x2, y2] = P(rows[6].text.right + 2, rows[6].y + rows[6].h / 2);
   // A toast on screen is put away as a person does, with Esc, before the drag (after it, Esc would also drop the
   // selection).
@@ -187,9 +196,9 @@ try {
   // row now names the pointer events VS Code got. mouse.swift is the D5 rows' (a settle, then 24 steps with deltas),
   // whose drags selected text in VS Code on the same runners.
   await editor.evaluate(() => {
-    const c = { down: 0, move: 0, held: 0, up: 0 };
+    const c = { down: 0, move: 0, held: 0, up: 0, on: '' };
     window.__qaPointer = c;
-    addEventListener('pointerdown', () => { c.down += 1; }, true);
+    addEventListener('pointerdown', (e) => { c.down += 1; c.on = String(e.target?.className || e.target?.tagName || '').slice(0, 60); }, true);
     addEventListener('pointermove', (e) => { c.move += 1; if (e.buttons & 1) c.held += 1; }, true);
     addEventListener('pointerup', () => { c.up += 1; }, true);
   });
@@ -208,8 +217,9 @@ try {
   execFileSync('screencapture', ['-x', `-R${cx},${cy},${cw},${ch}`, file]);
   const size = pngSize(file);
   log(selected > 0 && geo.theme === 'light' && Math.abs(k - 2) < 0.1, 'Still 1: the sample selected with the mouse in VS Code (Light+, zoom 3.8), editor and tab, 1x',
-    `${size.w}x${size.h} px; zoom ${k.toFixed(2)} (devicePixelRatio ${geo.dpr}); editor font ${geo.font} CSS; selection boxes ${selected}; pointer events in VS Code: down ${ptr.down}, move ${ptr.move} (${ptr.held} with the button held), up ${ptr.up}; side bar shown ${hidden.side}, secondary ${hidden.aux}; window (${owner}) ${fx},${fy} ${fw}x${fh}; drag ${x1},${y1} → ${x2},${y2}`);
+    `${size.w}x${size.h} px; zoom ${k.toFixed(2)} (devicePixelRatio ${geo.dpr}); editor font ${geo.font} CSS; selection boxes ${selected}; pointer events in VS Code: down ${ptr.down} on "${ptr.on}", move ${ptr.move} (${ptr.held} with the button held), up ${ptr.up}; side bar shown ${hidden.side}, secondary ${hidden.aux}; window (${owner}) ${fx},${fy} ${fw}x${fh}; drag ${x1},${y1} → ${x2},${y2}`);
 } catch (e) { log(false, 'Still 1: the selection in VS Code', short(e)); }
+if (DRAG_ONLY) stop('drag-only mode (0 AI): Still 1 only; nothing pressed in Unvibe');
 
 // --- Calls: the shortcut on that selection, then Test me --------------------------------------------------------------
 const panelWindow = () => app.windows().find((w) => w.url().includes('widget.html') && !w.isClosed());
