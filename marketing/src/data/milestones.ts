@@ -36,6 +36,41 @@ export const milestones: Milestone[] = [
     ],
   },
   {
+    date: "19 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain pages: one thing to check before you trust the code",
+    summary: "The explain pages now speak to people whose AI tool wrote the code. The /explain page opens with \"Your AI wrote it. You decide whether to accept it.\" and says Vibe adds a \"Not sure:\" line when it's guessing. On every explain page, the note on what to check, from trying the sample, is now labeled \"Before you trust it:\" instead of \"Watch out:\". On 61 pages, the section at the end says when to press the shortcut and spells it out: Control+U on a Mac, not Command+U (⌘U only works in Cursor and VS Code with the editor bridge), and Ctrl+Alt+U on Windows. The 13 pages whose sample is output, an error or a file a tool generates, such as git log output or package-lock.json, keep the shorter text. The Python, Supabase RLS and CORS error pages have new opening lines.",
+    links: [
+      { href: "/explain", label: "Explain code" },
+      { href: "/explain/supabase-rls", label: "Explain Supabase RLS policies" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/362", label: "PR #362" },
+    ],
+  },
+  {
+    date: "19 NOV 2026",
+    category: "PRODUCT",
+    title: "Explain segmentation faults, HTTP headers and DNS records",
+    summary: "3 new explain pages: a C program that crashes with \"Segmentation fault (core dumped)\" when its list of players is empty, and the GDB backtrace that points at the line; the headers curl -i prints from a small test API, and what a 404, -f and a 301 did; and a DNS zone with A, AAAA, CNAME, MX, TXT and CAA records, read back with dig from a local test server, not a public one. Each has its own sample in a Try it box and notes on what that sample did when run with clang 22.1.8 and GDB 17.2, curl 8.21.0 and Python 3.14.7, and BIND 9.20.26. The C page links to the segmentation fault page in its Related row, and the curl and CORS error pages link to HTTP headers.",
+    links: [
+      { href: "/explain/segmentation-fault", label: "Explain segmentation faults" },
+      { href: "/explain/http-headers", label: "Explain HTTP headers" },
+      { href: "/explain/dns-records", label: "Explain DNS records" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/325", label: "PR #325" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/364", label: "PR #364" },
+    ],
+  },
+  {
+    date: "19 NOV 2026",
+    category: "DISTRIBUTION",
+    title: "Explain pages named for files and commands",
+    summary: "28 more explain pages are now headed by what they explain instead of \"code\", most of them config files or commands, such as \"Explain .env files\", \"Explain tar commands\" and \"Explain git rebase -i todo lists\". The /explain list, the section at the end of each page and the link-preview cards use the same words. Pages such as Python, YAML and Terraform keep \"Explain … code\".",
+    links: [
+      { href: "/explain", label: "Explain code" },
+      { href: "/explain/env", label: "Explain .env files" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/323", label: "PR #323" },
+    ],
+  },
+  {
     date: "16 NOV 2026",
     category: "PRODUCT",
     title: "Unvibe 0.1.52: a new look for the whole app",
