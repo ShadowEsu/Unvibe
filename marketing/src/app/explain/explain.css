@@ -65,6 +65,11 @@
   font-size: 13px;
 }
 
+/* Room between the links and the "/" so a link's focus ring doesn't touch it (Design S-1 on #365). */
+.explain-crumb > span[aria-hidden="true"] {
+  margin-inline: 0.3em;
+}
+
 /* Text links only: the download buttons in .explain-get keep their own look. Ink underline, 1 px, going to 2 px on
    hover in 100 ms (Option A; no lime on these pages). */
 .explain-crumb a,
@@ -85,7 +90,8 @@
   text-decoration-thickness: 2px;
 }
 
-.explain-page :focus-visible {
+.explain-page :focus-visible,
+.explain-page a:focus-visible {
   outline: 2px solid var(--v-ink);
   outline-offset: 2px;
 }
@@ -95,6 +101,12 @@
   color: var(--v-ink);
   font: 560 28px / 1.2 var(--font-sans);
   letter-spacing: -0.02em;
+}
+
+/* The download card's heading is 22 px: at 28 a long subject ("Explain Supabase RLS policies beside your editor")
+   took 3 lines at 390 (Design S-1 on #365; spec §2). */
+.explain-card.explain-get h2 {
+  font-size: 22px;
 }
 
 .explain-page h3 {
