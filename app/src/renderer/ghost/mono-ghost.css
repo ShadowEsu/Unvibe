@@ -16,8 +16,10 @@
 :root .ghost--pill.ghost--flipped { flex-direction: row-reverse; padding: 0 6px 0 5px; }
 :root .ghost:focus-visible { outline: 2px solid var(--u-focus); outline-offset: -3px; }
 :root .ghost .buddy { flex: 0 0 auto; }
-:root .ghost__word { flex: 1 1 auto; white-space: nowrap; }
+:root .ghost__word { flex: 0 0 auto; white-space: nowrap; }
 :root .ghost__keys, :root .quick__full .ghost__keys { display: inline-flex; gap: 2px; }
+:root .ghost--pill .ghost__keys { margin-left: auto; }
+:root .ghost--pill.ghost--flipped .ghost__keys { margin-left: 0; margin-right: auto; }
 :root .ghost__key {
   display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px;
   box-sizing: border-box; border: 1px solid var(--u-border-control); border-radius: 5px;
