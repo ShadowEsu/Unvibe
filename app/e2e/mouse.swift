@@ -21,13 +21,17 @@ import Carbon
 import CoreGraphics
 import Foundation
 
-/// The system cursor as the Mac helper reads it (selection-watch/mac/main.swift pointerIsBeam: NSCursor.currentSystem's
-/// hot spot against NSCursor.iBeam's), and secure input (the helper shows nothing while it's on). Lead 2026-11-20.
+/// The system cursor as the Mac helper reads it (selection-watch/mac/main.swift: NSCursor.currentSystem's hot spot
+/// against NSCursor.iBeam's), with both images' sizes (lead 2026-11-20, after run 44675654106 read hot=12,11 on text),
+/// and secure input (the helper shows nothing while it's on).
+func pt(_ x: CGFloat, _ y: CGFloat) -> String { String(format: "%g,%g", Double(x), Double(y)) }
 func cur() -> String {
   let secure = IsSecureEventInputEnabled() ? 1 : 0
-  guard let c = NSCursor.currentSystem else { return "cur=none secure=\(secure)" }
-  let beam = c.hotSpot == NSCursor.iBeam.hotSpot ? 1 : 0
-  return "hot=\(Int(c.hotSpot.x)),\(Int(c.hotSpot.y)) beam=\(beam) secure=\(secure)"
+  let ib = NSCursor.iBeam
+  let ibeam = "ibeam=\(pt(ib.hotSpot.x, ib.hotSpot.y)) ibeamsize=\(String(format: "%gx%g", Double(ib.image.size.width), Double(ib.image.size.height)))"
+  guard let c = NSCursor.currentSystem else { return "cur=none \(ibeam) secure=\(secure)" }
+  let beam = c.hotSpot == ib.hotSpot ? 1 : 0
+  return "hot=\(pt(c.hotSpot.x, c.hotSpot.y)) size=\(String(format: "%gx%g", Double(c.image.size.width), Double(c.image.size.height))) \(ibeam) beam=\(beam) secure=\(secure)"
 }
 
 func onScreen() -> [[String: Any]] {

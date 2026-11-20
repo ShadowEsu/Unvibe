@@ -267,9 +267,10 @@ const pointer = {
 };
 
 // --- The helper's own reads (#366 8ec57712): after each left press it prints {"e":"press", x, y, beam, known
-// [, secure on a Mac]}, what its I-beam read saw; Unvibe's main drops that line. A second copy of the installed helper,
-// run by the harness for the launch, lets the report show it. Only press and select lines are kept, and only their
-// position, gesture and flags (no app ids, no text: the helper never reads any).
+// [, mx, my, secure on a Mac]}, what its I-beam read saw (x/y the event's point, mx/my the pointer at +40 ms); Unvibe's
+// main drops that line. A second copy of the installed helper, stdin open, run by the harness for the launch, lets the
+// report show it (unvibe-app 2026-11-20: two helpers only watch). Only ready, press and select lines are kept, and only
+// their points, gesture and flags (no app ids, no text: the helper never reads any).
 const helperFile = exe ? (os === 'mac'
   ? path.join(path.dirname(exe), '..', 'Resources', 'selection-watch', 'unvibe-selection-watch')
   : path.join(path.dirname(exe), 'resources', 'selection-watch', 'unvibe-selection-watch.exe')) : '';
@@ -282,26 +283,31 @@ function startShadow(tag) {
   createInterface({ input: child.stdout }).on('line', (l) => {
     let e;
     try { e = JSON.parse(l); } catch { return; }
-    if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', beam: e.beam, known: e.known, secure: e.secure });
-    else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', g: e.g });
+    if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', x: e.x, y: e.y, mx: e.mx, my: e.my, beam: e.beam, known: e.known, secure: e.secure });
+    else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', x: e.x, y: e.y, g: e.g });
     else if (e?.e === 'ready') lines.push({ t: Date.now(), e: 'ready' });
   });
   child.on('error', () => {});
   shadow = { child, lines };
   note(`The helper's own reads (${tag})`, `a second copy of ${path.basename(helperFile)} runs for this launch (pid ${child.pid}), its press and select lines kept`);
 }
-function stopShadow() {
+function stopShadow(tag) {
   if (!shadow) return;
+  const n = (k) => shadow.lines.filter((l) => l.e === k).length;
+  note(`The helper's own reads (${tag}): totals`, `ready ${n('ready')}, press ${n('press')}, select ${n('select')}`);
   try { shadow.child.stdin.end(); } catch {}
   shadow.child.kill();
   shadow = null;
 }
-/** The helper's own lines from `since` to `until`: "press beam=1 known=1 secure=0, select drag"; '' with no shadow
+/** The helper's own lines from `since` to `until` ("press at x,y (pointer mx,my) beam=1 known=1 secure=0, select drag at x,y"); '' with no shadow
  * helper. Lines are stamped when node reads them, so callers read after an await that follows the press. */
 const helperSaid = (since, until = Date.now()) => {
   if (!shadow) return '';
   const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && l.e !== 'ready');
-  return got.length ? got.map((l) => (l.e === 'press' ? `press beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}` : `select ${l.g}`)).join(', ') : 'no press line';
+  const at = (l) => (l.x !== undefined ? ` at ${l.x},${l.y}` : '');
+  return got.length ? got.map((l) => (l.e === 'press'
+    ? `press${at(l)}${l.mx !== undefined ? ` (pointer ${l.mx},${l.my})` : ''} beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}`
+    : `select ${l.g}${at(l)}`)).join(', ') : 'no press line';
 };
 /** What the harness read around a press, and what the helper itself read (when its copy runs). */
 const readsText = (harness, since) => [harness && `the harness read ${harness}`, shadow && `the helper read ${helperSaid(since)}`].filter(Boolean).join('; ');
@@ -700,7 +706,7 @@ const clearX = (L, row) => {
  * on every press); otherwise the harness's: Windows CURSOR_SHOWING with a handle, Mac NSCursor.currentSystem not nil
  * (both helpers count "can't say" as text). */
 const cursorReadable = (said) => {
-  const own = [...String(said).matchAll(/press beam=\d known=(\d)/g)];
+  const own = [...String(said).matchAll(/press at [^;]*? beam=\d known=(\d)/g)];
   if (own.length) return own.every(([, k]) => k === '1');
   if (os === 'mac') {
     const reads = [...String(said).matchAll(/(hot=\S+|cur=none)/g)];
@@ -751,17 +757,29 @@ function cropGhost(label, s) {
  * so the slower Windows captures can't outlast it.
  */
 async function pillThenButton(app, g, label, rest) {
-  pointer.move(mid(g).x, mid(g).y);
-  const pill = await waitFor(async () => { const s = await ghost(app); return s?.pill ? s : null; }, 2000, 20);
+  // Run 44675654106's A6 (Windows) saw no pill after one move onto the flipped button (run 3's opened). A person's
+  // hover is many moves: if the pill isn't open after 1.2 s, the pointer moves 1 px and back, then waits again.
+  const m = mid(g);
+  pointer.move(m.x, m.y);
+  const open = async () => { const s = await ghost(app); return s?.pill ? s : null; };
+  let pill = await waitFor(open, 1200, 20);
+  let nudged = false;
+  if (!pill) {
+    nudged = true;
+    pointer.move(m.x + 1, m.y + 1);
+    await sleep(60);
+    pointer.move(m.x, m.y);
+    pill = await waitFor(open, 1500, 20);
+  }
   await sleep(250);
   const cp = pill ? cropGhost(`${label}-pill-1to1`, await ghost(app)) : null;
   pointer.move(rest.x, rest.y);
   const back = await waitFor(async () => { const s = await ghost(app); return s?.shown && !s.pill ? s : null; }, 2000, 20);
   await sleep(200);
   const cb = back ? cropGhost(`${label}-button-1to1`, await ghost(app)) : null;
-  return { pill, cp, back, cb };
+  return { pill, cp, back, cb, nudged };
 }
-const crops = (r) => `button crop ${r.cb ? `${r.cb.size} sha ${r.cb.sha} (corner diffs ${r.cb.diffs.join('/')})` : 'none (gone)'}; pill crop ${r.cp ? `${r.cp.size} sha ${r.cp.sha} (${r.cp.diffs.join('/')})` : 'none'}`;
+const crops = (r) => `${r.nudged ? `pill ${r.pill ? 'opened after a 1 px nudge' : 'not open after a 1 px nudge either'}; ` : ''}button crop ${r.cb ? `${r.cb.size} sha ${r.cb.sha} (corner diffs ${r.cb.diffs.join('/')})` : 'none (gone)'}; pill crop ${r.cp ? `${r.cp.size} sha ${r.cp.sha} (${r.cp.diffs.join('/')})` : 'none'}`;
 
 // --- Launch A: the button in VS Code --------------------------------------------------------------------------------
 async function runA(app, companion, tag) {
@@ -1297,7 +1315,7 @@ for (const tag of plan) {
     log(false, `Launch ${tag}`, `stopped: ${short(e)}`);
     desktop(`${tag}-stopped`);
   } finally {
-    stopShadow();
+    stopShadow(tag);
     await app?.close().catch(() => {});
     await sleep(2000);
     if (tag === 'c') { try { unblockApi(); } catch (e) { log(false, 'The hosts file back after launch C', short(e)); } }
