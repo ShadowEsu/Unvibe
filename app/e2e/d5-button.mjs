@@ -41,9 +41,12 @@
 //   C1 N6: VS Code's password prompt (a development extension's showInputBox({ password: true })), double-clicked.
 //      Mac: no button (secure input). Windows: the button may show (Security N6); pressed with Quick look off, then
 //      on: nothing of the box reaches the clipboard or the panel, and nothing is sent; the Island is out of its working
-//      phases by +4 s after that empty press (read at +1 s and +4 s; Security SHOULD-366c).
+//      phases by +6 s after that empty press, then idle (a 10 s timeline; lead 2026-11-20), and the clipboard is the
+//      sentinel again (+4 s and +10 s reads; Security SHOULD-366c/d).
 //   C2 Quick look on: a selection, the button, the card (its request fails at the block), Esc closes it, VS Code keeps
 //      focus, and the next Esc reaches VS Code (its find box closes): Unvibe let go of Esc (SHOULD-366a).
+// Every launch also runs a second copy of the installed helper and keeps its own press lines (#366 8ec57712: beam,
+//   known, and secure on a Mac), so each row shows what the helper itself read; they decide A3 and the races.
 //
 // NO hosted-AI call: launches A and B have no agreement, so a press reads nothing (core/consent.ts reviewCapture);
 // launch C runs behind the hosts block. The app's net logs are summarised (time, method, path, status) and deleted.
@@ -57,6 +60,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { lookup } from 'node:dns/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { createInterface } from 'node:readline';
 
 const exe = process.env.UNVIBE_EXE;
 const os = process.env.UNVIBE_OS ?? (process.platform === 'darwin' ? 'mac' : 'windows');
@@ -224,10 +228,13 @@ function onScreen(...pts) {
 const pointer = {
   /** What the harness itself read before the last press (Windows: the global cursor is the I-beam, 1 or 0). */
   last: '',
+  /** When the last drag, race or click started (ms since 1970): the helper's own press lines from then on are its. */
+  t0: 0,
   /** A settle on (x1, y1), a press, a move to (x2, y2), a release; returns the release time (ms since 1970, this
    * machine's clock). */
   drag(x1, y1, x2, y2) {
     onScreen([x1, y1], [x2, y2]);
+    pointer.t0 = Date.now();
     const printed = os === 'mac'
       ? execFileSync(process.env.MOUSE, ['drag', S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
       : winPtr('drag', S(x1), S(y1), S(x2), S(y2), '1');
@@ -238,6 +245,7 @@ const pointer = {
    * drags to (x2, y2) and releases. Returns { up, said } (Windows: the I-beam at rest and 40 ms after the press). */
   race(x0, y0, x1, y1, x2, y2) {
     onScreen([x0, y0], [x1, y1], [x2, y2]);
+    pointer.t0 = Date.now();
     const printed = os === 'mac'
       ? execFileSync(process.env.MOUSE, ['race', S(x0), S(y0), S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
       : winPtr('race', S(x0), S(y0), S(x1), S(y1), '1', S(x2), S(y2));
@@ -246,6 +254,7 @@ const pointer = {
   },
   click(x, y, count = 1) {
     onScreen([x, y]);
+    pointer.t0 = Date.now();
     pointer.last = os === 'mac'
       ? execFileSync(process.env.MOUSE, ['click', S(x), S(y), String(count)], { encoding: 'utf8' }).trim()
       : winPtr('click', S(x), S(y), '0', '0', String(count));
@@ -256,6 +265,46 @@ const pointer = {
     else winPtr('move', S(x), S(y), '0', '0', '1');
   },
 };
+
+// --- The helper's own reads (#366 8ec57712): after each left press it prints {"e":"press", x, y, beam, known
+// [, secure on a Mac]}, what its I-beam read saw; Unvibe's main drops that line. A second copy of the installed helper,
+// run by the harness for the launch, lets the report show it. Only press and select lines are kept, and only their
+// position, gesture and flags (no app ids, no text: the helper never reads any).
+const helperFile = exe ? (os === 'mac'
+  ? path.join(path.dirname(exe), '..', 'Resources', 'selection-watch', 'unvibe-selection-watch')
+  : path.join(path.dirname(exe), 'resources', 'selection-watch', 'unvibe-selection-watch.exe')) : '';
+let shadow = null;
+function startShadow(tag) {
+  if (shadow) return;
+  if (!helperFile || !existsSync(helperFile)) { note(`The helper's own reads (${tag})`, `no helper at ${helperFile || '?'}`); return; }
+  const child = spawn(helperFile, [], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true, shell: false });
+  const lines = [];
+  createInterface({ input: child.stdout }).on('line', (l) => {
+    let e;
+    try { e = JSON.parse(l); } catch { return; }
+    if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', beam: e.beam, known: e.known, secure: e.secure });
+    else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', g: e.g });
+    else if (e?.e === 'ready') lines.push({ t: Date.now(), e: 'ready' });
+  });
+  child.on('error', () => {});
+  shadow = { child, lines };
+  note(`The helper's own reads (${tag})`, `a second copy of ${path.basename(helperFile)} runs for this launch (pid ${child.pid}), its press and select lines kept`);
+}
+function stopShadow() {
+  if (!shadow) return;
+  try { shadow.child.stdin.end(); } catch {}
+  shadow.child.kill();
+  shadow = null;
+}
+/** The helper's own lines from `since` to `until`: "press beam=1 known=1 secure=0, select drag"; '' with no shadow
+ * helper. Lines are stamped when node reads them, so callers read after an await that follows the press. */
+const helperSaid = (since, until = Date.now()) => {
+  if (!shadow) return '';
+  const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && l.e !== 'ready');
+  return got.length ? got.map((l) => (l.e === 'press' ? `press beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}` : `select ${l.g}`)).join(', ') : 'no press line';
+};
+/** What the harness read around a press, and what the helper itself read (when its copy runs). */
+const readsText = (harness, since) => [harness && `the harness read ${harness}`, shadow && `the helper read ${helperSaid(since)}`].filter(Boolean).join('; ');
 /** Keys typed into whatever is in front, as a person would (System Events / SendKeys). */
 const keys = {
   escape() { if (os === 'mac') osa('tell application "System Events" to key code 53'); else ps("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('{ESC}')"); },
@@ -647,9 +696,12 @@ const clearX = (L, row) => {
   const room = (L.editor?.right ?? SCREEN?.w ?? Infinity) - 300;
   return x <= room ? x : row.right + 2;
 };
-/** Every cursor read the harness printed found a cursor it can judge: Windows CURSOR_SHOWING with a handle; Mac a
- * system cursor (NSCursor.currentSystem not nil; the Mac helper counts nil as text). */
+/** The cursor reads found a cursor the helper can judge. The helper's own press lines decide when present (known=1
+ * on every press); otherwise the harness's: Windows CURSOR_SHOWING with a handle, Mac NSCursor.currentSystem not nil
+ * (both helpers count "can't say" as text). */
 const cursorReadable = (said) => {
+  const own = [...String(said).matchAll(/press beam=\d known=(\d)/g)];
+  if (own.length) return own.every(([, k]) => k === '1');
   if (os === 'mac') {
     const reads = [...String(said).matchAll(/(hot=\S+|cur=none)/g)];
     return reads.length > 0 && reads.every(([r]) => r.startsWith('hot='));
@@ -749,7 +801,7 @@ async function runA(app, companion, tag) {
     const g2 = g ? await ghost(app) : null;
     const precise = shownAt(g2, since);
     const latency = g ? (precise ?? g.t) - up : null;
-    const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected(), said: pointer.last };
+    const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected(), said: readsText(pointer.last, pointer.t0) };
     if (g) {
       const b = (g2 ?? g).b ?? g;
       r.dx = r1(b.x - to.x); r.cy = r1(b.y + b.h / 2 - to.y); r.size = `${r1(b.w)}×${r1(b.h)}${b.drawn !== undefined && !near(b.drawn, b.w, 0.5) ? ` (drawn ${r1(b.drawn)} at that moment)` : ''}`; r.bw = b.w; r.win = `${r1(g.w)}×${r1(g.h)} at mouse-up x + ${r1(g.x - to.x)}, y ${r1(g.y - to.y)}`;
@@ -774,7 +826,7 @@ async function runA(app, companion, tag) {
   const shown = rounds.filter((r) => r.latency !== null);
   const warm = shown.filter((r) => r.round > 1).map((r) => r.latency).sort((a, b) => a - b);
   const median = warm.length ? warm[Math.floor((warm.length - 1) / 2)] : null;
-  for (const r of rounds) note(`A2 ${tag} round ${r.round}`, `${r.latency === null ? `line ${r.line}: no button in 3 s (VS Code selection boxes ${r.selected})` : `line ${r.line}: button ${r.latency} ms after mouse-up (${r.how}); the button ${r.size} at mouse-up x + ${r.dx}, its centre ${r.cy} from the mouse-up's y (its window ${r.win}); ${r.leave}`}${r.said ? `; the harness read ${r.said}` : ''}`);
+  for (const r of rounds) note(`A2 ${tag} round ${r.round}`, `${r.latency === null ? `line ${r.line}: no button in 3 s (VS Code selection boxes ${r.selected})` : `line ${r.line}: button ${r.latency} ms after mouse-up (${r.how}); the button ${r.size} at mouse-up x + ${r.dx}, its centre ${r.cy} from the mouse-up's y (its window ${r.win}); ${r.leave}`}${r.said ? `; ${r.said}` : ''}`);
   log(shown.length === rounds.length, `A2 ${tag}: a real drag in VS Code shows the button (5 of 5)`, `${shown.length} of ${rounds.length}`);
   log(median !== null && median <= 150, `A2 ${tag}: mouse-up → button within the brief's 150 ms (median of rounds 2-5)`,
     `rounds 2-5: ${warm.join(', ')} ms (median ${median}); round 1 (the window is created): ${rounds[0].latency ?? '-'} ms. Measured from the release event's time to the button's node in its page (MutationObserver), same clock`);
@@ -832,10 +884,12 @@ async function runA(app, companion, tag) {
     pointer.click(Ln.lines[1].right + 80, Ln.lines[1].y);
     await sleep(400);
     pointer.drag(nums[0].x, nums[0].y, nums.at(-1).x, nums.at(-1).y);
-    const said = pointer.last;
+    const harness = pointer.last;
+    const t0 = pointer.t0;
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
-    const detail = `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; the harness read ${said}` : ''}`;
+    const said = readsText(harness, t0);
+    const detail = `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; ${said}` : ''}`;
     const why = os === 'mac' ? 'NSCursor.currentSystem gave no cursor' : 'GetCursorInfo: not CURSOR_SHOWING, or no handle';
     if (shown.length === 0) untestable(`A3 ${tag}: the gutter drag`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
     else if (cursorReadable(said)) log(sel > 0 && !g, `A3 ${tag}: a drag in VS Code's line-number gutter (not on text) shows no button`, detail);
@@ -858,11 +912,13 @@ async function runA(app, companion, tag) {
     const race = want
       ? pointer.race(num.x, num.y, row.left + 2, row.y, Math.min(row.right - 2, row.left + 300), row.y)
       : pointer.race(row.left + 40, row.y, num.x, num.y, below.x, below.y);
+    const t0 = pointer.t0;
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
-    const detail = `${race.said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}`;
+    const said = readsText(race.said, t0);
+    const detail = `${said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}`;
     if (!want && shown.length === 0) untestable(`A3 race ${tag}: ${kind}`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
-    else if (cursorReadable(race.said)) log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
+    else if (cursorReadable(said)) log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
     else untestable(`A3 race ${tag}: ${kind}`, `the runner shows no cursor at rest or 40 ms after the press, so the helper can't read it there; ${detail}`);
   }
 
@@ -1107,9 +1163,11 @@ async function runC(app, companion) {
     const Lc = await vsLines();
     const word = Lc.lines.find((l) => l.y > o.y + (box.y + box.h) * o.k + 120) ?? Lc.lines.at(-1);
     pointer.click(word.left + 20, word.y, 2);
-    const saidC = pointer.last;
+    const harnessC = pointer.last;
+    const t0C = pointer.t0;
     const gc = await waitShown(app, 2500);
-    log(Boolean(gc), 'C1 control: a double-click on a word of the code shows the button', `${gc ? `at (${r1(gc.x)}, ${r1(gc.y)}) for the double-click at (${Math.round(word.left + 20)}, ${Math.round(word.y)})` : 'no button in 2.5 s'}${saidC ? `; the harness read ${saidC}` : ''}`);
+    const saidC = readsText(harnessC, t0C);
+    log(Boolean(gc), 'C1 control: a double-click on a word of the code shows the button', `${gc ? `at (${r1(gc.x)}, ${r1(gc.y)}) for the double-click at (${Math.round(word.left + 20)}, ${Math.round(word.y)})` : 'no button in 2.5 s'}${saidC ? `; ${saidC}` : ''}`);
     pointer.click(word.left + 4, word.y);
     await waitHidden(app, 2000);
     pointer.click(at.x, at.y, 2);
@@ -1149,6 +1207,8 @@ async function runC(app, companion) {
         const phaseAt = (ms) => [...seen].reverse().find((e) => e.t <= ms)?.p ?? '';
         const p1 = phaseAt(1000);
         const p4 = phaseAt(4000);
+        const p6 = phaseAt(6000);
+        const pEnd = seen.at(-1)?.p ?? '';
         const timeline = seen.map((e) => `${e.p || '?'} @${(e.t / 1000).toFixed(1)} s`).join(' → ');
         const clip = readClipboard();
         const bar = (await barPage(app)?.evaluate(() => document.body.innerText).catch(() => '')) ?? '';
@@ -1158,9 +1218,10 @@ async function runC(app, companion) {
         desktop(`n6-press-quick-${quick ? 'on' : 'off'}`);
         log(!clip.includes(PROMPT_WORD) && !String(clip4 ?? '').includes(PROMPT_WORD) && !panelText.includes(PROMPT_WORD) && !card.includes(PROMPT_WORD) && aiPosts('c').length === posts,
           `C1 N6 (Windows): pressing it over the password prompt (Quick look ${quick ? 'on' : 'off'}) reads nothing of the box and sends nothing`,
-          `clipboard at +4 s "${String(clip4 ?? '').slice(0, 40)}", at +10 s "${clip.slice(0, 40)}"; the Island says "${bar.replace(/\s+/g, ' ').trim().slice(0, 120)}"; card "${card.replace(/\s+/g, ' ').trim().slice(0, 140)}"; AI POST attempts ${aiPosts('c').length - posts}`);
-        log(Boolean(p4) && !WORKING.test(p4), `C1 N6 (Windows): after the empty press (Quick look ${quick ? 'on' : 'off'}) the Island is out of its working phases by +4 s`,
-          `+1 s "${p1 || '?'}", +4 s "${p4 || '?'}" (expected Issue or idle, then idle); for 10 s: ${timeline}`);
+          `clipboard at +4 s "${String(clip4 ?? '').slice(0, 40)}", at +10 s "${clip.slice(0, 40)}" (the sentinel ${clip.trim() === 'qa-d5-sentinel' ? 'is back' : 'is NOT back'}: Security SHOULD-366d); the Island says "${bar.replace(/\s+/g, ' ').trim().slice(0, 120)}"; card "${card.replace(/\s+/g, ' ').trim().slice(0, 140)}"; AI POST attempts ${aiPosts('c').length - posts}`);
+        // Lead 2026-11-20 (#366 8ec57712 keeps both Windows copy waits at 32 tries): Issue or idle by +6 s, then idle.
+        log(Boolean(p6) && !WORKING.test(p6) && pEnd === 'idle', `C1 N6 (Windows): after the empty press (Quick look ${quick ? 'on' : 'off'}) the Island is out of its working phases by +6 s, then idle`,
+          `+1 s "${p1 || '?'}", +4 s "${p4 || '?'}", +6 s "${p6 || '?'}", +10 s "${pEnd || '?'}"; for 10 s: ${timeline}`);
         if (quick) keys.escape(); // the card's Esc (Unvibe holds it only while the card shows); off: nothing to close
         await sleep(800);
       }
@@ -1226,6 +1287,7 @@ for (const tag of plan) {
     const l = await launch(tag, tag === 'b' ? ['--force-device-scale-factor=1.5'] : []);
     app = l.app;
     await minimize(app, l.companion);
+    startShadow(tag);
     if (tag === 'a') await openVsCode();
     if (tag === 'a') await runA(app, l.companion, os === 'mac' ? 'mac' : '100');
     if (tag === 'b') await runB(app, l.companion);
@@ -1235,6 +1297,7 @@ for (const tag of plan) {
     log(false, `Launch ${tag}`, `stopped: ${short(e)}`);
     desktop(`${tag}-stopped`);
   } finally {
+    stopShadow();
     await app?.close().catch(() => {});
     await sleep(2000);
     if (tag === 'c') { try { unblockApi(); } catch (e) { log(false, 'The hosts file back after launch C', short(e)); } }
