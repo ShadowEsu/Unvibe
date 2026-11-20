@@ -2,7 +2,8 @@
 // rc0155/WALK-PLAN.md, BOSS's budget: 3 hosted calls per system, Mac and Windows), run by real-device-test.yml (input
 // rc0155=ai-mac or ai-windows, with ai=true) on ONE system per dispatch. The walk-only rows are in rc-0155.mjs.
 //
-// Hosted calls, counted: every action that sends goes through spend(), which refuses a 4th, and the first failed call
+// Hosted calls, counted: every action that sends goes through spend(), which refuses one past BUDGET (3; 2 with
+// RC55_SKIP_TABLE=1, BOSS's cap for Run A Windows, Security SHOULD-RA1), and the first failed call
 // step stops every later one:
 //   CALL 1, #353: Explain pressed twice on the confirm sheet ("Explain this code?", reached as the editor link does it:
 //           unvibe://review?source=ide with code on the clipboard; the agreement form comes first) → one POST.
@@ -38,7 +39,7 @@ const out = path.resolve(process.env.SHOTS_DIR ?? 'rc-0155-ai');
 const host = process.env.API_HOST ?? 'api.unvibe.site';
 const TMP = process.env.RUNNER_TEMP ?? tmpdir();
 const netDir = path.resolve(process.env.NETLOG_DIR ?? mkdtempSync(path.join(TMP, 'unvibe-rc0155-netlog-')));
-const BUDGET = 3;
+const BUDGET = process.env.RC55_SKIP_TABLE === '1' ? 2 : 3;
 if (!exe) throw new Error('Set UNVIBE_EXE');
 if (process.env.QA_AI_OK !== '1') throw new Error('rc-0155-ai.mjs sends hosted explanations: it needs QA_AI_OK=1 (workflow input ai=true)');
 if (`${netDir}${path.sep}`.startsWith(`${out}${path.sep}`)) throw new Error('NETLOG_DIR must be outside SHOTS_DIR: the raw net log is never uploaded');
@@ -200,17 +201,44 @@ async function openLink() {
     execFileSync('cmd', ['/c', 'start', '', url], { env });
   } else spawn(exe, [...appArgs, url], { env, stdio: 'ignore', detached: true }).unref();
 }
-/** Unvibe main processes (not its renderer/GPU/utility children); null where not counted (a local Linux run). */
-const mainProcesses = () => {
+/** Unvibe main processes (not its renderer/GPU/utility children), each with its parent and command line; null where
+ *  not listed (a local Linux run). */
+const mainList = () => {
   try {
-    if (os === 'mac') return execFileSync('pgrep', ['-x', 'Unvibe'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean).length;
-    if (os === 'windows') {
-      return Number(execFileSync('powershell', ['-NoProfile', '-Command',
-        "@(Get-CimInstance Win32_Process -Filter \"Name='Unvibe.exe'\" | Where-Object { $_.CommandLine -notmatch '--type=' }).Count"], { encoding: 'utf8', timeout: 30000 }).trim());
+    if (os === 'mac') {
+      const pids = execFileSync('pgrep', ['-x', 'Unvibe'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+      return execFileSync('ps', ['-o', 'pid=,ppid=,command=', '-p', pids.join(',')], { encoding: 'utf8' }).trim().split('\n')
+        .map((l) => { const [, pid, ppid, cmd] = l.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/) ?? []; return { pid: Number(pid), ppid: Number(ppid), cmd }; });
     }
-  } catch { return 0; }
+    if (os === 'windows') {
+      const json = execFileSync('powershell', ['-NoProfile', '-Command',
+        "@(Get-CimInstance Win32_Process -Filter \"Name='Unvibe.exe'\" | Where-Object { $_.CommandLine -notmatch '--type=' } | ForEach-Object { [pscustomobject]@{ pid = $_.ProcessId; ppid = $_.ParentProcessId; cmd = $_.CommandLine } }) | ConvertTo-Json -Compress"],
+        { encoding: 'utf8', timeout: 30000 }).trim();
+      if (!json) return [];
+      const v = JSON.parse(json);
+      return Array.isArray(v) ? v : [v];
+    }
+  } catch { return []; }
   return null;
 };
+const mainProcesses = () => mainList()?.length ?? null;
+/**
+ * The link's own copy should hand the link over and quit (requestSingleInstanceLock() false → 'second-instance' in the
+ * running app → quit). Run 44835707720 counted 2 main processes as soon as the overlay showed, so the list is now read
+ * every 250 ms until one is left or 3 s after the link (the lead), and every reading is kept: a copy that is gone by
+ * then was the hand-off caught midway; one still there is a second Unvibe, reported with both command lines.
+ */
+async function mainAfterLink(linkAt, ms = 3000) {
+  const seen = [];
+  for (;;) {
+    const list = mainList();
+    if (list === null) return { left: null, seen: 'not listed on this system' };
+    const at = Date.now() - linkAt;
+    seen.push(`+${at} ms: ${list.length} [${list.map((p) => `pid ${p.pid} (parent ${p.ppid}) ${String(p.cmd ?? '').split(exe).join('<exe>')}`).join('; ')}]`);
+    if (list.length <= 1 || at >= ms) return { left: list.length, seen: seen.join(' → ') };
+    await sleep(250);
+  }
+}
 const noOverlay = () => {
   const m = mainProcesses();
   return new Error(`the overlay did not open for the link${m !== null && m > 1 ? ` (${m} Unvibe main processes: a second Unvibe started instead of handing the link over)` : ''}`);
@@ -267,11 +295,13 @@ let panel = null;
 const t1 = {};
 if (!stopped) try {
   await setClipboard(CODE);
+  const linkAt = Date.now();
   await openLink();
   panel = await waitFor(async () => panelWindow(), 20000, 250);
   if (!panel) throw noOverlay();
-  const extra = mainProcesses();
-  if (extra !== null && extra !== 1) throw new Error(`${extra} Unvibe main processes after the link (expected the one running)`);
+  const after = await mainAfterLink(linkAt);
+  note('#353: Unvibe main processes after the link', after.seen);
+  if (after.left !== null && after.left !== 1) throw new Error(`${after.left} Unvibe main processes 3 s after the link (expected the one running): ${after.seen}`);
   const consent = panel.locator('.ob.ob--aiConsent .consent-form');
   await consent.waitFor({ timeout: 20000 });
   const boxes = consent.locator('input[type="checkbox"]');
@@ -365,6 +395,9 @@ if (!stopped) try {
   await openLink();
   panel = await waitFor(async () => panelWindow(), 20000, 250);
   if (!panel) throw noOverlay();
+  const after3 = await mainAfterLink(t3.blockedFrom);
+  note('#353 Retry: Unvibe main processes after the link', after3.seen);
+  if (after3.left !== null && after3.left !== 1) throw new Error(`${after3.left} Unvibe main processes 3 s after the link (expected the one running): ${after3.seen}`);
   await panel.locator('.ob.ob--confirm').waitFor({ timeout: 20000 });
   // Explain while blocked: nothing can reach the API, so this is not a call (checked below from the net log).
   await panel.evaluate(() => [...document.querySelectorAll('.ob.ob--confirm .ob-actions button')].find((b) => b.textContent.trim() === 'Explain')?.click());
