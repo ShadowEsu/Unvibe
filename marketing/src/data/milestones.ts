@@ -39,7 +39,7 @@ export const milestones: Milestone[] = [
     date: "19 NOV 2026",
     category: "PRODUCT",
     title: "Explain pages: one thing to check before you trust the code",
-    summary: "The explain pages now speak to people whose AI tool wrote the code. The /explain page opens with \"Your AI wrote it. You decide whether to accept it.\" and says Vibe adds a \"Not sure:\" line when it's guessing. On every explain page, the one thing to check that we found when we tried the sample is labeled \"Before you trust it:\" instead of \"Watch out:\". On 61 pages, the section at the end says when to press the shortcut and spells it out: Control+U on a Mac, not Command+U (⌘U only works in Cursor and VS Code with the editor bridge), and Ctrl+Alt+U on Windows. The 13 pages whose sample is output, an error or a file a tool generates, such as git log output or package-lock.json, keep the shorter text. The Python, Supabase RLS and CORS error pages have new opening lines.",
+    summary: "The explain pages now speak to people whose AI tool wrote the code. The /explain page opens with \"Your AI wrote it. You decide whether to accept it.\" and says Vibe adds a \"Not sure:\" line when it's guessing. On every explain page, the note on what to check, from trying the sample, is now labeled \"Before you trust it:\" instead of \"Watch out:\". On 61 pages, the section at the end says when to press the shortcut and spells it out: Control+U on a Mac, not Command+U (⌘U only works in Cursor and VS Code with the editor bridge), and Ctrl+Alt+U on Windows. The 13 pages whose sample is output, an error or a file a tool generates, such as git log output or package-lock.json, keep the shorter text. The Python, Supabase RLS and CORS error pages have new opening lines.",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "/explain/supabase-rls", label: "Explain Supabase RLS policies" },
@@ -63,7 +63,7 @@ export const milestones: Milestone[] = [
     date: "19 NOV 2026",
     category: "DISTRIBUTION",
     title: "Explain pages named for files and commands",
-    summary: "28 more explain pages are now headed by what they explain instead of \"code\", most of them config files or commands, such as \"Explain .env files\", \"Explain tar commands\" and \"Explain git rebase -i todo lists\". The /explain list, the section at the end of each page and the link-preview cards use the same words. Pages such as Python, YAML and Terraform keep \"Explain ... code\".",
+    summary: "28 more explain pages are now headed by what they explain instead of \"code\", most of them config files or commands, such as \"Explain .env files\", \"Explain tar commands\" and \"Explain git rebase -i todo lists\". The /explain list, the section at the end of each page and the link-preview cards use the same words. Pages such as Python, YAML and Terraform keep \"Explain … code\".",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "/explain/env", label: "Explain .env files" },
