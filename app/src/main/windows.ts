@@ -306,6 +306,22 @@ export function endDragsOnLoss(win: Pick<BrowserWindow, 'on'> & { webContents: P
   win.webContents.on('did-start-loading', abandon);
 }
 
+/**
+ * The displays changed (one was unplugged, or a resolution shrank): an open window whose centre is now on no display
+ * comes back whole onto the nearest one, instead of waiting for the OS to move it. A window still on a display, or
+ * mid-drag (its own moves keep it on screen), stays put. Nothing is saved. Security SHOULD after 0.1.54.
+ */
+export function keepWindowOnDisplays(win: BrowserWindow): void {
+  if (win.isDestroyed() || dragOrigins.has(win)) return;
+  const b = win.getBounds();
+  const size = { width: b.width, height: b.height };
+  const onScreen = keepOnDisplays(b, size, screen.getAllDisplays().map((d) => d.bounds));
+  if (onScreen.x === b.x && onScreen.y === b.y) return;
+  const centre = { x: onScreen.x + Math.round(b.width / 2), y: onScreen.y + Math.round(b.height / 2) };
+  const spot = clampSpot(onScreen, size, screen.getDisplayNearestPoint(centre).workArea);
+  win.setPosition(spot.x, spot.y);
+}
+
 /** The floating Island can be dragged; the notch Island stays on the screen edge. */
 export function islandDraggable(): boolean {
   return !attachedIsland(settings().all().barPosition);

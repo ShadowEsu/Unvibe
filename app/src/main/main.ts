@@ -42,6 +42,7 @@ import {
   hideBar,
   islandDirection,
   islandDraggable,
+  keepWindowOnDisplays,
   moveWindowDrag,
   nudgePanel,
   positionBar,
@@ -826,11 +827,13 @@ app.whenReady().then(() => {
   if (s.onboarded && s.barVisibility === 'always') showBar(bar);
   else hideBar(bar);
 
-  // Keep the learning strip correctly placed and above full-screen Spaces after display changes.
+  // Keep the learning strip correctly placed and above full-screen Spaces after display changes, and bring an open
+  // overlay back from a display that went away (the Island is placed again by showBar).
   const restoreFloatingWindows = () => {
     if (bar && !bar.isDestroyed() && bar.isVisible()) showBar(bar);
     const panel = currentWidget();
     if (!panel || panel.isDestroyed()) return;
+    keepWindowOnDisplays(panel);
     panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
     panel.moveTop();
   };
