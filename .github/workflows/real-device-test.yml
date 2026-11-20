@@ -451,7 +451,7 @@ jobs:
           NETLOG_DIR: ${{ runner.temp }}/netlog
         run: |
           $def = Join-Path $env:APPDATA 'Unvibe'
-          if (Test-Path (Join-Path $def 'unvibe-store.json')) { "default profile already holds a store: $(Get-Content (Join-Path $def 'unvibe-store.json') -Raw)" }
+          if (Test-Path (Join-Path $def 'unvibe-store.json')) { "default profile already holds a store, install id $((Get-Content (Join-Path $def 'unvibe-store.json') -Raw | ConvertFrom-Json -AsHashtable)['installId'])" }
           else {
             New-Item -ItemType Directory -Force $def | Out-Null
             Set-Content -Path (Join-Path $def 'unvibe-store.json') -Value (@{ installId = $env:RC55_LINK_DEFAULT_ID; loginPromptAsked = $true } | ConvertTo-Json -Compress) -Encoding utf8NoBOM
@@ -859,7 +859,9 @@ jobs:
           $failed = 0
           $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile')
           # rc0155 link: the probe's per-way profiles, and the app's default profile it seeded (Combine keeps a rooted path).
+          # rc0155 ai-windows: the default profile too, in case a second Unvibe started there (run 44658289654).
           if ($env:RC0155 -eq 'link') { $names += @('rc0155-link54-profile-A', 'rc0155-link54-profile-B', 'rc0155-link-profile-A', 'rc0155-link-profile-B', (Join-Path $env:APPDATA 'Unvibe')) }
+          if ($env:RC0155 -eq 'ai-windows') { $names += @((Join-Path $env:APPDATA 'Unvibe')) }
           foreach ($name in $names) {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }

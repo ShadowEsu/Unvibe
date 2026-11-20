@@ -185,26 +185,35 @@ function setClipboard(text) {
  * Windows gets the handler setAsDefaultProtocolClient writes, pointed at this run's profile, and `start`s the link,
  * so the second start hands it to the running app (second-instance) and exits. A local Linux run starts the second
  * instance itself.
+ * Windows: `start` runs with this run's app env (UNVIBE_USER_DATA = the profile), which the handler's copy inherits,
+ * as real-device.mjs's does. Without it that copy did not hand over: probe 44660771135 (rc0155=link) saw a second
+ * Unvibe start and no overlay, on 0.1.54 and on the RC alike, and the overlay in ~300 ms with it. The handler is
+ * written before every link, because the app writes its own ("exe" "%1") each time it starts.
  */
-let registered = false;
 async function openLink() {
   const url = 'unvibe://review?source=ide';
   if (os === 'mac') execFileSync('open', [url], { timeout: 15000 });
   else if (os === 'windows') {
-    if (!registered) {
-      const key = 'HKCU\\Software\\Classes\\unvibe\\shell\\open\\command';
-      execFileSync('reg', ['add', key, '/ve', '/t', 'REG_SZ', '/d', `"${exe}" --user-data-dir=${A} "%1"`, '/f']);
-      if (!execFileSync('reg', ['query', key, '/ve'], { encoding: 'utf8' }).includes(`--user-data-dir=${A}`)) throw new Error('the unvibe:// handler was not registered');
-      registered = true;
-    }
-    execFileSync('cmd', ['/c', 'start', '', url]);
+    const key = 'HKCU\\Software\\Classes\\unvibe\\shell\\open\\command';
+    execFileSync('reg', ['add', key, '/ve', '/t', 'REG_SZ', '/d', `"${exe}" --user-data-dir=${A} "%1"`, '/f']);
+    if (!execFileSync('reg', ['query', key, '/ve'], { encoding: 'utf8' }).includes(`--user-data-dir=${A}`)) throw new Error('the unvibe:// handler was not registered');
+    execFileSync('cmd', ['/c', 'start', '', url], { env });
   } else spawn(exe, [...appArgs, url], { env, stdio: 'ignore', detached: true }).unref();
 }
+/** Unvibe main processes (not its renderer/GPU/utility children); null where not counted (a local Linux run). */
 const mainProcesses = () => {
   try {
     if (os === 'mac') return execFileSync('pgrep', ['-x', 'Unvibe'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean).length;
+    if (os === 'windows') {
+      return Number(execFileSync('powershell', ['-NoProfile', '-Command',
+        "@(Get-CimInstance Win32_Process -Filter \"Name='Unvibe.exe'\" | Where-Object { $_.CommandLine -notmatch '--type=' }).Count"], { encoding: 'utf8', timeout: 30000 }).trim());
+    }
   } catch { return 0; }
   return null;
+};
+const noOverlay = () => {
+  const m = mainProcesses();
+  return new Error(`the overlay did not open for the link${m !== null && m > 1 ? ` (${m} Unvibe main processes: a second Unvibe started instead of handing the link over)` : ''}`);
 };
 /** Two clicks on the same button in one task; returns how many reached it. */
 const pressTwice = (panel, phaseClass, label) => panel.evaluate(({ phaseClass, label }) => {
@@ -260,7 +269,7 @@ if (!stopped) try {
   await setClipboard(CODE);
   await openLink();
   panel = await waitFor(async () => panelWindow(), 20000, 250);
-  if (!panel) throw new Error('the overlay did not open for the link');
+  if (!panel) throw noOverlay();
   const extra = mainProcesses();
   if (extra !== null && extra !== 1) throw new Error(`${extra} Unvibe main processes after the link (expected the one running)`);
   const consent = panel.locator('.ob.ob--aiConsent .consent-form');
@@ -355,7 +364,7 @@ if (!stopped) try {
   t3.blockedFrom = Date.now();
   await openLink();
   panel = await waitFor(async () => panelWindow(), 20000, 250);
-  if (!panel) throw new Error('the overlay did not open for the link');
+  if (!panel) throw noOverlay();
   await panel.locator('.ob.ob--confirm').waitFor({ timeout: 20000 });
   // Explain while blocked: nothing can reach the API, so this is not a call (checked below from the net log).
   await panel.evaluate(() => [...document.querySelectorAll('.ob.ob--confirm .ob-actions button')].find((b) => b.textContent.trim() === 'Explain')?.click());
