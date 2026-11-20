@@ -97,6 +97,18 @@ test('a click, right click or scroll elsewhere, or another app, dismisses it; on
   assert.equal(reduceGhost(shown(), { e: 'app', app: 'com.microsoft.VSCode' }, mac).effect, 'none');
 });
 
+test('Unvibe itself coming to the front (a synthesized click on its panel activates it) keeps the button, so the press lands', () => {
+  const win = { ...mac, platform: 'win32' as const };
+  assert.equal(reduceGhost(shown(), { e: 'app', app: 'com.unvibe.app' }, mac).effect, 'none');
+  const pressed = reduceGhost(reduceGhost(shown(), { e: 'app', app: 'com.unvibe.app' }, mac).state, { e: 'press' }, mac);
+  assert.equal(pressed.effect, 'explain');
+  const card = reduceGhost(shown(), { e: 'press' }, { ...mac, previewOn: true }).state;
+  assert.equal(reduceGhost(card, { e: 'app', app: 'com.unvibe.app' }, mac).effect, 'none');
+  assert.equal(reduceGhost(shown(), { e: 'app', app: 'Unvibe.exe' }, win).effect, 'none');
+  // Only Unvibe's exact id: another app whose name merely contains it still dismisses.
+  assert.equal(reduceGhost(shown(), { e: 'app', app: 'com.example.unvibe-notes' }, mac).state.look, 'hidden');
+});
+
 test('selecting text on the open card keeps the card and its result; a selection elsewhere in the editor replaces it', () => {
   const card = reduceGhost(shown(), { e: 'press' }, { ...mac, previewOn: true }).state;
   assert.equal(card.look, 'preview');
