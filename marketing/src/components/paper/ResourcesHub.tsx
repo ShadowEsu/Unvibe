@@ -385,12 +385,11 @@ export function ResourcesHub() {
               <p>The colors used on this site.</p>
               <div className="resources-swatches">
                 {[
-                  { name: "Paper (sheets and cards)", hex: "#FFFDF6" },
-                  { name: "Sky (page ground)", hex: "#D6ECFB" },
-                  { name: "Ink", hex: "#141414" },
-                  { name: "Lime (main buttons)", hex: "#D6F45A" },
-                  { name: "Lilac (Vibe only)", hex: "#B8A6FF" },
-                  { name: "Sky accent", hex: "#9FD8FF" },
+                  { name: "Paper", hex: "#FFFFFF" },
+                  { name: "Ink", hex: "#111111" },
+                  { name: "Ink 2", hex: "#555555" },
+                  { name: "Rule", hex: "#E5E5E5" },
+                  { name: "Lilac, Vibe only", hex: "#B8A6FF" },
                 ].map((color) => (
                   <button
                     key={color.hex}
@@ -413,7 +412,7 @@ export function ResourcesHub() {
               <div className="resources-typography-guide">
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Headings</span>
-                  <p className="resources-display-demo">Inter 700, tight, for every heading.</p>
+                  <p className="resources-display-demo">Inter 560, tight, for every heading.</p>
                 </div>
                 <div className="resources-type-sample">
                   <span className="resources-type-label">Emphasis</span>
