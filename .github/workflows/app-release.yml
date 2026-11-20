@@ -165,6 +165,16 @@ jobs:
           UNVIBE_TRIAL_TOKEN: ${{ secrets.UNVIBE_TRIAL_TOKEN }}
         run: npm run build
 
+      # The Unvibe button's helper (D5): Swift on a Mac (universal), C on Windows. Packaged as
+      # resources/selection-watch (package.json build.mac/win.extraResources); its hash goes in the log for the
+      # release baseline (Security H3).
+      - name: Build the selection helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          node native/build.mjs
+          node -e "const f=require('fs'),c=require('crypto');for(const n of f.readdirSync('native/dist'))console.log('sha256', c.createHash('sha256').update(f.readFileSync('native/dist/'+n)).digest('hex'), n)"
+
       - name: Package (publish to release)
         if: startsWith(github.ref, 'refs/tags/app-v') || inputs.publish == true
         env:
@@ -295,6 +305,57 @@ jobs:
             fi
             hdiutil detach "$mnt" -force >/dev/null
           done
+
+      # The packaged helper (D5): present, signed under the app's seal, prints its ready line, and exits when
+      # Unvibe closes its stdin (so it can never outlive the app).
+      - name: Check the selection helper (Mac)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in release/mac-arm64/Unvibe.app release/mac/Unvibe.app; do
+            h="$app/Contents/Resources/selection-watch/unvibe-selection-watch"
+            test -x "$h"
+            echo "== $h ($(lipo -archs "$h"))"
+            codesign --verify --strict --verbose=2 "$h"
+            codesign -dv "$h" 2>&1 | grep -E '^(Identifier|Signature|Authority|TeamIdentifier)=' || true
+            shasum -a 256 "$h"
+          done
+          h="release/mac-arm64/Unvibe.app/Contents/Resources/selection-watch/unvibe-selection-watch"
+          out="$(mktemp)"
+          (sleep 3) | "$h" > "$out" &
+          pid=$!
+          sleep 8
+          if kill -0 "$pid" 2>/dev/null; then kill "$pid"; echo "The helper kept running after its stdin closed."; exit 1; fi
+          cat "$out"
+          grep -q '"e":"ready"' "$out"
+
+      - name: Check the selection helper (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $h = Resolve-Path "release/win-unpacked/resources/selection-watch/unvibe-selection-watch.exe"
+          "sha256 " + (Get-FileHash $h -Algorithm SHA256).Hash
+          $psi = New-Object System.Diagnostics.ProcessStartInfo $h
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardInput = $true
+          $psi.RedirectStandardOutput = $true
+          $p = [System.Diagnostics.Process]::Start($psi)
+          Start-Sleep -Seconds 3
+          $p.StandardInput.Close()
+          if (-not $p.WaitForExit(8000)) { $p.Kill(); throw "The helper kept running after its stdin closed." }
+          $out = $p.StandardOutput.ReadToEnd()
+          "exit $($p.ExitCode): $out"
+          # A runner without an interactive desktop may refuse the mouse hook (exit 2, no ready line): reported, not failed.
+          if ($out -notmatch '"e":"ready"') { Write-Warning "No ready line on this runner (exit $($p.ExitCode))." }
+          # Security H4: an unsigned exe with a global mouse hook can look like malware to antivirus. Scan it.
+          $mp = Join-Path $env:ProgramFiles "Windows Defender\MpCmdRun.exe"
+          if (Test-Path $mp) {
+            & $mp -Scan -ScanType 3 -File $h -DisableRemediation
+            "MpCmdRun exit $LASTEXITCODE"
+            if ($LASTEXITCODE -eq 2) { throw "Microsoft Defender flagged the selection helper." }
+          } else { Write-Warning "Microsoft Defender's MpCmdRun.exe is not on this runner." }
+          $global:LASTEXITCODE = 0
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
