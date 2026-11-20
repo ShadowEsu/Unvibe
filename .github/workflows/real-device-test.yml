@@ -647,6 +647,9 @@ jobs:
           # Seeded into the profile and pre-flagged above.
           RC55_AI_ID: qa-rc0155-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           NETLOG_DIR: ${{ runner.temp }}/netlog
+          # Windows sends 2 calls, not 3: the #358 table ask is skipped (the server prompt forbids tables; Run A Mac
+          # 44656303317 got none; the lead's option 3, requests/unvibe/20261119-1753-unvibe-qa-rc0155-358-table.md).
+          RC55_SKIP_TABLE: ${{ inputs.rc0155 == 'ai-windows' && '1' || '' }}
         run: |
           cp app/e2e/rc-0155-ai.mjs app/e2e/netlog.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
           status=0

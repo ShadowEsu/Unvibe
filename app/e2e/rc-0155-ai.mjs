@@ -7,6 +7,7 @@
 //   CALL 1, #353: Explain pressed twice on the confirm sheet ("Explain this code?", reached as the editor link does it:
 //           unvibe://review?source=ide with code on the clipboard; the agreement form comes first) → one POST.
 //   CALL 2, #358: one Ask question for a small table of the answer's cases → every table fits the 320 px overlay.
+//           Not sent with RC55_SKIP_TABLE=1 (ai-windows): the server prompt forbids tables, see CALL 2 below.
 //   CALL 3, #353: Retry pressed twice on the error view → one POST. The error comes from api.unvibe.site pointing at
 //           this machine (a hosts line, then the app restarted, so no old connection or DNS answer is reused), which
 //           sends nothing to the API (checked: the runner's own request to it fails, and so does every one the app
@@ -21,7 +22,7 @@
 // Env: UNVIBE_EXE, SHOTS_DIR, UNVIBE_OS (mac | windows; linux = a local run against a mock API), QA_AI_OK=1,
 //      RC55_AI_PROFILE + RC55_AI_ID (a qa- id the workflow pre-flags and flags again after), NETLOG_DIR (outside
 //      SHOTS_DIR), API_HOST (default api.unvibe.site), UNVIBE_APP_DIR + MOCK_DOWN_FILE (local run only: the mock API
-//      answers 503 while that file exists, in place of the hosts line).
+//      answers 503 while that file exists, in place of the hosts line), RC55_SKIP_TABLE (1 = CALL 2 not sent).
 import { launchApp, readStore } from './cdp-launch.mjs';
 import { apiRequests, keepSummaryAndDrop, netLogArg } from './netlog.mjs';
 import { execFileSync, spawn } from 'node:child_process';
@@ -312,7 +313,12 @@ async function capture(label) {
   }
   return { size, got, sized: got.every((g) => g.w === size.w * g.scale && g.h === size.h * g.scale) };
 }
-if (!stopped) try {
+// RC55_SKIP_TABLE=1 (the workflow sets it for ai-windows; the lead's option 3, requests/unvibe/20261119-1753-…): the
+// server tells the model "No markdown tables" (web/src/ai/prompt.ts:54), so Run A Mac 44656303317's ask got none and a
+// second ask would most likely spend a call to show nothing. #358 then stays NOT SHOWN by a hosted answer.
+const SKIP_TABLE = process.env.RC55_SKIP_TABLE === '1';
+if (SKIP_TABLE && !stopped) note('#358: CALL 2 not sent (NOT SHOWN by a hosted answer)', 'the server prompt forbids markdown tables (web/src/ai/prompt.ts:54); Run A Mac 44656303317 asked for one and got none; skipped by the lead\'s choice (requests/unvibe/20261119-1753-unvibe-qa-rc0155-358-table.md)');
+if (!stopped && !SKIP_TABLE) try {
   const box = panel.locator('input.ob-ask__input');
   await box.waitFor({ timeout: 10000 });
   await box.fill('Show the cases pickRoute handles as a small markdown table with three columns: Case, Code (the exact expression from the function, in backticks) and What it returns.');
