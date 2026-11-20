@@ -24,6 +24,9 @@
 //   and 1:1 crops.
 // Launch C (Mac and Windows), the API host blocked in the hosts file for the whole launch (no byte reaches the server;
 //   the file is put back byte for byte and checked), the agreement given in the run's own profile:
+//   D5-a first (Security's MUST): the runner's own request gets no answer, the resolver gives only 0.0.0.0 / :: (and
+//      dscacheutil 0.0.0.0 on the Mac), and the app's net log so far has no answered request; else launch C stops
+//      there, with no agreement and no press.
 //   C1 N6: VS Code's password prompt (a development extension's showInputBox({ password: true })), double-clicked.
 //      Mac: no button (secure input). Windows: the button may show (Security N6); pressed with Quick look off, then
 //      on: nothing of the box reaches the clipboard or the panel, and nothing is sent.
@@ -39,6 +42,7 @@ import { chromium } from 'playwright';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { lookup } from 'node:dns/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -802,7 +806,37 @@ async function giveAgreement(app) {
   note('C: the agreement given in this run\'s profile', 'in the panel the shortcut opened (before the agreement the shortcut reads nothing)');
   return panel;
 }
+/**
+ * MUST-D5a (Security, 20 Nov 03:33Z): before the agreement, the block is shown to hold, or launch C stops here with
+ * nothing given or pressed. (a) The runner's own GET /api/v1/health gets no answer, the resolver (getaddrinfo, which
+ * reads the hosts file) gives only 0.0.0.0 / ::, and on the Mac dscacheutil shows 0.0.0.0; (b) launch C's net log so
+ * far has no request to the host with an answer.
+ */
+async function blockHolds() {
+  let runner;
+  try {
+    const res = await fetch(`https://${host}/api/v1/health`, { signal: AbortSignal.timeout(10000) });
+    runner = `HTTP ${res.status}`;
+  } catch (e) { runner = `no answer (${short(e.cause ?? e)})`; }
+  const addrs = await lookup(host, { all: true }).then((a) => a.map((x) => x.address)).catch((e) => [`lookup failed (${short(e)})`]);
+  const resolverOk = addrs.length > 0 && addrs.every((a) => a === '0.0.0.0' || a === '::');
+  let dns = '';
+  let dnsOk = true;
+  if (os === 'mac') {
+    try { dns = execFileSync('dscacheutil', ['-q', 'host', '-a', 'name', host], { encoding: 'utf8', timeout: 15000 }).trim().replace(/\s+/g, ' '); } catch (e) { dns = `dscacheutil failed (${short(e)})`; }
+    const v4 = [...dns.matchAll(/ip_address: (\S+)/g)].map((m) => m[1]);
+    const v6 = [...dns.matchAll(/ipv6_address: (\S+)/g)].map((m) => m[1]);
+    dnsOk = v4.length > 0 && v4.every((a) => a === '0.0.0.0') && v6.every((a) => a === '::');
+  }
+  const seen = apiRequests(netlogs.find((l) => l.tag === 'c').file, host);
+  const answered = seen.filter((q) => q.status);
+  const ok = runner.startsWith('no answer') && resolverOk && dnsOk && answered.length === 0;
+  log(ok, 'D5-a: the block holds before the agreement (otherwise launch C stops here: no agreement, no press)',
+    `the runner's own GET /api/v1/health: ${runner}; getaddrinfo: ${addrs.join(', ')}${os === 'mac' ? `; dscacheutil: ${dns}` : ''}; the app's net log so far: ${seen.length} request(s) to ${host} (${seen.map((q) => `${q.method} ${q.path} ${q.status || 'no answer'}`).join(', ') || 'none'}), with an answer ${answered.length}`);
+  return ok;
+}
 async function runC(app, companion) {
+  if (!(await blockHolds())) return;
   await companion.evaluate(() => window.unvibe.setBubble('ghost', true));
   // The agreement first, before VS Code's password prompt is up, with the pointer at the screen's bottom right so the
   // panel opens there, away from the prompt and the code.
