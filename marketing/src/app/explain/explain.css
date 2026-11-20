@@ -35,11 +35,12 @@
   gap: 0.55rem;
 }
 
-/* 36 px at 390 wide, 60 px at 1440 and up; Inter 560 at −0.025em, Option A's display style. */
+/* 36 px at 390 wide, 60 px at 1440 and up; Inter 560 at −0.025em, Option A's display style. In px, not rem: the
+   root size here is 18 px, so rem would overshoot the spec. */
 .explain-head h1 {
   margin: 0;
   color: var(--v-ink);
-  font: 560 clamp(2.25rem, 1.693rem + 2.286vw, 3.75rem) / 1.05 var(--font-sans);
+  font: 560 clamp(36px, 27.09px + 2.286vw, 60px) / 1.05 var(--font-sans);
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
