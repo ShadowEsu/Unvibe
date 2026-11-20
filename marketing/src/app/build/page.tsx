@@ -18,10 +18,8 @@ export const metadata: Metadata = pageMetadata({
 export default function BuildPage() {
   return (
     <article className="build-page">
-      <div className="paper-photo-band">
-        <img src="/hero/golden-gate-band-1600.webp" srcSet="/hero/golden-gate-band-800.webp 800w, /hero/golden-gate-band-1600.webp 1600w" sizes="100vw" alt="" />
-        <div className="paper-hero__veil" />
-        <div className="paper-photo-band__copy">
+      <header className="a-head">
+        <div className="a-head__in">
           <p className="paper-meta">Building in public</p>
           <h1>100%. Unvibe is out.</h1>
           <p>
@@ -35,7 +33,7 @@ export default function BuildPage() {
           </div>
           <DownloadRow surface="build" />
         </div>
-      </div>
+      </header>
 
       <section className="paper-section" id="growth">
         <Reveal className="paper-wrap">
