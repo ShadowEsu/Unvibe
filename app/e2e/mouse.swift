@@ -80,6 +80,10 @@ func steps(_ p1: CGPoint, _ p2: CGPoint) {
   }
 }
 
+// AppKit up (no Dock icon, never activated): without it NSCursor.iBeam read as hot 0,0, 0×0 in this command-line tool
+// (run 44677798585), so the harness's own beam= compared against an empty cursor. The helper's beamref read 12,11 23×22.
+_ = NSApplication.shared
+NSApp.setActivationPolicy(.prohibited)
 let a = CommandLine.arguments
 guard a.count > 1 else { exit(2) }
 switch a[1] {

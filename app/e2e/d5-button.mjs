@@ -9,7 +9,8 @@
 //      the press, A4), with Unvibe's Accessibility reset by the workflow first (a clean Mac); the helper is running.
 //   A2 a real drag in VS Code shows the button: mouse-up → button in the page, ms, 5 times (the brief's target
 //      ≤ 150 ms; the first one also creates the window); the button (its own box in its page, 32 px) placed 8 px
-//      right of the mouse-up, centred on it. It leaves after 4 s untouched (round 1) and on a click elsewhere
+//      right of the mouse-up, centred on it. It leaves 3.5-4.5 s after the mouse-up untouched (round 1; 4 s from the
+//      show, unvibe-app) and on a click elsewhere
 //      (rounds 2-5). Placing, hovering and pressing go by the button's box: on Windows its window was 64×64 px.
 //   A2b the old invisible strip: clicks 20 px right of, below, and right of and below the button land in VS Code
 //      (its selection goes, its caret moves there) while the button shows; on Windows the button's window is
@@ -26,8 +27,10 @@
 //      A3b and the races are judged only when the cursor reads found a cursor, otherwise NOT TESTABLE (the helpers'
 //      "can't say" branch shows the button by design, lead 2026-11-20), and a "no button" row only after A2 showed
 //      the button.
-//   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent;
+//   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent
+//      (the mouse-up on plain background: on the Mac's 1280 px screen, right of a short row between short rows);
 //      a press opens the panel on the agreement (no agreement in this profile: nothing is read) and sends nothing.
+//      The press row lists the helper's lines (down, press, app) and the pointer events the button's page saw.
 //   A5 stacking: that panel focused, then VS Code clicked (the panel fades), then a selection whose button lands over
 //      the panel's edge: the button is in front (window order) and takes the pointer (hover → pill over the panel).
 //   A6 the flip at the screen's right edge: the button and the pill grow left of the mouse-up.
@@ -274,8 +277,9 @@ const pointer = {
 // +40 ms, cursor the system cursor's geometry: hot, size, aspect, rel, agree), and the Mac helper prints one
 // {"e":"beamref","cursor":{..}} at start (NSCursor.iBeam's geometry). Unvibe's main drops those lines. A second copy of
 // the installed helper, stdin open, run by the harness for the launch, lets the report show them (unvibe-app
-// 2026-11-20: two helpers only watch). Only ready, beamref, press and select lines are kept, and only their numbers
-// and gesture (no app ids, no text: the helper never reads any).
+// 2026-11-20: two helpers only watch). Kept: ready, beamref, press, select, down/right/scroll (points) and app (the
+// front app's bundle id or exe name: unvibe-app's run-5 read, an `app` naming Unvibe hid the button before the press
+// landed). Numbers are coerced, the gesture and app id must look like one; the helper reads no text.
 const helperFile = exe ? (os === 'mac'
   ? path.join(path.dirname(exe), '..', 'Resources', 'selection-watch', 'unvibe-selection-watch')
   : path.join(path.dirname(exe), 'resources', 'selection-watch', 'unvibe-selection-watch.exe')) : '';
@@ -291,31 +295,38 @@ function startShadow(tag) {
     const num = (v) => (v === undefined ? undefined : Number(v));
     if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', x: num(e.x), y: num(e.y), mx: num(e.mx), my: num(e.my), beam: num(e.beam), known: num(e.known), secure: num(e.secure), cursor: geo(e.cursor) });
     else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', x: num(e.x), y: num(e.y), g: /^(drag|double|triple)$/.test(e.g) ? e.g : '?' });
+    else if (e?.e === 'down' || e?.e === 'right' || e?.e === 'scroll') lines.push({ t: Date.now(), e: e.e, x: num(e.x), y: num(e.y) });
+    else if (e?.e === 'app') lines.push({ t: Date.now(), e: 'app', app: /^[\w .-]{1,80}$/.test(String(e.app)) ? String(e.app) : '?' });
     else if (e?.e === 'ready') lines.push({ t: Date.now(), e: 'ready' });
     else if (e?.e === 'beamref') lines.push({ t: Date.now(), e: 'beamref', cursor: geo(e.cursor) });
   });
   child.on('error', () => {});
   shadow = { child, lines };
-  note(`The helper's own reads (${tag})`, `a second copy of ${path.basename(helperFile)} runs for this launch (pid ${child.pid}), its press and select lines kept`);
+  note(`The helper's own reads (${tag})`, `a second copy of ${path.basename(helperFile)} runs for this launch (pid ${child.pid}), its lines kept`);
 }
 function stopShadow(tag) {
   if (!shadow) return;
   const n = (k) => shadow.lines.filter((l) => l.e === k).length;
   const ref = shadow.lines.find((l) => l.e === 'beamref');
-  note(`The helper's own reads (${tag}): totals`, `ready ${n('ready')}, press ${n('press')}, select ${n('select')}${ref ? `; beamref (NSCursor.iBeam):${ref.cursor || ' none'}` : ''}`);
+  note(`The helper's own reads (${tag}): totals`, `ready ${n('ready')}, down ${n('down')}, press ${n('press')}, select ${n('select')}, app ${n('app')}${ref ? `; beamref (NSCursor.iBeam):${ref.cursor || ' none'}` : ''}`);
   try { shadow.child.stdin.end(); } catch {}
   shadow.child.kill();
   shadow = null;
 }
-/** The helper's own lines from `since` to `until` ("press at x,y (pointer mx,my) beam=1 known=1 secure=0, select drag at x,y"); '' with no shadow
- * helper. Lines are stamped when node reads them, so callers read after an await that follows the press. */
+/** The helper's own lines from `since` to `until`, in order ("down at x,y, press at x,y (pointer mx,my) beam=1 known=1
+ * secure=0 cursor …, select drag at x,y, app com.unvibe.app"); '' with no shadow helper. Lines are stamped when node
+ * reads them, so callers read after an await that follows the press. */
 const helperSaid = (since, until = Date.now()) => {
   if (!shadow) return '';
-  const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && (l.e === 'press' || l.e === 'select'));
+  const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && l.e !== 'ready' && l.e !== 'beamref');
   const at = (l) => (l.x !== undefined ? ` at ${l.x},${l.y}` : '');
-  return got.length ? got.map((l) => (l.e === 'press'
-    ? `press${at(l)}${l.mx !== undefined ? ` (pointer ${l.mx},${l.my})` : ''} beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}${l.cursor ?? ''}`
-    : `select ${l.g}${at(l)}`)).join(', ') : 'no press line';
+  const one = (l) => {
+    if (l.e === 'press') return `press${at(l)}${l.mx !== undefined ? ` (pointer ${l.mx},${l.my})` : ''} beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}${l.cursor ?? ''}`;
+    if (l.e === 'select') return `select ${l.g}${at(l)}`;
+    if (l.e === 'app') return `app ${l.app}`;
+    return `${l.e}${at(l)}`;
+  };
+  return got.length ? got.map(one).join(', ') : 'no line';
 };
 /** A helper cursor object as text, numbers only: " cursor hot 12,11 size 24x24 aspect 0.4 rel 0.5/0.5 agree 0.91". */
 function geo(c) {
@@ -716,7 +727,7 @@ async function ghost(app) {
     const oh = el?.offsetHeight ?? 0;
     return {
       shown: Boolean(b || q), pill: Boolean(b?.classList.contains('ghost--pill')), flipped: Boolean(b?.classList.contains('ghost--flipped')),
-      quick: Boolean(q), quickText: q ? q.innerText : '', x: screenX, y: screenY, w: outerWidth, h: outerHeight, t: Date.now(), log: window.__qaLog ?? null,
+      quick: Boolean(q), quickText: q ? q.innerText : '', x: screenX, y: screenY, w: outerWidth, h: outerHeight, t: Date.now(), log: window.__qaLog ?? null, ev: window.__qaEv ?? null,
       b: r ? { x: screenX + r.left + r.width / 2 - ow / 2, y: screenY + r.top + r.height / 2 - oh / 2, w: ow, h: oh, drawn: r.width } : null,
     };
   }).catch(() => null);
@@ -725,12 +736,22 @@ async function ghost(app) {
   const b = s.b ? { x: s.b.x * k, y: s.b.y * k, w: s.b.w * k, h: s.b.h * k, drawn: s.b.drawn * k } : null;
   return { ...s, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k, b };
 }
-/** A mouse-up x right of every code line on screen, with room for the pill (240 px) before the editor's right edge;
- * the dragged row's own end when there is no such room. */
-const clearX = (L, row) => {
+/** A row near index `i` and a mouse-up x right of its text whose surroundings are the editor's plain background: right
+ * of every code line on screen when there's room for the pill (240 px) before the editor's right edge; otherwise
+ * (the Mac's 1280 px screen: the long rows reach ~1100 px) the first row from `i` whose two neighbours are short rows
+ * too, with the mouse-up 12 px right of the longest of the three. Run 44677798585 (Mac A4) put the button right of
+ * a short row under a long one: the long row's glyphs sat at the button's top corners. */
+const plainEnd = (L, i) => {
   const x = Math.max(...L.lines.map((l) => l.right)) + 40;
   const room = (L.editor?.right ?? SCREEN?.w ?? Infinity) - 300;
-  return x <= room ? x : row.right + 2;
+  if (x <= room) return { row: L.lines[i], x };
+  const longest = Math.max(...L.lines.map((l) => l.right));
+  for (let j = Math.max(1, i); j < L.lines.length - 1; j++) {
+    const three = [L.lines[j - 1], L.lines[j], L.lines[j + 1]];
+    const end = Math.max(...three.map((l) => l.right));
+    if (end + 60 < longest) return { row: L.lines[j], x: end + 12 };
+  }
+  return { row: L.lines[i], x: L.lines[i].right + 2 };
 };
 /** The cursor reads found a cursor the helper can judge. The helper's own press lines decide when present (known=1
  * on every press); otherwise the harness's: Windows CURSOR_SHOWING with a handle, Mac NSCursor.currentSystem not nil
@@ -747,11 +768,14 @@ const cursorReadable = (said) => {
 };
 /** The middle of the button's own box (the window's when the page gave none). */
 const mid = (g) => (g.b ? { x: g.b.x + g.b.w / 2, y: g.b.y + g.b.h / 2 } : { x: g.x + g.w / 2, y: g.y + g.h / 2 });
-/** Records each show and hide in the button's page with its time (read only; installed once the page exists). */
+/** Records each show and hide in the button's page with its time, and each pointer event that reaches the page (type,
+ * time, the target's class: Mac A4 run 44677798585, a press on the button that opened nothing). Read only; listeners
+ * in the capture phase, passive, never stopping anything; installed once the page exists. */
 async function watchGhost(app) {
   await ghostPage(app)?.evaluate(() => {
     if (window.__qaLog) return;
     window.__qaLog = [];
+    window.__qaEv = [];
     const mark = () => {
       const s = Boolean(document.querySelector('.ghost, .quick'));
       const l = window.__qaLog;
@@ -759,8 +783,21 @@ async function watchGhost(app) {
     };
     new MutationObserver(mark).observe(document.getElementById('root'), { childList: true, subtree: true, attributes: true });
     mark();
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'focus', 'blur']) {
+      window.addEventListener(type, (e) => {
+        const ev = window.__qaEv;
+        const on = e.target === window ? 'window' : String(e.target?.getAttribute?.('class') ?? e.target?.nodeName ?? '');
+        if (ev.length < 400) ev.push({ type, t: Date.now(), on: on.slice(0, 40) });
+      }, { capture: true, passive: true });
+    }
   }).catch(() => {});
 }
+/** The pointer events that reached the button's page from `since`: "pointerdown@+12 ms (ghost)…", or 'none'. */
+const pageEvents = (g, since) => {
+  if (!g?.ev) return 'not watched';
+  const got = g.ev.filter((e) => e.t >= since);
+  return got.length ? got.map((e) => `${e.type}@+${e.t - since} ms${e.on ? ` (${e.on})` : ''}`).join(', ') : 'none';
+};
 const shownAt = (g, since) => g?.log?.find((e) => e.s && e.t >= since)?.t ?? null;
 const hiddenAt = (g, since) => g?.log?.find((e) => !e.s && e.t >= since)?.t ?? null;
 const waitShown = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g?.shown ? g : null; }, ms, 10);
@@ -847,7 +884,9 @@ async function runA(app, companion, tag) {
     const g = await waitShown(app, 3000);
     if (i === 0) await watchGhost(app);
     const g2 = g ? await ghost(app) : null;
-    const precise = shownAt(g2, since);
+    // Round 1: the page's show/hide log is installed only after the button first shows (the window is created then),
+    // so its first mark is the install time, not the show: round 1 uses the poll time.
+    const precise = i === 0 ? null : shownAt(g2, since);
     const latency = g ? (precise ?? g.t) - up : null;
     const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected(), said: readsText(pointer.last, pointer.t0) };
     if (g) {
@@ -856,10 +895,11 @@ async function runA(app, companion, tag) {
       if (i === 0) {
         const gone = await waitHidden(app, 7000);
         const g3 = await ghost(app);
-        const shownT = shownAt(g3, since) ?? g.t;
-        const hidT = hiddenAt(g3, shownT) ?? gone?.t ?? null;
-        r.leave = hidT ? `left by itself after ${hidT - shownT} ms` : 'still shown after 7 s';
-        r.idleMs = hidT ? hidT - shownT : null;
+        const hidT = hiddenAt(g3, since) ?? gone?.t ?? null;
+        // From the mouse-up (the same clock): GHOST_IDLE_MS (4 s) runs from main's show, which comes after it
+        // (unvibe-app run-5 read: expect 3.5-4.5 s).
+        r.leave = hidT ? `left by itself ${hidT - up} ms after the mouse-up` : 'still shown after 7 s';
+        r.idleMs = hidT ? hidT - up : null;
       } else {
         const clickAt = Date.now();
         pointer.click(L.lines[1].right + 80, L.lines[1].y);
@@ -881,7 +921,7 @@ async function runA(app, companion, tag) {
   const k0 = os === 'windows' ? scale : 1;
   const placedOk = shown.length > 0 && shown.every((r) => near(r.dx, 8 * k0, 1.5) && near(r.cy, 0, 1.5) && near(r.bw, 32 * k0, 1.5));
   log(placedOk, `A2 ${tag}: the button (${32 * k0} px) sits 8 px right of the mouse-up, centred on it (its own box in its page)`, shown.map((r) => `${r.size} +${r.dx}/${r.cy}`).join(', '));
-  log(near(rounds[0].idleMs, 4000, 400), `A2 ${tag}: an untouched button leaves after 4 s`, rounds[0].leave ?? 'not shown');
+  log(rounds[0].idleMs !== null && rounds[0].idleMs >= 3500 && rounds[0].idleMs <= 4500, `A2 ${tag}: an untouched button leaves about 4 s after it shows (3.5-4.5 s after the mouse-up)`, rounds[0].leave ?? 'not shown');
   log(rounds.slice(1).every((r) => r.clickOk), `A2 ${tag}: a click elsewhere hides the button`, rounds.slice(1).map((r) => r.leave ?? 'not shown').join('; '));
 
   // A2b (lead, unvibe-app 2026-11-20): on Windows the button's window stays 64×64 (GetWindowRect) around a 32 px button;
@@ -1000,31 +1040,39 @@ async function runA(app, companion, tag) {
   // A4: hover → pill; crops; press → the panel on the agreement, nothing read or sent.
   pointer.click(L.lines[1].right + 80, L.lines[1].y);
   await sleep(400);
-  const row = L.lines[20];
-  // The mouse-up right of every line on screen: the button's window and the pill land on the editor's plain
-  // background, so its corners are compared with the same plain colour (run 44671864693: over text glyphs, the
-  // corner pixels differed though the window was see-through).
-  const to = { x: clearX(L, row), y: row.y };
+  // The mouse-up on the editor's plain background: the button's window and the pill land there, so its corners are
+  // compared with the same plain colour (run 44671864693: over text glyphs, the corner pixels differed though the
+  // window was see-through).
+  const { row, x: endX } = plainEnd(L, 20);
+  const to = { x: endX, y: row.y };
   pointer.drag(row.left + 2, row.y, to.x, to.y);
   let g = await waitShown(app, 3000);
-  if (!g) { log(false, `A4 ${tag}: hover, crops and press`, 'no button for the drag on line 21'); return; }
+  if (!g) { log(false, `A4 ${tag}: hover, crops and press`, `no button for the drag on line ${L.lines.indexOf(row) + 1}`); return; }
   const r = await pillThenButton(app, g, `${tag}-light`, { x: to.x, y: to.y + 60 });
   log(Boolean(r.pill) && (r.pill.b?.w ?? r.pill.w) > (g.b?.w ?? g.w), `A4 ${tag}: hovering the button opens the pill`, r.pill ? `the button ${r1(g.b?.w ?? g.w)}×${r1(g.b?.h ?? g.h)} → the pill ${r1(r.pill.b?.w ?? r.pill.w)}×${r1(r.pill.b?.h ?? r.pill.h)}, grown ${near(r.pill.b?.x ?? r.pill.x, g.b?.x ?? g.x, 1.5) ? 'right' : 'left'}; hovered at the button's middle (${Math.round(mid(g).x)}, ${Math.round(mid(g).y)})` : `no pill in 2 s (hovered at the button's middle (${Math.round(mid(g).x)}, ${Math.round(mid(g).y)}))`);
   log(Boolean(r.cb?.clear) && Boolean(r.cp?.clear), `A4 ${tag}: 1:1 crops over VS Code light, corners see-through`, crops(r));
   if (!r.back) { log(false, `A4 ${tag}: the press`, 'the button was gone when the pointer left the pill'); return; }
   const before2 = os === 'mac' ? screenWindows() : [];
   const sentBefore = aiPosts('a').length;
+  const pressAt = Date.now();
   pointer.click(mid(r.back).x, mid(r.back).y);
+  const harnessP = pointer.last;
+  const t0P = pointer.t0;
   const panel = await waitFor(async () => panelPage(app), 8000, 100);
   let view = '';
   if (panel) await waitFor(async () => { view = await panel.evaluate(() => [...(document.querySelector('.ob')?.classList ?? [])].filter((c) => c.startsWith('ob--')).join(' ')).catch(() => ''); return /aiConsent/.test(view); }, 8000);
   const form = panel ? await panel.locator('.consent-form').count() : 0;
   const after = await ghost(app);
+  // What reached what (Mac run 44677798585: no panel, the button gone): the helper's down/press/app lines, the
+  // pointer events the button's page saw, and when the button hid, all from the press.
+  const saidP = readsText(harnessP, t0P);
+  const hidP = hiddenAt(after, pressAt);
+  const trail = `the button's page saw ${pageEvents(after, pressAt)}; the button hid ${hidP ? `${hidP - pressAt} ms after the click call` : 'not (log)'}${saidP ? `; ${saidP}` : ''}`;
   await sleep(1200);
   desktop(`${tag}-press-agreement`);
   log(Boolean(panel) && /aiConsent/.test(view) && form === 1 && !after?.shown && aiPosts('a').length === sentBefore,
     `A4 ${tag}: pressing the button opens the panel on the agreement (the Control+U path, nothing read or sent)`,
-    `panel ${panel ? `view "${view}", agreement form ${form}` : 'did not open in 8 s'}; button ${after?.shown ? 'still shown' : 'gone'}; AI POSTs ${aiPosts('a').length}`);
+    `panel ${panel ? `view "${view}", agreement form ${form}` : 'did not open in 8 s'}; button ${after?.shown ? 'still shown' : 'gone'}; AI POSTs ${aiPosts('a').length}; ${trail}`);
   if (os === 'mac') {
     const owners = new Set(before2.map((w) => w.owner));
     const fresh = screenWindows().filter((w) => !owners.has(w.owner) && !/^(Unvibe|Code|Visual Studio Code|Electron)$/.test(w.owner));
@@ -1110,8 +1158,8 @@ async function runA(app, companion, tag) {
   vsSettings('dark');
   await sleep(3000);
   const L4 = await vsLines();
-  const rowD = L4.lines[8];
-  const toD = { x: clearX(L4, rowD), y: rowD.y };
+  const { row: rowD, x: endD } = plainEnd(L4, 8);
+  const toD = { x: endD, y: rowD.y };
   pointer.drag(rowD.left + 2, rowD.y, toD.x, toD.y);
   const gd = await waitShown(app, 3000);
   if (!gd) log(false, `A7 ${tag}: the button and the pill over VS Code dark`, 'no button');
@@ -1147,8 +1195,8 @@ async function runB(app, companion) {
   pointer.click(L.lines[0].right + 60, L.lines[0].y);
   await companion.evaluate(() => window.unvibe.setBubble('ghost', true));
   await sleep(5000);
-  const row = L.lines[10];
-  const to = { x: clearX(L, row), y: row.y };
+  const { row, x: endC } = plainEnd(L, 10);
+  const to = { x: endC, y: row.y };
   pointer.drag(row.left + 2, row.y, to.x, to.y);
   const g = await waitShown(app, 3000);
   if (!g) { log(false, 'B 150: the button at 150 %', 'no button'); return; }
