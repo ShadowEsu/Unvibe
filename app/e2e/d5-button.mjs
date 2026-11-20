@@ -16,10 +16,11 @@
 //      clipped to the button (GetWindowRgnBox = its 32 px box; GetWindowRect stays 64×64, unvibe-app 438db5df).
 //      Windows turns MouseKeys on first so the VM shows a cursor (unvibe-app's idea); the reads say whether it did.
 //   A3 the I-beam check: a drag in the line-number gutter (VS Code selects the lines; the press wasn't on text) shows
-//      no button. Every press first settles on its point (three small moves, 300 ms). On Windows the harness reads
-//      the cursor as the helper does (GetCursorInfo flags, NULL handle, I-beam) before the press and 40 ms after it;
-//      A3 and the race rows are judged only when the cursor shows with a handle at those reads, otherwise NOT
-//      TESTABLE (the helper's "can't say" branch shows the button by design, lead 2026-11-20).
+//      no button. Every press first settles on its point (three small moves, 300 ms). The harness reads the cursor
+//      as the helper does before the press and 40 ms after it: Windows GetCursorInfo (flags, NULL handle, I-beam),
+//      Mac NSCursor.currentSystem's hot spot against the I-beam's, and secure input (mouse.swift). A3 and the race
+//      rows are judged only when those reads found a cursor, otherwise NOT TESTABLE (the helpers' "can't say"
+//      branch shows the button by design, lead 2026-11-20), and a "no button" row only after A2 showed the button.
 //   A3 race (unvibe-app, #366 5b34c779): rest on the gutter, move onto text and press within 16 ms → the button;
 //      rest on text, move onto the gutter and press within 16 ms → none.
 //   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent;
@@ -245,8 +246,9 @@ const pointer = {
   },
   click(x, y, count = 1) {
     onScreen([x, y]);
-    if (os === 'mac') execFileSync(process.env.MOUSE, ['click', S(x), S(y), String(count)]);
-    else pointer.last = winPtr('click', S(x), S(y), '0', '0', String(count));
+    pointer.last = os === 'mac'
+      ? execFileSync(process.env.MOUSE, ['click', S(x), S(y), String(count)], { encoding: 'utf8' }).trim()
+      : winPtr('click', S(x), S(y), '0', '0', String(count));
   },
   move(x, y) {
     onScreen([x, y]);
@@ -621,16 +623,21 @@ async function ghost(app) {
   const s = await g.evaluate(() => {
     const b = document.querySelector('.ghost');
     const q = document.querySelector('.quick');
-    const r = (b ?? q)?.getBoundingClientRect();
+    // The laid-out box (offsetWidth/Height: no transform), around the drawn box's centre. Run 44673965024 read the
+    // drawn box mid-entrance (30.1, 31.1, 29.5 px: the button scales in), so the size varied by round.
+    const el = b ?? q;
+    const r = el?.getBoundingClientRect();
+    const ow = el?.offsetWidth ?? 0;
+    const oh = el?.offsetHeight ?? 0;
     return {
       shown: Boolean(b || q), pill: Boolean(b?.classList.contains('ghost--pill')), flipped: Boolean(b?.classList.contains('ghost--flipped')),
       quick: Boolean(q), quickText: q ? q.innerText : '', x: screenX, y: screenY, w: outerWidth, h: outerHeight, t: Date.now(), log: window.__qaLog ?? null,
-      b: r ? { x: screenX + r.left, y: screenY + r.top, w: r.width, h: r.height } : null,
+      b: r ? { x: screenX + r.left + r.width / 2 - ow / 2, y: screenY + r.top + r.height / 2 - oh / 2, w: ow, h: oh, drawn: r.width } : null,
     };
   }).catch(() => null);
   if (!s) return null;
   const k = os === 'windows' ? scale : 1;
-  const b = s.b ? { x: s.b.x * k, y: s.b.y * k, w: s.b.w * k, h: s.b.h * k } : null;
+  const b = s.b ? { x: s.b.x * k, y: s.b.y * k, w: s.b.w * k, h: s.b.h * k, drawn: s.b.drawn * k } : null;
   return { ...s, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k, b };
 }
 /** A mouse-up x right of every code line on screen, with room for the pill (240 px) before the editor's right edge;
@@ -640,10 +647,13 @@ const clearX = (L, row) => {
   const room = (L.editor?.right ?? SCREEN?.w ?? Infinity) - 300;
   return x <= room ? x : row.right + 2;
 };
-/** Windows: every cursor read the harness printed found a showing cursor with a handle (CURSOR_SHOWING, non-NULL).
- * The Mac's helper reads its cursor another way, and the harness doesn't read it there. */
+/** Every cursor read the harness printed found a cursor it can judge: Windows CURSOR_SHOWING with a handle; Mac a
+ * system cursor (NSCursor.currentSystem not nil; the Mac helper counts nil as text). */
 const cursorReadable = (said) => {
-  if (os !== 'windows') return true;
+  if (os === 'mac') {
+    const reads = [...String(said).matchAll(/(hot=\S+|cur=none)/g)];
+    return reads.length > 0 && reads.every(([r]) => r.startsWith('hot='));
+  }
   const reads = [...String(said).matchAll(/flags=(\d+) null=(\d)/g)];
   return reads.length > 0 && reads.every(([, f, n]) => (Number(f) & 1) === 1 && n === '0');
 };
@@ -669,15 +679,17 @@ const waitShown = (app, ms = 3000) => waitFor(async () => { const g = await ghos
 const waitHidden = (app, ms = 3000) => waitFor(async () => { const g = await ghost(app); return g && !g.shown ? g : null; }, ms, 20);
 const aiPosts = (launchTag) => apiRequests(netlogs.find((l) => l.tag === launchTag).file, host).filter((q) => q.method === 'POST' && /^\/api\/v1\/(reviews|comprehension|previews)\b/.test(q.path));
 /** A 1:1 crop of the button (its own box in its page: the button, the pill or the card) with 8 px around it, and
- * whether its corners are see-through (the editor's own colour just inside the box's corner, as just outside it).
- * The box, not the window: on Windows the window is 64×64 around a 32 px button (run 44671864693). */
+ * whether its corners are see-through: the colour just inside each corner of the box equals the colour 3 px beside
+ * the box on the same row. Beside, not diagonally out: in run 44673965024's dark pill crop a light box (a tooltip, by
+ * its look) sat just below the pill, under the diagonal sample (0/0/0/224). The box, not the window: on Windows the window is 64×64
+ * around a 32 px button (run 44671864693). */
 function cropGhost(label, s) {
   const g = s.b ?? s;
   const m = Math.round(8 * (os === 'windows' ? scale : 1));
   const f = grab(file(label), g.x - m, g.y - m, g.w + 2 * m, g.h + 2 * m);
   const img = readPng(f);
   const inside = [[m + 1, m + 1], [m + Math.round(g.w) - 2, m + 1], [m + 1, m + Math.round(g.h) - 2], [m + Math.round(g.w) - 2, m + Math.round(g.h) - 2]];
-  const outside = [[m - 3, m - 3], [m + Math.round(g.w) + 2, m - 3], [m - 3, m + Math.round(g.h) + 2], [m + Math.round(g.w) + 2, m + Math.round(g.h) + 2]];
+  const outside = [[m - 3, m + 1], [m + Math.round(g.w) + 2, m + 1], [m - 3, m + Math.round(g.h) - 2], [m + Math.round(g.w) + 2, m + Math.round(g.h) - 2]];
   const diffs = inside.map((p, i) => rgbDiff(img.rgb(...p), img.rgb(...outside[i])));
   return { f, size: `${img.w}×${img.h}`, sha: sha(f).slice(0, 12), clear: diffs.every((d) => d <= 24), diffs };
 }
@@ -740,7 +752,7 @@ async function runA(app, companion, tag) {
     const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected(), said: pointer.last };
     if (g) {
       const b = (g2 ?? g).b ?? g;
-      r.dx = r1(b.x - to.x); r.cy = r1(b.y + b.h / 2 - to.y); r.size = `${r1(b.w)}×${r1(b.h)}`; r.bw = b.w; r.win = `${r1(g.w)}×${r1(g.h)} at mouse-up x + ${r1(g.x - to.x)}, y ${r1(g.y - to.y)}`;
+      r.dx = r1(b.x - to.x); r.cy = r1(b.y + b.h / 2 - to.y); r.size = `${r1(b.w)}×${r1(b.h)}${b.drawn !== undefined && !near(b.drawn, b.w, 0.5) ? ` (drawn ${r1(b.drawn)} at that moment)` : ''}`; r.bw = b.w; r.win = `${r1(g.w)}×${r1(g.h)} at mouse-up x + ${r1(g.x - to.x)}, y ${r1(g.y - to.y)}`;
       if (i === 0) {
         const gone = await waitHidden(app, 7000);
         const g3 = await ghost(app);
@@ -767,7 +779,7 @@ async function runA(app, companion, tag) {
   log(median !== null && median <= 150, `A2 ${tag}: mouse-up → button within the brief's 150 ms (median of rounds 2-5)`,
     `rounds 2-5: ${warm.join(', ')} ms (median ${median}); round 1 (the window is created): ${rounds[0].latency ?? '-'} ms. Measured from the release event's time to the button's node in its page (MutationObserver), same clock`);
   const k0 = os === 'windows' ? scale : 1;
-  const placedOk = shown.every((r) => near(r.dx, 8 * k0, 1.5) && near(r.cy, 0, 1.5) && near(r.bw, 32 * k0, 1.5));
+  const placedOk = shown.length > 0 && shown.every((r) => near(r.dx, 8 * k0, 1.5) && near(r.cy, 0, 1.5) && near(r.bw, 32 * k0, 1.5));
   log(placedOk, `A2 ${tag}: the button (${32 * k0} px) sits 8 px right of the mouse-up, centred on it (its own box in its page)`, shown.map((r) => `${r.size} +${r.dx}/${r.cy}`).join(', '));
   log(near(rounds[0].idleMs, 4000, 400), `A2 ${tag}: an untouched button leaves after 4 s`, rounds[0].leave ?? 'not shown');
   log(rounds.slice(1).every((r) => r.clickOk), `A2 ${tag}: a click elsewhere hides the button`, rounds.slice(1).map((r) => r.leave ?? 'not shown').join('; '));
@@ -824,8 +836,10 @@ async function runA(app, companion, tag) {
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
     const detail = `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; the harness read ${said}` : ''}`;
-    if (cursorReadable(said)) log(sel > 0 && !g, `A3 ${tag}: a drag in VS Code's line-number gutter (not on text) shows no button`, detail);
-    else untestable(`A3 ${tag}: the gutter drag`, `the runner shows no cursor (GetCursorInfo: not CURSOR_SHOWING, or no handle), so the helper takes its "can't say" branch (shows, by design: lead 2026-11-20); ${detail}`);
+    const why = os === 'mac' ? 'NSCursor.currentSystem gave no cursor' : 'GetCursorInfo: not CURSOR_SHOWING, or no handle';
+    if (shown.length === 0) untestable(`A3 ${tag}: the gutter drag`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
+    else if (cursorReadable(said)) log(sel > 0 && !g, `A3 ${tag}: a drag in VS Code's line-number gutter (not on text) shows no button`, detail);
+    else untestable(`A3 ${tag}: the gutter drag`, `the runner shows no cursor (${why}), so the helper takes its "can't say" branch (shows, by design: lead 2026-11-20); ${detail}`);
   } else log(false, `A3 ${tag}: the gutter drag`, 'line numbers 18-22 not found on screen');
 
   // A3 race (unvibe-app, #366 5b34c779: the helpers read the I-beam 40 ms after the press): the pointer rests on one
@@ -847,7 +861,8 @@ async function runA(app, companion, tag) {
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
     const detail = `${race.said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}`;
-    if (cursorReadable(race.said)) log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
+    if (!want && shown.length === 0) untestable(`A3 race ${tag}: ${kind}`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
+    else if (cursorReadable(race.said)) log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
     else untestable(`A3 race ${tag}: ${kind}`, `the runner shows no cursor at rest or 40 ms after the press, so the helper can't read it there; ${detail}`);
   }
 
@@ -1092,15 +1107,17 @@ async function runC(app, companion) {
     const Lc = await vsLines();
     const word = Lc.lines.find((l) => l.y > o.y + (box.y + box.h) * o.k + 120) ?? Lc.lines.at(-1);
     pointer.click(word.left + 20, word.y, 2);
+    const saidC = pointer.last;
     const gc = await waitShown(app, 2500);
-    log(Boolean(gc), 'C1 control: a double-click on a word of the code shows the button', gc ? `at (${r1(gc.x)}, ${r1(gc.y)}) for the double-click at (${Math.round(word.left + 20)}, ${Math.round(word.y)})` : 'no button in 2.5 s');
+    log(Boolean(gc), 'C1 control: a double-click on a word of the code shows the button', `${gc ? `at (${r1(gc.x)}, ${r1(gc.y)}) for the double-click at (${Math.round(word.left + 20)}, ${Math.round(word.y)})` : 'no button in 2.5 s'}${saidC ? `; the harness read ${saidC}` : ''}`);
     pointer.click(word.left + 4, word.y);
     await waitHidden(app, 2000);
     pointer.click(at.x, at.y, 2);
     const g = await waitShown(app, 2500);
     desktop('n6-password-double-click');
     if (os === 'mac') {
-      log(!g, 'C1 N6 (Mac): a double-click in VS Code\'s password prompt shows no button (secure input)', g ? `button shown at (${r1(g.x)}, ${r1(g.y)}); not pressed` : 'no button in 2.5 s');
+      if (!gc && !g) untestable('C1 N6 (Mac): the password prompt', 'the C1 control (a double-click on code) showed no button either, so "no button" here proves nothing');
+      else log(!g, 'C1 N6 (Mac): a double-click in VS Code\'s password prompt shows no button (secure input)', g ? `button shown at (${r1(g.x)}, ${r1(g.y)}); not pressed` : 'no button in 2.5 s');
     } else if (!g) {
       note('C1 N6 (Windows): a double-click in VS Code\'s password prompt', 'no button in 2.5 s');
     } else {
@@ -1113,25 +1130,37 @@ async function runC(app, companion) {
         const g2 = await ghost(app);
         const posts = aiPosts('c').length;
         pointer.click(mid(g2).x, mid(g2).y);
-        // The Island at +1 s and +4 s (Security SHOULD-366c, unvibe-app 2026-11-20): with the agreement given, an empty
-        // capture shows Issue, then idle; never a working phase ("Reading") at +4 s.
+        // The Island for 10 s after the press (Security SHOULD-366c, unvibe-app 2026-11-20): with the agreement given,
+        // an empty capture shows Issue, then idle; never a working phase ("Reading") at +4 s. The timeline tells a
+        // slow empty capture (leaves Reading after a few seconds) from a stuck one (#374). The clipboard is read at
+        // +4 s and at +10 s (Security SHOULD-366d: it is empty while a capture runs).
+        const WORKING = /^(loading|working|contextualizing|searching|analyzing|thinking|generating|finalizing)$/;
         const phase = async () => ((await barPage(app)?.evaluate(() => [...(document.querySelector('[class*="island--phase-"]')?.classList ?? [])].find((c) => c.startsWith('island--phase-')) ?? '').catch(() => '')) ?? '').replace('island--phase-', '');
-        await sleep(1000);
-        const p1 = await phase();
-        await sleep(3000);
-        const p4 = await phase();
+        const t0 = Date.now();
+        const seen = [];
+        let clip4 = null;
+        while (Date.now() - t0 < 10000) {
+          const p = await phase();
+          const t = Date.now() - t0;
+          if (!seen.length || seen.at(-1).p !== p) seen.push({ t, p });
+          if (clip4 === null && t >= 4000) clip4 = readClipboard();
+          await sleep(100);
+        }
+        const phaseAt = (ms) => [...seen].reverse().find((e) => e.t <= ms)?.p ?? '';
+        const p1 = phaseAt(1000);
+        const p4 = phaseAt(4000);
+        const timeline = seen.map((e) => `${e.p || '?'} @${(e.t / 1000).toFixed(1)} s`).join(' → ');
         const clip = readClipboard();
         const bar = (await barPage(app)?.evaluate(() => document.body.innerText).catch(() => '')) ?? '';
         const card = (await ghost(app))?.quickText ?? '';
         const pv = panelPage(app);
         const panelText = pv ? await pv.evaluate(() => document.body.innerText).catch(() => '') : '';
         desktop(`n6-press-quick-${quick ? 'on' : 'off'}`);
-        log(!clip.includes(PROMPT_WORD) && !panelText.includes(PROMPT_WORD) && !card.includes(PROMPT_WORD) && aiPosts('c').length === posts,
+        log(!clip.includes(PROMPT_WORD) && !String(clip4 ?? '').includes(PROMPT_WORD) && !panelText.includes(PROMPT_WORD) && !card.includes(PROMPT_WORD) && aiPosts('c').length === posts,
           `C1 N6 (Windows): pressing it over the password prompt (Quick look ${quick ? 'on' : 'off'}) reads nothing of the box and sends nothing`,
-          `clipboard after: "${clip.slice(0, 40)}"; the Island says "${bar.replace(/\s+/g, ' ').trim().slice(0, 120)}"; card "${card.replace(/\s+/g, ' ').trim().slice(0, 140)}"; AI POST attempts ${aiPosts('c').length - posts}`);
-        const WORKING = /^(loading|working|contextualizing|searching|analyzing|thinking|generating|finalizing)$/;
+          `clipboard at +4 s "${String(clip4 ?? '').slice(0, 40)}", at +10 s "${clip.slice(0, 40)}"; the Island says "${bar.replace(/\s+/g, ' ').trim().slice(0, 120)}"; card "${card.replace(/\s+/g, ' ').trim().slice(0, 140)}"; AI POST attempts ${aiPosts('c').length - posts}`);
         log(Boolean(p4) && !WORKING.test(p4), `C1 N6 (Windows): after the empty press (Quick look ${quick ? 'on' : 'off'}) the Island is out of its working phases by +4 s`,
-          `+1 s "${p1 || '?'}", +4 s "${p4 || '?'}" (expected Issue or idle, then idle)`);
+          `+1 s "${p1 || '?'}", +4 s "${p4 || '?'}" (expected Issue or idle, then idle); for 10 s: ${timeline}`);
         if (quick) keys.escape(); // the card's Esc (Unvibe holds it only while the card shows); off: nothing to close
         await sleep(800);
       }

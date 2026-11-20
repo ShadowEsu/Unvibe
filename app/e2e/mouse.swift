@@ -5,16 +5,30 @@
 //   mouse list                        every on-screen window, front to back: "<pid>\t<owner>\t<layer>\t<x> <y> <w> <h>"
 //   mouse display <w> <h>             the main display to its smallest mode of at least w x h points (public
 //                                     CoreGraphics API); prints the modes and the result
-//   mouse click <x> <y> <n>           n clicks at x,y as one multi-click (n = 3 selects a line in Terminal)
+//   mouse click <x> <y> <n>           n clicks at x,y as one multi-click (n = 3 selects a line in Terminal); prints the
+//                                     cursor before the first press and 40 ms into it ("press: … at40: …")
 //   mouse drag <x1> <y1> <x2> <y2>    a settle on x1,y1 (three small real moves, then 300 ms, so the app under it sets
 //                                     its cursor), press, move there in 24 steps (each with its delta) to x2,y2,
-//                                     release; prints the release time (ms since 1970) once it is posted
+//                                     release; prints the cursor at the press and 40 ms after it ("press: … at40: …"),
+//                                     then the release time (ms since 1970) once it is posted
 //   mouse race <x0> <y0> <x1> <y1> <x2> <y2>
-//                                     a settle on x0,y0, then a move to x1,y1 and a press at once (prints "gap=<ms>"
-//                                     between them), 24 steps to x2,y2, release; then the release time
+//                                     a settle on x0,y0, then a move to x1,y1 and a press at once, 24 steps to x2,y2,
+//                                     release; prints "rest: … gap=<ms> at40: …" (the cursor at rest and 40 ms after
+//                                     the press, the ms between the move and the press), then the release time
 //   mouse move <x> <y>                the pointer to x,y (a real move event), no button
+import AppKit
+import Carbon
 import CoreGraphics
 import Foundation
+
+/// The system cursor as the Mac helper reads it (selection-watch/mac/main.swift pointerIsBeam: NSCursor.currentSystem's
+/// hot spot against NSCursor.iBeam's), and secure input (the helper shows nothing while it's on). Lead 2026-11-20.
+func cur() -> String {
+  let secure = IsSecureEventInputEnabled() ? 1 : 0
+  guard let c = NSCursor.currentSystem else { return "cur=none secure=\(secure)" }
+  let beam = c.hotSpot == NSCursor.iBeam.hotSpot ? 1 : 0
+  return "hot=\(Int(c.hotSpot.x)),\(Int(c.hotSpot.y)) beam=\(beam) secure=\(secure)"
+}
 
 func onScreen() -> [[String: Any]] {
   let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
@@ -101,35 +115,45 @@ case "click" where a.count > 4:
   // A real move first, so the app under the pointer sets its cursor (the I-beam over text) before the press.
   post(.mouseMoved, p)
   usleep(150_000)
+  let before = cur()
+  var at40 = ""
   for i in 1...max(1, Int(a[4]) ?? 1) {
     post(.leftMouseDown, p, clicks: Int64(i))
-    usleep(30_000)
+    if i == 1 { usleep(40_000); at40 = cur() } else { usleep(30_000) }
     post(.leftMouseUp, p, clicks: Int64(i))
     usleep(60_000)
   }
+  print("press: \(before) at40: \(at40)")
 case "drag" where a.count > 5:
   let p1 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   let p2 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
   settle(p1)
+  let before = cur()
   post(.leftMouseDown, p1)
-  usleep(80_000)
+  usleep(40_000)
+  let at40 = cur()
+  usleep(40_000)
   steps(p1, p2)
   post(.leftMouseUp, p2)
+  print("press: \(before) at40: \(at40)")
   print(Int64(Date().timeIntervalSince1970 * 1000))
 case "race" where a.count > 7:
   let p0 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   let p1 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
   let p2 = CGPoint(x: Double(a[6]) ?? 0, y: Double(a[7]) ?? 0)
   settle(p0)
+  let rest = cur()
   let t0 = DispatchTime.now().uptimeNanoseconds
   CGWarpMouseCursorPosition(p1)
   post(.mouseMoved, p1, dx: Int64(p1.x - p0.x), dy: Int64(p1.y - p0.y))
   post(.leftMouseDown, p1)
   let gap = Double(DispatchTime.now().uptimeNanoseconds - t0) / 1_000_000
-  usleep(80_000)
+  usleep(40_000)
+  let at40 = cur()
+  usleep(40_000)
   steps(p1, p2)
   post(.leftMouseUp, p2)
-  print("gap=\((gap * 10).rounded() / 10)")
+  print("rest: \(rest) gap=\((gap * 10).rounded() / 10) at40: \(at40)")
   print(Int64(Date().timeIntervalSince1970 * 1000))
 case "list":
   // CGWindowList's own order: front to back.
