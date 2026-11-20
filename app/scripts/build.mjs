@@ -63,7 +63,6 @@ for (const name of ['bar', 'widget', 'companion']) {
   const tokens = readFileSync('src/renderer/shared/tokens.css', 'utf8');
   const rings = readFileSync('src/renderer/shared/usageRings.css', 'utf8');
   const buddy = readFileSync('src/renderer/shared/buddy.css', 'utf8');
-  const vibeBubble = readFileSync('src/renderer/shared/vibeBubble.css', 'utf8');
   const pasteTarget = readFileSync('src/renderer/shared/pasteTarget.css', 'utf8');
   const shortcutGuide = readFileSync('src/renderer/shared/shortcutGuide.css', 'utf8');
   const consentForm = readFileSync('src/renderer/shared/consentForm.css', 'utf8');
@@ -74,7 +73,7 @@ for (const name of ['bar', 'widget', 'companion']) {
   // (src/renderer/<name>/mono-*.css, in name order): frame, screens, quiz, overlay, island.
   const look = readFileSync('src/renderer/shared/mono.css', 'utf8');
   const slices = readdirSync(`src/renderer/${name}`).filter((f) => /^mono-.*\.css$/.test(f)).sort().map((f) => readFileSync(`src/renderer/${name}/${f}`, 'utf8')).join('\n');
-  writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${vibeBubble}\n${pasteTarget}\n${shortcutGuide}\n${consentForm}\n${css}${v3}\n${look}\n${slices}`);
+  writeFileSync(`dist/renderer/${name}/${name}.css`, `${readFileSync('src/renderer/shared/fonts.css', 'utf8')}\n${tokens}\n${rings}\n${buddy}\n${pasteTarget}\n${shortcutGuide}\n${consentForm}\n${css}${v3}\n${look}\n${slices}`);
   for (const file of readdirSync(`src/renderer/${name}`).filter((f) => /\.(png|webp|ttf|woff2?|txt)$/i.test(f))) {
     cpSync(`src/renderer/${name}/${file}`, `dist/renderer/${name}/${file}`);
   }

@@ -9,16 +9,18 @@ const COMPACT_PREVIEW_LINES = 4;
 /**
  * One focused paste target: the user copies code anywhere and pastes it here, with no permission
  * needed. `onPaste` gets the pasted text (never empty); the target then shows its first lines with
- * "Explaining in the panel", and another paste replaces it. An empty paste shows the clipboard-empty
- * message instead. `onChooseFile` adds "or Choose a file…" under the target. `compact` (the review
- * panel, which already heads it with "Paste the code here.") drops the bold title and is shorter.
+ * "Explaining in the panel", and another paste replaces it. An empty paste, or `clipboardEmpty` (Explain my clipboard
+ * found nothing copied), shows the clipboard-empty message instead. `onChooseFile` adds "or Choose a file…" under the
+ * target. `compact` (the review panel, which already heads it with "Paste the code here.") drops the bold title and
+ * is shorter.
  */
-export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, compact = false }: {
+export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, compact = false, clipboardEmpty = false }: {
   hint: string;
   onPaste: (text: string) => void;
   onChooseFile?: () => void;
   autoFocus?: boolean;
   compact?: boolean;
+  clipboardEmpty?: boolean;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const handler = useRef(onPaste);
@@ -66,7 +68,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, com
           </>
         )}
       </div>
-      {empty ? <p className="paste-target__error" role="alert">Your clipboard is empty. Copy some code first, then try again.</p> : null}
+      {empty || (clipboardEmpty && !preview) ? <p className="paste-target__error" role="alert">Your clipboard is empty. Copy some code first, then try again.</p> : null}
       {preview ? <p className="paste-target__or">Wrong code? Paste again.</p>
         : onChooseFile ? <p className="paste-target__or">or <button type="button" className="paste-target__link" onClick={onChooseFile}>Choose a file…</button></p>
           : null}

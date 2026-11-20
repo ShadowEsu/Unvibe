@@ -58,16 +58,16 @@ export function welcomeBackLine(pasteStarted: boolean): string {
 
 export interface ForwardAction {
   label: string;
-  /** Quiet: the step's primary is in its body (Explain this code, Turn on the shortcut) or there is none yet. */
+  /** Quiet: a text action on the footer's left; the step's primary is its own action (setupFooter) or there is none. */
   quiet?: boolean;
   /** Finishes setup instead of moving to the next step. */
   finishes?: boolean;
 }
 
 /**
- * The footer's one forward button. On the paste and shortcut steps, Skip for now, Not now and Do it later are quiet
- * and finish setup; before the sample is explained, Explain this code is the primary and Skip for now is quiet. Back on
- * a Mac's paste step after the own code is done, Next leads to the shortcut.
+ * The forward move. On the paste and shortcut steps, Skip for now, Not now and Do it later are quiet and finish
+ * setup; before the sample is explained, Explain this code is the primary and Skip for now is quiet. Back on a Mac's
+ * paste step after the own code is done, Next leads to the shortcut.
  */
 export function forwardAction(s: OnboardingState): ForwardAction {
   const last = onboardingSteps(s.windows).length - 1;
@@ -80,9 +80,33 @@ export function forwardAction(s: OnboardingState): ForwardAction {
   return { label: 'Start using Unvibe', finishes: true };
 }
 
-/** The step's own primary button, in its body, if it has one. */
+/**
+ * The step's own action, which then takes the footer's primary slot: explain the sample, explain the clipboard (the
+ * paste box's IPC, no permission), turn on the shortcut, or open System Settings again for someone who closed it.
+ */
 export function stepAction(s: OnboardingState): string | null {
   if (s.step === 1 && !s.explained) return 'Explain this code';
+  if (s.step === 2 && !s.pasteStarted && !s.ownCodeDone) return 'Explain my clipboard';
   if (s.step === 3 && s.offer === 'offer') return 'Turn on the shortcut';
+  if (s.step === 3 && s.offer === 'waiting') return 'Open System Settings';
   return null;
+}
+
+/** The pinned footer (633 A + C): the quiet action as text on the left, the step's one primary on the right. */
+export interface SetupFooter {
+  quiet: ForwardAction | null;
+  primary: string;
+  /** The primary runs the step's own action (stepAction) rather than the forward move. */
+  primaryIsStep: boolean;
+  /** Held (aria-disabled, keeps focus): the paste went to the panel, and Next waits for its explanation. */
+  held: boolean;
+}
+
+export function setupFooter(s: OnboardingState): SetupFooter {
+  const forward = forwardAction(s);
+  const quiet = forward.quiet ? forward : null;
+  if (s.step === 2 && s.pasteStarted && !s.ownCodeDone) return { quiet, primary: 'Next', primaryIsStep: false, held: true };
+  const action = stepAction(s);
+  if (action) return { quiet, primary: action, primaryIsStep: true, held: false };
+  return { quiet: null, primary: forward.label, primaryIsStep: false, held: false };
 }
