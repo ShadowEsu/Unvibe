@@ -15,14 +15,17 @@
 //      (its selection goes, its caret moves there) while the button shows; on Windows the button's window is
 //      clipped to the button (GetWindowRgnBox = its 32 px box; GetWindowRect stays 64×64, unvibe-app 438db5df).
 //      Windows turns MouseKeys on first so the VM shows a cursor (unvibe-app's idea); the reads say whether it did.
-//   A3 the I-beam check: a drag in the line-number gutter (VS Code selects the lines; the press wasn't on text) shows
-//      no button. Every press first settles on its point (three small moves, 300 ms). The harness reads the cursor
-//      as the helper does before the press and 40 ms after it: Windows GetCursorInfo (flags, NULL handle, I-beam),
-//      Mac NSCursor.currentSystem's hot spot against the I-beam's, and secure input (mouse.swift). A3 and the race
-//      rows are judged only when those reads found a cursor, otherwise NOT TESTABLE (the helpers' "can't say"
-//      branch shows the button by design, lead 2026-11-20), and a "no button" row only after A2 showed the button.
+//   A3 a gutter line-drag: a drag down the line numbers selects whole lines, a real selection, so the button shows
+//      (lead 2026-11-20, #366 5fa3fbaf). Every press first settles on its point (three small moves, 300 ms). The
+//      harness reads the cursor as the helper does before the press and 40 ms after it: Windows GetCursorInfo
+//      (flags, NULL handle, I-beam), Mac NSCursor.currentSystem's hot spot and image size against NSCursor.iBeam's,
+//      and secure input (mouse.swift).
+//   A3b a drag that isn't a selection: VS Code's scrollbar slider, 60 px down (then back) → no button.
 //   A3 race (unvibe-app, #366 5b34c779): rest on the gutter, move onto text and press within 16 ms → the button;
-//      rest on text, move onto the gutter and press within 16 ms → none.
+//      rest on text, move onto the scrollbar slider and press within 16 ms, drag it → none.
+//      A3b and the races are judged only when the cursor reads found a cursor, otherwise NOT TESTABLE (the helpers'
+//      "can't say" branch shows the button by design, lead 2026-11-20), and a "no button" row only after A2 showed
+//      the button.
 //   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent;
 //      a press opens the panel on the agreement (no agreement in this profile: nothing is read) and sends nothing.
 //   A5 stacking: that panel focused, then VS Code clicked (the panel fades), then a selection whose button lands over
@@ -266,11 +269,13 @@ const pointer = {
   },
 };
 
-// --- The helper's own reads (#366 8ec57712): after each left press it prints {"e":"press", x, y, beam, known
-// [, mx, my, secure on a Mac]}, what its I-beam read saw (x/y the event's point, mx/my the pointer at +40 ms); Unvibe's
-// main drops that line. A second copy of the installed helper, stdin open, run by the harness for the launch, lets the
-// report show it (unvibe-app 2026-11-20: two helpers only watch). Only ready, press and select lines are kept, and only
-// their points, gesture and flags (no app ids, no text: the helper never reads any).
+// --- The helper's own reads (#366 8ec57712, 5fa3fbaf): after each left press it prints {"e":"press", x, y, beam,
+// known [, mx, my, secure, cursor on a Mac]}, what its I-beam read saw (x/y the event's point, mx/my the pointer at
+// +40 ms, cursor the system cursor's geometry: hot, size, aspect, rel, agree), and the Mac helper prints one
+// {"e":"beamref","cursor":{..}} at start (NSCursor.iBeam's geometry). Unvibe's main drops those lines. A second copy of
+// the installed helper, stdin open, run by the harness for the launch, lets the report show them (unvibe-app
+// 2026-11-20: two helpers only watch). Only ready, beamref, press and select lines are kept, and only their numbers
+// and gesture (no app ids, no text: the helper never reads any).
 const helperFile = exe ? (os === 'mac'
   ? path.join(path.dirname(exe), '..', 'Resources', 'selection-watch', 'unvibe-selection-watch')
   : path.join(path.dirname(exe), 'resources', 'selection-watch', 'unvibe-selection-watch.exe')) : '';
@@ -283,9 +288,11 @@ function startShadow(tag) {
   createInterface({ input: child.stdout }).on('line', (l) => {
     let e;
     try { e = JSON.parse(l); } catch { return; }
-    if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', x: e.x, y: e.y, mx: e.mx, my: e.my, beam: e.beam, known: e.known, secure: e.secure });
-    else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', x: e.x, y: e.y, g: e.g });
+    const num = (v) => (v === undefined ? undefined : Number(v));
+    if (e?.e === 'press') lines.push({ t: Date.now(), e: 'press', x: num(e.x), y: num(e.y), mx: num(e.mx), my: num(e.my), beam: num(e.beam), known: num(e.known), secure: num(e.secure), cursor: geo(e.cursor) });
+    else if (e?.e === 'select') lines.push({ t: Date.now(), e: 'select', x: num(e.x), y: num(e.y), g: /^(drag|double|triple)$/.test(e.g) ? e.g : '?' });
     else if (e?.e === 'ready') lines.push({ t: Date.now(), e: 'ready' });
+    else if (e?.e === 'beamref') lines.push({ t: Date.now(), e: 'beamref', cursor: geo(e.cursor) });
   });
   child.on('error', () => {});
   shadow = { child, lines };
@@ -294,7 +301,8 @@ function startShadow(tag) {
 function stopShadow(tag) {
   if (!shadow) return;
   const n = (k) => shadow.lines.filter((l) => l.e === k).length;
-  note(`The helper's own reads (${tag}): totals`, `ready ${n('ready')}, press ${n('press')}, select ${n('select')}`);
+  const ref = shadow.lines.find((l) => l.e === 'beamref');
+  note(`The helper's own reads (${tag}): totals`, `ready ${n('ready')}, press ${n('press')}, select ${n('select')}${ref ? `; beamref (NSCursor.iBeam):${ref.cursor || ' none'}` : ''}`);
   try { shadow.child.stdin.end(); } catch {}
   shadow.child.kill();
   shadow = null;
@@ -303,12 +311,20 @@ function stopShadow(tag) {
  * helper. Lines are stamped when node reads them, so callers read after an await that follows the press. */
 const helperSaid = (since, until = Date.now()) => {
   if (!shadow) return '';
-  const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && l.e !== 'ready');
+  const got = shadow.lines.filter((l) => l.t >= since && l.t <= until && (l.e === 'press' || l.e === 'select'));
   const at = (l) => (l.x !== undefined ? ` at ${l.x},${l.y}` : '');
   return got.length ? got.map((l) => (l.e === 'press'
-    ? `press${at(l)}${l.mx !== undefined ? ` (pointer ${l.mx},${l.my})` : ''} beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}`
+    ? `press${at(l)}${l.mx !== undefined ? ` (pointer ${l.mx},${l.my})` : ''} beam=${l.beam} known=${l.known}${l.secure !== undefined ? ` secure=${l.secure}` : ''}${l.cursor ?? ''}`
     : `select ${l.g}${at(l)}`)).join(', ') : 'no press line';
 };
+/** A helper cursor object as text, numbers only: " cursor hot 12,11 size 24x24 aspect 0.4 rel 0.5/0.5 agree 0.91". */
+function geo(c) {
+  if (!c || typeof c !== 'object') return '';
+  if (c.none) return ' cursor none';
+  const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : '?');
+  const pair = (v, sep) => (Array.isArray(v) ? `${n(v[0])}${sep}${n(v[1])}` : '?');
+  return ` cursor hot ${pair(c.hot, ',')} size ${pair(c.size, 'x')} aspect ${n(c.aspect)} rel ${pair(c.rel, '/')}${c.agree !== undefined ? ` agree ${n(c.agree)}` : ''}`;
+}
 /** What the harness read around a press, and what the helper itself read (when its copy runs). */
 const readsText = (harness, since) => [harness && `the harness read ${harness}`, shadow && `the helper read ${helperSaid(since)}`].filter(Boolean).join('; ');
 /** Keys typed into whatever is in front, as a person would (System Events / SendKeys). */
@@ -596,6 +612,20 @@ async function vsCaret() {
   const o = await vsOrigin();
   const c = await vs.page.evaluate(() => { const r = document.querySelector('.monaco-editor .cursors-layer .cursor')?.getBoundingClientRect(); return r && r.height ? { x: r.left, y: r.top + r.height / 2, h: r.height } : null; });
   return c ? { x: o.x + c.x * o.k, y: o.y + c.y * o.k, h: c.h * o.k } : null;
+}
+/** VS Code's editor scrollbar slider (screen units): its centre and height, or null. */
+async function vsSlider() {
+  const o = await vsOrigin();
+  const r = await vs.page.evaluate(() => { const s = document.querySelector('.monaco-editor .scrollbar.vertical .slider')?.getBoundingClientRect(); return s && s.height && s.width ? { x: s.left + s.width / 2, y: s.top + s.height / 2, h: s.height } : null; });
+  return r ? { x: o.x + r.x * o.k, y: o.y + r.y * o.k, h: r.h * o.k } : null;
+}
+/** The slider dragged back to where it was (`s0`, before a drag), then the editor's top line compared with `top0`. */
+async function sliderBack(s0, top0) {
+  const s = await vsSlider();
+  if (s && Math.abs(s.y - s0.y) > 0.5) pointer.drag(s.x, s.y, s.x, s0.y);
+  await sleep(300);
+  const top = Math.min(...(await vsLines()).numbers.map((x) => x.n));
+  return top === top0 ? `scrolled back (top line ${top})` : `NOT scrolled back: top line ${top}, was ${top0}`;
 }
 
 // --- Unvibe -------------------------------------------------------------------------------------------------------
@@ -895,7 +925,8 @@ async function runA(app, companion, tag) {
   }
   for (const s of strips) log(s.ok, `A2b ${tag}: a click 20 px ${s.where} the button lands in VS Code (its selection goes, its caret moves there)`, s.text);
 
-  // A3: the I-beam check: a drag in the line-number gutter selects lines but didn't start on text.
+  const why = os === 'mac' ? 'NSCursor.currentSystem gave no cursor' : 'GetCursorInfo: not CURSOR_SHOWING, or no handle';
+  // A3: a gutter line-drag selects whole lines, a real selection: the button shows (lead 2026-11-20, #366 5fa3fbaf).
   const Ln = await vsLines();
   const nums = Ln.numbers.filter((x) => x.n >= 18 && x.n <= 22).sort((a, b) => a.n - b.n);
   if (nums.length >= 2) {
@@ -907,38 +938,64 @@ async function runA(app, companion, tag) {
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
     const said = readsText(harness, t0);
-    const detail = `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; ${said}` : ''}`;
-    const why = os === 'mac' ? 'NSCursor.currentSystem gave no cursor' : 'GetCursorInfo: not CURSOR_SHOWING, or no handle';
-    if (shown.length === 0) untestable(`A3 ${tag}: the gutter drag`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
-    else if (cursorReadable(said)) log(sel > 0 && !g, `A3 ${tag}: a drag in VS Code's line-number gutter (not on text) shows no button`, detail);
-    else untestable(`A3 ${tag}: the gutter drag`, `the runner shows no cursor (${why}), so the helper takes its "can't say" branch (shows, by design: lead 2026-11-20); ${detail}`);
-  } else log(false, `A3 ${tag}: the gutter drag`, 'line numbers 18-22 not found on screen');
+    log(sel > 0 && Boolean(g), `A3 ${tag}: a line-drag in VS Code's line-number gutter (whole lines selected) shows the button`,
+      `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; ${said}` : ''}`);
+  } else log(false, `A3 ${tag}: the gutter line-drag`, 'line numbers 18-22 not found on screen');
+
+  // A3b: a drag that isn't a selection (lead 2026-11-20): VS Code's editor scrollbar slider, 60 px down, then back.
+  {
+    const L0 = await vsLines();
+    pointer.click(L0.lines[1].right + 80, L0.lines[1].y);
+    await waitHidden(app, 2000);
+    await sleep(300);
+    const top0 = Math.min(...L0.numbers.map((x) => x.n));
+    const s = await vsSlider();
+    if (!s) log(false, `A3b ${tag}: a scrollbar drag`, "VS Code's editor shows no scrollbar slider");
+    else {
+      pointer.drag(s.x, s.y, s.x, s.y + 60);
+      const harness = pointer.last;
+      const t0 = pointer.t0;
+      const sel = await vsSelected();
+      const g = await waitShown(app, 1500);
+      const said = readsText(harness, t0);
+      const back = await sliderBack(s, top0);
+      const detail = `slider at (${r1(s.x)}, ${r1(s.y)}), ${r1(s.h)} tall, dragged 60 px down; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; ${back}${said ? `; ${said}` : ''}`;
+      if (shown.length === 0) untestable(`A3b ${tag}: a scrollbar drag`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
+      else if (cursorReadable(said)) log(sel === 0 && !g, `A3b ${tag}: a drag on VS Code's scrollbar (not a selection) shows no button`, detail);
+      else untestable(`A3b ${tag}: a scrollbar drag`, `the runner shows no cursor (${why}), so the helper takes its "can't say" branch (shows, by design: lead 2026-11-20); ${detail}`);
+    }
+  }
 
   // A3 race (unvibe-app, #366 5b34c779: the helpers read the I-beam 40 ms after the press): the pointer rests on one
   // side, then moves and presses within 16 ms, before the editor has changed its cursor.
   //   gutter → text: rests on line 25's number, presses at its text start, drags along it → the button shows;
-  //   text → gutter: rests on line 28's text, presses on its number, drags down the numbers → no button.
-  for (const [kind, li, ln, want] of [['gutter → text', 24, 25, true], ['text → gutter', 27, 28, false]]) {
+  //   text → scrollbar: rests on line 28's text, presses on the scrollbar slider, drags it 40 px → no button.
+  for (const [kind, li, ln, want] of [['gutter → text', 24, 25, true], ['text → scrollbar', 27, 28, false]]) {
     const Lr = await vsLines();
     const row = Lr.lines[li];
     const num = Lr.numbers.find((x) => x.n === ln);
-    const below = Lr.numbers.find((x) => x.n === ln + 3);
-    if (!row || !num || !below) { log(false, `A3 race ${tag} ${kind}`, `line ${ln} or its number not on screen`); continue; }
+    if (!row || !num) { log(false, `A3 race ${tag} ${kind}`, `line ${ln} or its number not on screen`); continue; }
     pointer.click(Lr.lines[1].right + 80, Lr.lines[1].y);
     await waitHidden(app, 2000);
     await sleep(300);
+    const top0 = Math.min(...Lr.numbers.map((x) => x.n));
+    const s = want ? null : await vsSlider();
+    if (!want && !s) { log(false, `A3 race ${tag} ${kind}`, "VS Code's editor shows no scrollbar slider"); continue; }
     const race = want
       ? pointer.race(num.x, num.y, row.left + 2, row.y, Math.min(row.right - 2, row.left + 300), row.y)
-      : pointer.race(row.left + 40, row.y, num.x, num.y, below.x, below.y);
+      : pointer.race(row.left + 40, row.y, s.x, s.y, s.x, s.y + 40);
     const t0 = pointer.t0;
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
     const said = readsText(race.said, t0);
-    const detail = `${said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}`;
+    const back = want ? '' : `; ${await sliderBack(s, top0)}`;
+    const detail = `${said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}${back}`;
     if (!want && shown.length === 0) untestable(`A3 race ${tag}: ${kind}`, `the button never showed for a real drag on text in A2, so "no button" here proves nothing; ${detail}`);
-    else if (cursorReadable(said)) log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
+    else if (cursorReadable(said)) log(race.gap <= 16 && (want ? sel > 0 : sel === 0) && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`, detail);
     else untestable(`A3 race ${tag}: ${kind}`, `the runner shows no cursor at rest or 40 ms after the press, so the helper can't read it there; ${detail}`);
   }
+  pointer.click(L.lines[1].right + 80, L.lines[1].y);
+  await waitHidden(app, 2000);
 
   // A4: hover → pill; crops; press → the panel on the agreement, nothing read or sent.
   pointer.click(L.lines[1].right + 80, L.lines[1].y);
