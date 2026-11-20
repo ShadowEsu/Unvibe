@@ -123,6 +123,11 @@ writeFileSync(settingsFile, JSON.stringify({
   'breadcrumbs.enabled': false,
   // No lightbulb beside the selection: drag-only run 44839422898 showed one at line 2 (Security NIT-ST5).
   'editor.lightbulb.enabled': 'off',
+  // Design (2026-11-20, after drag-only run 44839422898): no whitespace dots in the selection, and no cursor mark or
+  // border in the overview ruler at the right edge. Real VS Code settings, so the caption holds.
+  'editor.renderWhitespace': 'none',
+  'editor.overviewRulerBorder': false,
+  'editor.hideCursorInOverviewRuler': true,
   'window.restoreWindows': 'none',
 }, null, 2));
 let editor = null;
