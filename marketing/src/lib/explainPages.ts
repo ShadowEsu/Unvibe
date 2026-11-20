@@ -30,6 +30,12 @@ export interface ExplainPage {
    */
   heading?: string;
   /**
+   * The sample is output, an error or a file a tool generates (lsof output, a traceback, package-lock.json, compiled
+   * assembly), not code an AI tool writes for you. The download card then keeps its plain wording instead of
+   * "When your AI tool writes {subject}, select it…" (ledger 636).
+   */
+  sampleIsOutput?: true;
+  /**
    * The <title> and link-preview title without the " · Unvibe" suffix, for pages whose target query is a command,
    * error or pattern: it starts with the words people type ("ps aux output explained, column by column"), at most
    * 51 characters so the whole title is at most 60. Without it the title is "Explain {heading} in plain English".
@@ -62,7 +68,7 @@ export const explainPages: ExplainPage[] = [
     fileName: "sales_report.py",
     published: "2026-10-26",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
-    lead: "Paste Python, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English.",
+    lead: "Paste Python your AI wrote, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English, so you can tell whether it does what you asked.",
     description:
       "Paste Python code and get a plain English explanation online, free. The sample walks through a decorator, a generator and a dict comprehension.",
     sampleSummary: "A timing decorator, a generator that reads a CSV file and a dict comprehension.",
@@ -667,6 +673,7 @@ fragment UserBits on User {
   {
     id: "git-log",
     fileName: "git-log.txt",
+    sampleIsOutput: true,
     published: "2026-11-05",
     heading: "git log output",
     related: ["git-diff", "git-rebase", "gitignore"],
@@ -2853,6 +2860,7 @@ grep -oE " [45][0-9]{2} " logs/access.log`,
   {
     id: "git-diff",
     fileName: "changes.diff",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "git diff output",
     title: "git diff output explained, line by line",
@@ -2977,6 +2985,7 @@ export function Profile({ userId }) {
   {
     id: "python-traceback",
     fileName: "traceback.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "Python tracebacks",
     title: "Python traceback explained: read the stack trace",
@@ -3028,6 +3037,7 @@ KeyError: 'qty'`,
   {
     id: "package-lock",
     fileName: "package-lock.json",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "package-lock.json files",
     title: "package-lock.json explained, entry by entry",
@@ -3259,7 +3269,7 @@ GROUP BY c.id;`,
     heading: "Supabase RLS policies",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
-    lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
+    lead: "A policy can look finished and still show the wrong rows. Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
     description:
       "Paste Supabase RLS policies and get them explained in plain English, free online. The sample is a todos table where each user sees only their own rows.",
     sampleSummary: "SQL of the kind an AI app builder writes for a Supabase todos table: the table, row level security switched on, and 3 policies that tie each row to the signed-in user.",
@@ -3314,11 +3324,12 @@ create policy "update own todos" on todos
   {
     id: "cors-error",
     fileName: "cors-error.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json", "http-headers"],
-    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
+    lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and why the fix goes on the server, so you can check a suggested fix before you accept it.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end got from its own API, with the API's code.",
     sampleSummary: "What Chromium logged when a page on http://localhost:5173 fetched a small Node API on port 3000, then that API's code: a common setup, with the front end and the API on different ports.",
@@ -3529,6 +3540,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
   {
     id: "git-rebase",
     fileName: "git-rebase-todo",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "git rebase -i todo lists",
     title: "git rebase -i explained: the interactive todo list",
@@ -3634,6 +3646,7 @@ find . -name '*.log' | xargs ls -l`,
   {
     id: "ps-aux",
     fileName: "ps-aux.txt",
+    sampleIsOutput: true,
     published: "2026-11-06",
     heading: "ps aux output",
     title: "ps aux output explained, column by column",
@@ -3796,6 +3809,7 @@ output "app_name" {
   {
     id: "assembly",
     fileName: "sum.s",
+    sampleIsOutput: true,
     published: "2026-11-08",
     title: "Assembly code explained: arm64 from a C function",
     related: ["c", "cpp", "make"],
@@ -3857,6 +3871,7 @@ LBB0_4:
   {
     id: "git-merge-conflict",
     fileName: "shipping.js",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "git merge conflicts",
     title: "git merge conflict explained: the markers",
@@ -3908,6 +3923,7 @@ export function deliveryDays(country) {
   {
     id: "npm-error",
     fileName: "npm-install.txt",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "npm errors",
     title: "npm error code 1, ENOENT and node-gyp explained",
@@ -3963,6 +3979,7 @@ npm error A complete log of this run can be found in: ~/.npm/_logs/2026-11-07T09
   {
     id: "lsof",
     fileName: "lsof.txt",
+    sampleIsOutput: true,
     published: "2026-11-10",
     heading: "lsof output",
     title: "lsof command explained: find what holds a port",
@@ -4016,6 +4033,7 @@ $ kill 1643167`,
   {
     id: "segmentation-fault",
     fileName: "scores-crash.txt",
+    sampleIsOutput: true,
     heading: "segmentation faults",
     title: "Segmentation fault (core dumped) explained, in C",
     published: "2026-11-16",
@@ -4069,6 +4087,7 @@ best = 0x0`,
   {
     id: "http-headers",
     fileName: "response.txt",
+    sampleIsOutput: true,
     heading: "HTTP headers",
     title: "HTTP headers explained with an example response",
     published: "2026-11-16",
