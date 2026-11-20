@@ -158,7 +158,9 @@ else {
     await companion.keyboard.press('Escape');
     const closed = Boolean(await waitFor(async () => (await companion.locator('.modal').count()) === 0, 5000));
     await quitBrowsers();
-    await shot(companion, 'after-leave');
+    // #350: the card holds the code, so the still is taken only once it is gone.
+    if (closed) await shot(companion, 'after-leave');
+    else note('#354 leave: no still', 'Settings did not close: the card may still show the code');
     await sleep(Math.max(0, tClose + GRACE + WINDOW - Date.now()));
     rows.push({ row: 'leave', t0, tClose, closed, logged: cancelledLines() > loggedBefore });
   } catch (e) { log(false, '#354 leave: the sign-in card closes while its code waits', short(e)); }
@@ -176,7 +178,8 @@ else {
       const running = () => app.process.exitCode === null && app.process.signalCode === null;
       const aliveAtClose = running();
       await quitBrowsers();
-      desktop('after-command-w');
+      if (closed) desktop('after-command-w');
+      else note('#354 N1 ⌘W: no still', 'the window did not close: the card may still show the code');
       await sleep(Math.max(0, tClose + GRACE + WINDOW - Date.now()));
       rows.push({ row: 'cmdw', t0, tClose, closed, front: front === String(app.process.pid), alive: aliveAtClose && running() });
     } catch (e) { log(false, '#354 N1 ⌘W: a real ⌘W closes the window that shows the code', short(e)); }

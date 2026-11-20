@@ -9,9 +9,12 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 /** The switch that starts the log; no --net-log-capture-mode, so Chromium's default (stripped) mode is used. */
 export const netLogArg = (file) => `--log-net-log=${file}`;
 
+/** A path with every segment over 24 characters shown as "…", so a token or code in a path never reaches a summary. */
+export const maskPath = (p) => p.split('/').map((s) => (s.length > 24 ? '…' : s)).join('/');
+
 /**
- * The host's requests in the log so far, oldest first: { t (ms since the epoch), method, path, status (0 = no answer
- * logged yet) }. The log is read while the app still writes it: a partial last line is skipped.
+ * The host's requests in the log so far, oldest first: { t (ms since the epoch), method, path (long segments masked),
+ * status (0 = no answer logged yet) }. The log is read while the app still writes it: a partial last line is skipped.
  */
 export function apiRequests(file, host) {
   if (!existsSync(file)) return [];
@@ -37,7 +40,7 @@ export function apiRequests(file, host) {
       let url;
       try { url = new URL(ev.params.url); } catch { continue; }
       if (url.host !== host) continue;
-      bySource.set(id, { t: offset + Number(ev.time), method: ev.params.method ?? 'GET', path: url.pathname, status: 0 });
+      bySource.set(id, { t: offset + Number(ev.time), method: ev.params.method ?? 'GET', path: maskPath(url.pathname), status: 0 });
     } else if (ev.type === types.HTTP_TRANSACTION_READ_RESPONSE_HEADERS && bySource.has(id)) {
       const first = ev.params?.headers?.[0] ?? '';
       const status = Number(/^HTTP\/\S+ (\d{3})/.exec(first)?.[1] ?? 0);

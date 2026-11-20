@@ -27,6 +27,7 @@ import { apiRequests, keepSummaryAndDrop, netLogArg } from './netlog.mjs';
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const exe = process.env.UNVIBE_EXE;
@@ -87,20 +88,39 @@ function flushDns() {
     else if (os === 'windows') execFileSync('ipconfig', ['/flushdns'], { stdio: 'ignore' });
   } catch (e) { note('DNS cache flush', short(e)); }
 }
+// The hosts file's own bytes are saved before the block and written back exactly (Security MUST-H3); the workflow's
+// always() step restores from the same copy if this script never gets there.
+const HOSTS_ORIG = path.join(TMP, 'hosts.orig');
+const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 function block() {
   if (os === 'linux') { writeFileSync(process.env.MOCK_DOWN_FILE, 'down'); return; }
-  const add = `\n${hostsLines.join('\n')}\n`;
+  const orig = readFileSync(HOSTS);
+  if (!existsSync(HOSTS_ORIG)) writeFileSync(HOSTS_ORIG, orig);
+  note('The hosts file before the block', `sha256 ${sha256(orig)} (${orig.length} bytes; saved as $RUNNER_TEMP/hosts.orig)`);
+  const eol = os === 'windows' ? '\r\n' : '\n';
+  const add = `${eol}${hostsLines.join(eol)}${eol}`;
   if (os === 'mac') execFileSync('sudo', ['tee', '-a', HOSTS], { input: add, stdio: ['pipe', 'ignore', 'inherit'] });
   else writeFileSync(HOSTS, add, { flag: 'a' });
   flushDns();
 }
-/** Removes this file's lines (always safe to call again). */
+/** Writes the saved bytes back (always safe to call again); without a saved copy, removes the marked lines. */
 function unblock() {
   if (os === 'linux') { rmSync(process.env.MOCK_DOWN_FILE, { force: true }); return; }
+  if (existsSync(HOSTS_ORIG)) {
+    const orig = readFileSync(HOSTS_ORIG);
+    if (os === 'mac') execFileSync('sudo', ['tee', HOSTS], { input: orig, stdio: ['pipe', 'ignore', 'inherit'] });
+    else writeFileSync(HOSTS, orig);
+    flushDns();
+    const before = sha256(orig);
+    const after = sha256(readFileSync(HOSTS));
+    log(after === before, 'The hosts file is back byte for byte', `sha256 before ${before}, after ${after}`);
+    return;
+  }
   const kept = readFileSync(HOSTS, 'utf8').split(/\r?\n/).filter((l) => !l.endsWith(MARK)).join(os === 'windows' ? '\r\n' : '\n');
   if (os === 'mac') execFileSync('sudo', ['tee', HOSTS], { input: kept, stdio: ['pipe', 'ignore', 'inherit'] });
   else writeFileSync(HOSTS, kept);
   flushDns();
+  note('The hosts file', 'a marked line was left from before this run and no saved copy exists: the marked lines were removed');
 }
 const hostsHasMark = () => os !== 'linux' && readFileSync(HOSTS, 'utf8').includes(MARK);
 /** The runner's own request to the API: whether anything answers (any HTTP status) within 10 s. */

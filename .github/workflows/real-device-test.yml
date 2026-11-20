@@ -650,12 +650,26 @@ jobs:
           cat "$SHOTS_DIR/report-ai.txt" || true
           exit $status
 
-      # rc0155: whatever happened above, the hosts file holds none of this run's lines and no raw net log is left.
+      # rc0155: whatever happened above, the hosts file is back byte for byte (from the copy rc-0155-ai.mjs saved before
+      # its block, sha256 printed before and after) or, without a copy, holds none of this run's lines; and no raw net
+      # log is left.
       - name: Put the hosts file back and delete the raw net logs (rc0155, Mac)
         if: always() && inputs.rc0155 != '' && matrix.label == 'mac'
         shell: bash
         run: |
-          if grep -q '# unvibe-qa-rc0155$' /etc/hosts; then sudo sed -i '' '/# unvibe-qa-rc0155$/d' /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo "removed the hosts lines"; fi
+          orig="$RUNNER_TEMP/hosts.orig"
+          if [ -f "$orig" ]; then
+            before=$(shasum -a 256 "$orig" | cut -d' ' -f1)
+            now=$(shasum -a 256 /etc/hosts | cut -d' ' -f1)
+            if [ "$before" != "$now" ]; then sudo cp "$orig" /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo "put back from the saved copy"; now=$(shasum -a 256 /etc/hosts | cut -d' ' -f1); fi
+            echo "hosts sha256 before the block $before, now $now"
+            if [ "$before" != "$now" ]; then echo "::error::the hosts file is not back byte for byte"; exit 1; fi
+            rm -f "$orig"
+          elif grep -q '# unvibe-qa-rc0155$' /etc/hosts; then
+            sudo sed -i '' '/# unvibe-qa-rc0155$/d' /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo "no saved copy: removed the marked lines"
+          else
+            echo "no block was made: hosts sha256 $(shasum -a 256 /etc/hosts | cut -d' ' -f1)"
+          fi
           if grep -q 'unvibe-qa-rc0155' /etc/hosts; then echo "::error::a hosts line is still there"; exit 1; fi
           rm -rf "$RUNNER_TEMP/netlog"
           echo "hosts clean; raw net logs deleted"
@@ -665,8 +679,19 @@ jobs:
         shell: pwsh
         run: |
           $hosts = 'C:\Windows\System32\drivers\etc\hosts'
-          $lines = @(Get-Content $hosts)
-          if ($lines -match '# unvibe-qa-rc0155$') { Set-Content -Path $hosts -Value ($lines -notmatch '# unvibe-qa-rc0155$'); ipconfig /flushdns | Out-Null; 'removed the hosts lines' }
+          $orig = Join-Path $env:RUNNER_TEMP 'hosts.orig'
+          if (Test-Path $orig) {
+            $before = (Get-FileHash $orig -Algorithm SHA256).Hash.ToLower()
+            $now = (Get-FileHash $hosts -Algorithm SHA256).Hash.ToLower()
+            if ($before -ne $now) { [IO.File]::WriteAllBytes($hosts, [IO.File]::ReadAllBytes($orig)); ipconfig /flushdns | Out-Null; 'put back from the saved copy'; $now = (Get-FileHash $hosts -Algorithm SHA256).Hash.ToLower() }
+            "hosts sha256 before the block $before, now $now"
+            if ($before -ne $now) { Write-Error 'the hosts file is not back byte for byte'; exit 1 }
+            Remove-Item -Force $orig
+          } elseif (@(Get-Content $hosts) -match '# unvibe-qa-rc0155$') {
+            Set-Content -Path $hosts -Value (@(Get-Content $hosts) -notmatch '# unvibe-qa-rc0155$'); ipconfig /flushdns | Out-Null; 'no saved copy: removed the marked lines'
+          } else {
+            "no block was made: hosts sha256 $((Get-FileHash $hosts -Algorithm SHA256).Hash.ToLower())"
+          }
           if (Select-String -Path $hosts -Pattern 'unvibe-qa-rc0155' -Quiet) { Write-Error 'a hosts line is still there'; exit 1 }
           Remove-Item -Recurse -Force "$env:RUNNER_TEMP\netlog" -ErrorAction SilentlyContinue
           'hosts clean; raw net logs deleted'
