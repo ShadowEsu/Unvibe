@@ -42,6 +42,13 @@ const WIN_EDITORS: ReadonlySet<string> = new Set([
   'datagrip64.exe',
 ]);
 
+/** Unvibe's own app as the helper names it: the bundle id or exe name (Electron's in a dev build). */
+export function isUnvibe(platform: BubblePlatform, app: string): boolean {
+  return platform === 'darwin'
+    ? app === 'com.unvibe.app' || app === 'com.github.Electron'
+    : ['unvibe.exe', 'electron.exe'].includes(app.toLowerCase());
+}
+
 /** Never, even if someone adds them later: password managers and Unvibe itself (G4). */
 const DENIED = /1password|bitwarden|keychain ?access|com\.apple\.keychainaccess|com\.apple\.passwords|^passwords(\.exe)?$|keepassxc|dashlane|lastpass|unvibe/i;
 
@@ -231,7 +238,9 @@ export function reduceGhost(
       if (state.look === 'hidden' || ctx.inside(input)) return same;
       return hidden;
     case 'app':
-      if (state.look === 'hidden') return same;
+      // Unvibe itself coming to the front is the press on the button or the card: macOS activates the app for a click
+      // on its panel when the click is synthesized (electron#53889), and hiding there dropped the press (run 44677798585).
+      if (state.look === 'hidden' || isUnvibe(ctx.platform, input.app)) return same;
       return input.app === state.app ? same : hidden;
     case 'hover':
       if (state.look !== 'ghost' && state.look !== 'pill') return same;
