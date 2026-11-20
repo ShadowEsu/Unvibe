@@ -757,6 +757,9 @@ if (process.platform === 'win32') app.setAppUserModelId('com.unvibe.app');
 // ⌘U and leave a review panel open with no captured selection.
 // The lock carries this copy's version and path so an older running copy can hand over to it.
 const hasSingleInstanceLock = app.requestSingleInstanceLock({ version: app.getVersion(), execPath: process.execPath });
+// The copy that lost the lock has already handed its link to the running one (second-instance). It quits, but Electron
+// still goes ready first, so nothing below may start for it: it used to open its own Island, companion and panel, try
+// for the shortcut and write the shared store for about a second, on every unvibe:// link (Run A 44835707720).
 if (!hasSingleInstanceLock) app.quit();
 /** Windows and Linux deliver `unvibe://` links as command-line arguments, not via open-url. */
 function protocolUrlFrom(argv: readonly string[]): string | null {
@@ -778,7 +781,7 @@ app.on('second-instance', (_event, argv, _cwd, additionalData) => {
 });
 
 // A protocol link can also cold-start the app on Windows; macOS uses open-url for this.
-if (!isMac) {
+if (!isMac && hasSingleInstanceLock) {
   const launchUrl = protocolUrlFrom(process.argv);
   if (launchUrl) handleExternalReviewUrl(launchUrl);
 }
@@ -800,6 +803,7 @@ if (process.defaultApp) {
 }
 
 app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return;
   cleanupPortableUpdate();
   // Theme "system": the companion's window chrome follows the OS appearance as it changes.
   nativeTheme.on('updated', () => {
@@ -1924,7 +1928,7 @@ app.whenReady().then(() => {
 app.on('browser-window-focus', () => void flush());
 app.on('activate', () => {
   // Dock / Cmd-Tab selection — bring the home window back.
-  openCompanion();
+  if (hasSingleInstanceLock) openCompanion();
 });
 app.on('will-quit', () => {
   stopSync();
