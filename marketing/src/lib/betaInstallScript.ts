@@ -1,9 +1,9 @@
-export const BETA_INSTALL_TAG = "v0.1.52";
-export const BETA_INSTALL_ASSET = "Unvibe-0.1.52-mac-arm64.dmg";
+export const BETA_INSTALL_TAG = "v0.1.54";
+export const BETA_INSTALL_ASSET = "Unvibe-0.1.54-mac-arm64.dmg";
 /** The direct Windows download on the site: one portable exe, nothing installed. */
-export const BETA_WINDOWS_ASSET = "Unvibe-0.1.52-win-x64-portable.exe";
+export const BETA_WINDOWS_ASSET = "Unvibe-0.1.54-win-x64-portable.exe";
 /** What install.ps1 installs: the per-user NSIS setup, run silently (Start menu, Apps entry, uninstaller). */
-export const BETA_WINDOWS_SETUP_ASSET = "Unvibe-0.1.52-win-x64-setup.exe";
+export const BETA_WINDOWS_SETUP_ASSET = "Unvibe-0.1.54-win-x64-setup.exe";
 /**
  * The Windows installer's app GUID, which names its Apps & features (Uninstall) registry key:
  * electron-builder's UUID v5 of app/package.json's appId "com.unvibe.app" in its namespace
