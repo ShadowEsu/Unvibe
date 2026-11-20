@@ -400,3 +400,23 @@
   outline: 2px solid var(--v-ink);
   outline-offset: 2px;
 }
+
+/* The download card's install command box (Design §2): on 5 % ink (#f3f3f3), radius 10, with the ink Copy pill. */
+.explain-page .ninst {
+  --ninst-ink: var(--v-ink);
+  --ninst-ink-2: var(--v-ink-2);
+  --ninst-line: var(--explain-line);
+}
+
+.explain-page .ninst__box {
+  border-radius: var(--v-radius);
+  background: #f3f3f3;
+}
+
+.explain-page .ninst__box::after {
+  background: linear-gradient(90deg, rgb(243 243 243 / 0), #f3f3f3);
+}
+
+.explain-page .ninst__copy {
+  border-radius: 999px;
+}
