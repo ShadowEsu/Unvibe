@@ -11,6 +11,8 @@
 //        a mouse selection ended over text: x/y its end, px/py where the pointer rests
 //   {"e":"down"|"right"|"scroll","x":..,"y":..}                                  so the button can leave
 //   {"e":"app","app":"<bundle id>"}                                              another app came to the front
+//   {"e":"press","x":..,"y":..,"mx":..,"my":..,"beam":0|1,"known":0|1,"secure":0|1}
+//        after each left press's I-beam read: what the helper saw, for QA's logs. Main drops it (no such event).
 // Points are global, in points, with the origin at the top-left of the primary screen (Electron's screen space).
 
 import AppKit
@@ -36,11 +38,11 @@ func frontmostBundle() -> String {
 }
 
 /// The pointer is the text I-beam: the press starts in text, not on a tab, a scrollbar or a sidebar. Told apart by
-/// the cursor's hot spot. When macOS can't say, it counts as text, so the editors list alone decides.
+/// the cursor's hot spot. When macOS can't say (`known` false), it counts as text, so the editors list alone decides.
 let beamHotSpot = NSCursor.iBeam.hotSpot
-func pointerIsBeam() -> Bool {
-    guard let current = NSCursor.currentSystem else { return true }
-    return current.hotSpot == beamHotSpot
+func readBeam() -> (beam: Bool, known: Bool) {
+    guard let current = NSCursor.currentSystem else { return (true, false) }
+    return (current.hotSpot == beamHotSpot, true)
 }
 
 /// How long after a press the I-beam is read. Editors (Chromium) set the cursor asynchronously, so at the press itself
@@ -56,14 +58,20 @@ var lastScroll = Date.distantPast
 
 let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseUp, .rightMouseDown, .scrollWheel]
 let monitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { event in
-    let at = topLeft(NSEvent.mouseLocation)
+    // Where the event happened, not where the pointer is by the time this runs (the handler can run late, and the
+    // down's handler waits 40 ms). Quartz's event location is already top-left based, like Electron's screen space.
+    let at = event.cgEvent?.location ?? topLeft(NSEvent.mouseLocation)
     switch event.type {
     case .leftMouseDown:
         downAt = at
         emit(["e": "down", "x": round1(at.x), "y": round1(at.y)])
         // Blocks this helper's own run loop only; the release that follows is handled after this read.
         usleep(beamSettleMicros)
-        downOverText = pointerIsBeam()
+        let read = readBeam()
+        downOverText = read.beam
+        let pointer = topLeft(NSEvent.mouseLocation)
+        emit(["e": "press", "x": round1(at.x), "y": round1(at.y), "mx": round1(pointer.x), "my": round1(pointer.y),
+              "beam": read.beam ? 1 : 0, "known": read.known ? 1 : 0, "secure": IsSecureEventInputEnabled() ? 1 : 0])
     case .leftMouseUp:
         guard let start = downAt else { return }
         downAt = nil

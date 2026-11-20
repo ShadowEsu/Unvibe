@@ -27,10 +27,11 @@ if (process.platform === 'darwin') {
 } else if (process.platform === 'win32') {
   const src = path.join(here, 'selection-watch', 'win', 'main.c');
   const bin = path.join(out, 'unvibe-selection-watch.exe');
+  // /Brepro: no build timestamp in the PE header, so the same source gives the same hash (Security NIT).
   try {
-    run('clang', ['-O2', '-Wall', '-o', bin, src, '-luser32']);
+    run('clang', ['-O2', '-Wall', '-o', bin, src, '-luser32', '-Wl,/Brepro']);
   } catch {
-    run('cl', ['/nologo', '/O2', '/W3', `/Fe:${bin}`, src, 'user32.lib']);
+    run('cl', ['/nologo', '/O2', '/W3', `/Fe:${bin}`, src, 'user32.lib', '/link', '/Brepro']);
   }
 } else {
   console.log('selection helper: none on this system');

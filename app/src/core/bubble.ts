@@ -82,7 +82,8 @@ function appId(value: unknown): value is string {
 
 /**
  * One helper line, checked field by field; anything else is dropped. The helper never sends text from the
- * selection, and a line that tried to would not parse: no event has a field for it.
+ * selection, and a line that tried to would not parse: no event has a field for it. The helpers' `press` line (what
+ * the I-beam read saw, for QA's logs) is dropped here too.
  */
 export function parseHelperLine(line: string): HelperEvent | null {
   if (line.length > 1024) return null;
