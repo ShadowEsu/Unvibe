@@ -32,7 +32,7 @@ export interface ExplainPage {
   /**
    * The sample is output, an error or a file a tool generates (lsof output, a traceback, package-lock.json, compiled
    * assembly), not code an AI tool writes for you. The download card then keeps its plain wording instead of
-   * "When your AI tool writes {subject}, select it…" (ledger 636).
+   * "When your AI tool writes {subject}, select the code…" (ledger 636).
    */
   sampleIsOutput?: true;
   /**
@@ -4036,7 +4036,7 @@ $ kill 1643167`,
     sampleIsOutput: true,
     heading: "segmentation faults",
     title: "Segmentation fault (core dumped) explained, in C",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["c", "cpp", "assembly", "python-traceback"],
     lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
     description:
@@ -4090,7 +4090,7 @@ best = 0x0`,
     sampleIsOutput: true,
     heading: "HTTP headers",
     title: "HTTP headers explained with an example response",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["curl", "cors-error", "json"],
     lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
     description:
@@ -4139,7 +4139,7 @@ Vary: Origin
     fileName: "notes-app.zone",
     heading: "DNS records",
     title: "DNS records explained: A, CNAME, MX, TXT (SPF)",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["http-headers", "curl", "ssh-config"],
     lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
     description:
