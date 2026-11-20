@@ -73,6 +73,7 @@ import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
+import { createDevicePoll, OWNER_GONE_EVENTS, type DevicePollOwner } from './devicePoll';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { SUPPORT_EMAIL } from '../core/support';
 import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
@@ -174,8 +175,38 @@ const isMac = process.platform === 'darwin';
 let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
-let devicePoll: NodeJS.Timeout | null = null;
-let currentDeviceVerificationUrl: string | null = null;
+/** Google sign-in by device code: the one code main polls for, dropped when its card or window closes or the app quits. */
+const devicePoll = createDevicePoll({
+  redeem: redeemDeviceAuth,
+  approved: async (token, stillCurrent) => {
+    let account: Awaited<ReturnType<typeof accountInfo>>;
+    try {
+      account = await accountInfo(token);
+    } catch (err) {
+      // Lead N3 on #354: the code is spent, so nobody will ever hold this token; end its session before giving up.
+      endUnheldSession(token, 'its account could not be read');
+      throw err;
+    }
+    // The card closed while the account was read: nobody is signed in.
+    if (!stillCurrent()) return false;
+    await persistAccount({ userId: account.userId, email: account.email ?? 'Signed-in user', token });
+    void flush();
+    companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
+    return true;
+  },
+  // Security NIT-3 on #354: no orphaned session for a token nobody holds.
+  abandoned: (token) => endUnheldSession(token, 'it was approved after its card closed'),
+  ended: (error) => companion?.webContents.send('account:device', { ok: false, error }),
+});
+/** End the server session of a device-code token nobody holds, so none is left orphaned. */
+function endUnheldSession(token: string, why: string): void {
+  void revokeSession(token).then(
+    () => console.info(`[auth] ended the session of a sign-in: ${why}`),
+    () => console.warn(`[auth] could not end the session of a sign-in: ${why}`),
+  );
+}
+/** Device-code starts still waiting on the server, by the page that asked; a card that closes meanwhile drops its start. */
+const deviceStarts = new Map<Electron.WebContents, () => void>();
 /** The one review session inside the single shared panel (overlay B has no review tabs). */
 let panelSession: ReviewSession | undefined;
 let panelReady = false;
@@ -467,6 +498,7 @@ function repairAccessibilityAfterUpdate(): void {
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
+  devicePoll.cancel();
 });
 
 /** Menu items call this as `click`, so it takes no arguments (Electron passes the menu item first). */
@@ -1772,13 +1804,23 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle('account:startDevice', async (e) => {
+    // The page may close, reload or crash while the server makes the code (seconds on a cold server): then no card
+    // shows it, so neither the browser nor the poll starts.
+    const page: DevicePollOwner = e.sender;
+    let pageGone = false;
+    const onPageGone = () => { pageGone = true; };
+    for (const event of OWNER_GONE_EVENTS) page.once(event, onPageGone);
+    deviceStarts.set(e.sender, onPageGone);
     try {
       const asked = Date.now();
       const device = await startDeviceAuth();
       console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
+      if (pageGone || e.sender.isDestroyed()) {
+        console.info('[auth] device code not used: the card or page that asked for it is gone');
+        return { ok: false, error: 'Sign-in was closed.' };
+      }
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
-      currentDeviceVerificationUrl = verificationUrl;
       // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
       // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
       // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
@@ -1791,46 +1833,36 @@ app.whenReady().then(() => {
           if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
         },
       );
-      if (devicePoll) clearInterval(devicePoll);
-      const expires = Date.now() + 10 * 60_000;
-      devicePoll = setInterval(() => void (async () => {
-        if (Date.now() > expires) {
-          if (devicePoll) clearInterval(devicePoll);
-          devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Use Retry to create a new secure link.' });
-          return;
-        }
-        try {
-          const redeemed = await redeemDeviceAuth(device.deviceCode);
-          if (!redeemed) return;
-          const account = await accountInfo(redeemed.token);
-          await persistAccount({
-            userId: account.userId,
-            email: account.email ?? 'Signed-in user',
-            token: redeemed.token,
-          });
-          if (devicePoll) clearInterval(devicePoll); devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          void flush();
-          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'The secure sign-in request ended.';
-          if (/expired|unknown|already redeemed/i.test(message)) {
-            if (devicePoll) clearInterval(devicePoll);
-            devicePoll = null;
-            currentDeviceVerificationUrl = null;
-            companion?.webContents.send('account:device', { ok: false, error: 'This sign-in link is no longer valid. Use Retry to create a new one.' });
-          }
-        }
-      })(), Math.max(2, device.interval) * 1000);
+      // Polling is tied to the page that asked: its window closing (Mac close, ⌘W), a reload or a crash drops the code,
+      // since none of those runs the card's own cleanup (lead M1 / Security SHOULD-1 on #354).
+      devicePoll.start(device, verificationUrl, e.sender);
       return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' };
+    } finally {
+      if (deviceStarts.get(e.sender) === onPageGone) deviceStarts.delete(e.sender);
+      if (!e.sender.isDestroyed()) for (const event of OWNER_GONE_EVENTS) page.removeListener(event, onPageGone);
+    }
+  });
+  // The sign-in card closed while its code was still being made: open no browser and poll nothing for it (lead N2).
+  ipcMain.handle('account:cancelDeviceStart', (e) => {
+    const drop = deviceStarts.get(e.sender);
+    drop?.();
+    return { ok: Boolean(drop) };
+  });
+  // The sign-in card closed with its code still waiting: stop polling and forget it. Only the page that started the
+  // code may drop it, and only that card's own code.
+  ipcMain.handle('account:cancelDevice', (e, userCode: unknown) => {
+    if (typeof userCode !== 'string' || e.sender !== devicePoll.owner()) return { ok: false };
+    const dropped = devicePoll.cancel(userCode);
+    if (dropped) console.info('[auth] device sign-in cancelled: the card closed');
+    return { ok: dropped };
   });
   ipcMain.handle('account:openDeviceAuth', async () => {
-    if (!currentDeviceVerificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
+    const verificationUrl = devicePoll.verificationUrl();
+    if (!verificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
     try {
-      await shell.openExternal(currentDeviceVerificationUrl);
+      await shell.openExternal(verificationUrl);
       console.info('[auth] reopened device verification browser');
       return { ok: true };
     } catch {

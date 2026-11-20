@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from 'react';
 import { browserOpenedFor, deviceBrowserReducer, DEVICE_BROWSER_START } from '../shared/deviceBrowser';
+import { useDeviceCodeDroppedOnClose } from '../shared/deviceCodeCard';
 import { GoogleMark } from '../shared/googleMark';
 import { InkTitle } from './inkTitle';
 
@@ -12,7 +13,7 @@ export function Gift() {
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [signInBusy, setSignInBusy] = useState(false);
   const [signInError, setSignInError] = useState('');
-  const [deviceCode, setDeviceCode] = useState('');
+  const [userCode, setUserCode] = useState('');
   const [verificationUrl, setVerificationUrl] = useState('');
   const [browser, dispatchBrowser] = useReducer(deviceBrowserReducer, DEVICE_BROWSER_START);
   const browserOpened = browserOpenedFor(browser);
@@ -45,32 +46,36 @@ export function Gift() {
     };
   }, []);
 
-  useEffect(() => {
-    window.unvibe.onDeviceAuth((result) => {
-      setSignInBusy(false);
-      if (result.ok && result.email) {
-        setNeedsSignIn(false);
-        setEmail(result.email);
-        setSignInError('');
-        void window.unvibe.giftStatus().then((status) => applyStatus(status as GiftStatus, result.email));
-        return;
-      }
-      if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
-    });
-  }, []);
+  const cardCode = useDeviceCodeDroppedOnClose();
+  // Unsubscribed on close, so a Share page that was left never hears a later sign-in.
+  useEffect(() => window.unvibe.onDeviceAuth((result) => {
+    cardCode.ended();
+    setSignInBusy(false);
+    if (result.ok && result.email) {
+      setNeedsSignIn(false);
+      setEmail(result.email);
+      setSignInError('');
+      void window.unvibe.giftStatus().then((status) => applyStatus(status as GiftStatus, result.email));
+      return;
+    }
+    if (!result.ok) setSignInError(result.error ?? 'Secure sign-in failed.');
+  }), []);
   // The browser opens alongside the code and reports only a failure, for its own link.
   useEffect(() => window.unvibe.onDeviceBrowserFailed((r) => dispatchBrowser({ type: 'failed', url: r.verificationUri })), []);
 
   const startSignIn = async () => {
     setSignInBusy(true);
     setSignInError('');
+    cardCode.starting();
     const result = await window.unvibe.startDeviceAuth() as { ok: boolean; userCode?: string; verificationUri?: string; error?: string };
     if (result.ok && result.userCode && result.verificationUri) {
+      cardCode.arrived(result.userCode);
       dispatchBrowser({ type: 'code', url: result.verificationUri });
-      setDeviceCode(result.userCode);
+      setUserCode(result.userCode);
       setVerificationUrl(result.verificationUri);
     }
     else {
+      cardCode.ended();
       setSignInBusy(false);
       setSignInError(result.error ?? 'Could not start secure sign-in.');
     }
@@ -142,9 +147,9 @@ export function Gift() {
             {signInBusy ? 'Waiting for Google sign-in…' : 'Continue with Google'}
           </button>
           {signInError && <div className="field-err" role="alert">{signInError}</div>}
-          {deviceCode ? <div className="signin__code"><span>Approve this code in your browser</span><b>{deviceCode}</b></div> : null}
+          {userCode ? <div className="signin__code"><span>Approve this code in your browser</span><b>{userCode}</b></div> : null}
           <p className="field-note">
-            {deviceCode
+            {userCode
               ? `${browserOpened ? 'Finish in your browser.' : 'Your browser did not open.'} Sign in with Google, then approve the code above.`
               : 'Opens your browser for Google sign-in. Unvibe never sees your Google password.'}
           </p>
