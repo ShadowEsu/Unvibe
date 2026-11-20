@@ -11,7 +11,10 @@
 //      ≤ 150 ms; the first one also creates the window); placed 8 px right of the mouse-up, centred on it. It leaves
 //      after 4 s untouched (round 1) and on a click elsewhere (rounds 2-5).
 //   A3 the I-beam check: a drag in the line-number gutter (VS Code selects the lines; the press wasn't on text) shows
-//      no button.
+//      no button. Every press first settles on its point (three small moves, 300 ms), and on Windows the harness
+//      logs whether the global cursor is the I-beam just before it (unvibe-app's read of run 44668914881).
+//   A3 race (unvibe-app, #366 5b34c779): rest on the gutter, move onto text and press within 16 ms → the button;
+//      rest on text, move onto the gutter and press within 16 ms → none.
 //   A4 hover → the pill after 150 ms; 1:1 crops of the button and the pill over VS Code (light), corners transparent;
 //      a press opens the panel on the agreement (no agreement in this profile: nothing is read) and sends nothing.
 //   A5 stacking: that panel focused, then VS Code clicked (the panel fades), then a selection whose button lands over
@@ -20,13 +23,13 @@
 //   A7 dark: Unvibe and VS Code dark, the button and the pill again (crops, transparent corners).
 //   A8 idle CPU of Unvibe's processes over 60 s with the button on (ghost hidden), then 60 s with it off.
 // Launch B (Windows): --force-device-scale-factor=1.5 (Chromium's scale on the runner's 100 % display; the Windows
-//   setting needs a sign-out), the DIP conversion: the button 12 physical px (8 DIP) right of the mouse-up, centred,
-//   and 1:1 crops.
+//   setting needs a sign-out): a real drag shows the button, with see-through corners (PASS/FAIL); its size and place
+//   (GetWindowRect and the page's) are a NOTE, since a forced scale is not a Windows display scale.
 // Launch C (Mac and Windows), the API host blocked in the hosts file for the whole launch (no byte reaches the server;
 //   the file is put back byte for byte and checked), the agreement given in the run's own profile:
-//   D5-a first (Security's MUST): the runner's own request gets no answer, the resolver gives only 0.0.0.0 / :: (and
-//      dscacheutil 0.0.0.0 on the Mac), and the app's net log so far has no answered request; else launch C stops
-//      there, with no agreement and no press.
+//   D5-a first (Security's MUST): the runner's own request gets no answer, the resolver gives only 0.0.0.0 / :: or no
+//      address (Windows answers a 0.0.0.0 line with ENOENT), dscacheutil 0.0.0.0 on the Mac, and the app's net log so
+//      far has no answered request; else launch C stops there, with no agreement and no press.
 //   C1 N6: VS Code's password prompt (a development extension's showInputBox({ password: true })), double-clicked.
 //      Mac: no button (secure input). Windows: the button may show (Security N6); pressed with Quick look off, then
 //      on: nothing of the box reaches the clipboard or the panel, and nothing is sent.
@@ -103,13 +106,23 @@ function grab(f, x, y, w, h) {
   else ps(`Add-Type -AssemblyName System.Drawing; ${DPI_AWARE}; $bmp=New-Object System.Drawing.Bitmap ${w},${h}; [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen(${x},${y},0,0,$bmp.Size); $bmp.Save('${f}')`);
   return f;
 }
+/** The screen in pointer units (Mac points, Windows physical px), read after wideScreen(); the pointer refuses points
+ * outside it (run 44668914881: drags at x ≥ 1868 on a 1920-wide screen were clamped to its edge). */
+let SCREEN = null;
 function wideScreen() {
   if (os === 'mac') {
-    try { note('Screen', execFileSync(process.env.MOUSE, ['display', '1440', '900'], { encoding: 'utf8', timeout: 30000 }).trim()); } catch (e) { note('Screen', `the mode was not changed (${short(e)})`); }
+    // 1280 × 960, the mode setup-0157's runs used: at 1600 × 900, screencapture said "could not create image from
+    // display" and the app's windows stopped painting (run 44668914881).
+    try {
+      const said = execFileSync(process.env.MOUSE, ['display', '1280', '900'], { encoding: 'utf8', timeout: 30000 }).trim();
+      note('Screen', said);
+      const m = /now (\d+)x(\d+)/.exec(said);
+      if (m) SCREEN = { w: Number(m[1]), h: Number(m[2]) };
+    } catch (e) { note('Screen', `the mode was not changed (${short(e)})`); }
     return;
   }
   try {
-    note('Screen', ps([
+    const said = ps([
       'Add-Type @"',
       'using System; using System.Runtime.InteropServices;',
       'public class Disp {',
@@ -131,48 +144,92 @@ function wideScreen() {
       '$r = [Disp]::ChangeDisplaySettings([ref]$dm, 0)',
       'Add-Type -AssemblyName System.Windows.Forms; $b = [System.Windows.Forms.SystemInformation]::VirtualScreen',
       '"ChangeDisplaySettings 1920x1080 returned $r; screen now $($b.Width)x$($b.Height)"',
-    ].join('\n')));
+    ].join('\n'));
+    note('Screen', said);
+    const m = /now (\d+)x(\d+)/.exec(said);
+    if (m) SCREEN = { w: Number(m[1]), h: Number(m[2]) };
   } catch (e) { note('Screen', `1920 × 1080 not set (${short(e)})`); }
 }
 
 // --- The pointer and the keyboard (screen units: Mac points, Windows physical px) -------------------------------
 const ptrScript = path.join(TMP, 'unvibe-d5-pointer.ps1');
 if (os === 'windows') writeFileSync(ptrScript, [
-  'param([string]$op, [int]$x1, [int]$y1, [int]$x2, [int]$y2, [int]$n)',
+  'param([string]$op, [int]$x1, [int]$y1, [int]$x2, [int]$y2, [int]$n, [int]$x3 = 0, [int]$y3 = 0)',
   'Add-Type @"',
   'using System; using System.Runtime.InteropServices;',
   'public class Ptr {',
   '  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();',
   '  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);',
   '  [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, UIntPtr e);',
+  '  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }',
+  '  [StructLayout(LayoutKind.Sequential)] public struct CURSORINFO { public int cbSize; public int flags; public IntPtr hCursor; public POINT pt; }',
+  '  [DllImport("user32.dll")] public static extern bool GetCursorInfo(ref CURSORINFO ci);',
+  '  [DllImport("user32.dll")] public static extern IntPtr LoadCursor(IntPtr h, int id);',
+  '  // Whether the global cursor is the shared I-beam (IDC_IBEAM 32513), as the helper reads it.',
+  '  public static int IBeam() { var ci = new CURSORINFO(); ci.cbSize = Marshal.SizeOf(ci); GetCursorInfo(ref ci); return ci.hCursor == LoadCursor(IntPtr.Zero, 32513) ? 1 : 0; }',
+  '  public static void To(int x, int y) { SetCursorPos(x, y); mouse_event(1, 0, 0, 0, UIntPtr.Zero); }',
   '}',
   '"@',
   '[void][Ptr]::SetProcessDPIAware()',
-  'if ($op -eq "move") { [void][Ptr]::SetCursorPos($x1, $y1); [Ptr]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero) }',
-  'if ($op -eq "click") { [void][Ptr]::SetCursorPos($x1, $y1); [Ptr]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 150; for ($i = 0; $i -lt $n; $i++) { [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 30; [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 60 } }',
+  '# The settle: three small moves onto the start point, then 300 ms, so the app under it has set its cursor (unvibe-app).',
+  'function Settle([int]$x, [int]$y) { [Ptr]::To($x - 2, $y); Start-Sleep -Milliseconds 60; [Ptr]::To($x + 2, $y); Start-Sleep -Milliseconds 60; [Ptr]::To($x, $y); Start-Sleep -Milliseconds 300 }',
+  'function Steps([int]$ax, [int]$ay, [int]$bx, [int]$by) { for ($i = 1; $i -le 24; $i++) { [Ptr]::To([int]($ax + ($bx - $ax) * $i / 24), [int]($ay + ($by - $ay) * $i / 24)); Start-Sleep -Milliseconds 20 } }',
+  'if ($op -eq "move") { [Ptr]::To($x1, $y1) }',
+  'if ($op -eq "click") { Settle $x1 $y1; "ibeam=$([Ptr]::IBeam())"; for ($i = 0; $i -lt $n; $i++) { [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 30; [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 60 } }',
   'if ($op -eq "drag") {',
-  '  [void][Ptr]::SetCursorPos($x1, $y1); [Ptr]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 150',
+  '  Settle $x1 $y1; "ibeam=$([Ptr]::IBeam())"',
   '  [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 80',
-  '  for ($i = 1; $i -le 24; $i++) { [void][Ptr]::SetCursorPos([int]($x1 + ($x2 - $x1) * $i / 24), [int]($y1 + ($y2 - $y1) * $i / 24)); [Ptr]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 20 }',
+  '  Steps $x1 $y1 $x2 $y2',
   '  [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)',
+  '  [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()',
+  '}',
+  '# The race (unvibe-app): rest at (x1, y1), then move to (x2, y2) and press at once, drag to (x3, y3), release.',
+  'if ($op -eq "race") {',
+  '  Settle $x1 $y1; $rest = [Ptr]::IBeam()',
+  '  $sw = [Diagnostics.Stopwatch]::StartNew(); [Ptr]::To($x2, $y2); [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); $gap = $sw.Elapsed.TotalMilliseconds',
+  '  Start-Sleep -Milliseconds 40; $at40 = [Ptr]::IBeam()',
+  '  Steps $x2 $y2 $x3 $y3',
+  '  [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)',
+  '  "rest=$rest gap=$([Math]::Round($gap, 1)) at40=$at40"',
   '  [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()',
   '}',
 ].join('\r\n'));
 const S = (v) => String(Math.round(v));
 const winPtr = (...args) => execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ptrScript, ...args], { encoding: 'utf8', timeout: 30000 }).trim();
+function onScreen(...pts) {
+  if (!SCREEN) return;
+  for (const [x, y] of pts) if (!(x >= 0 && y >= 0 && x < SCREEN.w && y < SCREEN.h)) throw new Error(`harness: (${Math.round(x)}, ${Math.round(y)}) is off the ${SCREEN.w}×${SCREEN.h} screen; nothing pressed`);
+}
 const pointer = {
-  /** A press at (x1, y1), a move to (x2, y2), a release; returns the release time (ms since 1970, this machine's clock). */
+  /** What the harness itself read before the last press (Windows: the global cursor is the I-beam, 1 or 0). */
+  last: '',
+  /** A settle on (x1, y1), a press, a move to (x2, y2), a release; returns the release time (ms since 1970, this
+   * machine's clock). */
   drag(x1, y1, x2, y2) {
+    onScreen([x1, y1], [x2, y2]);
     const printed = os === 'mac'
       ? execFileSync(process.env.MOUSE, ['drag', S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
       : winPtr('drag', S(x1), S(y1), S(x2), S(y2), '1');
+    pointer.last = printed.split(/\s+/).slice(0, -1).join(' ');
     return Number(printed.split(/\s+/).pop());
   },
+  /** unvibe-app's race: the pointer rests on (x0, y0), then moves to (x1, y1) and presses at once (the gap is printed),
+   * drags to (x2, y2) and releases. Returns { up, said } (Windows: the I-beam at rest and 40 ms after the press). */
+  race(x0, y0, x1, y1, x2, y2) {
+    onScreen([x0, y0], [x1, y1], [x2, y2]);
+    const printed = os === 'mac'
+      ? execFileSync(process.env.MOUSE, ['race', S(x0), S(y0), S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
+      : winPtr('race', S(x0), S(y0), S(x1), S(y1), '1', S(x2), S(y2));
+    const said = printed.split(/\s+/).slice(0, -1).join(' ');
+    return { up: Number(printed.split(/\s+/).pop()), said, gap: Number(/gap=([\d.]+)/.exec(said)?.[1] ?? NaN) };
+  },
   click(x, y, count = 1) {
+    onScreen([x, y]);
     if (os === 'mac') execFileSync(process.env.MOUSE, ['click', S(x), S(y), String(count)]);
-    else winPtr('click', S(x), S(y), '0', '0', String(count));
+    else pointer.last = winPtr('click', S(x), S(y), '0', '0', String(count));
   },
   move(x, y) {
+    onScreen([x, y]);
     if (os === 'mac') execFileSync(process.env.MOUSE, ['move', S(x), S(y)]);
     else winPtr('move', S(x), S(y), '0', '0', '1');
   },
@@ -370,8 +427,19 @@ async function openVsCode(extraArgs = []) {
   const page = await waitFor(async () => browser.contexts().flatMap((c) => c.pages()).find((p) => /workbench/.test(p.url())), 60000, 500);
   if (!page) throw new Error('no VS Code window');
   await page.locator('.monaco-editor .view-line').first().waitFor({ timeout: 60000 });
-  await sleep(2500);
   vs = { browser, page };
+  // VS Code places and maximizes its window after its first paint: run 44668914881 read the origin at (1815, 35) on
+  // a 1920-wide screen, and every drag went off screen. Wait until two reads 1 s apart agree and the content starts
+  // inside the screen's left half and top quarter (maximized).
+  let prev = null;
+  const placed = await waitFor(async () => {
+    const o = await vsOrigin();
+    const same = prev && o.x === prev.x && o.y === prev.y && o.k === prev.k;
+    prev = o;
+    const inside = !SCREEN || (o.x >= -16 && o.x < SCREEN.w / 2 && o.y >= -16 && o.y < SCREEN.h / 4);
+    return same && inside ? o : null;
+  }, 30000, 1000);
+  note('VS Code placed', placed ? `content at (${placed.x}, ${placed.y}), ×${r1(placed.k)}${SCREEN ? ` on ${SCREEN.w}×${SCREEN.h}` : ''}` : `not settled in 30 s (last read (${prev?.x}, ${prev?.y}))`);
   return vs;
 }
 async function closeVsCode() {
@@ -480,7 +548,9 @@ async function minimize(app, companion) {
     const m = await companion.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth }));
     pointer.click((m.x + m.w - 115) * scale, (m.y + 20) * scale);
   }
-  const hidden = await waitFor(async () => (await companion.evaluate(() => document.visibilityState)) === 'hidden', 5000);
+  // Chromium keeps visibilityState "visible" for a minimized window on Windows (run 44668914881's still shows it
+  // minimized); there the window sits at Windows' minimized position, x −32000.
+  const hidden = await waitFor(async () => (await companion.evaluate(() => document.visibilityState === 'hidden' || screenX <= -10000)), 5000);
   note('The main window minimized', hidden ? 'yes' : 'no (it may cover VS Code)');
 }
 const ghostPage = (app) => app.windows().find((w) => /\/ghost\.html/.test(w.url()) && !w.isClosed()) ?? null;
@@ -578,7 +648,7 @@ async function runA(app, companion, tag) {
   // A2: five drags; latency and placement. Round 1 leaves by itself (4 s), the others on a click elsewhere.
   const rounds = [];
   for (const [i, li] of [3, 6, 9, 12, 15].entries()) {
-    const row = L.lines[li];
+    const row = (await vsLines()).lines[li];
     const from = { x: row.left + 2, y: row.y };
     const to = { x: Math.min(row.right - 2, from.x + 420), y: row.y };
     const since = Date.now();
@@ -588,7 +658,7 @@ async function runA(app, companion, tag) {
     const g2 = g ? await ghost(app) : null;
     const precise = shownAt(g2, since);
     const latency = g ? (precise ?? g.t) - up : null;
-    const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected() };
+    const r = { round: i + 1, line: li + 1, up, latency, how: precise ? 'page' : 'poll', selected: await vsSelected(), said: pointer.last };
     if (g) {
       r.dx = r1(g.x - to.x); r.cy = r1(g.y + g.h / 2 - to.y); r.size = `${r1(g.w)}×${r1(g.h)}`;
       if (i === 0) {
@@ -612,7 +682,7 @@ async function runA(app, companion, tag) {
   const shown = rounds.filter((r) => r.latency !== null);
   const warm = shown.filter((r) => r.round > 1).map((r) => r.latency).sort((a, b) => a - b);
   const median = warm.length ? warm[Math.floor((warm.length - 1) / 2)] : null;
-  for (const r of rounds) note(`A2 ${tag} round ${r.round}`, r.latency === null ? `line ${r.line}: no button in 3 s (VS Code selection boxes ${r.selected})` : `line ${r.line}: button ${r.latency} ms after mouse-up (${r.how}); window ${r.size} at mouse-up x + ${r.dx}, its centre ${r.cy} from the mouse-up's y; ${r.leave}`);
+  for (const r of rounds) note(`A2 ${tag} round ${r.round}`, `${r.latency === null ? `line ${r.line}: no button in 3 s (VS Code selection boxes ${r.selected})` : `line ${r.line}: button ${r.latency} ms after mouse-up (${r.how}); window ${r.size} at mouse-up x + ${r.dx}, its centre ${r.cy} from the mouse-up's y; ${r.leave}`}${r.said ? `; before the press the harness read ${r.said}` : ''}`);
   log(shown.length === rounds.length, `A2 ${tag}: a real drag in VS Code shows the button (5 of 5)`, `${shown.length} of ${rounds.length}`);
   log(median !== null && median <= 150, `A2 ${tag}: mouse-up → button within the brief's 150 ms (median of rounds 2-5)`,
     `rounds 2-5: ${warm.join(', ')} ms (median ${median}); round 1 (the window is created): ${rounds[0].latency ?? '-'} ms. Measured from the release event's time to the button's node in its page (MutationObserver), same clock`);
@@ -622,16 +692,40 @@ async function runA(app, companion, tag) {
   log(rounds.slice(1).every((r) => r.clickOk), `A2 ${tag}: a click elsewhere hides the button`, rounds.slice(1).map((r) => r.leave ?? 'not shown').join('; '));
 
   // A3: the I-beam check: a drag in the line-number gutter selects lines but didn't start on text.
-  const nums = L.numbers.filter((x) => x.n >= 18 && x.n <= 22).sort((a, b) => a.n - b.n);
+  const Ln = await vsLines();
+  const nums = Ln.numbers.filter((x) => x.n >= 18 && x.n <= 22).sort((a, b) => a.n - b.n);
   if (nums.length >= 2) {
-    pointer.click(L.lines[1].right + 80, L.lines[1].y);
+    pointer.click(Ln.lines[1].right + 80, Ln.lines[1].y);
     await sleep(400);
     pointer.drag(nums[0].x, nums[0].y, nums.at(-1).x, nums.at(-1).y);
+    const said = pointer.last;
     const sel = await vsSelected();
     const g = await waitShown(app, 1500);
     log(sel > 0 && !g, `A3 ${tag}: a drag in VS Code's line-number gutter (not on text) shows no button`,
-      `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}`);
+      `VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)})` : 'not shown in 1.5 s'}; drag ${Math.round(nums[0].x)},${Math.round(nums[0].y)} → ${Math.round(nums.at(-1).x)},${Math.round(nums.at(-1).y)}${said ? `; before the press the harness read ${said}` : ''}`);
   } else log(false, `A3 ${tag}: the gutter drag`, 'line numbers 18-22 not found on screen');
+
+  // A3 race (unvibe-app, #366 5b34c779: the helpers read the I-beam 40 ms after the press): the pointer rests on one
+  // side, then moves and presses within 16 ms, before the editor has changed its cursor.
+  //   gutter → text: rests on line 25's number, presses at its text start, drags along it → the button shows;
+  //   text → gutter: rests on line 28's text, presses on its number, drags down the numbers → no button.
+  for (const [kind, li, ln, want] of [['gutter → text', 24, 25, true], ['text → gutter', 27, 28, false]]) {
+    const Lr = await vsLines();
+    const row = Lr.lines[li];
+    const num = Lr.numbers.find((x) => x.n === ln);
+    const below = Lr.numbers.find((x) => x.n === ln + 3);
+    if (!row || !num || !below) { log(false, `A3 race ${tag} ${kind}`, `line ${ln} or its number not on screen`); continue; }
+    pointer.click(Lr.lines[1].right + 80, Lr.lines[1].y);
+    await waitHidden(app, 2000);
+    await sleep(300);
+    const race = want
+      ? pointer.race(num.x, num.y, row.left + 2, row.y, Math.min(row.right - 2, row.left + 300), row.y)
+      : pointer.race(row.left + 40, row.y, num.x, num.y, below.x, below.y);
+    const sel = await vsSelected();
+    const g = await waitShown(app, 1500);
+    log(race.gap <= 16 && sel > 0 && Boolean(g) === want, `A3 race ${tag}: ${kind}, the press within 16 ms of the move, ${want ? 'shows the button' : 'shows no button'}`,
+      `${race.said}; VS Code selection boxes ${sel}; button ${g ? `shown at (${r1(g.x)}, ${r1(g.y)}) ${g.t - race.up} ms after the release` : 'not shown in 1.5 s'}`);
+  }
 
   // A4: hover → pill; crops; press → the panel on the agreement, nothing read or sent.
   pointer.click(L.lines[1].right + 80, L.lines[1].y);
@@ -784,11 +878,14 @@ async function runB(app, companion) {
   if (!g) { log(false, 'B 150: the button at 150 %', 'no button'); return; }
   const dx = g.x - to.x;
   const cy = g.y + g.h / 2 - to.y;
+  // The window's own rectangle (GetWindowRect via EnumWindows, physical px), next to what its page reports × 1.5.
+  const pids = new Set(processTree(app.process.pid).map((p) => p.pid));
+  const rect = screenWindows().filter((w) => pids.has(w.pid) && Math.abs(w.x - g.x) < 40 && Math.abs(w.y - g.y) < 40).sort((a, b) => a.w * a.h - b.w * b.h)[0];
   const r = await pillThenButton(app, g, '150', { x: to.x, y: to.y + 80 });
   desktop('150-button');
-  log(near(dx, 12, 2) && near(cy, 0, 2) && near(g.w, 48, 1.5) && Boolean(r.cb?.clear),
-    'B 150: at 150 % the button is 48 physical px, 12 px (8 DIP) right of the mouse-up and centred on it',
-    `mouse-up (${Math.round(to.x)}, ${Math.round(to.y)}) physical; button ${r1(g.w)}×${r1(g.h)} px at mouse-up x + ${r1(dx)}, centre ${r1(cy)} from its y; pill ${r.pill ? `${r1(r.pill.w)}×${r1(r.pill.h)} px` : 'none'}; ${crops(r)}. The scale is Chromium's --force-device-scale-factor=1.5, not the Windows display setting`);
+  log(Boolean(r.cb?.clear) && Boolean(r.cp?.clear), 'B 150: under a forced 150 % the button shows for a real drag, with see-through corners', crops(r));
+  note('B 150: size and place under --force-device-scale-factor=1.5 (not a Windows display scale, so no PASS/FAIL; expected 32 DIP × 1.5 = 48 px, 8 DIP = 12 px right)',
+    `mouse-up (${Math.round(to.x)}, ${Math.round(to.y)}) physical; GetWindowRect ${rect ? `${rect.w}×${rect.h} at (${rect.x}, ${rect.y}), x − mouse-up ${rect.x - Math.round(to.x)}` : 'not found'}; the page's outer size × 1.5 ${r1(g.w)}×${r1(g.h)} at mouse-up x + ${r1(dx)}, centre ${r1(cy)} from its y; pill ${r.pill ? `${r1(r.pill.w)}×${r1(r.pill.h)}` : 'none'}`);
   pointer.click(L.lines[1].right + 80, L.lines[1].y);
   await waitHidden(app, 2000);
 }
@@ -818,8 +915,10 @@ async function blockHolds() {
     const res = await fetch(`https://${host}/api/v1/health`, { signal: AbortSignal.timeout(10000) });
     runner = `HTTP ${res.status}`;
   } catch (e) { runner = `no answer (${short(e.cause ?? e)})`; }
-  const addrs = await lookup(host, { all: true }).then((a) => a.map((x) => x.address)).catch((e) => [`lookup failed (${short(e)})`]);
-  const resolverOk = addrs.length > 0 && addrs.every((a) => a === '0.0.0.0' || a === '::');
+  const addrs = await lookup(host, { all: true }).then((a) => a.map((x) => x.address)).catch((e) => [`lookup failed (${e.code ?? short(e)})`]);
+  // Windows answers a 0.0.0.0 hosts line with "no address" (getaddrinfo ENOENT, run 44668914881): that counts as
+  // blocked too, with (a) the runner's request unanswered and (b) the app's below (Security's accepted delta).
+  const resolverOk = addrs.length > 0 && addrs.every((a) => a === '0.0.0.0' || a === '::' || /^lookup failed \((ENOTFOUND|ENOENT|EAI_NONAME)\)$/.test(a));
   let dns = '';
   let dnsOk = true;
   if (os === 'mac') {

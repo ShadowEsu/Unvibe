@@ -6,8 +6,12 @@
 //   mouse display <w> <h>             the main display to its smallest mode of at least w x h points (public
 //                                     CoreGraphics API); prints the modes and the result
 //   mouse click <x> <y> <n>           n clicks at x,y as one multi-click (n = 3 selects a line in Terminal)
-//   mouse drag <x1> <y1> <x2> <y2>    a move to x1,y1, press, move there in 24 steps (each with its delta) to x2,y2,
+//   mouse drag <x1> <y1> <x2> <y2>    a settle on x1,y1 (three small real moves, then 300 ms, so the app under it sets
+//                                     its cursor), press, move there in 24 steps (each with its delta) to x2,y2,
 //                                     release; prints the release time (ms since 1970) once it is posted
+//   mouse race <x0> <y0> <x1> <y1> <x2> <y2>
+//                                     a settle on x0,y0, then a move to x1,y1 and a press at once (prints "gap=<ms>"
+//                                     between them), 24 steps to x2,y2, release; then the release time
 //   mouse move <x> <y>                the pointer to x,y (a real move event), no button
 import CoreGraphics
 import Foundation
@@ -32,6 +36,30 @@ func post(_ type: CGEventType, _ p: CGPoint, clicks: Int64 = 1, dx: Int64 = 0, d
     e.setIntegerValueField(.mouseEventDeltaY, value: dy)
   }
   e.post(tap: .cghidEventTap)
+}
+
+/// Three small real moves onto p, then 300 ms: the app under the pointer has set its cursor before the press
+/// (unvibe-app, run 44668914881 read).
+func settle(_ p: CGPoint) {
+  for x in [p.x - 2, p.x + 2, p.x] {
+    let q = CGPoint(x: x, y: p.y)
+    CGWarpMouseCursorPosition(q)
+    post(.mouseMoved, q)
+    usleep(60_000)
+  }
+  usleep(300_000)
+}
+
+/// A held button moved from p1 to p2 in 24 steps of 20 ms, each with its delta.
+func steps(_ p1: CGPoint, _ p2: CGPoint) {
+  var last = p1
+  for i in 1...24 {
+    let t = Double(i) / 24
+    let p = CGPoint(x: (p1.x + (p2.x - p1.x) * t).rounded(), y: (p1.y + (p2.y - p1.y) * t).rounded())
+    post(.leftMouseDragged, p, dx: Int64(p.x - last.x), dy: Int64(p.y - last.y))
+    last = p
+    usleep(20_000)
+  }
 }
 
 let a = CommandLine.arguments
@@ -82,20 +110,26 @@ case "click" where a.count > 4:
 case "drag" where a.count > 5:
   let p1 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   let p2 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
-  CGWarpMouseCursorPosition(p1)
-  post(.mouseMoved, p1)
-  usleep(150_000)
+  settle(p1)
   post(.leftMouseDown, p1)
   usleep(80_000)
-  var last = p1
-  for i in 1...24 {
-    let t = Double(i) / 24
-    let p = CGPoint(x: (p1.x + (p2.x - p1.x) * t).rounded(), y: (p1.y + (p2.y - p1.y) * t).rounded())
-    post(.leftMouseDragged, p, dx: Int64(p.x - last.x), dy: Int64(p.y - last.y))
-    last = p
-    usleep(20_000)
-  }
+  steps(p1, p2)
   post(.leftMouseUp, p2)
+  print(Int64(Date().timeIntervalSince1970 * 1000))
+case "race" where a.count > 7:
+  let p0 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
+  let p1 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
+  let p2 = CGPoint(x: Double(a[6]) ?? 0, y: Double(a[7]) ?? 0)
+  settle(p0)
+  let t0 = DispatchTime.now().uptimeNanoseconds
+  CGWarpMouseCursorPosition(p1)
+  post(.mouseMoved, p1, dx: Int64(p1.x - p0.x), dy: Int64(p1.y - p0.y))
+  post(.leftMouseDown, p1)
+  let gap = Double(DispatchTime.now().uptimeNanoseconds - t0) / 1_000_000
+  usleep(80_000)
+  steps(p1, p2)
+  post(.leftMouseUp, p2)
+  print("gap=\((gap * 10).rounded() / 10)")
   print(Int64(Date().timeIntervalSince1970 * 1000))
 case "list":
   // CGWindowList's own order: front to back.

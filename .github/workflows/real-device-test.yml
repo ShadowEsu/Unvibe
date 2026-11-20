@@ -854,8 +854,9 @@ jobs:
           "VSCODE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       # d5=rows: the D5 #366 button rows (app/e2e/d5-button.mjs), no hosted-AI call. mouse.swift gives the Mac the real
-      # pointer and the window list. A clean Mac for the prompt row: Unvibe's Accessibility switch is reset first (the
-      # script turns it on again for its last launch, as the install step does). The raw net log stays in
+      # pointer and the window list. A clean Mac for the prompt row: Unvibe's Accessibility row is removed from TCC.db first,
+      # the same database the install step adds it to (tccutil said "No such bundle identifier" in run 44668914881 and
+      # removed nothing); the script adds it again for its last launch, as the install step does. The raw net log stays in
       # $RUNNER_TEMP/netlog-d5 (never uploaded); the script keeps only time, method, path and status.
       - name: Walk the D5 button rows (d5 rows)
         if: inputs.d5 == 'rows' && env.UNVIBE_EXE != '' && env.VSCODE != ''
@@ -873,9 +874,11 @@ jobs:
           if [ "$UNVIBE_OS" = mac ]; then
             swiftc -O -o "$RUNNER_TEMP/pw/mouse" app/e2e/mouse.swift
             export MOUSE="$RUNNER_TEMP/pw/mouse"
-            sudo tccutil reset Accessibility com.unvibe.app || true
             db="/Library/Application Support/com.apple.TCC/TCC.db"
-            echo "Unvibe's Accessibility rows after the reset: $(sudo sqlite3 "$db" "SELECT count(*) FROM access WHERE client='com.unvibe.app' AND service='kTCCServiceAccessibility';")"
+            sudo sqlite3 "$db" "DELETE FROM access WHERE client='com.unvibe.app' AND service='kTCCServiceAccessibility';"
+            left=$(sudo sqlite3 "$db" "SELECT count(*) FROM access WHERE client='com.unvibe.app' AND service='kTCCServiceAccessibility';")
+            echo "Unvibe's Accessibility rows after the removal: $left"
+            if [ "$left" != 0 ]; then echo "::error::Unvibe's Accessibility row is still in TCC.db"; exit 1; fi
           fi
           status=0
           (cd "$RUNNER_TEMP/pw" && node d5-button.mjs) || status=$?
