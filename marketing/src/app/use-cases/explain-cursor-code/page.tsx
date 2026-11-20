@@ -66,7 +66,7 @@ export default async function ExplainCursorCodePage() {
               in a panel beside Cursor, at the depth you pick.
             </p>
             <p className="uc-fold__cta">
-              <DownloadCta surface="use_cases" className="d-cta d-btn d-btn--lg">{D_NAV_CTA}</DownloadCta>
+              <DownloadCta surface="use_cases" className="d-cta">{D_NAV_CTA}</DownloadCta>
               <small>No account and no API key to start.</small>
             </p>
           </div>
@@ -160,7 +160,7 @@ export default async function ExplainCursorCodePage() {
           and press {SHORTCUTS.mac.anywhere} ({SHORTCUTS.windows.anywhere} on Windows).
         </p>
         <p className="uc-end">
-          <DownloadCta surface="use_cases" className="d-cta d-btn d-btn--lg">{D_NAV_CTA}</DownloadCta>
+          <DownloadCta surface="use_cases" className="d-cta">{D_NAV_CTA}</DownloadCta>
           <small>No account and no API key to start.</small>
         </p>
       </section>

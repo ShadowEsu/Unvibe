@@ -17,7 +17,7 @@ export function DownloadRow({ surface }: { surface: DownloadSurface }) {
   if (phone) {
     return (
       <div className="paper-join-row">
-        <Link href="/beta#email-link" className="d-cta d-btn">Email me the link</Link>
+        <Link href="/beta#email-link" className="d-cta">Email me the link</Link>
       </div>
     );
   }

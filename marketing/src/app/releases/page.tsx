@@ -4,7 +4,7 @@ import { DownloadRow } from "@/components/paper/DownloadLink";
 import { changelogEntries } from "@/data/milestones";
 import { fetchReleases } from "@/lib/releases";
 import { pageMetadata } from "@/lib/pageMeta";
-import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
+import { PhotoHead, PhotoPage } from "@/site/dia/PhotoPage";
 
 export const metadata: Metadata = pageMetadata({
   path: "/releases",
@@ -21,18 +21,18 @@ export default async function ReleasesPage() {
   const latest = releases[0];
 
   return (
-    <PhotoPage photo="changelog" labelledBy="releases-h">
+    <PhotoPage labelledBy="releases-h">
       <PhotoHead>
         <p className="dg__eyebrow">Changelog</p>
-        <h1 id="releases-h" data-d-hero-rise="h1">What shipped.</h1>
-        <p className="dg__lead" data-d-enter="" style={enterDelay(120)}>
+        <h1 id="releases-h">What shipped.</h1>
+        <p className="dg__lead">
           {latest
             ? `${latest.name.replace(/[—–]/g, ",")} is the newest build on GitHub.`
             : error
               ? "GitHub release data is temporarily unavailable."
               : "Product and company notes, newest first."}
         </p>
-        <div className="dg__actions" data-d-enter="" style={enterDelay(200)}>
+        <div className="dg__actions">
           <DownloadRow surface="releases" />
         </div>
       </PhotoHead>

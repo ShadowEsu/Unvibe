@@ -6,7 +6,6 @@ import { PRICING } from '@/lib/pricing';
 import { pricingCopy } from '@/lib/pricingCopy';
 import { AI_MAINTENANCE, AI_MAINTENANCE_NOTE } from '@/lib/aiMaintenance';
 import { DownloadCta } from '@/site/dia/DownloadCta';
-import { BtnDot } from '@/site/dia/effects';
 
 /** 'both': payments closed, so there is nothing to choose; each card states both prices in one line. */
 type Interval = 'monthly' | 'annual' | 'both';
@@ -29,9 +28,8 @@ export function trackPlanCta(plan: { id: string }): void {
 }
 
 /**
- * `paymentsOpen` comes from the server (lib/paymentsStatus); closed copy never promises checkout. Direction D (mock 10):
- * three white cards; hovering or focusing the Pro card fades Van Gogh's Irises in behind the page (the card is the
- * [data-d-bgswap-trigger]; app/pricing/page.tsx holds the painting layer and its credit).
+ * `paymentsOpen` comes from the server (lib/paymentsStatus); closed copy never promises checkout. Option A: three white
+ * cards with 1 px edges; the featured Pro card carries an ink edge, nothing behind the page changes.
  */
 export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   const trackedView = useRef(false);
@@ -49,7 +47,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
   return (
     <div className="pricing-plans">
       <div className="pricing-plans__intro">
-        <h1 id="pricing-title" className="d-serif">{copy.heading.lead}<em className="d-hl">{copy.heading.emphasis}</em>{copy.heading.tail}</h1>
+        <h1 id="pricing-title">{copy.heading.lead}{copy.heading.emphasis}{copy.heading.tail}</h1>
         <p>Free needs no card and no API key.</p>
       </div>
       {paymentsOpen ? (
@@ -74,7 +72,7 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
       <h2 className="sr-only">Plans</h2>
       <div className="marketing-plan-grid marketing-plan-grid--core">
         {copy.plans.map((plan) => (
-          <article key={plan.id} id={plan.id} className={`marketing-plan-card${plan.featured ? ' featured' : ''}`} {...(plan.id === 'pro' ? { 'data-d-bgswap-trigger': '' } : {})}>
+          <article key={plan.id} id={plan.id} className={`marketing-plan-card${plan.featured ? ' featured' : ''}`}>
             <span className="plan-badge">{plan.badge}</span>
             <h3>{plan.name}</h3>
             <p className="plan-kicker">{plan.eyebrow}</p>
@@ -91,13 +89,12 @@ export function PricingPlans({ paymentsOpen }: { paymentsOpen: boolean }) {
             <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
             {plan.after ? <p className="plan-after">{plan.after}</p> : null}
             {plan.href === '/beta' ? (
-              <DownloadCta surface="pricing" className={plan.primary ? 'pricing-button d-btn' : 'pricing-button pricing-button--quiet d-btn'} onClick={() => trackPlanCta(plan)}>
+              <DownloadCta surface="pricing" className={plan.primary ? 'pricing-button' : 'pricing-button pricing-button--quiet'} onClick={() => trackPlanCta(plan)}>
                 {plan.cta}
               </DownloadCta>
             ) : (
-              <a href={plan.href} className="pricing-button pricing-button--quiet d-btn" onClick={() => trackPlanCta(plan)}>
+              <a href={plan.href} className="pricing-button pricing-button--quiet" onClick={() => trackPlanCta(plan)}>
                 {plan.cta}
-                <BtnDot />
               </a>
             )}
           </article>

@@ -19,18 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-/**
- * Direction D pricing (plan mock 10; ANIMATIONS #31): one heading, then the tier cards. Hovering or focusing the Pro
- * card fades Van Gogh's Irises in full-bleed behind the page (public domain, credited while it shows) and the heading
- * turns white over a soft scrim; leaving restores the page. Visual only: no button changes what it does.
- */
+/** Pricing in Option A: one heading, then the tier cards, white on white with 1 px edges. */
 export default async function PricingPage() {
   const paymentsOpen = await fetchPaymentsOpen();
   return (
-    <div className="d d-page dp-page" data-d-bgswap-root="">
+    <div className="d d-page dp-page">
       <DiaMotion />
-      <div className="dp__bg" data-d-bgswap="" aria-hidden="true" />
-      <p className="dp__credit" data-d-bgswap="" aria-hidden="true">Irises, Vincent van Gogh, 1889 · public domain</p>
       <article className="dp" aria-labelledby="pricing-title">
         <PricingPlans paymentsOpen={paymentsOpen} />
       </article>

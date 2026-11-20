@@ -18,8 +18,7 @@ import { SUPPORT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/pageMeta";
 import { fetchPaymentsOpen } from "@/lib/paymentsStatus";
 import { PRICING } from "@/lib/pricing";
-import { BtnDot } from "@/site/dia/effects";
-import { PhotoHead, PhotoPage, enterDelay } from "@/site/dia/PhotoPage";
+import { PhotoHead, PhotoPage } from "@/site/dia/PhotoPage";
 
 export const metadata: Metadata = pageMetadata({
   path: "/investors",
@@ -75,19 +74,19 @@ export default async function InvestorsPage() {
   const latest = versions.slice(0, 5);
 
   return (
-    <PhotoPage photo="investors" wide labelledBy="inv-h">
+    <PhotoPage wide labelledBy="inv-h">
       <PhotoHead>
         <p className="dg__eyebrow">Unvibe for investors</p>
-        <h1 id="inv-h" data-d-hero-rise="h1">The ownership layer for <span className="dg-nowrap">AI-written</span> code.</h1>
-        <p className="dg__lead" data-d-enter="" style={enterDelay(120)}>
+        <h1 id="inv-h">The ownership layer for <span className="dg-nowrap">AI-written</span> code.</h1>
+        <p className="dg__lead">
           AI writes code faster than people can understand it. Unvibe sits beside the editor, explains what changed,
           checks that it stuck, and keeps the knowledge fresh as the code moves.
         </p>
-        <div className="dg__actions" data-d-enter="" style={enterDelay(200)}>
-          <a className="d-cta d-btn" href={MAIL}>Talk to us<BtnDot /></a>
-          <Link className="d-pill-link d-btn" href="/beta">Try Unvibe free<BtnDot /></Link>
+        <div className="dg__actions">
+          <a className="d-cta" href={MAIL}>Talk to us</a>
+          <Link className="d-pill-link" href="/beta">Try Unvibe free</Link>
         </div>
-        <dl className="dgi-stats" data-d-enter="" style={enterDelay(280)}>
+        <dl className="dgi-stats">
           <div><dt>{total}</dt><dd>{compensationTotalPhrase()}</dd></div>
           <div><dt>{programs}</dt><dd>startup programs we&apos;re in</dd></div>
           <div><dt>{versions.length}</dt><dd>versions in the changelog, latest {BETA_INSTALL_VERSION}</dd></div>
@@ -107,7 +106,7 @@ export default async function InvestorsPage() {
 
       <section className="dg__card" aria-labelledby="inv-shipped" data-d-enter="">
         <p className="dg__eyebrow">Commitments</p>
-        <h2 id="inv-shipped" data-d-ink="">What shipped, and what&apos;s next.</h2>
+        <h2 id="inv-shipped">What shipped, and what&apos;s next.</h2>
         <ol className="dgi-releases">
           {latest.map((m) => (
             <li key={m.figure}><span className="dgi-mono">{m.figure}</span><span>{m.title}</span><time>{m.date}</time></li>
@@ -127,7 +126,7 @@ export default async function InvestorsPage() {
 
       <section className="dg__card" aria-labelledby="inv-stands" data-d-enter="">
         <p className="dg__eyebrow">Where it stands</p>
-        <h2 id="inv-stands" data-d-ink="">The numbers so far.</h2>
+        <h2 id="inv-stands">The numbers so far.</h2>
         <ul className="dgi-facts">
           <li>Free download for Mac and Windows. No account, card or API key needed to start.</li>
           <li>Before anything is sent, Unvibe checks the selected code for keys and tokens on your computer, and a known key stops the request.</li>
@@ -144,13 +143,13 @@ export default async function InvestorsPage() {
 
       <section className="dg__card" id="backing" aria-labelledby="inv-programs" data-d-enter="">
         <p className="dg__eyebrow">Startup programs</p>
-        <h2 id="inv-programs" data-d-ink="">In {programs} startup programs.</h2>
+        <h2 id="inv-programs">In {programs} startup programs.</h2>
         <ProgramList firstUse />
       </section>
 
       <section className="dg__card" id="support" aria-labelledby="inv-runway" data-d-enter="">
         <p className="dg__eyebrow">Resource runway</p>
-        <h2 id="inv-runway" data-d-ink="">Where the {total} comes from.</h2>
+        <h2 id="inv-runway">Where the {total} comes from.</h2>
         <p>Every source by name. Program credits and plan value {credits} · cash {cash}.{outside > 0 ? ` The other ${outside} programs are listed with their terms, outside the total.` : ""} Credits are not cash. Not a round.</p>
         <div className="dgi-table" role="table" aria-label="Support by source">
           <div className="dgi-row dgi-row--head" role="row">
@@ -171,7 +170,7 @@ export default async function InvestorsPage() {
 
       <section className="dg__card" aria-labelledby="inv-listed" data-d-enter="">
         <p className="dg__eyebrow">Self-submitted directories</p>
-        <h2 id="inv-listed" data-d-ink="">Listed on</h2>
+        <h2 id="inv-listed">Listed on</h2>
         <ul className="lo-grid">
           {listingLinks.map((listing) => (
             <li key={listing.href} className="lo-card">
@@ -185,7 +184,7 @@ export default async function InvestorsPage() {
 
       <section className="dg__card" aria-labelledby="inv-guides" data-d-enter="">
         <p className="dg__eyebrow">Guides</p>
-        <h2 id="inv-guides" data-d-ink="">Let&apos;s talk.</h2>
+        <h2 id="inv-guides">Let&apos;s talk.</h2>
         <ul className="dgi-guides">
           {guides.map(([label, href]) => (
             <li key={href}><Link href={href}>{label} <span aria-hidden="true">→</span></Link></li>
