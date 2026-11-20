@@ -503,10 +503,14 @@ jobs:
         if: inputs.rc0155 != '' && env.UNVIBE_EXE != '' && matrix.label == 'windows'
         shell: pwsh
         run: |
+          # electron-builder's NSIS setup holds the app as $PLUGINSDIR\app-64.7z; app.asar is inside that (run 44653582285
+          # read the setup's top level and found no app.asar).
           $dir = "$env:RUNNER_TEMP\asar-setup"
           New-Item -ItemType Directory -Force $dir | Out-Null
-          & 'C:\Program Files\7-Zip\7z.exe' e -y "-o$dir" "$env:RUNNER_TEMP\Unvibe-setup.exe" 'resources\app.asar' | Out-Null
-          if (-not (Test-Path "$dir\app.asar")) { Write-Error 'no resources\app.asar inside the setup'; exit 1 }
+          & 'C:\Program Files\7-Zip\7z.exe' e -y "-o$dir" "$env:RUNNER_TEMP\Unvibe-setup.exe" '$PLUGINSDIR\app-64.7z' | Out-Null
+          if (-not (Test-Path "$dir\app-64.7z")) { Write-Error 'no $PLUGINSDIR\app-64.7z inside the setup'; exit 1 }
+          & 'C:\Program Files\7-Zip\7z.exe' e -y "-o$dir" "$dir\app-64.7z" 'resources\app.asar' | Out-Null
+          if (-not (Test-Path "$dir\app.asar")) { Write-Error 'no resources\app.asar inside the setup''s app-64.7z'; exit 1 }
           $inner = (Get-FileHash "$dir\app.asar" -Algorithm SHA256).Hash.ToLower()
           $installed = (Get-FileHash (Join-Path (Split-Path $env:UNVIBE_EXE) 'resources\app.asar') -Algorithm SHA256).Hash.ToLower()
           "app.asar inside the setup sha256 $inner ($((Get-Item "$dir\app.asar").Length) bytes)"
