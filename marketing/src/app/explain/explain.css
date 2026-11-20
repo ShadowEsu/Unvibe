@@ -90,10 +90,22 @@
   text-decoration-thickness: 2px;
 }
 
+/* One focus ring on these pages: 2 px ink, 2 px out. Listed with the shared sheets' button selectors so it wins over
+   their 3 px violet rings (sections.css), which tie on specificity otherwise. The dark half of the Try box keeps a
+   white ring below, and the install command box keeps its own inset ring (vibe.css .ninst__cmd). */
 .explain-page :focus-visible,
-.explain-page a:focus-visible {
+.explain-page a:focus-visible,
+.explain-page .try__levels button:focus-visible,
+.explain-page .try__retry:focus-visible,
+.explain-page .try__phone:focus-visible,
+.explain-page .try .paper-join:focus-visible,
+.explain-page .get-unvibe .paper-join:focus-visible {
   outline: 2px solid var(--v-ink);
   outline-offset: 2px;
+}
+
+.explain-page .ninst__cmd:focus-visible {
+  outline-offset: -2px;
 }
 
 .explain-card h2 {
@@ -261,6 +273,12 @@
   color: #fff;
 }
 
+/* The "Pro" badge is an ink pill; on the ink "on" fill it turns white so it doesn't disappear. */
+.explain-page .try__levels button[aria-pressed="true"] small {
+  background: #fff;
+  color: var(--v-ink);
+}
+
 .explain-page .try__go {
   background: #fff;
   color: var(--v-ink);
@@ -270,6 +288,8 @@
   background: #e6e6e6;
 }
 
+/* Everything on the Try box's dark half (#151514) gets a white ring: an ink one is 1.03:1 there. */
+.explain-page .try__editor :focus-visible,
 .explain-page .try__editor textarea:focus-visible,
 .explain-page .try__room input:focus-visible {
   outline: 2px solid #fff;
@@ -284,7 +304,8 @@
 }
 
 .explain-page .get-unvibe .paper-join--mac,
-.explain-page .try .paper-join--mac {
+.explain-page .try .paper-join--mac,
+.explain-page .try__phone {
   background: var(--v-ink);
   color: #fff;
 }

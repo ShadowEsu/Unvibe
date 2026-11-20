@@ -173,15 +173,11 @@ ol.explain-notes {
   font-size: 0.95rem;
 }
 
-/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays in Option A's 680 px reading column, while the worked
-   example's code block and the "Doing it with Unvibe" steps sit at about 860 px, wider than the prose but not the
-   whole card (Design SHOULD on #269). The list keeps its marker inside the same 860 px. Under 1024 nothing changes. */
+/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays in the 680 px reading column (explain.css), while the
+   worked example's code block and the "Doing it with Unvibe" steps sit at about 860 px, wider than the prose but not
+   the whole card (Design SHOULD on #269). The list keeps its marker inside the same 860 px. Under 1024 nothing
+   changes. */
 @media (min-width: 1024px) {
-  .explain-page--uc .explain-card p,
-  .explain-page--uc .explain-card li,
-  .explain-page--uc .explain-card dd {
-    max-width: 680px;
-  }
   /* The code block is 860 px, or as wide as its longest line when that is longer, never wider than the card: the
      Cursor sample's `controller.signal` line was cut at a hard 860 (Design MUST on #269). */
   .explain-page--uc .use-sample {
