@@ -32,7 +32,7 @@ export interface ExplainPage {
   /**
    * The sample is output, an error or a file a tool generates (lsof output, a traceback, package-lock.json, compiled
    * assembly), not code an AI tool writes for you. The download card then keeps its plain wording instead of
-   * "When your AI tool writes {subject}, select it…" (ledger 636).
+   * "When your AI tool writes {subject}, select the code…" (ledger 636).
    */
   sampleIsOutput?: true;
   /**
@@ -66,7 +66,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
-    published: "2026-10-26",
+    published: "2026-11-19",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python your AI wrote, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English, so you can tell whether it does what you asked.",
     description:
@@ -3265,7 +3265,7 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
-    published: "2026-11-06",
+    published: "2026-11-19",
     heading: "Supabase RLS policies",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
@@ -3325,7 +3325,7 @@ create policy "update own todos" on todos
     id: "cors-error",
     fileName: "cors-error.txt",
     sampleIsOutput: true,
-    published: "2026-11-06",
+    published: "2026-11-19",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json", "http-headers"],
@@ -4036,7 +4036,7 @@ $ kill 1643167`,
     sampleIsOutput: true,
     heading: "segmentation faults",
     title: "Segmentation fault (core dumped) explained, in C",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["c", "cpp", "assembly", "python-traceback"],
     lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
     description:
@@ -4090,7 +4090,7 @@ best = 0x0`,
     sampleIsOutput: true,
     heading: "HTTP headers",
     title: "HTTP headers explained with an example response",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["curl", "cors-error", "json"],
     lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
     description:
@@ -4139,7 +4139,7 @@ Vary: Origin
     fileName: "notes-app.zone",
     heading: "DNS records",
     title: "DNS records explained: A, CNAME, MX, TXT (SPF)",
-    published: "2026-11-16",
+    published: "2026-11-19",
     related: ["http-headers", "curl", "ssh-config"],
     lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
     description:
