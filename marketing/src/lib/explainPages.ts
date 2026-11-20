@@ -24,8 +24,9 @@ export interface ExplainPage {
   related?: readonly string[];
   /**
    * What follows "Explain" in the H1, the <title>, the /explain index link and the link-preview card, for pages
-   * about output or errors rather than code: a lowercase noun as people say it, no article ("lsof output",
-   * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
+   * whose sample isn't code in a language: output, errors, config files and commands. A plural noun as people say it,
+   * no article ("lsof output", "CORS errors", ".env files", "tar commands"). Without it the page reads
+   * "Explain {name} code". The breadcrumb and Related chips keep the name.
    */
   heading?: string;
   /**
@@ -121,6 +122,7 @@ def total_by_city(path):
     id: "pyproject-toml",
     fileName: "pyproject.toml",
     published: "2026-11-05",
+    heading: "pyproject.toml files",
     related: ["python", "requirements-txt", "python-traceback", "package-lock"],
     lead: "Paste a pyproject.toml and Vibe explains what each table does: how the package is built, what it depends on, which commands it installs and where tools like pytest read their settings.",
     description:
@@ -179,6 +181,7 @@ testpaths = ["tests"]`,
     id: "requirements-txt",
     fileName: "requirements.txt",
     published: "2026-11-05",
+    heading: "requirements.txt files",
     related: ["python", "pyproject-toml", "python-traceback", "package-lock"],
     lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
     description:
@@ -399,6 +402,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "tsconfig",
     fileName: "tsconfig.json",
     published: "2026-11-05",
+    heading: "tsconfig.json files",
     related: ["typescript", "javascript", "eslint-config", "json"],
     lead: "Paste a tsconfig.json and Vibe explains what each compiler option changes, which files TypeScript checks and why `strict` suddenly finds errors.",
     description:
@@ -451,6 +455,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "npm-scripts",
     fileName: "shop/package.json",
     published: "2026-11-05",
+    heading: "npm scripts",
     related: ["package-lock", "json", "npm-error"],
     lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
     description:
@@ -505,6 +510,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "eslint-config",
     fileName: "eslint.config.js",
     published: "2026-11-05",
+    heading: "ESLint config files",
     related: ["javascript", "typescript", "tsconfig", "npm-scripts"],
     lead: "Paste an eslint.config.js and Vibe explains which files each block covers, which rules it turns on and which block wins when two of them disagree.",
     description:
@@ -839,8 +845,9 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
     id: "curl",
     fileName: "check-orders.sh",
     published: "2026-11-05",
+    heading: "curl commands",
     title: "curl command explained, flag by flag",
-    related: ["cors-error", "json", "bash", "graphql"],
+    related: ["http-headers", "cors-error", "bash"],
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -893,6 +900,7 @@ curl -si -X DELETE "$API/api/orders/42"`,
     id: "bashrc",
     fileName: ".bashrc",
     published: "2026-11-05",
+    heading: ".bashrc files",
     related: ["zshrc", "bash", "fish", "env"],
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
     description:
@@ -950,6 +958,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
     id: "chmod",
     fileName: "set-permissions.sh",
     published: "2026-11-05",
+    heading: "chmod commands",
     title: "chmod 755, 644 and 777 explained",
     related: ["bash", "find", "ssh-config", "rsync"],
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
@@ -1000,6 +1009,7 @@ ls -l bin config`,
     id: "find",
     fileName: "clean-project.sh",
     published: "2026-11-05",
+    heading: "Unix find commands",
     related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
@@ -1055,7 +1065,7 @@ find . -type d -empty -delete`,
     id: "c",
     fileName: "players.c",
     published: "2026-10-26",
-    related: ["cpp", "make", "assembly"],
+    related: ["cpp", "make", "assembly", "segmentation-fault"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -1823,6 +1833,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
     id: "regex",
     fileName: "access_log.py",
     published: "2026-11-04",
+    heading: "regular expressions",
     title: "Regex pattern explained, piece by piece",
     related: ["grep", "sed", "awk", "python"],
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
@@ -1877,6 +1888,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
     id: "cron",
     fileName: "crontab",
     published: "2026-11-05",
+    heading: "crontab lines",
     related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
@@ -1988,6 +2000,7 @@ List<Track> parseTracks(String body) {
     id: "zshrc",
     fileName: ".zshrc",
     published: "2026-11-05",
+    heading: ".zshrc files",
     related: ["bashrc", "fish", "bash", "env"],
     lead: "Paste a .zshrc and Vibe explains what each line sets up in a new terminal: history options, `path`, completion, aliases, functions and what the `%` codes in `PROMPT` show.",
     description:
@@ -2159,6 +2172,7 @@ jobs:
     id: "ini",
     fileName: "settings.ini",
     published: "2026-11-05",
+    heading: "INI files",
     related: ["env", "yaml", "json", "ssh-config"],
     lead: "Paste an .ini file and Vibe explains what each section and setting is for, which defaults every section shares and how a value like `%(log_dir)s` gets filled in.",
     description:
@@ -2273,6 +2287,7 @@ subject = Your invoice from Acme`,
     id: "csv",
     fileName: "orders.csv",
     published: "2026-11-05",
+    heading: "CSV files",
     related: ["sql", "json", "awk", "python"],
     lead: "Paste a CSV file and Vibe explains what each column holds and how the quoting works: why some values sit in quotes, what a doubled quote means and why one row can run over two lines.",
     description:
@@ -2317,6 +2332,7 @@ back door"
     id: "env",
     fileName: ".env",
     published: "2026-11-05",
+    heading: ".env files",
     title: "What is a .env file? Explained with a sample",
     related: ["ini", "yaml", "bashrc", "prisma-schema"],
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
@@ -2489,6 +2505,7 @@ end`,
     id: "make",
     fileName: "Makefile",
     published: "2026-11-05",
+    heading: "Makefiles",
     related: ["c", "cpp", "bash", "npm-scripts"],
     lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",
     description:
@@ -2552,6 +2569,7 @@ clean:
     id: "gitignore",
     fileName: ".gitignore",
     published: "2026-11-05",
+    heading: ".gitignore files",
     related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
@@ -2608,6 +2626,7 @@ uploads/*
     id: "ssh-config",
     fileName: "config",
     published: "2026-11-05",
+    heading: "SSH config files",
     related: ["rsync", "bash", "chmod", "ini"],
     lead: "Paste an ~/.ssh/config and Vibe explains what each `Host` block sets, which key goes to which server and what ssh actually uses when several blocks match.",
     description:
@@ -2728,6 +2747,7 @@ print "$errors server errors\\n";`,
     id: "sed",
     fileName: "tidy.sed",
     published: "2026-11-05",
+    heading: "sed commands",
     related: ["awk", "grep", "regex", "xargs"],
     lead: "Paste a sed command or script and Vibe explains which lines each address picks, what a `s///` swaps in and what `\\1` and `\\2` hold.",
     description:
@@ -2785,6 +2805,7 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
     id: "grep",
     fileName: "find-problems.sh",
     published: "2026-11-05",
+    heading: "grep commands",
     related: ["regex", "sed", "awk", "find"],
     lead: "Paste grep commands and Vibe explains what each one finds: what the flags change, what the pattern matches and what the command prints back.",
     description:
@@ -3018,6 +3039,7 @@ KeyError: 'qty'`,
     fileName: "package-lock.json",
     sampleIsOutput: true,
     published: "2026-11-06",
+    heading: "package-lock.json files",
     title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
@@ -3183,6 +3205,7 @@ model Post {
     id: "sql-joins",
     fileName: "joins.sql",
     published: "2026-11-06",
+    heading: "SQL joins",
     title: "SQL joins explained with examples",
     related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
@@ -3243,6 +3266,7 @@ GROUP BY c.id;`,
     id: "supabase-rls",
     fileName: "todos.sql",
     published: "2026-11-06",
+    heading: "Supabase RLS policies",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "A policy can look finished and still show the wrong rows. Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
@@ -3304,7 +3328,7 @@ create policy "update own todos" on todos
     published: "2026-11-06",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
-    related: ["javascript", "curl", "json"],
+    related: ["javascript", "curl", "json", "http-headers"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and why the fix goes on the server, so you can check a suggested fix before you accept it.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end got from its own API, with the API's code.",
@@ -3414,6 +3438,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
     id: "tar",
     fileName: "backup-site.sh",
     published: "2026-11-06",
+    heading: "tar commands",
     title: "tar command explained: what each letter does",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
@@ -3464,6 +3489,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
     id: "rsync",
     fileName: "backup.sh",
     published: "2026-11-06",
+    heading: "rsync commands",
     title: "rsync command explained: flags and trailing slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
@@ -3516,6 +3542,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
     fileName: "git-rebase-todo",
     sampleIsOutput: true,
     published: "2026-11-06",
+    heading: "git rebase -i todo lists",
     title: "git rebase -i explained: the interactive todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
@@ -3570,6 +3597,7 @@ drop 803b36d # Add gitignore
     id: "xargs",
     fileName: "shrink-logs.sh",
     published: "2026-11-06",
+    heading: "xargs commands",
     title: "xargs explained: how it works, with find",
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
@@ -3668,6 +3696,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
     id: "systemd",
     fileName: "notes-api.service",
     published: "2026-11-08",
+    heading: "systemd service files",
     title: "systemd service file explained, section by section",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
@@ -4001,6 +4030,161 @@ $ kill 1643167`,
     watchOut:
       "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
   },
+  {
+    id: "segmentation-fault",
+    fileName: "scores-crash.txt",
+    sampleIsOutput: true,
+    heading: "segmentation faults",
+    title: "Segmentation fault (core dumped) explained, in C",
+    published: "2026-11-16",
+    related: ["c", "cpp", "assembly", "python-traceback"],
+    lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
+    description:
+      "Paste a segmentation fault and get it explained in plain English, free online. The sample is a C program that crashes on a NULL pointer, with GDB's backtrace.",
+    sampleSummary: "A C program that prints the best score from a list of players. It works for 3 players and crashes for 0, and GDB shows the line and the NULL pointer behind the crash.",
+    sample: `$ clang -g -O0 -o scores scores.c
+$ ./scores 3
+best: player3 with 74
+$ bash -c './scores 0; echo "exit code: $?"'
+bash: line 1: 1755872 Segmentation fault         (core dumped) ./scores 0
+exit code: 139
+$ gdb -q -batch -ex run -ex bt -ex "print best" -ex "info locals" --args ./scores 0
+Program received signal SIGSEGV, Segmentation fault.
+0x00005555555552b8 in main (argc=2, argv=0x7fffffffe1a8) at scores.c:29
+29	    printf("best: %s with %d\\n", best->name, best->score);
+#0  0x00005555555552b8 in main (argc=2, argv=0x7fffffffe1a8) at scores.c:29
+$1 = (struct player *) 0x0
+count = 0
+players = 0x555555559010
+best = 0x0`,
+    shows: [
+      {
+        concept: "Segmentation fault and exit code 139",
+        text: "A segmentation fault means the program read or wrote memory it isn't allowed to touch, and the system stopped it with signal 11, SIGSEGV. The shell printed `Segmentation fault` and the exit code was 139, which is 128 plus the signal number 11. The program printed nothing of its own before it stopped.",
+      },
+      {
+        concept: "the backtrace",
+        text: "Built with `-g`, the program carries line numbers, so GDB could say where it stopped: `main` at scores.c line 29, the `printf` line. `bt` lists the calls that led there, newest first. Here there is only frame `#0`, because the crash is in `main` itself.",
+      },
+      {
+        concept: "the NULL pointer",
+        text: "`print best` showed `0x0`: `best` is NULL, so `best->score` reads from address 0x10, 16 bytes past NULL, and `best->name` would hand `printf` address 0. `info locals` shows why: `count = 0`. In scores.c, which isn't in the sample, line 28 sets `best = find_best(players, count)`, and `find_best` returns NULL when `count` is 0, because it never goes into its loop. `main` used it without checking.",
+      },
+      {
+        concept: "-O0, -O2 and AddressSanitizer",
+        text: "Built with `-O2`, the same input crashed the same way, with exit code 139. Built with `-fsanitize=address`, it printed `SEGV on unknown address 0x000000000010`, `The signal is caused by a READ memory access` and `Hint: address points to the zero page`, with the place as scores.c:29:52, the `best->score` part of the line.",
+      },
+    ],
+    notes: [
+      "Run with clang 22.1.8 and GDB 17.2 on Linux x86-64. The sample is the commands and their output from one run, with the build folder's path and 3 of GDB's 11 lines left out (2 thread-library messages and a blank line). The `bash: line 1:` line, with the process ID, is how `bash -c` reported the crash; the sample runs it that way so `echo` can print the exit code.",
+      "What SIGSEGV means comes from the signal(7) manual, the 128 plus signal number exit code from the bash manual, and the order `bt` lists frames in from the GDB manual.",
+      "Address 0x10 is 16 bytes past NULL: in `struct player`, `name` takes the first 16 bytes, so `score` starts at byte 16.",
+      "Adding `if (best == NULL)` before the `printf` fixed it: with 0 players the program printed `no players` and exited with code 0, and with 3 it still printed `best: player3 with 74`.",
+    ],
+    watchOut:
+      "The line that crashes isn't always the line with the bug. Line 29 only used the pointer; the NULL came from `find_best`, which returns NULL when there are no players. The fix that worked here is a NULL check before the `printf` uses `best`. GDB's `print` on each pointer in the crashing line shows which one is bad: `print best` gave `0x0`.",
+  },
+  {
+    id: "http-headers",
+    fileName: "response.txt",
+    sampleIsOutput: true,
+    heading: "HTTP headers",
+    title: "HTTP headers explained with an example response",
+    published: "2026-11-16",
+    related: ["curl", "cors-error", "json"],
+    lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
+    description:
+      "Paste HTTP response headers and get each one explained in plain English, free online. The sample is an API response with caching, an ETag and a cookie.",
+    sampleSummary: "`curl -i` against a small test API: the status line, 9 headers, a blank line and a JSON body.",
+    sample: `$ curl -i http://127.0.0.1:8050/notes/42
+HTTP/1.1 200 OK
+Server: BaseHTTP/0.6 Python/3.14.7
+Date: Sat, 07 Nov 2026 09:47:53 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 46
+Cache-Control: private, max-age=60
+ETag: "0e1a4ca84681cfe8"
+Set-Cookie: session=abc123; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600
+Access-Control-Allow-Origin: http://localhost:5173
+Vary: Origin
+
+{"id": 42, "title": "Buy milk", "done": false}`,
+    shows: [
+      {
+        concept: "status line and body headers",
+        text: "`HTTP/1.1 200 OK` is the protocol and the status: 200 means it worked. `Content-Type` says the body is JSON in UTF-8, and `Content-Length: 46` is the body's size in bytes, which matches the 46-byte JSON. A blank line ends the headers. The test server's code never set `Server` or `Date`: Python's http.server added both.",
+      },
+      {
+        concept: "Cache-Control and ETag",
+        text: "`private, max-age=60` lets the browser reuse this response for 60 seconds and tells shared caches not to keep it. `ETag` is a fingerprint of this version. Sent back as `If-None-Match: \"0e1a4ca84681cfe8\"`, it got `HTTP/1.1 304 Not Modified` with an empty body: the copy the client already has is still current.",
+      },
+      {
+        concept: "Set-Cookie",
+        text: "`Set-Cookie` asks the client to store `session=abc123` for every path (`Path=/`) for 3600 seconds (`Max-Age`). `HttpOnly` hides it from the page's JavaScript, `Secure` limits it to HTTPS, and `SameSite=Lax` keeps it off most requests started by other sites. curl stored it in its cookie file with an `#HttpOnly_` prefix and the Secure column set to TRUE, and sent it back as `Cookie: session=abc123`, even though this test ran over plain HTTP to 127.0.0.1. Check Secure cookies on the real HTTPS site.",
+      },
+      {
+        concept: "Access-Control-Allow-Origin and Vary",
+        text: "`Access-Control-Allow-Origin: http://localhost:5173` lets a page from that one origin read this response in the browser. A page from any other origin can still send the request, and it still reaches the server, but the browser blocks that page from reading the answer. `Vary: Origin` tells caches the answer depends on the `Origin` request header, so they don't hand one site's version to another.",
+      },
+    ],
+    notes: [
+      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. The run used `curl -si` with the carriage returns at the ends of the header lines removed; the sample shows the command as `curl -i`. What `private`, `max-age`, `ETag`, `HttpOnly`, `Secure`, `SameSite`, `Vary` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run. curl isn't a browser, so this shows what the server sent, not what a browser does with it.",
+      "`/notes` answered `301 Moved Permanently` with `Location: /notes/42`. curl stopped there without `-L`; with `-L` it followed 1 redirect and got 200.",
+    ],
+    watchOut:
+      "An error status doesn't make curl fail. For a missing page the server answered `HTTP/1.1 404 Not Found` and curl exited with code 0, so a script that checks only the exit code sees success. With `-f`, curl exited with code 22 on the 404.",
+  },
+  {
+    id: "dns-records",
+    fileName: "notes-app.zone",
+    heading: "DNS records",
+    title: "DNS records explained: A, CNAME, MX, TXT (SPF)",
+    published: "2026-11-16",
+    related: ["http-headers", "curl", "ssh-config"],
+    lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
+    description:
+      "Paste DNS records and get each one explained in plain English, free online. The sample is a zone file with A, AAAA, CNAME, MX, TXT and CAA records.",
+    sampleSummary: "A zone file for a test domain, notes-app.example: the web app's addresses, 2 CNAMEs, 2 mail servers, SPF and DMARC records and a CAA record.",
+    sample: `; notes-app.example: DNS records for a web app and its email
+$TTL 3600
+@       IN  SOA   ns1.notes-app.example. admin.notes-app.example. (
+                  2026110701 7200 900 1209600 300 )
+@       IN  NS    ns1.notes-app.example.
+ns1     IN  A     203.0.113.53
+@       IN  A     203.0.113.10
+@       IN  AAAA  2001:db8::10
+www     IN  CNAME notes-app.example.
+api     IN  CNAME app-7f3k.hosting.example.
+@       IN  MX    10 mx1.mail.example.
+@       IN  MX    20 mx2.mail.example.
+@       IN  TXT   "v=spf1 include:_spf.mail.example ~all"
+_dmarc  IN  TXT   "v=DMARC1; p=quarantine; rua=mailto:dmarc@notes-app.example"
+@       IN  CAA   0 issue "letsencrypt.org"`,
+    shows: [
+      {
+        concept: "A, AAAA and TTL",
+        text: "`@` is the domain itself. Its `A` record is the IPv4 address, 203.0.113.10, and `AAAA` the IPv6 one. `$TTL 3600` sets how many seconds a resolver may keep an answer before asking again, and dig showed 3600 on each A, AAAA, CNAME, MX, TXT and CAA answer from this file.",
+      },
+      {
+        concept: "CNAME",
+        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query. This server only holds zones and has recursion off, so it followed the CNAME only inside notes-app.example, not into hosting.example, even though it serves that zone too; a resolver, like the one your computer normally asks, follows the CNAME for you (RFC 1034).",
+      },
+      {
+        concept: "MX",
+        text: "`MX` records say which servers take email for the domain. The number is the preference: lower comes first, so mail goes to mx1, with 10, before mx2, with 20. dig listed the 20 record first, the reverse of the file's order, but the number decides, not the order. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
+      },
+      {
+        concept: "TXT: SPF and DMARC",
+        text: "TXT records hold text that other systems read. `v=spf1 include:_spf.mail.example ~all` is SPF: it lists the servers allowed to send the domain's email, and `~all` marks everything else as suspicious. The record at `_dmarc` is DMARC: `p=quarantine` asks receivers to treat failing mail as spam, and `rua` is where reports go.",
+      },
+    ],
+    notes: [
+      "Run with BIND 9.20.26: `named-checkzone` loaded the file (`OK`), and named, started as a normal user on 127.0.0.1, served it to `dig` from the same release. The zone's names end in .example and the addresses are documentation ranges, all reserved for examples, so no real domain or public DNS server was involved.",
+      "A name that doesn't exist got `status: NXDOMAIN` with 0 answers, plus the zone's SOA record. A CNAME can't share its name with other records: a `www` TXT record next to the CNAME, or a CNAME on the bare domain, stopped the zone loading with `CNAME and other data`. `CAA 0 issue \"letsencrypt.org\"` says only Let's Encrypt may issue certificates for the domain. What TTLs, MX preference numbers, SPF, DMARC and CAA records mean comes from their standards, not from this run.",
+    ],
+    watchOut:
+      "The dot at the end of a name matters. With `mx1.mail.example` written without it, named-checkzone still said `OK`, with only a warning that `mx1.mail.example.notes-app.example` has no address records, but the server answered `10 mx1.mail.example.notes-app.example.`: a name without the final dot gets the zone's own domain added. In a DNS provider's web form the rules can differ, so compare what dig returns with what you meant.",
+  },
 ];
 
 /** The languages.ts entry behind a page. */
@@ -4017,11 +4201,16 @@ export function explainHeading(page: ExplainPage): string {
 
 /**
  * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
- * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283);
+ * a hyphen inside a file name or flag ("package-lock.json", "-i") gets a word joiner after it, and the space before a
+ * flag becomes no-break, so neither "package- / lock.json" nor "rebase / -i" happens at 390 px (Design on heading 2).
  * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
  */
 export function explainHeadingText(page: ExplainPage): string {
-  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
+  return explainHeading(page)
+    .replace(/^(git|ps) /, "$1\u00a0")
+    .replace(/ (-[a-z])\b/g, "\u00a0$1")
+    .replace(/-(\S)/g, "-\u2060$1");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
