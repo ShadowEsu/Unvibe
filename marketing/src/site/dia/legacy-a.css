@@ -57,6 +57,11 @@
 }
 
 /* ── Shared pieces ── */
+/* Vibe keeps its lilac (the one colour A allows, Vibe only); --v-lilac above is the old fill token */
+.vibe__body { fill: #b8a6ff; }
+/* the LinkedIn and Instagram marks in ink, one colour (the glyph cut-outs stay white) */
+.paper-follow__mark svg { --logo-linkedin: var(--d-ink); }
+.paper-follow__mark svg rect { fill: var(--d-ink); }
 .paper-text-link { color: var(--d-ink); text-decoration: underline 1px; text-decoration-color: currentColor; text-underline-offset: 3px; }
 .paper-meta, .pstats__eyebrow, .about-page__eyebrow, .fos__tag, .reward-panel .pixel-label, .reward-code label { font: 500 var(--d-small)/1.4 var(--d-sans) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--d-ink-2) !important; }
 .paper-section h2 { font-family: var(--font-display) !important; font-weight: var(--display-weight) !important; font-size: var(--d-h2-size) !important; line-height: 1.1 !important; letter-spacing: var(--display-track) !important; }
