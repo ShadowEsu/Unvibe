@@ -212,6 +212,8 @@ html :is(.redeem-btn, .activate-btn) { border-radius: 999px; font-weight: 500; }
 
 /* ── Admin pages (/waitlist, /console): white ground ── */
 .admin-shell { background: #fff !important; color: var(--d-ink) !important; }
+.admin-shell .admin-login { border: 1px solid var(--d-line); border-radius: calc(var(--d-radius) * var(--squircle-k, 1)); box-shadow: none; }
+.admin-shell .admin-login h1 { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-track); }
 
 /* ── Floating layers on every page ── */
 .fb-tab.lg-button { border: 1px solid var(--d-line); background: #fff; box-shadow: none; color: var(--d-ink); font: 500 14px/1 var(--d-sans); }
