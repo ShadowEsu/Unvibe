@@ -7,7 +7,8 @@
 //
 // Events (app/src/core/bubble.ts parseHelperLine is the contract):
 //   {"e":"ready","v":1}
-//   {"e":"select","x":..,"y":..,"app":"<bundle id>","g":"drag|double|triple"}   a mouse selection ended over text
+//   {"e":"select","x":..,"y":..,"px":..,"py":..,"app":"<bundle id>","g":"drag|double|triple"}
+//        a mouse selection ended over text: x/y its end, px/py where the pointer rests
 //   {"e":"down"|"right"|"scroll","x":..,"y":..}                                  so the button can leave
 //   {"e":"app","app":"<bundle id>"}                                              another app came to the front
 // Points are global, in points, with the origin at the top-left of the primary screen (Electron's screen space).
@@ -70,7 +71,7 @@ let monitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { event in
         // A drag that went up, or left along one line, ends where it started: the selection's end is there.
         let upward = at.y < start.y - 4 || (abs(at.y - start.y) <= 4 && at.x < start.x)
         let end = g == "drag" && upward ? start : at
-        emit(["e": "select", "x": round1(end.x), "y": round1(end.y), "app": frontmostBundle(), "g": g])
+        emit(["e": "select", "x": round1(end.x), "y": round1(end.y), "px": round1(at.x), "py": round1(at.y), "app": frontmostBundle(), "g": g])
     case .rightMouseDown:
         emit(["e": "right", "x": round1(at.x), "y": round1(at.y)])
     case .scrollWheel:
