@@ -153,6 +153,16 @@ export function readsOnStart(start: { agreed: boolean; sample?: boolean }): bool
 }
 
 /**
+ * startReview's first step: the Island's Loading at once (when something will be read, readsOnStart), then the usage
+ * round trip. The pulse must not wait for it: past its 60 s cache that is a billing call of up to 20 s (lead review,
+ * #374), and ⌃U would show nothing until it ends.
+ */
+export function pulseThenUsage<U>(start: { agreed: boolean; sample?: boolean }, pulse: () => void, usage: () => Promise<U>): Promise<U> {
+  if (readsOnStart(start)) pulse();
+  return usage();
+}
+
+/**
  * Sets $name to the foreground process name. ($pid is PowerShell's read-only automatic
  * variable, so the window's process id goes in $procId.)
  */

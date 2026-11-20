@@ -54,7 +54,7 @@ import {
   startWindowDrag,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, readsOnStart, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, pulseThenUsage, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
@@ -600,12 +600,14 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
-  // At once, before the usage round trip, so ⌃U is answered instantly; but only when something will be read. Past the
-  // limit check below `remaining` is above 0, where the provider doesn't depend on it, so this is the same answer as
-  // `agreed` there.
-  if (readsOnStart({ agreed: codeConsented(providerInUse()), sample: options.sample })) pulseBar({ phase: 'loading', label: 'Loading' });
-  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
-  const usage = await cachedAppUsage();
+  // The Island at once, before the usage round trip, but only when something will be read. Past the limit check below
+  // `remaining` is above 0, where the provider doesn't depend on it, so this is the same answer as `agreed` there.
+  // A recent usage snapshot keeps ⌘U instant; the server still enforces the real limit.
+  const usage = await pulseThenUsage(
+    { agreed: codeConsented(providerInUse()), sample: options.sample },
+    () => pulseBar({ phase: 'loading', label: 'Loading' }),
+    cachedAppUsage,
+  );
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);

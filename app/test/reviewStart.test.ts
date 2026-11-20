@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { reviewCapture } from '../src/core/consent';
-import { readsOnStart, restoresOpenPanel } from '../src/main/selection';
+import { pulseThenUsage, restoresOpenPanel } from '../src/main/selection';
+import { settlesOnClose } from '../src/main/notify';
 
 // startReview's first decisions in order: what the capture returns, then whether the open panel is only brought back.
 async function start(agreed: boolean, panel: { open: boolean; hasCode: boolean }, read: () => Promise<{ code: string | null }>) {
@@ -31,11 +32,28 @@ test('a missing Mac Accessibility grant is shown, not restored over', () => {
   assert.equal(restoresOpenPanel({ code: null, agreed: true, needsGrant: true, panelOpen: true, panelHasCode: true }), false);
 });
 
-test('the Island says Reading only when something is read: never before the agreement, always for the sample', () => {
-  // Security SHOULD-372c: ⌃U before the agreement opened the agreement while the Island said Reading, and kept saying it
-  // after Not now.
-  assert.equal(readsOnStart({ agreed: false }), false);
-  assert.equal(readsOnStart({ agreed: true }), true);
+test('⌃U: the Island says Reading at once, before the usage round trip ends; never before the agreement', async () => {
+  // The usage call never answers here, as a 20 s billing call past the 60 s cache would feel (lead review, #374).
+  const pulses = (start: { agreed: boolean; sample?: boolean }) => {
+    let pulsed = 0;
+    void pulseThenUsage(start, () => { pulsed += 1; }, () => new Promise<never>(() => {}));
+    return pulsed;
+  };
+  assert.equal(pulses({ agreed: true }), 1);
+  // Security SHOULD-372c: before the agreement nothing is read, so no Reading over the agreement (or after Not now).
+  assert.equal(pulses({ agreed: false }), 0);
   // The first-run sample is Unvibe's own code and runs without the agreement (CC-6).
-  assert.equal(readsOnStart({ agreed: false, sample: true }), true);
+  assert.equal(pulses({ agreed: false, sample: true }), 1);
+  // The usage still comes through for the rest of the start.
+  assert.equal(await pulseThenUsage({ agreed: true }, () => {}, async () => 7), 7);
+});
+
+test('closing the panel settles the Island only while it says Reading, Checking or Writing', () => {
+  for (const phase of ['loading', 'working', 'contextualizing', 'searching', 'analyzing', 'thinking', 'generating', 'finalizing'] as const) {
+    assert.equal(settlesOnClose(phase), true, phase);
+  }
+  // A finished tick, an Issue or Offline mark clear themselves; idle is already idle.
+  for (const phase of ['idle', 'ready', 'understood', 'error', 'offline'] as const) {
+    assert.equal(settlesOnClose(phase), false, phase);
+  }
 });
