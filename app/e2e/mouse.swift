@@ -45,8 +45,17 @@ case "display" where a.count > 3:
     .filter { $0.width >= wantW && $0.height >= wantH && $0.isUsableForDesktopGUI() }
     .sorted { $0.width * $0.height < $1.width * $1.height }
     .first
+  // A permanent configuration. In run 44664920831 CGDisplaySetDisplayMode returned 0 and read 1280x960, but the next
+  // screencapture and Unvibe's screen were 1024x768: [INFERENCE] its change lasted only while this process ran.
   var result = "no mode of at least \(wantW)x\(wantH)"
-  if let m = fit { result = "CGDisplaySetDisplayMode \(m.width)x\(m.height) returned \(CGDisplaySetDisplayMode(main, m, nil).rawValue)" }
+  if let m = fit {
+    var config: CGDisplayConfigRef?
+    let begin = CGBeginDisplayConfiguration(&config)
+    let set = CGConfigureDisplayWithDisplayMode(config, main, m, nil)
+    let done = CGCompleteDisplayConfiguration(config, .permanently)
+    result = "\(m.width)x\(m.height): begin \(begin.rawValue), configure \(set.rawValue), complete permanently \(done.rawValue)"
+  }
+  usleep(1_500_000)
   print("was \(was); modes \(names.joined(separator: " ")); \(result); now \(CGDisplayPixelsWide(main))x\(CGDisplayPixelsHigh(main))")
 case "frame" where a.count > 2:
   // Layer 0 only: an app's normal windows, not its menu bar items.

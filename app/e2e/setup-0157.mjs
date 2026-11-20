@@ -11,8 +11,10 @@
 //   Setup opens maximized on a first run (windows.ts createCompanion, `maximize: !onboarded`), so the corners are taken
 //     maximized, then the window is restored as a person would (Windows: dragging the top row restores it under the
 //     pointer; Mac: Window › Zoom) and the light corners taken again at the restored size. The drag row runs on the
-//     restored window, pressing near the bar's right end (clear of the Island at the screen's top centre), and Back is
-//     clicked only where it is on the screen. On the Mac a control comes first: the same drag on a Finder window.
+//     restored window, pressing the bar 200 px from the window's left edge, on the work area and off the Island's
+//     window (both checked and logged with the screen size), and Back is clicked only where it is on the screen. A
+//     drag passes within 10 px in the asked direction (the OS drag-start threshold). On the Mac a control comes first:
+//     the same drag on a Finder window.
 //   Row 5 (fresh install): Skip → step 3 → Explain my clipboard, with code on the clipboard. Pass: the panel opens on
 //     the agreement, and nothing is sent.
 //   Row 4 (step 3, empty clipboard): Explain my clipboard shows "Your clipboard is empty. Copy some code first, then
@@ -282,7 +284,7 @@ const measure = (page) => page.evaluate(() => {
   const region = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue('-webkit-app-region') || getComputedStyle(e).webkitAppRegion || '' : null; };
   return {
     W: innerWidth, H: innerHeight, dpr: devicePixelRatio, screenX, screenY, outerW: outerWidth, outerH: outerHeight,
-    availX: screen.availLeft, availY: screen.availTop, availW: screen.availWidth, availH: screen.availHeight,
+    availX: screen.availLeft, availY: screen.availTop, availW: screen.availWidth, availH: screen.availHeight, scrW: screen.width, scrH: screen.height,
     mac: Boolean(document.querySelector('.onboard--mac')),
     count: document.querySelector('.onboard__count')?.textContent ?? '',
     back: rect('.onboard__back'), glyph: rect('.onboard__back svg'), progress: rect('.onboard__progress'), counter: rect('.onboard__count'),
@@ -395,8 +397,34 @@ async function corners(app, page, tag) {
 
 /** Setup opens maximized on a first run (windows.ts createCompanion, `maximize: !onboarded`): the window fills the work area. */
 const filled = (m) => m.outerW >= m.availW - 2 && m.outerH >= m.availH - 2;
-/** Where the drags press: on the bar 60 px from its right end, 32 px down; clear of the Island at the screen's top centre. */
-const pressAt = (m, o) => ({ x: o.x + m.progress.right - 60, y: o.y + 32 });
+/**
+ * A drag's move matches the asked one within 10 px and in the same direction: the OS starts a window drag only after
+ * the pointer has moved a few pixels (Windows SM_CXDRAG/SM_CYDRAG), so the window lags the pointer by about that much
+ * [INFERENCE] (run 44664920831: Windows (55, 37) and Finder (52, 40) for (+60, +40)).
+ */
+const dragged = (moved, want) => ['x', 'y'].every((k) => Math.sign(moved[k]) === Math.sign(want[k]) && Math.abs(moved[k] - want[k]) <= 10);
+/** The Island's window (bar.html) on the screen, in the pointer's units, or null. */
+async function islandRect(app) {
+  const bar = app.windows().find((w) => /\/bar\.html/.test(w.url()) && !w.isClosed());
+  if (!bar) return null;
+  return bar.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight, shown: document.visibilityState })).catch(() => null);
+}
+/**
+ * Where the drags press: on the bar 200 px from the window's left edge, 32 px down (lead + unvibe-app, run 44664920831),
+ * moved right along the bar in 40 px steps while that point is off the work area or inside the Island's window.
+ * Returns the point (or null) and what was checked, for the report.
+ */
+async function pressAt(app, m, o) {
+  const island = await islandRect(app);
+  const onArea = (p) => p.x >= m.availX && p.y >= m.availY && p.x < m.availX + m.availW && p.y < m.availY + m.availH;
+  const inIsland = (p) => Boolean(island) && p.x >= island.x && p.x < island.x + island.w && p.y >= island.y && p.y < island.y + island.h;
+  const where = `screen ${m.scrW} × ${m.scrH}, work area ${m.availW} × ${m.availH} at (${m.availX}, ${m.availY}); Island ${island ? `${r1(island.w)} × ${r1(island.h)} at (${r1(island.x)}, ${r1(island.y)}), ${island.shown}` : 'none'}`;
+  for (let dx = Math.max(200, Math.ceil(m.progress.x) + 8); dx < m.progress.right - 8; dx += 40) {
+    const p = { x: o.x + dx, y: o.y + 32 };
+    if (onArea(p) && !inIsland(p)) return { p, dx, where };
+  }
+  return { p: null, dx: null, where };
+}
 
 /**
  * The maximized first-run window restored as a person would: on Windows by dragging its top row (Windows restores a
@@ -406,37 +434,46 @@ const pressAt = (m, o) => ({ x: o.x + m.progress.right - 60, y: o.y + 32 });
 async function restore(app, page, tag) {
   const m0 = await measure(page);
   const o0 = await origin(page, m0);
-  note(`Row 2 ${tag}: the window first`, `${filled(m0) ? 'maximized (fills the work area)' : 'not maximized'}: ${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}); the work area ${m0.availW} × ${m0.availH} at (${m0.availX}, ${m0.availY})`);
+  note(`Row 2 ${tag}: the window first`, `${filled(m0) ? 'maximized (fills the work area)' : 'not maximized'}: ${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}); screen ${m0.scrW} × ${m0.scrH}, work area ${m0.availW} × ${m0.availH} at (${m0.availX}, ${m0.availY})`);
   if (!filled(m0)) return false;
   front(app);
+  let how = 'by Window › Zoom';
   if (os === 'mac') {
     try {
       execFileSync('osascript', ['-e', `tell application "System Events" to tell (first process whose unix id is ${app.process.pid}) to click menu item "Zoom" of menu "Window" of menu bar 1`], { timeout: 15000 });
     } catch (e) { note(`Row 2 ${tag}: Window › Zoom`, short(e)); }
   } else {
-    const p = pressAt(m0, o0);
+    const { p, dx, where } = await pressAt(app, m0, o0);
+    if (!p) { log(false, `Row 2 ${tag}: the maximized window restored by dragging its top row`, `no point on the bar is on the work area and off the Island (${where}); not dragged (harness)`); return false; }
+    how = `by dragging its top row (real pointer, pressed at window x + ${dx}, +120, +90)`;
     pointer.drag(p.x, p.y, p.x + 120, p.y + 90);
   }
   await sleep(1500);
   const m1 = await measure(page);
   const o1 = await origin(page, m1);
-  const ok = !filled(m1);
-  log(ok, `Row 2 ${tag}: the maximized window restored ${os === 'mac' ? 'by Window › Zoom' : 'by dragging its top row (real pointer, +120, +90)'}`,
-    `${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}) → ${r1(m1.outerW)} × ${r1(m1.outerH)} at (${o1.x}, ${o1.y})`);
+  // Restored = the frame changed. On a screen smaller than the 1180 × 780 frame the restored window still fills it.
+  const ok = r1(m1.outerW) !== r1(m0.outerW) || r1(m1.outerH) !== r1(m0.outerH) || o1.x !== o0.x || o1.y !== o0.y;
+  log(ok, `Row 2 ${tag}: the maximized window restored ${how}`,
+    `${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}) → ${r1(m1.outerW)} × ${r1(m1.outerH)} at (${o1.x}, ${o1.y})${filled(m1) ? `; it still fills the ${m1.availW} × ${m1.availH} work area` : ''}`);
   return ok;
 }
 
 /** Row 2's drag and click with the real pointer: the top row moves the (restored) window, Back still clicks. */
-async function dragAndBack(page, tag) {
+async function dragAndBack(app, page, tag) {
   const m = await measure(page);
   const before = await origin(page, m);
-  const from = pressAt(m, before);
-  pointer.drag(from.x, from.y, from.x + 60, from.y + 40);
-  await sleep(1200);
+  const { p: from, dx, where } = await pressAt(app, m, before);
+  if (!from) {
+    log(false, `Row 2 ${tag}: the top row drags the window (real pointer)`, `no point on the bar is on the work area and off the Island (${where}); not dragged (harness)`);
+  } else {
+    pointer.drag(from.x, from.y, from.x + 60, from.y + 40);
+    await sleep(1200);
+    const after = await origin(page);
+    const moved = { x: r1(after.x - before.x), y: r1(after.y - before.y) };
+    log(dragged(moved, { x: 60, y: 40 }), `Row 2 ${tag}: the top row drags the window (real pointer, within 10 px)`,
+      `window ${r1(m.outerW)} × ${r1(m.outerH)} at (${before.x}, ${before.y}); ${where}; pressed at (${r1(from.x)}, ${r1(from.y)}) = window x + ${dx}, 32 down, moved by (+60, +40): the window went to (${after.x}, ${after.y}), by (${moved.x}, ${moved.y})`);
+  }
   const after = await origin(page);
-  const moved = { x: r1(after.x - before.x), y: r1(after.y - before.y) };
-  log(near(moved.x, 60, 4) && near(moved.y, 40, 4), `Row 2 ${tag}: the top row drags the window (real pointer)`,
-    `${filled(m) ? 'maximized' : 'not maximized'} ${r1(m.outerW)} × ${r1(m.outerH)}; pressed on the bar 60 px from its right end, 32 px down, moved by (+60, +40): the window went (${before.x}, ${before.y}) → (${after.x}, ${after.y}), by (${moved.x}, ${moved.y})`);
   const m2 = await measure(page);
   const countBefore = m2.count;
   const back = { x: after.x + m2.glyph.cx, y: after.y + m2.glyph.cy };
@@ -509,7 +546,7 @@ if (os === 'mac') {
     await sleep(1200);
     const f1 = execFileSync(process.env.MOUSE, ['frame', 'Finder'], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
     desktop('finder-control');
-    log(near(f1[0] - f0[0], 60, 4) && near(f1[1] - f0[1], 40, 4), 'Row 2 control (Mac): the same real-pointer drag moves a Finder window by its title bar',
+    log(dragged({ x: f1[0] - f0[0], y: f1[1] - f0[1] }, { x: 60, y: 40 }), 'Row 2 control (Mac): the same real-pointer drag moves a Finder window by its title bar (within 10 px)',
       `Finder ${f0[2]} × ${f0[3]} at (${f0[0]}, ${f0[1]}), pressed at (${p.x}, ${p.y}), moved by (+60, +40): now (${f1[0]}, ${f1[1]}), by (${f1[0] - f0[0]}, ${f1[1] - f0[1]})`);
     execFileSync('osascript', ['-e', 'tell application "System Events" to keystroke "w" using command down'], { timeout: 15000 });
     await sleep(800);
@@ -537,7 +574,7 @@ for (const run of runs) {
     await cmdThenCtrlU(app, companion);
     if (await restore(app, companion, run.tag)) await corners(app, companion, `${run.tag}-restored-light`);
     front(app);
-    await dragAndBack(companion, run.tag);
+    await dragAndBack(app, companion, run.tag);
     if (run.tag === '150') continue;
 
     // Row 5: a fresh install (no agreement), Skip → step 3 → Explain my clipboard with code copied.
@@ -549,10 +586,17 @@ for (const run of runs) {
     if (label !== 'Explain my clipboard') throw new Error(`step 3's primary is "${label}", not Explain my clipboard`);
     await companion.locator('.onboard__primary').click();
     const panel = await app.windowWith('widget.html', 15000);
-    const view = panel ? await waitFor(async () => panel.evaluate(() => {
-      const ob = document.querySelector('.ob');
-      return ob ? [...ob.classList].filter((c) => c.startsWith('ob--')).join(' ') : '';
-    }).catch(() => ''), 10000) : '';
+    // The panel boots first (ob--boot), then shows its view: read it once it's the agreement, or after 10 s.
+    let view = '';
+    if (panel) {
+      await waitFor(async () => {
+        view = await panel.evaluate(() => {
+          const ob = document.querySelector('.ob');
+          return ob ? [...ob.classList].filter((c) => c.startsWith('ob--')).join(' ') : '';
+        }).catch(() => '');
+        return /aiConsent/.test(view);
+      }, 10000);
+    }
     const consentForm = panel ? await panel.locator('.consent-form').count() : 0;
     const sentSoFar = apiRequests(netlogs.at(-1).file, host).filter((q) => q.method === 'POST' && /^\/api\/v1\/(reviews|comprehension|previews)\b/.test(q.path)).length;
     await sleep(1500); // the panel and Vibe's line settle
