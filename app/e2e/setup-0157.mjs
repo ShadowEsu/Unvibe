@@ -8,6 +8,11 @@
 //     ends 210 from the right; the counter ends 154 from the right, clear of the caption buttons. The top row drags the
 //     window, and Back still clicks (the real pointer). 150 % is Chromium's --force-device-scale-factor=1.5 on the
 //     runner's 100 % display, not the Windows display setting (that needs a sign-out); the report says so.
+//   Setup opens maximized on a first run (windows.ts createCompanion, `maximize: !onboarded`), so the corners are taken
+//     maximized, then the window is restored as a person would (Windows: dragging the top row restores it under the
+//     pointer; Mac: Window › Zoom) and the light corners taken again at the restored size. The drag row runs on the
+//     restored window, pressing near the bar's right end (clear of the Island at the screen's top centre), and Back is
+//     clicked only where it is on the screen. On the Mac a control comes first: the same drag on a Finder window.
 //   Row 5 (fresh install): Skip → step 3 → Explain my clipboard, with code on the clipboard. Pass: the panel opens on
 //     the agreement, and nothing is sent.
 //   Row 4 (step 3, empty clipboard): Explain my clipboard shows "Your clipboard is empty. Copy some code first, then
@@ -86,8 +91,16 @@ function grab(f, x, y, w, h) {
   else if (os === 'windows') ps(`Add-Type -AssemblyName System.Drawing; Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();' -Name D -Namespace W; [void][W.D]::SetProcessDPIAware(); $bmp=New-Object System.Drawing.Bitmap ${w},${h}; [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen(${x},${y},0,0,$bmp.Size); $bmp.Save('${f}')`);
   else execFileSync('import', ['-window', 'root', '-crop', `${w}x${h}+${x}+${y}`, '+repage', f]);
 }
-/** Windows runners start at 1024 × 768, too narrow for the window at 150 %: ask for 1920 × 1080 and report it. */
+/**
+ * Both runners start at 1024 × 768. Windows is too narrow there for the window at 150 %, and the Mac can't show the
+ * restored 1180 × 780 window (Row 1's size): ask for 1920 × 1080 on Windows and the Mac's smallest mode of at least
+ * 1280 × 860, and report it.
+ */
 function wideScreen() {
+  if (os === 'mac') {
+    try { note('Screen', execFileSync(process.env.MOUSE, ['display', '1280', '860'], { encoding: 'utf8', timeout: 30000 }).trim()); } catch (e) { note('Screen', `the mode was not changed (${short(e)})`); }
+    return;
+  }
   if (os !== 'windows') return;
   try {
     const result = ps([
@@ -268,7 +281,8 @@ const measure = (page) => page.evaluate(() => {
   };
   const region = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).getPropertyValue('-webkit-app-region') || getComputedStyle(e).webkitAppRegion || '' : null; };
   return {
-    W: innerWidth, H: innerHeight, dpr: devicePixelRatio, screenX, screenY,
+    W: innerWidth, H: innerHeight, dpr: devicePixelRatio, screenX, screenY, outerW: outerWidth, outerH: outerHeight,
+    availX: screen.availLeft, availY: screen.availTop, availW: screen.availWidth, availH: screen.availHeight,
     mac: Boolean(document.querySelector('.onboard--mac')),
     count: document.querySelector('.onboard__count')?.textContent ?? '',
     back: rect('.onboard__back'), glyph: rect('.onboard__back svg'), progress: rect('.onboard__progress'), counter: rect('.onboard__count'),
@@ -379,23 +393,63 @@ async function corners(app, page, tag) {
   return m;
 }
 
-/** Row 2's drag and click with the real pointer: the top row moves the window, Back still clicks. */
+/** Setup opens maximized on a first run (windows.ts createCompanion, `maximize: !onboarded`): the window fills the work area. */
+const filled = (m) => m.outerW >= m.availW - 2 && m.outerH >= m.availH - 2;
+/** Where the drags press: on the bar 60 px from its right end, 32 px down; clear of the Island at the screen's top centre. */
+const pressAt = (m, o) => ({ x: o.x + m.progress.right - 60, y: o.y + 32 });
+
+/**
+ * The maximized first-run window restored as a person would: on Windows by dragging its top row (Windows restores a
+ * maximized window when its caption is dragged, under the pointer), on the Mac by Window › Zoom (a zoomed Mac window
+ * only moves when dragged). Returns true when the window changed state.
+ */
+async function restore(app, page, tag) {
+  const m0 = await measure(page);
+  const o0 = await origin(page, m0);
+  note(`Row 2 ${tag}: the window first`, `${filled(m0) ? 'maximized (fills the work area)' : 'not maximized'}: ${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}); the work area ${m0.availW} × ${m0.availH} at (${m0.availX}, ${m0.availY})`);
+  if (!filled(m0)) return false;
+  front(app);
+  if (os === 'mac') {
+    try {
+      execFileSync('osascript', ['-e', `tell application "System Events" to tell (first process whose unix id is ${app.process.pid}) to click menu item "Zoom" of menu "Window" of menu bar 1`], { timeout: 15000 });
+    } catch (e) { note(`Row 2 ${tag}: Window › Zoom`, short(e)); }
+  } else {
+    const p = pressAt(m0, o0);
+    pointer.drag(p.x, p.y, p.x + 120, p.y + 90);
+  }
+  await sleep(1500);
+  const m1 = await measure(page);
+  const o1 = await origin(page, m1);
+  const ok = !filled(m1);
+  log(ok, `Row 2 ${tag}: the maximized window restored ${os === 'mac' ? 'by Window › Zoom' : 'by dragging its top row (real pointer, +120, +90)'}`,
+    `${r1(m0.outerW)} × ${r1(m0.outerH)} at (${o0.x}, ${o0.y}) → ${r1(m1.outerW)} × ${r1(m1.outerH)} at (${o1.x}, ${o1.y})`);
+  return ok;
+}
+
+/** Row 2's drag and click with the real pointer: the top row moves the (restored) window, Back still clicks. */
 async function dragAndBack(page, tag) {
   const m = await measure(page);
   const before = await origin(page, m);
-  const from = { x: before.x + m.W / 2, y: before.y + 32 };
-  pointer.drag(from.x, from.y, from.x - 120, from.y + 90);
+  const from = pressAt(m, before);
+  pointer.drag(from.x, from.y, from.x + 60, from.y + 40);
   await sleep(1200);
   const after = await origin(page);
   const moved = { x: r1(after.x - before.x), y: r1(after.y - before.y) };
-  log(near(moved.x, -120, 4) && near(moved.y, 90, 4), `Row 2 ${tag}: the top row drags the window (real pointer)`,
-    `pressed at the bar's middle, 32 px down, moved by (-120, +90): the window went (${before.x}, ${before.y}) → (${after.x}, ${after.y}), by (${moved.x}, ${moved.y})`);
+  log(near(moved.x, 60, 4) && near(moved.y, 40, 4), `Row 2 ${tag}: the top row drags the window (real pointer)`,
+    `${filled(m) ? 'maximized' : 'not maximized'} ${r1(m.outerW)} × ${r1(m.outerH)}; pressed on the bar 60 px from its right end, 32 px down, moved by (+60, +40): the window went (${before.x}, ${before.y}) → (${after.x}, ${after.y}), by (${moved.x}, ${moved.y})`);
   const m2 = await measure(page);
   const countBefore = m2.count;
-  pointer.click(after.x + m2.glyph.cx, after.y + m2.glyph.cy);
+  const back = { x: after.x + m2.glyph.cx, y: after.y + m2.glyph.cy };
+  const inside = back.x >= m2.availX && back.y >= m2.availY && back.x < m2.availX + m2.availW && back.y < m2.availY + m2.availH;
+  if (!inside) {
+    log(false, `Row 2 ${tag}: Back still clicks (real pointer, in the drag row)`, `not clicked: Back's centre (${r1(back.x)}, ${r1(back.y)}) is off the work area (harness)`);
+    desktop(`${tag}-after-drag`);
+    return;
+  }
+  pointer.click(back.x, back.y);
   const backed = await waitFor(async () => (await measure(page)).count.startsWith('1 /'), 5000);
   const countAfter = (await measure(page)).count;
-  log(backed, `Row 2 ${tag}: Back still clicks (real pointer, in the drag row)`, `count "${countBefore}" → "${countAfter}"`);
+  log(backed, `Row 2 ${tag}: Back still clicks (real pointer, in the drag row)`, `clicked at (${r1(back.x)}, ${r1(back.y)}); count "${countBefore}" → "${countAfter}"`);
   desktop(`${tag}-after-drag-and-back`);
   if (backed) {
     await page.locator('.onboard__primary').click();
@@ -441,6 +495,26 @@ async function theme(companion, value) {
 
 // --- The runs ----------------------------------------------------------------------------------------------------------
 wideScreen();
+// The Mac's control for Row 2 (unvibe-app's read of run 44663887449): the same real-pointer drag on a Finder window's
+// title bar. If Finder doesn't move either, it's the pointer, not Unvibe. The Finder window is closed with ⌘W after.
+if (os === 'mac') {
+  try {
+    // An empty folder of its own, so the still shows no files of the runner's.
+    const empty = mkdtempSync(path.join(tmpdir(), 'unvibe-qa-finder-control-'));
+    execFileSync('open', ['-a', 'Finder', empty]);
+    await sleep(2500);
+    const f0 = execFileSync(process.env.MOUSE, ['frame', 'Finder'], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
+    const p = { x: f0[0] + f0[2] / 2, y: f0[1] + 14 };
+    pointer.drag(p.x, p.y, p.x + 60, p.y + 40);
+    await sleep(1200);
+    const f1 = execFileSync(process.env.MOUSE, ['frame', 'Finder'], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
+    desktop('finder-control');
+    log(near(f1[0] - f0[0], 60, 4) && near(f1[1] - f0[1], 40, 4), 'Row 2 control (Mac): the same real-pointer drag moves a Finder window by its title bar',
+      `Finder ${f0[2]} × ${f0[3]} at (${f0[0]}, ${f0[1]}), pressed at (${p.x}, ${p.y}), moved by (+60, +40): now (${f1[0]}, ${f1[1]}), by (${f1[0] - f0[0]}, ${f1[1] - f0[1]})`);
+    execFileSync('osascript', ['-e', 'tell application "System Events" to keystroke "w" using command down'], { timeout: 15000 });
+    await sleep(800);
+  } catch (e) { log(false, 'Row 2 control (Mac): a Finder window drag', `not run (${short(e)})`); }
+}
 const runs = os === 'windows' ? [{ tag: '100', args: [] }, { tag: '150', args: ['--force-device-scale-factor=1.5'] }] : [{ tag: os === 'mac' ? 'mac' : 'local', args: [] }];
 let consentProfile = null;
 for (const run of runs) {
@@ -461,6 +535,7 @@ for (const run of runs) {
       await sleep(900);
     }
     await cmdThenCtrlU(app, companion);
+    if (await restore(app, companion, run.tag)) await corners(app, companion, `${run.tag}-restored-light`);
     front(app);
     await dragAndBack(companion, run.tag);
     if (run.tag === '150') continue;
