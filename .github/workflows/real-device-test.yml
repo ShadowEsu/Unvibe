@@ -23,6 +23,17 @@ name: Real device test
 # rc0154=hero (Mac only, ai off, a published version) shoots the site hero's Today still (app/e2e/hero-today.mjs:
 # light, 1180x780 at 2x, sample lessons written into a new profile, sharks off) instead of the usual walk; no hosted-AI
 # call, and no 0.1.52 is installed first.
+# rc0155=walk (with build_run, ai off) is the 0.1.55 RC walk, with no hosted-AI call: Unvibe 0.1.54 is installed first
+# (digest-pinned), sets up profile U and runs the sign-in control of app/e2e/rc-0155.mjs (RC_PHASE=control); the RC
+# goes over it; after the usual walk come 0.1.54's RC rows (app/e2e/rc-0154.mjs) and then the 0.1.55 rows (#354: the
+# sign-in card's code is dropped when the card closes, and on the Mac when ⌘W closes the window). Polls are counted in
+# the app's Chromium net log (app/e2e/netlog.mjs): only time, method, path and status of api.unvibe.site's requests
+# are kept; the raw log stays outside every uploaded folder and is deleted. The RC's app.asar is checked: on the Mac
+# against Security's pin, on Windows the setup's against the installed one.
+# rc0155=ai-<mac|windows> (with build_run and ai=true) runs app/e2e/rc-0155-ai.mjs on that one system only, instead of
+# the usual walk: at most 3 hosted calls (BOSS), counted by the script (#353 Explain and Retry each pressed twice, #358
+# a table answer at 320 px). For the Retry row api.unvibe.site points at the runner in the hosts file for a moment;
+# an always() step removes that line again. The usual walk, the website media and the portable exe are skipped.
 on:
   workflow_dispatch:
     inputs:
@@ -53,6 +64,10 @@ on:
         description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. 'hero': the site hero's Today still on the Mac (needs version, no build_run, ai off). Empty: off"
         required: false
         default: ""
+      rc0155:
+        description: "Unvibe 0.1.55 RC rows: 'walk' installs 0.1.54 first, then the build_run's RC over it, and runs the usual walk, app/e2e/rc-0154.mjs and app/e2e/rc-0155.mjs with no hosted-AI call (needs build_run, ai off, rc0154 empty). 'ai-mac' or 'ai-windows' runs app/e2e/rc-0155-ai.mjs on that system only, at most 3 hosted calls (needs build_run, ai on, rc0154 empty). Empty: off"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -67,10 +82,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # rc0154=ai-<os>-<plan> runs on that one system: its hosted calls are planned per system.
-        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero') && '[{"os":"macos-latest","label":"mac"}]' || startsWith(inputs.rc0154, 'ai-windows-') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        # rc0154=ai-<os>-<plan> and rc0155=ai-<os> run on that one system: their hosted calls are planned per system.
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
+    timeout-minutes: ${{ inputs.rc0155 == 'walk' && 45 || 30 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -79,11 +95,12 @@ jobs:
         env:
           MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
           RC0154: ${{ inputs.rc0154 }}
+          RC0155: ${{ inputs.rc0155 }}
           BUILD_RUN: ${{ inputs.build_run }}
           VERSION: ${{ inputs.version }}
           OS_LABEL: ${{ matrix.label }}
         run: |
-          case "$RC0154" in
+          case "$RC0154$RC0155" in
             ai-*|hero) ;;
             *)
               if [ "$QA_AI_OK" = 1 ]; then
@@ -111,6 +128,21 @@ jobs:
               if [ -n "$BUILD_RUN" ] || [ -z "$VERSION" ]; then echo "::error::rc0154=hero shoots a published release: give version, not build_run"; exit 1; fi
               echo "Mode: the site hero's Today still on the Mac (app/e2e/hero-today.mjs), Unvibe $VERSION as published; no hosted-AI call. The usual walk and the website media are skipped" ;;
             *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short, ai-windows-row2 or hero"; exit 1 ;;
+          esac
+          if [ -n "$RC0155" ] && [ -n "$RC0154" ]; then echo "::error::rc0154 and rc0155 can't run together: give one"; exit 1; fi
+          case "$RC0155" in
+            '') ;;
+            walk)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::rc0155=walk makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::rc0155=walk needs build_run (the RC's build-only run)"; exit 1; fi
+              echo "RC rows: 0.1.54 first (with the sign-in control), the RC over it, the usual walk, then app/e2e/rc-0154.mjs and app/e2e/rc-0155.mjs (walk only, no hosted-AI call)" ;;
+            ai-mac|ai-windows)
+              if [ "$QA_AI_OK" != 1 ]; then echo "::error::rc0155=$RC0155 sends hosted explanations: run it with ai on"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::rc0155=$RC0155 needs build_run (the RC's build-only run)"; exit 1; fi
+              if [ "$RC0155" != "ai-$OS_LABEL" ]; then echo "::error::rc0155=$RC0155 is not for $OS_LABEL"; exit 1; fi
+              if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with rc0155=$RC0155 (no website media)"; fi
+              echo "Mode: 0.1.55 RC rows with hosted AI on $OS_LABEL only (at most 3 hosted calls, counted by app/e2e/rc-0155-ai.mjs). The usual walk, the website media and the portable exe are skipped" ;;
+            *) echo "::error::rc0155 must be empty, walk, ai-mac or ai-windows"; exit 1 ;;
           esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
@@ -144,11 +176,17 @@ jobs:
           RC_AI_ID: qa-rc0154-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC_SAMPLE_ID: qa-rc0154-sample-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC_HERO_ID: qa-rc0154-hero-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_CONTROL_ID: qa-rc0155-control-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_ID: qa-rc0155-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC55_AI_ID: qa-rc0155-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC0154: ${{ inputs.rc0154 }}
+          RC0155: ${{ inputs.rc0155 }}
           OS_LABEL: ${{ matrix.label }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
-          case "$RC0154" in
+          case "$RC0154$RC0155" in
+            # rc0155 ai: only rc-0155-ai.mjs launches the app (the walk, media and portable steps are skipped).
+            ai-mac|ai-windows) ids="$RC55_AI_ID" ;;
             # rc0154 ai: only rc-0154-ai.mjs launches the app (the walk, media and portable steps are skipped): its
             # profile, and with the full plan the sample's new profile.
             ai-*-full) ids="$RC_AI_ID $RC_SAMPLE_ID" ;;
@@ -161,8 +199,10 @@ jobs:
                 # The media install exists only when the website media runs (ai=true).
                 if [ "$QA_AI_OK" = 1 ]; then ids="$ids $MEDIA_INSTALL_ID"; fi
               else ids="$ids $PORTABLE_INSTALL_ID"; fi
-              # rc0154: the profile 0.1.52 sets up (then opened by the RC) and the RC rows' new profile.
-              if [ "$RC0154" = walk ]; then ids="$ids $RC_UPGRADE_ID $RC_INSTALL_ID"; fi ;;
+              # rc0154 or rc0155 walk: the profile the last release sets up (then opened by the RC) and the RC rows'
+              # new profile; rc0155 adds the sign-in control's profile (on the last release) and its own on the RC.
+              if [ "$RC0154" = walk ] || [ "$RC0155" = walk ]; then ids="$ids $RC_UPGRADE_ID $RC_INSTALL_ID"; fi
+              if [ "$RC0155" = walk ]; then ids="$ids $RC55_CONTROL_ID $RC55_ID"; fi ;;
           esac
           for id in $ids; do
             # The header goes in on stdin (printf is a shell builtin), so the token is never in a process's arguments.
@@ -287,6 +327,100 @@ jobs:
           Get-Content "$env:SHOTS_DIR\report-pre.txt" -ErrorAction SilentlyContinue
           exit $code
 
+      # rc0155=walk: the RC goes over the last release, 0.1.54 (digest-pinned to the published files). It sets up
+      # profile U (rc-0154.mjs RC_PHASE=pre: a name, setup skipped, dark theme; nothing is explained), then runs the
+      # sign-in control (rc-0155.mjs RC_PHASE=control: 0.1.54 polls on after the card closes, which proves the net log
+      # sees the polls), and is quit; the install step after it puts the RC over it. A failure here doesn't stop the RC
+      # rows: report-pre.txt and report-control.txt show it. The raw net log goes to $RUNNER_TEMP/netlog (never uploaded).
+      - name: Install Unvibe 0.1.54 first, set up a profile and run the sign-in control (rc0155, Mac)
+        if: inputs.rc0155 == 'walk' && matrix.label == 'mac'
+        continue-on-error: true
+        shell: bash
+        env:
+          UNVIBE_OS: mac
+          RC_PROFILE_UPGRADE: ${{ runner.temp }}/rc0154-upgrade-profile
+          RC_UPGRADE_ID: qa-rc0154-upgrade-${{ github.run_id }}-${{ github.run_attempt }}-mac
+          RC55_PROFILE: ${{ runner.temp }}/rc0155-control-profile
+          RC55_INSTALL_ID: qa-rc0155-control-${{ github.run_id }}-${{ github.run_attempt }}-mac
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          arch=$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)
+          curl -fL -o "$RUNNER_TEMP/Unvibe-0.1.54.dmg" "https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.54/Unvibe-0.1.54-mac-$arch.dmg"
+          # The release's own digests (SHA256SUMS-mac.txt of v0.1.54); anything else is not run.
+          if [ "$arch" = arm64 ]; then want=fd9b7e58a9d0257ed3c1e761e60cbcc110a7f2ae3c0bab5fc57bf1bc0c19ddc9; else want=b02c635c92470d70ee95a99a36e7b4fcbd94d37faab8a4b0896740227303ccb3; fi
+          got=$(shasum -a 256 "$RUNNER_TEMP/Unvibe-0.1.54.dmg" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then echo "::error::Unvibe-0.1.54-mac-$arch.dmg sha256 $got, expected $want; not installed"; exit 1; fi
+          echo "0.1.54 dmg sha256 $got (matches the release)"
+          mnt="$RUNNER_TEMP/mnt-0154"; mkdir -p "$mnt"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$RUNNER_TEMP/Unvibe-0.1.54.dmg"
+          ditto "$mnt/Unvibe.app" /Applications/Unvibe.app
+          hdiutil detach "$mnt" -force || true
+          xattr -cr /Applications/Unvibe.app
+          echo "installed Unvibe $(defaults read /Applications/Unvibe.app/Contents/Info CFBundleShortVersionString)"
+          # The control's ⌘W is a System Events key press: Accessibility for the helpers, as the install step below does.
+          db="/Library/Application Support/com.apple.TCC/TCC.db"
+          for c in com.unvibe.app com.apple.systemevents com.apple.Terminal; do
+            sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','$c',0,2,4,1,'UNUSED',0);" || true
+          done
+          for p in /bin/bash /usr/bin/osascript "$(command -v node)" /usr/local/opt/runner/provisioner/provisioner; do
+            sudo sqlite3 "$db" "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','$p',1,2,4,1,'UNUSED',0);" || true
+          done
+          cp app/e2e/rc-0154.mjs app/e2e/rc-0155.mjs app/e2e/netlog.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          export UNVIBE_EXE=/Applications/Unvibe.app/Contents/MacOS/Unvibe
+          status=0
+          (cd "$RUNNER_TEMP/pw" && SHOTS_DIR="$RUNNER_TEMP/rc0154" RC_PHASE=pre node rc-0154.mjs) || status=$?
+          pkill -x Unvibe || true
+          cat "$RUNNER_TEMP/rc0154/report-pre.txt" || true
+          (cd "$RUNNER_TEMP/pw" && SHOTS_DIR="$RUNNER_TEMP/rc0155" RC_PHASE=control node rc-0155.mjs) || status=$?
+          pkill -x Unvibe || true
+          cat "$RUNNER_TEMP/rc0155/report-control.txt" || true
+          exit $status
+
+      - name: Install Unvibe 0.1.54 first, set up a profile and run the sign-in control (rc0155, Windows)
+        if: inputs.rc0155 == 'walk' && matrix.label == 'windows'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          UNVIBE_OS: windows
+          RC_PROFILE_UPGRADE: ${{ runner.temp }}/rc0154-upgrade-profile
+          RC_UPGRADE_ID: qa-rc0154-upgrade-${{ github.run_id }}-${{ github.run_attempt }}-windows
+          RC55_PROFILE: ${{ runner.temp }}/rc0155-control-profile
+          RC55_INSTALL_ID: qa-rc0155-control-${{ github.run_id }}-${{ github.run_attempt }}-windows
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          $setup = "$env:RUNNER_TEMP\Unvibe-0.1.54-setup.exe"
+          Invoke-WebRequest -Uri 'https://github.com/ShadowEsu/Unvibe/releases/download/v0.1.54/Unvibe-0.1.54-win-x64-setup.exe' -OutFile $setup
+          # The release's own digest (SHA256SUMS-windows.txt of v0.1.54); anything else is not run.
+          $got = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          if ($got -ne '8f1bbd07eb6b393fc6a0123d504611511fc47fba6029685c848810e06b6eb05b') { Write-Error "Unvibe-0.1.54-win-x64-setup.exe sha256 $got does not match the release; not run"; exit 1 }
+          "0.1.54 setup sha256 $got (matches the release)"
+          $proc = Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+          "0.1.54 setup exit code: $($proc.ExitCode)"
+          $exe = $null
+          for ($i = 0; $i -lt 30 -and -not $exe; $i++) {
+            $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter 'Unvibe.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { Start-Sleep -Seconds 2 }
+          }
+          if (-not $exe) { Write-Error 'Unvibe 0.1.54 was not installed'; exit 1 }
+          "installed Unvibe $($exe.VersionInfo.ProductVersion) at $($exe.FullName)"
+          Copy-Item app/e2e/rc-0154.mjs, app/e2e/rc-0155.mjs, app/e2e/netlog.mjs, app/e2e/cdp-launch.mjs "$env:RUNNER_TEMP\pw\"
+          $env:UNVIBE_EXE = $exe.FullName
+          $code = 0
+          Push-Location "$env:RUNNER_TEMP\pw"
+          $env:SHOTS_DIR = "$env:RUNNER_TEMP\rc0154"; $env:RC_PHASE = 'pre'
+          node rc-0154.mjs
+          if ($LASTEXITCODE -ne 0) { $code = $LASTEXITCODE }
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Content "$env:RUNNER_TEMP\rc0154\report-pre.txt" -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+          $env:SHOTS_DIR = "$env:RUNNER_TEMP\rc0155"; $env:RC_PHASE = 'control'
+          node rc-0155.mjs
+          if ($LASTEXITCODE -ne 0) { $code = $LASTEXITCODE }
+          Pop-Location
+          Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Content "$env:RUNNER_TEMP\rc0155\report-control.txt" -ErrorAction SilentlyContinue
+          exit $code
+
       - name: Install Unvibe (Mac)
         if: matrix.label == 'mac'
         shell: bash
@@ -352,10 +486,38 @@ jobs:
           }
           "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      # Skipped with rc0154 ai: with ai=true it would send its own 4 explanations, outside the RC plan's count. Skipped
-      # with rc0154 hero: that run only shoots the hero still.
+      # rc0155: the RC under test is the build Security read (requests/security/20261119-1640-…, run 44647459465).
+      # Mac: the installed app.asar against Security's pin. Windows: the app.asar inside the setup that was run and the
+      # installed one must be the same file; that value is the Windows pin for the 0.1.55 publish.
+      - name: Check the RC's app.asar (rc0155, Mac)
+        if: inputs.rc0155 != '' && env.UNVIBE_EXE != '' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          want=fbd2412cd255d9ac0698d5796f58b5843b4643c4e6c13ce29a2eaba27e263cfe
+          got=$(shasum -a 256 /Applications/Unvibe.app/Contents/Resources/app.asar | cut -d' ' -f1)
+          echo "installed app.asar sha256 $got"
+          if [ "$got" != "$want" ]; then echo "::error::the installed app.asar is not Security's pin $want"; exit 1; fi
+          echo "PASS  Mac app.asar = Security's pin"
+
+      - name: Check the RC's app.asar (rc0155, Windows)
+        if: inputs.rc0155 != '' && env.UNVIBE_EXE != '' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP\asar-setup"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' e -y "-o$dir" "$env:RUNNER_TEMP\Unvibe-setup.exe" 'resources\app.asar' | Out-Null
+          if (-not (Test-Path "$dir\app.asar")) { Write-Error 'no resources\app.asar inside the setup'; exit 1 }
+          $inner = (Get-FileHash "$dir\app.asar" -Algorithm SHA256).Hash.ToLower()
+          $installed = (Get-FileHash (Join-Path (Split-Path $env:UNVIBE_EXE) 'resources\app.asar') -Algorithm SHA256).Hash.ToLower()
+          "app.asar inside the setup sha256 $inner ($((Get-Item "$dir\app.asar").Length) bytes)"
+          "installed app.asar sha256 $installed"
+          if ($inner -ne $installed) { Write-Error "the installed app.asar is not the setup's"; exit 1 }
+          "PASS  Windows app.asar: the setup's = the installed one = $inner"
+
+      # Skipped with rc0154 ai and rc0155 ai: with ai=true it would send its own 4 explanations, outside the RC plan's
+      # count. Skipped with rc0154 hero: that run only shoots the hero still.
       - name: Walk through the app
-        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' }}
+        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && !startsWith(inputs.rc0155, 'ai-') }}
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -372,10 +534,11 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node real-device.mjs
           cat "$SHOTS_DIR/report.txt"
 
-      # rc0154=walk: the 0.1.54 RC rows (app/e2e/rc-0154.mjs), no hosted-AI call: profile U (0.1.52's) opened by the RC,
-      # then a new profile. On the Mac, mouse.swift gives the real pointer the Island and overlay drags need.
+      # rc0154=walk and rc0155=walk: the 0.1.54 RC rows (app/e2e/rc-0154.mjs), no hosted-AI call: profile U (the last
+      # release's) opened by the RC, then a new profile. On the Mac, mouse.swift gives the real pointer the Island and
+      # overlay drags need.
       - name: Walk the 0.1.54 RC rows (rc0154)
-        if: always() && inputs.rc0154 == 'walk' && env.UNVIBE_EXE != ''
+        if: always() && (inputs.rc0154 == 'walk' || inputs.rc0155 == 'walk') && env.UNVIBE_EXE != ''
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/rc0154
@@ -444,9 +607,73 @@ jobs:
           cat "$SHOTS_DIR/report-ai.txt" || true
           exit $status
 
+      # rc0155=walk: the 0.1.55 RC rows (app/e2e/rc-0155.mjs, RC_PHASE=walk), no hosted-AI call: #354 on a new profile
+      # (the sign-in card closes while its code waits; on the Mac a real ⌘W closes the window). The raw net log goes to
+      # $RUNNER_TEMP/netlog, which nothing uploads; the script keeps only time, method, path and status and deletes it.
+      - name: Walk the 0.1.55 RC rows (rc0155)
+        if: always() && inputs.rc0155 == 'walk' && env.UNVIBE_EXE != ''
+        shell: bash
+        env:
+          SHOTS_DIR: ${{ runner.temp }}/rc0155
+          UNVIBE_OS: ${{ matrix.label }}
+          RC_PHASE: walk
+          RC55_PROFILE: ${{ runner.temp }}/rc0155-profile
+          # Seeded into the new profile and pre-flagged above.
+          RC55_INSTALL_ID: qa-rc0155-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          cp app/e2e/rc-0155.mjs app/e2e/netlog.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          status=0
+          (cd "$RUNNER_TEMP/pw" && node rc-0155.mjs) || status=$?
+          cat "$SHOTS_DIR/report-walk.txt" || true
+          exit $status
+
+      # rc0155=ai-<os>: the 0.1.55 RC rows that need hosted AI (app/e2e/rc-0155-ai.mjs) on this one system, at most 3
+      # calls (BOSS), counted by the script: #353 Explain and Retry each pressed twice, #358 a table answer at 320 px.
+      # Not always(): any failed step before it (the mode check, the install) means nothing is sent. The Retry row
+      # points api.unvibe.site at this machine in the hosts file for a moment; the script removes the line, and so does
+      # the always() step below.
+      - name: Run the 0.1.55 RC rows with hosted AI (rc0155 ai)
+        if: startsWith(inputs.rc0155, 'ai-') && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1'
+        shell: bash
+        env:
+          SHOTS_DIR: ${{ runner.temp }}/rc0155
+          UNVIBE_OS: ${{ matrix.label }}
+          RC55_AI_PROFILE: ${{ runner.temp }}/rc0155-ai-profile
+          # Seeded into the profile and pre-flagged above.
+          RC55_AI_ID: qa-rc0155-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          NETLOG_DIR: ${{ runner.temp }}/netlog
+        run: |
+          cp app/e2e/rc-0155-ai.mjs app/e2e/netlog.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          status=0
+          (cd "$RUNNER_TEMP/pw" && node rc-0155-ai.mjs) || status=$?
+          cat "$SHOTS_DIR/report-ai.txt" || true
+          exit $status
+
+      # rc0155: whatever happened above, the hosts file holds none of this run's lines and no raw net log is left.
+      - name: Put the hosts file back and delete the raw net logs (rc0155, Mac)
+        if: always() && inputs.rc0155 != '' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          if grep -q '# unvibe-qa-rc0155$' /etc/hosts; then sudo sed -i '' '/# unvibe-qa-rc0155$/d' /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo "removed the hosts lines"; fi
+          if grep -q 'unvibe-qa-rc0155' /etc/hosts; then echo "::error::a hosts line is still there"; exit 1; fi
+          rm -rf "$RUNNER_TEMP/netlog"
+          echo "hosts clean; raw net logs deleted"
+
+      - name: Put the hosts file back and delete the raw net logs (rc0155, Windows)
+        if: always() && inputs.rc0155 != '' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $hosts = 'C:\Windows\System32\drivers\etc\hosts'
+          $lines = @(Get-Content $hosts)
+          if ($lines -match '# unvibe-qa-rc0155$') { Set-Content -Path $hosts -Value ($lines -notmatch '# unvibe-qa-rc0155$'); ipconfig /flushdns | Out-Null; 'removed the hosts lines' }
+          if (Select-String -Path $hosts -Pattern 'unvibe-qa-rc0155' -Quiet) { Write-Error 'a hosts line is still there'; exit 1 }
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\netlog" -ErrorAction SilentlyContinue
+          'hosts clean; raw net logs deleted'
+
       # The website's Windows download is the portable exe, so open that exact file too.
       - name: Open the portable exe the website serves (Windows)
-        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-')
+        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
         shell: pwsh
         env:
           V: ${{ steps.ver.outputs.v }}
@@ -497,7 +724,8 @@ jobs:
           if ($after['installId'] -ne $env:PORTABLE_INSTALL_ID) { Write-Error 'The portable app replaced the seeded QA install id'; exit 1 }
 
       # Leave this run's installs out of founder stats: the walkthrough's profile on both systems,
-      # on Windows the portable exe's, and rc0154's profiles (walk: two; ai: one, or two with full). Only this step has the admin token, and Unvibe is stopped
+      # on Windows the portable exe's, rc0154's profiles (walk: two; ai: one, or two with full) and rc0155's (walk: the
+      # control's and the RC rows'; ai: one). Only this step has the admin token, and Unvibe is stopped
       # first, so the app under test never runs with it. Runs even after a failed check. Fails when
       # the API answers anything but 200 with matched true: a 200 alone does not prove the app's own
       # install row was flagged (Security, 31 Oct).
@@ -511,7 +739,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          foreach ($name in 'walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile') {
+          foreach ($name in 'walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
             try {
@@ -536,11 +764,21 @@ jobs:
           retention-days: 14
 
       - name: Upload the 0.1.54 RC rows
-        if: always() && inputs.rc0154 != ''
+        if: always() && (inputs.rc0154 != '' || inputs.rc0155 == 'walk')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-${{ matrix.label }}-rc0154
           path: ${{ runner.temp }}/rc0154
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # rc0155's reports, stills and net-log summaries (time, method, path, status); the raw net logs are never in it.
+      - name: Upload the 0.1.55 RC rows
+        if: always() && inputs.rc0155 != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unvibe-${{ matrix.label }}-rc0155
+          path: ${{ runner.temp }}/rc0155
           if-no-files-found: ignore
           retention-days: 14
 
@@ -556,7 +794,7 @@ jobs:
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-')
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
         continue-on-error: true
         shell: bash
         env:
@@ -572,7 +810,7 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-')
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -593,7 +831,7 @@ jobs:
           echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
-        if: always() && matrix.label == 'mac' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-')
+        if: always() && matrix.label == 'mac' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-mac-website-media
