@@ -20,6 +20,9 @@ name: Real device test
 # (short), counted by the script, which refuses any past the plan. The usual walk (4 calls with ai=true), the website
 # media and the portable exe are skipped, and no 0.1.52 is installed first. rc0154=ai-windows-row2 (BOSS's narrow
 # re-check after Run B) is 1 hosted call: the ⌃U explanation, then only the finished-overlay drag (row 2).
+# rc0154=hero (Mac only, ai off, a published version) shoots the site hero's Today still (app/e2e/hero-today.mjs:
+# light, 1180x780 at 2x, sample lessons written into a new profile, sharks off) instead of the usual walk; no hosted-AI
+# call, and no 0.1.52 is installed first.
 on:
   workflow_dispatch:
     inputs:
@@ -47,7 +50,7 @@ on:
         required: false
         default: false
       rc0154:
-        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. Empty: off"
+        description: "Unvibe 0.1.54 RC rows: 'walk' installs 0.1.52 first, then the build_run's RC over it, and runs app/e2e/rc-0154.mjs with no hosted-AI call (needs build_run and ai off). 'ai-mac-full', 'ai-mac-short', 'ai-windows-full' or 'ai-windows-short' runs app/e2e/rc-0154-ai.mjs on that system only, at most 6 (full) or 3 (short) hosted calls (needs build_run and ai on); 'ai-windows-row2' is 1 call, then only the finished-overlay drag. 'hero': the site hero's Today still on the Mac (needs version, no build_run, ai off). Empty: off"
         required: false
         default: ""
 
@@ -65,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         # rc0154=ai-<os>-<plan> runs on that one system: its hosted calls are planned per system.
-        include: ${{ fromJSON(startsWith(inputs.rc0154, 'ai-mac-') && '[{"os":"macos-latest","label":"mac"}]' || startsWith(inputs.rc0154, 'ai-windows-') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero') && '[{"os":"macos-latest","label":"mac"}]' || startsWith(inputs.rc0154, 'ai-windows-') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -77,10 +80,11 @@ jobs:
           MEDIA_SAMPLES: ${{ inputs.media_samples && '1' || '' }}
           RC0154: ${{ inputs.rc0154 }}
           BUILD_RUN: ${{ inputs.build_run }}
+          VERSION: ${{ inputs.version }}
           OS_LABEL: ${{ matrix.label }}
         run: |
           case "$RC0154" in
-            ai-*) ;;
+            ai-*|hero) ;;
             *)
               if [ "$QA_AI_OK" = 1 ]; then
                 echo "Mode: ai=true: the walkthrough explains for real (4 hosted calls on this system); the Mac also records the website media"
@@ -102,7 +106,11 @@ jobs:
               if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with rc0154=$RC0154 (no website media)"; fi
               plan=${RC0154##*-}
               echo "Mode: RC rows with hosted AI on $OS_LABEL only, plan $plan (at most $(case $plan in (full) echo 6 ;; (short) echo 3 ;; (row2) echo 1 ;; esac) hosted calls, counted by app/e2e/rc-0154-ai.mjs). The usual walk, the website media and the portable exe are skipped" ;;
-            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short or ai-windows-row2"; exit 1 ;;
+            hero)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::rc0154=hero makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -n "$BUILD_RUN" ] || [ -z "$VERSION" ]; then echo "::error::rc0154=hero shoots a published release: give version, not build_run"; exit 1; fi
+              echo "Mode: the site hero's Today still on the Mac (app/e2e/hero-today.mjs), Unvibe $VERSION as published; no hosted-AI call. The usual walk and the website media are skipped" ;;
+            *) echo "::error::rc0154 must be empty, walk, ai-mac-full, ai-mac-short, ai-windows-full, ai-windows-short, ai-windows-row2 or hero"; exit 1 ;;
           esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
@@ -135,6 +143,7 @@ jobs:
           RC_INSTALL_ID: qa-rc0154-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC_AI_ID: qa-rc0154-ai-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC_SAMPLE_ID: qa-rc0154-sample-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          RC_HERO_ID: qa-rc0154-hero-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           RC0154: ${{ inputs.rc0154 }}
           OS_LABEL: ${{ matrix.label }}
         run: |
@@ -144,6 +153,8 @@ jobs:
             # profile, and with the full plan the sample's new profile.
             ai-*-full) ids="$RC_AI_ID $RC_SAMPLE_ID" ;;
             ai-*) ids="$RC_AI_ID" ;;
+            # rc0154 hero: only hero-today.mjs launches the app (the walk is skipped).
+            hero) ids="$RC_HERO_ID" ;;
             *)
               ids="$WALK_INSTALL_ID"
               if [ "$OS_LABEL" = mac ]; then
@@ -341,9 +352,10 @@ jobs:
           }
           "UNVIBE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      # Skipped with rc0154 ai: with ai=true it would send its own 4 explanations, outside the RC plan's count.
+      # Skipped with rc0154 ai: with ai=true it would send its own 4 explanations, outside the RC plan's count. Skipped
+      # with rc0154 hero: that run only shoots the hero still.
       - name: Walk through the app
-        if: ${{ !startsWith(inputs.rc0154, 'ai-') }}
+        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' }}
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -382,6 +394,24 @@ jobs:
           status=0
           (cd "$RUNNER_TEMP/pw" && node rc-0154.mjs) || status=$?
           cat "$SHOTS_DIR/report-walk.txt" || true
+          exit $status
+
+      # rc0154=hero: the site hero's Today still (unvibe-site, Design's Option A spec §3), no hosted-AI call: a new
+      # profile holding sample lessons, light, sharks off, Today at 1180x780 captured at 2x (2360x1560 px, checked).
+      - name: Shoot the site hero's Today still (rc0154 hero)
+        if: inputs.rc0154 == 'hero' && env.UNVIBE_EXE != ''
+        shell: bash
+        env:
+          SHOTS_DIR: ${{ runner.temp }}/rc0154
+          UNVIBE_OS: ${{ matrix.label }}
+          RC_HERO_PROFILE: ${{ runner.temp }}/rc0154-hero-profile
+          # Seeded into the profile and pre-flagged above.
+          RC_HERO_ID: qa-rc0154-hero-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+        run: |
+          cp app/e2e/hero-today.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          status=0
+          (cd "$RUNNER_TEMP/pw" && node hero-today.mjs) || status=$?
+          cat "$SHOTS_DIR/report-hero.txt" || true
           exit $status
 
       # rc0154=ai-<os>-<plan>: the RC rows that need hosted AI (app/e2e/rc-0154-ai.mjs) on this one system: the ⌃U
@@ -481,7 +511,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          foreach ($name in 'walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile') {
+          foreach ($name in 'walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile') {
             $store = [IO.Path]::Combine($env:RUNNER_TEMP, $name, 'unvibe-store.json')
             if (-not (Test-Path $store)) { "QA install flag ($name): skipped, no store"; continue }
             try {
