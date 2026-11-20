@@ -54,7 +54,7 @@ import {
   startWindowDrag,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, readsOnStart, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
@@ -103,7 +103,7 @@ import {
 } from './backend';
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
-import { setBar, notify, pulseBar } from './notify';
+import { setBar, notify, pulseBar, settleBar } from './notify';
 import { setShortcutRecording } from './commandUHint';
 import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
@@ -284,6 +284,8 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
   clearPanelSessions();
   win.on('closed', () => {
     clearPanelSessions();
+    // Before any hide: a pulse shows the Island, and the hide below must win.
+    settleBar();
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
     // The companion's paste step stops saying the explanation is opening if none came.
     if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
@@ -598,7 +600,6 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
-  pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
   const usage = await cachedAppUsage();
   if (usage.remaining <= 0) {
@@ -630,6 +631,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // Capture before showing any Unvibe surface. This preserves the active editor selection
   // for the global shortcut, while the IDE bridge uses its just-written local clipboard text.
   const agreed = codeConsented(providerInUse(usage.remaining));
+  if (readsOnStart({ agreed, sample: options.sample })) pulseBar({ phase: 'loading', label: 'Loading' });
   if (!options.sample && !options.captured) {
     heldClipboardReview = !agreed && options.preferClipboard ? { at: Date.now() } : null;
   }
