@@ -24,8 +24,9 @@ export interface ExplainPage {
   related?: readonly string[];
   /**
    * What follows "Explain" in the H1, the <title>, the /explain index link and the link-preview card, for pages
-   * about output or errors rather than code: a lowercase noun as people say it, no article ("lsof output",
-   * "CORS errors"). Without it the page reads "Explain {name} code". The breadcrumb and Related chips keep the name.
+   * whose sample isn't code in a language: output, errors, config files and commands. A plural noun as people say it,
+   * no article ("lsof output", "CORS errors", ".env files", "tar commands"). Without it the page reads
+   * "Explain {name} code". The breadcrumb and Related chips keep the name.
    */
   heading?: string;
   /**
@@ -115,6 +116,7 @@ def total_by_city(path):
     id: "pyproject-toml",
     fileName: "pyproject.toml",
     published: "2026-11-05",
+    heading: "pyproject.toml files",
     related: ["python", "requirements-txt", "python-traceback", "package-lock"],
     lead: "Paste a pyproject.toml and Vibe explains what each table does: how the package is built, what it depends on, which commands it installs and where tools like pytest read their settings.",
     description:
@@ -173,6 +175,7 @@ testpaths = ["tests"]`,
     id: "requirements-txt",
     fileName: "requirements.txt",
     published: "2026-11-05",
+    heading: "requirements.txt files",
     related: ["python", "pyproject-toml", "python-traceback", "package-lock"],
     lead: "Paste a requirements.txt and Vibe explains what each line asks pip for: an exact version, a range, a compatible release or a package only some machines need.",
     description:
@@ -393,6 +396,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "tsconfig",
     fileName: "tsconfig.json",
     published: "2026-11-05",
+    heading: "tsconfig.json files",
     related: ["typescript", "javascript", "eslint-config", "json"],
     lead: "Paste a tsconfig.json and Vibe explains what each compiler option changes, which files TypeScript checks and why `strict` suddenly finds errors.",
     description:
@@ -445,6 +449,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "npm-scripts",
     fileName: "shop/package.json",
     published: "2026-11-05",
+    heading: "npm scripts",
     related: ["package-lock", "json", "npm-error"],
     lead: "Paste the `scripts` from a package.json and Vibe explains what `npm run dev`, `npm run build` and the rest actually run, in what order, and where each command comes from.",
     description:
@@ -499,6 +504,7 @@ export async function userLabel(id: number): Promise<string> {
     id: "eslint-config",
     fileName: "eslint.config.js",
     published: "2026-11-05",
+    heading: "ESLint config files",
     related: ["javascript", "typescript", "tsconfig", "npm-scripts"],
     lead: "Paste an eslint.config.js and Vibe explains which files each block covers, which rules it turns on and which block wins when two of them disagree.",
     description:
@@ -832,6 +838,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
     id: "curl",
     fileName: "check-orders.sh",
     published: "2026-11-05",
+    heading: "curl commands",
     title: "curl command explained, flag by flag",
     related: ["cors-error", "json", "bash", "graphql"],
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
@@ -886,6 +893,7 @@ curl -si -X DELETE "$API/api/orders/42"`,
     id: "bashrc",
     fileName: ".bashrc",
     published: "2026-11-05",
+    heading: ".bashrc files",
     related: ["zshrc", "bash", "fish", "env"],
     lead: "Paste a .bashrc and Vibe explains what each line sets up for a new terminal: aliases, functions, `PATH`, history and what `PS1` puts in your prompt.",
     description:
@@ -943,6 +951,7 @@ PS1='\\u@\\h:\\w$(git branch --show-current 2>/dev/null | sed "s/.*/ (&)/")\\$ '
     id: "chmod",
     fileName: "set-permissions.sh",
     published: "2026-11-05",
+    heading: "chmod commands",
     title: "chmod 755, 644 and 777 explained",
     related: ["bash", "find", "ssh-config", "rsync"],
     lead: "Paste chmod commands and Vibe explains what each number or letter code allows: who can read, change or run each file, and what `755`, `644` and `777` really mean.",
@@ -993,6 +1002,7 @@ ls -l bin config`,
     id: "find",
     fileName: "clean-project.sh",
     published: "2026-11-05",
+    heading: "Unix find commands",
     related: ["xargs", "tar", "grep"],
     lead: "Paste find commands and Vibe explains what each test picks out, which folders are skipped and what happens to every file that matches.",
     description:
@@ -1816,6 +1826,7 @@ fun packingLabels(parcels: List<Parcel>): List<String> {
     id: "regex",
     fileName: "access_log.py",
     published: "2026-11-04",
+    heading: "regular expressions",
     title: "Regex pattern explained, piece by piece",
     related: ["grep", "sed", "awk", "python"],
     lead: "Paste a regular expression and Vibe explains what each part of it matches.",
@@ -1870,6 +1881,7 @@ print(m.group("path"), m.group("status"), m.group("bytes"))`,
     id: "cron",
     fileName: "crontab",
     published: "2026-11-05",
+    heading: "crontab lines",
     related: ["bash", "systemd"],
     lead: "Paste a crontab line or a whole crontab and Vibe explains when each job runs, what `*/15` and `1-5` mean and where the job's output goes.",
     description:
@@ -1981,6 +1993,7 @@ List<Track> parseTracks(String body) {
     id: "zshrc",
     fileName: ".zshrc",
     published: "2026-11-05",
+    heading: ".zshrc files",
     related: ["bashrc", "fish", "bash", "env"],
     lead: "Paste a .zshrc and Vibe explains what each line sets up in a new terminal: history options, `path`, completion, aliases, functions and what the `%` codes in `PROMPT` show.",
     description:
@@ -2152,6 +2165,7 @@ jobs:
     id: "ini",
     fileName: "settings.ini",
     published: "2026-11-05",
+    heading: "INI files",
     related: ["env", "yaml", "json", "ssh-config"],
     lead: "Paste an .ini file and Vibe explains what each section and setting is for, which defaults every section shares and how a value like `%(log_dir)s` gets filled in.",
     description:
@@ -2266,6 +2280,7 @@ subject = Your invoice from Acme`,
     id: "csv",
     fileName: "orders.csv",
     published: "2026-11-05",
+    heading: "CSV files",
     related: ["sql", "json", "awk", "python"],
     lead: "Paste a CSV file and Vibe explains what each column holds and how the quoting works: why some values sit in quotes, what a doubled quote means and why one row can run over two lines.",
     description:
@@ -2310,6 +2325,7 @@ back door"
     id: "env",
     fileName: ".env",
     published: "2026-11-05",
+    heading: ".env files",
     title: "What is a .env file? Explained with a sample",
     related: ["ini", "yaml", "bashrc", "prisma-schema"],
     lead: "Paste a .env file, with real keys and passwords swapped for placeholders, and Vibe explains what each setting is for, which part a `#` cuts off and why every value reaches your code as text.",
@@ -2482,6 +2498,7 @@ end`,
     id: "make",
     fileName: "Makefile",
     published: "2026-11-05",
+    heading: "Makefiles",
     related: ["c", "cpp", "bash", "npm-scripts"],
     lead: "Paste a Makefile and Vibe explains what each rule builds, why make reruns some commands and skips others, and what `$@`, `$^` and `$<` stand for.",
     description:
@@ -2545,6 +2562,7 @@ clean:
     id: "gitignore",
     fileName: ".gitignore",
     published: "2026-11-05",
+    heading: ".gitignore files",
     related: ["git-diff", "git-log", "package-lock"],
     lead: "Paste a .gitignore and Vibe explains which files each line leaves out, what a leading or trailing `/` changes and why a `!` line sometimes can't bring a file back.",
     description:
@@ -2601,6 +2619,7 @@ uploads/*
     id: "ssh-config",
     fileName: "config",
     published: "2026-11-05",
+    heading: "SSH config files",
     related: ["rsync", "bash", "chmod", "ini"],
     lead: "Paste an ~/.ssh/config and Vibe explains what each `Host` block sets, which key goes to which server and what ssh actually uses when several blocks match.",
     description:
@@ -2721,6 +2740,7 @@ print "$errors server errors\\n";`,
     id: "sed",
     fileName: "tidy.sed",
     published: "2026-11-05",
+    heading: "sed commands",
     related: ["awk", "grep", "regex", "xargs"],
     lead: "Paste a sed command or script and Vibe explains which lines each address picks, what a `s///` swaps in and what `\\1` and `\\2` hold.",
     description:
@@ -2778,6 +2798,7 @@ s/^([a-z_]+_(token|password)) = .*/\\1 = [hidden]/
     id: "grep",
     fileName: "find-problems.sh",
     published: "2026-11-05",
+    heading: "grep commands",
     related: ["regex", "sed", "awk", "find"],
     lead: "Paste grep commands and Vibe explains what each one finds: what the flags change, what the pattern matches and what the command prints back.",
     description:
@@ -3008,6 +3029,7 @@ KeyError: 'qty'`,
     id: "package-lock",
     fileName: "package-lock.json",
     published: "2026-11-06",
+    heading: "package-lock.json files",
     title: "package-lock.json explained, entry by entry",
     related: ["json", "npm-scripts", "gitignore"],
     lead: "Paste a package-lock.json and Vibe explains what it pins: the exact version of every package, where npm downloaded it, the hash that proves the file is the same, and why one package can sit inside another.",
@@ -3173,6 +3195,7 @@ model Post {
     id: "sql-joins",
     fileName: "joins.sql",
     published: "2026-11-06",
+    heading: "SQL joins",
     title: "SQL joins explained with examples",
     related: ["sql", "sqlite", "supabase-rls", "prisma-schema"],
     lead: "Paste a query with JOINs and Vibe explains what each join keeps and drops: which rows match, which customers come back with nothing, and why a total can come out twice as big as it should.",
@@ -3233,6 +3256,7 @@ GROUP BY c.id;`,
     id: "supabase-rls",
     fileName: "todos.sql",
     published: "2026-11-06",
+    heading: "Supabase RLS policies",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
     lead: "Paste Supabase row level security SQL and Vibe explains who can read and change which rows: what `using` and `with check` each test, what `auth.uid()` is, and what happens to a request no policy covers.",
@@ -3403,6 +3427,7 @@ print(f"total {time.perf_counter() - START:.1f}s")`,
     id: "tar",
     fileName: "backup-site.sh",
     published: "2026-11-06",
+    heading: "tar commands",
     title: "tar command explained: what each letter does",
     related: ["rsync", "find", "chmod"],
     lead: "Paste tar commands and Vibe explains what each letter does: what `c`, `x`, `t`, `z`, `v` and `f` mean, where the files end up, and which mistakes the command won't stop.",
@@ -3453,6 +3478,7 @@ tar -xzf site-backup.tar.gz -C ~/restore my-site/package.json`,
     id: "rsync",
     fileName: "backup.sh",
     published: "2026-11-06",
+    heading: "rsync commands",
     title: "rsync command explained: flags and trailing slash",
     related: ["tar", "ssh-config", "bash"],
     lead: "Paste rsync commands and Vibe explains what gets copied and what gets deleted: what `-avh`, `-n` and `--delete` do, and why one trailing slash changes where the files go.",
@@ -3504,6 +3530,7 @@ rsync -avh --delete --exclude='node_modules/' --exclude='*.log' "$SRC" "$DEST"
     id: "git-rebase",
     fileName: "git-rebase-todo",
     published: "2026-11-06",
+    heading: "git rebase -i todo lists",
     title: "git rebase -i explained: the interactive todo list",
     related: ["git-log", "git-diff", "gitignore", "git-merge-conflict"],
     lead: "Paste the todo list from `git rebase -i` and Vibe explains what each line will do to your commits: `pick`, `fixup`, `reword` and `drop`, and why the branch needs a force push afterwards.",
@@ -3558,6 +3585,7 @@ drop 803b36d # Add gitignore
     id: "xargs",
     fileName: "shrink-logs.sh",
     published: "2026-11-06",
+    heading: "xargs commands",
     title: "xargs explained: how it works, with find",
     related: ["find", "grep", "sed"],
     lead: "Paste a `find | xargs` line and Vibe explains how file names become arguments: what `-0`, `-n`, `-P`, `-I {}` and `-r` do, and why a space in a file name breaks the plain version.",
@@ -3655,6 +3683,7 @@ devuser   880109  0.0  0.0      0     0 ?        Z<   21:54   0:00 [python3] <de
     id: "systemd",
     fileName: "notes-api.service",
     published: "2026-11-08",
+    heading: "systemd service files",
     title: "systemd service file explained, section by section",
     related: ["bash", "env", "cron"],
     lead: "Paste a systemd unit file and Vibe explains what each line does: what `ExecStart=` runs and where, which exits `Restart=` brings back, and where the `Environment=` values come from.",
@@ -4000,11 +4029,16 @@ export function explainHeading(page: ExplainPage): string {
 
 /**
  * The heading as rendered on the page (H1, index link, download H2): a 2-word command at its start ("git log",
- * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283).
+ * "ps aux") gets a no-break space so a narrow screen never breaks "Explain git / log output" (Design S-1 on #283);
+ * a hyphen inside a file name or flag ("package-lock.json", "-i") gets a word joiner after it, and the space before a
+ * flag becomes no-break, so neither "package- / lock.json" nor "rebase / -i" happens at 390 px (Design on heading 2).
  * Plain-text uses (<title>, card alt, llms-full.txt) keep explainHeading().
  */
 export function explainHeadingText(page: ExplainPage): string {
-  return explainHeading(page).replace(/^(git|ps) /, "$1\u00a0");
+  return explainHeading(page)
+    .replace(/^(git|ps) /, "$1\u00a0")
+    .replace(/ (-[a-z])\b/g, "\u00a0$1")
+    .replace(/-(\S)/g, "-\u2060$1");
 }
 
 /** The other pages a page links to: its related pages in the order given, then every remaining page in data order. */
