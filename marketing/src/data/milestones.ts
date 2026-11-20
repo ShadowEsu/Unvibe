@@ -21,6 +21,21 @@ export interface Milestone {
 
 export const milestones: Milestone[] = [
   {
+    date: "19 NOV 2026",
+    category: "PRODUCT",
+    title: "Unvibe 0.1.54: Question it, and a panel you can move",
+    summary: "When an explanation finishes, the panel shows 3 questions under \"Question it\": \"Why this way?\", \"What breaks if I remove it?\" and \"What would a reviewer flag?\" Tapping one puts it in the Ask box, and nothing is sent until you press Ask or Return. You can drag the floating Island, or drag the panel by its header, and each display remembers its own spot; double-click the header to put the panel back beside your last Control+U. The panel is 320 px wide, and Settings has a new Density choice, Comfortable or Compact. On a Mac, setup and the panel show the shortcut as Control and U, setup says \"Hold Control, not Command, and press U\", and pressing Command+U in Unvibe shows a reminder that the shortcut is Control+U. In a quiz, the arrow keys move between answers, and after a wrong answer focus stays in them. Sign-in shows its code right away, Next stays in view during setup, pasting your own code before the agreement is no longer dropped, and Today fits a 1180 by 780 window without scrolling.",
+    figure: "v0.1.54",
+    links: [
+      { href: "https://github.com/ShadowEsu/Unvibe/releases/tag/v0.1.54", label: "Release v0.1.54" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/361", label: "PR #361" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/344", label: "PR #344" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/345", label: "PR #345" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/347", label: "PR #347" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/348", label: "PR #348" },
+    ],
+  },
+  {
     date: "16 NOV 2026",
     category: "PRODUCT",
     title: "Unvibe 0.1.52: a new look for the whole app",
