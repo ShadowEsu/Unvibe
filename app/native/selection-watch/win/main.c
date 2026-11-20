@@ -94,7 +94,9 @@ static void exe_of(HWND hwnd, char *out, size_t cap) {
 }
 
 /* The pointer is the text I-beam (Chromium, Monaco and Java editors use the system one): the press started in text,
- * not on a tab, a scrollbar or a sidebar. When Windows can't say, it counts as text. */
+ * not on a tab, a scrollbar or a sidebar. When Windows can't say (no cursor handle: touch or pen hides it, and a PC with
+ * no mouse has none), it counts as text on purpose (lead): a missed button is the bigger miss there, and a stray one is
+ * harmless (it never sends anything, and it leaves after 4 s or on any click). */
 static BOOL pointer_is_beam(void) {
   CURSORINFO ci;
   ci.cbSize = sizeof ci;
