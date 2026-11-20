@@ -18,7 +18,7 @@ ol.explain-notes {
 .use-sample figcaption {
   margin-bottom: 0.4rem;
   color: var(--explain-muted);
-  font: 0.9rem / 1.4 var(--font-mono);
+  font: 13px / 1.4 var(--font-mono);
 }
 
 /* Code keeps its lines: no wrapping; the region around it scrolls sideways (Design, #135 gate). The code grows to
@@ -100,7 +100,7 @@ ol.explain-notes {
 .os-shot figcaption {
   margin-top: 0.6rem;
   color: var(--explain-muted);
-  font-size: 0.9rem;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -173,16 +173,11 @@ ol.explain-notes {
   font-size: 0.95rem;
 }
 
-/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays a reading measure (68ch), while the worked example's
-   code block and the "Doing it with Unvibe" steps sit at about 860 px, wider than the prose but not the whole card
-   (Design SHOULD on #269; the 1440 page is not shorter for it: 6,079 px against 6,020). The list keeps its marker
-   inside the same 860 px. Under 1024 nothing changes. */
+/* Search landing pages (/use-cases/*) at ≥ 1024: prose stays in the 680 px reading column (explain.css), while the
+   worked example's code block and the "Doing it with Unvibe" steps sit at about 860 px, wider than the prose but not
+   the whole card (Design SHOULD on #269). The list keeps its marker inside the same 860 px. Under 1024 nothing
+   changes. */
 @media (min-width: 1024px) {
-  .explain-page--uc .explain-card p,
-  .explain-page--uc .explain-card li,
-  .explain-page--uc .explain-card dd {
-    max-width: 68ch;
-  }
   /* The code block is 860 px, or as wide as its longest line when that is longer, never wider than the card: the
      Cursor sample's `controller.signal` line was cut at a hard 860 (Design MUST on #269). */
   .explain-page--uc .use-sample {
