@@ -79,7 +79,7 @@
 .resources-section__head > .paper-lead,
 .paper-pricing .pricing-disclosure {
   padding: 0.75rem 1rem;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--squircle-k, 1)); corner-shape: squircle;
   background: var(--u-sheet);
   color: var(--u-text);
 }
@@ -192,7 +192,7 @@
   margin: 1.5rem auto 0;
   padding: 1rem 1.25rem;
   border: 1.5px solid var(--v-ink);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--squircle-k, 1)); corner-shape: squircle;
   background: var(--u-card);
   box-shadow: 3px 3px 0 var(--v-ink);
   color: var(--v-ink);
@@ -342,7 +342,7 @@
   align-items: center;
   min-height: 2.75rem;
   border: 1.5px solid var(--v-ink);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--squircle-k, 1)); corner-shape: squircle;
   background: var(--u-card);
   color: var(--v-ink);
   font-weight: 750;

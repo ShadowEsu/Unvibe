@@ -6,7 +6,7 @@
 .sec-head h2 { text-wrap: balance; }
 /* Paper chips keep eyebrows and leads readable where a head sits straight on the dusk photo (inside a sheet they flatten). */
 .sec-head > .paper-meta { padding: 0.2rem 0.9rem; border-radius: 999px; background: var(--u-sheet); }
-.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: 14px; background: var(--u-sheet); text-wrap: pretty; }
+.sec-head > .paper-lead { max-width: 36rem; padding: 0.5rem 1rem; border-radius: calc(14px * var(--squircle-k, 1)); corner-shape: squircle; background: var(--u-sheet); text-wrap: pretty; }
 .sec-head > .paper-lead .paper-text-link { font-size: inherit; }
 /* Home: the language pages under Try it. Underlined, since the links sit inside a sentence. */
 .home-langs { margin: 1rem 0 0; color: var(--u-text-2); font-size: 0.95rem; line-height: 1.6; text-align: center; text-wrap: pretty; }
@@ -53,7 +53,7 @@
 .try__foot .try__fine { margin: 0; color: #c9c5bc; }
 .try__room { display: flex; align-items: center; gap: 0.5rem; }
 /* Border #77756f: 3.97:1 on the #151514 panel, 3.58:1 on the field's own fill (input edges need 3:1). */
-.try__room input { width: 11rem; min-height: 2.25rem; padding: 0.3rem 0.6rem; border: 1px solid #77756f; border-radius: 6px; background: #1f1f1d; color: #f4f2ea; font: 0.95rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.try__room input { width: 11rem; min-height: 2.25rem; padding: 0.3rem 0.6rem; border: 1px solid #77756f; border-radius: calc(6px * var(--squircle-k, 1)); corner-shape: squircle; background: #1f1f1d; color: #f4f2ea; font: 0.95rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
 .try__room input:focus-visible { border-color: #a9a69c; outline: 3px solid var(--v-lime); outline-offset: 2px; }
 /* The two Try consent boxes: Explain's lime, big enough to read as part of the form (Design TC-4 P2). */
 .try__foot .try__consent { display: flex; align-items: center; gap: 10px; min-height: 32px; }
@@ -95,7 +95,7 @@
 @keyframes mSweep { to { transform: translateX(100%); } }
 /* The answer crossfades in as it lands. */
 .try__answer { animation: mFade var(--m-fast) var(--m-ease-sharp) both; }
-.try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: 12px; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; }
+.try__retry { min-height: 2.75rem; padding: 0 1.2rem; border: 1.5px solid var(--v-ink); border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; color: var(--v-ink); font: 700 0.95rem var(--font-sans); cursor: pointer; }
 .try__retry:focus-visible, .try__phone:focus-visible, .try .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 .try__after p { margin: 0 0 0.9rem; }
 /* The accuracy line under the answer: secondary ink, one step under the answer's 1.08rem, plain weight. */
@@ -108,10 +108,10 @@
 /* Download buttons inside the always-light panel: fixed ink colours so they read in both themes. */
 .try .paper-join-row { justify-content: flex-start; }
 .try__state .paper-join-row { justify-content: center; }
-.try .paper-join { min-height: 2.9rem; border: 1.5px solid #141414; border-radius: 12px; font-weight: 700; }
+.try .paper-join { min-height: 2.9rem; border: 1.5px solid #141414; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; font-weight: 700; }
 .try .paper-join--mac { background: var(--v-lime); color: #141414; }
 .try .paper-join--win { background: #141414; color: #fff; }
-.try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: 12px; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-sans); text-decoration: none; }
+.try__phone { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.4rem; border: 1.5px solid #141414; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: var(--v-lime); color: #141414; font: 800 1.05rem var(--font-sans); text-decoration: none; }
 
 @media (max-width: 520px) {
   .try__editor textarea { min-height: 12rem; font-size: 0.88rem; }
@@ -129,7 +129,7 @@
 
 /* ── Install card (BetaInstall) ── */
 .paper-beta__quickstart { margin: 0.35rem 0 0; padding: 0; list-style: none; }
-.paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: 6px; font: 600 0.88em var(--font-mono); }
+.paper-beta__step-text kbd { padding: 0.05rem 0.4rem; border: 1px solid currentColor; border-radius: calc(6px * var(--squircle-k, 1)); corner-shape: squircle; font: 600 0.88em var(--font-mono); }
 
 /* ── Startup programs ── */
 .paper-backing .claude-startups { max-width: 1000px; margin-inline: auto; }
@@ -167,13 +167,13 @@
 
 /* ── GetUnvibe: the download for this computer, the other system as a pill; phones get the emailed link ── */
 .get-unvibe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-.get-unvibe .paper-join { min-height: 3rem; padding: 0 1.3rem; border: 1.5px solid #141414; border-radius: 12px; font-size: 1rem; font-weight: 700; }
+.get-unvibe .paper-join { min-height: 3rem; padding: 0 1.3rem; border: 1.5px solid #141414; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; font-size: 1rem; font-weight: 700; }
 .get-unvibe .paper-join--mac { background: var(--v-lime); color: #141414; }
 .get-unvibe .paper-join--win { background: #141414; color: #fff; }
 .get-unvibe .paper-join:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 3px; }
 
 /* A secondary download (the other system, the Intel build): a real target, not a 20 px inline link. */
-a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: 12px; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; }
+a.paper-alt-link { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 1rem; border: 1.5px solid #141414; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; color: #141414; font: 700 0.95rem var(--font-sans); line-height: 1.2; text-decoration: none; }
 a.paper-alt-link:hover { background: #f4f1ea; }
 a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px; }
 /* "Older Intel Mac?" and its pill on one centred row that wraps on narrow screens. */
@@ -209,12 +209,12 @@ a.paper-alt-link:focus-visible { outline: 3px solid #3c2fb8; outline-offset: 2px
 .newsletter { display: grid; gap: 0.6rem; width: min(30rem, 100%); }
 .newsletter__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .newsletter__row input {
-  flex: 1 1 12rem; min-width: 0; min-height: 2.75rem; padding: 0 0.9rem; border: 1.5px solid var(--u-line-strong); border-radius: 12px;
+  flex: 1 1 12rem; min-width: 0; min-height: 2.75rem; padding: 0 0.9rem; border: 1.5px solid var(--u-line-strong); border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle;
   background: var(--u-card); color: var(--u-text); font: 500 1rem var(--font-sans);
 }
 .newsletter__row input::placeholder { color: var(--u-text-2); opacity: 1; }
 .newsletter__row button {
-  min-height: 2.75rem; padding: 0 1.1rem; border: 1.5px solid #141414; border-radius: 12px; background: #141414; color: #fff;
+  min-height: 2.75rem; padding: 0 1.1rem; border: 1.5px solid #141414; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: #141414; color: #fff;
   font: 700 0.95rem var(--font-sans); cursor: pointer;
 }
 .newsletter__row button[aria-disabled="true"] { background: var(--u-card); color: var(--u-text); cursor: not-allowed; }

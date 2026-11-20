@@ -4,7 +4,7 @@
 .dl-card__others { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-top: 0.5rem; }
 .dl-card__other {
   display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0 1rem;
-  border: 1.5px solid var(--v-ink); border-radius: 12px; background: var(--u-card); color: var(--u-text);
+  border: 1.5px solid var(--v-ink); border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: var(--u-card); color: var(--u-text);
   font: 600 0.95rem var(--font-sans); letter-spacing: -0.01em;
   text-decoration: none; cursor: pointer; transition: background-color 160ms ease;
 }
@@ -23,7 +23,7 @@
 }
 
 /* ── Who it's for (WhoItsFor): one panel, three columns split by hairlines, rows on a phone. ── */
-.who-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.6rem; border: 1px solid var(--u-line-strong); border-radius: 20px; background: var(--u-card); color: var(--u-text); }
+.who-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.6rem; border: 1px solid var(--u-line-strong); border-radius: calc(20px * var(--squircle-k, 1)); corner-shape: squircle; background: var(--u-card); color: var(--u-text); }
 .who-panel__item { padding: clamp(1.2rem, 2.6vw, 1.8rem); }
 .who-panel__item + .who-panel__item { border-left: 1px solid rgb(20 20 20 / 0.14); }
 .who-panel__item h3 { margin: 0 0 0.4rem; }

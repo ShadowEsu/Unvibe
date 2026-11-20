@@ -27,24 +27,24 @@ html:not(.os-win) .lx-win, html.os-win .lx-mac { display: none !important; }
   content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 22%, rgb(255 255 255 / 0.45) 38%, transparent 52%, transparent 70%, rgb(255 255 255 / 0.25) 80%, transparent 90%); mix-blend-mode: soft-light; }
 .dh.is-open .dh__glass::before { opacity: 1; background: rgb(255 255 255 / 0.8); }
 .dh__bar { position: relative; display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 8px 0 12px; }
-.dh__mark { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px; margin-right: 6px; border-radius: 12px; color: var(--d-ink); text-decoration: none; }
+.dh__mark { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px; margin-right: 6px; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; color: var(--d-ink); text-decoration: none; }
 .dh__mark img { display: block; width: 28px; height: 28px; }
 .dh__word { display: none; font-family: var(--font-wordmark); font-style: italic; font-size: 24px; line-height: 1; }
 .dh__links { display: flex; align-items: center; gap: 2px; margin: 0 8px 0 0; padding: 0; list-style: none; }
-.dh__links a { position: relative; display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 10px; font: 500 15.5px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
+.dh__links a { position: relative; display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: calc(10px * var(--squircle-k, 1)); corner-shape: squircle; font: 500 15.5px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
 .dh__links a:hover { color: var(--d-violet); }
 .dh a:focus-visible, .dh button:focus-visible { outline: 2px solid var(--d-violet); outline-offset: 2px; }
 .dh__cta { display: inline-flex; align-items: center; height: 42px; min-width: 150px; padding: 0 48px 0 20px; border-radius: 999px; background: var(--d-violet); color: #fff; font: 450 15.5px/1 var(--d-sans); white-space: nowrap; text-decoration: none; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2); }
 .dh__cta:hover { background: var(--d-violet-2); }
 /* the pop (dia-motion.css [data-d-navcta]) needs the pill's own layout: it keeps its space, so the bar never moves */
 .dh [data-d-navcta] { position: relative; }
-.dh__toggle { display: none; position: relative; width: 40px; height: 40px; margin-left: auto; border: 0; border-radius: 12px; background: none; cursor: pointer; }
+.dh__toggle { display: none; position: relative; width: 40px; height: 40px; margin-left: auto; border: 0; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: none; cursor: pointer; }
 .dh__toggle span, .dh__toggle span::before { position: absolute; left: 12px; top: 19px; width: 16px; height: 2px; border-radius: 1px; background: var(--d-ink); transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1); }
 .dh__toggle span::before { content: ""; left: 0; top: 0; transform: rotate(90deg); }
 .dh.is-open .dh__toggle span { transform: rotate(45deg); }
 .dh__menu { position: relative; padding: 4px 14px 16px; }
 .dh__menu ul { display: grid; gap: 2px; margin: 0 0 12px; padding: 0; list-style: none; }
-.dh__menu a:not(.d-cta) { display: block; padding: 12px 8px; border-radius: 10px; font: 500 17px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
+.dh__menu a:not(.d-cta) { display: block; padding: 12px 8px; border-radius: calc(10px * var(--squircle-k, 1)); corner-shape: squircle; font: 500 17px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
 .dh__menu-cta { width: 100%; }
 .dh [data-d-navcta] { position: relative; }
 html:not(.js) .dh [data-d-navcta] { clip-path: none; transform: none; visibility: visible; }
@@ -81,7 +81,7 @@ html:not(.js) .dh [data-d-navcta] > * { opacity: 1; }
 .d-foot__dirs { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px 24px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--d-line); }
 .d-foot__dirs-h { margin: 6px 0 0; color: var(--d-ink); }
 .d-foot__badges { display: flex; flex-wrap: wrap; gap: 12px; }
-.d-foot__badges a { display: inline-flex; border-radius: 6px; }
+.d-foot__badges a { display: inline-flex; border-radius: calc(6px * var(--squircle-k, 1)); corner-shape: squircle; }
 .d-foot__badges img { display: block; width: auto; height: 28px; }
 .d-foot__links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font: 400 13px/1.5 var(--d-sans); letter-spacing: 0; text-transform: none; }
 .d-foot__dirs-h + .d-foot__links { margin-top: 4px; }
