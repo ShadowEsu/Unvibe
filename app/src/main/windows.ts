@@ -214,6 +214,40 @@ export function createBar(): BrowserWindow {
   return win;
 }
 
+/**
+ * The Unvibe button (D5): never takes focus, so the editor keeps its selection and stays the app a press copies
+ * from (Design NOTE §1, "non-activating"). Created hidden; main sizes and shows it inactive per look.
+ */
+export function createGhostWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 32,
+    height: 32,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    alwaysOnTop: true,
+    fullscreenable: false,
+    acceptFirstMouse: true,
+    roundedCorners: false,
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
+    show: false,
+    webPreferences: secureWebPrefs(),
+  });
+  win.setAlwaysOnTop(true, 'screen-saver', 2);
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  if (process.platform === 'darwin') {
+    win.setHiddenInMissionControl(true);
+    win.setWindowButtonVisibility(false);
+  }
+  lockNavigation(win);
+  void win.loadFile(page('ghost'));
+  return win;
+}
+
 /** Hover expansion is a real window resize so the transparent area never blocks other apps. */
 export function resizeBar(win: BrowserWindow | null, expanded: boolean, force = false): void {
   if (!win || win.isDestroyed()) return;

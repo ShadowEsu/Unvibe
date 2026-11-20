@@ -408,6 +408,24 @@ export async function postReview(payload: ReviewRequestPayload, token: string | 
   });
 }
 
+/**
+ * Quick look (D5 T3): 3 bullets on a pressed selection, from the preview route (web/app/api/v1/previews), which
+ * keeps only `level` and the selection's context and meters previews apart from explanations. The same agreement
+ * applies, checked before any request; the caller runs the secret scan first, as for an explanation.
+ */
+export async function postPreview(payload: ReviewRequestPayload, token: string | null | undefined, signal: AbortSignal): Promise<Response> {
+  requireCodeConsent('unvibe');
+  return networkFetch(`${BACKEND}/api/v1/previews`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...aiAuthHeaders(token),
+    },
+    body: JSON.stringify({ level: payload.level, context: payload.context }),
+    signal,
+  });
+}
+
 /** A quiz question about the code: the code goes to Unvibe's server too, so the same agreement applies. */
 export async function fetchQuestion(payload: ReviewRequestPayload, token?: string | null, signal?: AbortSignal): Promise<ComprehensionQuestion> {
   if (!isFirstRunSamplePayload(payload)) requireCodeConsent('unvibe');

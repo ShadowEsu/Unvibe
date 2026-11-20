@@ -48,7 +48,7 @@ await build({
 });
 
 // Renderers (browser/iife) + static html/css
-for (const name of ['bar', 'widget', 'companion']) {
+for (const name of ['bar', 'widget', 'companion', 'ghost']) {
   await build({
     entryPoints: [`src/renderer/${name}/${name}.tsx`],
     outfile: `dist/renderer/${name}/${name}.js`,
