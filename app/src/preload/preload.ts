@@ -60,6 +60,8 @@ const api = {
   widgetReady: () => ipcRenderer.send('widget:ready'),
   /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
   fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** A finished answer's table: how wide it is against the 320 px pane, numbers only (main logs it; Design, 0.1.55). */
+  tableFit: (fit: { columns: number; scrollWidth: number; clientWidth: number }) => ipcRenderer.send('widget:tableFit', fit),
   /** Moving the panel by its header: drag (pointer travel since the drag began), arrow keys, double-click to put it back. */
   panelDragStart: () => ipcRenderer.send('widget:dragStart'),
   panelDragMove: (dx: number, dy: number) => ipcRenderer.send('widget:dragMove', dx, dy),

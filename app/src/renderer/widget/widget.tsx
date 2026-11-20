@@ -489,6 +489,19 @@ function Widget() {
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [view]);
 
+  // Each table in a finished answer reports whether it fits the pane (numbers only), so real answers show whether the
+  // stacked layout is ever needed after 0.1.55's wrap (Design).
+  useEffect(() => {
+    if (!answerReady) return undefined;
+    const frame = requestAnimationFrame(() => {
+      for (const table of innerRef.current?.querySelectorAll<HTMLElement>('.ob-answer .rich-table') ?? []) {
+        const columns = table.querySelector('tr')?.children.length ?? 0;
+        window.unvibe.tableFit({ columns, scrollWidth: table.scrollWidth, clientWidth: table.clientWidth });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [answerReady]);
+
   // Autoscroll while the answer (or a follow-up) streams.
   useEffect(() => {
     if ((phase === 'streaming' || asking) && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
