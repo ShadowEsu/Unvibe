@@ -41,6 +41,11 @@
 // Launch B (Windows): --force-device-scale-factor=1.5 (Chromium's scale on the runner's 100 % display; the Windows
 //   setting needs a sign-out): a real drag shows the button, with see-through corners (PASS/FAIL); its size and place
 //   (GetWindowRect and the page's) are a NOTE, since a forced scale is not a Windows display scale.
+// Launch F (Mac, after A, a fresh profile and process; lead 2026-11-20, polish backlog P4): the fade first. Nothing
+//   clicks an Unvibe window in this launch (unvibe-app suspects the earlier synthesized clicks on the button,
+//   electron#53889, for run 7's panel that never faded): ⌃U from VS Code opens the panel on the agreement (no
+//   agreement: nothing is read), then VS Code comes to the front (a click in it, then activated by name), and the
+//   panel fades below 0.5 within 3 s. Its install id is the run's D5_ID, flagged with launch A's profile.
 // Launch C (Mac and Windows), the API host blocked in the hosts file for the whole launch (no byte reaches the server;
 //   the file is put back byte for byte and checked), the agreement given in the run's own profile:
 //   D5-a first (Security's MUST): the runner's own request gets no answer, the resolver gives only 0.0.0.0 / :: or no
@@ -1236,6 +1241,32 @@ async function runB(app, companion) {
   await waitHidden(app, 2000);
 }
 
+// --- Launch F (Mac): the fade first, before any click on an Unvibe window --------------------------------------------
+async function runF(app) {
+  const L = await vsLines();
+  pointer.click(L.lines[2].left + 30, L.lines[2].y, 2); // VS Code in front, a word selected (the button is off here)
+  await sleep(500);
+  keys.unvibe();
+  const panel = await waitFor(async () => panelPage(app), 8000, 100);
+  if (!panel) { log(false, 'F mac: the fade first', 'no panel 8 s after ⌃U'); desktop('f-no-panel'); return; }
+  let view = '';
+  await waitFor(async () => { view = await panel.evaluate(() => [...(document.querySelector('.ob')?.classList ?? [])].filter((c) => c.startsWith('ob--')).join(' ')).catch(() => ''); return /aiConsent/.test(view); }, 8000);
+  const opacity = () => panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity)).catch(() => null);
+  const before = await opacity();
+  const P = await panel.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight }));
+  // A click in VS Code off the panel (it opens near the pointer): a line above or below it, else beside it.
+  const off = (l) => l.y < P.y - 20 || l.y > P.y + P.h + 20 || l.left + 30 < P.x - 20 || l.left + 30 > P.x + P.w + 20;
+  const away = L.lines.find(off) ?? L.lines[0];
+  pointer.click(away.left + 30, away.y);
+  osa('tell application "Visual Studio Code" to activate');
+  const faded = await waitFor(async () => { const o = await opacity(); return o !== null && o < 0.5 ? o : null; }, 3000, 100);
+  desktop('f-fade-first');
+  log(faded !== null, 'F mac: with no click on any Unvibe window in this launch, the panel ⌃U opened fades once VS Code is in front (the fade first)',
+    `panel view "${view}", opacity ${before === null ? '?' : r1(before)} → ${faded !== null ? r1(faded) : 'stayed at or above 0.5 for 3 s'}; VS Code clicked at (${Math.round(away.left + 30)}, ${Math.round(away.y)})${off(away) ? '' : ' (no line off the panel: inside it)'} and activated by name; AI POSTs ${aiPosts('f').length}`);
+  await panel.locator('.consent-form__actions button.ghost').click({ timeout: 5000 }).catch(() => {});
+  await sleep(800);
+}
+
 // --- Launch C: behind the hosts block, with the agreement ---------------------------------------------------------------
 async function giveAgreement(app) {
   keys.unvibe();
@@ -1415,7 +1446,7 @@ if (os === 'windows') {
 }
 vsSettings('light');
 let failedLaunch = false;
-const plan = os === 'windows' ? ['a', 'b', 'c'] : ['a', 'c'];
+const plan = os === 'windows' ? ['a', 'b', 'c'] : ['a', 'f', 'c'];
 for (const tag of plan) {
   let app = null;
   try {
@@ -1433,9 +1464,10 @@ for (const tag of plan) {
     app = l.app;
     await minimize(app, l.companion);
     startShadow(tag);
-    if (tag === 'a') await openVsCode();
+    if ((tag === 'a' || tag === 'f') && !vs) await openVsCode();
     if (tag === 'a') await runA(app, l.companion, os === 'mac' ? 'mac' : '100');
     if (tag === 'b') await runB(app, l.companion);
+    if (tag === 'f') await runF(app);
     if (tag === 'c') await runC(app, l.companion);
   } catch (e) {
     failedLaunch = true;
