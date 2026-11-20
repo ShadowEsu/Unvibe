@@ -1,11 +1,13 @@
-// QA helper for two-app-take.mjs, rc-0154.mjs and setup-0157.mjs (macOS runner): an app's window frame, the main
-// display's mode, and real mouse input (the same CGEvent input as .github/qa/gkwin.swift on qa/install-matrix). Built on
-// the runner: swiftc -O -o mouse mouse.swift
+// QA helper for two-app-take.mjs, rc-0154.mjs, setup-0157.mjs and d5-button.mjs (macOS runner): an app's window frame,
+// the on-screen windows, the main display's mode, and real mouse input (the same CGEvent input as
+// .github/qa/gkwin.swift on qa/install-matrix). Built on the runner: swiftc -O -o mouse mouse.swift
 //   mouse frame <owner>               "x y w h" of that owner's largest on-screen window (screen points), exit 1 if none
+//   mouse list                        every on-screen window, front to back: "<pid>\t<owner>\t<layer>\t<x> <y> <w> <h>"
 //   mouse display <w> <h>             the main display to its smallest mode of at least w x h points (public
 //                                     CoreGraphics API); prints the modes and the result
 //   mouse click <x> <y> <n>           n clicks at x,y as one multi-click (n = 3 selects a line in Terminal)
-//   mouse drag <x1> <y1> <x2> <y2>    a move to x1,y1, press, move there in 24 steps (each with its delta) to x2,y2, release
+//   mouse drag <x1> <y1> <x2> <y2>    a move to x1,y1, press, move there in 24 steps (each with its delta) to x2,y2,
+//                                     release; prints the release time (ms since 1970) once it is posted
 //   mouse move <x> <y>                the pointer to x,y (a real move event), no button
 import CoreGraphics
 import Foundation
@@ -68,7 +70,9 @@ case "frame" where a.count > 2:
 case "click" where a.count > 4:
   let p = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   CGWarpMouseCursorPosition(p)
-  usleep(120_000)
+  // A real move first, so the app under the pointer sets its cursor (the I-beam over text) before the press.
+  post(.mouseMoved, p)
+  usleep(150_000)
   for i in 1...max(1, Int(a[4]) ?? 1) {
     post(.leftMouseDown, p, clicks: Int64(i))
     usleep(30_000)
@@ -92,6 +96,16 @@ case "drag" where a.count > 5:
     usleep(20_000)
   }
   post(.leftMouseUp, p2)
+  print(Int64(Date().timeIntervalSince1970 * 1000))
+case "list":
+  // CGWindowList's own order: front to back.
+  for w in onScreen() {
+    let r = frame(w)
+    let pid = w[kCGWindowOwnerPID as String] as? Int ?? 0
+    let owner = w[kCGWindowOwnerName as String] as? String ?? "?"
+    let layer = w[kCGWindowLayer as String] as? Int ?? 0
+    print("\(pid)\t\(owner)\t\(layer)\t\(Int(r.minX)) \(Int(r.minY)) \(Int(r.width)) \(Int(r.height))")
+  }
 case "move" where a.count > 3:
   let p = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   CGWarpMouseCursorPosition(p)

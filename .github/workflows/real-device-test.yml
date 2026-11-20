@@ -45,6 +45,14 @@ name: Real device test
 # ⌘U-then-⌃U on step 2 before any agreement (the panel asks for it), and step 3's Explain my clipboard on a fresh
 # install (the agreement first) and with an empty clipboard. Nothing is explained: step 2's "Explain this code" and the
 # confirm sheet's Explain are never pressed, and the net log is checked. The usual walk and the portable exe are skipped.
+# d5=rows (with build_run, ai off; Mac and Windows) runs D5 #366's real-device rows for the Unvibe button with VS Code
+# (app/e2e/d5-button.mjs): a real drag shows the button (mouse-up to button ms, placement, idle and click-away), the
+# line-number gutter shows none (the I-beam check), no new macOS permission prompt with Unvibe's Accessibility reset,
+# hover, press, stacking over a faded panel, the flip at the right edge, light and dark 1:1 crops, idle CPU on and off,
+# Windows at Chromium's forced 150 %, VS Code's password prompt (N6) and Esc after the Quick look card. Nothing is
+# explained: the first launches have no agreement (a press reads nothing), and the last runs with the API host blocked
+# in the hosts file, put back byte for byte. VS Code: Homebrew's cask on the Mac; on Windows Microsoft's zip, sha256
+# and Authenticode checked. The usual walk and the portable exe are skipped.
 on:
   workflow_dispatch:
     inputs:
@@ -83,6 +91,10 @@ on:
         description: "Unvibe 0.1.57 setup rows: 'setup' runs app/e2e/setup-0157.mjs on the Mac and Windows with no hosted-AI call (the top bar's corners 1:1, drag and Back with the real pointer, Explain my clipboard on a fresh install and with an empty clipboard; needs build_run, ai off, rc0154 and rc0155 empty). Empty: off"
         required: false
         default: ""
+      d5:
+        description: "D5 #366 button rows: 'rows' runs app/e2e/d5-button.mjs with VS Code on the Mac and Windows, no hosted-AI call (needs build_run, ai off, rc0154, rc0155 and rc0157 empty). Empty: off"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -112,12 +124,13 @@ jobs:
           RC0154: ${{ inputs.rc0154 }}
           RC0155: ${{ inputs.rc0155 }}
           RC0157: ${{ inputs.rc0157 }}
+          D5: ${{ inputs.d5 }}
           BUILD_RUN: ${{ inputs.build_run }}
           VERSION: ${{ inputs.version }}
           OS_LABEL: ${{ matrix.label }}
         run: |
-          case "$RC0154$RC0155$RC0157" in
-            ai-*|hero|setup) ;;
+          case "$RC0154$RC0155$RC0157$D5" in
+            ai-*|hero|setup|rows) ;;
             *)
               if [ "$QA_AI_OK" = 1 ]; then
                 echo "Mode: ai=true: the walkthrough explains for real (4 hosted calls on this system); the Mac also records the website media"
@@ -174,6 +187,15 @@ jobs:
               echo "Mode: the 0.1.57 setup rows (app/e2e/setup-0157.mjs) on $OS_LABEL; no hosted-AI call. The usual walk and the portable exe are skipped" ;;
             *) echo "::error::rc0157 must be empty or setup"; exit 1 ;;
           esac
+          if [ -n "$D5" ] && [ -n "$RC0154$RC0155$RC0157" ]; then echo "::error::d5 can't run with rc0154, rc0155 or rc0157: give one"; exit 1; fi
+          case "$D5" in
+            '') ;;
+            rows)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::d5=rows makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::d5=rows needs build_run (the D5 build-only run)"; exit 1; fi
+              echo "Mode: the D5 #366 button rows (app/e2e/d5-button.mjs) with VS Code on $OS_LABEL; no hosted-AI call (the last launch behind a hosts block of the API host). The usual walk and the portable exe are skipped" ;;
+            *) echo "::error::d5 must be empty or rows"; exit 1 ;;
+          esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
       # funnel (29 Oct: a deleted secret made the flag steps skip and 12 CI installs counted as real).
@@ -216,11 +238,15 @@ jobs:
           RC0155: ${{ inputs.rc0155 }}
           RC0157: ${{ inputs.rc0157 }}
           SETUP57_ID: qa-setup0157-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          D5: ${{ inputs.d5 }}
+          D5_ID: qa-d5-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           OS_LABEL: ${{ matrix.label }}
         run: |
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
-          # The mode check above lets only one of rc0154, rc0155 and rc0157 be set.
-          case "$RC0154$RC0155$RC0157" in
+          # The mode check above lets only one of rc0154, rc0155, rc0157 and d5 be set.
+          case "$RC0154$RC0155$RC0157$D5" in
+            # d5 rows: only d5-button.mjs launches the app (one id for its profiles a, b (Windows) and c).
+            rows) ids="$D5_ID" ;;
             # rc0157 setup: only setup-0157.mjs launches the app (one id for its profiles: Mac one, Windows 100 % and 150 %).
             setup) ids="$SETUP57_ID" ;;
             # rc0155 ai: only rc-0155-ai.mjs launches the app (the walk, media and portable steps are skipped).
@@ -607,10 +633,10 @@ jobs:
           "PASS  Windows app.asar: the setup's = the installed one = $inner"
 
       # Skipped with rc0154 ai and rc0155 ai: with ai=true it would send its own 4 explanations, outside the RC plan's
-      # count. Skipped with rc0154 hero (that run only shoots the hero still), rc0155 link (the probe only) and rc0157
-      # setup (the setup rows only).
+      # count. Skipped with rc0154 hero (that run only shoots the hero still), rc0155 link (the probe only), rc0157
+      # setup (the setup rows only) and d5 rows (the button rows only).
       - name: Walk through the app
-        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link' && inputs.rc0157 == '' }}
+        if: ${{ !startsWith(inputs.rc0154, 'ai-') && inputs.rc0154 != 'hero' && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link' && inputs.rc0157 == '' && inputs.d5 == '' }}
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/shots
@@ -793,6 +819,100 @@ jobs:
           cat "$SHOTS_DIR/report-setup0157-$UNVIBE_OS.txt" || true
           exit $status
 
+      # d5=rows: VS Code for the button rows. Mac: Homebrew's cask, its quarantine flag removed (as the install step does
+      # for Unvibe), signed by Microsoft's team UBF8T346G9. Windows: the stable zip from Microsoft's update service, its
+      # sha256 the service's, and Code.exe Authenticode-signed by Microsoft. Nothing is installed system-wide on Windows.
+      - name: Install VS Code for the D5 rows (Mac)
+        if: inputs.d5 == 'rows' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          brew install --cask visual-studio-code >/dev/null
+          app="/Applications/Visual Studio Code.app"
+          xattr -dr com.apple.quarantine "$app" || true
+          codesign --verify --deep --strict "$app" && echo "VS Code signature valid"
+          team=$(codesign -dv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+          echo "VS Code $(defaults read "$app/Contents/Info" CFBundleShortVersionString), team $team"
+          if [ "$team" != UBF8T346G9 ]; then echo "::error::VS Code is not signed by Microsoft's team"; exit 1; fi
+          echo "VSCODE=$app/Contents/Resources/app/bin/code" >> "$GITHUB_ENV"
+
+      - name: Install VS Code for the D5 rows (Windows)
+        if: inputs.d5 == 'rows' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $info = Invoke-RestMethod 'https://update.code.visualstudio.com/api/update/win32-x64-archive/stable/latest'
+          "VS Code $($info.productVersion) ($($info.version)); the service's sha256 $($info.sha256hash); from $(([Uri]$info.url).Host)"
+          if (([Uri]$info.url).Host -notmatch '(^|\.)(microsoft\.com|visualstudio\.com)$') { Write-Error 'the zip is not on a Microsoft host'; exit 1 }
+          $zip = "$env:RUNNER_TEMP\vscode.zip"
+          Invoke-WebRequest -Uri $info.url -OutFile $zip -UseBasicParsing
+          $got = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($got -ne $info.sha256hash.ToLower()) { Write-Error "the zip's sha256 $got is not the service's"; exit 1 }
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\vscode" -Force
+          $exe = "$env:RUNNER_TEMP\vscode\Code.exe"
+          $sig = Get-AuthenticodeSignature $exe
+          "Code.exe: $($sig.Status), $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') { Write-Error 'Code.exe is not validly signed by Microsoft'; exit 1 }
+          "VSCODE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # d5=rows: the D5 #366 button rows (app/e2e/d5-button.mjs), no hosted-AI call. mouse.swift gives the Mac the real
+      # pointer and the window list. A clean Mac for the prompt row: Unvibe's Accessibility switch is reset first (the
+      # script turns it on again for its last launch, as the install step does). The raw net log stays in
+      # $RUNNER_TEMP/netlog-d5 (never uploaded); the script keeps only time, method, path and status.
+      - name: Walk the D5 button rows (d5 rows)
+        if: inputs.d5 == 'rows' && env.UNVIBE_EXE != '' && env.VSCODE != ''
+        shell: bash
+        env:
+          SHOTS_DIR: ${{ runner.temp }}/d5
+          UNVIBE_OS: ${{ matrix.label }}
+          D5_PROFILE: ${{ runner.temp }}/d5-profile
+          # Seeded into each new profile and pre-flagged above.
+          D5_ID: qa-d5-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
+          NETLOG_DIR: ${{ runner.temp }}/netlog-d5
+          VSCODE_DATA: ${{ runner.temp }}/d5-vscode
+        run: |
+          cp app/e2e/d5-button.mjs app/e2e/png.mjs app/e2e/netlog.mjs app/e2e/cdp-launch.mjs "$RUNNER_TEMP/pw/"
+          if [ "$UNVIBE_OS" = mac ]; then
+            swiftc -O -o "$RUNNER_TEMP/pw/mouse" app/e2e/mouse.swift
+            export MOUSE="$RUNNER_TEMP/pw/mouse"
+            sudo tccutil reset Accessibility com.unvibe.app || true
+            db="/Library/Application Support/com.apple.TCC/TCC.db"
+            echo "Unvibe's Accessibility rows after the reset: $(sudo sqlite3 "$db" "SELECT count(*) FROM access WHERE client='com.unvibe.app' AND service='kTCCServiceAccessibility';")"
+          fi
+          status=0
+          (cd "$RUNNER_TEMP/pw" && node d5-button.mjs) || status=$?
+          rm -rf "$NETLOG_DIR"
+          cat "$SHOTS_DIR/report-d5-$UNVIBE_OS.txt" || true
+          exit $status
+
+      # d5: whatever happened above, the hosts file holds none of this run's lines (the script put it back from its copy
+      # and checked it byte for byte; a stopped script's copy is put back here), and no raw net log is left.
+      - name: Put the hosts file back and delete the raw net logs (d5, Mac)
+        if: always() && inputs.d5 != '' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          orig="$RUNNER_TEMP/hosts.d5.orig"
+          if [ -f "$orig" ]; then
+            sudo cp "$orig" /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; sudo rm -f "$orig"
+            echo "put back from the script's saved copy"
+          fi
+          if grep -q '# unvibe-qa-d5$' /etc/hosts; then
+            sudo sed -i '' '/# unvibe-qa-d5$/d' /etc/hosts; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo "removed the marked lines"
+          fi
+          if grep -q 'unvibe-qa-d5' /etc/hosts; then echo "::error::a hosts line is still there"; exit 1; fi
+          rm -rf "$RUNNER_TEMP/netlog-d5"
+          echo "hosts clean (sha256 $(shasum -a 256 /etc/hosts | cut -d' ' -f1)); raw net logs deleted"
+
+      - name: Put the hosts file back and delete the raw net logs (d5, Windows)
+        if: always() && inputs.d5 != '' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $hosts = 'C:\Windows\System32\drivers\etc\hosts'
+          $orig = Join-Path $env:RUNNER_TEMP 'hosts.d5.orig'
+          if (Test-Path $orig) { [IO.File]::WriteAllBytes($hosts, [IO.File]::ReadAllBytes($orig)); Remove-Item -Force $orig; ipconfig /flushdns | Out-Null; 'put back from the script''s saved copy' }
+          if (@(Get-Content $hosts) -match '# unvibe-qa-d5$') { Set-Content -Path $hosts -Value (@(Get-Content $hosts) -notmatch '# unvibe-qa-d5$'); ipconfig /flushdns | Out-Null; 'removed the marked lines' }
+          if (Select-String -Path $hosts -Pattern 'unvibe-qa-d5' -Quiet) { Write-Error 'a hosts line is still there'; exit 1 }
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\netlog-d5" -ErrorAction SilentlyContinue
+          "hosts clean (sha256 $((Get-FileHash $hosts -Algorithm SHA256).Hash.ToLower())); raw net logs deleted"
+
       # rc0155: whatever happened above, the hosts file is back byte for byte (from the copy rc-0155-ai.mjs saved before
       # its block, sha256 printed before and after) or, without a copy, holds none of this run's lines; and no raw net
       # log is left.
@@ -841,7 +961,7 @@ jobs:
 
       # The website's Windows download is the portable exe, so open that exact file too.
       - name: Open the portable exe the website serves (Windows)
-        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link' && inputs.rc0157 == ''
+        if: always() && matrix.label == 'windows' && steps.ver.outputs.v != '' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.rc0155 != 'link' && inputs.rc0157 == '' && inputs.d5 == ''
         shell: pwsh
         env:
           V: ${{ steps.ver.outputs.v }}
@@ -893,7 +1013,7 @@ jobs:
 
       # Leave this run's installs out of founder stats: the walkthrough's profile on both systems,
       # on Windows the portable exe's, rc0154's profiles (walk: two; ai: one, or two with full), rc0155's (walk: the
-      # control's and the RC rows'; ai: one) and rc0157's (setup: the Mac's one; Windows 100 % and 150 %). Only this step has the admin token, and Unvibe is stopped
+      # control's and the RC rows'; ai: one), rc0157's (setup: the Mac's one; Windows 100 % and 150 %) and d5's (a, b on Windows, c). Only this step has the admin token, and Unvibe is stopped
       # first, so the app under test never runs with it. Runs even after a failed check. Fails when
       # the API answers anything but 200 with matched true: a 200 alone does not prove the app's own
       # install row was flagged (Security, 31 Oct).
@@ -908,7 +1028,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150')
+          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150', 'd5-profile-a', 'd5-profile-b', 'd5-profile-c')
           # rc0155 link: the probe's per-way profiles, and the app's default profile it seeded (Combine keeps a rooted path).
           # rc0155 ai-windows: the default profile too, in case a second Unvibe started there (run 44658289654).
           if ($env:RC0155 -eq 'link') { $names += @('rc0155-link54-profile-A', 'rc0155-link54-profile-B', 'rc0155-link-profile-A', 'rc0155-link-profile-B', (Join-Path $env:APPDATA 'Unvibe')) }
@@ -963,6 +1083,16 @@ jobs:
         with:
           name: unvibe-${{ matrix.label }}-setup0157
           path: ${{ runner.temp }}/setup0157
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # d5's report, crops, stills and net-log summaries (time, method, path, status); the raw net log is never in it.
+      - name: Upload the D5 button rows
+        if: always() && inputs.d5 != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unvibe-${{ matrix.label }}-d5
+          path: ${{ runner.temp }}/d5
           if-no-files-found: ignore
           retention-days: 14
 
