@@ -128,7 +128,9 @@ try {
   const codeEnv = { ...process.env };
   delete codeEnv.ELECTRON_RUN_AS_NODE;
   for (const key of Object.keys(codeEnv)) if (/^(UNVIBE_|GITHUB_TOKEN|GH_TOKEN|ACTIONS_)/.test(key)) delete codeEnv[key];
-  spawn(code, ['--user-data-dir', codeData, '--extensions-dir', path.join(codeData, 'extensions'), '--disable-extensions', '--new-window', `--remote-debugging-port=${PORT}`, sampleFile], { stdio: 'ignore', detached: true, env: codeEnv }).unref();
+  // No --disable-extensions: the fresh --extensions-dir holds none, and the flag put an "All installed extensions are
+  // temporarily disabled" toast over still 1 in run 44835239941 (Security).
+  spawn(code, ['--user-data-dir', codeData, '--extensions-dir', path.join(codeData, 'extensions'), '--new-window', `--remote-debugging-port=${PORT}`, sampleFile], { stdio: 'ignore', detached: true, env: codeEnv }).unref();
   browser = await waitFor(() => chromium.connectOverCDP(`http://127.0.0.1:${PORT}`).catch(() => null), 90000, 1000);
   if (!browser) {
     // Run 44683184081 stopped here with nothing else to go on: whether VS Code runs at all, and the screen.
@@ -174,9 +176,27 @@ try {
   const P = (x, y) => [Math.round(fx + x * k), Math.round(fy + y * k)];
   const [x1, y1] = P(rows[0].text.left - 1, rows[0].y + rows[0].h / 2);
   const [x2, y2] = P(rows[6].text.right + 2, rows[6].y + rows[6].h / 2);
+  // A toast on screen is put away as a person does, with Esc, before the drag (after it, Esc would also drop the
+  // selection).
+  if (hidden.toasts) {
+    osa('tell application "System Events" to key code 53');
+    await sleep(600);
+    note('VS Code notifications after Esc', String(await editor.evaluate(() => document.querySelectorAll('.notification-toast').length)));
+  }
+  // What reached the page during the drag: run 44835239941's drag (no settle, no deltas) left 0 selection boxes, so the
+  // row now names the pointer events VS Code got. mouse.swift is the D5 rows' (a settle, then 24 steps with deltas),
+  // whose drags selected text in VS Code on the same runners.
+  await editor.evaluate(() => {
+    const c = { down: 0, move: 0, held: 0, up: 0 };
+    window.__qaPointer = c;
+    addEventListener('pointerdown', () => { c.down += 1; }, true);
+    addEventListener('pointermove', (e) => { c.move += 1; if (e.buttons & 1) c.held += 1; }, true);
+    addEventListener('pointerup', () => { c.up += 1; }, true);
+  });
   execFileSync(process.env.MOUSE, ['drag', String(x1), String(y1), String(x2), String(y2)]);
   await sleep(600);
   const selected = await editor.evaluate(() => document.querySelectorAll('.monaco-editor .selected-text').length);
+  const ptr = await editor.evaluate(() => window.__qaPointer);
   selectionOk = selected > 0;
   // The pointer leaves the editor (below the window), so the still shows no cursor hover.
   execFileSync(process.env.MOUSE, ['move', String(x2), String(Math.round(fy + fh + 40))]);
@@ -188,7 +208,7 @@ try {
   execFileSync('screencapture', ['-x', `-R${cx},${cy},${cw},${ch}`, file]);
   const size = pngSize(file);
   log(selected > 0 && geo.theme === 'light' && Math.abs(k - 2) < 0.1, 'Still 1: the sample selected with the mouse in VS Code (Light+, zoom 3.8), editor and tab, 1x',
-    `${size.w}x${size.h} px; zoom ${k.toFixed(2)} (devicePixelRatio ${geo.dpr}); editor font ${geo.font} CSS; selection boxes ${selected}; side bar shown ${hidden.side}, secondary ${hidden.aux}; window (${owner}) ${fx},${fy} ${fw}x${fh}; drag ${x1},${y1} → ${x2},${y2}`);
+    `${size.w}x${size.h} px; zoom ${k.toFixed(2)} (devicePixelRatio ${geo.dpr}); editor font ${geo.font} CSS; selection boxes ${selected}; pointer events in VS Code: down ${ptr.down}, move ${ptr.move} (${ptr.held} with the button held), up ${ptr.up}; side bar shown ${hidden.side}, secondary ${hidden.aux}; window (${owner}) ${fx},${fy} ${fw}x${fh}; drag ${x1},${y1} → ${x2},${y2}`);
 } catch (e) { log(false, 'Still 1: the selection in VS Code', short(e)); }
 
 // --- Calls: the shortcut on that selection, then Test me --------------------------------------------------------------
