@@ -18,7 +18,7 @@ ol.explain-notes {
 .use-sample figcaption {
   margin-bottom: 0.4rem;
   color: var(--explain-muted);
-  font: 0.9rem / 1.4 var(--font-mono);
+  font: 13px / 1.4 var(--font-mono);
 }
 
 /* Code keeps its lines: no wrapping; the region around it scrolls sideways (Design, #135 gate). The code grows to
@@ -100,7 +100,7 @@ ol.explain-notes {
 .os-shot figcaption {
   margin-top: 0.6rem;
   color: var(--explain-muted);
-  font-size: 0.9rem;
+  font-size: 13px;
   line-height: 1.4;
 }
 
