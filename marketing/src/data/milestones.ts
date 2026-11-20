@@ -39,12 +39,11 @@ export const milestones: Milestone[] = [
     date: "19 NOV 2026",
     category: "PRODUCT",
     title: "Explain pages: one thing to check before you trust the code",
-    summary: "The explain pages now speak to people whose AI tool wrote the code. The /explain page opens with \"Your AI wrote it. You decide whether to accept it.\" and says Vibe adds a \"Not sure:\" line when it's guessing. On every explain page, the one thing to check that we found when we tried the sample is labeled \"Before you trust it:\" instead of \"Watch out:\". On the 61 pages whose sample is code or a config file, the section at the end says when to press the shortcut and spells it out: Control+U on a Mac, not Command+U (⌘U only works in Cursor and VS Code with the editor bridge), and Ctrl+Alt+U on Windows. The 13 pages whose sample is output or an error, such as git log output or a Python traceback, keep the shorter text. The Python, Supabase RLS and CORS error pages have new opening lines.",
+    summary: "The explain pages now speak to people whose AI tool wrote the code. The /explain page opens with \"Your AI wrote it. You decide whether to accept it.\" and says Vibe adds a \"Not sure:\" line when it's guessing. On every explain page, the one thing to check that we found when we tried the sample is labeled \"Before you trust it:\" instead of \"Watch out:\". On 61 pages, the section at the end says when to press the shortcut and spells it out: Control+U on a Mac, not Command+U (⌘U only works in Cursor and VS Code with the editor bridge), and Ctrl+Alt+U on Windows. The 13 pages whose sample is output, an error or a file a tool generates, such as git log output or package-lock.json, keep the shorter text. The Python, Supabase RLS and CORS error pages have new opening lines.",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "/explain/supabase-rls", label: "Explain Supabase RLS policies" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/362", label: "PR #362" },
-      { href: "https://github.com/ShadowEsu/Unvibe/pull/364", label: "PR #364" },
     ],
   },
   {
@@ -57,13 +56,14 @@ export const milestones: Milestone[] = [
       { href: "/explain/http-headers", label: "Explain HTTP headers" },
       { href: "/explain/dns-records", label: "Explain DNS records" },
       { href: "https://github.com/ShadowEsu/Unvibe/pull/325", label: "PR #325" },
+      { href: "https://github.com/ShadowEsu/Unvibe/pull/364", label: "PR #364" },
     ],
   },
   {
     date: "19 NOV 2026",
     category: "DISTRIBUTION",
     title: "Explain pages named for files and commands",
-    summary: "28 more explain pages whose sample is a config file or a set of commands are now headed by what it is instead of \"code\", such as \"Explain .env files\", \"Explain tar commands\" and \"Explain git rebase -i todo lists\". The /explain list, the section at the end of each page and the link-preview cards use the same words. Pages whose sample is code, such as Python or Terraform, keep \"Explain ... code\".",
+    summary: "28 more explain pages are now headed by what they explain instead of \"code\", most of them config files or commands, such as \"Explain .env files\", \"Explain tar commands\" and \"Explain git rebase -i todo lists\". The /explain list, the section at the end of each page and the link-preview cards use the same words. Pages such as Python, YAML and Terraform keep \"Explain ... code\".",
     links: [
       { href: "/explain", label: "Explain code" },
       { href: "/explain/env", label: "Explain .env files" },
