@@ -7,49 +7,35 @@ import { D_NAV, D_NAV_CTA } from "./content";
 import { DownloadCta } from "./DownloadCta";
 
 /**
- * The one header on every page (Preston, 6 Nov: "make sure only 1 glass effect header"; plan rev 3 mock 19): a pinned
- * mirror-glass pill that blurs and tints whatever scrolls under it (blur 18 px, saturate 1.8, a lens edge, a sheen,
- * a white rim). Past 80 px it settles to 94 % and turns a little more solid (ANIMATIONS #2), and a 2 px lime line
- * inside its bottom edge grows with the page's scroll (#3). "Download free" sits inside the glass at its end, as in
- * mock 19: on a first visit to home it pops from a dot just after the hero rises (#21); everywhere else, and without JS,
- * it is there from the first frame. It keeps its slot either way, so the links never move. Phones get the
- * ghost + wordmark + a "+" that opens the links inside the glass. /activate is a full-screen card: no header there.
+ * The one header on every page (Option A, Design §3): a 64 px white bar. Vibe and "Unvibe" on the left, the links
+ * centred, "Download free" as an ink pill on the right. It gets its shadow only once the page has scrolled (the one
+ * thing that floats). At ≤ 820 px the links and the pill fold into the menu button. /activate is a full-screen card:
+ * no header there.
  */
 export function SiteHeader() {
   const pathname = usePathname() ?? "/";
   const home = pathname === "/";
   const [open, setOpen] = useState(false);
-  const [cta, setCta] = useState(!home);
   const root = useRef<HTMLElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
-    if (cta) return undefined;
-    const timer = window.setTimeout(() => setCta(true), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900);
-    return () => window.clearTimeout(timer);
-  }, [cta]);
-  useEffect(() => {
     const el = root.current;
     if (!el) return undefined;
     let raf = 0;
     const apply = () => {
       raf = 0;
-      const y = window.scrollY;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      el.toggleAttribute("data-settled", y > 80);
-      el.style.setProperty("--d-progress", (max > 0 ? Math.min(1, y / max) : 0).toFixed(4));
+      el.toggleAttribute("data-scrolled", window.scrollY > 4);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(apply);
     };
     apply();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [pathname]);
@@ -69,24 +55,21 @@ export function SiteHeader() {
 
   const active = (href: string) => (href === "/" ? home : pathname.startsWith(href));
   return (
-    <header ref={root} className={open ? "dh is-open" : "dh"} data-home={home ? "" : undefined}>
-      <div className="dh__glass" aria-hidden="true" />
+    <header ref={root} className={open ? "dh is-open" : "dh"}>
       <nav className="dh__bar" aria-label="Primary">
         <Link href="/" className="dh__mark" aria-label="Unvibe home">
           {/* eslint-disable-next-line @next/next/no-img-element -- Vibe, our own mark */}
-          <img src="/brand/vibe.svg" width={28} height={28} alt="" />
+          <img src="/brand/vibe.svg" width={26} height={26} alt="" />
           <span className="dh__word" aria-hidden="true">Unvibe</span>
         </Link>
         <ul className="dh__links">
           {D_NAV.map((item) => (
             <li key={item.href}>
-              <Link href={item.href} {...(active(item.href) ? { "data-d-nav-active": "", "aria-current": "page" as const } : {})}>{item.label}</Link>
+              <Link href={item.href} {...(active(item.href) ? { "aria-current": "page" as const } : {})}>{item.label}</Link>
             </li>
           ))}
         </ul>
-        <DownloadCta surface="nav" className="dh__cta d-btn" data-d-navcta="" data-on={cta ? "" : undefined}>
-          <span>{D_NAV_CTA}</span>
-        </DownloadCta>
+        <DownloadCta surface="nav" className="dh__cta">{D_NAV_CTA}</DownloadCta>
         <button
           ref={toggle}
           type="button"
@@ -102,12 +85,11 @@ export function SiteHeader() {
       <div id="dh-menu" className="dh__menu" hidden={!open}>
         <ul>
           {D_NAV.map((item) => (
-            <li key={item.href}><Link href={item.href} onClick={() => setOpen(false)}>{item.label}</Link></li>
+            <li key={item.href}><Link href={item.href} {...(active(item.href) ? { "aria-current": "page" as const } : {})} onClick={() => setOpen(false)}>{item.label}</Link></li>
           ))}
         </ul>
-        <DownloadCta surface="nav" className="d-cta d-btn dh__menu-cta" onClick={() => setOpen(false)}>{D_NAV_CTA}</DownloadCta>
+        <DownloadCta surface="nav" className="d-cta dh__menu-cta" onClick={() => setOpen(false)}>{D_NAV_CTA}</DownloadCta>
       </div>
-      <span className="dh__progress" aria-hidden="true" />
     </header>
   );
 }

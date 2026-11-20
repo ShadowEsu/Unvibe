@@ -7,15 +7,15 @@ import { NewsletterSignup } from "@/components/paper/NewsletterSignup";
 import { openAnalyticsSettings } from "@/lib/analyticsConsent";
 import { OFFICIAL_PROFILES } from "@/lib/contact";
 import { trackDownloadPageClick } from "@/lib/downloadTracking";
-import { D_ART_CREDITS, D_FOOT } from "./content";
+import { D_FOOT } from "./content";
 
 /**
- * The footer on every page (plan mock 09): mono-caps columns with every link of the live footer (Security MUST-D6),
+ * The footer on every page: columns with every link of the live footer (Security MUST-D6),
  * Analytics settings and the newsletter; then the quiet directory rows (Security 20261106-1849): "Listed on" holds the
  * live listings, each directory's own badge as a self-hosted copy (never hotlinked, never recoloured) and every live
  * listing as a plain text link; "Submitted to" holds, as plain text only, the pending directories that need a link back
- * before they approve. Server-rendered <a>s without nofollow, so the directories' checkers find them. Then the photo
- * and painting credits. The Follow column (Design, ledger 563) links the profiles Unvibe controls with rel="me", the
+ * before they approve. Server-rendered <a>s without nofollow, so the directories' checkers find them. Option A has no
+ * paintings or photos, so there are no art credits. The Follow column (Design, ledger 563) links the profiles Unvibe controls with rel="me", the
  * same list as the Organization JSON-LD sameAs.
  */
 export function SiteFooter() {
@@ -78,7 +78,6 @@ export function SiteFooter() {
       </div>
       <div className="d-foot__base">
         <span>© {new Date().getFullYear()} Unvibe</span>
-        <span>{D_ART_CREDITS}</span>
       </div>
     </footer>
   );

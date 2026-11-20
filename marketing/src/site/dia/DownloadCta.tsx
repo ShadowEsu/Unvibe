@@ -6,7 +6,6 @@ import { useContext, useEffect, type ReactNode } from "react";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { trackDownloadClick, trackDownloadPageClick, type DownloadSurface } from "@/lib/downloadTracking";
 import { DOWNLOAD_FILES, pickDownload, type ArchHints, type DownloadKey } from "@/lib/downloadPick";
-import { BtnDot } from "./effects";
 
 /** Chromium's client hint, asked once per page load (it's async, so it must be in before the click). */
 const hints: ArchHints = {};
@@ -96,19 +95,18 @@ function fileFor(platform: "mac" | "windows" | undefined): DownloadKey | null {
 }
 
 /**
- * Every "Download Unvibe for free" / "Download free" button (Preston, 6 Nov): one click starts the v0.1.49 file for
+ * Every "Download Unvibe for free" / "Download free" button (Preston, 6 Nov): one click starts the current release's file for
  * this computer (Windows → the Windows file, everything else → a Mac file, Apple silicon unless the browser says Intel)
  * and opens the thank-you state with its first-open steps (the .dmg isn't notarized). The server HTML is a plain link
  * to /beta, so without JavaScript it opens the download page; phones go to the emailed-link form there.
  * `download_cta_clicked {surface, platform}` fires as before.
  */
-export function DownloadCta({ surface, platform, children, className = "d-cta d-btn", dot = true, onClick, ...rest }: {
+export function DownloadCta({ surface, platform, children, className = "d-cta", onClick, ...rest }: {
   surface: DownloadSurface;
   /** Pin the file to one computer (a "Download free for Windows" button); the default detects it. */
   platform?: "mac" | "windows";
   children: ReactNode;
   className?: string;
-  dot?: boolean;
   onClick?: () => void;
 } & Record<`data-${string}`, string | undefined>) {
   const router = useContext(AppRouterContext);
@@ -142,7 +140,6 @@ export function DownloadCta({ surface, platform, children, className = "d-cta d-
       {...rest}
     >
       {children}
-      {dot ? <BtnDot /> : null}
     </a>
   );
 }

@@ -1,119 +1,93 @@
-/* Direction D, site-wide: the one glass header (mock 19), the footer (mock 09), the purple cursor (mock 20), the lime
- * accents (mock 18) and the display type on every page. Tokens come from dia.css (:root). */
+/* Option A, site-wide: the header, the footer and the page type. Tokens come from dia.css (:root). */
 
-/* ---------- every page: the display serif on page titles (PLAN: "/pricing, /download and other pages use the new type") ---------- */
-main h1, main h2 { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.015em; }
-main :is(h1, h2) :is(strong, b) { font-weight: 400; }
+/* ---------- every page: page titles in Inter display (weight 560, −0.025em) ---------- */
+main h1, main h2 { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-track); }
+main :is(h1, h2) :is(strong, b) { font-weight: inherit; }
 main .sr-only { font-family: inherit; }
 
 /* OS-aware copy (MUST-D12): osBoot.ts sets html.os-win before first paint; everyone else reads the Mac line */
 html:not(.os-win) .lx-win, html.os-win .lx-mac { display: none !important; }
 
-/* ---------- the glass header (ANIMATIONS #1-3, #21) ---------- */
-.dh {
-  position: fixed; z-index: 50; top: 12px; left: 0; right: 0; width: fit-content; max-width: calc(100% - 20px); margin: 0 auto;
-  border-radius: 28px; color: var(--d-ink); transform-origin: 50% 0; transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-.dh[data-settled] { transform: scale(0.94); }
-/* the glass: blur 18 + saturate 1.8, a white rim, a lens edge (inner violet shade at the bottom) and a mirrored sheen */
-.dh__glass { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none;
-  -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.30));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.6), inset 0 -10px 18px -12px rgb(90 63 224 / 0.35), 0 12px 32px -16px rgb(29 20 80 / 0.5); }
-.dh__glass::before { /* settled: a little more solid (opacity only) */
-  content: ""; position: absolute; inset: 0; background: rgb(255 255 255 / 0.42); opacity: 0; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
-.dh[data-settled] .dh__glass::before { opacity: 1; }
-.dh__glass::after { /* the sheen */
-  content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 22%, rgb(255 255 255 / 0.45) 38%, transparent 52%, transparent 70%, rgb(255 255 255 / 0.25) 80%, transparent 90%); mix-blend-mode: soft-light; }
-.dh.is-open .dh__glass::before { opacity: 1; background: rgb(255 255 255 / 0.8); }
-.dh__bar { position: relative; display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 8px 0 12px; }
-.dh__mark { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px; margin-right: 6px; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; color: var(--d-ink); text-decoration: none; }
-.dh__mark img { display: block; width: 28px; height: 28px; }
-.dh__word { display: none; font-family: var(--font-wordmark); font-style: italic; font-size: 24px; line-height: 1; }
-.dh__links { display: flex; align-items: center; gap: 2px; margin: 0 8px 0 0; padding: 0; list-style: none; }
-.dh__links a { position: relative; display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: calc(10px * var(--squircle-k, 1)); corner-shape: squircle; font: 500 15.5px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
-.dh__links a:hover { color: var(--d-violet); }
-.dh a:focus-visible, .dh button:focus-visible { outline: 2px solid var(--d-violet); outline-offset: 2px; }
-.dh__cta { display: inline-flex; align-items: center; height: 42px; min-width: 150px; padding: 0 48px 0 20px; border-radius: 999px; background: var(--d-violet); color: #fff; font: 450 15.5px/1 var(--d-sans); white-space: nowrap; text-decoration: none; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2); }
-.dh__cta:hover { background: var(--d-violet-2); }
-/* the pop (dia-motion.css [data-d-navcta]) needs the pill's own layout: it keeps its space, so the bar never moves */
-.dh [data-d-navcta] { position: relative; }
-.dh__toggle { display: none; position: relative; width: 40px; height: 40px; margin-left: auto; border: 0; border-radius: calc(12px * var(--squircle-k, 1)); corner-shape: squircle; background: none; cursor: pointer; }
-.dh__toggle span, .dh__toggle span::before { position: absolute; left: 12px; top: 19px; width: 16px; height: 2px; border-radius: 1px; background: var(--d-ink); transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1); }
-.dh__toggle span::before { content: ""; left: 0; top: 0; transform: rotate(90deg); }
-.dh.is-open .dh__toggle span { transform: rotate(45deg); }
-.dh__menu { position: relative; padding: 4px 14px 16px; }
-.dh__menu ul { display: grid; gap: 2px; margin: 0 0 12px; padding: 0; list-style: none; }
-.dh__menu a:not(.d-cta) { display: block; padding: 12px 8px; border-radius: calc(10px * var(--squircle-k, 1)); corner-shape: squircle; font: 500 17px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
-.dh__menu-cta { width: 100%; }
-.dh [data-d-navcta] { position: relative; }
-html:not(.js) .dh [data-d-navcta] { clip-path: none; transform: none; visibility: visible; }
-html:not(.js) .dh [data-d-navcta] > * { opacity: 1; }
-.dh__progress { position: absolute; left: 22px; right: 22px; bottom: 1px; height: 2px; border-radius: 2px; background: var(--d-lime); transform: scaleX(var(--d-progress, 0)); transform-origin: 0 50%; pointer-events: none; }
-/* the three-dot active link (dia-motion.css [data-d-nav-active]) */
-.dh__links [data-d-nav-active]::after { bottom: 4px; }
+/* ---------- the header (Design §3): 64 px, white, the links centred, the ink pill on the right ---------- */
+.dh { position: fixed; z-index: 50; top: 0; left: 0; right: 0; background: var(--d-paper); color: var(--d-ink); transition: box-shadow 100ms var(--d-ease); }
+/* it floats once the page has scrolled, so only then does it get its shadow */
+.dh[data-scrolled] { box-shadow: 0 1px 0 var(--d-line), 0 6px 18px -12px rgb(17 17 17 / 0.25); }
+.dh.is-open { box-shadow: 0 1px 0 var(--d-line), 0 16px 32px -20px rgb(17 17 17 / 0.3); }
+.dh__bar { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 64px; max-width: 1440px; margin: 0 auto; padding: 0 64px; }
+.dh__mark { justify-self: start; display: inline-flex; align-items: center; gap: 10px; height: 40px; color: var(--d-ink); text-decoration: none; }
+.dh__mark img { display: block; width: 26px; height: 26px; }
+.dh__word { font: 650 17px/1 var(--d-sans); letter-spacing: -0.01em; }
+.dh__links { display: flex; align-items: center; gap: 28px; margin: 0; padding: 0; list-style: none; }
+.dh__links a { display: inline-flex; align-items: center; height: 40px; font: 500 14px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; text-underline-offset: 6px; }
+.dh__links a:hover, .dh__links a[aria-current="page"] { text-decoration: underline 1px; }
+.dh a:focus-visible, .dh button:focus-visible { outline: 2px solid var(--d-ink); outline-offset: 2px; border-radius: 4px; }
+.dh__cta { justify-self: end; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; background: var(--d-cta); color: #fff; font: 500 14px/1 var(--d-sans); white-space: nowrap; text-decoration: none; transition: background-color 100ms var(--d-ease); }
+.dh__cta:hover { background: var(--d-cta-hover); }
+.dh a.dh__cta:focus-visible { border-radius: 999px; }
+.dh__toggle { display: none; position: relative; justify-self: end; width: 40px; height: 40px; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+/* three lines; open: an × */
+.dh__toggle span, .dh__toggle span::before, .dh__toggle span::after { position: absolute; left: 11px; width: 18px; height: 1.5px; border-radius: 1px; background: var(--d-ink); transition: transform 100ms var(--d-ease), opacity 100ms var(--d-ease); }
+.dh__toggle span { top: 19px; }
+.dh__toggle span::before, .dh__toggle span::after { content: ""; left: 0; }
+.dh__toggle span::before { top: -6px; }
+.dh__toggle span::after { top: 6px; }
+.dh.is-open .dh__toggle span { background: transparent; }
+.dh.is-open .dh__toggle span::before { transform: translateY(6px) rotate(45deg); }
+.dh.is-open .dh__toggle span::after { transform: translateY(-6px) rotate(-45deg); }
+.dh__menu { padding: 4px 16px 20px; border-top: 1px solid var(--d-line); }
+.dh__menu ul { display: grid; margin: 0 0 12px; padding: 0; list-style: none; }
+.dh__menu li + li { border-top: 1px solid var(--d-line); }
+.dh__menu a:not(.d-cta) { display: flex; align-items: center; min-height: 48px; font: 500 17px/1 var(--d-sans); color: var(--d-ink); text-decoration: none; }
+.dh__menu a[aria-current="page"] { text-decoration: underline 1px; text-underline-offset: 6px; }
+.dh__menu-cta { width: 100%; justify-content: center; }
 @media (max-width: 820px) {
-  .dh { left: 10px; right: 10px; width: auto; max-width: none; border-radius: 22px; }
-  .dh__bar { height: 52px; }
-  .dh__word { display: inline; }
+  .dh__bar { grid-template-columns: 1fr auto; height: 64px; padding: 0 16px; }
   .dh__links, .dh__bar > .dh__cta { display: none; }
   .dh__toggle { display: block; }
 }
 @media (min-width: 821px) { .dh__menu { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
-  .dh, .dh__glass::before { transition: none; }
-  .dh__progress { display: none; }
+  .dh, .dh__cta, .dh__toggle span, .dh__toggle span::before, .dh__toggle span::after { transition: none; }
 }
 
-/* ---------- the footer (mock 09) ---------- */
-.d-foot { position: relative; z-index: 4; padding: 72px max(24px, calc((100% - 1180px) / 2)) 60px; background: var(--d-paper); color: var(--d-ink); font: 500 12.5px/1.3 var(--d-mono); letter-spacing: 0.08em; text-transform: uppercase; border-top: 1px solid var(--d-line); }
+/* ---------- the footer: Inter 13 px, sentence case as written ---------- */
+.d-foot { position: relative; z-index: 4; padding: 80px max(32px, calc((100% - 1140px) / 2)) 56px; background: var(--d-paper); color: var(--d-ink); font: 400 var(--d-small)/1.4 var(--d-sans); border-top: 1px solid var(--d-line); }
 /* Follow (ledger 563) takes only its text's width; the newsletter keeps 340 px so the field and Subscribe sit easily (Design S-1) */
 .d-foot__cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) max-content minmax(340px, 1.3fr); gap: 48px; }
-.d-foot h2 { margin: 0 0 14px; font: inherit; letter-spacing: inherit; color: var(--d-ink); }
+.d-foot h2 { margin: 0 0 16px; font: 600 var(--d-small)/1.4 var(--d-sans); letter-spacing: 0; color: var(--d-ink); }
 .d-foot ul { margin: 0; padding: 0; list-style: none; }
-.d-foot li + li { margin-top: 9px; }
-.d-foot__cols a, .d-foot__cols button { color: rgb(23 19 31 / 0.66); background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; text-decoration: none; cursor: pointer; }
-.d-foot a:hover, .d-foot button:hover { color: var(--d-violet); }
-.d-foot__news { display: grid; align-content: start; gap: 12px; text-transform: none; letter-spacing: 0; font-family: var(--d-sans); }
-.d-foot__news .newsletter__row button { padding: 0 16px; }
-.d-foot__ghost { width: 48px; height: 48px; }
+.d-foot li + li { margin-top: 8px; }
+.d-foot__cols a, .d-foot__cols button { color: var(--d-ink-2); background: none; border: 0; padding: 0; font: inherit; text-decoration: none; cursor: pointer; }
+.d-foot a:hover, .d-foot button:hover { color: var(--d-ink); text-decoration: underline 1px; text-underline-offset: 3px; }
+.d-foot a:focus-visible, .d-foot button:focus-visible { outline: 2px solid var(--d-ink); outline-offset: 2px; border-radius: 2px; }
+.d-foot__news { display: grid; align-content: start; gap: 12px; }
+/* the newsletter in A: a white field with a 1 px edge (radius 10), the ink pill; before the box is ticked the pill is the
+   outline pill (aria-disabled), hover changes colour only */
+.d-foot__news .newsletter__row .lg-input { min-height: 40px; border-radius: calc(var(--d-radius) * var(--squircle-k, 1)); background: #fff; box-shadow: inset 0 0 0 1px rgb(17 17 17 / 0.22); font: 400 15px var(--d-sans); color: var(--d-ink); }
+.d-foot__news .newsletter__row .lg-input:focus-within { outline: 2px solid var(--d-ink); outline-offset: 2px; }
+.d-foot__news .newsletter__row button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--d-cta); color: #fff; font: 500 14px/1 var(--d-sans); text-decoration: none; transition: background-color 100ms var(--d-ease); }
+.d-foot__news .newsletter__row button:hover { background: var(--d-cta-hover); color: #fff; text-decoration: none; }
+.d-foot__news .newsletter__row button[aria-disabled="true"] { background: #fff; color: var(--d-ink); box-shadow: inset 0 0 0 1px var(--d-ink); }
+.d-foot__news .newsletter__row button[aria-disabled="true"]:hover { background: var(--d-tint); color: var(--d-ink); }
+.d-foot__news .newsletter__consent { font: 400 13px/1.5 var(--d-sans); color: var(--d-ink-2); }
+.d-foot__ghost { width: 40px; height: 40px; }
 .d-foot__newsh { margin: 0; font: 600 14px/1.4 var(--d-sans); color: var(--d-ink); }
-.d-foot__dirs { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px 24px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--d-line); }
-.d-foot__dirs-h { margin: 6px 0 0; color: var(--d-ink); }
+.d-foot__dirs { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px 24px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--d-line); }
+.d-foot__dirs-h { margin: 4px 0 0; font-weight: 600; color: var(--d-ink); }
 .d-foot__badges { display: flex; flex-wrap: wrap; gap: 12px; }
 .d-foot__badges a { display: inline-flex; border-radius: calc(6px * var(--squircle-k, 1)); corner-shape: squircle; }
 .d-foot__badges img { display: block; width: auto; height: 28px; }
-.d-foot__links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font: 400 13px/1.5 var(--d-sans); letter-spacing: 0; text-transform: none; }
+.d-foot__links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font: 400 var(--d-small)/1.5 var(--d-sans); }
 .d-foot__dirs-h + .d-foot__links { margin-top: 4px; }
-.d-foot__links a { color: #5c5868; text-decoration: none; }
-.d-foot__links a:hover { color: var(--d-violet); text-decoration: underline; text-underline-offset: 3px; }
-.d-foot__all { color: var(--d-violet) !important; }
-.d-foot__base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; margin-top: 40px; font-size: 10.5px; color: rgb(23 19 31 / 0.66); }
-/* 821-900 px: five tracks with a 340 px newsletter leave the link columns about 55 px; smaller gaps keep mono words inside */
+.d-foot__links a { color: var(--d-ink-2); text-decoration: none; }
+.d-foot__all { color: var(--d-ink) !important; text-decoration: underline 1px !important; text-underline-offset: 3px; }
+.d-foot__base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; margin-top: 40px; color: var(--d-ink-2); }
 @media (min-width: 821px) and (max-width: 900px) { .d-foot__cols { column-gap: 32px; } }
 @media (max-width: 820px) {
-  .d-foot { padding: 56px 20px 100px; }
+  .d-foot { padding: 56px 16px 40px; }
   .d-foot__cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
   .d-foot__news { grid-column: 1 / -1; }
-  /* Every column link is a 24 px tap row on phones, so Follow and the other columns share one rhythm (Design 563 S-1);
-     flex keeps the 1.3 line height when a long label wraps. The button (Analytics settings) starts at the column edge. */
+  /* Every column link is a 24 px tap row on phones (Design 563 S-1); flex keeps the line height when a label wraps. */
   .d-foot__cols li > :is(a, button) { display: inline-flex; align-items: center; min-height: 24px; padding: 0; text-align: left; }
   .d-foot__dirs { grid-template-columns: minmax(0, 1fr); }
 }
-
-/* ---------- lime accents (mock 18; ≤ 3 % of a screen, never a button, never text on its own) ---------- */
-/* the highlight behind one italic word per heading, sweeping in like a code selection (ANIMATIONS #5) */
-.d-hl { position: relative; z-index: 0; font-style: italic; }
-.d-hl::before { content: ""; position: absolute; z-index: -1; left: -0.08em; right: -0.1em; top: 0.12em; bottom: 0.02em; border-radius: 3px; background: var(--d-lime); transform-origin: 0 50%; transition: transform 450ms cubic-bezier(0.19, 1, 0.22, 1) 200ms; }
-.js [data-d-words]:not([data-in]) .d-hl::before { transform: scaleX(0); }
-.pricing-plans__intro .d-hl::before { animation: dHl 450ms cubic-bezier(0.19, 1, 0.22, 1) 500ms both; }
-@keyframes dHl { from { transform: scaleX(0); } }
-/* the ribbon between sections (ANIMATIONS #4) */
-.d-ribbon { position: relative; z-index: 2; height: 0; pointer-events: none; }
-.d-ribbon svg { position: absolute; left: 0; top: -100px; width: 100%; height: 200px; overflow: visible; opacity: var(--d-fade, 1); }
-.d-ribbon path { fill: none; stroke: var(--d-lime); stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--d-draw, 0)); }
-.d-ribbon__a { stroke-width: 7px; }
-.d-ribbon__b { stroke-width: 2.5px; opacity: 0.75; }
-html:not(.js) .d-ribbon { display: none; }
-@media (prefers-reduced-motion: reduce) { .d-ribbon { display: none; } }
-@media (max-width: 820px) { .d-ribbon__a { stroke-width: 6px; } }

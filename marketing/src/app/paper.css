@@ -19,23 +19,15 @@ html body {
   color: var(--ink);
 }
 
-/* The page backdrop (Design, ledger 443; agents/design/unvibe-site-glass-redesign-2026-11-04.md §1; ledger 466
-   picks it): the demo's own debounce.ts with lime and sky selection bands on a sky ground. The home sections'
-   tinted glass plates, cards, panels, the hero still and the bars blur it (glass.css).
-   No blur is baked in; the glass does the blur. Phones and narrow windows get the 1200 px copy. */
+/* The page ground (Option A, Design spec §2 and §7): plain white on every page. The code-field backdrop with its lime
+   and sky selection bands is gone; glass panes over it now sit on white. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -2;
-  background: #d6ecfb url("/backdrop/code-field-2400.webp") 50% 0 / cover no-repeat;
+  background: #ffffff;
   pointer-events: none;
-}
-
-@media (max-width: 899px) {
-  body::before {
-    background-image: url("/backdrop/code-field-1200.webp");
-  }
 }
 
 .paper-logo__word {
