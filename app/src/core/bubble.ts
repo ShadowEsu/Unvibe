@@ -59,8 +59,11 @@ export function ghostAllowedIn(platform: BubblePlatform, app: string): boolean {
 /** What the helper says, one JSON object per line on its stdout (Security H1: stdout to main only). */
 export type HelperEvent =
   | { e: 'ready'; v: number }
-  /** A mouse selection ended: a drag that started over text, or a double or triple click over text. */
-  | { e: 'select'; x: number; y: number; app: string; g: 'drag' | 'double' | 'triple' }
+  /**
+   * A mouse selection ended: a drag that started over text, or a double or triple click over text. `x`/`y` is the
+   * selection's end (the drag's start for an upward or leftward drag); `px`/`py`, where the pointer rests.
+   */
+  | { e: 'select'; x: number; y: number; px?: number; py?: number; app: string; g: 'drag' | 'double' | 'triple' }
   /** A press, a right click or a scroll anywhere; the point lets main ignore ones on its own windows. */
   | { e: 'down' | 'right' | 'scroll'; x: number; y: number }
   /** Another app came to the front. */
@@ -94,10 +97,11 @@ export function parseHelperLine(line: string): HelperEvent | null {
   switch (o.e) {
     case 'ready':
       return typeof o.v === 'number' && Number.isInteger(o.v) ? { e: 'ready', v: o.v } : null;
-    case 'select':
-      return coord(o.x) && coord(o.y) && appId(o.app) && typeof o.g === 'string' && GESTURES.has(o.g)
-        ? { e: 'select', x: o.x, y: o.y, app: o.app, g: o.g as 'drag' | 'double' | 'triple' }
-        : null;
+    case 'select': {
+      if (!(coord(o.x) && coord(o.y) && appId(o.app) && typeof o.g === 'string' && GESTURES.has(o.g))) return null;
+      const event: HelperEvent = { e: 'select', x: o.x, y: o.y, app: o.app, g: o.g as 'drag' | 'double' | 'triple' };
+      return coord(o.px) && coord(o.py) ? { ...event, px: o.px, py: o.py } : event;
+    }
     case 'down':
     case 'right':
     case 'scroll':
@@ -128,22 +132,31 @@ function within(value: number, min: number, max: number): number {
 }
 
 /**
- * Where the ghost goes for a mouse-up point. Editors report no selection bounds we may read, so the point is
- * Design's fallback (Q1). It sits to the right, or flips left near the work area's right edge, so the resting
- * cursor and the drag's own mouse-up are never over it (G7), and it never leaves the work area (below the
- * menu bar). `flipped` tells the pill and the card which way to grow.
+ * Where the ghost goes for a selection's end point. Editors report no selection bounds we may read, so the point is
+ * Design's fallback (Q1). It sits to the right, or flips left near the work area's right edge, and it never leaves
+ * the work area (below the menu bar). `flipped` tells the pill and the card which way to grow. The resting pointer is
+ * never over it (G7; lead N2): a short leftward drag near the right edge ends inside the flipped spot, so the ghost
+ * moves to the other side if the pill fits there, else just under (or over) the pointer.
  */
-export function ghostPlacement(at: Point, workArea: Rect, pillWidth = PILL_WIDTH): { x: number; y: number; flipped: boolean } {
-  const right = at.x + GHOST_GAP;
-  const flipped = right + pillWidth > workArea.x + workArea.width;
-  const x = flipped ? at.x - GHOST_GAP - GHOST_SIZE : right;
-  const y = at.y - GHOST_SIZE / 2;
-  return {
-    x: Math.round(within(x, workArea.x, workArea.x + workArea.width - GHOST_SIZE)),
-    y: Math.round(within(y, workArea.y, workArea.y + workArea.height - GHOST_SIZE)),
-    flipped,
-  };
+export function ghostPlacement(at: Point, workArea: Rect, pillWidth = PILL_WIDTH, pointer?: Point): { x: number; y: number; flipped: boolean } {
+  const fitsRight = at.x + GHOST_GAP + pillWidth <= workArea.x + workArea.width;
+  const clampX = (x: number) => Math.round(within(x, workArea.x, workArea.x + workArea.width - GHOST_SIZE));
+  const clampY = (y: number) => Math.round(within(y, workArea.y, workArea.y + workArea.height - GHOST_SIZE));
+  const spot = (flipped: boolean, y = at.y - GHOST_SIZE / 2) => ({ x: clampX(flipped ? at.x - GHOST_GAP - GHOST_SIZE : at.x + GHOST_GAP), y: clampY(y), flipped });
+  const covers = (s: { x: number; y: number }) => pointer !== undefined
+    && pointer.x >= s.x - POINTER_MARGIN && pointer.x < s.x + GHOST_SIZE + POINTER_MARGIN
+    && pointer.y >= s.y - POINTER_MARGIN && pointer.y < s.y + GHOST_SIZE + POINTER_MARGIN;
+  const first = spot(!fitsRight);
+  if (!covers(first) || !pointer) return first;
+  // The other side: toward the left always (the pill grows left there); toward the right only when the pill fits.
+  const other = spot(fitsRight);
+  if (fitsRight && !covers(other)) return other;
+  const below = spot(first.flipped, pointer.y + POINTER_MARGIN + GHOST_GAP);
+  return covers(below) ? spot(first.flipped, pointer.y - POINTER_MARGIN - GHOST_GAP - GHOST_SIZE) : below;
 }
+
+/** How far the resting pointer must stay from the ghost's edge. */
+const POINTER_MARGIN = 4;
 
 /** The window for each look: the circle, the pill (grown away from the edge) or the Quick look card. */
 export function ghostWindowBounds(

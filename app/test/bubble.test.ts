@@ -58,6 +58,25 @@ test('the ghost sits 8 pt right of the mouse-up, flips left at the edge, and sta
   assert.ok(card.y + card.height <= work.y + work.height);
 });
 
+test('the ghost is never placed under the resting pointer, even after a short leftward drag at the right edge', () => {
+  const under = (g: { x: number; y: number }, p: { x: number; y: number }) => p.x >= g.x - 4 && p.x < g.x + 36 && p.y >= g.y - 4 && p.y < g.y + 36;
+  // Near the right edge the ghost flips left of the drag's start; a 20 pt leftward drag rests inside that spot.
+  const start = { x: 1400, y: 300 };
+  const rest = { x: 1380, y: 300 };
+  assert.equal(under(ghostPlacement(start, work, 130), rest), true);
+  const placed = ghostPlacement(start, work, 130, rest);
+  assert.equal(under(placed, rest), false, JSON.stringify(placed));
+  assert.ok(placed.x + 32 <= work.x + work.width && placed.y + 32 <= work.y + work.height);
+  // Away from the edge a leftward drag's rest point is left of the ghost, so nothing moves.
+  assert.deepEqual(ghostPlacement({ x: 400, y: 300 }, work, 130, { x: 380, y: 300 }), { x: 408, y: 284, flipped: false });
+  // At the bottom of the work area it goes over the pointer instead of under it.
+  const low = ghostPlacement({ x: 1400, y: 890 }, work, 130, { x: 1385, y: 890 });
+  assert.equal(under(low, { x: 1385, y: 890 }), false, JSON.stringify(low));
+  // The helper's resting point is optional and range-checked like the rest.
+  assert.deepEqual(parseHelperLine('{"e":"select","x":10,"y":20,"px":15,"py":20,"app":"com.microsoft.VSCode","g":"drag"}'), { e: 'select', x: 10, y: 20, px: 15, py: 20, app: 'com.microsoft.VSCode', g: 'drag' });
+  assert.deepEqual(parseHelperLine('{"e":"select","x":10,"y":20,"px":"15","py":20,"app":"com.microsoft.VSCode","g":"drag"}'), { e: 'select', x: 10, y: 20, app: 'com.microsoft.VSCode', g: 'drag' });
+});
+
 function shown(): GhostState {
   return reduceGhost({ look: 'hidden' }, { e: 'select', x: 400, y: 300, app: 'com.microsoft.VSCode', g: 'drag' }, mac).state;
 }

@@ -9,7 +9,8 @@
  *
  * Events (app/src/core/bubble.ts parseHelperLine is the contract):
  *   {"e":"ready","v":1}
- *   {"e":"select","x":..,"y":..,"app":"<exe name>","g":"drag|double|triple"}   a mouse selection ended over text
+ *   {"e":"select","x":..,"y":..,"px":..,"py":..,"app":"<exe name>","g":"drag|double|triple"}
+ *        a mouse selection ended over text: x/y its end, px/py where the pointer rests
  *   {"e":"down"|"right"|"scroll","x":..,"y":..}                                 so the button can leave
  *   {"e":"app","app":"<exe name>"}                                              another app came to the front
  * Points are physical screen pixels (the process is per-monitor DPI aware); main converts them to DIPs.
@@ -156,7 +157,7 @@ static DWORD WINAPI worker(LPVOID arg) {
         const POINT end = (g[0] == 'd' && g[1] == 'r' && upward) ? down : pt;
         exe_of(GetForegroundWindow(), app, sizeof app);
         if (!app[0]) break;
-        printf("{\"e\":\"select\",\"x\":%ld,\"y\":%ld,\"app\":\"%s\",\"g\":\"%s\"}\n", (long)end.x, (long)end.y, app, g);
+        printf("{\"e\":\"select\",\"x\":%ld,\"y\":%ld,\"px\":%ld,\"py\":%ld,\"app\":\"%s\",\"g\":\"%s\"}\n", (long)end.x, (long)end.y, (long)pt.x, (long)pt.y, app, g);
         fflush(stdout);
         break;
       }

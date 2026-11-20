@@ -99,6 +99,7 @@ let ghostWin: BrowserWindow | null = null;
 let ghostReady = false;
 let state: GhostState = { look: 'hidden' };
 let anchor: { x: number; y: number; flipped: boolean } | null = null;
+let restingPointer: Point | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let previewHeight = 120;
 // The pill's measured width (the renderer reports it: the shortcut's caps differ by platform and setting).
@@ -181,7 +182,11 @@ function onInput(input: GhostInput): void {
     deps?.explain();
     return;
   }
-  if (event.e === 'select' && next.state.look === 'ghost') anchor = null;
+  if (event.e === 'select' && next.state.look === 'ghost') {
+    anchor = null;
+    // Where the pointer rests, so the ghost is never placed under it (G7).
+    restingPointer = event.px !== undefined && event.py !== undefined ? toDip({ x: event.px, y: event.py }) : null;
+  }
   apply(next.state);
   if (next.effect === 'preview') void runPreview(++previewRuns);
 }
@@ -235,7 +240,7 @@ function apply(next: GhostState): void {
     return;
   }
   const work = screen.getDisplayNearestPoint(next.at).workArea;
-  anchor ??= ghostPlacement(next.at, work, pillWidth);
+  anchor ??= ghostPlacement(next.at, work, pillWidth, restingPointer ?? undefined);
   const win = ensureWindow();
   win.setBounds(ghostWindowBounds(anchor, next.look, work, previewHeight, pillWidth));
   if (ghostReady) win.webContents.send('ghost:view', view());
