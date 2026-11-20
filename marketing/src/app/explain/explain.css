@@ -11,18 +11,15 @@
   --v-ink-2: #555555;
   --v-radius: 10px;
   --explain-muted: var(--v-ink-2);
+  /* Option A cards (Design's content spec §2): a 1 px edge at ink 11 %; code, notes and folds on ink 5 %. */
+  --explain-line: rgb(17 17 17 / 0.11);
+  --explain-tint: rgb(17 17 17 / 0.05);
   --font-mono: var(--explain-mono-face), var(--font-mono-fallback), ui-monospace, monospace;
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
   width: min(1120px, calc(100% - 2.5rem));
   margin-inline: auto;
   padding-block: clamp(5.25rem, 9vw, 7rem) 6rem;
-}
-
-/* Option A cards (Design's content spec §2): white, a 1 px edge at ink 11 %, radius 10, 24 px padding, no shadow. */
-.explain-page {
-  --explain-line: rgb(17 17 17 / 0.11);
-  --explain-tint: rgb(17 17 17 / 0.05);
 }
 
 .explain-head,
@@ -97,8 +94,8 @@
 }
 
 /* One focus ring on these pages: 2 px ink, 2 px out. Listed with the shared sheets' button selectors so it wins over
-   their 3 px violet rings (sections.css), which tie on specificity otherwise. The dark half of the Try box keeps a
-   white ring below, and the install command box keeps its own inset ring (vibe.css .ninst__cmd). */
+   their 3 px violet rings (sections.css), which tie on specificity otherwise. The install command box keeps an inset
+   ring (below), and the editor's textarea an inset one further down. */
 .explain-page :focus-visible,
 .explain-page a:focus-visible,
 .explain-page .try__levels button:focus-visible,
@@ -155,13 +152,23 @@
   margin: 0 0 1rem;
 }
 
-/* Inline code: a 5 % ink chip, radius 4 (Design §2). */
-.explain-card code {
+/* Inline code: a 5 % ink chip, radius 4 (Design §2), the same in the cards, the head's lead and Vibe's answer. The
+   answer's code had the site's warm chip (vibe.css .try__answer code). */
+.explain-card code,
+.explain-head p code,
+.explain-page .try__answer code {
+  corner-shape: round;
   padding: 0.05em 0.35em;
   border-radius: 4px;
   background: var(--explain-tint);
   font: 0.92em var(--font-mono);
   overflow-wrap: anywhere;
+}
+
+/* The install command sits straight on its box: no second chip inside the 5 % fill (vibe.css .ninst__cmd code). */
+.explain-page .ninst__cmd code {
+  padding: 0;
+  background: none;
 }
 
 /* What it shows: rows split by 1 px rules, no boxes. */
@@ -206,6 +213,9 @@
   padding: 20px;
   border-radius: var(--v-radius);
   background: var(--explain-tint);
+  /* Forced colours drop the fill; a transparent outline turns into an edge there and draws nothing otherwise. */
+  outline: 1px solid transparent;
+  outline-offset: -1px;
 }
 
 .explain-card .explain-watch b {
@@ -233,6 +243,8 @@
   gap: 4px;
   padding-block: 14px;
   border-top: 1px solid var(--explain-line);
+  /* In a 2-column row a short cell stretches to its neighbour's height; this keeps the summary right under its link. */
+  align-content: start;
 }
 
 .explain-langs a {
@@ -253,7 +265,7 @@
   gap: 0.6rem 1.2rem;
 }
 
-/* Related and the other languages: plain 15 px links in a wrapped row, no pills. Each keeps a 44 px tall target. */
+/* Related and the other languages: plain 15/600 links in a wrapped row, no pills. Each keeps a 44 × 44 px target. */
 .explain-more ul {
   display: flex;
   flex-wrap: wrap;
@@ -266,8 +278,9 @@
 .explain-more a {
   display: inline-flex;
   align-items: center;
+  min-width: 44px;
   min-height: 44px;
-  font: 500 15px / 1.3 var(--font-sans);
+  font: 600 15px / 1.3 var(--font-sans);
 }
 
 .explain-more a:hover {
@@ -357,8 +370,9 @@
   color: #8a4b00;
 }
 
+/* #767676: the field's edge is 4.54:1 on its white fill and 4.09:1 on the editor's #f3f3f3 (3:1 needed, sections.css). */
 .explain-page .try__room input {
-  border-color: rgb(17 17 17 / 0.45);
+  border-color: #767676;
   background: #fff;
   color: var(--v-ink);
 }
@@ -367,10 +381,19 @@
   accent-color: var(--v-ink);
 }
 
+/* The ink pill: round corners, not the shared squircle (vibe.css .try__go); hover colour in 100 ms, and no press
+   movement (spec §2: no motion beyond hover colour). */
 .explain-page .try__go {
   border-radius: 999px;
+  corner-shape: round;
   background: var(--v-ink);
   color: #fff;
+  transition-duration: 100ms;
+}
+
+.explain-page .try__go:active:not(:disabled):not([aria-disabled="true"]),
+.explain-page .try__levels button:hover:not(:disabled) {
+  transform: none;
 }
 
 .explain-page .try__go:hover:not(:disabled):not([aria-disabled="true"]) {
@@ -410,6 +433,12 @@
   --ninst-line: var(--explain-line);
 }
 
+/* The command's left corners follow the box's 10 px radius, so its inset focus ring does too. */
+.explain-page .ninst__cmd {
+  border-radius: var(--v-radius) 0 0 var(--v-radius);
+  corner-shape: round;
+}
+
 .explain-page .ninst__box {
   border-radius: var(--v-radius);
   background: #f3f3f3;
@@ -421,4 +450,5 @@
 
 .explain-page .ninst__copy {
   border-radius: 999px;
+  corner-shape: round;
 }

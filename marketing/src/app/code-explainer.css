@@ -75,6 +75,8 @@ ol.explain-notes {
   margin: 0;
   white-space: pre;
   overflow-wrap: normal;
+  /* Inside a framed sample the frame draws the edge and corners. */
+  border-radius: 0;
 }
 
 .os-how {
@@ -137,11 +139,6 @@ ol.explain-notes {
   overflow-wrap: anywhere;
 }
 
-/* Inside a framed sample the frame draws the edge and corners. */
-.explain-card .use-sample .os-cmd {
-  border-radius: 0;
-}
-
 /* Search landing pages (Design, 7 Nov): the H1 names the job, one line of what you get, then the real panel
    screenshot of that job at the fold with the one Download free button beside it; the same button ends the page. */
 /* Option A: the fold sits on a 5 % ink fill, radius 10 (Design §2). */
@@ -153,6 +150,18 @@ ol.explain-notes {
   padding: 24px;
   border-radius: var(--v-radius);
   background: var(--explain-tint);
+  /* Forced colours drop the fill; a transparent outline turns into an edge there and draws nothing otherwise. */
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+
+/* Under 400 px the fold's 24 px sits inside the head card's own 24 px, leaving less than the Download free button
+   (211 px, one line) needs; it reaches 16 px into the card's padding and uses 16 px of its own. */
+@media (max-width: 400px) {
+  .uc-fold {
+    margin-inline: -16px;
+    padding: 16px;
+  }
 }
 
 @media (min-width: 860px) {
