@@ -1,0 +1,208 @@
+/* ── Mono: first-run setup in option A with C's pinned footer (633; Design build spec
+   requests/unvibe-app/20261119-1559-design-633-ac-setup-build-spec.md, frames agents/design/ten-refs-20261117/setup-ac/).
+   Three rows: the top bar in the title-bar row (48 px with its 8 px gap), a body that scrolls, and a 76 px footer that
+   never does. One 600 px column. Purple only on Vibe; setup always draws at Comfortable, whatever Density says. ── */
+
+:root[data-ui="v3"][data-v7] .onboard {
+  position: fixed; inset: 0; z-index: 1; display: grid; grid-template-rows: 48px minmax(0, 1fr) 76px;
+  background: var(--u-paper); color: var(--u-ink); font: 400 14px/1.45 var(--u-font); letter-spacing: 0;
+}
+/* :where keeps the reset at the class rules' weight, so the margins they set below win. */
+:root[data-ui="v3"][data-v7] .onboard :where(h1, p) { margin: 0; }
+
+/* Top bar: shares the 40 px title-bar row with the traffic lights or caption buttons (centred at y 20), and drags the
+   window like a title bar; Back doesn't. Mac (hiddenInset, lights at x 13-72): Back's icon at x 84, progress 128..W-84,
+   the counter right at W-32. Windows (caption buttons over W-138..W): Back at 16, progress 60..W-210, counter W-154. */
+:root[data-ui="v3"][data-v7] .onboard__top { position: relative; height: 40px; -webkit-app-region: drag; }
+:root[data-ui="v3"][data-v7] .onboard__back {
+  position: absolute; top: 4px; display: grid; place-items: center; width: 32px; height: 32px; margin: 0; padding: 0;
+  border: 0; border-radius: 8px; background: none; color: var(--u-ink-2); cursor: pointer; -webkit-app-region: no-drag;
+}
+:root[data-ui="v3"][data-v7] .onboard__back:hover:not(:disabled) { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__progress { position: absolute; top: 18px; height: 4px; overflow: hidden; border-radius: 2px; background: color-mix(in srgb, var(--u-ink) 10%, transparent); }
+:root[data-ui="v3"][data-v7] .onboard__progress i { display: block; height: 100%; border-radius: 2px; background: var(--u-ink); transition: width 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+:root[data-ui="v3"][data-v7] .onboard__count { position: absolute; top: 0; font: 400 12px/40px var(--u-font); color: var(--u-ink-2); font-variant-numeric: tabular-nums; }
+:root[data-ui="v3"][data-v7] .onboard--mac .onboard__back { left: 78px; }
+:root[data-ui="v3"][data-v7] .onboard--mac .onboard__progress { left: 128px; right: 84px; }
+:root[data-ui="v3"][data-v7] .onboard--mac .onboard__count { right: 32px; }
+:root[data-ui="v3"][data-v7] .onboard--win .onboard__back { left: 10px; }
+:root[data-ui="v3"][data-v7] .onboard--win .onboard__progress { left: 60px; right: 210px; }
+:root[data-ui="v3"][data-v7] .onboard--win .onboard__count { right: 154px; }
+
+/* Body: centred between the bars when it fits with 12 px to spare; otherwise it starts 12 px under the top bar and
+   scrolls (auto margins collapse to 0 once the column is taller than the space). */
+:root[data-ui="v3"][data-v7] .onboard__scroll { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; scroll-padding-block: 12px; }
+:root[data-ui="v3"][data-v7] .onboard__column { display: flex; flex-direction: column; align-items: center; width: min(600px, calc(100% - 48px)); margin: auto; padding: 12px 0; }
+/* The System Settings guide sits beside its drawing: 440 + 290 with the gap, wider than the column. */
+:root[data-ui="v3"][data-v7] .onboard__column:has(.shortcut-guide) { width: min(760px, calc(100% - 48px)); }
+
+/* Vibe, then Vibe's line as the screen's heading (20/600, no bubble), 22 px over the step's content. */
+:root[data-ui="v3"][data-v7] .onboard__vibe { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+:root[data-ui="v3"][data-v7] .onboard__vibe .buddy { flex: none; }
+:root[data-ui="v3"][data-v7] .onboard__line { min-height: 28px; font: 600 20px/28px var(--u-font); color: var(--u-ink); text-align: center; text-wrap: balance; }
+:root[data-ui="v3"][data-v7] .onboard__body { display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 22px; }
+/* A step comes in: fades from 0 and rises 8 px over 200 ms. Reduced motion keeps the fade only. */
+:root[data-ui="v3"][data-v7] .onboard .onboard__body.fade-in { animation: onboardIn 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+@keyframes onboardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes onboardFade { from { opacity: 0; } to { opacity: 1; } }
+:root[data-ui="v3"][data-v7] .onboard__lead { max-width: 520px; font: 400 14px/1.5 var(--u-font); color: var(--u-ink-2); text-align: center; }
+:root[data-ui="v3"][data-v7] .onboard .field-err { margin: 0; font: 400 13px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard__save-err { margin-top: 14px; text-align: center; }
+
+/* Step 1, Hello: today's h1, the form at 420 px, then the Google option (closed). */
+:root[data-ui="v3"][data-v7] .onboard h1 { font: 560 32px/1.2 var(--u-font); letter-spacing: -0.022em; color: var(--u-ink); text-align: center; text-wrap: balance; outline: none; }
+:root[data-ui="v3"][data-v7] .onboard__form { display: grid; gap: 16px; width: min(420px, 100%); margin-top: 22px; }
+:root[data-ui="v3"][data-v7] .onboard__form label { display: grid; gap: 8px; }
+:root[data-ui="v3"][data-v7] .onboard__form label > span:first-child { font: 500 14px/1.3 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__form small { margin-left: 4px; font: 400 14px/1.3 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__form input {
+  width: 100%; height: 40px; box-sizing: border-box; margin: 0; padding: 0 13px; border: 1px solid var(--u-border-control); border-radius: 8px;
+  background: var(--u-paper); color: var(--u-ink); font: 400 14px/1 var(--u-font); box-shadow: none; outline: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__form input::placeholder { color: var(--u-ink-2); }
+/* Focus: a 2 px ink edge (the 1 px border plus 1 px inset), no violet and no ring outside it. */
+:root[data-ui="v3"][data-v7] .onboard__form input:is(:focus, :focus-visible) { border-color: var(--u-ink); box-shadow: inset 0 0 0 1px var(--u-ink); outline: none; }
+:root[data-ui="v3"][data-v7] .onboard__note { font: 400 12px/1.45 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__google,
+:root[data-ui="v3"][data-v7] .onboard__signed { width: min(420px, 100%); margin-top: 16px; text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__google { display: grid; justify-items: start; gap: 10px; }
+:root[data-ui="v3"][data-v7] .onboard__signed { font: 500 13px/1.4 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__more summary { color: var(--u-ink-2); font: 400 13px/1.4 var(--u-font); cursor: pointer; }
+:root[data-ui="v3"][data-v7] .onboard__more summary:hover { color: var(--u-ink); }
+
+/* Step 2, Try it: the sample in a light code window (never a dark editor in light mode), the lead, then the
+   Control-not-Command hint row. Explained: the status pill, the explained lead, the level box. */
+:root[data-ui="v3"][data-v7] .onboard__try { display: grid; justify-items: center; gap: 16px; width: 100%; }
+:root[data-ui="v3"][data-v7] .onboard__editor { width: 100%; box-sizing: border-box; overflow: hidden; border: 1px solid var(--u-border); border-radius: 10px; background: var(--u-paper); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar { display: flex; align-items: center; gap: 6px; height: 42px; box-sizing: border-box; padding: 0 14px; border-bottom: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--u-border); }
+:root[data-ui="v3"][data-v7] .onboard__editor-bar span { margin-left: 14px; font: 400 12px/1 var(--u-font-mono); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__editor pre { margin: 0; padding: 12px 20px 14px; overflow-x: auto; font: 400 13px/21px var(--u-font-mono); color: var(--u-ink); text-align: left; font-variant-ligatures: none; }
+:root[data-ui="v3"][data-v7] .onboard__keys { display: inline-flex; align-items: center; gap: 14px; height: 40px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--u-ink) 5%, transparent); }
+:root[data-ui="v3"][data-v7] .onboard__keys-caps { display: inline-flex; align-items: center; gap: 8px; color: var(--u-ink-2); font: 400 13px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] :is(.onboard__keys, .onboard__caps) kbd {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; box-sizing: border-box; padding: 0 6px;
+  border: 1px solid var(--u-border-control); border-radius: 5px; background: var(--u-paper); color: var(--u-ink);
+  font: 600 12px/1 var(--u-font-mono); box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__keys-line { font: 600 14px/1.3 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill {
+  height: 26px; padding: 0 10px; gap: 7px; border: 0; border-radius: 999px; background: var(--u-sunken); color: var(--u-ink);
+  font: 500 13px/1 var(--u-font); box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__pill i { width: 6px; height: 6px; background: var(--u-ink); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard__level { display: grid; gap: 14px; width: 100%; box-sizing: border-box; padding: 20px; border-radius: 10px; background: var(--u-sunken); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__level p { font: 600 14px/1.4 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__choices { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Outline pills: the level choices and the shortcut guide's Fix it and Restart Unvibe. */
+:root[data-ui="v3"][data-v7] .onboard__outline {
+  display: inline-flex; align-items: center; justify-content: center; height: 34px; margin: 0; padding: 0 14px; box-sizing: border-box;
+  border: 1px solid var(--u-border-control); border-radius: 999px; background: transparent; color: var(--u-ink);
+  font: 500 14px/1 var(--u-font); white-space: nowrap; cursor: pointer; box-shadow: none; transition: background-color 100ms ease;
+}
+:root[data-ui="v3"][data-v7] .onboard__outline:hover:not(:disabled) { background: var(--u-sunken); }
+
+/* Step 3, Your code: the paste box, 600 × 196 with a 1.2 px dashed control edge; after a paste a solid hairline,
+   the code's first lines and the pill at the bottom right. */
+:root[data-ui="v3"][data-v7] .onboard__paste { display: grid; justify-items: center; gap: 12px; width: 100%; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target { gap: 10px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box {
+  min-height: 196px; gap: 10px; padding: 20px; border: 1.2px dashed var(--u-border-control); border-radius: 10px;
+  background: color-mix(in srgb, var(--u-ink) 2.5%, var(--u-paper)); color: var(--u-ink); font-family: var(--u-font); box-shadow: none; transition: none;
+}
+/* Step 3 focuses the box on entry so ⌘V lands there; the ring shows only for keyboard focus. */
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box:focus { border-style: dashed; border-color: var(--u-border-control); box-shadow: none; outline: none; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box:focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box.has-code { position: relative; align-items: stretch; justify-content: flex-start; padding: 16px 20px 46px; border: 1px solid var(--u-border); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box.has-code .paste-target__pill { position: absolute; right: 16px; bottom: 14px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box pre { padding: 0; border: 0; border-radius: 0; background: none; color: var(--u-ink); font: 400 13px/21px var(--u-font-mono); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__keys { gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__key {
+  min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--u-border-control); border-radius: 5px;
+  background: var(--u-paper); color: var(--u-ink); font: 600 12px/1 var(--u-font-mono); box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .onboard .paste-target__box b { font: 600 20px/1.3 var(--u-font); letter-spacing: -0.01em; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__hint { max-width: 440px; color: var(--u-ink-2); font: 400 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__or { color: var(--u-ink-2); font: 400 14px/1.4 var(--u-font); gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__link { color: var(--u-ink-2); font: 400 14px/1.4 var(--u-font); text-decoration-color: var(--u-border-control); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__link:hover { color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard .paste-target__error { font: 400 13px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard__paste > .onboard__more summary { font-size: 14px; }
+/* The Integrations panel inside setup: names and states only, and a capped height that scrolls. */
+:root[data-ui="v3"][data-v7] .onboard__integrations { max-height: 290px; overflow: auto; margin-top: 12px; padding-right: 5px; text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__integrations :is(.integ__lead, .integ-card__body p) { display: none; }
+
+/* Step 4, Shortcut (Mac): the card (keycaps, what it does, Allowed once on), the Control line, the why. */
+:root[data-ui="v3"][data-v7] .onboard__perm {
+  display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 12px 18px;
+  border: 1px solid var(--u-border); border-radius: 10px; background: var(--u-paper); text-align: left;
+}
+:root[data-ui="v3"][data-v7] .onboard__caps { display: inline-flex; flex: none; gap: 6px; }
+:root[data-ui="v3"][data-v7] .onboard__perm-text { display: grid; gap: 2px; min-width: 0; }
+:root[data-ui="v3"][data-v7] .onboard__perm-text b { font: 600 14px/1.35 var(--u-font); color: var(--u-ink); }
+:root[data-ui="v3"][data-v7] .onboard__perm-text small { font: 400 12px/1.4 var(--u-font); color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__ok { display: inline-flex; align-items: center; flex: none; height: 24px; margin-left: auto; padding: 0 11px; border-radius: 999px; background: var(--u-sunken); color: var(--u-ink); font: 500 13px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard__control { margin-top: 16px; font: 600 14px/1.4 var(--u-font); color: var(--u-ink); text-align: center; }
+:root[data-ui="v3"][data-v7] .onboard__why { display: flex; gap: 10px; width: 100%; box-sizing: border-box; margin-top: 20px; font: 400 13px/1.5 var(--u-font); color: var(--u-ink-2); text-align: left; }
+:root[data-ui="v3"][data-v7] .onboard__why svg { flex: none; margin-top: 1px; }
+:root[data-ui="v3"][data-v7] .onboard__why + .onboard__lead { margin-top: 14px; }
+/* Waiting: the guide beside its drawing, in these tokens (numbered 22 px circles, the done step filled ink). */
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide { width: 100%; color: var(--u-ink); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide--wide { grid-template-columns: 440px 290px; justify-content: space-between; gap: 30px; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__steps li { grid-template-columns: 22px minmax(0, 1fr); gap: 12px; font: 400 14px/1.45 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__steps li::before { width: 22px; height: 22px; border: 0; background: var(--u-sunken); color: var(--u-ink); font: 600 12px/1 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__wait { padding-left: 34px; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__steps li.is-done::before {
+  background: var(--u-ink) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / 13px no-repeat;
+}
+:root[data-ui="v3"][data-v7][data-theme="dark"] .onboard .shortcut-guide__steps li.is-done::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12.5l4.3 4.3L19 7.5' fill='none' stroke='%23111111' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__fix { padding-top: 14px; border-top: 1px solid var(--u-border); color: var(--u-ink-2); font: 400 14px/1.5 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-guide__fix summary { color: var(--u-ink); font-weight: 600; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill { height: 26px; border: 0; background: var(--u-sunken); color: var(--u-ink); font: 600 13px/1 var(--u-font); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-pill i { width: 6px; height: 6px; border: 0; background: var(--u-ink); box-shadow: none; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art figcaption { color: var(--u-ink-2); font: 400 13px/1.4 var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__window { border-color: var(--u-border); border-radius: 10px; background: var(--u-paper); color: var(--u-ink); font-family: var(--u-font); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar { border-bottom-color: var(--u-border); background: var(--u-paper); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar i { background: var(--u-border); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__bar span { color: var(--u-ink-2); font-weight: 400; }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__row { border-color: transparent; background: var(--u-paper); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__row.is-you { outline: 0; background: var(--u-sunken); }
+:root[data-ui="v3"][data-v7] .onboard :is(.shortcut-art__icon, .shortcut-art__name) { background: var(--u-sunken); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__switch:not(.is-on) { background: var(--u-sunken); }
+:root[data-ui="v3"][data-v7] .onboard .shortcut-art__switch.is-on { background: var(--u-ink); }
+
+/* Footer: pinned, opaque, a hairline on top. The quiet action as text on the left, the one primary on the right;
+   with no quiet action the primary spans the 600 px column. */
+:root[data-ui="v3"][data-v7] .onboard__foot { display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--u-border); background: var(--u-paper); }
+:root[data-ui="v3"][data-v7] .onboard__foot-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(600px, calc(100% - 48px)); }
+:root[data-ui="v3"][data-v7] .onboard__quiet {
+  height: 32px; margin: 0; padding: 0; border: 0; background: none; color: var(--u-ink); font: 600 14px/1 var(--u-font);
+  white-space: nowrap; cursor: pointer; box-shadow: none;
+}
+:root[data-ui="v3"][data-v7] .onboard__quiet:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
+:root[data-ui="v3"][data-v7] .onboard__quiet:disabled { cursor: default; color: var(--u-ink-2); }
+:root[data-ui="v3"][data-v7] .onboard__primary {
+  display: inline-flex; align-items: center; justify-content: center; height: 48px; min-width: 260px; margin: 0; padding: 0 32px; box-sizing: border-box;
+  border: 0; border-radius: 999px; background: var(--u-action); color: var(--u-action-on); font: 600 15px/1 var(--u-font);
+  white-space: nowrap; cursor: pointer; box-shadow: none; transition: background-color 100ms ease, transform 100ms ease;
+}
+:root[data-ui="v3"][data-v7] .onboard__primary:hover:not([aria-disabled="true"]) { background: var(--u-action-hover); }
+:root[data-ui="v3"][data-v7] .onboard__primary:active:not([aria-disabled="true"]) { transform: scale(0.97); }
+/* Held (aria-disabled, keeps focus): sunken with ink-2, about 6.5:1 in light. Never a faded black pill. */
+:root[data-ui="v3"][data-v7] .onboard__primary[aria-disabled="true"] { background: var(--u-sunken); color: var(--u-ink-2); cursor: default; }
+:root[data-ui="v3"][data-v7] .onboard__foot--single .onboard__primary { flex: 1 1 auto; }
+
+/* Focus everywhere: a 2 px ring, 2 px out. */
+:root[data-ui="v3"][data-v7] .onboard :is(button, summary, a, [role="textbox"]):focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; }
+:root[data-ui="v3"][data-v7] .onboard h1:focus { outline: none; }
+
+/* Reduced motion: opacity only (no rise, no press scale); the progress fill jumps. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="v3"][data-v7] .onboard .onboard__body.fade-in { animation-name: onboardFade; }
+  :root[data-ui="v3"][data-v7] .onboard__progress i { transition: none; }
+  :root[data-ui="v3"][data-v7] .onboard__primary { transition: background-color 100ms ease; }
+  :root[data-ui="v3"][data-v7] .onboard__primary:active:not([aria-disabled="true"]) { transform: none; }
+}

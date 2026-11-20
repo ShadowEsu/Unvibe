@@ -209,6 +209,12 @@ const api = {
     ipcRenderer.on('onboarding:ownCodeDone', listener);
     return () => { ipcRenderer.removeListener('onboarding:ownCodeDone', listener); };
   },
+  /** A clipboard explain found nothing copied (setup's Your code step says so under its box); returns an unsubscribe. */
+  onClipboardEmpty: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on('onboarding:clipboardEmpty', listener);
+    return () => { ipcRenderer.removeListener('onboarding:clipboardEmpty', listener); };
+  },
   /** The review panel closed; returns an unsubscribe. */
   onPanelClosed: (cb: () => void) => {
     const listener = () => cb();

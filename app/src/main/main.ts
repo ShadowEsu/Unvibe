@@ -651,8 +651,11 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
-  // instead of leaving the panel to guess why.
-  if (captureFailed && options.preferClipboard) notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
+  // instead of leaving the panel to guess why. Setup's Your code step also says it under its paste box.
+  if (captureFailed && options.preferClipboard) {
+    notify('Your clipboard is empty. Copy some code first, then try again.', { problem: true });
+    if (companion && !companion.isDestroyed()) companion.webContents.send('onboarding:clipboardEmpty');
+  }
   if (captureFailed && !restoring && process.platform === 'win32' && !options.preferClipboard) {
     // macOS explains a missing Accessibility grant in the panel; on Windows say what happened.
     const from = sourceApp && !/unvibe|^electron$/i.test(sourceApp) ? sourceApp : 'that app';

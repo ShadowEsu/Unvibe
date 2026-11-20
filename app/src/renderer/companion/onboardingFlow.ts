@@ -58,16 +58,16 @@ export function welcomeBackLine(pasteStarted: boolean): string {
 
 export interface ForwardAction {
   label: string;
-  /** Quiet: the step's primary is in its body (Explain this code, Turn on the shortcut) or there is none yet. */
+  /** Quiet: a text action on the footer's left; the step's primary is its own action (setupFooter) or there is none. */
   quiet?: boolean;
   /** Finishes setup instead of moving to the next step. */
   finishes?: boolean;
 }
 
 /**
- * The footer's one forward button. On the paste and shortcut steps, Skip for now, Not now and Do it later are quiet
- * and finish setup; before the sample is explained, Explain this code is the primary and Skip for now is quiet. Back on
- * a Mac's paste step after the own code is done, Next leads to the shortcut.
+ * The forward move. On the paste and shortcut steps, Skip for now, Not now and Do it later are quiet and finish
+ * setup; before the sample is explained, Explain this code is the primary and Skip for now is quiet. Back on a Mac's
+ * paste step after the own code is done, Next leads to the shortcut.
  */
 export function forwardAction(s: OnboardingState): ForwardAction {
   const last = onboardingSteps(s.windows).length - 1;
@@ -80,9 +80,46 @@ export function forwardAction(s: OnboardingState): ForwardAction {
   return { label: 'Start using Unvibe', finishes: true };
 }
 
-/** The step's own primary button, in its body, if it has one. */
-export function stepAction(s: OnboardingState): string | null {
-  if (s.step === 1 && !s.explained) return 'Explain this code';
-  if (s.step === 3 && s.offer === 'offer') return 'Turn on the shortcut';
+/** What the footer's primary runs: the step's own action, or the forward move (forwardAction). */
+export type SetupAction = 'explainSample' | 'explainClipboard' | 'turnOn' | 'openSettings' | 'forward';
+
+/**
+ * The step's own action, which then takes the footer's primary slot: explain the sample, explain the clipboard (the
+ * paste box's IPC, no permission), turn on the shortcut, or open System Settings again for someone who closed it.
+ */
+function stepAction(s: OnboardingState): { label: string; action: SetupAction } | null {
+  if (s.step === 1 && !s.explained) return { label: 'Explain this code', action: 'explainSample' };
+  if (s.step === 2 && !s.pasteStarted && !s.ownCodeDone) return { label: 'Explain my clipboard', action: 'explainClipboard' };
+  if (s.step === 3 && s.offer === 'offer') return { label: 'Turn on the shortcut', action: 'turnOn' };
+  if (s.step === 3 && s.offer === 'waiting') return { label: 'Open System Settings', action: 'openSettings' };
   return null;
+}
+
+/** The pinned footer (633 A + C): the quiet action as text on the left, the step's one primary on the right. */
+export interface SetupFooter {
+  quiet: ForwardAction | null;
+  primary: string;
+  action: SetupAction;
+  /** Held (aria-disabled, keeps focus): the paste went to the panel, and Next waits for its explanation. */
+  held: boolean;
+}
+
+export function setupFooter(s: OnboardingState): SetupFooter {
+  const forward = forwardAction(s);
+  const quiet = forward.quiet ? forward : null;
+  if (s.step === 2 && s.pasteStarted && !s.ownCodeDone) return { quiet, primary: 'Next', action: 'forward', held: true };
+  const step = stepAction(s);
+  if (step) return { quiet, primary: step.label, action: step.action, held: false };
+  return { quiet: null, primary: forward.label, action: 'forward', held: false };
+}
+
+/**
+ * What a press on the primary runs, or nothing. The primary is one button whose label and action change in place (and
+ * it grows under the pointer when the quiet slot empties), so the second click of a double-click lands on the next
+ * state's action: "Explain this code" would explain and then skip Try it (lead S1 on #372). `detail` is the click
+ * count (MouseEvent.detail); a keyboard press is 0.
+ */
+export function primaryPress(footer: SetupFooter, detail: number): SetupAction | null {
+  if (footer.held || detail > 1) return null;
+  return footer.action;
 }

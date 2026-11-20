@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
@@ -19,8 +19,7 @@ import { AccountMenu } from './accountMenu';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
-import { VibeBubble } from '../shared/vibeBubble';
-import { firstNameOf, forwardAction, onboardingSteps, stepAction, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
+import { firstNameOf, forwardAction, onboardingSteps, primaryPress, setupFooter, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
 import { accessibilityRow, type AccessibilityState } from './settingsRows';
 import { FADE_OPACITY } from '../widget/clickAway';
 import { Home } from './home';
@@ -434,6 +433,10 @@ const SAMPLE_LINES = [
  * (onboarding:ownCodeDone): value first, permission second. Windows needs no permission, so it keeps
  * three steps and names its shortcut on step 3. Google sign-in and editor bridges are optional and
  * stay reachable later.
+ *
+ * Layout (633, option A with C's pinned footer): a top bar in the title-bar row (Back, one progress bar, the
+ * counter), a body that scrolls, and a footer that never does, with the quiet action on its left and the step's
+ * one primary on its right (setupFooter in onboardingFlow.ts).
  */
 function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }: { soundEffects: boolean; soundVolume: number; soundStyle: 'soft' | 'pixel'; shortcut: string; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -445,12 +448,16 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [celebrating, setCelebrating] = useState(false);
   const [explained, setExplained] = useState(false);
   const [sampleDone, setSampleDone] = useState(false);
+  // The sample is in the panel and not explained yet: the "Explaining in the panel" status is true only then (Security
+  // S-2), so closing the panel ends it too.
+  const [sampleRunning, setSampleRunning] = useState(false);
   const [levelSaved, setLevelSaved] = useState('');
   const [signedIn, setSignedIn] = useState('');
   const [ownCodeDone, setOwnCodeDone] = useState(false);
   // Mac step 4: the offer, the guide while System Settings is open, then the shortcut is on.
   const [offer, setOffer] = useState<'offer' | 'waiting' | 'on'>('offer');
   const shortcutHeading = useRef<HTMLHeadingElement>(null);
+  const primaryButton = useRef<HTMLButtonElement>(null);
   const paste = useOwnCodePaste();
   const steps = onboardingSteps(isWindows);
   const pasteStep = step === 2;
@@ -461,7 +468,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
-  useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
+  useEffect(() => window.unvibe.onSampleDone(() => {
+    setSampleDone(true);
+    setSampleRunning(false);
+  }), []);
+  useEffect(() => window.unvibe.onPanelClosed(() => setSampleRunning(false)), []);
   // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer; Windows
   // stays and finishes from there, with a fresh paste target (no stale "Explaining in the panel").
   useEffect(() => window.unvibe.onOwnCodeDone(() => {
@@ -469,6 +480,10 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     if (isWindows) paste.reset();
     else setStep((current) => (current === 2 ? 3 : current));
   }), []);
+  // Try it's focus is its primary (Explain this code), so Return or Space explains the sample.
+  useEffect(() => {
+    if (step === 1) primaryButton.current?.focus();
+  }, [step]);
   // Announce the card, without making Enter trigger the permission prompt.
   useEffect(() => {
     if (macShortcut) shortcutHeading.current?.focus();
@@ -505,14 +520,16 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   };
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
-    // Navigation remounts the paste target without a preview; its speech must reset with it.
+    // Navigation remounts the paste target without a preview or an old "clipboard is empty"; its speech resets with it.
     paste.setStarted(false);
+    paste.clearNotice();
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
     if (explained) return;
     window.unvibe.explainSample();
     setExplained(true);
+    setSampleRunning(true);
     setBuddyMood('reading');
   };
   const answerLevel = async (answer: 'too_basic' | 'about_right' | 'too_advanced') => {
@@ -543,13 +560,25 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     setOffer('waiting');
     await turnOnShortcut(window.unvibe);
   };
-  // The footer's one forward button (onboardingFlow.ts).
+  // The forward move (onboardingFlow.ts), and the footer it sits in.
   const forward = forwardAction(flow);
+  const footer = setupFooter(flow);
   const advance = () => {
     // Optional and never awaited: a blank answer sends nothing and setup never waits on it.
     if (step === 0 && heardFrom.trim()) window.unvibe.answerHeardFrom(heardFrom);
     if (forward.finishes) void finish();
     else go(step + 1);
+  };
+  // The footer's primary: the step's own action, else the forward move (primaryPress: held, and the second click of a
+  // double-click, do nothing and keep focus).
+  const primary = (detail: number) => {
+    if (saving) return;
+    const action = primaryPress(footer, detail);
+    if (action === 'forward') advance();
+    else if (action === 'explainSample') explainSample();
+    else if (action === 'explainClipboard') paste.explainPaste();
+    else if (action === 'turnOn') void turnOn();
+    else if (action === 'openSettings') void window.unvibe.openAccessibility();
   };
   const back = () => {
     if (saving) return;
@@ -562,7 +591,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
       // On the paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
-      if ((event.key === 'ArrowRight' || event.key === 'Enter') && step < 2) { event.preventDefault(); advance(); }
+      if (event.key === 'Enter' && step < 2) { event.preventDefault(); primary(0); }
+      if (event.key === 'ArrowRight' && step < 2) { event.preventDefault(); advance(); }
       if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
     window.addEventListener('keydown', onKey);
@@ -571,179 +601,236 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
 
   const mood = celebrating ? 'celebrate' : step === 0 ? 'wave' : step === 1 ? (explained ? 'reading' : 'happy')
     : pasteStep && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
-  const continueLabel = forward.finishes && celebrating ? 'Welcome!' : forward.finishes && saving ? 'Saving…' : forward.label;
-  // The shortcut's keys on the card; the line beside them says "press it", so the caps carry the name for screen readers.
-  const macCaps = shortcutCaps('Control+U', false);
+  // "Saving…" and "Welcome!" replace the label of whichever button finishes setup.
+  const finishingLabel = (label: string) => (celebrating ? 'Welcome!' : saving ? 'Saving…' : label);
+  const primaryFinishes = footer.action === 'forward' && !footer.held && forward.finishes;
+  // The shortcut's keys on the card, as in the step-2 hint (`⌃ control` + `U`); the line beside them says "press it", so
+  // the caps carry the name for screen readers.
   const shortcutCard = (title: string, note: string, allowed: boolean) => (
     <div className="onboard__perm">
-      <span className="onboard__caps" role="img" aria-label="Control U">{macCaps.map((key) => <kbd key={key}>{key}</kbd>)}</span>
+      <span className="onboard__caps" role="img" aria-label="Control U"><kbd>⌃ control</kbd><kbd>U</kbd></span>
       <span className="onboard__perm-text"><b>{title}</b><small>{note}</small></span>
       {allowed ? <span className="onboard__ok">Allowed</span> : null}
     </div>
   );
+  const controlLine = <p className="onboard__control">Hold Control, not Command, and press U.</p>;
 
   return (
-    <div className={`onboard onboard--step-${step}`}>
+    <div className={`onboard ${isMac ? 'onboard--mac' : 'onboard--win'}`}>
       {celebrating ? (
         <div className="onboard__confetti" aria-hidden="true">
           {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
         </div>
       ) : null}
+      {/* The title-bar row: a drag region shared with the traffic lights or caption buttons; Back is no-drag. */}
       <div className="onboard__top">
-        <div className="onboard__steps" aria-hidden="true">{steps.map((label, i) => <i key={label} className={i <= step ? 'on' : undefined} />)}</div>
+        {step > 0 ? <button type="button" className="onboard__back" aria-label="Back" disabled={saving} onClick={back}><BackGlyph /></button> : null}
+        <div className="onboard__progress" aria-hidden="true"><i style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
         <span className="onboard__count">{step + 1} / {steps.length}</span>
       </div>
-      <div className="onboard__vibe">
-        <Buddy mood={mood} size={56} follow label="Vibe" key={`${step}-${mood}`} />
-        {/* The bubble types its line out, so it isn't live: screen readers hear each whole line once, from the status. */}
-        <VibeBubble large live={false}>{said}</VibeBubble>
-        <p className="sr-only" role="status">{line}</p>
-      </div>
 
-      <FadeIn animKey={step} className="onboard__body">
-        {step === 0 && (
-          <>
-            <h1>Understand the code AI writes.</h1>
-            <form className="onboard__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
-              <label>
-                <span>What should I call you? <small>optional</small></span>
-                <input value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
-                  onChange={(event) => setDisplayName(event.target.value)} />
-              </label>
-              <label>
-                <span>Where did you hear about Unvibe? <small>optional</small></span>
-                <input value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
-                  aria-describedby="heard-from-note" onChange={(event) => setHeardFrom(event.target.value)} />
-                {/* Security 0046 (option A): typing an answer is its own opt-in, so the line says what happens. */}
-                <span className="onboard__note" id="heard-from-note">Sent once to Unvibe with this install&apos;s random ID. Leave it blank to send nothing.</span>
-              </label>
-              <button type="submit" hidden />
-            </form>
-          </>
-        )}
+      <div className="onboard__scroll">
+        <div className="onboard__column">
+          <div className="onboard__vibe">
+            <Buddy mood={mood} size={56} follow label="Vibe" key={`${step}-${mood}`} />
+            {/* Vibe's line is the screen's heading. It types out, so it isn't live: screen readers hear each whole line
+                once, from the status. */}
+            <p className="onboard__line" aria-hidden="true">{said}</p>
+            <p className="sr-only" role="status">{line}</p>
+          </div>
 
-        {step === 1 && (
-          <div className="onboard__try">
-            <div className="onboard__editor">
-              <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
-              <pre>{SAMPLE_LINES.join('\n')}</pre>
-            </div>
-            {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line says it.
-                A Mac always registers Control+U next to a shortcut of the person's own (core/shortcutKeys.ts), so its row
-                is true for every Mac. Windows and Linux register only their own shortcut, so the caps show that one. */}
-            {isMac ? (
-              <div className="onboard__keys">
-                <span className="onboard__keys-caps" aria-hidden="true">{['⌃ control', 'U'].map((key) => <kbd key={key}>{key}</kbd>)}</span>
-                <p className="onboard__keys-line">Hold Control, not Command, and press U.</p>
-              </div>
-            ) : (
-              <div className="onboard__keys">
-                <span className="onboard__keys-caps" role="img" aria-label={shortcutCaps(shortcut, true).join(' ')}>{shortcutCaps(shortcut, true).map((key, i) => <kbd key={`${key}-${i}`}>{key}</kbd>)}</span>
-              </div>
+          <FadeIn animKey={step} className="onboard__body">
+            {step === 0 && (
+              <>
+                <h1>Understand the code AI writes.</h1>
+                <form className="onboard__form" onSubmit={(event) => { event.preventDefault(); advance(); }}>
+                  <label>
+                    <span>What should I call you? <small>optional</small></span>
+                    <input value={displayName} autoFocus autoComplete="given-name" placeholder="Your name"
+                      onChange={(event) => setDisplayName(event.target.value)} />
+                  </label>
+                  <label>
+                    <span>Where did you hear about Unvibe? <small>optional</small></span>
+                    <input value={heardFrom} maxLength={200} autoComplete="off" placeholder="A friend, a subreddit, a video…"
+                      aria-describedby="heard-from-note" onChange={(event) => setHeardFrom(event.target.value)} />
+                    {/* Security 0046 (option A): typing an answer is its own opt-in, so the line says what happens. */}
+                    <span className="onboard__note" id="heard-from-note">Sent once to Unvibe with this install&apos;s random ID. Leave it blank to send nothing.</span>
+                  </label>
+                  <button type="submit" hidden />
+                </form>
+                {/* The Google disclosure (633 §3): in the body under the note, closed, nothing signs in until its button. */}
+                {signedIn ? <p className="onboard__signed">✓ Signed in as {signedIn}</p> : (
+                  <details className="onboard__more onboard__google">
+                    <summary>Sync across devices with Google (optional)</summary>
+                    <SignInForm label="Fill this in with Google" onDone={fillFromGoogle} />
+                  </details>
+                )}
+              </>
             )}
-            {/* aria-disabled, not disabled: the button keeps focus as its label changes, and a second press does nothing. */}
-            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={explainSample} aria-disabled={explained}>
-              {explained ? 'Explaining in the panel →' : 'Explain this code'}
-            </button>
-            <p className="onboard__lead">{explained
-              ? `That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`
-              : 'Uses one of your free explanations. No setup needed.'}</p>
-            {sampleDone ? (
-              <div className="onboard__level" role="group" aria-label="How was that explanation pitched?">
-                {levelSaved ? <p role="status">Got it. The next ones start at {levelSaved}.</p> : (
+
+            {step === 1 && (
+              <div className="onboard__try">
+                <div className="onboard__editor">
+                  <div className="onboard__editor-bar"><i /><i /><i /><span>debounce.js</span></div>
+                  <pre>{SAMPLE_LINES.join('\n')}</pre>
+                </div>
+                {explained ? (
                   <>
-                    <p>Was that too basic, about right, or too advanced? I'll pitch the next ones there.</p>
-                    <div className="onboard__choices">
-                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_basic')}>Too basic</button>
-                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('about_right')}>About right</button>
-                      <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_advanced')}>Too advanced</button>
-                    </div>
+                    {/* A status, shown only while it's true (Security S-2): until the sample is explained or the panel closes. */}
+                    {sampleRunning ? <span className="paste-target__pill onboard__status" role="status"><i aria-hidden="true" />Explaining in the panel</span> : null}
+                    <p className="onboard__lead">{`That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="onboard__lead">Uses one of your free explanations. No setup needed.</p>
+                    {/* Control, not Command: a Mac's ⌘U belongs to the app in front, so the caps name the key and the line
+                        says it. A Mac always registers Control+U next to a shortcut of the person's own
+                        (core/shortcutKeys.ts), so its row is true for every Mac. Windows and Linux register only their
+                        own shortcut, so the caps show that one. */}
+                    {isMac ? (
+                      <div className="onboard__keys">
+                        <span className="onboard__keys-caps" aria-hidden="true"><kbd>⌃ control</kbd><span>+</span><kbd>U</kbd></span>
+                        <p className="onboard__keys-line">Hold Control, not Command, and press U.</p>
+                      </div>
+                    ) : (
+                      <div className="onboard__keys">
+                        <span className="onboard__keys-caps" role="img" aria-label={shortcutCaps(shortcut, true).join(' ')}>
+                          {shortcutCaps(shortcut, true).map((key, i) => <Fragment key={`${key}-${i}`}>{i > 0 ? <span aria-hidden="true">+</span> : null}<kbd>{key}</kbd></Fragment>)}
+                        </span>
+                        <p className="onboard__keys-line">Select code in any app, then press it</p>
+                      </div>
+                    )}
                   </>
                 )}
+                {sampleDone ? (
+                  <div className="onboard__level" role="group" aria-label="How was that explanation pitched?">
+                    {levelSaved ? <p role="status">Got it. The next ones start at {levelSaved}.</p> : (
+                      <>
+                        <p>Was that too basic, about right, or too advanced? I'll pitch the next ones there.</p>
+                        <div className="onboard__choices">
+                          <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_basic')}>Too basic</button>
+                          <button type="button" className="onboard__outline" onClick={() => void answerLevel('about_right')}>About right</button>
+                          <button type="button" className="onboard__outline" onClick={() => void answerLevel('too_advanced')}>Too advanced</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        )}
+            )}
 
-        {/* The own-code step needs no permission: one paste target. On a Mac the shortcut, which needs
-            Accessibility, is offered in step 4 once this has worked; Windows names it here. */}
-        {pasteStep && (
-          <div className="onboard__paste">
-            <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} />
-            {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
-            {isWindows ? <p className="onboard__lead">Or select code in any app and press {keys}.</p> : null}
-            <details className="onboard__more">
-              <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
-              <div className="onboard__integrations"><IntegrationsPanel /></div>
-            </details>
-          </div>
-        )}
+            {/* The own-code step needs no permission: one paste target, and Explain my clipboard in the footer (the same
+                IPC). On a Mac the shortcut, which needs Accessibility, is offered in step 4 once this has worked;
+                Windows names it here. */}
+            {pasteStep && (
+              <div className="onboard__paste">
+                <PasteTarget key={paste.attempt} hint={OWN_CODE_HINT} onPaste={paste.explainPaste} onChooseFile={() => void paste.chooseFile()} clipboardEmpty={paste.clipboardEmpty}
+                  explainedCode={ownCodeDone && !paste.started ? paste.explainedCode : ''} />
+                {paste.fileError ? <p className="field-err" role="alert">{paste.fileError}</p> : null}
+                {isWindows ? <p className="onboard__lead">Or select code in any app and press {keys}.</p> : null}
+                <details className="onboard__more">
+                  <summary>Use VS Code or Cursor? Add {isWindows ? 'Ctrl+U' : '⌘U'} there too</summary>
+                  <div className="onboard__integrations"><IntegrationsPanel /></div>
+                </details>
+              </div>
+            )}
 
-        {macShortcut && offer === 'offer' && (
-          <>
-            <h1 ref={shortcutHeading} tabIndex={-1}>Turn on the shortcut</h1>
-            {shortcutCard('Select code in any app, then press it', 'No copying, no pasting.', false)}
-            <p className="onboard__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
-            <button type="button" className={stepAction(flow) ? 'onboard__primary' : 'onboard__quiet'} onClick={() => void turnOn()}>Turn on the shortcut</button>
-            <p className="onboard__lead">Pasting keeps working without it.</p>
-          </>
-        )}
-        {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="onboard__outline" illustration />}
-        {macShortcut && offer === 'on' && (
-          <>
-            <h1 ref={shortcutHeading} tabIndex={-1}>Shortcut is on</h1>
-            {shortcutCard('Select code in any app, then press it', 'Pasting keeps working without it.', true)}
-          </>
-        )}
-      </FadeIn>
+            {/* The h1s stay as focus targets for screen readers; Vibe's line is the visible heading. */}
+            {macShortcut && offer === 'offer' && (
+              <>
+                <h1 ref={shortcutHeading} tabIndex={-1} className="sr-only">Turn on the shortcut</h1>
+                {shortcutCard('Select code in any app, then press it', 'No copying, no pasting.', false)}
+                {controlLine}
+                <p className="onboard__why"><LockGlyph /><span>macOS calls this permission Accessibility. Unvibe uses it only to copy your selection when you press Control U, then sends that code to {CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.</span></p>
+                <p className="onboard__lead">Pasting keeps working without it.</p>
+              </>
+            )}
+            {macShortcut && offer === 'waiting' && <ShortcutGuide buttonClass="onboard__outline" illustration />}
+            {macShortcut && offer === 'on' && (
+              <>
+                <h1 ref={shortcutHeading} tabIndex={-1} className="sr-only">Shortcut is on</h1>
+                {shortcutCard('Select code in any app, then press it', 'Pasting keeps working without it.', true)}
+                {controlLine}
+              </>
+            )}
+          </FadeIn>
+          {saveError ? <p className="field-err onboard__save-err" role="alert">{saveError}</p> : null}
+        </div>
+      </div>
 
-      {saveError ? <p className="field-err" role="alert">{saveError}</p> : null}
-      <div className="onboard__foot">
-        {step > 0 ? <button type="button" className="onboard__back" disabled={saving} onClick={back}>Back</button> : <span />}
-        <div className="onboard__forward">
-          <button type="button" className={forward.quiet ? 'onboard__quiet' : 'onboard__primary'} disabled={saving} onClick={advance}>{continueLabel}</button>
-          {/* Design Q11: the Google sign-in disclosure sits directly under Hello's primary. */}
-          {step === 0 ? (signedIn ? <p className="onboard__signed">✓ Signed in as {signedIn}</p> : (
-            <details className="onboard__more onboard__google">
-              <summary>Sync across devices with Google (optional)</summary>
-              <SignInForm label="Fill this in with Google" onDone={fillFromGoogle} />
-            </details>
-          )) : null}
+      <div className={`onboard__foot${footer.quiet ? '' : ' onboard__foot--single'}`}>
+        <div className="onboard__foot-row">
+          {footer.quiet ? (
+            <button type="button" className="onboard__quiet" disabled={saving} onClick={advance}>
+              {footer.quiet.finishes ? finishingLabel(footer.quiet.label) : footer.quiet.label}
+            </button>
+          ) : null}
+          {/* aria-disabled, not disabled: a held or busy primary keeps focus as its label changes. */}
+          <button ref={primaryButton} type="button" className="onboard__primary" aria-disabled={footer.held || saving || undefined} onClick={(event) => primary(event.detail)}>
+            {primaryFinishes ? finishingLabel(footer.primary) : footer.primary}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
+function BackGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  );
+}
+
 const OWN_CODE_HINT = "Copy a few lines from a file you didn't write. Pasting explains it in the panel and uses one free explanation.";
 
 /**
- * The own-code paste step's two ways in, used by setup's step 3 and by the next open's paste step: a
- * paste explains the clipboard, which holds what was just pasted (main reads it there, as Explain my
- * clipboard does), and Choose a file explains a file. Neither needs a permission.
+ * The own-code paste step's ways in, used by setup's step 3 and by the next open's paste step: a paste
+ * explains the clipboard, which holds what was just pasted (main reads it there), setup's Explain my
+ * clipboard does the same through the same IPC, and Choose a file explains a file. None needs a permission.
  */
 function useOwnCodePaste() {
   const [started, setStarted] = useState(false);
   const [fileError, setFileError] = useState('');
-  // Bumped to remount the paste target without its preview and "Explaining in the panel" pill.
+  // Explain my clipboard found nothing copied: the paste box says so.
+  const [clipboardEmpty, setClipboardEmpty] = useState(false);
+  // Bumped to remount the paste target without its "Explaining in the panel" pill (and, unless it was explained, its code).
   const [attempt, setAttempt] = useState(0);
   // A paste or file went to the panel and hasn't been explained yet.
   const waiting = useRef(false);
-  const explainPaste = () => {
+  // The pasted code on its way to the panel, and the last one explained: the box keeps showing it afterwards (Design
+  // S-1 SHOULD 1). Explain my clipboard and Choose a file leave the renderer without the code, so they keep none.
+  const pending = useRef('');
+  const [explainedCode, setExplainedCode] = useState('');
+  const explainPaste = (text?: string) => {
     setFileError('');
+    setClipboardEmpty(false);
     setStarted(true);
     waiting.current = true;
+    pending.current = text ?? '';
     window.unvibe.explainClipboard();
   };
   const chooseFile = async () => {
     setFileError('');
+    setClipboardEmpty(false);
     const result = await window.unvibe.companionPickFile();
     if (result.ok) {
       setStarted(true);
       waiting.current = true;
+      pending.current = '';
     } else if (result.error) setFileError(result.error);
   };
-  useEffect(() => window.unvibe.onOwnCodeDone(() => { waiting.current = false; }), []);
+  useEffect(() => window.unvibe.onOwnCodeDone(() => {
+    waiting.current = false;
+    setExplainedCode(pending.current);
+  }), []);
+  useEffect(() => window.unvibe.onClipboardEmpty(() => {
+    if (!waiting.current) return;
+    waiting.current = false;
+    setStarted(false);
+    setClipboardEmpty(true);
+  }), []);
   // The panel closed before explaining it (Cancel on the confirm sheet, say): ask again instead of
   // saying it's opening.
   useEffect(() => window.unvibe.onPanelClosed(() => {
@@ -752,12 +839,17 @@ function useOwnCodePaste() {
     setStarted(false);
     setAttempt((n) => n + 1);
   }), []);
-  // A fresh target, for another paste after one was explained.
+  // A target ready for another paste after one was explained (setup's step 3 still shows the explained code in it).
   const reset = () => {
     setStarted(false);
     setAttempt((n) => n + 1);
   };
-  return { started, setStarted, fileError, explainPaste, chooseFile, attempt, reset };
+  // Leaving the step: the "clipboard is empty" note was about that try, so it doesn't come back on re-entry.
+  const clearNotice = () => {
+    setClipboardEmpty(false);
+    setFileError('');
+  };
+  return { started, setStarted, fileError, clipboardEmpty, explainPaste, chooseFile, attempt, reset, clearNotice, explainedCode };
 }
 
 function LockGlyph() {
@@ -771,31 +863,36 @@ function LockGlyph() {
 
 /**
  * The next open after a first session that explained only the sample: the same paste step as setup,
- * before Today. Pasting or choosing a file explains in the panel, with no permission needed. Windows
- * also names its shortcut. "Not now" goes to Today until the next open (ownCodeStep.ts).
+ * before Today, in setup's three rows without the progress bar, the counter or Back (633 §8). Pasting or
+ * choosing a file explains in the panel, with no permission needed. Windows also names its shortcut.
+ * "Not now" goes to Today until the next open (ownCodeStep.ts).
  */
 function OwnCodeWelcome({ soundEffects, shortcut, onNotNow }: { soundEffects: boolean; shortcut: string; onNotNow: () => void }) {
-  const { started, fileError, explainPaste, chooseFile, attempt } = useOwnCodePaste();
+  const { started, fileError, clipboardEmpty, explainPaste, chooseFile, attempt } = useOwnCodePaste();
   const line = welcomeBackLine(started);
   const said = useVibeSays(line, soundEffects);
   return (
-    <div className="onboard onboard--welcome">
-      <div className="onboard__vibe">
-        <Buddy mood={started ? 'reading' : 'wave'} size={56} follow label="Vibe" />
-        <VibeBubble large live={false}>{said}</VibeBubble>
-        <p className="sr-only" role="status">{line}</p>
-      </div>
-      <div className="onboard__body">
-        <div className="onboard__paste">
-          <PasteTarget key={attempt} hint={OWN_CODE_HINT}
-            onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
-          {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
-          {isWindows ? <p className="onboard__lead">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
+    <div className={`onboard onboard--welcome ${isMac ? 'onboard--mac' : 'onboard--win'}`}>
+      <div className="onboard__top" />
+      <div className="onboard__scroll">
+        <div className="onboard__column">
+          <div className="onboard__vibe">
+            <Buddy mood={started ? 'reading' : 'wave'} size={56} follow label="Vibe" />
+            <p className="onboard__line" aria-hidden="true">{said}</p>
+            <p className="sr-only" role="status">{line}</p>
+          </div>
+          <div className="onboard__body">
+            <div className="onboard__paste">
+              <PasteTarget key={attempt} hint={OWN_CODE_HINT} clipboardEmpty={clipboardEmpty}
+                onPaste={explainPaste} onChooseFile={() => void chooseFile()} />
+              {fileError ? <p className="field-err" role="alert">{fileError}</p> : null}
+              {isWindows ? <p className="onboard__lead">Or select code in any app and press {prettyAccel(shortcut)}.</p> : null}
+            </div>
+          </div>
         </div>
       </div>
       <div className="onboard__foot">
-        <span />
-        <div className="onboard__forward">
+        <div className="onboard__foot-row">
           <button type="button" className="onboard__quiet" onClick={onNotNow}>Not now</button>
         </div>
       </div>

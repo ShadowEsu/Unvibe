@@ -6,24 +6,35 @@ import { isWindows } from './platform';
 const PREVIEW_LINES = 6;
 const COMPACT_PREVIEW_LINES = 4;
 
+/** The first lines of some code, without a leading blank line. */
+function firstLines(text: string): string {
+  return text.replace(/^\s*\n/, '').split(/\r?\n/).slice(0, PREVIEW_LINES).join('\n');
+}
+
 /**
  * One focused paste target: the user copies code anywhere and pastes it here, with no permission
  * needed. `onPaste` gets the pasted text (never empty); the target then shows its first lines with
- * "Explaining in the panel", and another paste replaces it. An empty paste shows the clipboard-empty
- * message instead. `onChooseFile` adds "or Choose a file…" under the target. `compact` (the review
- * panel, which already heads it with "Paste the code here.") drops the bold title and is shorter.
+ * "Explaining in the panel", and another paste replaces it. `explainedCode` is code already explained (setup's step 3
+ * after its explanation landed, Design S-1 SHOULD 1): its first lines show, with "Wrong code? Paste again." and no
+ * pill. An empty paste, or `clipboardEmpty` (Explain my clipboard found nothing copied), shows the clipboard-empty
+ * message instead. `onChooseFile` adds "or Choose a file…" under the target. `compact` (the review panel, which
+ * already heads it with "Paste the code here.") drops the bold title and is shorter.
  */
-export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, compact = false }: {
+export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, compact = false, clipboardEmpty = false, explainedCode = '' }: {
   hint: string;
   onPaste: (text: string) => void;
   onChooseFile?: () => void;
   autoFocus?: boolean;
   compact?: boolean;
+  clipboardEmpty?: boolean;
+  explainedCode?: string;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const handler = useRef(onPaste);
   handler.current = onPaste;
-  const [preview, setPreview] = useState('');
+  const [preview, setPreview] = useState(() => (explainedCode.trim() ? firstLines(explainedCode) : ''));
+  // Only a paste in this target is being explained now; code it was given is already explained.
+  const [explaining, setExplaining] = useState(false);
   const [empty, setEmpty] = useState(false);
   useEffect(() => {
     if (autoFocus) target.current?.focus();
@@ -41,7 +52,8 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, com
         return;
       }
       setEmpty(false);
-      setPreview(text.replace(/^\s*\n/, '').split(/\r?\n/).slice(0, PREVIEW_LINES).join('\n'));
+      setPreview(firstLines(text));
+      setExplaining(true);
       handler.current(text);
     };
     document.addEventListener('paste', paste);
@@ -54,7 +66,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, com
         {preview ? (
           <>
             <pre>{compact ? preview.split('\n').slice(0, COMPACT_PREVIEW_LINES).join('\n') : preview}</pre>
-            <span className="paste-target__pill" role="status"><i aria-hidden="true" />Explaining in the panel</span>
+            {explaining ? <span className="paste-target__pill" role="status"><i aria-hidden="true" />Explaining in the panel</span> : null}
           </>
         ) : (
           <>
@@ -66,7 +78,7 @@ export function PasteTarget({ hint, onPaste, onChooseFile, autoFocus = true, com
           </>
         )}
       </div>
-      {empty ? <p className="paste-target__error" role="alert">Your clipboard is empty. Copy some code first, then try again.</p> : null}
+      {empty || (clipboardEmpty && !preview) ? <p className="paste-target__error" role="alert">Your clipboard is empty. Copy some code first, then try again.</p> : null}
       {preview ? <p className="paste-target__or">Wrong code? Paste again.</p>
         : onChooseFile ? <p className="paste-target__or">or <button type="button" className="paste-target__link" onClick={onChooseFile}>Choose a file…</button></p>
           : null}
