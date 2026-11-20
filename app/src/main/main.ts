@@ -54,7 +54,7 @@ import {
   startWindowDrag,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, pulseThenUsage, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
@@ -103,7 +103,7 @@ import {
 } from './backend';
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
-import { setBar, notify, pulseBar } from './notify';
+import { setBar, notify, pulseBar, settleBar } from './notify';
 import { setShortcutRecording } from './commandUHint';
 import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
@@ -284,6 +284,8 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
   clearPanelSessions();
   win.on('closed', () => {
     clearPanelSessions();
+    // Before any hide: a pulse shows the Island, and the hide below must win.
+    settleBar();
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
     // The companion's paste step stops saying the explanation is opening if none came.
     if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
@@ -598,9 +600,14 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
   broadcastShortcut();
-  pulseBar({ phase: 'loading', label: 'Loading' });
-  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
-  const usage = await cachedAppUsage();
+  // The Island at once, before the usage round trip, but only when something will be read. Past the limit check below
+  // `remaining` is above 0, where the provider doesn't depend on it, so this is the same answer as `agreed` there.
+  // A recent usage snapshot keeps ⌘U instant; the server still enforces the real limit.
+  const usage = await pulseThenUsage(
+    { agreed: codeConsented(providerInUse()), sample: options.sample },
+    () => pulseBar({ phase: 'loading', label: 'Loading' }),
+    cachedAppUsage,
+  );
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
