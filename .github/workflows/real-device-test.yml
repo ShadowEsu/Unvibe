@@ -620,7 +620,8 @@ jobs:
           brew install --cask visual-studio-code
           app="/Applications/Visual Studio Code.app"
           xattr -dr com.apple.quarantine "$app" || true
-          codesign --verify --deep --strict "$app" && echo "VS Code signature valid"
+          if ! codesign --verify --deep --strict "$app"; then echo "::error::VS Code's signature does not verify; nothing sent"; exit 1; fi
+          echo "VS Code signature valid"
           team=$(codesign -dv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
           echo "VS Code $(defaults read "$app/Contents/Info" CFBundleShortVersionString), team $team"
           if [ "$team" != UBF8T346G9 ]; then echo "::error::VS Code is not signed by Microsoft's team; nothing sent"; exit 1; fi
