@@ -66,7 +66,7 @@ export const explainPages: ExplainPage[] = [
   {
     id: "python",
     fileName: "sales_report.py",
-    published: "2026-10-26",
+    published: "2026-11-19",
     related: ["python-traceback", "asyncio", "requirements-txt", "pyproject-toml"],
     lead: "Paste Python your AI wrote, from a one-line comprehension to a decorator, and Vibe explains what it does in plain English, so you can tell whether it does what you asked.",
     description:
@@ -3265,7 +3265,7 @@ GROUP BY c.id;`,
   {
     id: "supabase-rls",
     fileName: "todos.sql",
-    published: "2026-11-06",
+    published: "2026-11-19",
     heading: "Supabase RLS policies",
     title: "Supabase RLS policies explained",
     related: ["sql", "sql-joins", "prisma-schema", "env"],
@@ -3325,7 +3325,7 @@ create policy "update own todos" on todos
     id: "cors-error",
     fileName: "cors-error.txt",
     sampleIsOutput: true,
-    published: "2026-11-06",
+    published: "2026-11-19",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
     related: ["javascript", "curl", "json", "http-headers"],
