@@ -840,7 +840,7 @@ $old | Select-Object Name, @{ Name = "SizeKB"; Expression = { [math]::Round($_.L
     published: "2026-11-05",
     heading: "curl commands",
     title: "curl command explained, flag by flag",
-    related: ["cors-error", "json", "bash", "graphql"],
+    related: ["http-headers", "cors-error", "bash"],
     lead: "Paste a curl command and Vibe explains what each flag does: what gets sent, which headers go with it, and what curl does with the reply.",
     description:
       "Paste curl commands and get every flag explained in plain English, free online. The sample reads, creates and deletes orders on an API and follows a redirect.",
@@ -1058,7 +1058,7 @@ find . -type d -empty -delete`,
     id: "c",
     fileName: "players.c",
     published: "2026-10-26",
-    related: ["cpp", "make", "assembly"],
+    related: ["cpp", "make", "assembly", "segmentation-fault"],
     lead: "Paste C and get its pointers, structs and memory explained in plain English before you compile.",
     description:
       "Paste C code and get pointers and memory explained in plain English, free. The sample builds an array of structs on the heap with calloc and frees it.",
@@ -3317,7 +3317,7 @@ create policy "update own todos" on todos
     published: "2026-11-06",
     heading: "CORS errors",
     title: "CORS error explained, with the fix",
-    related: ["javascript", "curl", "json"],
+    related: ["javascript", "curl", "json", "http-headers"],
     lead: "Paste a CORS error and the server code behind it and Vibe explains what the browser blocked and why: which origin asked, which header was missing, and the fix, which goes on the server, not in the browser.",
     description:
       "Paste a CORS error and get it explained in plain English, free online. The sample is the console error a front end got from its own API, with the API's code.",
@@ -4012,6 +4012,159 @@ $ kill 1643167`,
     ],
     watchOut:
       "`kill $(lsof -t -i :3000)` can stop more than the server. `lsof -t -i :3000` printed 2 PIDs, the server's and the client's, because the client had a connection to port 3000. If that client is your browser, kill sends it the signal too. Add `-sTCP:LISTEN` to get only the server.",
+  },
+  {
+    id: "segmentation-fault",
+    fileName: "scores-crash.txt",
+    heading: "segmentation faults",
+    title: "Segmentation fault (core dumped) explained, in C",
+    published: "2026-11-16",
+    related: ["c", "cpp", "assembly", "python-traceback"],
+    lead: "Paste a segmentation fault and what your debugger printed, and Vibe explains it in plain English: which line crashed, which pointer was bad, and where that bad value came from.",
+    description:
+      "Paste a segmentation fault and get it explained in plain English, free online. The sample is a C program that crashes on a NULL pointer, with GDB's backtrace.",
+    sampleSummary: "A C program that prints the best score from a list of players. It works for 3 players and crashes for 0, and GDB shows the line and the NULL pointer behind the crash.",
+    sample: `$ clang -g -O0 -o scores scores.c
+$ ./scores 3
+best: player3 with 74
+$ bash -c './scores 0; echo "exit code: $?"'
+bash: line 1: 1755872 Segmentation fault         (core dumped) ./scores 0
+exit code: 139
+$ gdb -q -batch -ex run -ex bt -ex "print best" -ex "info locals" --args ./scores 0
+Program received signal SIGSEGV, Segmentation fault.
+0x00005555555552b8 in main (argc=2, argv=0x7fffffffe1a8) at scores.c:29
+29	    printf("best: %s with %d\\n", best->name, best->score);
+#0  0x00005555555552b8 in main (argc=2, argv=0x7fffffffe1a8) at scores.c:29
+$1 = (struct player *) 0x0
+count = 0
+players = 0x555555559010
+best = 0x0`,
+    shows: [
+      {
+        concept: "Segmentation fault and exit code 139",
+        text: "A segmentation fault means the program read or wrote memory it isn't allowed to touch, and the system stopped it with signal 11, SIGSEGV. The shell printed `Segmentation fault` and the exit code was 139, which is 128 plus the signal number 11. The program printed nothing of its own before it stopped.",
+      },
+      {
+        concept: "the backtrace",
+        text: "Built with `-g`, the program carries line numbers, so GDB could say where it stopped: `main` at scores.c line 29, the `printf` line. `bt` lists the calls that led there, newest first. Here there is only frame `#0`, because the crash is in `main` itself.",
+      },
+      {
+        concept: "the NULL pointer",
+        text: "`print best` showed `0x0`: `best` is NULL, so `best->score` reads from address 0x10, 16 bytes past NULL, and `best->name` would hand `printf` address 0. `info locals` shows why: `count = 0`. In scores.c, which isn't in the sample, line 28 sets `best = find_best(players, count)`, and `find_best` returns NULL when `count` is 0, because it never goes into its loop. `main` used it without checking.",
+      },
+      {
+        concept: "-O0, -O2 and AddressSanitizer",
+        text: "Built with `-O2`, the same input crashed the same way, with exit code 139. Built with `-fsanitize=address`, it printed `SEGV on unknown address 0x000000000010`, `The signal is caused by a READ memory access` and `Hint: address points to the zero page`, with the place as scores.c:29:52, the `best->score` part of the line.",
+      },
+    ],
+    notes: [
+      "Run with clang 22.1.8 and GDB 17.2 on Linux x86-64. The sample is the commands and their output from one run, with the build folder's path and 3 of GDB's 11 lines left out (2 thread-library messages and a blank line). The `bash: line 1:` line, with the process ID, is how `bash -c` reported the crash; the sample runs it that way so `echo` can print the exit code.",
+      "What SIGSEGV means comes from the signal(7) manual, the 128 plus signal number exit code from the bash manual, and the order `bt` lists frames in from the GDB manual.",
+      "Address 0x10 is 16 bytes past NULL: in `struct player`, `name` takes the first 16 bytes, so `score` starts at byte 16.",
+      "Adding `if (best == NULL)` before the `printf` fixed it: with 0 players the program printed `no players` and exited with code 0, and with 3 it still printed `best: player3 with 74`.",
+    ],
+    watchOut:
+      "The line that crashes isn't always the line with the bug. Line 29 only used the pointer; the NULL came from `find_best`, which returns NULL when there are no players. The fix that worked here is a NULL check before the `printf` uses `best`. GDB's `print` on each pointer in the crashing line shows which one is bad: `print best` gave `0x0`.",
+  },
+  {
+    id: "http-headers",
+    fileName: "response.txt",
+    heading: "HTTP headers",
+    title: "HTTP headers explained with an example response",
+    published: "2026-11-16",
+    related: ["curl", "cors-error", "json"],
+    lead: "Paste the headers from `curl -i` or your browser's network tab and Vibe explains each one in plain English: what the status line says, how long the response may be cached, what a cookie allows, and which site may read it.",
+    description:
+      "Paste HTTP response headers and get each one explained in plain English, free online. The sample is an API response with caching, an ETag and a cookie.",
+    sampleSummary: "`curl -i` against a small test API: the status line, 9 headers, a blank line and a JSON body.",
+    sample: `$ curl -i http://127.0.0.1:8050/notes/42
+HTTP/1.1 200 OK
+Server: BaseHTTP/0.6 Python/3.14.7
+Date: Sat, 07 Nov 2026 09:47:53 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 46
+Cache-Control: private, max-age=60
+ETag: "0e1a4ca84681cfe8"
+Set-Cookie: session=abc123; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600
+Access-Control-Allow-Origin: http://localhost:5173
+Vary: Origin
+
+{"id": 42, "title": "Buy milk", "done": false}`,
+    shows: [
+      {
+        concept: "status line and body headers",
+        text: "`HTTP/1.1 200 OK` is the protocol and the status: 200 means it worked. `Content-Type` says the body is JSON in UTF-8, and `Content-Length: 46` is the body's size in bytes, which matches the 46-byte JSON. A blank line ends the headers. The test server's code never set `Server` or `Date`: Python's http.server added both.",
+      },
+      {
+        concept: "Cache-Control and ETag",
+        text: "`private, max-age=60` lets the browser reuse this response for 60 seconds and tells shared caches not to keep it. `ETag` is a fingerprint of this version. Sent back as `If-None-Match: \"0e1a4ca84681cfe8\"`, it got `HTTP/1.1 304 Not Modified` with an empty body: the copy the client already has is still current.",
+      },
+      {
+        concept: "Set-Cookie",
+        text: "`Set-Cookie` asks the client to store `session=abc123` for every path (`Path=/`) for 3600 seconds (`Max-Age`). `HttpOnly` hides it from the page's JavaScript, `Secure` limits it to HTTPS, and `SameSite=Lax` keeps it off most requests started by other sites. curl stored it in its cookie file with an `#HttpOnly_` prefix and the Secure column set to TRUE, and sent it back as `Cookie: session=abc123`, even though this test ran over plain HTTP to 127.0.0.1. Check Secure cookies on the real HTTPS site.",
+      },
+      {
+        concept: "Access-Control-Allow-Origin and Vary",
+        text: "`Access-Control-Allow-Origin: http://localhost:5173` lets a page from that one origin read this response in the browser. A page from any other origin can still send the request, and it still reaches the server, but the browser blocks that page from reading the answer. `Vary: Origin` tells caches the answer depends on the `Origin` request header, so they don't hand one site's version to another.",
+      },
+    ],
+    notes: [
+      "Run with curl 8.21.0 against a test server written with Python 3.14.7's http.server on 127.0.0.1. The run used `curl -si` with the carriage returns at the ends of the header lines removed; the sample shows the command as `curl -i`. What `private`, `max-age`, `ETag`, `HttpOnly`, `Secure`, `SameSite`, `Vary` and the CORS header mean comes from the HTTP standards and MDN's header reference, not from this run. curl isn't a browser, so this shows what the server sent, not what a browser does with it.",
+      "`/notes` answered `301 Moved Permanently` with `Location: /notes/42`. curl stopped there without `-L`; with `-L` it followed 1 redirect and got 200.",
+    ],
+    watchOut:
+      "An error status doesn't make curl fail. For a missing page the server answered `HTTP/1.1 404 Not Found` and curl exited with code 0, so a script that checks only the exit code sees success. With `-f`, curl exited with code 22 on the 404.",
+  },
+  {
+    id: "dns-records",
+    fileName: "notes-app.zone",
+    heading: "DNS records",
+    title: "DNS records explained: A, CNAME, MX, TXT (SPF)",
+    published: "2026-11-16",
+    related: ["http-headers", "curl", "ssh-config"],
+    lead: "Paste DNS records from your domain's settings or a zone file, and Vibe explains each one in plain English: which address the domain points to, what a CNAME does, where email goes, and what the SPF and DMARC text records say.",
+    description:
+      "Paste DNS records and get each one explained in plain English, free online. The sample is a zone file with A, AAAA, CNAME, MX, TXT and CAA records.",
+    sampleSummary: "A zone file for a test domain, notes-app.example: the web app's addresses, 2 CNAMEs, 2 mail servers, SPF and DMARC records and a CAA record.",
+    sample: `; notes-app.example: DNS records for a web app and its email
+$TTL 3600
+@       IN  SOA   ns1.notes-app.example. admin.notes-app.example. (
+                  2026110701 7200 900 1209600 300 )
+@       IN  NS    ns1.notes-app.example.
+ns1     IN  A     203.0.113.53
+@       IN  A     203.0.113.10
+@       IN  AAAA  2001:db8::10
+www     IN  CNAME notes-app.example.
+api     IN  CNAME app-7f3k.hosting.example.
+@       IN  MX    10 mx1.mail.example.
+@       IN  MX    20 mx2.mail.example.
+@       IN  TXT   "v=spf1 include:_spf.mail.example ~all"
+_dmarc  IN  TXT   "v=DMARC1; p=quarantine; rua=mailto:dmarc@notes-app.example"
+@       IN  CAA   0 issue "letsencrypt.org"`,
+    shows: [
+      {
+        concept: "A, AAAA and TTL",
+        text: "`@` is the domain itself. Its `A` record is the IPv4 address, 203.0.113.10, and `AAAA` the IPv6 one. `$TTL 3600` sets how many seconds a resolver may keep an answer before asking again, and dig showed 3600 on each A, AAAA, CNAME, MX, TXT and CAA answer from this file.",
+      },
+      {
+        concept: "CNAME",
+        text: "A `CNAME` makes a name an alias of another name. Asked for www, the server answered with the CNAME to notes-app.example and that name's A record, 203.0.113.10. Asked for api, it answered only with the CNAME to app-7f3k.hosting.example; that name's own A record, 198.51.100.80, came from a second query. This server only holds zones and has recursion off, so it followed the CNAME only inside notes-app.example, not into hosting.example, even though it serves that zone too; a resolver, like the one your computer normally asks, follows the CNAME for you (RFC 1034).",
+      },
+      {
+        concept: "MX",
+        text: "`MX` records say which servers take email for the domain. The number is the preference: lower comes first, so mail goes to mx1, with 10, before mx2, with 20. dig listed the 20 record first, the reverse of the file's order, but the number decides, not the order. Each MX points at a name, and that name needs its own A record: mx1.mail.example answered 198.51.100.25.",
+      },
+      {
+        concept: "TXT: SPF and DMARC",
+        text: "TXT records hold text that other systems read. `v=spf1 include:_spf.mail.example ~all` is SPF: it lists the servers allowed to send the domain's email, and `~all` marks everything else as suspicious. The record at `_dmarc` is DMARC: `p=quarantine` asks receivers to treat failing mail as spam, and `rua` is where reports go.",
+      },
+    ],
+    notes: [
+      "Run with BIND 9.20.26: `named-checkzone` loaded the file (`OK`), and named, started as a normal user on 127.0.0.1, served it to `dig` from the same release. The zone's names end in .example and the addresses are documentation ranges, all reserved for examples, so no real domain or public DNS server was involved.",
+      "A name that doesn't exist got `status: NXDOMAIN` with 0 answers, plus the zone's SOA record. A CNAME can't share its name with other records: a `www` TXT record next to the CNAME, or a CNAME on the bare domain, stopped the zone loading with `CNAME and other data`. `CAA 0 issue \"letsencrypt.org\"` says only Let's Encrypt may issue certificates for the domain. What TTLs, MX preference numbers, SPF, DMARC and CAA records mean comes from their standards, not from this run.",
+    ],
+    watchOut:
+      "The dot at the end of a name matters. With `mx1.mail.example` written without it, named-checkzone still said `OK`, with only a warning that `mx1.mail.example.notes-app.example` has no address records, but the server answered `10 mx1.mail.example.notes-app.example.`: a name without the final dot gets the zone's own domain added. In a DNS provider's web form the rules can differ, so compare what dig returns with what you meant.",
   },
 ];
 
