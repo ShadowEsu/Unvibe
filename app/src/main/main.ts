@@ -745,7 +745,8 @@ if (!isMac && hasSingleInstanceLock) {
 }
 
 // Register before Electron becomes ready: macOS can deliver an open-url event during launch. The copy that lost the
-// lock leaves links to the running one.
+// lock drops it: a link that cold-starts a second Mac bundle reaches that copy's open-url, not the running app's
+// second-instance argv, so it isn't forwarded (it never was; Launch Services normally hands links to the running copy).
 app.on('open-url', (event, url) => {
   event.preventDefault();
   if (hasSingleInstanceLock) handleExternalReviewUrl(url);
