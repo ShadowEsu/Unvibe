@@ -40,7 +40,7 @@ describe("What leaves your computer (W4)", () => {
 
   it("the home page's privacy section shows the kept items, Security's key-check line and the link to the full list", async () => {
     const html = await renderHome();
-    const start = html.indexOf('<section class="d-privacy"');
+    const start = html.search(/<section class="[^"]*\bd-privacy\b/);
     assert.ok(start > 0, "no privacy section on home");
     const markup = html.slice(start, html.indexOf("</section>", start));
     const section = text(markup);

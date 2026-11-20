@@ -36,11 +36,13 @@ describe("home surfaces", () => {
     assert.doesNotMatch(readFileSync("src/components/AnalyticsConsentBar.tsx", "utf8"), /glisse/);
   });
 
-  it("the hero's window is the HTML recreation under Security's caption, with no video, no toast and one H1", async () => {
+  it("the hero shows the real app capture under its caption, with no video, no toast and one H1", async () => {
     const html = await renderHome();
     const hero = html.slice(html.indexOf('<section class="d-hero"'), html.indexOf("</section>", html.indexOf('<section class="d-hero"')));
-    assert.ok(hero.includes('class="d-win__frame"'), "the slice is the hero");
-    assert.match(hero, /Unvibe 0\.1\.49 panel, recreated in HTML · sample code/);
+    assert.ok(hero.includes('class="d-hero__shot"'), "the slice is the hero");
+    assert.match(hero, /<figcaption[^>]*>Real screen, sample data · Unvibe \d+\.\d+\.\d+<\/figcaption>/);
+    assert.match(hero, /<source type="image\/avif" srcset="\/unvibe\/real\/\d+\/today-light-720\.avif 720w,/i);
+    assert.match(hero, /<img [^>]*src="\/unvibe\/real\/\d+\/today-light-1040\.webp"/);
     assert.doesNotMatch(hero, /<video\b/);
     assert.doesNotMatch(html, /Saved to your Library/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);

@@ -4,77 +4,111 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PricingCopy } from "@/lib/pricingCopy";
 import { D_BRIEF, D_CARDS, D_CLOSE, D_EXPLAIN, D_FAQ, D_GET_TABLE, D_HERO, D_PRIVACY, D_SPLIT, D_STATEMENT, D_STATS, D_STEPS } from "./content";
-import { BtnDot, Letters, Statement, Stats, VioletSplit } from "./effects";
-import { Faq, Os, PixelVibe, PixelWipe, Pixels, Ribbon, T } from "./bits";
+import { Faq, Os, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
 import { DiaMotion } from "./motion/DiaMotion";
 import { UnvibeDemo } from "./UnvibeDemo";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
-// A function, not a module-level array: no JSX runs at import time (the tests import pages before React is global).
-const statIcon = (i: number) => [
-  <svg key="depth" viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4-8-4zm0 5l8 4 8-4M4 17l8 4 8-4" /></svg>,
-  <svg key="screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M9 20h6M12 16v4" /></svg>,
-  <svg key="key" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 9v4.5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V9" /></svg>,
-  <svg key="nokey" viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.5" /><path d="M11.5 12H20M17 12v3M4 20L20 4" /></svg>,
-][i];
-
-/** The live demo in its light frosted window (mock 01), with Security's caption under it. */
-function DemoWindow({ step, rise }: { step?: 0 | 1 | 2; rise?: boolean }) {
+/** A real capture in the standard frame (Design §3: 1 px edge, radius 10, no tilt, glow or shadow). */
+function Shot({ src, width, height, alt }: { src: string; width: number; height: number; alt: string }) {
   return (
-    <figure className="d-win" {...(rise ? { "data-d-hero-rise": "window" } : {})}>
-      <div className="d-win__frame">
+    <div className="d-frame">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
+      <img src={src} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
+    </div>
+  );
+}
+
+/** The hero's capture: AVIF, then WebP, at the widths the layout needs; loaded first (it is the page's largest paint). */
+function HeroShot() {
+  const { base, widths, sizes, width, height, alt } = D_HERO.shot;
+  const set = (ext: string) => widths.map((w) => `${base}-${w}.${ext} ${w}w`).join(", ");
+  return (
+    <div className="d-frame">
+      <picture>
+        <source type="image/avif" srcSet={set("avif")} sizes={sizes} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- a real capture, sized by the frame */}
+        <img src={`${base}-1040.webp`} srcSet={set("webp")} sizes={sizes} width={width} height={height} alt={alt} decoding="async" fetchPriority="high" />
+      </picture>
+    </div>
+  );
+}
+
+/** The HTML recreation of the 0.1.49 panel, in the standard frame, with its caption under it (the Steps stage only). */
+function DemoWindow({ step }: { step?: 0 | 1 | 2 }) {
+  return (
+    <figure className="d-win">
+      <div className="d-win__frame d-frame">
         <UnvibeDemo step={step} />
       </div>
-      <figcaption className="d-mono d-win__cap">{D_HERO.caption}</figcaption>
+      <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
     </figure>
   );
 }
 
-/** The H1 is plain text, visible in the first frame; it only rises (ANIMATIONS #12). */
+/**
+ * The hero (Design §3, frames a-5-hero-1440/390): centred H1 in two balanced lines, the audience line, one ink pill,
+ * the try link and the platforms in one 13 px line, then a real Today capture with its caption above it. Nothing moves.
+ */
 function Hero() {
   return (
     <section className="d-hero" aria-labelledby="d-hero-h">
-      <div className="d-hero__bg" data-d-hero-bg="" aria-hidden="true" />
-      <div className="d-hero__top" data-d-hero-rise="h1">
-        <h1 id="d-hero-h" className="d-hero__h1 d-serif">{D_HERO.h1}</h1>
+      <div className="d-hero__top">
+        <h1 id="d-hero-h" className="d-hero__h1">{D_HERO.h1}</h1>
         <p className="d-hero__sub">{D_HERO.sub}</p>
-        <TryWeb />
+        <DownloadCta surface="hero" className="d-cta d-hero__cta">{D_HERO.cta}</DownloadCta>
+        <p className="d-hero__meta">
+          <Link className="d-hero__try" href="/explain">{D_HERO.tryIt}</Link>
+          <span aria-hidden="true"> · </span>
+          <span>{D_HERO.available}</span>
+        </p>
       </div>
-      <p className="d-hero__mark" aria-hidden="true" data-d-hero-rise="wordmark">{D_HERO.wordmark}</p>
-      <DemoWindow rise />
+      <figure className="d-hero__shot">
+        <figcaption className="d-chipcap">{D_HERO.shotCaption}</figcaption>
+        <HeroShot />
+      </figure>
     </section>
   );
 }
 
-/** "Or try it in your browser first →" (Design 2032 + 2050 pick d, Security 2033: plain /explain): one quiet text link
- *  10 px under the hero tagline at every width, above the wordmark, so no phone's dock ever covers it. */
-function TryWeb() {
+/** Label, h2, lead, one real screen, caption: the one section pattern (Design §4). The numbers sit in one row divided
+ *  by 1 px rules, like Today's number row in the app; they render final (no count-up). */
+function Numbers() {
   return (
-    <p className="d-try">
-      <Link href="/explain">
-        {D_HERO.tryIt}{" "}
-        <span className="d-try__arrow" aria-hidden="true">→</span>
-      </Link>
-    </p>
+    <section className="d-sec d-statsec" aria-labelledby="d-stats-h">
+      <h2 id="d-stats-h" className="d-label d-left" data-d-enter="">({D_STATS.label})</h2>
+      <div className="d-stats" data-d-enter="" style={d(80)}>
+        {D_STATS.items.map((s, i) => (
+          <div key={i} className="d-stat">
+            <span className="d-stat__value">{s.value}</span>
+            <span className="d-stat__label"><Os v={s.label} /></span>
+            <span className="d-stat__fact">{s.fact}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
-function Numbers() {
+function Statement() {
   return (
-    <section className="d-statsec" aria-labelledby="d-stats-h" data-d-arch="">
-      <h2 id="d-stats-h" className="d-label d-mono" data-d-enter="">({D_STATS.label})</h2>
-      <Stats items={D_STATS.items.map((s, i) => ({ value: s.value, label: <Os v={s.label} />, fact: s.fact, icon: statIcon(i), pixels: <Pixels /> }))} />
+    <section className="d-sec d-stmt" aria-labelledby="d-stmt-h">
+      <p className="d-label d-left" data-d-enter="">{D_STATEMENT.label}</p>
+      <h2 id="d-stmt-h" className="d-stmt__h" data-d-enter="" style={d(80)}>
+        {D_STATEMENT.lines[0]}<br />{D_STATEMENT.lines[1]}<br />{D_STATEMENT.lines[2]}<br />{D_STATEMENT.last} {D_STATEMENT.em}
+      </h2>
+      <p className="d-stmt__entity" data-d-enter="" style={d(160)}>{D_STATEMENT.entity}</p>
     </section>
   );
 }
 
 /**
- * Steps (mock 04): at ≥ 821 px the list and ONE demo window are pinned together in a 300vh track; three invisible
- * markers ([data-d-shot]) are DiaMotion's triggers, so the step whose marker crosses the middle is active and the
- * window jumps to that step's part of the loop, with the panel's own status chip above it (ANIMATIONS #22-23).
- * At ≤ 820 px each step is followed by its own window.
+ * Steps: at ≥ 821 px the list and ONE demo window are pinned together in a 300vh track; three invisible markers
+ * ([data-d-shot]) are DiaMotion's triggers, so the step whose marker crosses the middle is active and the window jumps
+ * to that step's part of the loop, with the panel's own status chip above it. At ≤ 820 px each step is followed by its
+ * own window.
  */
 function Steps() {
   const root = useRef<HTMLElement>(null);
@@ -91,9 +125,9 @@ function Steps() {
     return () => mo.disconnect();
   }, []);
   return (
-    <section ref={root} className="d-steps" aria-labelledby="d-steps-h" data-d-steps="" data-d-arch="">
-      <p className="d-label d-mono" data-d-enter="">{D_STEPS.label}</p>
-      <h2 id="d-steps-h" className="d-h2 d-serif" data-d-ink=""><T t={D_STEPS.h2} /></h2>
+    <section ref={root} className="d-sec d-steps" aria-labelledby="d-steps-h" data-d-steps="">
+      <p className="d-label d-left" data-d-enter="">{D_STEPS.label}</p>
+      <h2 id="d-steps-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_STEPS.h2} /></h2>
       <div className="d-steps__track">
         {D_STEPS.items.map((item, i) => <div key={item.n} id={`d-shot-${i}`} className="d-steps__mark" data-d-shot={i} aria-hidden="true" />)}
         <div className="d-steps__pin">
@@ -101,8 +135,8 @@ function Steps() {
             {D_STEPS.items.map((item, i) => (
               <li key={item.n}>
                 <a href={`#d-shot-${i}`} className="d-step" data-d-step={i}>
-                  <span className="d-step__n d-mono">{item.n}</span>
-                  <span className="d-step__t d-serif"><Os v={item.title} /></span>
+                  <span className="d-step__n">{item.n}</span>
+                  <span className="d-step__t"><Os v={item.title} /></span>
                   <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
                 </a>
                 <div className="d-steps__mobile d-steps__card"><DemoWindow step={i as 0 | 1 | 2} /></div>
@@ -122,25 +156,16 @@ function Steps() {
 
 function Brief() {
   return (
-    <section className="d-brief" aria-labelledby="d-brief-h">
-      <div className="d-brief__art" aria-hidden="true">
-        <picture>
-          <source type="image/avif" srcSet="/d/art/wisteria-1200.avif 1200w, /d/art/wisteria-2400.avif 2400w" sizes="100vw" />
-          {/* eslint-disable-next-line @next/next/no-img-element -- painting backdrop */}
-          <img src="/d/art/wisteria-1200.webp" srcSet="/d/art/wisteria-1200.webp 1200w, /d/art/wisteria-2400.webp 2400w" sizes="100vw" alt="" width={1200} height={800} loading="lazy" decoding="async" data-d-zoom-slow="" />
-        </picture>
+    <section className="d-sec d-side d-brief" aria-labelledby="d-brief-h">
+      <div className="d-side__text">
+        <p className="d-label d-left" data-d-enter="">{D_BRIEF.label} {D_BRIEF.kicker}</p>
+        <h2 id="d-brief-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_BRIEF.h2} /></h2>
+        <p className="d-brief__note" data-d-enter="" style={d(120)}>{D_BRIEF.note}</p>
       </div>
-      <div className="d-brief__in">
-        <p className="d-label d-mono d-brief__kick" data-d-enter="">{D_BRIEF.label} {D_BRIEF.kicker}</p>
-        <h2 id="d-brief-h" className="d-h2 d-serif d-brief__h" data-d-words=""><T t={D_BRIEF.h2} /></h2>
-        <figure className="d-brief__card" data-d-enter="" style={d(160)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-          <img src={D_BRIEF.shot.src} width={D_BRIEF.shot.width} height={D_BRIEF.shot.height} alt={D_BRIEF.shot.alt} loading="lazy" decoding="async" />
-          <figcaption className="d-mono">{D_BRIEF.caption}</figcaption>
-        </figure>
-        <p className="d-brief__note d-serif" data-d-enter="" style={d(240)}><em>{D_BRIEF.note}</em></p>
-      </div>
-      <p className="d-credit d-mono">{D_BRIEF.credit}</p>
+      <figure className="d-side__pic" data-d-enter="" style={d(160)}>
+        <Shot {...D_BRIEF.shot} />
+        <figcaption className="d-chipcap d-sec__cap">{D_BRIEF.caption}</figcaption>
+      </figure>
     </section>
   );
 }
@@ -158,17 +183,13 @@ function Crop({ src, alt, crop }: { src: string; alt: string; crop: { x: number;
 
 function Cards() {
   return (
-    <section className="d-cards" aria-labelledby="d-cards-h" data-d-arch="">
-      <p className="d-label d-mono" data-d-enter="">{D_CARDS.label}</p>
-      <div className="d-cards__head">
-        <h2 id="d-cards-h" className="d-h2 d-serif" data-d-ink=""><T t={D_CARDS.h2} /></h2>
-        <PixelVibe className="d-cards__vibe" />
-      </div>
+    <section className="d-sec d-cards" aria-labelledby="d-cards-h">
+      <p className="d-label d-left" data-d-enter="">{D_CARDS.label}</p>
+      <h2 id="d-cards-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_CARDS.h2} /></h2>
       <div className="d-cards__grid">
         {D_CARDS.items.map((card, i) => (
           <article key={card.n} className="d-card" data-d-enter="" style={d(i * 50)}>
-            <span className="d-card__x" aria-hidden="true" />
-            <h3 className="d-card__k d-mono">{card.n} {card.title}</h3>
+            <h3 className="d-card__k"><span className="d-card__n">{card.n}</span> {card.title}</h3>
             <p className="d-card__b"><Os v={card.body} /></p>
             <div className="d-card__shot">
               {"shot" in card ? <Crop {...card.shot} /> : (
@@ -186,86 +207,59 @@ function Cards() {
           </article>
         ))}
       </div>
-      <p className="d-cap">{D_CARDS.caption}</p>
+      <p className="d-chipcap d-sec__cap">{D_CARDS.caption}</p>
     </section>
   );
 }
 
+/** Then prove it: the three rows, then the Library and Test me captures as two standard frames side by side. */
 function Split() {
   return (
-    <div className="d-splitwrap">
-      <PixelWipe />
-      <VioletSplit
-        labelledBy="d-split-h"
-        left={
-          <>
-            <p className="d-label d-mono d-split__label">{D_SPLIT.label}</p>
-            <h2 id="d-split-h" className="d-split__h d-serif">
-              <Letters parts={[{ text: D_SPLIT.h2.before }, { text: D_SPLIT.h2.em, em: true, br: true }, { text: D_SPLIT.h2.after ?? "" }]} />
-            </h2>
-            <dl className="d-split__rows">
-              {D_SPLIT.rows.map((row, i) => (
-                <div key={row.title} className="d-split__row" data-d-enter="" style={d(i * 50)}>
-                  <dt>{row.title}</dt>
-                  <dd><Os v={row.body} /></dd>
-                </div>
-              ))}
-            </dl>
-            <figure className="d-split__lib" data-d-enter="" style={d(150)}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-              <img src={D_SPLIT.library.src} width={D_SPLIT.library.width} height={D_SPLIT.library.height} alt={D_SPLIT.library.alt} loading="lazy" decoding="async" />
-              <figcaption className="d-mono">{D_SPLIT.library.caption}</figcaption>
-            </figure>
-          </>
-        }
-        media={
-          <div className="d-split__media">
-            <div className="d-split__zoom" data-d-zoom="">
-              <picture>
-                <source type="image/avif" srcSet="/d/art/lilacs-1200.avif" />
-                {/* eslint-disable-next-line @next/next/no-img-element -- painting backdrop */}
-                <img className="d-split__paint" src="/d/art/lilacs-1200.webp" alt="" width={1200} height={924} loading="lazy" decoding="async" />
-              </picture>
-            </div>
-            <figure className="d-split__shot">
-              {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-              <img src={D_SPLIT.shot.src} width={D_SPLIT.shot.width} height={D_SPLIT.shot.height} alt={D_SPLIT.shot.alt} loading="lazy" decoding="async" />
-              <figcaption className="d-mono">{D_SPLIT.shot.caption}</figcaption>
-            </figure>
-            <p className="d-credit d-mono">{D_SPLIT.credit}</p>
+    <section className="d-sec d-split" aria-labelledby="d-split-h">
+      <p className="d-label d-left" data-d-enter="">{D_SPLIT.label}</p>
+      <h2 id="d-split-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_SPLIT.h2} /></h2>
+      <dl className="d-split__rows">
+        {D_SPLIT.rows.map((row, i) => (
+          <div key={row.title} className="d-split__row" data-d-enter="" style={d(i * 50)}>
+            <dt>{row.title}</dt>
+            <dd><Os v={row.body} /></dd>
           </div>
-        }
-      />
-    </div>
+        ))}
+      </dl>
+      <div className="d-split__pics">
+        {[D_SPLIT.library, D_SPLIT.shot].map((shot, i) => (
+          <figure key={shot.caption} data-d-enter="" style={d(120 + i * 80)}>
+            <Shot src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} />
+            <figcaption className="d-chipcap d-sec__cap">{shot.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
   );
 }
 
 function Privacy() {
   return (
-    <section className="d-privacy" aria-labelledby="d-privacy-h">
-      <div className="d-privacy__l">
-        <p className="d-label d-mono d-left" data-d-enter="">{D_PRIVACY.label}</p>
-        <h2 id="d-privacy-h" className="d-h2 d-serif d-left" data-d-ink=""><T t={D_PRIVACY.h2} /></h2>
+    <section className="d-sec d-side d-privacy" aria-labelledby="d-privacy-h">
+      <div className="d-side__text">
+        <p className="d-label d-left" data-d-enter="">{D_PRIVACY.label}</p>
+        <h2 id="d-privacy-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_PRIVACY.h2} /></h2>
         {D_PRIVACY.lines.map((line, i) => <p key={line} className="d-privacy__p" data-d-enter="" style={d(80 + i * 50)}>{line}</p>)}
         <div className="d-privacy__kept" data-d-enter="" style={d(200)}>
-          <h3 className="d-mono">{D_PRIVACY.keptTitle}</h3>
+          <h3>{D_PRIVACY.keptTitle}</h3>
           <ul>{D_PRIVACY.kept.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
-        <Link className="d-pill-link d-btn" href={D_PRIVACY.more.href} data-d-enter="" style={d(260)}>{D_PRIVACY.more.label}<BtnDot /></Link>
+        <Link className="d-pill-link" href={D_PRIVACY.more.href} data-d-enter="" style={d(260)}>{D_PRIVACY.more.label}</Link>
       </div>
-      <figure className="d-tile d-privacy__shot" data-d-enter="" style={d(120)}>
-        <div className="d-tile__img">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-          <img src={D_PRIVACY.shot.src} width={D_PRIVACY.shot.width} height={D_PRIVACY.shot.height} alt={D_PRIVACY.shot.alt} loading="lazy" decoding="async" />
-        </div>
-        <figcaption className="d-mono">{D_PRIVACY.shot.caption}</figcaption>
-        <Pixels />
+      <figure className="d-side__pic d-privacy__shot" data-d-enter="" style={d(120)}>
+        <Shot {...D_PRIVACY.shot} />
+        <figcaption className="d-chipcap d-sec__cap">{D_PRIVACY.shot.caption}</figcaption>
       </figure>
     </section>
   );
 }
 
-/** What you get (mock 16): the Free and Pro rows are the live pricing-card features, word for word. */
+/** What you get: the Free and Pro rows are the live pricing-card features, word for word. */
 function WhatYouGet({ copy }: { copy: PricingCopy }) {
   const free = copy.plans.find((p) => p.id === "free");
   const pro = copy.plans.find((p) => p.id === "pro");
@@ -273,37 +267,34 @@ function WhatYouGet({ copy }: { copy: PricingCopy }) {
   const proOnly = pro.features.filter((f) => !/^Everything in Free/.test(f));
   const rows = [...free.features.map((f) => ({ f, free: true })), ...proOnly.map((f) => ({ f, free: false }))];
   return (
-    <section className="d-get" aria-labelledby="d-get-h">
-      <div className="d-get__l">
-        <p className="d-label d-mono d-left" data-d-enter="">{D_GET_TABLE.label}</p>
-        <h2 id="d-get-h" className="d-h2 d-serif d-left" data-d-words=""><T t={D_GET_TABLE.h2} /></h2>
-        <p className="d-get__lead" data-d-enter="" style={d(80)}>{D_GET_TABLE.lead}</p>
-        <figure className="d-tile" data-d-enter="" style={d(160)}>
-          <div className="d-tile__img">
-            {/* eslint-disable-next-line @next/next/no-img-element -- a real capture at its own size */}
-            <img src={D_GET_TABLE.library.src} width={D_GET_TABLE.library.width} height={D_GET_TABLE.library.height} alt={D_GET_TABLE.library.alt} loading="lazy" decoding="async" />
-          </div>
-          <figcaption className="d-mono">{D_GET_TABLE.library.caption}</figcaption>
+    <section className="d-sec d-side d-get" aria-labelledby="d-get-h">
+      <div className="d-side__text">
+        <p className="d-label d-left" data-d-enter="">{D_GET_TABLE.label}</p>
+        <h2 id="d-get-h" className="d-h2 d-left" data-d-enter="" style={d(80)}><T t={D_GET_TABLE.h2} /></h2>
+        <p className="d-get__lead" data-d-enter="" style={d(120)}>{D_GET_TABLE.lead}</p>
+        <figure data-d-enter="" style={d(160)}>
+          <Shot {...D_GET_TABLE.library} />
+          <figcaption className="d-chipcap d-sec__cap">{D_GET_TABLE.library.caption}</figcaption>
         </figure>
       </div>
       <div className="d-get__r" data-d-enter="" style={d(120)}>
-        <table className="d-table" data-d-ticks="">
+        <table className="d-table">
           <thead>
-            <tr><th scope="col"><span className="sr-only">Feature</span></th><th scope="col">{free.name}</th><th scope="col" className="d-table__pro">{pro.name}</th></tr>
+            <tr><th scope="col"><span className="sr-only">Feature</span></th><th scope="col">{free.name}</th><th scope="col">{pro.name}</th></tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.f} style={{ "--i": i } as CSSProperties}>
+            {rows.map((row) => (
+              <tr key={row.f}>
                 <th scope="row">{row.f}</th>
                 <td>{row.free ? <Tick /> : <span className="sr-only">No</span>}</td>
-                <td className="d-table__pro"><Tick /></td>
+                <td><Tick /></td>
               </tr>
             ))}
           </tbody>
         </table>
         <p className="d-get__fine">{free.detail}</p>
         <p className="d-get__fine">{copy.disclosure}</p>
-        <Link className="d-pill-link d-btn" href={D_GET_TABLE.all.href}>{D_GET_TABLE.all.label}<BtnDot /></Link>
+        <Link className="d-pill-link" href={D_GET_TABLE.all.href}>{D_GET_TABLE.all.label}</Link>
       </div>
     </section>
   );
@@ -312,22 +303,18 @@ function WhatYouGet({ copy }: { copy: PricingCopy }) {
 function Tick() {
   return (
     <svg className="d-tick" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="Yes">
-      <path d="M3 8.5l3.2 3L13 4.5" pathLength={1} />
+      <path d="M3 8.5l3.2 3L13 4.5" />
     </svg>
   );
 }
 
 function ShortAnswers({ faq }: { faq: ReadonlyArray<{ id: string; question: string; answer: string }> }) {
   return (
-    <section className="d-faqsec" id="faq" aria-labelledby="d-faq-h">
+    <section className="d-sec d-faqsec" id="faq" aria-labelledby="d-faq-h">
       <div className="d-faqsec__l">
-        <p className="d-label d-mono d-left" data-d-enter="">{D_FAQ.label}</p>
-        <h2 id="d-faq-h" className="d-h2 d-serif d-left" data-d-words="">{D_FAQ.h2}</h2>
-        <Link className="d-faqsec__more" href={D_FAQ.more.href} data-d-enter="" style={d(80)}>{D_FAQ.more.label} <span aria-hidden="true">→</span></Link>
-        <div className="d-faqsec__tile" aria-hidden="true" data-d-enter="" style={d(160)}>
-          <PixelVibe size={6} />
-          <Pixels size={8} />
-        </div>
+        <p className="d-label d-left" data-d-enter="">{D_FAQ.label}</p>
+        <h2 id="d-faq-h" className="d-h2 d-left" data-d-enter="" style={d(80)}>{D_FAQ.h2}</h2>
+        <Link className="d-link d-faqsec__more" href={D_FAQ.more.href} data-d-enter="" style={d(120)}>{D_FAQ.more.label}</Link>
       </div>
       <Faq items={faq.map((item) => ({ id: item.id, question: item.question, answer: <p>{item.answer}</p> }))} />
     </section>
@@ -337,13 +324,13 @@ function ShortAnswers({ faq }: { faq: ReadonlyArray<{ id: string; question: stri
 /** Links to 8 /explain pages; each label is that page's own H1 (explainHeadingText), built on the server in app/page.tsx. */
 function ExplainLinks({ links }: { links: ReadonlyArray<{ href: string; label: string }> }) {
   return (
-    <section className="d-explain" aria-labelledby="d-explain-h">
-      <h2 id="d-explain-h" className="d-label d-mono" data-d-enter="">{D_EXPLAIN.h2}</h2>
+    <section className="d-sec d-explain" aria-labelledby="d-explain-h">
+      <h2 id="d-explain-h" className="d-label d-left" data-d-enter="">{D_EXPLAIN.h2}</h2>
       <ul className="d-explain__list" data-d-enter="" style={d(80)}>
         {links.map((link) => (
-          <li key={link.href}><Link href={link.href}>{link.label}</Link></li>
+          <li key={link.href}><Link className="d-link" href={link.href}>{link.label}</Link></li>
         ))}
-        <li><Link className="d-explain__all" href={D_EXPLAIN.all.href}>{D_EXPLAIN.all.label}</Link></li>
+        <li><Link className="d-link d-explain__all" href={D_EXPLAIN.all.href}>{D_EXPLAIN.all.label}</Link></li>
       </ul>
     </section>
   );
@@ -351,34 +338,22 @@ function ExplainLinks({ links }: { links: ReadonlyArray<{ href: string; label: s
 
 function Close() {
   return (
-    <>
-      <div className="d-closebg" aria-hidden="true" />
-      <section className="d-close" aria-labelledby="d-close-h" data-d-arch="">
-        {/* eslint-disable-next-line @next/next/no-img-element -- our own mark */}
-        <img className="d-close__ghost" src="/brand/vibe.svg" width={72} height={72} alt="" data-d-enter="" />
-        <h2 id="d-close-h" className="d-h2 d-serif" data-d-ink=""><T t={D_CLOSE.h2} /></h2>
-      </section>
-    </>
-  );
-}
-
-/** Motion's dock: the LAST child of [data-d-dock-scope]; sticky, resting under the close section (ANIMATIONS #17). */
-function Dock() {
-  return (
-    <div data-d-cta-dock="" className="d-dock">
-      <div data-d-dock-arc="" aria-hidden="true" />
-      <div data-d-dock-pill="" data-d-hero-rise="dock">
-        <DownloadCta surface="hero" className="d-cta d-btn d-btn--lg">{D_HERO.cta}</DownloadCta>
+    <section className="d-sec d-close" aria-labelledby="d-close-h">
+      {/* eslint-disable-next-line @next/next/no-img-element -- our own mark */}
+      <img className="d-close__ghost" src="/brand/vibe.svg" width={72} height={72} alt="" data-d-enter="" />
+      <h2 id="d-close-h" className="d-h2" data-d-enter="" style={d(80)}><T t={D_CLOSE.h2} /></h2>
+      <div className="d-close__cta" data-d-enter="" style={d(160)}>
+        <DownloadCta surface="hero" className="d-cta">{D_HERO.cta}</DownloadCta>
         <p className="d-avail">{D_HERO.available}</p>
       </div>
-    </div>
+    </section>
   );
 }
 
 /**
- * Direction D's home (PLAN rev 3, mocks 01-20): Dia's sections in Dia's order, in Unvibe purple. One DiaMotion per
- * page drives the scroll-linked parts; the rest is CSS (dia-motion.css). The H1, wordmark and demo window are painted
- * from the first frame and only rise.
+ * The home in Option A (ledger 633/639; Design spec requests/unvibe-site/20261119-1611-design-633-a-site-spec.md):
+ * every section and string of direction D, on a white page with black type and real screens in one plain frame.
+ * DiaMotion runs the one-time section reveal and the Steps switch; the hero doesn't move.
  */
 export function Home({ copy, faq, explain }: {
   copy: PricingCopy;
@@ -388,36 +363,18 @@ export function Home({ copy, faq, explain }: {
   return (
     <div className="d d-page d-home">
       <DiaMotion />
-      <div data-d-dock-scope="">
-        <Hero />
-        <Ribbon />
-        <Numbers />
-        <Statement labelledBy="d-stmt-h">
-          <p className="d-stmt__entity">{D_STATEMENT.entity}</p>
-          <p className="d-label d-mono">{D_STATEMENT.label}</p>
-          <h2 id="d-stmt-h" className="d-stmt__h d-serif">
-            <Letters parts={[
-              { text: D_STATEMENT.lines[0] },
-              { text: D_STATEMENT.lines[1], br: true },
-              { text: D_STATEMENT.lines[2], br: true },
-              { text: D_STATEMENT.last, br: true },
-              { text: " " + D_STATEMENT.em, em: true },
-            ]} />
-          </h2>
-        </Statement>
-        <Steps />
-        <Ribbon flip />
-        <Brief />
-        <Cards />
-        <Split />
-        <Privacy />
-        <Ribbon />
-        <WhatYouGet copy={copy} />
-        <ShortAnswers faq={faq} />
-        <ExplainLinks links={explain} />
-        <Close />
-        <Dock />
-      </div>
+      <Hero />
+      <Numbers />
+      <Statement />
+      <Steps />
+      <Brief />
+      <Cards />
+      <Split />
+      <Privacy />
+      <WhatYouGet copy={copy} />
+      <ShortAnswers faq={faq} />
+      <ExplainLinks links={explain} />
+      <Close />
     </div>
   );
 }

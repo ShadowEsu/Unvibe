@@ -22,17 +22,31 @@ export const D_NAV = [
 ] as const;
 export const D_NAV_CTA = "Download free";
 
+/** The release the hero's Today capture comes from: its caption names it, and the picture must match it (Design §3). */
+const HERO_CAPTURE_VERSION = "0.1.54";
+
 export const D_HERO = {
   /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
   h1: "Understand the code your AI writes, well enough to question it.",
   /** Who it's for (ledger 636; Design: no "junior" on the page). One line at every width; the H1 carries the promise. */
   sub: "For developers who build with AI tools.",
-  wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
   /** The web try under the tagline (Unvibe lead, 6 Nov: home had no visible way to /explain; Security 2033 GO). */
   tryIt: "Or try it in your browser first",
-  caption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
+  /** Option A (Design §3): a real Today capture of the shipped app, light theme, replaces the HTML recreation. NEW string
+   *  pattern for Security: the caption and the alt. QA's still on the published 0.1.54, sample lessons, start animation
+   *  off (agents/unvibe-qa/2026-11-19-thu1119/hero-today/, sha256 38bd755f…; Security S-2 + C-4 PASS), used whole: AVIF
+   *  and WebP at these widths, resized only. 1040 CSS px wide on desktop, the column at 390. */
+  shot: {
+    base: `/unvibe/real/${HERO_CAPTURE_VERSION.replace(/\./g, "")}/today-light`,
+    widths: [720, 1040, 1560, 2080],
+    sizes: "(max-width: 820px) calc(100vw - 32px), 1040px",
+    width: 2360,
+    height: 1560,
+    alt: "Unvibe's Today page on a Mac: a greeting, how to explain code with Control+U, Up next, the numbers, recently understood lessons and the Ask Vibe box.",
+  },
+  shotCaption: `Real screen, sample data · Unvibe ${HERO_CAPTURE_VERSION}`,
 } as const;
 
 /** Numbers (mock 02): the GO'd labels (0118, 18:51Z) with one live fact line each. "No" never counts. */
@@ -56,6 +70,8 @@ export const D_STATEMENT = {
 } as const;
 
 export const D_STEPS = {
+  /** The Steps stage's window is the HTML recreation of the 0.1.49 panel (it plays the three steps); its caption says so. */
+  caption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
   label: "(How it works)",
   h2: { before: "From selection to", em: "understanding", after: ", in three steps." } as Title,
   items: [
@@ -70,7 +86,6 @@ export const D_BRIEF = {
   kicker: "After-agent review",
   h2: { before: "Changes,", em: "briefed", after: " in plain English." } as Title,
   note: "Built from local git on this computer.",
-  credit: "Wisteria, Claude Monet, c. 1925 · public domain",
   /** MUST-D11: the public 0.1.49 Brief (0149/briefs-open.webp), cropped to the Brief card: no sidebar, no path. */
   shot: { src: "/d/briefs-open-card.webp", width: 591, height: 336, alt: "An Unvibe Brief: 1 file changed in a sample app, what to review first and what matters." },
   caption: "Real screen, sample repo · Unvibe 0.1.49",
@@ -91,7 +106,7 @@ export const D_CARDS = {
   caption: "Real screens, sample code · Unvibe 0.1.49",
 } as const;
 
-/** Then prove it (mock 07, revision 2: violet): three rows of live strings, the Library and Test me captures. */
+/** Then prove it: three rows of live strings, then the Library and Test me captures side by side. */
 export const D_SPLIT = {
   label: "(Test me)",
   h2: { before: "Then prove you", em: "understood", after: " it." } as Title,
@@ -102,7 +117,6 @@ export const D_SPLIT = {
   ],
   library: { src: `${CAPTURE_DIR}/library.webp`, width: 704, height: 440, alt: "Unvibe's Library listing 4 saved explanations from today.", caption: `Library · ${SHOT_CAPTION}` },
   shot: { src: `${CAPTURE_DIR}/panel-test-me.webp`, ...PANEL, alt: "Unvibe's Test me question about the debounce sample, with its answer choices.", caption: `Test me · ${SHOT_CAPTION}` },
-  credit: "Lilacs in the Sun, Claude Monet, 1873 · public domain",
 } as const;
 
 /** MUST-D9: the live /about keys line. The list is the live WhatLeaves "Stays on your computer", word for word. */
@@ -184,5 +198,3 @@ export const D_FOOT = [
   { h: "Resources", links: [["Help", "/help"], ["Install help", "/install-help"], ["FAQ", "/faq"], ["Resources", "/resources"], ["Privacy", "/privacy"], ["Terms", "/terms"], ["Refunds", "/refund"], ["Open-source notices", "/licenses"]] },
   { h: "Company", links: [["Investors", "/investors"], ["About", "/about"], ["Why we built it", "/why"], ["Building Unvibe", "/build"], ["Listed on", "/listed-on"], ["Contact", "mailto:support@unvibe.site"]] },
 ] as const;
-
-export const D_ART_CREDITS = "Photo: Tim Marshall (Unsplash), CC0, recoloured · Paintings, public domain: Claude Monet, Lilacs in the Sun, 1873 · Claude Monet, Wisteria, c. 1925 · Vincent van Gogh, Irises, 1889";

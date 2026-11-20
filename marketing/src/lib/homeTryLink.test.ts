@@ -27,10 +27,10 @@ describe("home: the browser-try link under the tagline (Design 2032, Security MU
     for (const [href] of links) assert.match(href, /^\/explain(\/[a-z0-9-]+)?$/, href);
   });
 
-  it("puts the link under the H1, before the demo window", () => {
+  it("puts the link under the H1, before the hero's app capture", () => {
     const h1 = html.indexOf('id="d-hero-h"');
     const link = html.indexOf('href="/explain"');
-    const demo = html.indexOf('class="d-win"');
-    assert.ok(h1 >= 0 && link > h1 && demo > link, `order h1 ${h1} < link ${link} < demo ${demo}`);
+    const shot = html.indexOf('class="d-hero__shot"');
+    assert.ok(h1 >= 0 && link > h1 && shot > link, `order h1 ${h1} < link ${link} < capture ${shot}`);
   });
 });
