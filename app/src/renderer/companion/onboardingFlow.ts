@@ -80,15 +80,18 @@ export function forwardAction(s: OnboardingState): ForwardAction {
   return { label: 'Start using Unvibe', finishes: true };
 }
 
+/** What the footer's primary runs: the step's own action, or the forward move (forwardAction). */
+export type SetupAction = 'explainSample' | 'explainClipboard' | 'turnOn' | 'openSettings' | 'forward';
+
 /**
  * The step's own action, which then takes the footer's primary slot: explain the sample, explain the clipboard (the
  * paste box's IPC, no permission), turn on the shortcut, or open System Settings again for someone who closed it.
  */
-export function stepAction(s: OnboardingState): string | null {
-  if (s.step === 1 && !s.explained) return 'Explain this code';
-  if (s.step === 2 && !s.pasteStarted && !s.ownCodeDone) return 'Explain my clipboard';
-  if (s.step === 3 && s.offer === 'offer') return 'Turn on the shortcut';
-  if (s.step === 3 && s.offer === 'waiting') return 'Open System Settings';
+function stepAction(s: OnboardingState): { label: string; action: SetupAction } | null {
+  if (s.step === 1 && !s.explained) return { label: 'Explain this code', action: 'explainSample' };
+  if (s.step === 2 && !s.pasteStarted && !s.ownCodeDone) return { label: 'Explain my clipboard', action: 'explainClipboard' };
+  if (s.step === 3 && s.offer === 'offer') return { label: 'Turn on the shortcut', action: 'turnOn' };
+  if (s.step === 3 && s.offer === 'waiting') return { label: 'Open System Settings', action: 'openSettings' };
   return null;
 }
 
@@ -96,8 +99,7 @@ export function stepAction(s: OnboardingState): string | null {
 export interface SetupFooter {
   quiet: ForwardAction | null;
   primary: string;
-  /** The primary runs the step's own action (stepAction) rather than the forward move. */
-  primaryIsStep: boolean;
+  action: SetupAction;
   /** Held (aria-disabled, keeps focus): the paste went to the panel, and Next waits for its explanation. */
   held: boolean;
 }
@@ -105,8 +107,19 @@ export interface SetupFooter {
 export function setupFooter(s: OnboardingState): SetupFooter {
   const forward = forwardAction(s);
   const quiet = forward.quiet ? forward : null;
-  if (s.step === 2 && s.pasteStarted && !s.ownCodeDone) return { quiet, primary: 'Next', primaryIsStep: false, held: true };
-  const action = stepAction(s);
-  if (action) return { quiet, primary: action, primaryIsStep: true, held: false };
-  return { quiet: null, primary: forward.label, primaryIsStep: false, held: false };
+  if (s.step === 2 && s.pasteStarted && !s.ownCodeDone) return { quiet, primary: 'Next', action: 'forward', held: true };
+  const step = stepAction(s);
+  if (step) return { quiet, primary: step.label, action: step.action, held: false };
+  return { quiet: null, primary: forward.label, action: 'forward', held: false };
+}
+
+/**
+ * What a press on the primary runs, or nothing. The primary is one button whose label and action change in place (and
+ * it grows under the pointer when the quiet slot empties), so the second click of a double-click lands on the next
+ * state's action: "Explain this code" would explain and then skip Try it (lead S1 on #372). `detail` is the click
+ * count (MouseEvent.detail); a keyboard press is 0.
+ */
+export function primaryPress(footer: SetupFooter, detail: number): SetupAction | null {
+  if (footer.held || detail > 1) return null;
+  return footer.action;
 }

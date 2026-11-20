@@ -19,7 +19,7 @@ import { AccountMenu } from './accountMenu';
 import { FeedbackCard, FEEDBACK_ASKED_KEY } from './feedback';
 import { DeletionNotice } from './deletionNotice';
 import { Buddy, setBuddyMood } from '../shared/buddy';
-import { firstNameOf, forwardAction, onboardingSteps, setupFooter, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
+import { firstNameOf, forwardAction, onboardingSteps, primaryPress, setupFooter, vibeLine, welcomeBackLine, type OnboardingState } from './onboardingFlow';
 import { accessibilityRow, type AccessibilityState } from './settingsRows';
 import { FADE_OPACITY } from '../widget/clickAway';
 import { Home } from './home';
@@ -448,6 +448,9 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const [celebrating, setCelebrating] = useState(false);
   const [explained, setExplained] = useState(false);
   const [sampleDone, setSampleDone] = useState(false);
+  // The sample is in the panel and not explained yet: the "Explaining in the panel" status is true only then (Security
+  // S-2), so closing the panel ends it too.
+  const [sampleRunning, setSampleRunning] = useState(false);
   const [levelSaved, setLevelSaved] = useState('');
   const [signedIn, setSignedIn] = useState('');
   const [ownCodeDone, setOwnCodeDone] = useState(false);
@@ -465,7 +468,11 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const spoken = isWindows ? keys : shortcut.replace(/CommandOrControl|Command/g, 'Command').replace(/Alt/g, 'Option');
 
   useEffect(() => { configureTones({ enabled: soundEffects, volume: soundVolume, style: soundStyle }); }, [soundEffects, soundVolume, soundStyle]);
-  useEffect(() => window.unvibe.onSampleDone(() => setSampleDone(true)), []);
+  useEffect(() => window.unvibe.onSampleDone(() => {
+    setSampleDone(true);
+    setSampleRunning(false);
+  }), []);
+  useEffect(() => window.unvibe.onPanelClosed(() => setSampleRunning(false)), []);
   // The user's own code was explained: a Mac on the paste step moves on to the shortcut offer; Windows
   // stays and finishes from there, with a fresh paste target (no stale "Explaining in the panel").
   useEffect(() => window.unvibe.onOwnCodeDone(() => {
@@ -513,14 +520,16 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   };
   const go = (to: number) => {
     if (soundEffects) playTone('boop');
-    // Navigation remounts the paste target without a preview; its speech must reset with it.
+    // Navigation remounts the paste target without a preview or an old "clipboard is empty"; its speech resets with it.
     paste.setStarted(false);
+    paste.clearNotice();
     setStep(Math.max(0, Math.min(to, steps.length - 1)));
   };
   const explainSample = () => {
     if (explained) return;
     window.unvibe.explainSample();
     setExplained(true);
+    setSampleRunning(true);
     setBuddyMood('reading');
   };
   const answerLevel = async (answer: 'too_basic' | 'about_right' | 'too_advanced') => {
@@ -560,14 +569,16 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     if (forward.finishes) void finish();
     else go(step + 1);
   };
-  // The footer's primary: the step's own action, else the forward move. Held does nothing and keeps focus.
-  const primary = () => {
-    if (footer.held || saving) return;
-    if (!footer.primaryIsStep) advance();
-    else if (step === 1) explainSample();
-    else if (pasteStep) paste.explainPaste();
-    else if (macShortcut && offer === 'offer') void turnOn();
-    else if (macShortcut && offer === 'waiting') void window.unvibe.openAccessibility();
+  // The footer's primary: the step's own action, else the forward move (primaryPress: held, and the second click of a
+  // double-click, do nothing and keep focus).
+  const primary = (detail: number) => {
+    if (saving) return;
+    const action = primaryPress(footer, detail);
+    if (action === 'forward') advance();
+    else if (action === 'explainSample') explainSample();
+    else if (action === 'explainClipboard') paste.explainPaste();
+    else if (action === 'turnOn') void turnOn();
+    else if (action === 'openSettings') void window.unvibe.openAccessibility();
   };
   const back = () => {
     if (saving) return;
@@ -580,7 +591,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
       const target = event.target as HTMLElement | null;
       if (target?.matches('input, select, textarea, button, summary, [role="textbox"]')) return;
       // On the paste and shortcut steps only the buttons move on, so a stray Enter never skips them.
-      if (event.key === 'Enter' && step < 2) { event.preventDefault(); primary(); }
+      if (event.key === 'Enter' && step < 2) { event.preventDefault(); primary(0); }
       if (event.key === 'ArrowRight' && step < 2) { event.preventDefault(); advance(); }
       if (event.key === 'ArrowLeft' || event.key === 'Escape') { event.preventDefault(); back(); }
     };
@@ -592,7 +603,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
     : pasteStep && paste.started ? 'reading' : macShortcut && offer === 'on' ? 'happy' : 'thinking';
   // "Saving…" and "Welcome!" replace the label of whichever button finishes setup.
   const finishingLabel = (label: string) => (celebrating ? 'Welcome!' : saving ? 'Saving…' : label);
-  const primaryFinishes = !footer.primaryIsStep && !footer.held && forward.finishes;
+  const primaryFinishes = footer.action === 'forward' && !footer.held && forward.finishes;
   // The shortcut's keys on the card, as in the step-2 hint (`⌃ control` + `U`); the line beside them says "press it", so
   // the caps carry the name for screen readers.
   const shortcutCard = (title: string, note: string, allowed: boolean) => (
@@ -605,7 +616,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
   const controlLine = <p className="onboard__control">Hold Control, not Command, and press U.</p>;
 
   return (
-    <div className={`onboard onboard--step-${step} ${isMac ? 'onboard--mac' : 'onboard--win'}`}>
+    <div className={`onboard ${isMac ? 'onboard--mac' : 'onboard--win'}`}>
       {celebrating ? (
         <div className="onboard__confetti" aria-hidden="true">
           {Array.from({ length: 48 }, (_, i) => <i key={i} style={{ '--i': i } as React.CSSProperties} />)}
@@ -665,8 +676,8 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
                 </div>
                 {explained ? (
                   <>
-                    {/* A status, shown only while it's true (Security S-2): the level question takes over once it's done. */}
-                    {sampleDone ? null : <span className="paste-target__pill onboard__status" role="status"><i aria-hidden="true" />Explaining in the panel</span>}
+                    {/* A status, shown only while it's true (Security S-2): until the sample is explained or the panel closes. */}
+                    {sampleRunning ? <span className="paste-target__pill onboard__status" role="status"><i aria-hidden="true" />Explaining in the panel</span> : null}
                     <p className="onboard__lead">{`That's what ${spoken} does with any code you select. Test me asks you a question about this exact code. Then press Next.`}</p>
                   </>
                 ) : (
@@ -754,7 +765,7 @@ function Onboarding({ soundEffects, soundVolume, soundStyle, shortcut, onDone }:
             </button>
           ) : null}
           {/* aria-disabled, not disabled: a held or busy primary keeps focus as its label changes. */}
-          <button ref={primaryButton} type="button" className="onboard__primary" aria-disabled={footer.held || saving || undefined} onClick={primary}>
+          <button ref={primaryButton} type="button" className="onboard__primary" aria-disabled={footer.held || saving || undefined} onClick={(event) => primary(event.detail)}>
             {primaryFinishes ? finishingLabel(footer.primary) : footer.primary}
           </button>
         </div>
@@ -823,7 +834,12 @@ function useOwnCodePaste() {
     setStarted(false);
     setAttempt((n) => n + 1);
   };
-  return { started, setStarted, fileError, clipboardEmpty, explainPaste, chooseFile, attempt, reset };
+  // Leaving the step: the "clipboard is empty" note was about that try, so it doesn't come back on re-entry.
+  const clearNotice = () => {
+    setClipboardEmpty(false);
+    setFileError('');
+  };
+  return { started, setStarted, fileError, clipboardEmpty, explainPaste, chooseFile, attempt, reset, clearNotice };
 }
 
 function LockGlyph() {
