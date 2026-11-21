@@ -145,16 +145,20 @@ function Steps() {
                   <span className="d-step__t"><Os v={item.title} /></span>
                   <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
                 </a>
-                <figure className="d-steps__mobile d-steps__card d-win">
-                  <StepShot i={stepShot(i)} />
-                  <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
-                </figure>
+                {/* phones and reduced motion: a step whose still is the one just shown above gets none (Design MAY) */}
+                {i > 0 && stepShot(i) === stepShot(i - 1) ? null : (
+                  <figure className="d-steps__mobile d-steps__card d-win">
+                    <StepShot i={stepShot(i)} />
+                    <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
+                  </figure>
+                )}
               </li>
             ))}
           </ol>
-          <div className="d-steps__stage" data-d-stage={active}>
+          {/* data-d-stage is the still on show, so step 3 (still 2 for now) gets step 2's chip (Design SHOULD) */}
+          <div className="d-steps__stage" data-d-stage={stepShot(active)}>
             {/* The panel's own status chip (plan §6, Giga): real panel UI, not a new string */}
-            <p className="d-steps__status" aria-hidden="true"><span className="d-steps__dot" />{active === 1 ? "explaining" : "ready to learn"}</p>
+            <p className="d-steps__status" aria-hidden="true"><span className="d-steps__dot" />{stepShot(active) === 1 ? "explaining" : "ready to learn"}</p>
             <figure className="d-steps__card d-win">
               <div className="d-steps__screens">
                 {D_STEPS.shots.map((shot, j) => {
