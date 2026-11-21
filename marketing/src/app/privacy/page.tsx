@@ -35,10 +35,11 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>The Unvibe button, if you turn it on.</strong> It is off until you switch it on
-            in Settings. While it is on, Unvibe watches your mouse clicks and which app is in front,
-            on your computer, to notice when you select code in a code editor and show a small
-            button. It reads no text and sends nothing until you press the button, and pressing it
-            does the same as the shortcut. With Quick look also on, pressing the button sends the
+            in Settings. While it is on, Unvibe watches your mouse clicks and scrolling, the
+            pointer&apos;s shape, and which app is in front, on your computer, to notice when you
+            select code in a code editor, and shows a small button. It reads no text and sends
+            nothing until you press it, and pressing it does the same as the shortcut. With Quick
+            look also on, pressing the button sends the
             selected code for a short preview, after the same check for keys and tokens (or to your
             own provider if you added your own API key). It doesn&apos;t watch your typing, skips
             password fields and password managers, and doesn&apos;t store or send your mouse clicks.

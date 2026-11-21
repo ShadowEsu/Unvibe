@@ -71,7 +71,7 @@ export const faqItems: FaqItem[] = [
     id: "screen",
     question: "Does it read my entire screen?",
     answer:
-      "No. It never records your screen or uses OCR. It only sees the code you select, or the git changes you ask a Brief about. If you turn on the Unvibe button in Settings (it's off until you do), Unvibe also watches your mouse clicks and which app is in front, on your computer, to show the button when you select code in a code editor. It reads no text and sends nothing until you press the button.",
+      "No. It never records your screen or uses OCR. It only sees the code you select, or the git changes you ask a Brief about. If you turn on the Unvibe button in Settings (it's off until you do), Unvibe also watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows the button. It reads no text and sends nothing until you press it.",
     category: "privacy",
   },
   {
