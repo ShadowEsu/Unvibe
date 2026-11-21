@@ -63,7 +63,7 @@ test('the question can take focus and the rows are pressable until answered', ()
 test('code in the question, the options and the reasoning shows as a code chip, never raw backticks or HTML', () => {
   const quiz = graded({
     question: 'After `const d = debounce(log, 200)`, what does `d(\'c\')` do?',
-    options: ['Runs `log` once, 200 ms after `d(\'c\')`', 'Runs <b>twice</b>', 'Throws', 'Nothing'],
+    options: ['Runs `log` once, 200 ms after `d(\'c\')`', 'Runs <b>twice</b>', 'It throws, see [[cite:debounce.ts:3]]', 'Nothing'],
     choice: 0, answerIndex: 0,
     rationale: 'Each call clears the timer, so only the last `d(...)` schedules `log`.',
   });
@@ -76,6 +76,11 @@ test('code in the question, the options and the reasoning shows as a code chip, 
   assert.ok(!html.includes('`'), 'no raw backtick is left');
   // Text from the model is text: markup in it is shown escaped, not run.
   assert.ok(html.includes('Runs &lt;b&gt;twice&lt;/b&gt;') && !html.includes('<b>'));
+  // A model-written cite is a plain text chip: nothing interactive ends up nested inside an option's <button>.
+  const rows = [...html.matchAll(/<button[^>]*class="ob-opt[^"]*"[^>]*>(.*?)<\/button>/g)].map((m) => m[1]);
+  assert.equal(rows.length, 4);
+  assert.match(rows[2]!, /<span class="cite" title="[^"]*">/);
+  for (const row of rows) assert.doesNotMatch(row, /<(?:button|a|input|select|textarea|label)\b|tabindex|href=/i);
 });
 
 test('a press selects a row without grading it', () => {

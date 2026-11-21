@@ -438,7 +438,7 @@ export function QuizCheck({
           <>
             <div className="qz-q">
               <span className="qz-q__vibe"><Buddy mood={busy ? 'thinking' : wrong.length && chosen === null ? 'confused' : 'idle'} size={40} follow label="Vibe" /></span>
-              <h2 className="qz-q__text">{card.question}</h2>
+              <h2 className="qz-q__text">{renderInline(card.question)}</h2>
             </div>
             {lesson.code ? (recall ? (
               <details className="qz-fold">
@@ -470,7 +470,7 @@ export function QuizCheck({
                     onClick={() => { if (!off) setChosen(i); }}
                   >
                     <span className="qz-keytile" aria-hidden="true">{i + 1}</span>
-                    <span className="qz-option__text">{option}</span>
+                    <span className="qz-option__text">{renderInline(option)}</span>
                     {isWrong ? <><Cross /><span className="sr-only">Wrong answer</span></> : null}
                   </button>
                 );
@@ -509,7 +509,7 @@ export function QuizCheck({
         {done ? (
           <div className="qz-option is-right" role="note">
             <span className="qz-keytile" aria-hidden="true">{done.answerIndex + 1}</span>
-            <span className="qz-option__text">{done.options[done.answerIndex]}</span>
+            <span className="qz-option__text">{renderInline(done.options[done.answerIndex] ?? '')}</span>
             <Tick /><span className="sr-only">Right answer</span>
           </div>
         ) : null}
@@ -558,9 +558,9 @@ export function QuizCheck({
                     {item.tries === 1 ? <Tick /> : <span className="m-chip m-chip--outlined">To revisit</span>}
                   </span>
                 </div>
-                <p className="qz-tile__q">{item.question}</p>
+                <p className="qz-tile__q">{renderInline(item.question)}</p>
                 <p className="qz-tile__label">Right answer</p>
-                <p className="qz-tile__a">{item.options[item.answerIndex]}</p>
+                <p className="qz-tile__a">{renderInline(item.options[item.answerIndex] ?? '')}</p>
                 {code ? <p className="qz-tile__code"><span aria-hidden="true">{item.line}</span><code>{code}</code></p> : null}
               </section>
             );
