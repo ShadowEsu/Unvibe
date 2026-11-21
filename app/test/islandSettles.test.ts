@@ -74,7 +74,7 @@ test('Cancel while the explanation is being written: the panel is told and the I
   assert.equal(events.at(-1)?.type, 'cancelled');
 });
 
-test('a trial build with its selected-code prompts used up: no credit, a notice, and the Island says Limit reached instead of staying on Loading', () => {
+test('a trial build with its selected-code prompts used up: no credit, a notice, and the Island gets the limit\'s error pulse (shown as Issue) instead of staying on Loading', () => {
   assert.equal(takeSelectionCredit(false), 'free', 'a build that does not count them always has one');
   const before = pulses.length;
   while (store().betaSelectedCodeUsage().remaining > 0) assert.equal(takeSelectionCredit(true), 'held');
