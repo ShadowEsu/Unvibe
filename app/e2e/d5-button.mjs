@@ -33,7 +33,7 @@
 //      The press row lists the helper's lines (down, press, app) and the pointer events the button's page saw; those
 //      listeners go on after the light crops and off after the press row (unvibe-app 2026-11-20: the ring on runs 6
 //      and 7's Mac light crops came with them). Until then the page holds only the show/hide log (as in run 5).
-//   F  the focus right after the button appears (unvibe-app, the ring is drawn only on :focus-visible): A2's 5 rounds
+//   FR the focus right after the button appears (unvibe-app, the ring is drawn only on :focus-visible): A2's 5 rounds
 //      and A4 before its crops, then A6 and A7 after A4's press; each read has document.activeElement BODY and the
 //      button not :focus-visible. The A4/A6/A7 crop rows also give the focus at each crop.
 //   A5 stacking: that panel focused, then VS Code clicked (Mac: and activated by name, since synthesized clicks don't
@@ -835,9 +835,9 @@ const pageEvents = (g, since) => {
 };
 /** The focus in the button's page, short: "BODY", or "BUTTON.ghost :focus-visible, outline auto 1px". */
 const focusText = (f) => (f ? `${f.active}${f.fv ? ' :focus-visible' : f.fo ? ' :focus' : ''}${f.outline && !/^none /.test(f.outline) ? `, outline ${f.outline}` : ''}` : '-');
-/** The focus right after the button appears, read by labelled waitShown calls (the F rows). */
+/** The focus right after the button appears, read by labelled waitShown calls (the FR rows; launch F's rows are "F"). */
 const focusReads = [];
-/** One F row: every read in `reads` has BODY as the page's active element and the button not :focus-visible. */
+/** One FR row: every read in `reads` has BODY as the page's active element and the button not :focus-visible. */
 const focusRow = (row, reads) => log(reads.length > 0 && reads.every((x) => x.f?.active === 'BODY' && !x.f.fv), row,
   reads.length ? `${reads.map((x) => `${x.label}: ${focusText(x.f)}`).join('; ')} (document.hasFocus() ${[...new Set(reads.map((x) => x.f?.has))].join('/')}: Playwright's focus emulation)` : 'no read');
 const shownAt = (g, since) => g?.log?.find((e) => e.s && e.t >= since)?.t ?? null;
@@ -1101,7 +1101,7 @@ async function runA(app, companion, tag) {
   // unvibe-app 2026-11-20 (the ring on run 6's and 7's Mac light crops): the button's focus right after each show,
   // read with nothing but the show/hide log in its page; A4's trail listeners go on only now, after the crops.
   const lightReads = focusReads.length;
-  focusRow(`F ${tag}: right after the button appears (A2's 5 rounds, A4 before its crops), the button's page has document.activeElement BODY and the button doesn't match :focus-visible`, focusReads.slice(0, lightReads));
+  focusRow(`FR ${tag}: right after the button appears (A2's 5 rounds, A4 before its crops), the button's page has document.activeElement BODY and the button doesn't match :focus-visible`, focusReads.slice(0, lightReads));
   if (!r.back) { log(false, `A4 ${tag}: the press`, 'the button was gone when the pointer left the pill'); return; }
   await trailOn(app);
   const before2 = os === 'mac' ? screenWindows() : [];
@@ -1244,7 +1244,7 @@ async function runA(app, companion, tag) {
   }
   pointer.click(L4.lines[1].right + 80, L4.lines[1].y);
   await waitHidden(app, 2000);
-  focusRow(`F ${tag}: after A4's press, the same when the button appears again (A6 flipped; A7 dark, its page reloaded)`, focusReads.slice(lightReads));
+  focusRow(`FR ${tag}: after A4's press, the same when the button appears again (A6 flipped; A7 dark, its page reloaded)`, focusReads.slice(lightReads));
   await companion.evaluate(() => window.unvibe.setSettings({ theme: 'light' }));
   await ghostPage(app)?.reload().catch(() => {});
   vsSettings('light');
