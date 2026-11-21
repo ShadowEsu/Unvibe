@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
 import { TryIt } from "@/components/paper/TryIt";
 import { ExplainDownload } from "@/components/paper/ExplainParts";
@@ -12,6 +13,28 @@ const description =
   "Paste code your AI wrote and Vibe explains what it does in plain English, so you can question it before you accept it. Free online, no account.";
 
 export const metadata: Metadata = pageMetadata({ path: "/explain", title, description, card: OG_CARDS.explain });
+
+/** A sample summary with `backticked` commands as code; each word of a command stays whole, so a flag like --oneline never breaks at its hyphens. */
+function Summary({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("`").map((part, i) =>
+        i % 2 === 1 ? (
+          <code key={i}>
+            {part.split(" ").map((word, j) => (
+              <Fragment key={j}>
+                {j > 0 && " "}
+                <span>{word}</span>
+              </Fragment>
+            ))}
+          </code>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
 
 export default function ExplainIndexPage() {
   return (
@@ -32,7 +55,7 @@ export default function ExplainIndexPage() {
           {explainPages.map((page) => (
             <li key={page.id}>
               <Link href={`/explain/${page.id}`}>Explain {explainHeadingText(page)}</Link>
-              <span>{page.sampleSummary}</span>
+              <span><Summary text={page.sampleSummary} /></span>
             </li>
           ))}
         </ul>

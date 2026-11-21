@@ -165,10 +165,11 @@
   overflow-wrap: anywhere;
 }
 
-/* The install command sits straight on its box: no second chip inside the 5 % fill (vibe.css .ninst__cmd code). */
+/* The install command sits straight on its box: no second chip inside the 5 % fill, at vibe.css's 500 15px (.ninst__cmd code) instead of the card's 0.92em chip. */
 .explain-page .ninst__cmd code {
   padding: 0;
   background: none;
+  font: 500 15px / 1 var(--font-mono);
 }
 
 /* What it shows: rows split by 1 px rules, no boxes. */
@@ -251,7 +252,12 @@
   font: 600 15px / 1.4 var(--font-sans);
 }
 
-.explain-card .explain-langs span {
+/* A summary's commands (git log --oneline --graph ...) wrap at their spaces only: each word is its own span. */
+.explain-langs code span {
+  white-space: nowrap;
+}
+
+.explain-card .explain-langs li > span {
   max-width: none;
   color: var(--explain-muted);
   font-size: 14px;
@@ -265,12 +271,12 @@
   gap: 0.6rem 1.2rem;
 }
 
-/* Related and the other languages: plain 15/600 links in a wrapped row, no pills. Each keeps a 44 × 44 px target. */
+/* Related and the other languages: plain 15/600 links in a wrapped row, no pills. Each target is 44 px tall; 10 px side padding gives even 20 px gaps, and the row's -10 px margin keeps the text in line with the heading. */
 .explain-more ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 20px;
-  margin: 0;
+  gap: 0;
+  margin: 0 -10px;
   padding: 0;
   list-style: none;
 }
@@ -278,8 +284,8 @@
 .explain-more a {
   display: inline-flex;
   align-items: center;
-  min-width: 44px;
   min-height: 44px;
+  padding: 0 10px;
   font: 600 15px / 1.3 var(--font-sans);
 }
 
