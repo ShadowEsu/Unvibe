@@ -117,6 +117,11 @@ function App() {
   const [view, setView] = useState<GhostView>({ look: 'hidden', flipped: false, shortcut: 'Control+U' });
   useEffect(() => {
     window.unvibe.onGhostView(setView);
+    // Nothing in this window ever keeps focus. It is never meant to take focus (focusable: false, shown inactive), yet
+    // on the Mac the button was focused on show, even in a fresh page, and drew the focus ring (QA run 44841461573,
+    // F rows). A press acts on click, Esc and the shortcut are global, so dropping focus costs nothing.
+    const dropFocus = (event: FocusEvent) => { if (event.target instanceof HTMLElement) event.target.blur(); };
+    document.addEventListener('focusin', dropFocus);
     let theme: ThemePreference = 'light';
     void window.unvibe.getSettings().then((value) => {
       theme = (value as { theme?: ThemePreference }).theme ?? 'light';
@@ -125,7 +130,10 @@ function App() {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onScheme = () => { if (theme === 'system') applyTheme('system'); };
     media.addEventListener('change', onScheme);
-    return () => media.removeEventListener('change', onScheme);
+    return () => {
+      media.removeEventListener('change', onScheme);
+      document.removeEventListener('focusin', dropFocus);
+    };
   }, []);
   if (view.look === 'hidden') return null;
   if (view.look === 'preview') return <QuickLook key="quick" view={view} />;
