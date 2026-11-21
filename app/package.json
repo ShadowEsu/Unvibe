@@ -11,12 +11,13 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/build.mjs --tests && node --test dist-test/*.test.js",
     "prepare:bridge": "npm --prefix ../extension run package",
-    "dist": "npm run prepare:bridge && npm run build && electron-builder --mac dir",
-    "dist:mac": "npm run prepare:bridge && npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
+    "dist": "npm run prepare:bridge && npm run build && npm run build:native && electron-builder --mac dir",
+    "dist:mac": "npm run prepare:bridge && npm run build && npm run build:native && electron-builder --mac",
+    "dist:win": "npm run build && npm run build:native && electron-builder --win",
     "dist:linux": "npm run prepare:bridge && npm run build && electron-builder --linux --publish never",
     "package:beta:win": "node scripts/package-beta-windows.mjs",
-    "dist:all": "npm run build && electron-builder --mac --win",
+    "dist:all": "npm run build && npm run build:native && electron-builder --mac --win",
+    "build:native": "node native/build.mjs",
     "open": "npm run dist && open \"release/mac-arm64/Unvibe.app\" || open \"release/mac/Unvibe.app\"",
     "dist:win:release": "node scripts/package-release-windows.mjs"
   },
@@ -92,7 +93,16 @@
         "LSUIElement": false
       },
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extraResources": [
+        {
+          "from": "native/dist",
+          "to": "selection-watch",
+          "filter": [
+            "unvibe-selection-watch"
+          ]
+        }
+      ]
     },
     "dmg": {
       "sign": false,
@@ -142,6 +152,15 @@
           "target": "portable",
           "arch": [
             "x64"
+          ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "native/dist",
+          "to": "selection-watch",
+          "filter": [
+            "unvibe-selection-watch.exe"
           ]
         }
       ]

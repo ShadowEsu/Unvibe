@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ConsentProvider } from '../core/consent';
+import type { BubbleSettings, GhostView } from '../main/bubble';
 import type { PmfDraft, PmfTextKey } from '../core/pmf';
 import type { ConsentStatus } from '../main/consent';
 import type { SavedLesson, SavedRow } from '../main/panelSaved';
@@ -165,6 +166,17 @@ const api = {
   setShortcutRecording: (on: boolean) => ipcRenderer.send('settings:recordingShortcut', on),
   integrations: () => ipcRenderer.invoke('integrations:status'),
   installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
+  /** Settings › the Unvibe button and Quick look (D5): read, and turn one on or off (main records version and time). */
+  bubbleSettings: (): Promise<BubbleSettings> => ipcRenderer.invoke('bubble:get'),
+  setBubble: (item: 'ghost' | 'preview', on: boolean): Promise<BubbleSettings> => ipcRenderer.invoke('bubble:set', item, on),
+  // the Unvibe button's own window (main ignores these from any other window)
+  onGhostView: (cb: (view: GhostView) => void) => ipcRenderer.on('ghost:view', (_e, view: GhostView) => cb(view)),
+  ghostHover: (on: boolean) => ipcRenderer.send('ghost:hover', on),
+  ghostPress: () => ipcRenderer.send('ghost:press'),
+  ghostClose: () => ipcRenderer.send('ghost:close'),
+  ghostOpenFull: () => ipcRenderer.send('ghost:openFull'),
+  ghostHeight: (height: number) => ipcRenderer.send('ghost:height', height),
+  ghostWidth: (width: number) => ipcRenderer.send('ghost:width', width),
 
   // permissions
   accessibility: () => ipcRenderer.invoke('perms:accessibility'),
