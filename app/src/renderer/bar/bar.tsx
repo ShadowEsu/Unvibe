@@ -7,6 +7,7 @@ import { prettyShortcut } from '../shared/prettyShortcut';
 import { playUiTone, type ToneKind } from '../shared/tones';
 import { trackWindowAway } from '../shared/windowAway';
 import { windowDragHandler } from '../shared/windowDrag';
+import { problemWord } from './problemWord';
 import '../shared/tokens.css';
 
 type Snapshot = {
@@ -55,7 +56,7 @@ const WORKING: Partial<Record<PulsePhase, { word: string; step: 0 | 1 | 2 }>> = 
   finalizing: { word: 'Writing', step: 2 },
 };
 
-function Status({ phase }: { phase: PulsePhase }) {
+function Status({ phase, label }: { phase: PulsePhase; label: string }) {
   const working = WORKING[phase];
   if (working) {
     return (
@@ -68,7 +69,8 @@ function Status({ phase }: { phase: PulsePhase }) {
   if (phase === 'ready' || phase === 'understood') {
     return <span className="island__status"><span className="island__done" aria-hidden="true"><TickIcon /></span>{phase === 'ready' ? 'Ready' : 'Understood'}</span>;
   }
-  return <span className="island__status island__status--problem"><span className="island__problem" aria-hidden="true" />{phase === 'offline' ? 'Offline' : 'Issue'}</span>;
+  const word = problemWord(phase === 'offline' ? 'offline' : 'error', label);
+  return <span className="island__status island__status--problem"><span className="island__problem" aria-hidden="true" />{word}</span>;
 }
 
 type ThemePreference = 'light' | 'dark' | 'system';
@@ -89,6 +91,8 @@ function Bar() {
   const [note, setNote] = useState('');
   const [noteProblem, setNoteProblem] = useState(false);
   const [phase, setPhase] = useState<PulsePhase>('idle');
+  /** The pulse's own label: an error shows it when it is one of the Island's problem words. */
+  const [pulseLabel, setPulseLabel] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
@@ -124,9 +128,10 @@ function Bar() {
     tone('launch');
   };
   const refresh = () => void window.unvibe.barSnapshot().then((value) => setSnapshot(value as Snapshot));
-  const applyPulse = (next: PulsePhase) => {
+  const applyPulse = (next: PulsePhase, label = '') => {
     if (phaseTimer.current) clearTimeout(phaseTimer.current);
     setPhase(next);
+    setPulseLabel(label);
     if (next === 'understood') tone('success');
     if (next === 'ready' || next === 'understood') refresh();
     if (next === 'ready' || next === 'understood' || next === 'error' || next === 'offline') {
@@ -185,7 +190,7 @@ function Bar() {
       // under notify.ts's 15 s gap: that gap is what stops an information notice replacing a problem.
       noteTimer.current = setTimeout(() => setNote(''), 9000);
     });
-    const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle'));
+    const offPulse = window.unvibe.onBarPulse((pulse) => applyPulse((pulse.phase as PulsePhase) || 'idle', pulse.label));
     const offCollapse = window.unvibe.onBarCollapse(() => setPanelExpanded(false, false));
     const offOpensUp = window.unvibe.onBarOpensUp(setOpensUp);
     void window.unvibe.barOpensUp().then(setOpensUp);
@@ -292,7 +297,7 @@ function Bar() {
         </div>
         <span className="island__notch" aria-hidden="true" />
         <div className="island__wing island__wing--right" aria-live="polite">
-          {active ? <Status phase={phase} /> : aiLeft === undefined ? null : <span className="island__left" title="AI explanations left"><b>{aiLeft}</b> left</span>}
+          {active ? <Status phase={phase} label={pulseLabel} /> : aiLeft === undefined ? null : <span className="island__left" title="AI explanations left"><b>{aiLeft}</b> left</span>}
         </div>
       </div>
 
