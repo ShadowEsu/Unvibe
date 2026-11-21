@@ -14,7 +14,6 @@ import "./system.css";
 import "./home-ux.css";
 import "./glass.css";
 import "@/site/dia/dia.css";
-import "@/site/dia/demo.css";
 import "@/site/dia/motion/dia-motion.css";
 import "@/site/dia/site.css";
 import "@/site/dia/listed.css";

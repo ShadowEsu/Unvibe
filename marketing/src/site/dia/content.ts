@@ -83,9 +83,9 @@ export const D_STEPS = {
     { base: `${STEPS_DIR}/steps-select`, widths: [456, 912], width: 912, height: 544, alt: "VS Code with a sample debounce function selected, all seven lines." },
     { base: `${STEPS_DIR}/steps-explain`, widths: [320, 640], width: 640, height: 1120, alt: "Unvibe's panel at Beginner depth explaining the debounce function, with the Question it buttons under the answer." },
   ],
-  /** Step 3 keeps the HTML recreation and its own caption, never "Real screen" (Design: 0.1.54's Test me prints raw
-   *  backticks, so still 3 waits for the app fix and a re-shoot). */
-  recreatedCaption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
+  /** Which still each step shows. Step 3 shows still 2 again until still 3 is re-shot (Design S-1 r3 SHOULD: 0.1.54's
+   *  Test me prints raw backticks, and the 0.1.49 HTML recreation clashed with the real screens beside it). */
+  stepShot: [0, 1, 1],
   label: "(How it works)",
   h2: { before: "From selection to", em: "understanding", after: ", in three steps." } as Title,
   items: [

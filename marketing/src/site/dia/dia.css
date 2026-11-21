@@ -43,7 +43,7 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-link:hover { text-decoration-thickness: 2px; }
 /* the standard frame for every real screen (Design §3): 1 px edge, radius 10, no tilt, glow or shadow */
 .d-frame { display: block; overflow: hidden; border: 1px solid var(--d-line); border-radius: calc(var(--d-radius) * var(--squircle-k, 1)); corner-shape: squircle; background: #fff; }
-/* the frame's own picture only: step 3's HTML recreation sits in a frame too, and its Vibe marks keep their sizes */
+/* the frame's own picture */
 .d-frame > picture, .d-frame > img, .d-frame > picture > img { display: block; width: 100%; height: auto; }
 /* the capture caption: "Real screen, sample data · Unvibe 0.1.xx" */
 .d-chipcap { display: block; font: 400 var(--d-small)/1.4 var(--d-sans); color: var(--d-ink-2); }
@@ -98,22 +98,18 @@ html:has(.d-page), html:has(.d-page) body { background: var(--d-paper) !importan
 .d-steps__mark:nth-child(1) { top: 0; }
 .d-steps__mark:nth-child(2) { top: calc(100% / 3); }
 .d-steps__mark:nth-child(3) { top: calc(200% / 3); }
-/* The pinned stage holds the three steps' pictures stacked in one fixed box, the active one shown, so switching never
+/* The pinned stage holds the Steps stills stacked in one fixed box, the active step's still shown, so switching never
    moves anything. The box is 560 px tall (still 2's 320 × 560 panel), less if the viewport is short: 150 px of chrome
    under the pin's top (status chip 42, card padding 48, caption 30, slack 30). */
 .d-steps { --d-pin-top: max(96px, calc(50vh - 300px)); --d-shot-h: min(560px, calc(100vh - var(--d-pin-top) - 150px)); }
 .d-steps__pin { position: sticky; top: var(--d-pin-top); display: grid; grid-template-columns: 340px minmax(0, 1fr); align-items: center; gap: 56px; }
-/* 720 wide: the card's 656 px inside keeps step 3's recreation in its scaled desktop layout (it switches to its phone
-   layout under 640 px of window) */
-.d-steps__stage { justify-self: center; width: 100%; max-width: 720px; }
+.d-steps__stage { justify-self: center; width: 100%; max-width: 620px; }
 .d-steps__screens { display: grid; place-items: center; height: var(--d-shot-h); }
 .d-steps__screen { grid-area: 1 / 1; display: grid; place-items: center; width: 100%; opacity: 0; }
 .d-steps__screen[data-on] { opacity: 1; }
-/* Still 1 (VS Code at 200 %, taken at 1x) shows at half its pixel width; still 2 is 2x of a 320 × 560 panel; step 3's
-   HTML recreation fills the card's width at its own 1115:690 shape */
+/* Still 1 (VS Code at 200 %, taken at 1x) shows at half its pixel width; still 2 is 2x of a 320 × 560 panel */
 .d-stepshot--wide { width: 456px; max-width: 100%; }
 .d-stepshot--tall { height: var(--d-shot-h); aspect-ratio: 320 / 560; }
-.d-stepdemo { width: 100%; }
 .d-steps__mobile .d-stepshot { margin-inline: auto; }
 .d-steps__mobile .d-stepshot--tall { width: min(320px, 100%); height: auto; }
 .d-steps__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }

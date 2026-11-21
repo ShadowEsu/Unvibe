@@ -7,7 +7,6 @@ import { D_BRIEF, D_CARDS, D_CLOSE, D_EXPLAIN, D_FAQ, D_GET_TABLE, D_HERO, D_PRI
 import { Faq, Os, T } from "./bits";
 import { DownloadCta } from "./DownloadCta";
 import { DiaMotion } from "./motion/DiaMotion";
-import { UnvibeDemo } from "./UnvibeDemo";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
@@ -52,13 +51,8 @@ function StepShot({ i }: { i: 0 | 1 }) {
   );
 }
 
-/** Step i's picture: the real still for steps 1 and 2; step 3 is the HTML recreation's Test me until still 3 is re-shot. */
-function StepScreen({ i }: { i: 0 | 1 | 2 }) {
-  if (i === 2) return <div className="d-frame d-win__frame d-stepdemo"><UnvibeDemo step={2} /></div>;
-  return <StepShot i={i} />;
-}
-
-const stepCaption = (i: number) => (i === 2 ? D_STEPS.recreatedCaption : D_STEPS.caption);
+/** The still step i shows (D_STEPS.stepShot: step 3 repeats still 2 until still 3 is re-shot). */
+const stepShot = (i: number) => D_STEPS.stepShot[i] as 0 | 1;
 
 /**
  * The hero (Design §3, frames a-5-hero-1440/390): centred H1 in two balanced lines, the audience line, one ink pill,
@@ -119,9 +113,8 @@ function Statement() {
 /**
  * Steps: at ≥ 821 px the list and ONE stage are pinned together in a 300vh track; three invisible markers
  * ([data-d-shot]) are DiaMotion's triggers, so the step whose marker crosses the middle is active and the stage shows
- * that step's picture (all three stacked in one box; the others are transparent and inert), with the panel's own status
- * chip above it and that picture's caption under it. At ≤ 820 px (and with reduced motion) each step is followed by its
- * own picture.
+ * that step's still (the stills stacked in one box, the others transparent), with the panel's own status chip above
+ * it. At ≤ 820 px (and with reduced motion) each step is followed by its own still.
  */
 function Steps() {
   const root = useRef<HTMLElement>(null);
@@ -153,8 +146,8 @@ function Steps() {
                   <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
                 </a>
                 <figure className="d-steps__mobile d-steps__card d-win">
-                  <StepScreen i={i as 0 | 1 | 2} />
-                  <figcaption className="d-chipcap d-win__cap">{stepCaption(i)}</figcaption>
+                  <StepShot i={stepShot(i)} />
+                  <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
                 </figure>
               </li>
             ))}
@@ -164,13 +157,16 @@ function Steps() {
             <p className="d-steps__status" aria-hidden="true"><span className="d-steps__dot" />{active === 1 ? "explaining" : "ready to learn"}</p>
             <figure className="d-steps__card d-win">
               <div className="d-steps__screens">
-                {D_STEPS.items.map((item, i) => (
-                  <div key={item.n} className="d-steps__screen" data-on={active === i ? "" : undefined} aria-hidden={active === i ? undefined : true} {...((active === i ? {} : { inert: "" }) as object)}>
-                    <StepScreen i={i as 0 | 1 | 2} />
-                  </div>
-                ))}
+                {D_STEPS.shots.map((shot, j) => {
+                  const on = stepShot(active) === j;
+                  return (
+                    <div key={shot.base} className="d-steps__screen" data-on={on ? "" : undefined} aria-hidden={on ? undefined : true}>
+                      <StepShot i={j as 0 | 1} />
+                    </div>
+                  );
+                })}
               </div>
-              <figcaption className="d-chipcap d-win__cap">{stepCaption(active)}</figcaption>
+              <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
             </figure>
           </div>
         </div>
