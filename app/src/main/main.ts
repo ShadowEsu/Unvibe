@@ -58,6 +58,7 @@ import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock,
 import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
+  cancelReview,
   initWidget,
   runReview,
   startComprehension,
@@ -68,6 +69,7 @@ import {
   type ReviewSession,
   type RequestOpts,
 } from './review';
+import { takeSelectionCredit, type SelectionCredit } from './selectionCredit';
 import { openSavedLesson, savedLessons } from './panelSaved';
 import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
@@ -328,17 +330,6 @@ function beginCapture(
   const start = Boolean(code) && !session.awaitingConfirm;
   initWidget(win, session, { autoStart: start });
   if (start) void runReview(win, session, { level: session.level });
-}
-
-/** 'held': a trial build took one local selected-code credit; 'free': this build doesn't count them. */
-type SelectionCredit = 'held' | 'free';
-
-/** Trial builds count selected-code prompts on this computer. Null, with a notice, once they're used up. */
-function takeSelectionCredit(): SelectionCredit | null {
-  if (!trialBuildEnabled() || fullProductBuildEnabled()) return 'free';
-  if (store().consumeBetaSelectedCodePrompt().ok) return 'held';
-  notify(`Your 30-day beta includes ${store().betaSelectedCodeUsage().limit} selected-code prompts. Your saved learning is still available.`, { problem: true });
-  return null;
 }
 
 const MAX_PICK_BYTES = 200_000;
@@ -1093,8 +1084,7 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = panelSession;
     if (!win || !session) return;
-    session.abort?.abort();
-    win.webContents.send('review:event', { type: 'cancelled' });
+    cancelReview(win, session);
   });
   ipcMain.on('widget:testMe', (e) => {
     const win = widgetOf(e);
