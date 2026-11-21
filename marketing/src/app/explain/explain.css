@@ -11,6 +11,9 @@
   --v-ink-2: #555555;
   --v-radius: 10px;
   --explain-muted: var(--v-ink-2);
+  /* Option A cards (Design's content spec §2): a 1 px edge at ink 11 %; code, notes and folds on ink 5 %. */
+  --explain-line: rgb(17 17 17 / 0.11);
+  --explain-tint: rgb(17 17 17 / 0.05);
   --font-mono: var(--explain-mono-face), var(--font-mono-fallback), ui-monospace, monospace;
   display: grid;
   gap: clamp(1.25rem, 3vw, 2rem);
@@ -22,11 +25,11 @@
 .explain-head,
 .explain-card {
   min-width: 0;
-  padding: clamp(1.1rem, 3vw, 2rem);
-  border: 1.5px solid var(--v-ink);
+  padding: 24px;
+  border: 1px solid var(--explain-line);
   border-radius: var(--v-radius);
   background: var(--v-card);
-  box-shadow: var(--v-shadow);
+  box-shadow: none;
   color: var(--v-ink);
 }
 
@@ -91,8 +94,8 @@
 }
 
 /* One focus ring on these pages: 2 px ink, 2 px out. Listed with the shared sheets' button selectors so it wins over
-   their 3 px violet rings (sections.css), which tie on specificity otherwise. The dark half of the Try box keeps a
-   white ring below, and the install command box keeps its own inset ring (vibe.css .ninst__cmd). */
+   their 3 px violet rings (sections.css), which tie on specificity otherwise. The install command box keeps an inset
+   ring (below), and the editor's textarea an inset one further down. */
 .explain-page :focus-visible,
 .explain-page a:focus-visible,
 .explain-page .try__levels button:focus-visible,
@@ -149,22 +152,44 @@
   margin: 0 0 1rem;
 }
 
-.explain-card code {
+/* Inline code: a 5 % ink chip, radius 4 (Design §2), the same in the cards, the head's lead and Vibe's answer. The
+   answer's code had the site's warm chip (vibe.css .try__answer code). */
+.explain-card code,
+.explain-head p code,
+.explain-page .try__answer code {
+  corner-shape: round;
   padding: 0.05em 0.35em;
-  border-radius: calc(6px * var(--squircle-k, 1)); corner-shape: squircle;
-  background: color-mix(in srgb, var(--v-ink) 8%, var(--v-card));
+  border-radius: 4px;
+  background: var(--explain-tint);
   font: 0.92em var(--font-mono);
   overflow-wrap: anywhere;
 }
 
+/* The install command sits straight on its box: no second chip inside the 5 % fill, at vibe.css's 500 15px (.ninst__cmd code) instead of the card's 0.92em chip. */
+.explain-page .ninst__cmd code {
+  padding: 0;
+  background: none;
+  font: 500 15px / 1 var(--font-mono);
+}
+
+/* What it shows: rows split by 1 px rules, no boxes. */
 .explain-shows {
   display: grid;
-  gap: 1rem;
   margin: 0;
 }
 
+.explain-shows > div {
+  padding-block: 16px;
+  border-top: 1px solid var(--explain-line);
+}
+
+.explain-shows > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .explain-shows dt {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .explain-shows dt::first-letter {
@@ -183,38 +208,59 @@
   list-style: disc;
 }
 
+/* "Before you trust it": a 5 % ink box, radius 10, 20 px padding; the lead words at 600. */
 .explain-card .explain-watch {
   margin: 1.6rem 0 0;
-  padding: 0.9rem 1rem;
-  border-left: 4px solid var(--v-ink);
-  border-radius: 0 calc(12px * var(--squircle-k, 1)) calc(12px * var(--squircle-k, 1)) 0; corner-shape: squircle;
-  background: color-mix(in srgb, var(--v-ink) 5%, var(--v-card));
+  padding: 20px;
+  border-radius: var(--v-radius);
+  background: var(--explain-tint);
+  /* Forced colours drop the fill; a transparent outline turns into an edge there and draws nothing otherwise. */
+  outline: 1px solid transparent;
+  outline-offset: -1px;
 }
 
+.explain-card .explain-watch b {
+  font-weight: 600;
+}
+
+/* The /explain index: rows, each a 15 px link with its sample summary under it in the second ink, split by 1 px
+   rules; 2 columns from 1024 (Design §2). */
 .explain-langs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: 0.8rem;
+  column-gap: 32px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+@media (min-width: 1024px) {
+  .explain-langs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .explain-langs li {
   display: grid;
-  gap: 0.3rem;
-  padding: 1rem 1.1rem;
-  border: 1.5px solid var(--v-ink);
-  border-radius: calc(16px * var(--squircle-k, 1)); corner-shape: squircle;
+  gap: 4px;
+  padding-block: 14px;
+  border-top: 1px solid var(--explain-line);
+  /* In a 2-column row a short cell stretches to its neighbour's height; this keeps the summary right under its link. */
+  align-content: start;
 }
 
 .explain-langs a {
-  font: 700 1.15rem / 1.3 var(--font-sans);
+  font: 600 15px / 1.4 var(--font-sans);
 }
 
-.explain-card .explain-langs span {
+/* A summary's commands (git log --oneline --graph ...) wrap at their spaces only: each word is its own span. */
+.explain-langs code span {
+  white-space: nowrap;
+}
+
+.explain-card .explain-langs li > span {
+  max-width: none;
   color: var(--explain-muted);
-  font-size: 0.95rem;
+  font-size: 14px;
   line-height: 1.45;
 }
 
@@ -225,11 +271,12 @@
   gap: 0.6rem 1.2rem;
 }
 
+/* Related and the other languages: plain 15/600 links in a wrapped row, no pills. Each target is 44 px tall; 10 px side padding gives even 20 px gaps, and the row's -10 px margin keeps the text in line with the heading. */
 .explain-more ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  margin: 0;
+  gap: 0;
+  margin: 0 -10px;
   padding: 0;
   list-style: none;
 }
@@ -237,35 +284,25 @@
 .explain-more a {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
-  padding: 0 1rem;
-  border: 1.5px solid var(--v-ink);
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 650;
+  min-height: 44px;
+  padding: 0 10px;
+  font: 600 15px / 1.3 var(--font-sans);
 }
 
 .explain-more a:hover {
-  background: color-mix(in srgb, var(--v-ink) 6%, var(--v-card));
+  text-decoration-thickness: 2px;
 }
 
 /* Between the rows of the card; each row is its own nav. */
 .explain-more__rule {
   margin: 1.4rem 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--v-ink) 18%, transparent);
+  border-top: 1px solid var(--explain-line);
 }
 
 /* Option A retires lime and the sticker colours on these pages (Design's content spec §1 and §4). The rules they
    replace live in vibe.css and sections.css, which other pages share, so each is overridden here under
-   .explain-page. "On" states are an ink fill with white text; on the Try it box's dark half the Explain it button
-   is white with ink text and the window dots are grey, until the parts pass makes that half light. */
-.explain-page .try__bar i,
-.explain-page .try__bar i:nth-child(2),
-.explain-page .try__bar i:nth-child(3) {
-  background: rgb(255 255 255 / 0.28);
-}
-
+   .explain-page. "On" states are an ink fill with white text. */
 .explain-page .try__levels button.is-on,
 .explain-page .try__levels button[aria-pressed="true"] {
   border-color: var(--v-ink);
@@ -279,26 +316,6 @@
   color: var(--v-ink);
 }
 
-.explain-page .try__go {
-  background: #fff;
-  color: var(--v-ink);
-}
-
-.explain-page .try__go:hover:not(:disabled):not([aria-disabled="true"]) {
-  background: #e6e6e6;
-}
-
-/* Everything on the Try box's dark half (#151514) gets a white ring: an ink one is 1.03:1 there. */
-.explain-page .try__editor :focus-visible,
-.explain-page .try__editor textarea:focus-visible,
-.explain-page .try__room input:focus-visible {
-  outline: 2px solid #fff;
-}
-
-.explain-page .try__consent input {
-  accent-color: #fff;
-}
-
 .explain-page .try__answer strong {
   background: linear-gradient(transparent 60%, color-mix(in srgb, var(--v-ink) 12%, transparent) 60%);
 }
@@ -308,4 +325,136 @@
 .explain-page .try__phone {
   background: var(--v-ink);
   color: #fff;
+}
+
+/* The Try it box in A (Design §4): no dark half. One frame with a 1 px edge and radius 10; the editor is the code
+   style (ink 5 %, ink text), Explain it the ink pill, the window dots ink at 14 %, the fine print the second ink. */
+.explain-page .try {
+  border: 1px solid var(--explain-line);
+  border-radius: var(--v-radius);
+  box-shadow: none;
+}
+
+/* Solid #f3f3f3 (5 % ink on white), not the translucent tint: the editor sits straight on the page, and a see-through
+   fill let the page's background show behind the code. */
+.explain-page .try__editor {
+  background: #f3f3f3;
+  color: var(--v-ink);
+}
+
+.explain-page .try__bar,
+.explain-page .try__foot {
+  border-color: var(--explain-line);
+}
+
+.explain-page .try__bar i,
+.explain-page .try__bar i:nth-child(2),
+.explain-page .try__bar i:nth-child(3) {
+  background: rgb(17 17 17 / 0.14);
+}
+
+.explain-page .try__bar span {
+  color: var(--v-ink-2);
+}
+
+.explain-page .try__editor textarea {
+  color: var(--v-ink);
+  font-size: 14px;
+}
+
+/* The sideways-scroll cue fades into the editor's new fill (5 % ink on white = #f3f3f3). */
+.explain-page .try__code::after {
+  background: linear-gradient(to right, rgb(243 243 243 / 0), #f3f3f3 80%);
+}
+
+.explain-page .try__foot .try__fine,
+.explain-page .try__fine {
+  color: var(--v-ink-2);
+}
+
+.explain-page .try__foot .try__why {
+  color: #8a4b00;
+}
+
+/* #767676: the field's edge is 4.54:1 on its white fill and 4.09:1 on the editor's #f3f3f3 (3:1 needed, sections.css). */
+.explain-page .try__room input {
+  border-color: #767676;
+  background: #fff;
+  color: var(--v-ink);
+}
+
+.explain-page .try__consent input {
+  accent-color: var(--v-ink);
+}
+
+/* The ink pill: round corners, not the shared squircle (vibe.css .try__go); hover colour in 100 ms, and no press
+   movement (spec §2: no motion beyond hover colour). */
+.explain-page .try__go {
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--v-ink);
+  color: #fff;
+  transition-duration: 100ms;
+}
+
+.explain-page .try__go:active:not(:disabled):not([aria-disabled="true"]),
+.explain-page .try__levels button:hover:not(:disabled) {
+  transform: none;
+}
+
+.explain-page .try__go:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: #2a2a2a;
+}
+
+.explain-page .try__panel {
+  border-color: var(--explain-line);
+}
+
+.explain-page .try__head,
+.explain-page .try__levels {
+  border-color: var(--explain-line);
+}
+
+.explain-page .try__levels {
+  background: #fff;
+}
+
+/* The editor and the room code field had lime rings on the dark half (sections.css, one element more specific than
+   the page-wide ring); on the light editor they take the same 2 px ink ring as the rest of the page. */
+.explain-page .try__editor textarea:focus-visible {
+  outline: 2px solid var(--v-ink);
+  outline-offset: -3px;
+}
+
+.explain-page .try__room input:focus-visible {
+  border-color: var(--v-ink);
+  outline: 2px solid var(--v-ink);
+  outline-offset: 2px;
+}
+
+/* The download card's install command box (Design §2): on 5 % ink (#f3f3f3), radius 10, with the ink Copy pill. */
+.explain-page .ninst {
+  --ninst-ink: var(--v-ink);
+  --ninst-ink-2: var(--v-ink-2);
+  --ninst-line: var(--explain-line);
+}
+
+/* The command's left corners follow the box's 10 px radius, so its inset focus ring does too. */
+.explain-page .ninst__cmd {
+  border-radius: var(--v-radius) 0 0 var(--v-radius);
+  corner-shape: round;
+}
+
+.explain-page .ninst__box {
+  border-radius: var(--v-radius);
+  background: #f3f3f3;
+}
+
+.explain-page .ninst__box::after {
+  background: linear-gradient(90deg, rgb(243 243 243 / 0), #f3f3f3);
+}
+
+.explain-page .ninst__copy {
+  border-radius: 999px;
+  corner-shape: round;
 }
