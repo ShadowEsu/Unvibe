@@ -1,6 +1,7 @@
 import type { Ref } from 'react';
 import type { QuizMode } from '../../core/protocol';
 import { Buddy } from '../shared/buddy';
+import { renderInline } from '../shared/richText';
 import { Icon } from './icons';
 
 export interface Quiz {
@@ -92,7 +93,9 @@ export function QuizCard({ quiz, depth, pick, questionRef, onPick }: {
         ))}
       </div>
       <div className="ob-quiz__kicker"><span>{quizCount(quiz)}</span>{kind ? <span>{kind}</span> : null}</div>
-      <h2 className="ob-quiz__q" ref={questionRef} tabIndex={-1}>{quiz.question}</h2>
+      {/* The question, options and reasoning come from the model as markdown: `code` shows as a chip, as in Explain,
+          and nothing is ever HTML (renderInline makes React nodes only). */}
+      <h2 className="ob-quiz__q" ref={questionRef} tabIndex={-1}>{renderInline(quiz.question ?? '')}</h2>
       <div className="ob-quiz__opts">
         {quiz.options?.map((option, i) => {
           const picked = i === selected;
@@ -109,7 +112,7 @@ export function QuizCard({ quiz, depth, pick, questionRef, onPick }: {
               onClick={() => onPick(i)}
             >
               <kbd className="ob-opt__key" aria-hidden="true">{i + 1}</kbd>
-              <span className="ob-opt__text">{option}</span>
+              <span className="ob-opt__text">{renderInline(option)}</span>
               {right ? <span className="ob-opt__mark ob-opt__mark--right"><Icon name="check" size={12} /><span className="sr-only">Correct answer</span></span> : null}
               {wrong ? <span className="ob-opt__mark ob-opt__mark--wrong"><Icon name="x" size={12} /><span className="sr-only">Your answer, not correct</span></span> : null}
             </button>
@@ -121,7 +124,7 @@ export function QuizCard({ quiz, depth, pick, questionRef, onPick }: {
           <span aria-hidden="true"><Buddy mood={quiz.correct ? 'celebrate' : 'confused'} size={28} label="Vibe" /></span>
           <div>
             <p className="ob-verdict__line" role="status">{quizVerdict(quiz)}</p>
-            {quiz.rationale ? <p className="ob-quiz__why">{quiz.rationale}</p> : null}
+            {quiz.rationale ? <p className="ob-quiz__why">{renderInline(quiz.rationale)}</p> : null}
             {endLine ? <p className="ob-quiz__end">{endLine}</p> : null}
           </div>
         </div>

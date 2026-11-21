@@ -137,6 +137,8 @@
 :root .ob .ob-answer .rich-heading { margin: 8px 0 0; font-size: 14px; line-height: 22px; font-weight: 600; }
 :root .ob .ob-answer .rich-heading:first-child { margin-top: 0; }
 :root .ob .ob-answer code.inline { padding: 1px 4px; border: 0; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink); font: 400 12px/18px var(--u-font-mono); }
+/* The same chip in Test me's question, options and reasoning, sized to the text around it (17 px question, 13 px rows). */
+:root .ob .ob-quiz code.inline { padding: 1px 4px; border: 0; border-radius: 5px; background: var(--u-sunken); color: var(--u-ink); font-family: var(--u-font-mono); font-size: 0.88em; font-weight: 400; overflow-wrap: anywhere; }
 :root .ob .ob-answer strong { font-weight: 600; text-decoration: none; }
 :root .ob .ob-answer .rich-table { border: 1px solid var(--u-border); border-radius: 8px; }
 :root .ob .ob-answer table { font-size: 12px; line-height: 18px; }
