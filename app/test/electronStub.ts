@@ -62,6 +62,11 @@ export const shell = {
   },
 };
 
+/** macOS notifications: nothing is subscribed in tests. */
+export const systemPreferences = {
+  subscribeWorkspaceNotification: (): number => 0,
+};
+
 /** Tests inject their own clipboard readers; touching the real one fails loudly. */
 export const clipboard = {
   readText: (): never => {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, shell, systemPreferences } from 'electron';
 import path from 'node:path';
 import { settings, type BarPosition, type BarSize, type InactiveBehavior, type ThemePreference } from './settings';
 import { ownCodeStepDueNow } from './ownCodeStep';
@@ -517,6 +517,79 @@ function sendAway(win: BrowserWindow, away: boolean): void {
   if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('panel:away', away);
 }
 
+/** Whether the limit pause, a dialog or the Accessibility guide holds the panel up (it neither fades nor hides). */
+function panelHeld(): boolean {
+  return limitPauseActive || panelDialogs > 0 || grantFlowOpen;
+}
+
+/** The click-away rule on the panel's own blur. */
+function leavePanel(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  const action = clickAwayOnBlur(settings().all().inactiveBehavior, panelHeld());
+  if (action === 'hide') win.hide();
+  else if (action === 'fade') sendAway(win, true);
+}
+
+/**
+ * The pid in an NSWorkspace activation note, or null when it can't be read. Electron passes the NSRunningApplication
+ * under NSWorkspaceApplicationKey as its description (undocumented), "<NSRunningApplication: 0x… (com.microsoft.VSCode
+ * - 812) LSASN:…>"; Unvibe's own entry carries its main process id.
+ */
+export function activatedPid(info: Record<string, unknown>): number | null {
+  const app = info.NSWorkspaceApplicationKey;
+  if (typeof app !== 'string') return null;
+  const match = / - (\d+)\)/.exec(app);
+  return match ? Number(match[1]) : null;
+}
+
+/** What macOS told us: Unvibe resigned, some app became active (its note), or Unvibe became active again. */
+export type AppSwitch = { kind: 'resigned' } | { kind: 'activated'; info: Record<string, unknown> } | { kind: 'returned' };
+
+/**
+ * The panel's answer to an app switch: leaving runs the click-away rule (fade, hide, or nothing while held) when the
+ * panel shows; another app's note counts only when it is readable and not Unvibe's own (with Hide, a misread of
+ * Unvibe's own activation would hide the panel the user just clicked: lead S1 on #378); coming back with the panel as
+ * the key window brings it back.
+ */
+export function appSwitchAction(
+  event: AppSwitch,
+  ownPid: number,
+  panel: { visible: boolean; focused: boolean },
+  behavior: InactiveBehavior,
+  held: boolean,
+): 'fade' | 'hide' | 'back' | 'none' {
+  if (!panel.visible) return 'none';
+  if (event.kind === 'returned') return panel.focused ? 'back' : 'none';
+  if (event.kind === 'activated') {
+    const pid = activatedPid(event.info);
+    if (pid === null || pid === ownPid) return 'none';
+  }
+  const action = clickAwayOnBlur(behavior, held);
+  return action === 'stay' ? 'none' : action;
+}
+
+/**
+ * macOS: ⌃U shows the panel without activating Unvibe (the editor keeps its selection), so its window can stay the
+ * key window of an app that was never active, and leaving it sends no blur (QA run 44841461573, A5 and launch F).
+ * Unvibe resigning, or another app coming to the front, runs the same click-away rule; Unvibe coming back with the
+ * panel as its key window brings the panel back. A panel opened with ⌃U and never touched still stays when you click
+ * into the editor that was in front all along: nothing reaches Unvibe then (lead's call, options 1 + 3).
+ */
+export function watchAppSwitches(): void {
+  if (process.platform !== 'darwin') return;
+  const run = (event: AppSwitch) => {
+    const win = panelWin;
+    if (!win || win.isDestroyed()) return;
+    const action = appSwitchAction(event, process.pid, { visible: win.isVisible(), focused: win.isFocused() }, settings().all().inactiveBehavior, panelHeld());
+    if (action === 'hide') win.hide();
+    else if (action === 'fade') sendAway(win, true);
+    else if (action === 'back') sendAway(win, false);
+  };
+  app.on('did-resign-active', () => run({ kind: 'resigned' }));
+  systemPreferences.subscribeWorkspaceNotification('NSWorkspaceDidActivateApplicationNotification', (_event, info) => run({ kind: 'activated', info }));
+  app.on('did-become-active', () => run({ kind: 'returned' }));
+}
+
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     ...clampToVisibleArea(bounds),
@@ -547,12 +620,7 @@ function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {
 
   // Its spot is saved when a drag or an arrow key moves it (endPanelDrag, nudgePanel), per display.
 
-  win.on('blur', () => {
-    if (win.isDestroyed()) return;
-    const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0 || grantFlowOpen);
-    if (action === 'hide') win.hide();
-    else if (action === 'fade') sendAway(win, true);
-  });
+  win.on('blur', () => leavePanel(win));
   win.on('focus', () => sendAway(win, false));
 
   lockNavigation(win);
