@@ -142,8 +142,9 @@
    so a switched-off option's code dims with its words (lead NIT on #377). A chip that wraps keeps its padding and
    corners on both lines (Design MAY, P6). */
 :root .ob .ob-quiz code.inline { padding: 1px 4px; border: 0; border-radius: 5px; background: var(--u-sunken); color: inherit; font-family: var(--u-font-mono); font-size: max(11px, 0.88em); font-weight: 400; overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-/* After Check, focus moves to the question so a screen reader reads on from there (`questionRef`). It isn't a control,
-   so it shows no ring: mono.css's [tabindex] ring beat widget.css's `.ob-quiz__q:focus` (Design SHOULD, P6). */
+/* When a new question arrives, focus moves to it so a screen reader reads it (`questionRef`, widget.tsx); a key press
+   such as Return to Check then made it match :focus-visible. It isn't a control, so it shows no ring: mono.css's
+   [tabindex] ring beat widget.css's `.ob-quiz__q:focus` (Design SHOULD, P6). */
 :root .ob .ob-quiz__q:focus-visible { outline: none; }
 :root .ob .ob-answer strong { font-weight: 600; text-decoration: none; }
 :root .ob .ob-answer .rich-table { border: 1px solid var(--u-border); border-radius: 8px; }
