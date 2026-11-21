@@ -1365,25 +1365,72 @@ async function runF(app, companion) {
   log(tf !== null, 'F mac: touched (a click on the panel\'s header), then a click into VS Code with VS Code activated, fades the panel (unvibe-app: about 300 ms)',
     `opacity after the header click ${r1(backTo)}; then ${where}: ${tf ? `opacity ${r1(tf.o)}, ${tf.ms} ms after the click call` : `opacity ${r1(await opacity())}: stayed at or above 0.5 for 3 s`}`);
 
-  // F hide: "Hide" as the click-away setting; the panel's own window found in the window list by its frame.
+  // F hide: "Hide" as the click-away setting. Each row starts from a panel opened afresh with ⌃U (VS Code in front, a
+  // word selected) and seen on the screen: its page visible, and a window of Unvibe's in the window list at the frame
+  // the panel reports now (its height follows its content, 360-560, so the frame read at launch F's start can be stale:
+  // run 44847332266 matched nothing before the click). A row whose start isn't met FAILs with the frame and the list.
   await companion.evaluate(() => window.unvibe.setSettings({ inactiveBehavior: 'hide' }));
   await sleep(800);
   const pids = new Set(processTree(app.process.pid).map((p) => p.pid));
-  const onScreen = () => screenWindows().some((w) => pids.has(w.pid) && near(w.x, P.x, 3) && near(w.y, P.y, 3) && near(w.w, P.w, 3) && near(w.h, P.h, 3));
-  const shown0 = onScreen();
-  pointer.click(P.x + head.x, P.y + head.y);
-  await sleep(1000);
-  const shown1 = onScreen();
-  log(shown0 && shown1, 'F mac: with "Hide" set, a click on the panel itself keeps it on the screen',
-    `the panel's window on the screen before the click ${shown0}, 1 s after it ${shown1}; opacity ${r1(await opacity())}`);
-  const tHide = Date.now();
-  intoVsCode();
-  const gone = await waitFor(async () => (onScreen() ? null : Date.now()), 3000, 100);
-  desktop('f-hide');
-  log(Boolean(gone), 'F mac: with "Hide" set, a click into VS Code with VS Code activated takes the panel off the screen',
-    gone ? `off the screen ${gone - tHide} ms after the click call` : 'still on the screen 3 s later');
+  let hp = panel;
+  const seen = async () => {
+    const f = await hp.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight, vis: document.visibilityState })).catch(() => null);
+    const mine = screenWindows().filter((w) => pids.has(w.pid));
+    const listed = Boolean(f) && mine.some((w) => near(w.x, f.x, 3) && near(w.y, f.y, 3) && near(w.w, f.w, 3) && near(w.h, f.h, 3));
+    return { on: listed && f.vis === 'visible', listed, f, mine };
+  };
+  const say = (s) => `the panel reports ${s.f ? `${s.f.x},${s.f.y} ${s.f.w}×${s.f.h}, page ${s.f.vis}` : 'no frame'}; `
+    + `${s.listed ? 'its window is in the list' : 'no window of Unvibe\'s at that frame'} (Unvibe's windows: ${s.mine.map((w) => `${w.x},${w.y} ${w.w}×${w.h} layer ${w.layer}`).join(' | ') || 'none'})`;
+  /** ⌃U with VS Code in front and a word selected; the panel seen on the screen within 5 s, else the last look. */
+  const fresh = async () => {
+    pointer.click(L.lines[2].left + 30, L.lines[2].y, 2);
+    await sleep(500);
+    keys.unvibe();
+    hp = (await waitFor(async () => panelPage(app), 5000, 100)) ?? hp;
+    return (await waitFor(async () => { const s = await seen(); return s.on ? s : null; }, 5000, 200)) ?? seen();
+  };
+  const headOf = async (s) => {
+    const h = await hp.evaluate(() => { const r = document.querySelector('.ob-head')?.getBoundingClientRect(); return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; }).catch(() => null);
+    return h && s.f ? { x: s.f.x + h.x, y: s.f.y + h.y } : null;
+  };
+
+  // Hide 1: a click on the panel itself keeps it on the screen (lead's S1: Unvibe's own activation is not "another app").
+  const s0 = await fresh();
+  const h0 = s0.on ? await headOf(s0) : null;
+  if (!s0.on || !h0) {
+    log(false, 'F mac: with "Hide" set, a click on the panel itself keeps it on the screen', `not run: the panel was not seen on the screen after a fresh ⌃U: ${say(s0)}${s0.on ? '; no header (.ob-head)' : ''}`);
+  } else {
+    pointer.click(h0.x, h0.y);
+    await sleep(1000);
+    const s1 = await seen();
+    desktop('f-hide-click');
+    log(s1.on, 'F mac: with "Hide" set, a click on the panel itself keeps it on the screen',
+      `before the click (fresh ⌃U): ${say(s0)}; header clicked at (${Math.round(h0.x)}, ${Math.round(h0.y)}); 1 s after: ${s1.on ? 'on the screen' : say(s1)}; opacity ${r1(await hp.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity)).catch(() => NaN))}`);
+  }
+
+  // Hide 2: touched (a header click), then a click into VS Code with VS Code activated, takes it off the screen.
+  const s2 = await fresh();
+  const h2 = s2.on ? await headOf(s2) : null;
+  let s3 = null;
+  if (s2.on && h2) {
+    pointer.click(h2.x, h2.y);
+    await sleep(1000);
+    s3 = await seen();
+  }
+  if (!s3?.on) {
+    log(false, 'F mac: with "Hide" set, touched, then a click into VS Code with VS Code activated takes the panel off the screen',
+      `not run: the panel was not seen on the screen ${s2.on && h2 ? `1 s after the header click: ${say(s3)}` : `after a fresh ⌃U: ${say(s2)}${s2.on ? '; no header (.ob-head)' : ''}`}`);
+  } else {
+    const tHide = Date.now();
+    intoVsCode();
+    let last = s3;
+    const gone = await waitFor(async () => { last = await seen(); return last.listed ? null : Date.now(); }, 3000, 100);
+    desktop('f-hide');
+    log(Boolean(gone), 'F mac: with "Hide" set, touched, then a click into VS Code with VS Code activated takes the panel off the screen',
+      `before (fresh ⌃U, header clicked): ${say(s3)}; then ${where}: ${gone ? `its window left the list ${gone - tHide} ms after the click call (page ${last.f?.vis ?? '?'})` : `still on the screen 3 s later: ${say(last)}`}`);
+  }
   await companion.evaluate(() => window.unvibe.setSettings({ inactiveBehavior: 'fade' })).catch(() => {});
-  await panel.locator('.consent-form__actions button.ghost').click({ timeout: 3000 }).catch(() => {});
+  await hp.locator('.consent-form__actions button.ghost').click({ timeout: 3000 }).catch(() => {});
   await sleep(800);
   actNote();
 }
