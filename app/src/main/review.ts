@@ -138,6 +138,15 @@ function send(win: BrowserWindow, session: ReviewSession, ev: object): void {
   else if (typed.type === 'cancelled') pulseBar({ phase: 'idle', label: 'Ready' });
 }
 
+/**
+ * Stop: the request is dropped and the panel told, through `send`, so the Island leaves its working word for Ready
+ * (it used to keep saying "Writing" while the panel stayed open; polish backlog P3).
+ */
+export function cancelReview(win: BrowserWindow, session: ReviewSession): void {
+  session.abort?.abort();
+  send(win, session, { type: 'cancelled' });
+}
+
 async function ensurePayload(session: ReviewSession, opts: RequestOpts): Promise<ReviewRequestPayload> {
   if (session.payload) {
     return {
