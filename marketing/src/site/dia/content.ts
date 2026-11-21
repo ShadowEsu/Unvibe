@@ -22,10 +22,13 @@ export const D_NAV = [
 ] as const;
 export const D_NAV_CTA = "Download free";
 
-/** The release the hero's Today capture comes from: its caption names it, and the picture must match it (Design §3). */
+/** The release each real still comes from: its caption names it, and the picture must match it (Design §3). The hero
+ *  and the Steps stills are separate captures, so each has its own version (Security NIT-OA2). */
 const HERO_CAPTURE_VERSION = "0.1.54";
-/** Where the real stills of that release live (the hero's and the Steps stills). */
-const REAL_DIR = `/unvibe/real/${HERO_CAPTURE_VERSION.replace(/\./g, "")}`;
+const STEPS_CAPTURE_VERSION = "0.1.54";
+const realDir = (version: string) => `/unvibe/real/${version.replace(/\./g, "")}`;
+const REAL_DIR = realDir(HERO_CAPTURE_VERSION);
+const STEPS_DIR = realDir(STEPS_CAPTURE_VERSION);
 
 export const D_HERO = {
   /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
@@ -75,10 +78,10 @@ export const D_STEPS = {
   /** Design S-1 r2 SHOULD 2 and Design's gate of QA's run 44840827384 (2 hosted calls BOSS approved): steps 1 and 2 show
    *  the real 0.1.54 stills (d67831ea, 0f6b098e), unedited, AVIF and WebP resized only. Still 1 is VS Code at 200 % zoom
    *  taken at 1x, shown at half its pixel width like a 2x still; still 2 is 2x of the 320 × 560 panel. */
-  caption: `Real screen, sample code · Unvibe ${HERO_CAPTURE_VERSION}`,
+  caption: `Real screen, sample code · Unvibe ${STEPS_CAPTURE_VERSION}`,
   shots: [
-    { base: `${REAL_DIR}/steps-select`, widths: [456, 912], width: 912, height: 544, alt: "VS Code with a sample debounce function selected, all seven lines." },
-    { base: `${REAL_DIR}/steps-explain`, widths: [320, 640], width: 640, height: 1120, alt: "Unvibe's panel at Beginner depth explaining the debounce function, with the Question it buttons under the answer." },
+    { base: `${STEPS_DIR}/steps-select`, widths: [456, 912], width: 912, height: 544, alt: "VS Code with a sample debounce function selected, all seven lines." },
+    { base: `${STEPS_DIR}/steps-explain`, widths: [320, 640], width: 640, height: 1120, alt: "Unvibe's panel at Beginner depth explaining the debounce function, with the Question it buttons under the answer." },
   ],
   /** Step 3 keeps the HTML recreation and its own caption, never "Real screen" (Design: 0.1.54's Test me prints raw
    *  backticks, so still 3 waits for the app fix and a re-shoot). */
