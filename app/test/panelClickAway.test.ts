@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FADE_IN_MS, FADE_OPACITY, FADE_OUT_MS, NOT_FADED, fadeStyle, isFaded, nextFade } from '../src/renderer/widget/clickAway';
 import { panelThemeMigration } from '../src/renderer/widget/themeMigration';
-import { clickAwayOnBlur } from '../src/main/windows';
+import { clickAwayOnBlur, otherAppActivated } from '../src/main/windows';
 
 test('Fade drops the pane to 22 % over 200 ms when focus leaves, and back to 100 % over 150 ms', () => {
   const away = nextFade(NOT_FADED, 'away');
@@ -40,6 +40,19 @@ test('main fades or hides on blur as Settings says, and does neither while the l
   assert.equal(clickAwayOnBlur('hide', false), 'hide');
   assert.equal(clickAwayOnBlur('hide', true), 'stay');
   assert.equal(clickAwayOnBlur('fade', true), 'stay');
+});
+
+test('macOS: another app coming to the front counts as leaving the panel; Unvibe coming to the front does not', () => {
+  const note = (desc: string) => ({ NSWorkspaceApplicationKey: desc });
+  const vscode = '<NSRunningApplication: 0x600002f1c000 (com.microsoft.VSCode - 812) LSASN:{hi=0x0;lo=0x1a01a}>';
+  const unvibe = '<NSRunningApplication: 0x600002f1c0a0 (com.unvibe.app - 4321) LSASN:{hi=0x0;lo=0x2b02b}>';
+  assert.equal(otherAppActivated(note(vscode), 4321), true);
+  assert.equal(otherAppActivated(note(unvibe), 4321), false);
+  // An id that only starts with Unvibe's is still another app.
+  assert.equal(otherAppActivated(note(vscode.replace('812', '43210')), 4321), true);
+  // A note it can't read counts as another app (Unvibe's own activation brings the panel back).
+  assert.equal(otherAppActivated({}, 4321), true);
+  assert.equal(otherAppActivated({ NSWorkspaceApplicationKey: 7 }, 4321), true);
 });
 
 test('a dark panel moon becomes Theme: Dark once, only when Theme was never chosen, and the old key goes', () => {

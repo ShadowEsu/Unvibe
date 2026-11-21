@@ -52,6 +52,7 @@ import {
   setGrantFlowOpen,
   showBar,
   startWindowDrag,
+  watchAppSwitches,
   whilePanelDialog,
 } from './windows';
 import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
@@ -775,6 +776,8 @@ app.whenReady().then(() => {
   }, 1200);
   powerMonitor.on('resume', warmBackend);
   powerMonitor.on('unlock-screen', warmBackend);
+  // macOS: the panel also fades (or hides) when another app comes to the front, not only on its own blur.
+  watchAppSwitches();
   // A UI/settings migration may re-show setup, but an app update must never erase learning.
   settings().takeFreshStart();
   store();
