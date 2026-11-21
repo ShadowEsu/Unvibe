@@ -75,6 +75,9 @@ export default function BetaDownloadsPage() {
                   <p>
                     {`On a Mac that's ${mac.anywhere}, not Command+U (${mac.editor} only works in Cursor and VS Code with the editor bridge). A panel opens beside your editor and the explanation streams in. Ask why it was written that way or what breaks if you remove it, take Test me, or save it to your Library. No shortcut yet? Paste code into Unvibe instead.`}
                   </p>
+                  <p>
+                    {`Optional: the Unvibe button. It's off until you turn it on in Settings. When it's on, Unvibe watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows a small button. It reads no text and sends nothing until you press it, and pressing it does the same as the shortcut. With Quick look on, a press sends the selected code for a short preview.`}
+                  </p>
                 </div>
               </li>
             </ol>
