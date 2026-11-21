@@ -36,17 +36,29 @@ function HeroShot() {
   );
 }
 
-/** The HTML recreation of the 0.1.49 panel, in the standard frame, with its caption under it (the Steps stage only). */
-function DemoWindow({ step }: { step?: 0 | 1 | 2 }) {
+/** A Steps still (QA's real 0.1.54 screen) in the standard frame: AVIF, then WebP, at 1x and 2x of its CSS width. */
+function StepShot({ i }: { i: 0 | 1 }) {
+  const { base, widths, width, height, alt } = D_STEPS.shots[i];
+  const set = (ext: string) => widths.map((w) => `${base}-${w}.${ext} ${w}w`).join(", ");
+  const sizes = `${widths[0]}px`;
   return (
-    <figure className="d-win">
-      <div className="d-win__frame d-frame">
-        <UnvibeDemo step={step} />
-      </div>
-      <figcaption className="d-chipcap d-win__cap">{D_STEPS.caption}</figcaption>
-    </figure>
+    <div className={`d-frame d-stepshot ${i === 0 ? "d-stepshot--wide" : "d-stepshot--tall"}`}>
+      <picture>
+        <source type="image/avif" srcSet={set("avif")} sizes={sizes} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- a real capture, sized by the frame */}
+        <img src={`${base}-${widths[1]}.webp`} srcSet={set("webp")} sizes={sizes} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
+      </picture>
+    </div>
   );
 }
+
+/** Step i's picture: the real still for steps 1 and 2; step 3 is the HTML recreation's Test me until still 3 is re-shot. */
+function StepScreen({ i }: { i: 0 | 1 | 2 }) {
+  if (i === 2) return <div className="d-frame d-win__frame d-stepdemo"><UnvibeDemo step={2} /></div>;
+  return <StepShot i={i} />;
+}
+
+const stepCaption = (i: number) => (i === 2 ? D_STEPS.recreatedCaption : D_STEPS.caption);
 
 /**
  * The hero (Design §3, frames a-5-hero-1440/390): centred H1 in two balanced lines, the audience line, one ink pill,
@@ -105,10 +117,11 @@ function Statement() {
 }
 
 /**
- * Steps: at ≥ 821 px the list and ONE demo window are pinned together in a 300vh track; three invisible markers
- * ([data-d-shot]) are DiaMotion's triggers, so the step whose marker crosses the middle is active and the window jumps
- * to that step's part of the loop, with the panel's own status chip above it. At ≤ 820 px each step is followed by its
- * own window.
+ * Steps: at ≥ 821 px the list and ONE stage are pinned together in a 300vh track; three invisible markers
+ * ([data-d-shot]) are DiaMotion's triggers, so the step whose marker crosses the middle is active and the stage shows
+ * that step's picture (all three stacked in one box; the others are transparent and inert), with the panel's own status
+ * chip above it and that picture's caption under it. At ≤ 820 px (and with reduced motion) each step is followed by its
+ * own picture.
  */
 function Steps() {
   const root = useRef<HTMLElement>(null);
@@ -139,14 +152,26 @@ function Steps() {
                   <span className="d-step__t"><Os v={item.title} /></span>
                   <span className="d-step__b" data-d-step-body=""><Os v={item.body} /></span>
                 </a>
-                <div className="d-steps__mobile d-steps__card"><DemoWindow step={i as 0 | 1 | 2} /></div>
+                <figure className="d-steps__mobile d-steps__card d-win">
+                  <StepScreen i={i as 0 | 1 | 2} />
+                  <figcaption className="d-chipcap d-win__cap">{stepCaption(i)}</figcaption>
+                </figure>
               </li>
             ))}
           </ol>
           <div className="d-steps__stage" data-d-stage={active}>
             {/* The panel's own status chip (plan §6, Giga): real panel UI, not a new string */}
             <p className="d-steps__status" aria-hidden="true"><span className="d-steps__dot" />{active === 1 ? "explaining" : "ready to learn"}</p>
-            <div className="d-steps__card"><DemoWindow step={active} /></div>
+            <figure className="d-steps__card d-win">
+              <div className="d-steps__screens">
+                {D_STEPS.items.map((item, i) => (
+                  <div key={item.n} className="d-steps__screen" data-on={active === i ? "" : undefined} aria-hidden={active === i ? undefined : true} {...((active === i ? {} : { inert: "" }) as object)}>
+                    <StepScreen i={i as 0 | 1 | 2} />
+                  </div>
+                ))}
+              </div>
+              <figcaption className="d-chipcap d-win__cap">{stepCaption(active)}</figcaption>
+            </figure>
           </div>
         </div>
       </div>

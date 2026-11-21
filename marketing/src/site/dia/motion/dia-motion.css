@@ -25,18 +25,11 @@
 [data-d-step][data-on]::before { opacity: 1; }
 [data-d-step] [data-d-step-body] { opacity: 0; transition: opacity 300ms var(--d-ease); }
 [data-d-step][data-on] [data-d-step-body] { opacity: 1; }
-/* The sticky stage's one window cross-fades on every step change (300 ms). A keyframe name per step, so changing the
-   step swaps the name and restarts the animation without JS. */
-@keyframes dStage0 { from { opacity: 0; } }
-@keyframes dStage1 { from { opacity: 0; } }
-@keyframes dStage2 { from { opacity: 0; } }
-.d-steps__stage .d-win { animation: 300ms var(--d-ease) both; }
-.d-steps__stage[data-d-stage="0"] .d-win { animation-name: dStage0; }
-.d-steps__stage[data-d-stage="1"] .d-win { animation-name: dStage1; }
-.d-steps__stage[data-d-stage="2"] .d-win { animation-name: dStage2; }
+/* The sticky stage's three stills cross-fade on every step change (300 ms). */
+.d-steps__screen { transition: opacity 300ms var(--d-ease); }
 
 @media (prefers-reduced-motion: reduce) {
   .js [data-d-enter]:not([data-in]), [data-d-enter][data-in] { opacity: 1; transform: none; animation: none; }
   [data-d-step], [data-d-step]::before, [data-d-step] [data-d-step-body] { transition: none !important; }
-  .d-steps__stage .d-win { animation: none; }
+  .d-steps__screen { transition: none; }
 }

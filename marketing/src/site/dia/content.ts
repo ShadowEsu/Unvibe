@@ -3,7 +3,7 @@
  * rev 3, Preston's OK 6 Nov), in one place so Security reads one file. Sources: Security file 20261106-0936 (the 0936
  * GO list, the 17:46Z demo caption, the 17:50Z strings with MUST-D9 and SHOULD-D10, the 18:21Z first-look GO with
  * MUST-D11, the 18:51Z PLAN §5 GO with MUST-D12/D13) and the live copy the plan reuses word for word (pricingCopy,
- * WhatLeaves, faq.ts, productFacts, the code-explainer pages). The demo's own strings live in UnvibeDemo.tsx.
+ * WhatLeaves, faq.ts, productFacts, the code-explainer pages).
  */
 import { KEPT } from "@/components/paper/WhatLeaves";
 import { CAPTURE_DIR, KEY_CHECK_SHOT, SHOT_CAPTION } from "@/data/homeGallery";
@@ -24,6 +24,8 @@ export const D_NAV_CTA = "Download free";
 
 /** The release the hero's Today capture comes from: its caption names it, and the picture must match it (Design §3). */
 const HERO_CAPTURE_VERSION = "0.1.54";
+/** Where the real stills of that release live (the hero's and the Steps stills). */
+const REAL_DIR = `/unvibe/real/${HERO_CAPTURE_VERSION.replace(/\./g, "")}`;
 
 export const D_HERO = {
   /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
@@ -39,7 +41,7 @@ export const D_HERO = {
    *  off (agents/unvibe-qa/2026-11-19-thu1119/hero-today/, sha256 38bd755f…; Security S-2 + C-4 PASS), used whole: AVIF
    *  and WebP at these widths, resized only. 1040 CSS px wide on desktop, the column at 390. */
   shot: {
-    base: `/unvibe/real/${HERO_CAPTURE_VERSION.replace(/\./g, "")}/today-light`,
+    base: `${REAL_DIR}/today-light`,
     widths: [720, 1040, 1560, 2080],
     sizes: "(max-width: 820px) calc(100vw - 32px), 1040px",
     width: 2360,
@@ -70,8 +72,17 @@ export const D_STATEMENT = {
 } as const;
 
 export const D_STEPS = {
-  /** The Steps stage's window is the HTML recreation of the 0.1.49 panel (it plays the three steps); its caption says so. */
-  caption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
+  /** Design S-1 r2 SHOULD 2 and Design's gate of QA's run 44840827384 (2 hosted calls BOSS approved): steps 1 and 2 show
+   *  the real 0.1.54 stills (d67831ea, 0f6b098e), unedited, AVIF and WebP resized only. Still 1 is VS Code at 200 % zoom
+   *  taken at 1x, shown at half its pixel width like a 2x still; still 2 is 2x of the 320 × 560 panel. */
+  caption: `Real screen, sample code · Unvibe ${HERO_CAPTURE_VERSION}`,
+  shots: [
+    { base: `${REAL_DIR}/steps-select`, widths: [456, 912], width: 912, height: 544, alt: "VS Code with a sample debounce function selected, all seven lines." },
+    { base: `${REAL_DIR}/steps-explain`, widths: [320, 640], width: 640, height: 1120, alt: "Unvibe's panel at Beginner depth explaining the debounce function, with the Question it buttons under the answer." },
+  ],
+  /** Step 3 keeps the HTML recreation and its own caption, never "Real screen" (Design: 0.1.54's Test me prints raw
+   *  backticks, so still 3 waits for the app fix and a re-shoot). */
+  recreatedCaption: "Unvibe 0.1.49 panel, recreated in HTML · sample code",
   label: "(How it works)",
   h2: { before: "From selection to", em: "understanding", after: ", in three steps." } as Title,
   items: [
