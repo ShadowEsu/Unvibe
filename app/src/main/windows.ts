@@ -517,22 +517,55 @@ function sendAway(win: BrowserWindow, away: boolean): void {
   if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send('panel:away', away);
 }
 
-/** The click-away rule from any trigger: the panel's own blur, or (macOS) another app coming to the front. */
+/** Whether the limit pause, a dialog or the Accessibility guide holds the panel up (it neither fades nor hides). */
+function panelHeld(): boolean {
+  return limitPauseActive || panelDialogs > 0 || grantFlowOpen;
+}
+
+/** The click-away rule on the panel's own blur. */
 function leavePanel(win: BrowserWindow): void {
   if (win.isDestroyed()) return;
-  const action = clickAwayOnBlur(settings().all().inactiveBehavior, limitPauseActive || panelDialogs > 0 || grantFlowOpen);
+  const action = clickAwayOnBlur(settings().all().inactiveBehavior, panelHeld());
   if (action === 'hide') win.hide();
   else if (action === 'fade') sendAway(win, true);
 }
 
 /**
- * Whether an NSWorkspace activation note names another app. Electron passes the NSRunningApplication as its
- * description, "<NSRunningApplication: 0x… (com.microsoft.VSCode - 812) LSASN:…>"; Unvibe's own entry carries its
- * main process id. A note it can't read counts as another app: Unvibe's own activation brings the panel back anyway.
+ * The pid in an NSWorkspace activation note, or null when it can't be read. Electron passes the NSRunningApplication
+ * under NSWorkspaceApplicationKey as its description (undocumented), "<NSRunningApplication: 0x… (com.microsoft.VSCode
+ * - 812) LSASN:…>"; Unvibe's own entry carries its main process id.
  */
-export function otherAppActivated(info: Record<string, unknown>, ownPid: number): boolean {
-  const pids = Object.values(info).flatMap((value) => (typeof value === 'string' ? [...value.matchAll(/ - (\d+)\)/g)].map((m) => Number(m[1])) : []));
-  return !pids.includes(ownPid);
+export function activatedPid(info: Record<string, unknown>): number | null {
+  const app = info.NSWorkspaceApplicationKey;
+  if (typeof app !== 'string') return null;
+  const match = / - (\d+)\)/.exec(app);
+  return match ? Number(match[1]) : null;
+}
+
+/** What macOS told us: Unvibe resigned, some app became active (its note), or Unvibe became active again. */
+export type AppSwitch = { kind: 'resigned' } | { kind: 'activated'; info: Record<string, unknown> } | { kind: 'returned' };
+
+/**
+ * The panel's answer to an app switch: leaving runs the click-away rule (fade, hide, or nothing while held) when the
+ * panel shows; another app's note counts only when it is readable and not Unvibe's own (with Hide, a misread of
+ * Unvibe's own activation would hide the panel the user just clicked: lead S1 on #378); coming back with the panel as
+ * the key window brings it back.
+ */
+export function appSwitchAction(
+  event: AppSwitch,
+  ownPid: number,
+  panel: { visible: boolean; focused: boolean },
+  behavior: InactiveBehavior,
+  held: boolean,
+): 'fade' | 'hide' | 'back' | 'none' {
+  if (!panel.visible) return 'none';
+  if (event.kind === 'returned') return panel.focused ? 'back' : 'none';
+  if (event.kind === 'activated') {
+    const pid = activatedPid(event.info);
+    if (pid === null || pid === ownPid) return 'none';
+  }
+  const action = clickAwayOnBlur(behavior, held);
+  return action === 'stay' ? 'none' : action;
 }
 
 /**
@@ -544,16 +577,17 @@ export function otherAppActivated(info: Record<string, unknown>, ownPid: number)
  */
 export function watchAppSwitches(): void {
   if (process.platform !== 'darwin') return;
-  const away = () => {
-    if (panelWin && !panelWin.isDestroyed() && panelWin.isVisible()) leavePanel(panelWin);
+  const run = (event: AppSwitch) => {
+    const win = panelWin;
+    if (!win || win.isDestroyed()) return;
+    const action = appSwitchAction(event, process.pid, { visible: win.isVisible(), focused: win.isFocused() }, settings().all().inactiveBehavior, panelHeld());
+    if (action === 'hide') win.hide();
+    else if (action === 'fade') sendAway(win, true);
+    else if (action === 'back') sendAway(win, false);
   };
-  app.on('did-resign-active', away);
-  systemPreferences.subscribeWorkspaceNotification('NSWorkspaceDidActivateApplicationNotification', (_event, info) => {
-    if (otherAppActivated(info, process.pid)) away();
-  });
-  app.on('did-become-active', () => {
-    if (panelWin && !panelWin.isDestroyed() && panelWin.isVisible() && panelWin.isFocused()) sendAway(panelWin, false);
-  });
+  app.on('did-resign-active', () => run({ kind: 'resigned' }));
+  systemPreferences.subscribeWorkspaceNotification('NSWorkspaceDidActivateApplicationNotification', (_event, info) => run({ kind: 'activated', info }));
+  app.on('did-become-active', () => run({ kind: 'returned' }));
 }
 
 function buildWidgetWindow(bounds: Electron.Rectangle): BrowserWindow {

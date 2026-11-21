@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FADE_IN_MS, FADE_OPACITY, FADE_OUT_MS, NOT_FADED, fadeStyle, isFaded, nextFade } from '../src/renderer/widget/clickAway';
 import { panelThemeMigration } from '../src/renderer/widget/themeMigration';
-import { clickAwayOnBlur, otherAppActivated } from '../src/main/windows';
+import { appSwitchAction, clickAwayOnBlur } from '../src/main/windows';
 
 test('Fade drops the pane to 22 % over 200 ms when focus leaves, and back to 100 % over 150 ms', () => {
   const away = nextFade(NOT_FADED, 'away');
@@ -42,17 +42,34 @@ test('main fades or hides on blur as Settings says, and does neither while the l
   assert.equal(clickAwayOnBlur('fade', true), 'stay');
 });
 
-test('macOS: another app coming to the front counts as leaving the panel; Unvibe coming to the front does not', () => {
-  const note = (desc: string) => ({ NSWorkspaceApplicationKey: desc });
-  const vscode = '<NSRunningApplication: 0x600002f1c000 (com.microsoft.VSCode - 812) LSASN:{hi=0x0;lo=0x1a01a}>';
-  const unvibe = '<NSRunningApplication: 0x600002f1c0a0 (com.unvibe.app - 4321) LSASN:{hi=0x0;lo=0x2b02b}>';
-  assert.equal(otherAppActivated(note(vscode), 4321), true);
-  assert.equal(otherAppActivated(note(unvibe), 4321), false);
-  // An id that only starts with Unvibe's is still another app.
-  assert.equal(otherAppActivated(note(vscode.replace('812', '43210')), 4321), true);
-  // A note it can't read counts as another app (Unvibe's own activation brings the panel back).
-  assert.equal(otherAppActivated({}, 4321), true);
-  assert.equal(otherAppActivated({ NSWorkspaceApplicationKey: 7 }, 4321), true);
+test('macOS app switches: another app coming to the front runs the click-away rule; Unvibe itself, or a note it cannot read, does nothing', () => {
+  const own = 4321;
+  const shown = { visible: true, focused: false };
+  const note = (desc: unknown) => ({ kind: 'activated' as const, info: { NSWorkspaceApplicationKey: desc } });
+  const vscode = note('<NSRunningApplication: 0x600002f1c000 (com.microsoft.VSCode - 812) LSASN:{hi=0x0;lo=0x1a01a}>');
+  const unvibe = note('<NSRunningApplication: 0x600002f1c0a0 (com.unvibe.app - 4321) LSASN:{hi=0x0;lo=0x2b02b}>');
+  assert.equal(appSwitchAction(vscode, own, shown, 'fade', false), 'fade');
+  assert.equal(appSwitchAction(vscode, own, shown, 'hide', false), 'hide');
+  assert.equal(appSwitchAction(unvibe, own, shown, 'hide', false), 'none');
+  // A pid that only starts with Unvibe's is another app.
+  assert.equal(appSwitchAction(note('<NSRunningApplication: 0x1 (com.microsoft.VSCode - 43210) LSASN:{}>'), own, shown, 'fade', false), 'fade');
+  // Unreadable: with Hide, a misread of Unvibe's own activation would hide the panel just clicked (lead S1 on #378).
+  for (const unreadable of [note(7), note('<NSRunningApplication: 0x1>'), { kind: 'activated' as const, info: {} }, { kind: 'activated' as const, info: { other: '(x - 812)' } }]) {
+    assert.equal(appSwitchAction(unreadable, own, shown, 'hide', false), 'none');
+  }
+});
+
+test('macOS app switches: Unvibe resigning fades or hides a shown panel, never while held, and coming back restores it only when it is key', () => {
+  const own = 4321;
+  const resigned = { kind: 'resigned' as const };
+  const returned = { kind: 'returned' as const };
+  assert.equal(appSwitchAction(resigned, own, { visible: true, focused: true }, 'fade', false), 'fade');
+  assert.equal(appSwitchAction(resigned, own, { visible: true, focused: false }, 'hide', false), 'hide');
+  assert.equal(appSwitchAction(resigned, own, { visible: true, focused: true }, 'hide', true), 'none', 'the limit pause or a dialog holds it');
+  assert.equal(appSwitchAction(resigned, own, { visible: false, focused: false }, 'fade', false), 'none', 'a hidden panel is left alone');
+  assert.equal(appSwitchAction(returned, own, { visible: true, focused: true }, 'fade', false), 'back');
+  assert.equal(appSwitchAction(returned, own, { visible: true, focused: false }, 'fade', false), 'none', 'the companion came forward, not the panel');
+  assert.equal(appSwitchAction(returned, own, { visible: false, focused: true }, 'fade', false), 'none');
 });
 
 test('a dark panel moon becomes Theme: Dark once, only when Theme was never chosen, and the old key goes', () => {
