@@ -1040,7 +1040,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150', 'd5-profile-a', 'd5-profile-b', 'd5-profile-c')
+          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150', 'd5-profile-a', 'd5-profile-b', 'd5-profile-f', 'd5-profile-c')
           # rc0155 link: the probe's per-way profiles, and the app's default profile it seeded (Combine keeps a rooted path).
           # rc0155 ai-windows: the default profile too, in case a second Unvibe started there (run 44658289654).
           if ($env:RC0155 -eq 'link') { $names += @('rc0155-link54-profile-A', 'rc0155-link54-profile-B', 'rc0155-link-profile-A', 'rc0155-link-profile-B', (Join-Path $env:APPDATA 'Unvibe')) }
