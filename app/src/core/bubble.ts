@@ -287,16 +287,17 @@ export function previewTitle(code: string): string {
 }
 
 /**
- * The two Settings controls, verbatim: the button's help from Security's S-1 on #366 (SHOULD-366b, editors only, no
- * text read before a press), Quick look's from file 1235. Bump the version when either text changes.
+ * The two Settings controls, verbatim: the button's help from Security's S-2 on #366/#367 (the same clause on /privacy,
+ * /beta and the FAQ: everything the helper watches, and no text read before a press), Quick look's from file 1235.
+ * Bump the version when either text changes.
  */
-export const BUBBLE_COPY_VERSION = '2026-11-19';
+export const BUBBLE_COPY_VERSION = '2026-11-20';
 
 export function bubbleCopy(shortcut: string): { ghost: { label: string; help: string }; preview: { label: string; help: string } } {
   return {
     ghost: {
       label: 'Show the Unvibe button when I select code',
-      help: `Off until you turn it on. When it's on, Unvibe watches your mouse clicks, on your computer, to notice when you select code in a code editor, and shows a small button. It reads nothing until you press it. Nothing is sent until you press the button, and pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
+      help: `Off until you turn it on. When it's on, Unvibe watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows a small button. It reads no text and sends nothing until you press it, and pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
     },
     preview: {
       label: 'Quick look when I press the button',
