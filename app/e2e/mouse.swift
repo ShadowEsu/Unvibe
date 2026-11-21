@@ -16,6 +16,8 @@
 //                                     release; prints "rest: … gap=<ms> at40: …" (the cursor at rest and 40 ms after
 //                                     the press, the ms between the move and the press), then the release time
 //   mouse move <x> <y>                the pointer to x,y (a real move event), no button
+//   mouse activations <seconds>       for that long, one line per NSWorkspace didActivateApplication note:
+//                                     "<userInfo key>\t<value's description>" (#378 reads the pid in "(bundle id - pid)")
 import AppKit
 import Carbon
 import CoreGraphics
@@ -176,6 +178,14 @@ case "move" where a.count > 3:
   let p = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   CGWarpMouseCursorPosition(p)
   post(.mouseMoved, p)
+case "activations" where a.count > 2:
+  // NSWorkspace's own notification center needs a run loop; each note's userInfo printed as it is (lead, #378).
+  let center = NSWorkspace.shared.notificationCenter
+  let token = center.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: nil) { note in
+    for (key, value) in note.userInfo ?? [:] { print("\(key.base)\t\(value)"); fflush(stdout) }
+  }
+  RunLoop.main.run(until: Date(timeIntervalSinceNow: Double(a[2]) ?? 5))
+  center.removeObserver(token)
 default:
   exit(2)
 }

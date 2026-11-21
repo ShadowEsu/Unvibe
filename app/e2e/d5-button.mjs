@@ -46,11 +46,18 @@
 // Launch B (Windows): --force-device-scale-factor=1.5 (Chromium's scale on the runner's 100 % display; the Windows
 //   setting needs a sign-out): a real drag shows the button, with see-through corners (PASS/FAIL); its size and place
 //   (GetWindowRect and the page's) are a NOTE, since a forced scale is not a Windows display scale.
-// Launch F (Mac, after A, a fresh profile and process; lead 2026-11-20, polish backlog P4): the fade first. Nothing
-//   clicks an Unvibe window in this launch (unvibe-app suspects the earlier synthesized clicks on the button,
-//   electron#53889, for run 7's panel that never faded): ⌃U from VS Code opens the panel on the agreement (no
-//   agreement: nothing is read), then VS Code comes to the front (a click in it, then activated by name), and the
-//   panel fades below 0.5 within 3 s. Its install id is the run's D5_ID, flagged with launch A's profile.
+// Launch F (Mac, after A, a fresh profile and process; #378 the Mac panel fade, lead's options 1 + 3). ⌃U from VS Code
+//   opens the panel on the agreement (no agreement: nothing is read); then, in order:
+//   F untouched: nothing has clicked an Unvibe window; a click into VS Code (the app in front all along, also
+//      activated by name) leaves the panel as it is: it STAYS at or above 0.5 for 3 s (option 3, documented);
+//   F app switch: another app (Finder) activated by name fades the panel below 0.5 within 3 s (ms given);
+//   F touched: the panel's header clicked (the panel back, its focus read), then a click into VS Code and VS Code
+//      activated: it fades below 0.5 within 3 s (ms given; unvibe-app expects about 300 ms). NOT TESTABLE if the
+//      header click didn't give the panel focus;
+//   F hide: with "Hide" as the click-away setting, a click on the panel's header keeps it on screen (1 s later, by
+//      the window list), and a click into VS Code with VS Code activated takes it off the screen within 3 s.
+//   Its install id is the run's D5_ID, flagged with launch A's profile. d5=fade runs launch F only (no button needed,
+//   so a build without #366 runs it).
 // Launch C (Mac and Windows), the API host blocked in the hosts file for the whole launch (no byte reaches the server;
 //   the file is put back byte for byte and checked), the agreement given in the run's own profile:
 //   D5-a first (Security's MUST): the runner's own request gets no answer, the resolver gives only 0.0.0.0 / :: or no
@@ -90,9 +97,13 @@ const code = process.env.VSCODE; // Mac: the `code` CLI; Windows: Code.exe
 const codeData = process.env.VSCODE_DATA ?? path.join(TMP, 'd5-vscode');
 const base = process.env.D5_PROFILE ?? mkdtempSync(path.join(tmpdir(), 'unvibe-d5-'));
 const installId = process.env.D5_ID ?? `qa-d5-local-${Date.now()}`;
+// 'rows' (the default): launches A, F and C on the Mac, A, B and C on Windows; 'fade': launch F only (Mac).
+const D5 = process.env.D5 || 'rows';
+if (D5 !== 'rows' && D5 !== 'fade') throw new Error(`D5 must be rows or fade, not ${D5}`);
 if (!exe) throw new Error('UNVIBE_EXE is not set');
 if (!code) throw new Error('VSCODE is not set');
 if (os !== 'mac' && os !== 'windows') throw new Error('the Unvibe button exists on a Mac and on Windows only');
+if (D5 === 'fade' && os !== 'mac') throw new Error('D5=fade (launch F, the Mac panel fade) runs on a Mac only');
 if (process.env.QA_AI_OK === '1') throw new Error('d5-button.mjs makes no hosted-AI call: run it with ai off');
 mkdirSync(out, { recursive: true });
 mkdirSync(netDir, { recursive: true });
@@ -1288,14 +1299,14 @@ async function runB(app, companion) {
   await waitHidden(app, 2000);
 }
 
-// --- Launch F (Mac): the fade first, before any click on an Unvibe window --------------------------------------------
-async function runF(app) {
+// --- Launch F (Mac): #378, the panel fade: untouched stays, an app switch fades, touched fades, and "Hide" ------------
+async function runF(app, companion) {
   const L = await vsLines();
   pointer.click(L.lines[2].left + 30, L.lines[2].y, 2); // VS Code in front, a word selected (the button is off here)
   await sleep(500);
   keys.unvibe();
   const panel = await waitFor(async () => panelPage(app), 8000, 100);
-  if (!panel) { log(false, 'F mac: the fade first', 'no panel 8 s after ⌃U'); desktop('f-no-panel'); return; }
+  if (!panel) { log(false, 'F mac: the panel fade', 'no panel 8 s after ⌃U'); desktop('f-no-panel'); return; }
   let view = '';
   await waitFor(async () => { view = await panel.evaluate(() => [...(document.querySelector('.ob')?.classList ?? [])].filter((c) => c.startsWith('ob--')).join(' ')).catch(() => ''); return /aiConsent/.test(view); }, 8000);
   const opacity = () => panel.evaluate(() => Number(getComputedStyle(document.querySelector('.ob')).opacity)).catch(() => null);
@@ -1304,14 +1315,77 @@ async function runF(app) {
   // A click in VS Code off the panel (it opens near the pointer): a line above or below it, else beside it.
   const off = (l) => l.y < P.y - 20 || l.y > P.y + P.h + 20 || l.left + 30 < P.x - 20 || l.left + 30 > P.x + P.w + 20;
   const away = L.lines.find(off) ?? L.lines[0];
-  pointer.click(away.left + 30, away.y);
+  const where = `VS Code clicked at (${Math.round(away.left + 30)}, ${Math.round(away.y)})${off(away) ? '' : ' (no line off the panel: inside it)'} and activated by name`;
+  const intoVsCode = () => { pointer.click(away.left + 30, away.y); osa('tell application "Visual Studio Code" to activate'); };
+  /** The opacity below 0.5 within `ms`, and how long after `t0` it got there; null if it didn't. */
+  const fadeWithin = async (t0, ms) => { const o = await waitFor(async () => { const v = await opacity(); return v !== null && v < 0.5 ? v : null; }, ms, 50); return o === null ? null : { o, ms: Date.now() - t0 }; };
+  /** The lowest opacity read over `ms`. */
+  const lowestOver = async (ms) => { let low = Infinity; const end = Date.now() + ms; while (Date.now() < end) { const v = await opacity(); if (v !== null) low = Math.min(low, v); await sleep(100); } return low; };
+  // The NSWorkspace activation notes while launch F runs (lead, #378 reads the pid in "(bundle id - pid)"): mouse.swift
+  // prints each note's userInfo as macOS gives it; the report keeps the lines and whether Unvibe's main pid is named.
+  const tF = Date.now();
+  const acts = [];
+  const actChild = spawn(process.env.MOUSE, ['activations', '60'], { stdio: ['ignore', 'pipe', 'ignore'] });
+  actChild.on('error', () => {});
+  createInterface({ input: actChild.stdout }).on('line', (l) => acts.push({ t: Date.now(), l: l.slice(0, 200) }));
+  const actNote = () => {
+    actChild.kill();
+    note('F mac: NSWorkspace activation notes during launch F (mouse.swift activations)',
+      `${acts.length ? acts.map((x) => `+${x.t - tF} ms ${x.l.replace(/\t/g, ' = ')}`).join('; ') : 'none'}; Unvibe's main pid ${app.process.pid} ${acts.some((x) => x.l.includes(` - ${app.process.pid})`)) ? 'is named in a note' : 'is in no note'}`);
+  };
+  await sleep(500);
+
+  // F untouched (option 3): VS Code was in front all along, so nothing reaches Unvibe; the panel stays.
+  intoVsCode();
+  const low = await lowestOver(3000);
+  desktop('f-untouched');
+  log(low >= 0.5, 'F mac: untouched (⌃U, no click on any Unvibe window), a click into VS Code, the app in front all along, leaves the panel as it is (option 3: it stays)',
+    `panel view "${view}", opacity ${before === null ? '?' : r1(before)}; the lowest over 3 s ${low === Infinity ? '?' : r1(low)}; ${where}; AI POSTs ${aiPosts('f').length}`);
+
+  // F app switch: another app comes to the front.
+  const tSwitch = Date.now();
+  osa('tell application "Finder" to activate');
+  const sw = await fadeWithin(tSwitch, 3000);
+  desktop('f-app-switch');
+  log(sw !== null, 'F mac: another app coming to the front (Finder, activated by name) fades the panel',
+    sw ? `opacity ${r1(sw.o)}, ${sw.ms} ms after the activation call` : `opacity ${r1(await opacity())}: stayed at or above 0.5 for 3 s`);
   osa('tell application "Visual Studio Code" to activate');
-  const faded = await waitFor(async () => { const o = await opacity(); return o !== null && o < 0.5 ? o : null; }, 3000, 100);
-  desktop('f-fade-first');
-  log(faded !== null, 'F mac: with no click on any Unvibe window in this launch, the panel ⌃U opened fades once VS Code is in front (the fade first)',
-    `panel view "${view}", opacity ${before === null ? '?' : r1(before)} → ${faded !== null ? r1(faded) : 'stayed at or above 0.5 for 3 s'}; VS Code clicked at (${Math.round(away.left + 30)}, ${Math.round(away.y)})${off(away) ? '' : ' (no line off the panel: inside it)'} and activated by name; AI POSTs ${aiPosts('f').length}`);
-  await panel.locator('.consent-form__actions button.ghost').click({ timeout: 5000 }).catch(() => {});
   await sleep(800);
+
+  // F touched: a click on the panel's header (it comes back), then VS Code clicked and activated.
+  const head = await panel.evaluate(() => { const h = document.querySelector('.ob-head')?.getBoundingClientRect(); return h ? { x: h.left + h.width / 2, y: h.top + h.height / 2 } : null; }).catch(() => null);
+  if (!head) { log(false, 'F mac: touched, then VS Code', 'the panel has no header (.ob-head) to click'); actNote(); return; }
+  pointer.click(P.x + head.x, P.y + head.y);
+  await sleep(600);
+  const backTo = await opacity();
+  const tTouched = Date.now();
+  intoVsCode();
+  const tf = await fadeWithin(tTouched, 3000);
+  desktop('f-touched');
+  log(tf !== null, 'F mac: touched (a click on the panel\'s header), then a click into VS Code with VS Code activated, fades the panel (unvibe-app: about 300 ms)',
+    `opacity after the header click ${r1(backTo)}; then ${where}: ${tf ? `opacity ${r1(tf.o)}, ${tf.ms} ms after the click call` : `opacity ${r1(await opacity())}: stayed at or above 0.5 for 3 s`}`);
+
+  // F hide: "Hide" as the click-away setting; the panel's own window found in the window list by its frame.
+  await companion.evaluate(() => window.unvibe.setSettings({ inactiveBehavior: 'hide' }));
+  await sleep(800);
+  const pids = new Set(processTree(app.process.pid).map((p) => p.pid));
+  const onScreen = () => screenWindows().some((w) => pids.has(w.pid) && near(w.x, P.x, 3) && near(w.y, P.y, 3) && near(w.w, P.w, 3) && near(w.h, P.h, 3));
+  const shown0 = onScreen();
+  pointer.click(P.x + head.x, P.y + head.y);
+  await sleep(1000);
+  const shown1 = onScreen();
+  log(shown0 && shown1, 'F mac: with "Hide" set, a click on the panel itself keeps it on the screen',
+    `the panel's window on the screen before the click ${shown0}, 1 s after it ${shown1}; opacity ${r1(await opacity())}`);
+  const tHide = Date.now();
+  intoVsCode();
+  const gone = await waitFor(async () => (onScreen() ? null : Date.now()), 3000, 100);
+  desktop('f-hide');
+  log(Boolean(gone), 'F mac: with "Hide" set, a click into VS Code with VS Code activated takes the panel off the screen',
+    gone ? `off the screen ${gone - tHide} ms after the click call` : 'still on the screen 3 s later');
+  await companion.evaluate(() => window.unvibe.setSettings({ inactiveBehavior: 'fade' })).catch(() => {});
+  await panel.locator('.consent-form__actions button.ghost').click({ timeout: 3000 }).catch(() => {});
+  await sleep(800);
+  actNote();
 }
 
 // --- Launch C: behind the hosts block, with the agreement ---------------------------------------------------------------
@@ -1493,7 +1567,7 @@ if (os === 'windows') {
 }
 vsSettings('light');
 let failedLaunch = false;
-const plan = os === 'windows' ? ['a', 'b', 'c'] : ['a', 'f', 'c'];
+const plan = os === 'windows' ? ['a', 'b', 'c'] : D5 === 'fade' ? ['f'] : ['a', 'f', 'c'];
 for (const tag of plan) {
   let app = null;
   try {
@@ -1514,7 +1588,7 @@ for (const tag of plan) {
     if ((tag === 'a' || tag === 'f') && !vs) await openVsCode();
     if (tag === 'a') await runA(app, l.companion, os === 'mac' ? 'mac' : '100');
     if (tag === 'b') await runB(app, l.companion);
-    if (tag === 'f') await runF(app);
+    if (tag === 'f') await runF(app, l.companion);
     if (tag === 'c') await runC(app, l.companion);
   } catch (e) {
     failedLaunch = true;
