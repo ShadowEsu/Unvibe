@@ -602,7 +602,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
   const usage = await cachedAppUsage();
   if (usage.remaining <= 0) {
-    pulseBar({ phase: 'error', label: 'Limit reached' });
+    pulseBar({ phase: 'error', label: 'Limit' });
     showBar(bar);
     const win = getOrCreateWidget();
     raiseLimitPause(win);
@@ -646,9 +646,9 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
   const needsGrant = captureFailed && isMac && !options.preferClipboard && !accessibilityGranted(false);
   // ⌃U with nothing newly selected brings a faded or hidden panel back as it was (Design ruling e), but only after a
   // real read: before the agreement the panel opens on it instead (restoresOpenPanel). Decided before the failure
-  // signals, so restoring doesn't flash "Select code first" or the Windows copy notice (review SHOULD).
+  // signals, so restoring doesn't flash "Select code" or the Windows copy notice (review SHOULD).
   const restoring = restoresOpenPanel({ code, agreed, needsGrant, panelOpen: Boolean(currentWidget()), panelHasCode: Boolean(panelSession?.code) });
-  if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code first' });
+  if (captureFailed && !restoring) pulseBar({ phase: 'error', label: 'Select code' });
   captureBlock = nextCaptureBlock(captureBlock, options, capture);
   // A clipboard explain (onboarding's button or the IDE link) with nothing copied: say so,
   // instead of leaving the panel to guess why.
