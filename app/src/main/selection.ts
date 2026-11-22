@@ -318,7 +318,12 @@ const MAC_AUTO_READ = [
   "  se.keyCode(8, { using: 'command down' });",
   '  var end = Date.now() + 1300;',
   '  while (Date.now() < end) {',
-  "    if (pb.changeCount !== before) { emit('copied ' + hid().join(',')); return ''; }",
+  // The copy has landed, so a line must go out or the clipboard isn't restored. A failed sample sends a zero mark, which
+  // MAC_AUTO_INPUT always reads as input: the text is read, the clipboard goes back, and the result is dropped.
+  '    if (pb.changeCount !== before) {',
+  "      var mark; try { mark = hid().join(','); } catch (e) { mark = '0,0,0'; }",
+  "      emit('copied ' + mark); return '';",
+  '    }',
   '    delay(0.01);',
   '  }',
   "  emit('none ' + h.join(','));",
@@ -328,12 +333,14 @@ const MAC_AUTO_READ = [
 
 /**
  * After the restore: 'input' if any hardware input came after the mark's sample. With no new input the idle time grew by
- * exactly the time between the two samples, which is at least (this sample's start - that sample's end).
+ * exactly the time between the two samples, which is at least (this sample's start - that sample's end). A mark that
+ * isn't 3 numbers reads as input.
  */
 const MAC_AUTO_INPUT = [
   MAC_AUTO_HID,
   'function run(argv) {',
   "  var m = String(argv[0]).split(',').map(Number);",
+  "  if (m.length !== 3 || m.some(isNaN)) return 'input';",
   '  var h = hid();',
   "  return h[2] < m[2] + (h[0] - m[1]) ? 'input' : 'idle';",
   '}',
