@@ -99,8 +99,8 @@
 //   X1 and X2 also fail a read the key met that was kept. Windows: a start more than 50 ms after the key. Mac: an
 //      input check that began after the counted key and said idle; an osascript wrapper first on the app's PATH logs
 //      when each read and input check ran and what they said (after an idle check the app asks osascript for the
-//      front app, so a start can trail a check the key followed by a few hundred ms). The Mac rows at 700-1500 ms are
-//      Security's X9c (MUST-A5).
+//      front app, so a start can trail a check the key followed by a few hundred ms). Each read's mark prints the
+//      press counts Unvibe's own read sampled (key-downs, left-downs, right-downs).
 //   A row whose file comes out wrong logs the drag against the line ends and the editor's edge, and takes a still.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
@@ -116,6 +116,9 @@
 //      soon as the keystroke returns and 300 ms later), and the harness's CGEvent ⌘C adds 1 (the count is live).
 //   X9a2 (the harness's model): a System Events Shift tap resets HIDIdleTime and adds no key-down (a CGEvent ⌘C's
 //      HIDIdleTime is printed too). NOT TESTABLE when the tap doesn't reset it; X1 / X2 then judge only keys after the copy.
+//   X9c after both editors (Security, c9acb715): across the launch's reads that copied, the key-down and left-down
+//      counts Unvibe's own read sampled rise, between consecutive reads, by at least the CGEvent keys and presses the
+//      harness posted wholly between them, and neither stays put or at 0 for the launch (x9c-counts.txt lists each).
 //   X9b after them: Unvibe had no Input Monitoring grant (a runner row for it is removed first), and the reads leave
 //      no Input Monitoring row for Unvibe or osascript (system and user TCC databases), no prompt window on screen,
 //      and no ListenEvent line naming either in the TCC log since the launch began.
@@ -345,6 +348,14 @@ function onScreen(...pts) {
   if (!SCREEN) return;
   for (const [x, y] of pts) if (!(x >= 0 && y >= 0 && x < SCREEN.w && y < SCREEN.h)) throw new Error(`harness: (${Math.round(x)}, ${Math.round(y)}) is off the ${SCREEN.w}×${SCREEN.h} screen; nothing pressed`);
 }
+/** X9c (Mac): every key-down and left mouse-down the harness posted through mouse.swift, each with the span it fell in
+ * (a, b: ms since 1970), so the press counts printed by Unvibe's own reads can be held against them. */
+const sentInput = [];
+const sent = (a, b, keys, lefts) => { if (keys || lefts) sentInput.push({ a, b, keys, lefts }); };
+/** The HID key-downs a key action posts: ⌘V, ⌘C and ⌘Tab 1 each (the ⌘ itself counts none: X9a's CGEvent ⌘C is +1),
+ * type:<ascii> one per character; System Events keys none (X9a: +0), so an rk- key counts its CGEvent half. */
+const keyDowns = (action) => action.startsWith('rk-') ? keyDowns(action.slice(3))
+  : ['paste', 'copy', 'switch'].includes(action) ? 1 : action.startsWith('type:') ? action.length - 5 : 0;
 const pointer = {
   /** What the harness itself read before the last press (Windows: the global cursor is the I-beam, 1 or 0). */
   last: '',
@@ -359,7 +370,9 @@ const pointer = {
       ? execFileSync(process.env.MOUSE, ['drag', S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
       : winPtr('drag', S(x1), S(y1), S(x2), S(y2), '1');
     pointer.last = printed.split(/\s+/).slice(0, -1).join(' ');
-    return Number(printed.split(/\s+/).pop());
+    const up = Number(printed.split(/\s+/).pop());
+    sent(pointer.t0, up, 0, 1);
+    return up;
   },
   /** unvibe-app's race: the pointer rests on (x0, y0), then moves to (x1, y1) and presses at once (the gap is printed),
    * drags to (x2, y2) and releases. Returns { up, said } (Windows: the I-beam at rest and 40 ms after the press). */
@@ -370,7 +383,9 @@ const pointer = {
       ? execFileSync(process.env.MOUSE, ['race', S(x0), S(y0), S(x1), S(y1), S(x2), S(y2)], { encoding: 'utf8' }).trim()
       : winPtr('race', S(x0), S(y0), S(x1), S(y1), '1', S(x2), S(y2));
     const said = printed.split(/\s+/).slice(0, -1).join(' ');
-    return { up: Number(printed.split(/\s+/).pop()), said, gap: Number(/gap=([\d.]+)/.exec(said)?.[1] ?? NaN) };
+    const up = Number(printed.split(/\s+/).pop());
+    sent(pointer.t0, up, 0, 1);
+    return { up, said, gap: Number(/gap=([\d.]+)/.exec(said)?.[1] ?? NaN) };
   },
   click(x, y, count = 1) {
     onScreen([x, y]);
@@ -378,6 +393,7 @@ const pointer = {
     pointer.last = os === 'mac'
       ? execFileSync(process.env.MOUSE, ['click', S(x), S(y), String(count)], { encoding: 'utf8' }).trim()
       : winPtr('click', S(x), S(y), '0', '0', String(count));
+    sent(pointer.t0, Date.now(), 0, Math.max(1, count));
   },
   move(x, y) {
     onScreen([x, y]);
@@ -470,10 +486,13 @@ const readClipboard = () => (os === 'mac' ? execFileSync('pbpaste', { encoding: 
 // --- Auto-mode rows (#384): real keys, the app in front, the clipboard's other formats, its changes ------------------
 /** One key action now as real key events (paste, copy, switch = Cmd/Alt+Tab, type:<ascii>); returns when it went. */
 function keyNow(action) {
+  const a = Date.now();
   const printed = os === 'mac'
     ? execFileSync(process.env.MOUSE, ['key', action], { encoding: 'utf8' }).trim()
     : winPtr('key', '0', '0', '0', '0', '0', '0', '0', action);
-  return Number(printed.split(/\s+/).pop());
+  const t = Number(printed.split(/\s+/).pop());
+  sent(a, t, keyDowns(action), 0);
+  return t;
 }
 /** A drag, then the key action `ms` after its release, timed inside one process; returns { up, key, done? } (ms since
  * 1970; done: when the key action ended, Mac only). */
@@ -486,7 +505,10 @@ function dragKey(x1, y1, x2, y2, ms, action) {
   const m = /up=(\d+) key=(\d+)(?: poke=(\d+))?(?: done=(\d+))?/.exec(printed);
   if (!m) throw new Error(`harness: dragkey printed "${printed.slice(-160)}"`);
   pointer.last = printed.split(/\r?\n/)[0];
-  return { up: Number(m[1]), key: Number(m[2]), poke: m[3] ? Number(m[3]) : null, done: m[4] ? Number(m[4]) : null };
+  const r = { up: Number(m[1]), key: Number(m[2]), poke: m[3] ? Number(m[3]) : null, done: m[4] ? Number(m[4]) : null };
+  sent(pointer.t0, r.up, 0, 1);
+  sent(r.key, r.done ?? Date.now(), keyDowns(action), 0);
+  return r;
 }
 /**
  * Mac launch X: every osascript Unvibe runs goes through this wrapper, first on the app's PATH (the app runs
@@ -538,6 +560,56 @@ function osaSince(since) {
   }
   return runs.filter((r) => r.start >= since).map((r) => ({ ...r, lines: lines.filter((x) => x.pid === r.pid && x.t >= r.start && x.t <= r.end + 5) }));
 }
+/** A read's mark line (6 numbers: uptime before and after the idle sample, the idle seconds, then the press counts
+ * Unvibe's own read took with that sample): fields 4-6, [key-downs, left-downs, right-downs]; null for other lines. */
+const markCounts = (l) => {
+  const f = String(l).split(',');
+  return f.length === 6 && f.every((v) => /^[\d.e+-]+$/.test(v) && Number.isFinite(Number(v))) ? f.slice(3).map(Number) : null;
+};
+const markText = ([k, l, r]) => `keys ${k} left ${l} right ${r}`;
+/**
+ * X9c (Security, c9acb715): the press counts in Unvibe's own reads move with the harness's input. A read that copied
+ * prints its mark; its counts were sampled after the wrapper started it and before its `copied -` line. Between two
+ * such reads the key-downs and left-downs must have risen by at least what the harness posted wholly after the first
+ * read's `copied -` and before the second read began, and neither count may read 0 for the whole launch. A failed
+ * sample (all six fields 0, which the input check reads as input) is listed and left out.
+ */
+function counterRow(since) {
+  const step = "X9c (Mac, MUST-A5): the key-down and left-down counts sampled by Unvibe's own reads rise by at least the harness's CGEvent keys and presses between them";
+  try {
+    const rel = (t) => `+${((t - since) / 1000).toFixed(1)} s`;
+    const reads = osaSince(since).filter((r) => r.kind === 'read').flatMap((r) => {
+      const line = r.lines.find((x) => markCounts(x.l));
+      if (!line) return [];
+      const copied = r.lines.find((x) => x.l.startsWith('copied'));
+      return [{ start: r.start, sampled: copied?.t ?? line.t, c: markCounts(line.l), failed: /^0(,0){5}$/.test(line.l) }];
+    });
+    const marks = reads.filter((x) => !x.failed);
+    const gaps = [];
+    for (let i = 1; i < marks.length; i++) {
+      const p = marks[i - 1];
+      const q = marks[i];
+      const inside = sentInput.filter((e) => e.a > p.sampled && e.b < q.start);
+      const want = [inside.reduce((s, e) => s + e.keys, 0), inside.reduce((s, e) => s + e.lefts, 0)];
+      const got = [0, 1].map((j) => (q.c[j] - p.c[j]) >>> 0);
+      gaps.push({ at: q.start, want, got, ok: got.every((g, j) => g < 2 ** 31 && g >= want[j]) });
+    }
+    const table = [
+      ...reads.map((x) => `${rel(x.start)} read, sampled by ${rel(x.sampled)}: ${x.failed ? 'failed sample (0,0,0,0,0,0)' : markText(x.c)}`),
+      ...gaps.map((g) => `${rel(g.at)} gap before this read: key-downs +${g.got[0]} (harness sent ≥${g.want[0]}), left-downs +${g.got[1]} (harness pressed ≥${g.want[1]})${g.ok ? '' : ' MISS'}`),
+    ];
+    writeFileSync(path.join(out, 'x9c-counts.txt'), `${table.join('\n')}\n`);
+    const field = (j) => marks.map((x) => x.c[j]);
+    const dead = [0, 1].filter((j) => marks.length && (field(j).every((v) => v === 0) || (marks.length > 1 && field(j).every((v) => v === field(j)[0]))));
+    const misses = gaps.filter((g) => !g.ok);
+    const tested = [0, 1].map((j) => gaps.filter((g) => g.want[j] > 0).length);
+    const range = (j) => (marks.length ? `${field(j)[0]} → ${field(j)[marks.length - 1]}` : 'none');
+    const detail = `${marks.length} read(s) with a mark (${reads.length - marks.length} failed sample(s)); key-downs ${range(0)}, left-downs ${range(1)}, right-downs ${range(2)}; ${gaps.length} gap(s) between them, ${tested[0]} with harness keys and ${tested[1]} with harness presses inside; ${misses.length ? `rose less than sent: ${misses.slice(0, 5).map((g) => `${rel(g.at)} keys +${g.got[0]}/${g.want[0]}, left +${g.got[1]}/${g.want[1]}`).join('; ')}` : 'every gap rose by at least what was sent'}${dead.length ? `; ${dead.map((j) => ['key-downs', 'left-downs'][j]).join(' and ')} never moved` : ''} (x9c-counts.txt)`;
+    if (misses.length || dead.length) log(false, step, detail);
+    else if (tested[0] && tested[1]) log(true, step, detail);
+    else untestable(step, `${detail}; no gap held a harness key and a press`);
+  } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+}
 /** One row's osascript runs, relative to the mouse-up: the reads and input checks, and the others (the front-app
  * question before a start, say) only from the first read to 1.5 s after the last check. */
 const osaText = (runs, up) => {
@@ -546,7 +618,7 @@ const osaText = (runs, up) => {
   const from = main.length ? main[0].start : Infinity;
   const to = main.length ? Math.max(...main.map((r) => r.end)) + 1500 : -Infinity;
   return runs.filter((r) => r.kind !== 'other' || (r.start >= from && r.start <= to)).map((r) => {
-    if (r.kind === 'read') return `read ${rel(r.start)}..${rel(r.end)} (${r.lines.map((x) => `${/^[\d.,]+$/.test(x.l) ? 'mark' : x.l} ${rel(x.t)}`).join(', ') || 'no line'})`;
+    if (r.kind === 'read') return `read ${rel(r.start)}..${rel(r.end)} (${r.lines.map((x) => `${markCounts(x.l) ? `mark ${markText(markCounts(x.l))}` : x.l} ${rel(x.t)}`).join(', ') || 'no line'})`;
     if (r.kind === 'check') return `input check ${rel(r.start)}..${rel(r.end)} = ${r.out || `rc ${r.rc}`}`;
     return `osascript ${rel(r.start)}..${rel(r.end)}`;
   }).join('; ') || 'no read';
@@ -2170,6 +2242,7 @@ async function runX(app, companion) {
     try { await autoEditor(ctx, which === 'vscode' ? 'vs' : 'cu'); } catch (e) { log(false, `X ${ED.name}`, `stopped: ${short(e)}`); desktop(`x-${which}-stopped`); } finally { await closeVsCode(); closeExplorerWindows(); }
   }
   ED = EDITORS.vscode;
+  if (os === 'mac' && !ctx.defender) counterRow(xT0);
   stopClipWatch();
   if (ctx.defender) {
     // SHOULD-384c: what the workflow's Defender step counts (each start is one auto read that copied and was kept).
@@ -2317,13 +2390,13 @@ async function autoEditor(ctx, tag) {
   // HIDIdleTime, so either alone fails rows a keyboard passes (run 44992962409). Each Mac row is judged on when the read
   // and its input check ran (the osascript wrapper), not on the start's time: after an idle check the app asks
   // osascript for the front app before it starts, so a start can come a few hundred ms after a check the key followed.
-  // The 700-1500 ms rows are Security's X9c. Windows: SendInput, which GetLastInputInfo sees.
+  // Windows: SendInput, which GetLastInputInfo sees.
   const offsets = [300, 700, 900, 1200, 1500, 2500];
   for (const kind of ['paste', 'type']) {
     for (const ms of offsets) {
       const via = os === 'mac' ? 'rk' : '';
       const k = nextK();
-      const name = `${kind === 'paste' ? 'X1' : 'X2'}${os === 'mac' && ms >= 700 && ms <= 1500 ? ' / X9c' : ''} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${os === 'mac' ? ' (rk: System Events Shift, then the CGEvent key)' : ''}`;
+      const name = `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${os === 'mac' ? ' (rk: System Events Shift, then the CGEvent key)' : ''}`;
       try {
         await spaced();
         await reset();
