@@ -58,6 +58,15 @@ module.exports = async function afterPack(context) {
   const args = ['--force', '--deep', '--sign', sign, '--entitlements', entitlements];
   if (identity) args.push('--options', 'runtime', '--timestamp=none');
   if (identity && keychain) args.push('--keychain', keychain);
+  // The Unvibe button's helper (D5) sits in Resources, where --deep doesn't look for code: sign it first, with the
+  // same identity and no entitlements, so the bundle's seal covers a signed binary (Security H3).
+  const helper = path.join(appPath, 'Contents', 'Resources', 'selection-watch', 'unvibe-selection-watch');
+  if (require('node:fs').existsSync(helper)) {
+    const helperArgs = ['--force', '--sign', sign, '--identifier', 'com.unvibe.app.selection-watch'];
+    if (identity) helperArgs.push('--options', 'runtime', '--timestamp=none');
+    if (identity && keychain) helperArgs.push('--keychain', keychain);
+    execFileSync('codesign', [...helperArgs, helper], { stdio: 'inherit' });
+  }
   execFileSync('codesign', [...args, appPath], { stdio: 'inherit' });
   // With the stable identity, check the requirement the app's updater and install.sh pin, so a
   // build they would refuse fails here, before anything is uploaded.

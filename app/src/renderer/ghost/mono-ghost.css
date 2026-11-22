@@ -1,0 +1,59 @@
+/* ── The Unvibe button (D5 A) and Quick look (D5 T3), Mono. The window is exactly the button, pill or card, so no
+   transparent margin ever sits over the editor. Design NOTE §1: a 32 pt circle with Vibe at 19 pt; hover opens the
+   pill "Explain" + the shortcut; Quick look is a 320 pt card with at most 3 bullets. ── */
+:root, :root body { margin: 0; padding: 0; background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
+:root body { font-family: var(--font-sans, 'Inter', system-ui, sans-serif); color: var(--u-ink); }
+
+:root .ghost {
+  box-sizing: border-box; display: flex; align-items: center; gap: 6px;
+  width: 32px; height: 32px; padding: 0 6px; margin: 0;
+  border: 1px solid var(--u-border-control); border-radius: 999px;
+  background: var(--u-paper); color: var(--u-ink);
+  font: 600 13px/1 var(--font-sans, 'Inter', system-ui, sans-serif);
+  cursor: pointer; animation: ghostIn 120ms ease-out both;
+}
+:root .ghost--pill { width: 100%; padding: 0 5px 0 6px; animation: none; }
+:root .ghost--pill.ghost--flipped { flex-direction: row-reverse; padding: 0 6px 0 5px; }
+:root .ghost:focus-visible { outline: 2px solid var(--u-focus); outline-offset: -3px; }
+:root .ghost .buddy { flex: 0 0 auto; }
+:root .ghost__word { flex: 0 0 auto; white-space: nowrap; }
+:root .ghost__keys, :root .quick__full .ghost__keys { display: inline-flex; gap: 2px; }
+:root .ghost--pill .ghost__keys { margin-left: 2px; }
+:root .ghost--pill.ghost--flipped .ghost__keys { margin-left: 0; margin-right: 2px; }
+:root .ghost__key {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px;
+  box-sizing: border-box; border: 1px solid var(--u-border-control); border-radius: 5px;
+  font: 500 11px/1 var(--font-sans, 'Inter', system-ui, sans-serif); color: var(--u-ink);
+}
+
+:root .quick {
+  box-sizing: border-box; width: 320px; padding: 12px 14px 10px;
+  border: 1px solid var(--u-border-control); border-radius: 12px; background: var(--u-paper);
+  font-size: 13px; line-height: 18px; animation: ghostIn 120ms ease-out both;
+}
+:root .quick__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+:root .quick__title { font-weight: 600; white-space: nowrap; }
+:root .quick__meta { color: var(--u-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+:root .quick__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+:root .quick__item { position: relative; padding-left: 14px; overflow-wrap: anywhere; }
+:root .quick__item::before { content: ''; position: absolute; left: 2px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--u-ink); }
+:root .quick__item--skeleton { height: 10px; margin: 4px 0; border-radius: 5px; background: var(--u-sunken); width: 82%; }
+:root .quick__item--skeleton + .quick__item--skeleton { width: 60%; }
+:root .quick__item--skeleton::before { display: none; }
+:root .quick__item code.inline { font-size: 12px; padding: 0 3px; border-radius: 4px; background: var(--u-sunken); }
+:root .quick__message { margin: 10px 0 0; color: var(--u-ink); }
+:root .quick__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--u-border);
+}
+:root .quick__full, :root .quick__dismiss {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 2px; border: 0; background: none; cursor: pointer;
+  font: 600 13px/18px var(--font-sans, 'Inter', system-ui, sans-serif); color: var(--u-ink);
+}
+:root .quick__dismiss { font-weight: 400; color: var(--u-ink-2); }
+:root .quick__full:focus-visible, :root .quick__dismiss:focus-visible { outline: 2px solid var(--u-focus); outline-offset: 2px; border-radius: 4px; }
+
+@keyframes ghostIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  :root .ghost, :root .quick { animation: none; }
+}

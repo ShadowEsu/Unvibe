@@ -151,8 +151,8 @@ export function Buddy({ mood: moodProp = 'idle', size = 40, follow = false, clas
       ref={rootRef}
       className={`buddy buddy--${mood}${reactions ? ` buddy--react buddy--react-${reactions % 2}` : ''} ${className}`.trim()}
       style={{ width: size, height: size }}
-      role="img"
-      aria-label={label ?? `Vibe is ${mood === 'idle' ? 'here' : mood}`}
+      // An empty label means decoration beside text that already says it all: hidden, not an unnamed image.
+      {...(label === '' ? { 'aria-hidden': true } : { role: 'img', 'aria-label': label ?? `Vibe is ${mood === 'idle' ? 'here' : mood}` })}
     >
       <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
         <ellipse className="buddy__shadow" cx="24" cy="45" rx="12" ry="1.8" />
