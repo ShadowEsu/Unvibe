@@ -166,9 +166,12 @@ const api = {
   setShortcutRecording: (on: boolean) => ipcRenderer.send('settings:recordingShortcut', on),
   integrations: () => ipcRenderer.invoke('integrations:status'),
   installDesktopBridge: (editor: 'cursor' | 'vscode') => ipcRenderer.invoke('integrations:installBridge', editor),
-  /** Settings › the Unvibe button and Quick look (D5): read, and turn one on or off (main records version and time). */
+  /**
+   * Settings › the Unvibe button, Quick look and auto mode (D5, ledger 646): read, and turn one on or off (main records
+   * version and time). `withButton`: auto mode on with the button's line ticked too, while the button is off.
+   */
   bubbleSettings: (): Promise<BubbleSettings> => ipcRenderer.invoke('bubble:get'),
-  setBubble: (item: 'ghost' | 'preview', on: boolean): Promise<BubbleSettings> => ipcRenderer.invoke('bubble:set', item, on),
+  setBubble: (item: 'ghost' | 'preview' | 'auto', on: boolean, withButton = false): Promise<BubbleSettings> => ipcRenderer.invoke('bubble:set', item, on, withButton),
   // the Unvibe button's own window (main ignores these from any other window)
   onGhostView: (cb: (view: GhostView) => void) => ipcRenderer.on('ghost:view', (_e, view: GhostView) => cb(view)),
   ghostHover: (on: boolean) => ipcRenderer.send('ghost:hover', on),

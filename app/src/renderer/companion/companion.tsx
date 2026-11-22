@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
@@ -397,25 +397,63 @@ function PermRow() {
 }
 
 /**
- * The Unvibe button (D5 A) and Quick look (T3): each its own unticked switch with Security's words (file 1235); main
- * keeps every choice with its version and time. Quick look shows only while the button is on. Mac and Windows only.
+ * The Unvibe button (D5 A), Quick look (T3) and auto mode (ledger 646): each its own unticked switch with Security's
+ * words (file 1235; 646 S-2); main keeps every choice with its version and time. Quick look shows only while the button
+ * is on. Auto mode always shows: turned on while the button is off, it asks for both lines, ticked one by one, and
+ * turns both on together. Mac and Windows only.
  */
 function BubbleRows() {
   const [bubble, setBubble] = useState<BubbleSettings | null>(null);
   const [error, setError] = useState('');
+  const [asking, setAsking] = useState(false);
   useEffect(() => {
     void window.unvibe.bubbleSettings().then(setBubble);
   }, []);
   if (!bubble?.available) return null;
-  const flip = (item: 'ghost' | 'preview', on: boolean) => {
+  const flip = (item: 'ghost' | 'preview' | 'auto', on: boolean, withButton = false) => {
     setError('');
-    window.unvibe.setBubble(item, on).then(setBubble, () => setError("Couldn't save that. Try again."));
+    window.unvibe.setBubble(item, on, withButton).then((next) => {
+      setBubble(next);
+      setAsking(false);
+    }, () => setError("Couldn't save that. Try again."));
+  };
+  const flipAuto = () => {
+    if (bubble.auto) flip('auto', false);
+    else if (bubble.ghost) flip('auto', true);
+    else setAsking(true);
   };
   return (
     <>
       <div className="setrow"><div><div className="sl">{bubble.copy.ghost.label}</div><div className="sd">{bubble.copy.ghost.help}</div><div className="sd">Works in {bubble.editors}.</div>{error && <div className="field-err" role="alert">{error}</div>}</div><Toggle label={bubble.copy.ghost.label} on={bubble.ghost} onClick={() => flip('ghost', !bubble.ghost)} /></div>
       {bubble.ghost && <div className="setrow"><div><div className="sl">{bubble.copy.preview.label}</div><div className="sd">{bubble.copy.preview.help}</div></div><Toggle label={bubble.copy.preview.label} on={bubble.preview} onClick={() => flip('preview', !bubble.preview)} /></div>}
+      <div className="setrow"><div><div className="sl">{bubble.copy.auto.label}</div><div className="sd">{bubble.copy.auto.help}</div></div><Toggle label={bubble.copy.auto.label} on={bubble.auto} onClick={flipAuto} /></div>
+      {asking && !bubble.ghost && <AutoWithButton copy={bubble.copy} onConfirm={() => flip('auto', true, true)} onCancel={() => setAsking(false)} />}
     </>
+  );
+}
+
+/** Auto mode needs the button: both consent lines, each its own unticked box; Turn on does nothing until both are ticked. */
+function AutoWithButton({ copy, onConfirm, onCancel }: { copy: BubbleSettings['copy']; onConfirm: () => void; onCancel: () => void }) {
+  const [button, setButton] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const id = useId();
+  const ready = button && auto;
+  return (
+    <section className="consent-form" aria-label="Turn on auto mode and the Unvibe button">
+      <p className="consent-form__lead">Auto mode needs the Unvibe button. Tick both to turn them on.</p>
+      <label className="consent-form__row" htmlFor={`${id}-button`}>
+        <input id={`${id}-button`} type="checkbox" autoFocus checked={button} onChange={(e) => setButton(e.target.checked)} />
+        <span><strong>{copy.ghost.label}.</strong> {copy.ghost.help}</span>
+      </label>
+      <label className="consent-form__row" htmlFor={`${id}-auto`}>
+        <input id={`${id}-auto`} type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+        <span><strong>{copy.auto.label}.</strong> {copy.auto.help}</span>
+      </label>
+      <div className="consent-form__actions">
+        <button type="button" className="field-btn" aria-disabled={!ready} onClick={() => { if (ready) onConfirm(); }}>Turn on both</button>
+        <button type="button" className="field-btn ghost" onClick={onCancel}>Not now</button>
+      </div>
+    </section>
   );
 }
 

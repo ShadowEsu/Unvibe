@@ -155,6 +155,20 @@ const LEVEL_OUT_TOKENS: Record<ExplanationLevel, number> = {
   expert: 1100,
 };
 
+/** As the server's `wantsSuggestedFixes`: a short selection explanation with `suggestFixes: true` (auto mode, ledger 646). */
+function wantsSuggestedFixes(payload: ReviewRequestPayload): boolean {
+  return payload.suggestFixes === true && payload.detail === 'short' && payload.scope === 'selection' && !payload.question;
+}
+
+/** The server's "Suggested fixes" rules (web/src/ai/prompt.ts), worded the same for the person's own key. */
+const SUGGESTED_FIXES_RULES = [
+  'After the explanation (and after any "Not sure:" sentence), end with a blank line, the line "### Suggested fixes", then at most 3 bullets that each start with "- ". This section is the one exception to the rules above about headings, bullets and length.',
+  'Each bullet names the line or construct, what could go wrong there, and the change to consider, in one or two plain sentences.',
+  'Only suggest a fix for a problem the code plainly shows or that clearly follows from it; never invent one to fill the list. If there is nothing to fix, put the single line "Nothing to fix that I can see." under the heading instead of bullets.',
+  'No rewritten code and no code blocks in this section. A one-line change in single backticks is fine.',
+  'You suggest; the reader decides. Never say a fix was made.',
+];
+
 export function buildLocalSystemPrompt(payload: ReviewRequestPayload): string {
   const short = payload.detail === 'short';
   return [
@@ -167,6 +181,7 @@ export function buildLocalSystemPrompt(payload: ReviewRequestPayload): string {
         'Answer in 2 to 4 short, plain sentences (each under about 25 words, 75 words at most in all) that say what the selected code does. However long the selection is, never more than 4 sentences.',
         'No headings, no bullets, no lists, no bold, no code blocks. One paragraph. Put names from the code (functions, variables, files) in single backticks, like `total`.',
         'If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain.',
+        ...(wantsSuggestedFixes(payload) ? SUGGESTED_FIXES_RULES : []),
       ]
       : [
         'Separate what the code SHOWS, what you INFER, and what is UNCERTAIN.',
@@ -229,7 +244,9 @@ export function buildLocalUserPrompt(payload: ReviewRequestPayload): string {
   const shown = payload.detail === 'full' && !payload.question ? (payload.shortAnswer ?? '').trim().slice(0, 1_500) : '';
   if (payload.question) parts.push(`\n## Task\n${payload.question}`);
   else if (payload.detail === 'short') {
-    parts.push('\n## Task\nSay what this code does in 2 to 4 plain sentences.');
+    parts.push(wantsSuggestedFixes(payload)
+      ? '\n## Task\nSay what this code does in 2 to 4 plain sentences, then end with the Suggested fixes section.'
+      : '\n## Task\nSay what this code does in 2 to 4 plain sentences.');
   } else if (payload.scope === 'diff') {
     parts.push('\n## Task\nExplain what changed and why, how data flows, and what would break if reverted.');
   } else {

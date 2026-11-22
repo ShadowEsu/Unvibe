@@ -84,6 +84,8 @@ export interface ReviewSession {
   selectionCredit?: 'held' | 'returned';
   /** Prevents a pulse event for every streamed token. */
   islandStreaming?: boolean;
+  /** Auto mode started this capture (ledger 646): its explanation asks for the "Suggested fixes" section. */
+  suggestFixes?: boolean;
   payload?: ReviewRequestPayload;
   file?: string;
   project?: string;
@@ -392,6 +394,14 @@ export function withDetail(payload: ReviewRequestPayload, detailRun: boolean, sh
 }
 
 /**
+ * An auto-mode capture's own explanation asks for Suggested fixes; follow-ups and More detail never do. The built
+ * payload (kept on the session for follow-ups) never carries the flag itself: it's added per run.
+ */
+export function withFixes(payload: ReviewRequestPayload, fixes: boolean): ReviewRequestPayload {
+  return fixes ? { ...payload, suggestFixes: true } : payload;
+}
+
+/**
  * How a run ended, for the selection credit: 'explained' (it was used), 'failed' (refused or broken, with
  * no explanation: it goes back), 'waiting' (paused for the person or replaced by a newer run: kept).
  */
@@ -400,7 +410,24 @@ type RunOutcome = 'explained' | 'failed' | 'waiting';
 const SELECTION_CREDITS_USED_UP = (limit: number) =>
   `Your 30-day beta includes ${limit} selected-code prompts. Your saved learning is still available.`;
 
+/** Explanations running now, from the start of a run to its end (streamed, refused, failed or replaced). */
+let runsInFlight = 0;
+
+/** Whether an explanation is being fetched: auto mode never starts or cancels one then (ledger 646). */
+export function explanationInFlight(): boolean {
+  return runsInFlight > 0;
+}
+
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  runsInFlight += 1;
+  try {
+    await runCountedReview(win, session, opts);
+  } finally {
+    runsInFlight -= 1;
+  }
+}
+
+async function runCountedReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   // "More detail" goes on from the short answer this panel already has; anything else is a new answer.
   const detailRun = Boolean(opts.moreDetail) && !opts.question && Boolean(session.shortText?.trim());
   // Only a new explanation of the selection uses its credit; follow-ups and More detail never do.
@@ -475,7 +502,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
 
   let payload: ReviewRequestPayload;
   try {
-    payload = withDetail(await ensurePayload(session, opts), detailRun, session.shortText);
+    payload = withFixes(withDetail(await ensurePayload(session, opts), detailRun, session.shortText), Boolean(session.suggestFixes) && !opts.question && !detailRun);
   } catch (err) {
     send(win, session, { type: 'error', message: err instanceof Error ? err.message : 'Could not build review context.', ...tag });
     return 'failed';

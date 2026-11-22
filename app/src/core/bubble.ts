@@ -1,10 +1,11 @@
 /**
- * The Unvibe button (D5 A) and its Quick look (D5 T3): the pure parts.
+ * The Unvibe button (D5 A), its Quick look (D5 T3) and auto mode (ledger 646): the pure parts.
  *
  * A small native helper watches the mouse (never the keyboard, Security G3) and reports one JSON line per
  * gesture. Main decides from those lines alone whether the ghost shows: only in an allowed code editor, only
  * after a mouse selection, never in a denied app. In editors nothing is read before a press (Security G2 as
  * clarified 7 Nov); a press runs exactly the Control+U path (G7), or with Quick look on, a 3-bullet preview.
+ * Auto mode, its own opt-in, does what a press does once the selection has stayed put, behind AutoExplainGate.
  */
 
 export type BubblePlatform = 'darwin' | 'win32';
@@ -287,13 +288,13 @@ export function previewTitle(code: string): string {
 }
 
 /**
- * The two Settings controls, verbatim: the button's help from Security's S-2 on #366/#367 (the same clause on /privacy,
- * /beta and the FAQ: everything the helper watches, and no text read before a press), Quick look's from file 1235.
- * Bump the version when either text changes.
+ * The three Settings controls, verbatim: the button's help from Security's S-2 on #366/#367 (the same clause on /privacy,
+ * /beta and the FAQ: everything the helper watches, and no text read before a press), Quick look's from file 1235, and
+ * auto mode's from the lead's draft for Security's S-2 (ledger 646). Bump the version when any text changes.
  */
-export const BUBBLE_COPY_VERSION = '2026-11-20';
+export const BUBBLE_COPY_VERSION = '2026-11-21';
 
-export function bubbleCopy(shortcut: string): { ghost: { label: string; help: string }; preview: { label: string; help: string } } {
+export function bubbleCopy(shortcut: string): Record<BubbleItem, { label: string; help: string }> {
   return {
     ghost: {
       label: 'Show the Unvibe button when I select code',
@@ -303,10 +304,14 @@ export function bubbleCopy(shortcut: string): { ghost: { label: string; help: st
       label: 'Quick look when I press the button',
       help: "Off until you turn it on. When it's on, pressing the Unvibe button sends your selection to the AI for a short 3-point preview first. That's Claude, or the provider of your own key, and your key pays. Previews don't count toward your free explanations; they have their own smaller daily limit. Open full explanation counts as one explanation. Previews aren't saved to your Library unless you open the full explanation.",
     },
+    auto: {
+      label: 'Explain automatically when I select code',
+      help: "Off until you turn it on. When you select code in a code editor, Unvibe sends the selection to explain it, without a press. Each one counts as an explanation. The explanation ends with up to 3 suggested fixes for you to consider. It needs the Unvibe button, so turning the button off turns this off too.",
+    },
   };
 }
 
-export type BubbleItem = 'ghost' | 'preview';
+export type BubbleItem = 'ghost' | 'preview' | 'auto';
 
 /** One choice in Settings, kept with the copy version and the time (Security G1; ledger 299 rule 5). */
 export interface BubbleChoice {
@@ -316,20 +321,94 @@ export interface BubbleChoice {
   at: string;
 }
 
-/** The latest choice per control; both start off, for new and updated installs alike (G1, A2). */
-export function bubbleState(choices: readonly BubbleChoice[]): { ghost: boolean; preview: boolean } {
-  let ghost = false;
-  let preview = false;
-  for (const choice of choices) {
-    if (choice.item === 'ghost') ghost = choice.on === true;
-    if (choice.item === 'preview') preview = choice.on === true;
-  }
-  // Quick look works only while the button is on (Security 1235: "usable only while Control 1 is on").
-  return { ghost, preview: ghost && preview };
+/** The latest choice per control; all start off, for new and updated installs alike (G1, A2). */
+export function bubbleState(choices: readonly BubbleChoice[]): { ghost: boolean; preview: boolean; auto: boolean } {
+  const on: Record<BubbleItem, boolean> = { ghost: false, preview: false, auto: false };
+  for (const choice of choices) on[choice.item] = choice.on === true;
+  // Quick look and auto mode work only while the button is on (Security 1235: "usable only while Control 1 is on").
+  return { ghost: on.ghost, preview: on.ghost && on.preview, auto: on.ghost && on.auto };
 }
 
 export function isBubbleChoice(value: unknown): value is BubbleChoice {
   if (!value || typeof value !== 'object') return false;
   const c = value as Record<string, unknown>;
-  return (c.item === 'ghost' || c.item === 'preview') && typeof c.on === 'boolean' && typeof c.copyVersion === 'string' && typeof c.at === 'string';
+  return (c.item === 'ghost' || c.item === 'preview' || c.item === 'auto') && typeof c.on === 'boolean' && typeof c.copyVersion === 'string' && typeof c.at === 'string';
+}
+
+/** Auto mode's guards against accidental spend (ledger 646, the lead's rule 2). */
+export const AUTO_SETTLE_MS = 700;
+export const AUTO_COOLDOWN_MS = 15_000;
+export const AUTO_REPEAT_MS = 10 * 60_000;
+const AUTO_MIN_CHARS = 40;
+const AUTO_MIN_LINES = 2;
+
+/** At least 2 lines with something on them, or 40 characters: a stray word or a click's selection never sends. */
+export function bigEnoughForAuto(code: string): boolean {
+  const text = code.trim();
+  return text.length >= AUTO_MIN_CHARS || text.split('\n').filter((line) => line.trim()).length >= AUTO_MIN_LINES;
+}
+
+/**
+ * The 700 ms wait after a mouse-up. `arm` starts it for the button's state at that moment; `cancel` (called on any
+ * change to the button: a click, a scroll, a new selection, a press) stops it; and it fires only if the button is
+ * still in that same state.
+ */
+export class AutoSettle<S> {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private readonly current: () => S, private readonly fire: (armed: S) => void, private readonly ms = AUTO_SETTLE_MS) {}
+
+  arm(armed: S): void {
+    this.cancel();
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      if (this.current() === armed) this.fire(armed);
+    }, this.ms);
+  }
+
+  cancel(): void {
+    clearTimeout(this.timer ?? undefined);
+    this.timer = null;
+  }
+}
+
+/** Before reading the selection: read it, or why not. 'show-limit' shows the limit (as a press would), once. */
+export type AutoBefore = 'read' | 'busy' | 'cooldown' | 'show-limit' | 'limit';
+/** After reading it: start, or why not. */
+export type AutoAfter = 'start' | 'small' | 'repeat';
+
+/**
+ * Auto mode's memory, in this process only: when the last auto explanation started, the hashes of the selections it
+ * explained in the last 10 minutes (never the text, never stored), and whether the limit was already shown.
+ */
+export class AutoExplainGate {
+  private lastStart = Number.NEGATIVE_INFINITY;
+  private readonly recent = new Map<string, number>();
+  private limitShown = false;
+
+  /**
+   * One explanation in flight at a time (a new selection never cancels it), 15 s between auto starts. At a limit the
+   * limit shows once, and nothing more starts until a selection after it has reset.
+   */
+  before(now: number, at: { busy: boolean; limited: boolean }): AutoBefore {
+    if (at.limited) {
+      if (this.limitShown) return 'limit';
+      this.limitShown = true;
+      return 'show-limit';
+    }
+    this.limitShown = false;
+    if (at.busy) return 'busy';
+    if (now - this.lastStart < AUTO_COOLDOWN_MS) return 'cooldown';
+    return 'read';
+  }
+
+  /** The size floor and the 10-minute repeat check; a start is remembered here. */
+  after(now: number, code: string, hash: string): AutoAfter {
+    for (const [seen, at] of this.recent) if (now - at >= AUTO_REPEAT_MS) this.recent.delete(seen);
+    if (!bigEnoughForAuto(code)) return 'small';
+    if (this.recent.has(hash)) return 'repeat';
+    this.recent.set(hash, now);
+    this.lastStart = now;
+    return 'start';
+  }
 }

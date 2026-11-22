@@ -43,6 +43,8 @@ export interface ReviewRequestPayload {
   /** With detail 'full' after a short answer: that answer, so the detail goes on from it without repeating it. */
   shortAnswer?: string;
   quizMode?: QuizMode;
+  /** Auto mode (ledger 646): end the short selection explanation with a "Suggested fixes" section. Only `true` turns it on. */
+  suggestFixes?: boolean;
 }
 
 /**

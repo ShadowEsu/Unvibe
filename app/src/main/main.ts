@@ -59,6 +59,7 @@ import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
+  explanationInFlight,
   runReview,
   startComprehension,
   gradeComprehension,
@@ -314,11 +315,13 @@ function beginCapture(
   confirmFrom: ConfirmReason | null = null,
   meta?: FileMeta,
   credit: SelectionCredit = 'free',
+  suggestFixes = false,
 ): void {
   panelSession?.abort?.abort();
   const session = makeSession(code, sourceApp);
   applyFileMeta(session, meta);
   if (credit === 'held') session.selectionCredit = 'held';
+  if (suggestFixes) session.suggestFixes = true;
   if (confirmFrom && code) {
     session.awaitingConfirm = true;
     session.confirmFrom = confirmFrom;
@@ -362,6 +365,7 @@ function loadCodeIntoSession(
   // explanation this replaces goes back first (that answer never came), then none carries over.
   if (session.selectionCredit === 'held') store().refundBetaSelectedCodePrompt();
   session.selectionCredit = undefined;
+  session.suggestFixes = undefined;
   session.payload = undefined;
   session.mode = 'selection';
   session.file = meta?.file;
@@ -597,7 +601,7 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  * Before the person agrees to sending code, nothing is captured at all (Windows' synthetic copy would
  * overwrite the clipboard): the panel opens on the agreement instead (Security CC-4, CC-5).
  */
-async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta } } = {}): Promise<void> {
+async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta }; suggestFixes?: boolean } = {}): Promise<void> {
   broadcastShortcut();
   pulseBar({ phase: 'loading', label: 'Loading' });
   // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
@@ -681,7 +685,7 @@ async function startReview(options: { preferClipboard?: boolean; sample?: boolea
     pulseBar({ phase: 'idle', label: 'Ready' });
     return;
   }
-  beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit);
+  beginCapture(win, code, sourceApp, confirmFrom, options.captured?.meta, credit, options.suggestFixes === true);
 }
 
 function registerShortcut(accel: string): boolean {
@@ -1409,11 +1413,15 @@ app.whenReady().then(() => {
     return syncStatus();
   });
 
-  // --- the Unvibe button (D5): its press is exactly the shortcut's path ---
+  // --- the Unvibe button (D5): its press is exactly the shortcut's path; auto mode (646) the same, with no press ---
   registerBubble({
     explain: () => void startReview(),
     explainCaptured: (code, sourceApp) => void startReview({ captured: { code, sourceApp } }),
-    // Only Settings (the companion) may change the two switches (lead and Security NIT N1).
+    explainAuto: (code, sourceApp) => void startReview({ captured: { code, sourceApp }, suggestFixes: true }),
+    busy: () => explanationInFlight(),
+    // The limits a press stops at: the explanation allowance (startReview) and a trial build's selected-code prompts.
+    limited: (remaining) => remaining <= 0 || (trialBuildEnabled() && !fullProductBuildEnabled() && store().betaSelectedCodeUsage().remaining <= 0),
+    // Only Settings (the companion) may change the switches (lead and Security NIT N1).
     fromSettings: (sender) => Boolean(companion && BrowserWindow.fromWebContents(sender) === companion),
   });
 

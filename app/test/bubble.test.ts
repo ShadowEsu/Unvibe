@@ -1,10 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mock } from 'node:test';
 import {
+  AUTO_COOLDOWN_MS,
+  AUTO_REPEAT_MS,
+  AUTO_SETTLE_MS,
+  AutoExplainGate,
+  AutoSettle,
+  bigEnoughForAuto,
   bubbleState,
   ghostAllowedIn,
   ghostPlacement,
   ghostWindowBounds,
+  isBubbleChoice,
   parseHelperLine,
   previewBullets,
   previewTitle,
@@ -139,14 +147,98 @@ test('a press explains like Control+U, or opens Quick look when it is on; hover 
   assert.equal(reduceGhost(preview.state, { e: 'idle' }, mac).effect, 'none');
 });
 
-test('both controls start off, Quick look needs the button on, and the latest choice wins', () => {
-  assert.deepEqual(bubbleState([]), { ghost: false, preview: false });
+test('every control starts off, Quick look and auto mode need the button on, and the latest choice wins', () => {
+  assert.deepEqual(bubbleState([]), { ghost: false, preview: false, auto: false });
   const at = '2026-11-19T00:00:00.000Z';
   const v = '2026-11-11';
-  assert.deepEqual(bubbleState([{ item: 'preview', on: true, copyVersion: v, at }]), { ghost: false, preview: false });
-  const both = [{ item: 'ghost' as const, on: true, copyVersion: v, at }, { item: 'preview' as const, on: true, copyVersion: v, at }];
-  assert.deepEqual(bubbleState(both), { ghost: true, preview: true });
-  assert.deepEqual(bubbleState([...both, { item: 'ghost', on: false, copyVersion: v, at }]), { ghost: false, preview: false });
+  assert.deepEqual(bubbleState([{ item: 'preview', on: true, copyVersion: v, at }, { item: 'auto', on: true, copyVersion: v, at }]), { ghost: false, preview: false, auto: false });
+  const all = [{ item: 'ghost' as const, on: true, copyVersion: v, at }, { item: 'preview' as const, on: true, copyVersion: v, at }, { item: 'auto' as const, on: true, copyVersion: v, at }];
+  assert.deepEqual(bubbleState(all), { ghost: true, preview: true, auto: true });
+  assert.deepEqual(bubbleState([...all, { item: 'auto', on: false, copyVersion: v, at }]), { ghost: true, preview: true, auto: false });
+  assert.deepEqual(bubbleState([...all, { item: 'ghost', on: false, copyVersion: v, at }]), { ghost: false, preview: false, auto: false });
+  assert.equal(isBubbleChoice({ item: 'auto', on: true, copyVersion: v, at }), true);
+  assert.equal(isBubbleChoice({ item: 'auto', on: 'yes', copyVersion: v, at }), false);
+  assert.equal(isBubbleChoice({ item: 'autoplay', on: true, copyVersion: v, at }), false);
+});
+
+test('auto mode waits 700 ms after the mouse-up, and any change to the button in that time cancels it', () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    let current: object = { look: 'ghost' };
+    const fired: object[] = [];
+    const settle = new AutoSettle(() => current, (armed) => fired.push(armed));
+    const armed = current;
+    settle.arm(armed);
+    mock.timers.tick(AUTO_SETTLE_MS - 1);
+    assert.equal(fired.length, 0, 'not before the selection has stayed put');
+    mock.timers.tick(1);
+    assert.deepEqual(fired, [armed]);
+    // A click, scroll or new selection changes the button: the caller cancels.
+    settle.arm(armed);
+    mock.timers.tick(AUTO_SETTLE_MS - 100);
+    settle.cancel();
+    mock.timers.tick(1_000);
+    assert.equal(fired.length, 1, 'cancelled');
+    // A new selection re-arms: the wait starts again from its mouse-up.
+    settle.arm(armed);
+    mock.timers.tick(AUTO_SETTLE_MS - 100);
+    current = { look: 'ghost' };
+    settle.arm(current);
+    mock.timers.tick(AUTO_SETTLE_MS - 1);
+    assert.equal(fired.length, 1, 'the first wait was replaced');
+    mock.timers.tick(1);
+    assert.equal(fired.length, 2);
+    // The button changed without a cancel: the wait ends without firing.
+    settle.arm(current);
+    current = { look: 'hidden' };
+    mock.timers.tick(AUTO_SETTLE_MS);
+    assert.equal(fired.length, 2, 'fires only for the state it was armed for');
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test('auto mode sends only a selection of at least 2 lines or 40 characters', () => {
+  assert.equal(bigEnoughForAuto('x'.repeat(39)), false);
+  assert.equal(bigEnoughForAuto('x'.repeat(40)), true);
+  assert.equal(bigEnoughForAuto(`  ${'x'.repeat(39)}  \n`), false, 'surrounding space does not count');
+  assert.equal(bigEnoughForAuto('a = 1\nb = 2'), true);
+  assert.equal(bigEnoughForAuto('a = 1\n\n   \n'), false, 'blank lines do not count');
+  assert.equal(bigEnoughForAuto(''), false);
+});
+
+test('auto mode: one explanation in flight, 15 s between starts, no repeat within 10 minutes, too small is skipped', () => {
+  const gate = new AutoExplainGate();
+  const big = 'function total(items) {\n  return items.length;\n}';
+  const free = { busy: false, limited: false };
+  let now = 1_000_000;
+  assert.equal(gate.before(now, { busy: true, limited: false }), 'busy', 'a new selection never cancels the one in flight');
+  assert.equal(gate.before(now, free), 'read');
+  assert.equal(gate.after(now, 'x', 'h-small'), 'small');
+  assert.equal(gate.before(now, free), 'read', 'a skipped selection starts no cooldown');
+  assert.equal(gate.after(now, big, 'h1'), 'start');
+  assert.equal(gate.before(now + AUTO_COOLDOWN_MS - 1, free), 'cooldown');
+  now += AUTO_COOLDOWN_MS;
+  assert.equal(gate.before(now, free), 'read');
+  assert.equal(gate.after(now, big, 'h1'), 'repeat', 'the same text within 10 minutes');
+  assert.equal(gate.before(now, free), 'read', 'a repeat starts no cooldown either');
+  assert.equal(gate.after(now, big, 'h2'), 'start');
+  now = 1_000_000 + AUTO_REPEAT_MS - 1;
+  assert.equal(gate.after(now, big, 'h1'), 'repeat');
+  now = 1_000_000 + AUTO_REPEAT_MS;
+  assert.equal(gate.after(now, big, 'h1'), 'start', '10 minutes after it started, the same text explains again');
+});
+
+test('at a limit auto mode shows it once, then starts nothing until a selection after it resets', () => {
+  const gate = new AutoExplainGate();
+  const limited = { busy: false, limited: true };
+  assert.equal(gate.before(0, limited), 'show-limit');
+  for (let i = 1; i <= 5; i += 1) assert.equal(gate.before(i * AUTO_COOLDOWN_MS, limited), 'limit', `selection ${i} at the limit`);
+  assert.equal(gate.before(10 * AUTO_COOLDOWN_MS, { busy: true, limited: true }), 'limit', 'the limit wins over in-flight');
+  // Reset: the next selection reads again, and a later limit is shown again, once.
+  assert.equal(gate.before(11 * AUTO_COOLDOWN_MS, { busy: false, limited: false }), 'read');
+  assert.equal(gate.before(12 * AUTO_COOLDOWN_MS, limited), 'show-limit');
+  assert.equal(gate.before(13 * AUTO_COOLDOWN_MS, limited), 'limit');
 });
 
 test('Quick look shows at most 3 bullets from the stream, and a title from the selection', () => {
