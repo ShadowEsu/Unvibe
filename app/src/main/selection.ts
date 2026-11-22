@@ -284,9 +284,11 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
  * editor, no hardware input since the settle began (and none in the last 500 ms), no Shift, Control, Option or Command
  * held (it would join the ⌘C), then ⌘C and a 10 ms watch of the pasteboard's change count. The first line goes out the
  * moment it's known, while osascript is still exiting.
- * Idle time comes from IOHIDSystem's HIDIdleTime (kernel, real keys and pointer only, so the synthetic ⌘C doesn't reset
- * it). CGEventSourceSecondsSinceLastEventType lags up to about a second after input on macOS 27.2, so it isn't used.
- * The mark is the uptime before and after the idle sample and the idle seconds, for the input check after the restore.
+ * Idle time comes from IOHIDSystem's HIDIdleTime (kernel). CGEventSourceSecondsSinceLastEventType lags up to about a
+ * second after input on macOS 27.2, so it isn't used. The synthetic ⌘C resets HIDIdleTime too (QA run 44982193648: with
+ * the mark taken before it, every read dropped), so the mark is a second sample taken once the copy has landed, after
+ * the keystroke as on Windows: the uptime before and after that sample and the idle seconds, for the input check after
+ * the restore.
  */
 const MAC_AUTO_HID = [
   "var me = Application.currentApplication(); me.includeStandardAdditions = true;",
@@ -316,7 +318,7 @@ const MAC_AUTO_READ = [
   "  se.keyCode(8, { using: 'command down' });",
   '  var end = Date.now() + 1300;',
   '  while (Date.now() < end) {',
-  "    if (pb.changeCount !== before) { emit('copied ' + h.join(',')); return ''; }",
+  "    if (pb.changeCount !== before) { emit('copied ' + hid().join(',')); return ''; }",
   '    delay(0.01);',
   '  }',
   "  emit('none ' + h.join(','));",
@@ -325,8 +327,8 @@ const MAC_AUTO_READ = [
 ].join('\n');
 
 /**
- * After the restore: 'input' if any hardware input came after the read's idle sample. With no new input the idle time
- * grew by exactly the time between the two samples, which is at least (this sample's start - that sample's end).
+ * After the restore: 'input' if any hardware input came after the mark's sample. With no new input the idle time grew by
+ * exactly the time between the two samples, which is at least (this sample's start - that sample's end).
  */
 const MAC_AUTO_INPUT = [
   MAC_AUTO_HID,

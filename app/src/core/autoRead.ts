@@ -11,7 +11,8 @@ import { autoClipboardReadable } from './clipboardHold';
  *   then, never what was typed;
  * - the person's clipboard goes back the moment the copy's text is read (clipboardHolder: only over the copy's own
  *   result);
- * - any input between the idle check and that restore drops the result: no explanation, no request;
+ * - any input after the copy keystroke (the mark is sampled just after it, since the keystroke itself counts as input)
+ *   and before that restore drops the result: no explanation, no request;
  * - nothing happens when the clipboard holds something that can't be put back (an image, files).
  */
 
@@ -77,8 +78,8 @@ export async function autoRead(deps: AutoReadDeps, app: string, settleStartedAt:
   }, (result) => result.code);
   const { mark, ...result } = read;
   if (!result.code || !mark) return result;
-  // The clipboard is back. If the person pressed anything since the idle check, their paste or key may have met the
-  // copy: drop it. A check that fails can't say, so it drops too.
+  // The clipboard is back. If the person pressed anything since the mark (just after the copy keystroke), their paste or
+  // key may have met the copy: drop it. A check that fails can't say, so it drops too.
   const acted = await deps.inputSince(mark).catch(() => true);
   return acted ? { code: null, sourceApp: result.sourceApp, skipped: 'busy' } : result;
 }
