@@ -23,7 +23,9 @@
 //                                     ⌘ released), copy (⌘C), type:<ascii> (each character typed); prints the time
 //   mouse dragkey <x1> <y1> <x2> <y2> <ms> <action>
 //                                     a drag as `drag`, then <ms> after the release the key action; prints the press
-//                                     reads, then "up=<release ms> key=<key ms>" (ms since 1970)
+//                                     reads, then "up=<release ms> key=<ms the key action began> done=<ms it ended>"
+//                                     (ms since 1970). Also se-paste (⌘V) and se-type:<ascii>: the same keys sent
+//                                     through System Events (compiled and System Events warmed before the drag)
 //   mouse front                       the frontmost app's bundle id
 //   mouse clip info                   the general pasteboard: change count, types, the PNG's sha256, file URLs, and
 //                                     the text's length and first 80 characters, as one JSON line
@@ -71,6 +73,29 @@ func act(_ a: String) {
       usleep(15_000)
     }
   }
+}
+
+/// se-paste and se-type:<ascii>: the keys through System Events, as an Apple event it turns into key events. Unlike the
+/// CGEvent posts above they reset IOHIDSystem's HIDIdleTime, which auto mode's Mac idle check reads (run 44987639357:
+/// with CGEvent keys every Mac row still read, even a paste before the 700 ms; System Events' own ⌘C resets it, run
+/// 44982193648). Compiled, and System Events asked something harmless, before the drag, so the key goes at once.
+func seScript(_ a: String) -> NSAppleScript? {
+  let body: String
+  if a == "se-paste" { body = "keystroke \"v\" using command down" }
+  else if a.hasPrefix("se-type:") { body = "keystroke \"\(a.dropFirst(8))\"" }
+  else { return nil }
+  var err: NSDictionary?
+  guard let warm = NSAppleScript(source: "tell application \"System Events\" to get name"),
+        let s = NSAppleScript(source: "tell application \"System Events\" to \(body)") else { exit(4) }
+  _ = warm.executeAndReturnError(&err)
+  if err == nil { _ = s.compileAndReturnError(&err) }
+  if let e = err { FileHandle.standardError.write("System Events: \(e)\n".data(using: .utf8)!); exit(4) }
+  return s
+}
+func runSE(_ s: NSAppleScript) {
+  var err: NSDictionary?
+  _ = s.executeAndReturnError(&err)
+  if let e = err { FileHandle.standardError.write("System Events: \(e)\n".data(using: .utf8)!); exit(4) }
 }
 
 /// The general pasteboard as one JSON object: change count, types, the PNG's sha256, file URLs, the text's length and
@@ -263,6 +288,7 @@ case "dragkey" where a.count > 7:
   // The drag as `drag`, then the key action <ms> after the release, timed here (no process start in between).
   let p1 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
   let p2 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
+  let se = seScript(a[7])
   settle(p1)
   let before = cur()
   post(.leftMouseDown, p1)
@@ -274,9 +300,10 @@ case "dragkey" where a.count > 7:
   let up = nowMs()
   let due = up + (Int64(a[6]) ?? 0)
   while nowMs() < due { usleep(2_000) }
-  act(a[7])
+  let k = nowMs()
+  if let s = se { runSE(s) } else { act(a[7]) }
   print("press: \(before) at40: \(at40)")
-  print("up=\(up) key=\(nowMs())")
+  print("up=\(up) key=\(k) done=\(nowMs())")
 case "front":
   print(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none")
 case "clip" where a.count > 2:

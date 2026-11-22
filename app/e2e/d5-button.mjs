@@ -88,10 +88,13 @@
 //      file unchanged and the person's clipboard theirs again. Without it every row below could pass with auto mode
 //      never reading at all.
 //   X1 select, then paste (the person's own clipboard text) 300 / 700 / 900 / 1200 / 1500 / 2500 ms after the
-//      mouse-up: the file holds the paste in place of the selection, and the person's clipboard is theirs again 5 s
-//      later (run 44977282607 lost the paste at 1200 ms; the #384 fix f7e12828 copies only when no input came since the
-//      mouse-up, never empties the clipboard, and drops a read met by any key).
-//   X2 select, then type at the same moments: the file holds the typed word in its place.
+//      mouse-up: the file holds the paste in place of the selection, the person's clipboard is theirs again 5 s later,
+//      and no explanation read the pasted text (a read after the key copies the line the paste landed in: run
+//      44987639357, Mac, +468 ms). Run 44977282607 lost the paste at 1200 ms; the #384 fix copies only when no input
+//      came since the mouse-up, never empties the clipboard, and drops a read met by any key. On the Mac the keys go
+//      through System Events (mouse.swift se-paste / se-type), which reset HIDIdleTime as a keyboard does; CGEvent keys
+//      didn't (run 44987639357), so the Mac idle check never saw them.
+//   X2 select, then type at the same moments: the file holds the typed word in its place, and no read holds it.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
 //   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
@@ -457,17 +460,18 @@ function keyNow(action) {
     : winPtr('key', '0', '0', '0', '0', '0', '0', '0', action);
   return Number(printed.split(/\s+/).pop());
 }
-/** A drag, then the key action `ms` after its release, timed inside one process; returns { up, key } (ms since 1970). */
+/** A drag, then the key action `ms` after its release, timed inside one process; returns { up, key, done? } (ms since
+ * 1970; done: when the key action ended, Mac only). */
 function dragKey(x1, y1, x2, y2, ms, action) {
   onScreen([x1, y1], [x2, y2]);
   pointer.t0 = Date.now();
   const printed = os === 'mac'
     ? execFileSync(process.env.MOUSE, ['dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), action], { encoding: 'utf8' }).trim()
     : winPtr('dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), '0', '0', action);
-  const m = /up=(\d+) key=(\d+)/.exec(printed);
+  const m = /up=(\d+) key=(\d+)(?: done=(\d+))?/.exec(printed);
   if (!m) throw new Error(`harness: dragkey printed "${printed.slice(-160)}"`);
   pointer.last = printed.split(/\r?\n/)[0];
-  return { up: Number(m[1]), key: Number(m[2]) };
+  return { up: Number(m[1]), key: Number(m[2]), done: m[3] ? Number(m[3]) : null };
 }
 /** The app in front: the Mac's bundle id, Windows' process name. */
 const frontApp = () => {
@@ -1924,7 +1928,7 @@ async function watchReads(app) {
     window.__qaInit = [];
     window.__qaEnd = [];
     window.unvibe.onReviewEvent((e) => {
-      if (e?.type === 'init') window.__qaInit.push({ t: Date.now(), auto: Boolean(e.autoStart), len: String(e.preview ?? '').length, head: String(e.preview ?? '').trim().split('\n')[0].slice(0, 90) });
+      if (e?.type === 'init') window.__qaInit.push({ t: Date.now(), auto: Boolean(e.autoStart), len: String(e.preview ?? '').length, head: String(e.preview ?? '').trim().split('\n')[0].slice(0, 90), full: String(e.preview ?? '').slice(0, 600) });
       if (e?.type === 'done' || e?.type === 'error') window.__qaEnd.push({ t: Date.now(), type: e.type, code: e.code ?? null, message: String(e.message ?? '').slice(0, 140) });
     });
   }).catch(() => {});
@@ -2148,7 +2152,9 @@ async function autoEditor(ctx, tag) {
         await watchReads(app);
         const s = await block(k);
         const t0 = Date.now();
-        const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, kind === 'paste' ? 'paste' : `type:${TYPED}`);
+        // Mac: the keys through System Events, which reset HIDIdleTime as a keyboard does (run 44987639357: CGEvent keys
+        // didn't, so the Mac idle check never saw them); Windows: SendInput, which GetLastInputInfo sees.
+        const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, `${os === 'mac' ? 'se-' : ''}${kind === 'paste' ? 'paste' : `type:${TYPED}`}`);
         ctx.lastRead = r.up;
         await sleep(5500);
         const got = readFileSync(autoFile, 'utf8');
@@ -2156,8 +2162,10 @@ async function autoEditor(ctx, tag) {
         const said = await autoSays(t0);
         const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
         const clipOk = clip === P;
-        log(fileOk && clipOk, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
-          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
+        // A read that holds the person's key came after it: the idle check missed the key.
+        const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
+        log(fileOk && clipOk && !readKey, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
+          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.text}`);
       } catch (e) { log(false, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind} ${ms} ms after the mouse-up`, `stopped: ${short(e)}`); }
     }
   }
