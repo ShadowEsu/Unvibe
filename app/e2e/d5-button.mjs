@@ -76,8 +76,34 @@
 // Every launch also runs a second copy of the installed helper and keeps its own press lines (#366 8ec57712: beam,
 //   known, and secure on a Mac), so each row shows what the helper itself read; they decide A3 and the races.
 //
-// NO hosted-AI call: launches A and B have no agreement, so a press reads nothing (core/consent.ts reviewCapture);
-// launch C runs behind the hosts block. The app's net logs are summarised (time, method, path, status) and deleted.
+// d5=auto: launch X only, auto mode (#384, ledger 646) in VS Code, then Cursor, behind the hosts block as launch C
+//   (Security's C-3 rows, requests/security/20261121-1741-…-auto-explain-383-384-s2.md L134-140):
+//   X0 consent: auto can't turn on alone while the button is off; with the button (Settings' "Turn on both") main
+//      records both choices in one write at copy version 2026-11-21. D5-a, then the agreement, as launch C.
+//   Then in each editor (a 36-line sample on disk saved by the editor itself 200 ms after each change, so the file
+//   holds what the person's keys did; each selection runs from one line's end to the next one's end, 2 lines, and
+//   waits until 16 s after the last auto read, so the 15 s spacing never decides a row):
+//   X1 select, then paste (the person's own clipboard text) 300 / 1200 / 2500 ms after the mouse-up: the file holds
+//      the paste in place of the selection, and the person's clipboard is theirs again 5 s later.
+//   X2 select, then type 300 / 1200 / 2500 ms after the mouse-up: the file holds the typed word in its place.
+//   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
+//      (no change seen from outside), the image the same, and nothing starts.
+//   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
+//   X5 a double-click on a word: the clipboard untouched and nothing starts.
+//   X6 4 selections in a row: at most one auto copy in the 15 s from the first read (the Mac's clipboard watcher
+//      sees the copied text; Windows: the history (Win+V) read through WinRT when the runner has it, and the
+//      clipboard's change bursts); then one more after 16 s is read again (the control).
+//   X7 Cmd+Tab / Alt+Tab 250 ms (before the 700 ms) and 800 ms (during the read) after the mouse-up: nothing starts,
+//      nothing is sent, the person's clipboard is back.
+//   Each read is seen from outside: the app's own "explanation started" event (onShortcutFired in the main window),
+//   the panel's init event (what was read), the net log, and the clipboard's changes.
+// d5=auto-ai: launch Y only (ai on, the only hosted call this script makes): auto on, the agreement, VS Code (Mac) or
+//   Cursor (Windows), one settled selection of a short function with real faults, auto turned off as soon as the
+//   explanation starts (one call at most); the answer must end with Suggested fixes (#383); stills of the panel.
+//
+// NO hosted-AI call except launch Y: launches A and B have no agreement, so a press reads nothing (core/consent.ts
+// reviewCapture); launches C and X run behind the hosts block. The app's net logs are summarised (time, method, path,
+// status) and deleted.
 import { launchApp } from './cdp-launch.mjs';
 import { apiRequests, keepSummaryAndDrop, netLogArg } from './netlog.mjs';
 import { readPng, rgbDiff } from './png.mjs';
@@ -100,14 +126,18 @@ const code = process.env.VSCODE; // Mac: the `code` CLI; Windows: Code.exe
 const codeData = process.env.VSCODE_DATA ?? path.join(TMP, 'd5-vscode');
 const base = process.env.D5_PROFILE ?? mkdtempSync(path.join(tmpdir(), 'unvibe-d5-'));
 const installId = process.env.D5_ID ?? `qa-d5-local-${Date.now()}`;
-// 'rows' (the default): launches A, F and C on the Mac, A, B and C on Windows; 'fade': launch F only (Mac).
+// 'rows' (the default): launches A, F and C on the Mac, A, B and C on Windows; 'fade': launch F only (Mac); 'auto':
+// launch X only (VS Code and Cursor); 'auto-ai': launch Y only (VS Code on the Mac, Cursor on Windows).
 const D5 = process.env.D5 || 'rows';
-if (D5 !== 'rows' && D5 !== 'fade') throw new Error(`D5 must be rows or fade, not ${D5}`);
+if (!['rows', 'fade', 'auto', 'auto-ai'].includes(D5)) throw new Error(`D5 must be rows, fade, auto or auto-ai, not ${D5}`);
 if (!exe) throw new Error('UNVIBE_EXE is not set');
 if (!code) throw new Error('VSCODE is not set');
+if ((D5 === 'auto' || (D5 === 'auto-ai' && os === 'windows')) && !process.env.CURSOR) throw new Error('CURSOR is not set');
 if (os !== 'mac' && os !== 'windows') throw new Error('the Unvibe button exists on a Mac and on Windows only');
 if (D5 === 'fade' && os !== 'mac') throw new Error('D5=fade (launch F, the Mac panel fade) runs on a Mac only');
-if (process.env.QA_AI_OK === '1') throw new Error('d5-button.mjs makes no hosted-AI call: run it with ai off');
+// The one switch for a hosted call: only D5=auto-ai runs with ai on (one call at most), every other mode with it off.
+if (D5 === 'auto-ai' && process.env.QA_AI_OK !== '1') throw new Error('D5=auto-ai makes one hosted call: run it with ai on');
+if (D5 !== 'auto-ai' && process.env.QA_AI_OK === '1') throw new Error(`D5=${D5} makes no hosted-AI call: run it with ai off`);
 mkdirSync(out, { recursive: true });
 mkdirSync(netDir, { recursive: true });
 
@@ -201,7 +231,7 @@ function wideScreen() {
 // --- The pointer and the keyboard (screen units: Mac points, Windows physical px) -------------------------------
 const ptrScript = path.join(TMP, 'unvibe-d5-pointer.ps1');
 if (os === 'windows') writeFileSync(ptrScript, [
-  'param([string]$op, [int]$x1, [int]$y1, [int]$x2, [int]$y2, [int]$n, [int]$x3 = 0, [int]$y3 = 0)',
+  'param([string]$op, [int]$x1, [int]$y1, [int]$x2, [int]$y2, [int]$n, [int]$x3 = 0, [int]$y3 = 0, [string]$act = "")',
   'Add-Type @"',
   'using System; using System.Runtime.InteropServices;',
   'public class Ptr {',
@@ -223,6 +253,17 @@ if (os === 'windows') writeFileSync(ptrScript, [
   '  [StructLayout(LayoutKind.Sequential)] public struct MOUSEKEYS { public uint cbSize, dwFlags, iMaxSpeed, iTimeToMaxSpeed, iCtrlSpeed, dwReserved1, dwReserved2; }',
   '  [DllImport("user32.dll")] public static extern bool SystemParametersInfo(uint a, uint b, ref MOUSEKEYS mk, uint f);',
   '  public static string MouseKeys() { var mk = new MOUSEKEYS(); mk.cbSize = (uint)Marshal.SizeOf(mk); mk.dwFlags = 3; mk.iMaxSpeed = 10; mk.iTimeToMaxSpeed = 1000; return "mousekeys=" + (SystemParametersInfo(0x37, mk.cbSize, ref mk, 2) ? 1 : 0); }',
+  '  // Auto-mode rows: real key events (keybd_event, as a keyboard), and the window in front.',
+  '  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint f, UIntPtr e);',
+  '  [DllImport("user32.dll")] public static extern short VkKeyScan(char ch);',
+  '  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();',
+  '  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);',
+  '  public static void K(byte vk, bool up) { keybd_event(vk, 0, up ? 2u : 0u, UIntPtr.Zero); }',
+  '  public static void Combo(byte mod, byte vk) { K(mod, false); System.Threading.Thread.Sleep(20); K(vk, false); K(vk, true); System.Threading.Thread.Sleep(20); K(mod, true); }',
+  '  public static void Type(string s) { foreach (char c in s) { short v = VkKeyScan(c); byte vk = (byte)(v & 0xff); bool sh = (v & 0x100) != 0; if (sh) K(0x10, false); K(vk, false); K(vk, true); if (sh) K(0x10, true); System.Threading.Thread.Sleep(15); } }',
+  '  // Alt held, Tab, Alt released: the switcher picks the last window.',
+  '  public static void AltTab() { K(0x12, false); System.Threading.Thread.Sleep(40); K(0x09, false); K(0x09, true); System.Threading.Thread.Sleep(200); K(0x12, true); }',
+  '  public static string Fg() { uint pid; GetWindowThreadProcessId(GetForegroundWindow(), out pid); try { return System.Diagnostics.Process.GetProcessById((int)pid).ProcessName; } catch { return "pid " + pid; } }',
   '}',
   '"@',
   '[void][Ptr]::SetProcessDPIAware()',
@@ -249,6 +290,22 @@ if (os === 'windows') writeFileSync(ptrScript, [
   '  [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)',
   '  "rest: $rest gap=$([Math]::Round($gap, 2)) at40: $at40"',
   '  [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()',
+  '}',
+  'function Act([string]$a) { if ($a -eq "paste") { [Ptr]::Combo(0x11, 0x56) } elseif ($a -eq "copy") { [Ptr]::Combo(0x11, 0x43) } elseif ($a -eq "switch") { [Ptr]::AltTab() } elseif ($a.StartsWith("type:")) { [Ptr]::Type($a.Substring(5)) } else { throw "unknown key action $a" } }',
+  'function Now() { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }',
+  'if ($op -eq "key") { Act $act; Now }',
+  'if ($op -eq "fg") { [Ptr]::Fg() }',
+  '# The drag, then the key action $n ms after the release, timed in this process.',
+  'if ($op -eq "dragkey") {',
+  '  Settle $x1 $y1; $before = [Ptr]::Cur()',
+  '  [Ptr]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 80',
+  '  Steps $x1 $y1 $x2 $y2',
+  '  [Ptr]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)',
+  '  $up = Now; $sw = [Diagnostics.Stopwatch]::StartNew()',
+  '  while ($sw.ElapsedMilliseconds -lt $n) { Start-Sleep -Milliseconds 2 }',
+  '  Act $act',
+  '  "press: $before"',
+  '  "up=$up key=$(Now)"',
   '}',
 ].join('\r\n'));
 const S = (v) => String(Math.round(v));
@@ -378,6 +435,172 @@ function setClipboard(text) {
   else execFileSync('powershell', ['-NoProfile', '-Command', '[Console]::In.ReadToEnd() | Set-Clipboard'], { input: text });
 }
 const readClipboard = () => (os === 'mac' ? execFileSync('pbpaste', { encoding: 'utf8' }) : ps('Get-Clipboard -Raw') ?? '');
+
+// --- Auto-mode rows (#384): real keys, the app in front, the clipboard's other formats, its changes ------------------
+/** One key action now as real key events (paste, copy, switch = Cmd/Alt+Tab, type:<ascii>); returns when it went. */
+function keyNow(action) {
+  const printed = os === 'mac'
+    ? execFileSync(process.env.MOUSE, ['key', action], { encoding: 'utf8' }).trim()
+    : winPtr('key', '0', '0', '0', '0', '0', '0', '0', action);
+  return Number(printed.split(/\s+/).pop());
+}
+/** A drag, then the key action `ms` after its release, timed inside one process; returns { up, key } (ms since 1970). */
+function dragKey(x1, y1, x2, y2, ms, action) {
+  onScreen([x1, y1], [x2, y2]);
+  pointer.t0 = Date.now();
+  const printed = os === 'mac'
+    ? execFileSync(process.env.MOUSE, ['dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), action], { encoding: 'utf8' }).trim()
+    : winPtr('dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), '0', '0', action);
+  const m = /up=(\d+) key=(\d+)/.exec(printed);
+  if (!m) throw new Error(`harness: dragkey printed "${printed.slice(-160)}"`);
+  pointer.last = printed.split(/\r?\n/)[0];
+  return { up: Number(m[1]), key: Number(m[2]) };
+}
+/** The app in front: the Mac's bundle id, Windows' process name. */
+const frontApp = () => {
+  try { return os === 'mac' ? execFileSync(process.env.MOUSE, ['front'], { encoding: 'utf8' }).trim() : winPtr('fg', '0', '0', '0', '0', '0'); } catch (e) { return `? (${short(e)})`; }
+};
+// Windows: the clipboard's formats, image, files and text, read in an STA PowerShell (Windows PowerShell's default).
+const WIN_CLIP = [
+  'Add-Type -AssemblyName System.Windows.Forms, System.Drawing',
+  "Add-Type -MemberDefinition '[DllImport(\"user32.dll\")] public static extern uint GetClipboardSequenceNumber();' -Name S -Namespace QaClip",
+  'function Info { $d = [System.Windows.Forms.Clipboard]::GetDataObject(); $f = if ($d) { @($d.GetFormats()) } else { @() }',
+  '  $img = if ([System.Windows.Forms.Clipboard]::ContainsImage()) { $i = [System.Windows.Forms.Clipboard]::GetImage(); "$($i.Width)x$($i.Height)" } else { "" }',
+  '  $files = if ([System.Windows.Forms.Clipboard]::ContainsFileDropList()) { @([System.Windows.Forms.Clipboard]::GetFileDropList()) } else { @() }',
+  '  $t = if ([System.Windows.Forms.Clipboard]::ContainsText()) { [System.Windows.Forms.Clipboard]::GetText() } else { "" }',
+  '  [pscustomobject]@{ c = [QaClip.S]::GetClipboardSequenceNumber(); types = $f; image = $img; files = $files; len = $t.Length; text = $t.Substring(0, [Math]::Min(80, $t.Length)) } | ConvertTo-Json -Compress -Depth 3 }',
+].join('\n');
+/** The clipboard now: { c (change count / sequence number), types, png (Mac sha256) or image (Windows WxH), files, len, text }. */
+function clipInfo() {
+  const raw = os === 'mac' ? execFileSync(process.env.MOUSE, ['clip', 'info'], { encoding: 'utf8' }) : ps(`${WIN_CLIP}\nInfo`);
+  const o = JSON.parse(raw.trim().split(/\r?\n/).pop());
+  for (const k of ['types', 'files']) if (o[k] && !Array.isArray(o[k])) o[k] = [o[k]];
+  return o;
+}
+const clipText = (o) => `change ${o.c}; ${o.types?.length ?? 0} format(s)${o.png ? `; PNG ${o.png.slice(0, 12)}` : ''}${o.image ? `; image ${o.image}` : ''}${o.files?.length ? `; files ${o.files.map((f) => path.basename(f)).join(', ')}` : ''}; text ${o.len} chars`;
+/** The clipboard holds this PNG only (as a screenshot copy does). */
+function clipImage(png) {
+  if (os === 'mac') execFileSync(process.env.MOUSE, ['clip', 'image', png]);
+  else ps(`${WIN_CLIP}\n$img = [System.Drawing.Image]::FromFile('${png}'); [System.Windows.Forms.Clipboard]::SetImage($img)`);
+}
+/**
+ * A file copied the way a person does it: Finder (select it, ⌘C) or Explorer (open its folder with it selected, Ctrl+C).
+ * Returns how: 'Finder' / 'Explorer', or the fallback when that left no file on the clipboard (a file URL written by
+ * the harness on a Mac, Set-Clipboard -Path on Windows), so the row says which one it judged.
+ */
+async function clipFileAsPerson(f) {
+  if (os === 'mac') {
+    try {
+      // `open -R` shows the file selected in a Finder window and brings Finder to the front (no Apple Events, so no
+      // Automation prompt for Finder on the runner).
+      execFileSync('open', ['-R', f]);
+      await sleep(1800);
+      const fg = frontApp();
+      if (fg === 'com.apple.finder') {
+        keyNow('copy');
+        await sleep(800);
+        if (clipInfo().files?.some((p) => p === f || p.endsWith(f))) return 'Finder (the file selected, ⌘C)';
+      } else note('Files from Finder', `the app in front was ${fg}, not Finder`);
+    } catch (e) { note('Files from Finder', short(e)); }
+    execFileSync(process.env.MOUSE, ['clip', 'files', f]);
+    return 'a file URL written by the harness (Finder\'s ⌘C left none)';
+  }
+  try {
+    spawn('explorer.exe', [`/select,${f}`], { detached: true, stdio: 'ignore' }).unref();
+    await sleep(3500);
+    let fg = frontApp();
+    if (!/explorer/i.test(fg)) {
+      // A window opened by a background process may not get the foreground: a click on its title bar gives it, as a
+      // person's would (the file stays selected).
+      const r = explorerRect();
+      if (r) { pointer.click(r.x + r.w / 2, r.y + 12); await sleep(700); fg = frontApp(); }
+    }
+    if (/explorer/i.test(fg)) {
+      keyNow('copy');
+      await sleep(800);
+      if (clipInfo().files?.some((p) => p.toLowerCase() === f.toLowerCase())) return 'Explorer (select, Ctrl+C)';
+    } else note('Files from Explorer', `the window in front was ${fg}, not Explorer`);
+  } catch (e) { note('Files from Explorer', short(e)); }
+  ps(`Set-Clipboard -Path '${f}'`);
+  return 'Set-Clipboard -Path (Explorer\'s Ctrl+C left none)';
+}
+/** Explorer windows the harness opened, closed (Shell.Application). */
+function closeExplorerWindows() {
+  if (os === 'windows') { try { ps('(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { try { $_.Quit() } catch {} }'); } catch {} }
+}
+/**
+ * The clipboard's changes, watched from outside for the launch: the Mac's change count every 5 ms with the content
+ * at each change (pasteboard reads take no lock); Windows' GetClipboardSequenceNumber every ~15 ms and nothing else,
+ * since opening the clipboard there could make the app's own write fail. Lines: { t, c [, types, text] }.
+ */
+let clipWatch = null;
+function startClipWatch() {
+  if (clipWatch) return;
+  let child;
+  if (os === 'mac') child = spawn(process.env.MOUSE, ['clipwatch'], { stdio: ['pipe', 'pipe', 'ignore'] });
+  else {
+    const f = path.join(TMP, 'unvibe-d5-clipwatch.ps1');
+    writeFileSync(f, [
+      "Add-Type -MemberDefinition '[DllImport(\"user32.dll\")] public static extern uint GetClipboardSequenceNumber();' -Name S -Namespace QaWatch",
+      '$last = [QaWatch.S]::GetClipboardSequenceNumber()',
+      '[Console]::Out.WriteLine("{""t"":$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()),""c"":$last,""start"":1}"); [Console]::Out.Flush()',
+      'while ($true) { Start-Sleep -Milliseconds 5; $c = [QaWatch.S]::GetClipboardSequenceNumber(); if ($c -ne $last) { $last = $c; [Console]::Out.WriteLine("{""t"":$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()),""c"":$c}"); [Console]::Out.Flush() } }',
+    ].join('\r\n'));
+    child = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+  }
+  const events = [];
+  createInterface({ input: child.stdout }).on('line', (l) => { try { const e = JSON.parse(l); if (!e.start) events.push(e); } catch {} });
+  child.on('error', () => {});
+  clipWatch = { child, events };
+}
+function stopClipWatch() {
+  if (!clipWatch) return;
+  try { clipWatch.child.stdin.end(); } catch {}
+  clipWatch.child.kill();
+  clipWatch = null;
+}
+/** The clipboard's changes from `since` to `until`: how many, in bursts (changes less than 3 s apart), with the sample
+ * texts seen on a Mac. */
+function clipChanges(since, until = Date.now()) {
+  const ev = (clipWatch?.events ?? []).filter((e) => e.t >= since && e.t <= until);
+  const bursts = [];
+  for (const e of ev) { const b = bursts.at(-1); if (b && e.t - b.last < 3000) { b.n++; b.last = e.t; } else bursts.push({ first: e.t, last: e.t, n: 1 }); }
+  const sample = ev.filter((e) => typeof e.text === 'string' && e.text.includes('qa line '));
+  return { ev, bursts, sample };
+}
+// Windows' clipboard history (Win+V): on, cleared, and read through WinRT (Clipboard.GetHistoryItemsAsync).
+const WIN_HISTORY = [
+  'Add-Type -AssemblyName System.Runtime.WindowsRuntime',
+  '$null = [Windows.ApplicationModel.DataTransfer.Clipboard, Windows.ApplicationModel.DataTransfer, ContentType = WindowsRuntime]',
+  "$asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]",
+  'function Await($op, [Type]$t) { $task = $asTask.MakeGenericMethod($t).Invoke($null, @($op)); [void]$task.Wait(15000); $task.Result }',
+].join('\n');
+function winHistoryOn() {
+  ps("New-Item -Path 'HKCU:\\Software\\Microsoft\\Clipboard' -Force | Out-Null; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Clipboard' -Name EnableClipboardHistory -Value 1 -Type DWord");
+  const on = () => ps(`${WIN_HISTORY}\n[Windows.ApplicationModel.DataTransfer.Clipboard]::IsHistoryEnabled()`).split(/\r?\n/).pop();
+  let state = on();
+  if (state !== 'True') {
+    try { ps("Get-Service -Name 'cbdhsvc_*' | Restart-Service -Force"); } catch {}
+    state = on();
+  }
+  return state === 'True';
+}
+const winHistoryClear = () => ps(`${WIN_HISTORY}\n[Windows.ApplicationModel.DataTransfer.Clipboard]::ClearHistory()`);
+/** The history's text items, newest first: [{ t (ms), text (first 200 characters) }], or null if it can't be read. */
+function winHistory() {
+  try {
+    const raw = ps([
+      WIN_HISTORY,
+      '$r = Await ([Windows.ApplicationModel.DataTransfer.Clipboard]::GetHistoryItemsAsync()) ([Windows.ApplicationModel.DataTransfer.ClipboardHistoryItemsResult])',
+      '$out = @(foreach ($i in $r.Items) { $txt = ""; if ($i.Content.Contains("Text")) { $txt = Await ($i.Content.GetTextAsync()) ([string]) }; [pscustomobject]@{ t = $i.Timestamp.ToUnixTimeMilliseconds(); text = $txt.Substring(0, [Math]::Min(200, $txt.Length)) } })',
+      '"status $($r.Status)"; ConvertTo-Json -Compress -InputObject $out',
+    ].join('\n'));
+    const [status, json] = raw.split(/\r?\n/);
+    if (!/Success/.test(status)) return { status, items: null };
+    const items = JSON.parse(json || '[]');
+    return { status, items: Array.isArray(items) ? items : [items] };
+  } catch (e) { return { status: short(e), items: null }; }
+}
 
 // --- Windows on the screen, front to back --------------------------------------------------------------------------
 const zScript = path.join(TMP, 'unvibe-d5-windows.ps1');
@@ -527,8 +750,15 @@ writeFileSync(path.join(extDir, 'extension.js'), [
   'exports.deactivate = () => {};',
 ].join('\n'));
 
-const settingsFile = path.join(codeData, 'User', 'settings.json');
-function vsSettings(theme) {
+// The editor the helpers below drive: VS Code (every mode), or Cursor (the auto-mode launches; a VS Code fork with the
+// same workbench, Monaco DOM and command line, its own data folder and debug port).
+const EDITORS = {
+  vscode: { name: 'VS Code', exe: code, data: codeData, port: 9339, owners: ['Code', 'Visual Studio Code', 'Electron'], proc: 'Code', app: 'Visual Studio Code', killMac: 'Visual Studio Code.app/Contents/MacOS/', image: 'Code.exe' },
+  cursor: { name: 'Cursor', exe: process.env.CURSOR, data: path.join(TMP, 'd5-cursor'), port: 9341, owners: ['Cursor'], proc: 'Cursor', app: 'Cursor', killMac: 'Cursor.app/Contents/MacOS/', image: 'Cursor.exe' },
+};
+let ED = EDITORS.vscode;
+function vsSettings(theme, extra = {}) {
+  const settingsFile = path.join(ED.data, 'User', 'settings.json');
   mkdirSync(path.dirname(settingsFile), { recursive: true });
   writeFileSync(settingsFile, JSON.stringify({
     'window.zoomLevel': 0,
@@ -555,20 +785,23 @@ function vsSettings(theme) {
     'editor.occurrencesHighlight': 'off',
     'editor.selectionHighlight': false,
     'editor.cursorBlinking': 'solid',
+    ...extra,
   }, null, 2));
 }
-const PORT = 9339;
 let vs = null; // { browser, page }
-async function openVsCode(extraArgs = []) {
+async function openVsCode(extraArgs = [], file = sampleFile) {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   for (const key of Object.keys(env)) if (/^(UNVIBE_|GITHUB_TOKEN|GH_TOKEN|ACTIONS_)/.test(key)) delete env[key];
-  spawn(code, ['--user-data-dir', codeData, '--extensions-dir', path.join(codeData, 'extensions'), '--new-window', `--remote-debugging-port=${PORT}`, ...extraArgs, sampleFile], { stdio: 'ignore', detached: true, env }).unref();
-  const browser = await waitFor(() => chromium.connectOverCDP(`http://127.0.0.1:${PORT}`), 90000, 1000);
-  if (!browser) throw new Error('VS Code did not open its debug port');
+  spawn(ED.exe, ['--user-data-dir', ED.data, '--extensions-dir', path.join(ED.data, 'extensions'), '--new-window', `--remote-debugging-port=${ED.port}`, ...extraArgs, file], { stdio: 'ignore', detached: true, env }).unref();
+  const browser = await waitFor(() => chromium.connectOverCDP(`http://127.0.0.1:${ED.port}`), 90000, 1000);
+  if (!browser) throw new Error(`${ED.name} did not open its debug port`);
   const page = await waitFor(async () => browser.contexts().flatMap((c) => c.pages()).find((p) => /workbench/.test(p.url())), 60000, 500);
-  if (!page) throw new Error('no VS Code window');
+  if (!page) throw new Error(`no ${ED.name} window`);
   await page.locator('.monaco-editor .view-line').first().waitFor({ timeout: 60000 });
+  // Cursor's first start covers the workbench with its sign-in screen (Log In / Sign Up, no skip; the laptop's Cursor
+  // 3.31 smoke): hidden by a style in its own page, as a signed-in person never sees it. Its AI stays off (signed out).
+  if (ED === EDITORS.cursor) await page.evaluate(() => { const s = document.createElement('style'); s.textContent = '.onboarding-v2-overlay { display: none !important; }'; document.head.appendChild(s); });
   vs = { browser, page };
   // VS Code places and maximizes its window after its first paint: run 44668914881 read the origin at (1815, 35) on
   // a 1920-wide screen, and every drag went off screen. Wait until two reads 1 s apart agree and the content starts
@@ -581,15 +814,15 @@ async function openVsCode(extraArgs = []) {
     const inside = !SCREEN || (o.x >= -16 && o.x < SCREEN.w / 2 && o.y >= -16 && o.y < SCREEN.h / 4);
     return same && inside ? o : null;
   }, 30000, 1000);
-  note('VS Code placed', placed ? `content at (${placed.x}, ${placed.y}), ×${r1(placed.k)}${SCREEN ? ` on ${SCREEN.w}×${SCREEN.h}` : ''}` : `not settled in 30 s (last read (${prev?.x}, ${prev?.y}))`);
+  note(`${ED.name} placed`, placed ? `content at (${placed.x}, ${placed.y}), ×${r1(placed.k)}${SCREEN ? ` on ${SCREEN.w}×${SCREEN.h}` : ''}` : `not settled in 30 s (last read (${prev?.x}, ${prev?.y}))`);
   return vs;
 }
 async function closeVsCode() {
   await vs?.browser.close().catch(() => {});
   vs = null;
   try {
-    if (os === 'mac') execFileSync('pkill', ['-f', 'Visual Studio Code.app/Contents/MacOS/']);
-    else execFileSync('taskkill', ['/IM', 'Code.exe', '/T', '/F'], { stdio: 'ignore' });
+    if (os === 'mac') execFileSync('pkill', ['-f', ED.killMac]);
+    else execFileSync('taskkill', ['/IM', ED.image, '/T', '/F'], { stdio: 'ignore' });
   } catch { /* not running */ }
   await sleep(3000);
 }
@@ -598,8 +831,8 @@ async function vsOrigin() {
   const inner = await vs.page.evaluate(() => ({ iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio }));
   if (os === 'mac') {
     const frameOf = (owner) => { try { return execFileSync(process.env.MOUSE, ['frame', owner], { encoding: 'utf8' }).trim(); } catch { return ''; } };
-    const owner = ['Code', 'Visual Studio Code', 'Electron'].find((o) => frameOf(o));
-    if (!owner) throw new Error('no on-screen VS Code window');
+    const owner = ED.owners.find((o) => frameOf(o));
+    if (!owner) throw new Error(`no on-screen ${ED.name} window`);
     const [x, y, w] = frameOf(owner).split(/\s+/).map(Number);
     return { x, y, k: w / inner.iw };
   }
@@ -611,7 +844,7 @@ async function vsOrigin() {
     '  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }',
     '"@',
     '[void][C]::SetProcessDPIAware()',
-    '$w = Get-Process Code -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1',
+    `$w = Get-Process ${ED.proc} -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1`,
     '$p = New-Object C+P; [void][C]::ClientToScreen($w.MainWindowHandle, [ref]$p); "$($p.X) $($p.Y)"',
   ].join('\n')).split(/\s+/).map(Number);
   return { x: xy[0], y: xy[1], k: inner.dpr };
@@ -1488,7 +1721,7 @@ async function giveAgreement(app) {
  * reads the hosts file) gives only 0.0.0.0 / ::, and on the Mac dscacheutil shows 0.0.0.0; (b) launch C's net log so
  * far has no request to the host with an answer.
  */
-async function blockHolds() {
+async function blockHolds(tag = 'c') {
   let runner;
   try {
     const res = await fetch(`https://${host}/api/v1/health`, { signal: AbortSignal.timeout(10000) });
@@ -1506,10 +1739,10 @@ async function blockHolds() {
     const v6 = [...dns.matchAll(/ipv6_address: (\S+)/g)].map((m) => m[1]);
     dnsOk = v4.length > 0 && v4.every((a) => a === '0.0.0.0') && v6.every((a) => a === '::');
   }
-  const seen = apiRequests(netlogs.find((l) => l.tag === 'c').file, host);
+  const seen = apiRequests(netlogs.find((l) => l.tag === tag).file, host);
   const answered = seen.filter((q) => q.status);
   const ok = runner.startsWith('no answer') && resolverOk && dnsOk && answered.length === 0;
-  log(ok, 'D5-a: the block holds before the agreement (otherwise launch C stops here: no agreement, no press)',
+  log(ok, `D5-a: the block holds before the agreement (otherwise launch ${tag.toUpperCase()} stops here: no agreement, ${tag === 'c' ? 'no press' : 'no read'})`,
     `the runner's own GET /api/v1/health: ${runner}; getaddrinfo: ${addrs.join(', ')}${os === 'mac' ? `; dscacheutil: ${dns}` : ''}; the app's net log so far: ${seen.length} request(s) to ${host} (${seen.map((q) => `${q.method} ${q.path} ${q.status || 'no answer'}`).join(', ') || 'none'}), with an answer ${answered.length}`);
   return ok;
 }
@@ -1640,6 +1873,422 @@ async function runC(app, companion) {
   await companion.evaluate(() => window.unvibe.setBubble('preview', false));
 }
 
+// --- Launches X and Y: auto mode (#384) ----------------------------------------------------------------------------
+const bubbleFileOf = (tag) => path.join(`${base}-${tag}`, 'unvibe-bubble.json');
+const norm = (s) => String(s ?? '').replace(/\u00a0/g, ' ');
+let personN = 0;
+/** The person's own clipboard text for one row (made up, different each time). */
+const person = () => `qa-person-clip-${++personN}-${Date.now().toString(36)}`;
+const TYPED = 'qatyped';
+/** X0 / Y0: auto mode through Settings' own calls (the main window is Settings' window). Alone, with the button off,
+ * it records nothing; with the button ("Turn on both": withButton) main records both choices in one write. */
+async function autoOn(app, companion, tag) {
+  const alone = await companion.evaluate(() => window.unvibe.setBubble('auto', true));
+  const file0 = existsSync(bubbleFileOf(tag));
+  const both = await companion.evaluate(() => window.unvibe.setBubble('auto', true, true));
+  let rec = [];
+  try { rec = JSON.parse(readFileSync(bubbleFileOf(tag), 'utf8')).choices ?? []; } catch { /* none */ }
+  const g = rec.find((c) => c.item === 'ghost');
+  const a = rec.find((c) => c.item === 'auto');
+  const helper = await waitFor(async () => { const h = processTree(app.process.pid).filter(isHelper); return h.length ? h : null; }, 10000, 500);
+  log(alone?.ghost === false && alone?.auto === false && !file0 && both?.ghost === true && both?.auto === true && rec.length === 2
+    && g?.on === true && a?.on === true && g.copyVersion === '2026-11-21' && a.copyVersion === '2026-11-21' && g.at === a.at && Boolean(helper),
+  `${tag.toUpperCase()}0: auto mode turns on only with the button ("Turn on both"), both choices recorded in one write`,
+  `alone, the button off: ghost ${alone?.ghost}, auto ${alone?.auto}, unvibe-bubble.json ${file0 ? 'on file' : 'none'}; with the button: ghost ${both?.ghost}, auto ${both?.auto}; ${rec.length} choice(s): ${rec.map((c) => `${c.item} ${c.on} ${c.copyVersion} ${c.at}`).join('; ')}; helper ${helper ? helper.map((p) => `${p.name}#${p.pid}`).join(', ') : 'not running in 10 s'}`);
+}
+/** The app's own "an explanation started" moments: startReview sends shortcut:fired to the main window first thing,
+ * for a press, the shortcut and an auto start alike. */
+async function watchStarts(companion) {
+  await companion.evaluate(() => { if (!window.__qaFired) { window.__qaFired = []; window.unvibe.onShortcutFired(() => window.__qaFired.push(Date.now())); } });
+}
+const startsSince = async (companion, since) => ((await companion.evaluate(() => window.__qaFired ?? []).catch(() => [])) ?? []).filter((t) => t >= since);
+/** What each explanation read (the panel's init event: its first line and length) and how it ended. */
+async function watchReads(app) {
+  await panelPage(app)?.evaluate(() => {
+    if (window.__qaInit) return;
+    window.__qaInit = [];
+    window.__qaEnd = [];
+    window.unvibe.onReviewEvent((e) => {
+      if (e?.type === 'init') window.__qaInit.push({ t: Date.now(), auto: Boolean(e.autoStart), len: String(e.preview ?? '').length, head: String(e.preview ?? '').trim().split('\n')[0].slice(0, 90) });
+      if (e?.type === 'done' || e?.type === 'error') window.__qaEnd.push({ t: Date.now(), type: e.type, code: e.code ?? null, message: String(e.message ?? '').slice(0, 140) });
+    });
+  }).catch(() => {});
+}
+const readsSince = async (app, since) => ((await panelPage(app)?.evaluate(() => window.__qaInit ?? []).catch(() => [])) ?? []).filter((r) => r.t >= since);
+const endsSince = async (app, since) => ((await panelPage(app)?.evaluate(() => window.__qaEnd ?? []).catch(() => [])) ?? []).filter((r) => r.t >= since);
+const netFile = (tag) => netlogs.find((l) => l.tag === tag)?.file;
+const reviewPostsSince = (tag, since) => apiRequests(netFile(tag), host).filter((q) => q.method === 'POST' && /^\/api\/v1\/reviews\b/.test(q.path) && q.t >= since - 500);
+/** The editor in front, as a person brings it there: activated by name on a Mac (a synthesized click doesn't activate
+ * an app on macOS 26), a click right of its last line on Windows. */
+async function activateEditor() {
+  if (os === 'mac') osa(`tell application "${ED.app}" to activate`);
+  else {
+    const L = await vsLines();
+    const last = L.lines.at(-3) ?? L.lines.at(-1);
+    pointer.click(Math.min(last.right + 60, L.editor.right - 40), last.y);
+  }
+  await sleep(700);
+}
+/** Windows: the last File Explorer window's frame (screen px), or null. */
+function explorerRect() {
+  const r = ps([
+    'Add-Type @"',
+    'using System; using System.Runtime.InteropServices;',
+    'public class QaRect { [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }',
+    '  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);',
+    '  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }',
+    '"@',
+    '[void][QaRect]::SetProcessDPIAware()',
+    "$w = @((New-Object -ComObject Shell.Application).Windows()) | Where-Object { $_.FullName -match 'explorer\\.exe$' } | Select-Object -Last 1",
+    'if ($w) { $r = New-Object QaRect+RECT; [void][QaRect]::GetWindowRect([IntPtr]$w.HWND, [ref]$r); "$($r.Left) $($r.Top) $($r.Right) $($r.Bottom)" }',
+  ].join('\n'));
+  const v = r.split(/\s+/).map(Number);
+  return v.length === 4 && v.every(Number.isFinite) ? { x: v[0], y: v[1], w: v[2] - v[0], h: v[3] - v[1] } : null;
+}
+/** The other app an app switch goes back to, brought to the front: Finder (Mac); a File Explorer window, its title bar
+ * clicked (Windows). */
+async function otherAppInFront() {
+  if (os === 'mac') { osa('tell application "Finder" to activate'); await sleep(600); return 'com.apple.finder'; }
+  let r = explorerRect();
+  if (!r) { spawn('explorer.exe', [sampleDir], { detached: true, stdio: 'ignore' }).unref(); await sleep(3500); r = explorerRect(); }
+  if (!r) throw new Error('no File Explorer window to switch to');
+  pointer.click(r.x + r.w / 2, r.y + 12);
+  await sleep(700);
+  return 'explorer';
+}
+/** 36 plain lines for one editor, each ending "qa line <tag> <k>" (the Mac's clipboard watcher tells an auto copy by
+ * that text); the tag differs per editor, so the 10-minute repeat check never meets a text twice. */
+const autoSample = (tag) => Array.from({ length: 36 }, (_, i) => `function ${tag}Step${i + 1}(value, limit = ${(i + 1) * 10}) { return value > limit ? limit : value + ${i + 1}; } // qa line ${tag} ${i + 1}`);
+/** The editor settings for the auto rows: saved 200 ms after each change (the file then holds what the keys did), no
+ * suggestion box or inline completion that could take a typed key. */
+const AUTO_EDITOR = {
+  'files.autoSave': 'afterDelay', 'files.autoSaveDelay': 200, 'editor.quickSuggestions': { other: 'off', comments: 'off', strings: 'off' },
+  'editor.suggestOnTriggerCharacters': false, 'editor.wordBasedSuggestions': 'off', 'editor.acceptSuggestionOnEnter': 'off',
+  'editor.inlineSuggest.enabled': false, 'editor.parameterHints.enabled': false, 'editor.autoClosingBrackets': 'never',
+};
+
+async function runX(app, companion) {
+  if (!(await blockHolds('x'))) return;
+  await autoOn(app, companion, 'x');
+  // The agreement, as launch C: no editor open, the pointer at the screen's bottom right so the panel opens there.
+  await closeVsCode();
+  const area = await companion.evaluate(() => ({ x: screen.availLeft, y: screen.availTop, w: screen.availWidth, h: screen.availHeight }));
+  pointer.move((area.x + area.w - 240) * scale, (area.y + area.h - 240) * scale);
+  await giveAgreement(app);
+  await watchStarts(companion);
+  await watchReads(app);
+  if (os === 'windows') {
+    let on = false;
+    try { on = winHistoryOn(); } catch (e) { note('Clipboard history (Win+V)', short(e)); }
+    note('Clipboard history (Win+V)', on ? 'turned on (EnableClipboardHistory = 1; IsHistoryEnabled true)' : 'not available on this runner: X6 counts the clipboard\'s change bursts only');
+  }
+  startClipWatch();
+  // A real PNG for X3 (a corner of the screen) and a file for X4.
+  const png = grab(file('x-clipboard-image'), 0, 0, 160, 100);
+  const qaFile = path.join(sampleDir, 'qa-notes.txt');
+  writeFileSync(qaFile, 'QA file for the auto-mode files row\n');
+  const ctx = { app, companion, png, qaFile, lastRead: 0 };
+  for (const which of ['vscode', 'cursor']) {
+    ED = EDITORS[which];
+    try { await autoEditor(ctx, which === 'vscode' ? 'vs' : 'cu'); } catch (e) { log(false, `X ${ED.name}`, `stopped: ${short(e)}`); desktop(`x-${which}-stopped`); } finally { await closeVsCode(); closeExplorerWindows(); }
+  }
+  ED = EDITORS.vscode;
+  stopClipWatch();
+}
+
+async function autoEditor(ctx, tag) {
+  const { app, companion } = ctx;
+  const lines = autoSample(tag);
+  const original = `${lines.join('\n')}\n`;
+  const autoFile = path.join(sampleDir, `auto-${tag}.js`);
+  writeFileSync(autoFile, original);
+  vsSettings('light', AUTO_EDITOR);
+  await openVsCode([], autoFile);
+  await sleep(1500);
+  const lineOf = (L, k) => {
+    const l = L.lines.find((x) => norm(x.text).trimEnd().endsWith(`// qa line ${tag} ${k}`));
+    if (!l) throw new Error(`line ${k} of the sample is not on screen in ${ED.name}`);
+    return l;
+  };
+  const want = (k, r) => `${[...lines.slice(0, k - 1), lines[k - 1] + r, ...lines.slice(k + 1)].join('\n')}\n`;
+  /** The file back to the sample, and the editor showing it (it reloads a saved file changed on disk). */
+  const reset = async () => {
+    if (readFileSync(autoFile, 'utf8') !== original) writeFileSync(autoFile, original);
+    const back = await waitFor(async () => { const L = await vsLines(); return lines.every((s, i) => L.lines.some((x) => norm(x.text).trimEnd() === s) || i >= L.lines.length) ? true : null; }, 8000, 300);
+    if (!back) throw new Error(`${ED.name} does not show the sample again 8 s after it was put back on disk`);
+  };
+  const spaced = async () => { const w = ctx.lastRead + 16000 - Date.now(); if (w > 0) await sleep(w); };
+  /** "the file: …" for a row: what the person's keys left. */
+  const fileSays = (got, k, r) => {
+    if (got === want(k, r)) return `the ${r === TYPED ? 'typed word' : 'paste'} in place of the selection`;
+    if (got === original) return 'UNCHANGED (the keys did not reach the selection)';
+    const g = got.split('\n');
+    const i = g.findIndex((s, j) => s !== lines[j]);
+    return `OTHER: from line ${i + 1}: "${(g[i] ?? '').slice(0, 110)}" / "${(g[i + 1] ?? '').slice(0, 60)}"; ${g.length - 1} lines (the sample 36)`;
+  };
+  /** What auto mode did from `t0`: its starts, what it read, the clipboard's changes, the app in front. */
+  const autoSays = async (t0) => {
+    const st = await startsSince(companion, t0);
+    const rd = await readsSince(app, t0);
+    const ch = clipChanges(t0);
+    const texts = [...new Set(ch.sample.map((e) => `"${norm(e.text).trim().slice(0, 50)}"`))];
+    const types = os === 'mac' ? [...new Set(ch.ev.flatMap((e) => e.types ?? []))] : [];
+    return {
+      st, rd, ch,
+      text: `auto: ${st.length} start(s)${rd.length ? `, read "${rd[0].head}" (${rd[0].len} chars)` : ''}; clipboard changes ${ch.ev.length} in ${ch.bursts.length} burst(s)${texts.length ? `, sample text seen ${texts.join(', ')}` : ''}${types.length ? `, types ${types.join(' ')}` : ''}; in front after: ${frontApp()}`,
+    };
+  };
+  let kNext = 1;
+  const nextK = () => { const k = kNext; kNext += 2; return k; };
+  const block = async (k) => {
+    const L = await vsLines();
+    const a = lineOf(L, k);
+    const b = lineOf(L, k + 1);
+    const edge = L.editor.right - 40;
+    return { x1: Math.min(a.right + 30, edge), y1: a.y, x2: Math.min(b.right + 30, edge), y2: b.y };
+  };
+
+  // X1 / X2: select, then paste or type, at three moments.
+  for (const kind of ['paste', 'type']) {
+    for (const ms of [300, 1200, 2500]) {
+      const k = nextK();
+      try {
+        await spaced();
+        await reset();
+        const P = person();
+        setClipboard(P);
+        await activateEditor();
+        await watchReads(app);
+        const s = await block(k);
+        const t0 = Date.now();
+        const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, kind === 'paste' ? 'paste' : `type:${TYPED}`);
+        ctx.lastRead = r.up;
+        await sleep(5500);
+        const got = readFileSync(autoFile, 'utf8');
+        const clip = readClipboard().trim();
+        const said = await autoSays(t0);
+        const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
+        const clipOk = clip === P;
+        log(fileOk && clipOk, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
+          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
+      } catch (e) { log(false, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind} ${ms} ms after the mouse-up`, `stopped: ${short(e)}`); }
+    }
+  }
+
+  // X3 an image, X4 a file: a settled selection leaves the clipboard as it is.
+  for (const what of ['image', 'files']) {
+    const k = nextK();
+    const step = what === 'image' ? `X3 ${ED.name}: an image on the clipboard survives a settled selection (nothing read, nothing starts)` : `X4 ${ED.name}: a file copied in ${os === 'mac' ? 'Finder' : 'Explorer'} survives a settled selection (nothing read, nothing starts)`;
+    try {
+      await spaced();
+      await reset();
+      let how = 'a PNG (screenshot-style copy)';
+      if (what === 'image') clipImage(ctx.png);
+      else how = await clipFileAsPerson(ctx.qaFile);
+      await sleep(500);
+      const before = clipInfo();
+      await activateEditor();
+      await watchReads(app);
+      const s = await block(k);
+      const t0 = Date.now();
+      ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+      await sleep(3500);
+      const after = clipInfo();
+      const said = await autoSays(t0);
+      const kept = what === 'image'
+        ? (os === 'mac' ? Boolean(before.png) && after.png === before.png : Boolean(before.image) && after.image === before.image)
+        : Boolean(before.files?.length) && JSON.stringify(after.files) === JSON.stringify(before.files);
+      log(kept && after.c === before.c && said.st.length === 0 && said.ch.ev.length === 0, step,
+        `${how}; before: ${clipText(before)}${before.types?.length ? ` [${before.types.join(' ')}]` : ''}; after the selection and 3.5 s: ${clipText(after)}; ${said.text}`);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // X5 a double-click on a word.
+  {
+    const k = nextK();
+    const step = `X5 ${ED.name}: a double-click on a word reads nothing and starts nothing`;
+    try {
+      await spaced();
+      await reset();
+      const P = person();
+      setClipboard(P);
+      await activateEditor();
+      const L = await vsLines();
+      const l = lineOf(L, k);
+      const t0 = Date.now();
+      pointer.click(l.left + 20, l.y, 2);
+      await sleep(3000);
+      const said = await autoSays(t0);
+      const sel = await vsSelected();
+      const clip = readClipboard().trim();
+      log(said.st.length === 0 && said.ch.ev.length === 0 && clip === P, step, `line ${k}, "function" double-clicked; VS Code selection boxes ${sel}; ${readsText(pointer.last, t0)}; the person's clipboard ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // X6 4 selections in a row: at most one auto copy in the 15 s from the first read; one more after 16 s (control).
+  {
+    const step = `X6 ${ED.name}: 4 selections in a row reach the clipboard at most once in 15 s${os === 'windows' ? ' (Win+V history)' : ''}`;
+    try {
+      await spaced();
+      await reset();
+      const P = person();
+      setClipboard(P);
+      if (os === 'windows') { try { winHistoryClear(); } catch (e) { note('Clipboard history', `not cleared (${short(e)})`); } }
+      await activateEditor();
+      const t0 = Date.now();
+      const ups = [];
+      for (let i = 0; i < 4; i++) {
+        const s = await block(nextK());
+        if (os === 'mac' && i > 0) osa(`tell application "${ED.app}" to activate`);
+        ups.push(pointer.drag(s.x1, s.y1, s.x2, s.y2));
+        await sleep(1300);
+      }
+      const end = ups[0] + 700 + 15000;
+      const lastIn = ups.filter((u) => u < end - 700).length;
+      const wait = ups[0] + 16500 - Date.now();
+      if (wait > 0) await sleep(wait);
+      await activateEditor();
+      const sc = await block(nextK());
+      const tc = Date.now();
+      const upC = pointer.drag(sc.x1, sc.y1, sc.x2, sc.y2);
+      ctx.lastRead = upC;
+      await sleep(4500);
+      const ch = clipChanges(t0);
+      const st = await startsSince(companion, t0);
+      const inWin = (t) => t >= t0 && t < end;
+      const macCopies = [...new Set(ch.sample.filter((e) => inWin(e.t)).map((e) => norm(e.text).trim()))];
+      const burstsIn = ch.bursts.filter((b) => inWin(b.first));
+      const control = os === 'mac' ? ch.sample.some((e) => e.t >= tc) : ch.bursts.some((b) => b.first >= tc);
+      let hist = null;
+      if (os === 'windows') hist = winHistory();
+      const histSample = hist?.items ? hist.items.filter((h) => norm(h.text).includes('qa line ')) : null;
+      const histIn = histSample ? histSample.filter((h) => inWin(h.t)) : null;
+      const copiesIn = os === 'mac' ? macCopies.length : burstsIn.length;
+      const ok = copiesIn <= 1 && (histIn === null || histIn.length <= 1) && st.filter(inWin).length <= 1;
+      log(ok, step, `${lastIn} of 4 selections within the 15 s (mouse-ups ${ups.map((u) => `+${u - ups[0]}`).join(', ')} ms); in the 15 s: ${os === 'mac' ? `${macCopies.length} sample text(s) on the clipboard${macCopies.length ? ` (${macCopies.map((t) => `"${t.slice(0, 40)}"`).join(', ')})` : ''}` : `${burstsIn.length} clipboard change burst(s)`}, ${st.filter(inWin).length} start(s)${hist ? `; Win+V history: ${hist.items ? `${histSample.length} sample item(s), ${histIn.length} in the 15 s` : `not read (${hist.status})`}` : ''}; the control selection 16 s after the first: ${control ? 'read (the clipboard changed)' : 'NOT read'}`);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // X7 an app switch (Cmd+Tab / Alt+Tab) before and during the read.
+  for (const ms of [250, 800]) {
+    const k = nextK();
+    const step = `X7 ${ED.name}: ${os === 'mac' ? 'Cmd' : 'Alt'}+Tab ${ms} ms after the mouse-up (${ms < 700 ? 'before the 700 ms' : 'during the read'}) sends nothing`;
+    try {
+      await spaced();
+      await reset();
+      const P = person();
+      setClipboard(P);
+      const other = await otherAppInFront();
+      await activateEditor();
+      await watchReads(app);
+      const s = await block(k);
+      const t0 = Date.now();
+      const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, 'switch');
+      ctx.lastRead = r.up;
+      await sleep(4500);
+      const front = frontApp();
+      const said = await autoSays(t0);
+      const posts = reviewPostsSince('x', t0);
+      const clip = readClipboard().trim();
+      const switched = os === 'mac' ? front === other : /explorer/i.test(front);
+      const detail = `the switch went ${r.key - r.up} ms after the release; in front 4.5 s later: ${front}; explanation POSTs ${posts.length}; the person's clipboard ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`;
+      if (!switched) untestable(step, `the switch did not bring ${other} to the front; ${detail}`);
+      else log(said.st.length === 0 && posts.length === 0 && clip === P, step, detail);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+}
+
+// Launch Y: one real explanation of a settled selection (ai on; the only hosted call in this script).
+const AI_SAMPLE = [
+  '// qa sample: an order total',
+  'function orderTotal(items, discount) {',
+  '  let total = 0;',
+  '  for (let i = 0; i <= items.length; i++) {',
+  '    total += items[i].price * items[i].qty;',
+  '  }',
+  '  if (discount > 0) total = total - total * discount / 100;',
+  '  return total.toFixed(2);',
+  '}',
+  '',
+  '// end of the sample',
+];
+async function runY(app, companion) {
+  await autoOn(app, companion, 'y');
+  await closeVsCode();
+  const area = await companion.evaluate(() => ({ x: screen.availLeft, y: screen.availTop, w: screen.availWidth, h: screen.availHeight }));
+  pointer.move((area.x + area.w - 240) * scale, (area.y + area.h - 240) * scale);
+  const panel = await giveAgreement(app);
+  await watchStarts(companion);
+  await watchReads(app);
+  ED = os === 'mac' ? EDITORS.vscode : EDITORS.cursor;
+  const f = path.join(sampleDir, 'order-total.js');
+  writeFileSync(f, `${AI_SAMPLE.join('\n')}\n`);
+  vsSettings('light', AUTO_EDITOR);
+  await openVsCode([], f);
+  await sleep(2000);
+  const P = person();
+  setClipboard(P);
+  await activateEditor();
+  const L = await vsLines();
+  const a = L.lines.find((l) => norm(l.text).startsWith('// qa sample'));
+  // The function's own closing brace (column 0), not the loop's indented one.
+  const b = L.lines.find((l) => norm(l.text).trimEnd() === '}');
+  if (!a || !b) throw new Error(`the sample is not on screen in ${ED.name}`);
+  const edge = L.editor.right - 40;
+  const t0 = Date.now();
+  const up = pointer.drag(Math.min(a.right + 30, edge), a.y, Math.min(b.right + 30, edge), b.y);
+  // The cap: auto mode off the moment the explanation starts (main records it), so nothing else can start.
+  const st = await waitFor(async () => { const s = await startsSince(companion, t0); return s.length ? s : null; }, 8000, 50);
+  const off = await companion.evaluate(() => window.unvibe.setBubble('auto', false));
+  if (!st) {
+    log(false, `Y1 ${ED.name}: auto mode explains a settled selection with no press`, `no explanation started in 8 s after the mouse-up; auto then turned off (${off?.auto === false ? 'recorded' : 'NOT recorded'}); ${readsText(pointer.last, t0)}`);
+    return;
+  }
+  line(`CALL  1/1: auto mode: the settled selection (lines 2-9 of a short function) explained with no press, ${st[0] - up} ms after the mouse-up; auto turned off right after (${off?.auto === false ? 'recorded' : 'NOT recorded'})`);
+  const ended = await waitFor(async () => { const e = await endsSince(app, t0); return e.length ? e : null; }, 90000, 500);
+  await sleep(1500);
+  const rd = await readsSince(app, t0);
+  const posts = reviewPostsSince('y', t0);
+  const ans = await panel.evaluate(() => {
+    const root = document.querySelector('.short-answer');
+    const heads = [...document.querySelectorAll('.short-answer h1, .short-answer h2, .short-answer h3, .short-answer h4')].map((h) => h.textContent.trim());
+    const fixH = [...document.querySelectorAll('.short-answer h3, .short-answer h4')].find((h) => /suggested fixes/i.test(h.textContent));
+    const fixes = [];
+    for (let el = fixH?.nextElementSibling; el && !/^H[1-6]$/.test(el.tagName); el = el.nextElementSibling) {
+      if (el.matches('ul, ol')) fixes.push(...[...el.querySelectorAll('li')].map((li) => li.textContent.trim()));
+    }
+    const text = root?.innerText ?? '';
+    return { heads, fixHead: Boolean(fixH), fixes, nothing: /Nothing to fix that I can see\./.test(text), len: text.length, text };
+  });
+  log(st.length === 1 && posts.length === 1 && posts[0].status === 200 && ended?.[0]?.type === 'done',
+    `Y1 ${ED.name}: auto mode explains a settled selection with no press (one POST, answered 200)`,
+    `start ${st[0] - up} ms after the mouse-up; read "${rd[0]?.head ?? '?'}" (${rd[0]?.len ?? '?'} chars, auto start ${rd[0]?.auto}); POST /api/v1/reviews ${posts.length} (${posts.map((q) => q.status || 'no answer').join(', ') || 'none'}); ended ${ended ? `${ended[0].type}${ended[0].message ? ` "${ended[0].message}"` : ''} ${ended[0].t - st[0]} ms after the start` : 'not in 90 s'}`);
+  log(ans.fixHead && ans.heads.length > 0 && /suggested fixes/i.test(ans.heads.at(-1)) && ((ans.fixes.length >= 1 && ans.fixes.length <= 3) || ans.nothing),
+    `Y2 ${ED.name}: the answer ends with Suggested fixes (#383): 1 to 3 fixes, or "Nothing to fix that I can see."`,
+    `headings ${ans.heads.map((h) => `"${h}"`).join(', ') || 'none'}; ${ans.fixes.length} fix(es)${ans.nothing ? ', "Nothing to fix that I can see."' : ''}; answer ${ans.len} chars`);
+  for (const [i, fx] of ans.fixes.entries()) note(`Y2 fix ${i + 1}`, fx.replace(/\s+/g, ' ').slice(0, 300));
+  // Stills: the panel as it is, then with the fixes in view, and the screen.
+  await panel.screenshot({ path: file('auto-panel') }).catch((e) => note('Still auto-panel', short(e)));
+  await panel.evaluate(() => [...document.querySelectorAll('.short-answer h3, .short-answer h4')].find((h) => /suggested fixes/i.test(h.textContent))?.scrollIntoView({ block: 'start' })).catch(() => {});
+  await sleep(400);
+  await panel.screenshot({ path: file('auto-fixes') }).catch((e) => note('Still auto-fixes', short(e)));
+  desktop('auto-editor-and-panel');
+  const clip = readClipboard().trim();
+  log(clip === P, `Y3 ${ED.name}: the person's clipboard is theirs again after the read`, clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`);
+  // A second selection after 16 s, auto now off: nothing starts (the cap holds).
+  await sleep(Math.max(0, up + 16000 - Date.now()));
+  await activateEditor();
+  const L2 = await vsLines();
+  const c = L2.lines.find((l) => norm(l.text).startsWith('// end of the sample'));
+  const t2 = Date.now();
+  if (c) pointer.drag(Math.min(a.right + 30, edge), a.y, Math.min(c.right + 30, edge), c.y);
+  await sleep(4000);
+  const st2 = await startsSince(companion, t2);
+  const posts2 = reviewPostsSince('y', t0);
+  log((await startsSince(companion, t0)).length === 1 && st2.length === 0 && posts2.length === 1, `Y4 ${ED.name}: one hosted call: with auto off after the start, a new selection starts nothing`,
+    `${c ? 'a new selection (lines 1-11) 16 s later' : 'no second selection (line 11 not on screen)'}: ${st2.length} start(s); explanation POSTs in the launch ${posts2.length}`);
+}
+
 // --- The runs ----------------------------------------------------------------------------------------------------------
 wideScreen();
 if (os === 'windows') {
@@ -1648,18 +2297,18 @@ if (os === 'windows') {
 }
 vsSettings('light');
 let failedLaunch = false;
-const plan = os === 'windows' ? ['a', 'b', 'c'] : D5 === 'fade' ? ['f'] : ['a', 'f', 'c'];
+const plan = D5 === 'auto' ? ['x'] : D5 === 'auto-ai' ? ['y'] : os === 'windows' ? ['a', 'b', 'c'] : D5 === 'fade' ? ['f'] : ['a', 'f', 'c'];
 for (const tag of plan) {
   let app = null;
   try {
-    if (tag === 'c') {
+    if (tag === 'c' || tag === 'x' || tag === 'y') {
       if (os === 'mac') {
-        // Quick look reads the selection the way Control+U does (System Events ⌘C): Accessibility back on for Unvibe,
-        // as the install step grants it (A1 ran with it reset).
+        // Quick look and auto mode read the selection the way Control+U does (System Events ⌘C): Accessibility back
+        // on for Unvibe, as the install step grants it (A1 ran with it reset).
         execFileSync('sudo', ['-n', 'sqlite3', '/Library/Application Support/com.apple.TCC/TCC.db', "INSERT OR REPLACE INTO access (service,client,client_type,auth_value,auth_reason,auth_version,indirect_object_identifier,flags) VALUES('kTCCServiceAccessibility','com.unvibe.app',0,2,4,1,'UNUSED',0);"]);
-        note('Launch C', 'Unvibe\'s Accessibility granted again, as the install step does');
+        note(`Launch ${tag.toUpperCase()}`, 'Unvibe\'s Accessibility granted again, as the install step does');
       }
-      blockApi();
+      if (tag !== 'y') blockApi();
     }
     scale = tag === 'b' ? 1.5 : 1;
     const l = await launch(tag, tag === 'b' ? ['--force-device-scale-factor=1.5'] : []);
@@ -1671,6 +2320,8 @@ for (const tag of plan) {
     if (tag === 'b') await runB(app, l.companion);
     if (tag === 'f') await runF(app, l.companion);
     if (tag === 'c') await runC(app, l.companion);
+    if (tag === 'x') await runX(app, l.companion);
+    if (tag === 'y') await runY(app, l.companion);
   } catch (e) {
     failedLaunch = true;
     log(false, `Launch ${tag}`, `stopped: ${short(e)}`);
@@ -1679,16 +2330,22 @@ for (const tag of plan) {
     stopShadow(tag);
     await app?.close().catch(() => {});
     await sleep(2000);
-    if (tag === 'c') { try { unblockApi(); } catch (e) { log(false, 'The hosts file back after launch C', short(e)); } }
+    if (tag === 'c' || tag === 'x') { try { unblockApi(); } catch (e) { log(false, `The hosts file back after launch ${tag.toUpperCase()}`, short(e)); } }
   }
 }
 await closeVsCode();
 
-// --- No hosted-AI call ---------------------------------------------------------------------------------------------
+// --- Hosted-AI calls: none, or at most one (launch Y) ------------------------------------------------------------
 const requests = netlogs.flatMap(({ tag, file: f }) => (existsSync(f) ? keepSummaryAndDrop(f, host, path.join(out, `netlog-d5-${os}-${tag}.txt`)).map((q) => ({ ...q, tag })) : []));
 const ai = requests.filter((q) => q.method === 'POST' && /^\/api\/v1\/(reviews|comprehension|previews)\b/.test(q.path));
 const answered = ai.filter((q) => q.status);
-log(answered.length === 0 && ai.every((q) => q.tag === 'c'), 'No hosted-AI call: nothing reached the server',
-  `the app's net logs: ${requests.length} request(s) to ${host}; AI POSTs ${ai.length} (${ai.map((q) => `${q.tag} ${q.path} ${q.status || 'no answer'}`).join(', ') || 'none'}), with an answer ${answered.length}. Launch C ran behind the hosts block`);
-writeFileSync(path.join(out, `report-d5-${os}.txt`), `Unvibe ${version}: D5 #366 button rows (${os}), no hosted AI\n\n${report.join('\n')}\n`);
+const aiList = `AI POSTs ${ai.length} (${ai.map((q) => `${q.tag} ${q.path} ${q.status || 'no answer'}`).join(', ') || 'none'}), with an answer ${answered.length}`;
+if (D5 === 'auto-ai') {
+  log(ai.length <= 1 && ai.every((q) => q.tag === 'y'), 'At most one hosted call (launch Y\'s auto start)', `the app's net logs: ${requests.length} request(s) to ${host}; ${aiList}`);
+} else {
+  log(answered.length === 0 && ai.every((q) => q.tag === 'c' || q.tag === 'x'), 'No hosted-AI call: nothing reached the server',
+    `the app's net logs: ${requests.length} request(s) to ${host}; ${aiList}. Launch${D5 === 'auto' ? ' X' : ' C'} ran behind the hosts block`);
+}
+const title = D5 === 'auto' ? 'D5 auto mode (#384) rows, VS Code and Cursor, no hosted AI' : D5 === 'auto-ai' ? 'D5 auto mode (#384) with Suggested fixes (#383), at most one hosted call' : 'D5 #366 button rows';
+writeFileSync(path.join(out, `report-d5-${os}.txt`), `Unvibe ${version}: ${title} (${os})${D5 === 'auto' || D5 === 'auto-ai' ? '' : ', no hosted AI'}\n\n${report.join('\n')}\n`);
 process.exit(failedLaunch || report.some((l) => l.startsWith('FAIL')) ? 1 : 0);

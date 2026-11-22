@@ -58,6 +58,14 @@ name: Real device test
 # coming to the front fades it; touched (a header click), then VS Code clicked and activated, it fades; and with
 # "Hide" as the click-away setting, a click on the panel itself keeps it on screen and leaving it hides it. It needs no
 # Unvibe button, so it runs on a build without #366.
+# d5=auto (with build_run, ai off; Mac and Windows) runs only d5-button.mjs's launch X for auto mode (#384, Security's
+# C-3 rows) in VS Code and Cursor: select-then-paste and select-then-type land in the file, an image or a file copied
+# in Finder/Explorer stays on the clipboard, at most one auto copy per 15 s (Windows: the Win+V history), and a
+# double-click or an app switch during the read sends nothing. It runs with the API host blocked (no hosted call).
+# d5=auto-ai (with build_run, ai on; Mac and Windows) runs only launch Y: one settled selection explained with no
+# press (VS Code on the Mac, Cursor on Windows), auto mode turned off as soon as it starts: at most one hosted call per
+# system, and the answer's Suggested fixes (#383). Cursor: the user setup from Cursor's update service, its signature
+# checked (Mac: codesign and its bundle id; Windows: Authenticode); it is not signed in.
 on:
   workflow_dispatch:
     inputs:
@@ -97,7 +105,7 @@ on:
         required: false
         default: ""
       d5:
-        description: "D5 rows: 'rows' runs app/e2e/d5-button.mjs (#366 button rows) with VS Code on the Mac and Windows; 'fade' runs only its launch F (#378 panel fade) on the Mac. No hosted-AI call (needs build_run, ai off, rc0154, rc0155 and rc0157 empty). Empty: off"
+        description: "D5 rows: 'rows' runs app/e2e/d5-button.mjs (#366 button rows) with VS Code on the Mac and Windows; 'fade' runs only its launch F (#378 panel fade) on the Mac; 'auto' runs its launch X (#384 auto mode, VS Code and Cursor) on both with no hosted-AI call (needs ai off); 'auto-ai' runs its launch Y, at most 1 hosted call per system (needs ai on). All need build_run, rc0154, rc0155 and rc0157 empty. Empty: off"
         required: false
         default: ""
 
@@ -118,7 +126,7 @@ jobs:
         include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac' || inputs.d5 == 'fade') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
-    timeout-minutes: ${{ inputs.rc0155 == 'walk' && 45 || 30 }}
+    timeout-minutes: ${{ (inputs.rc0155 == 'walk' || inputs.d5 == 'auto') && 45 || 30 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -135,7 +143,7 @@ jobs:
           OS_LABEL: ${{ matrix.label }}
         run: |
           case "$RC0154$RC0155$RC0157$D5" in
-            ai-*|hero|setup|rows|fade) ;;
+            ai-*|hero|setup|rows|fade|auto|auto-ai) ;;
             *)
               if [ "$QA_AI_OK" = 1 ]; then
                 echo "Mode: ai=true: the walkthrough explains for real (4 hosted calls on this system); the Mac also records the website media"
@@ -201,7 +209,16 @@ jobs:
               if [ "$D5" = fade ] && [ "$OS_LABEL" != mac ]; then echo "::error::d5=fade is Mac only"; exit 1; fi
               if [ "$D5" = rows ]; then echo "Mode: the D5 #366 button rows (app/e2e/d5-button.mjs) with VS Code on $OS_LABEL; no hosted-AI call (the last launch behind a hosts block of the API host). The usual walk and the portable exe are skipped"
               else echo "Mode: the #378 panel-fade rows (app/e2e/d5-button.mjs launch F only) with VS Code on the Mac; no hosted-AI call (no agreement in its profile). The usual walk and the portable exe are skipped"; fi ;;
-            *) echo "::error::d5 must be empty, rows or fade"; exit 1 ;;
+            auto)
+              if [ "$QA_AI_OK" = 1 ]; then echo "::error::d5=auto makes no hosted-AI call: run it with ai off"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::d5=auto needs build_run (the build-only run under test)"; exit 1; fi
+              echo "Mode: the #384 auto-mode rows (app/e2e/d5-button.mjs launch X) with VS Code and Cursor on $OS_LABEL; no hosted-AI call (the API host blocked in the hosts file). The usual walk, the website media and the portable exe are skipped" ;;
+            auto-ai)
+              if [ "$QA_AI_OK" != 1 ]; then echo "::error::d5=auto-ai sends one hosted explanation: run it with ai on"; exit 1; fi
+              if [ -z "$BUILD_RUN" ]; then echo "::error::d5=auto-ai needs build_run (the build-only run under test)"; exit 1; fi
+              if [ -n "$MEDIA_SAMPLES" ]; then echo "::warning::media_samples is ignored with d5=auto-ai (no website media)"; fi
+              echo "Mode: the #384 auto-mode explanation with #383's Suggested fixes (app/e2e/d5-button.mjs launch Y) in $([ "$OS_LABEL" = mac ] && echo 'VS Code' || echo Cursor) on $OS_LABEL; at most 1 hosted call on this system. The usual walk, the website media and the portable exe are skipped" ;;
+            *) echo "::error::d5 must be empty, rows, fade, auto or auto-ai"; exit 1 ;;
           esac
 
       # Every install this run makes must be flagged as QA, or it counts as a real install in the
@@ -252,8 +269,8 @@ jobs:
           if [ -z "$UNVIBE_QA_FLAG_TOKEN" ]; then echo "::error::no QA flag token; nothing was launched"; exit 1; fi
           # The mode check above lets only one of rc0154, rc0155, rc0157 and d5 be set.
           case "$RC0154$RC0155$RC0157$D5" in
-            # d5 rows and fade: only d5-button.mjs launches the app (one id for its profiles a, b (Windows), f and c).
-            rows|fade) ids="$D5_ID" ;;
+            # d5: only d5-button.mjs launches the app (one id for its profiles a, b (Windows), f, c, x and y).
+            rows|fade|auto|auto-ai) ids="$D5_ID" ;;
             # rc0157 setup: only setup-0157.mjs launches the app (one id for its profiles: Mac one, Windows 100 % and 150 %).
             setup) ids="$SETUP57_ID" ;;
             # rc0155 ai: only rc-0155-ai.mjs launches the app (the walk, media and portable steps are skipped).
@@ -826,11 +843,11 @@ jobs:
           cat "$SHOTS_DIR/report-setup0157-$UNVIBE_OS.txt" || true
           exit $status
 
-      # d5=rows and fade: VS Code for the D5 rows. Mac: Homebrew's cask, its quarantine flag removed (as the install step does
+      # d5 (every mode): VS Code for the D5 rows. Mac: Homebrew's cask, its quarantine flag removed (as the install step does
       # for Unvibe), signed by Microsoft's team UBF8T346G9. Windows: the stable zip from Microsoft's update service, its
       # sha256 the service's, and Code.exe Authenticode-signed by Microsoft. Nothing is installed system-wide on Windows.
       - name: Install VS Code for the D5 rows (Mac)
-        if: (inputs.d5 == 'rows' || inputs.d5 == 'fade') && matrix.label == 'mac'
+        if: inputs.d5 != '' && matrix.label == 'mac'
         shell: bash
         run: |
           brew install --cask visual-studio-code >/dev/null
@@ -844,7 +861,7 @@ jobs:
           echo "VSCODE=$app/Contents/Resources/app/bin/code" >> "$GITHUB_ENV"
 
       - name: Install VS Code for the D5 rows (Windows)
-        if: inputs.d5 == 'rows' && matrix.label == 'windows'
+        if: inputs.d5 != '' && matrix.label == 'windows'
         shell: pwsh
         run: |
           $info = Invoke-RestMethod 'https://update.code.visualstudio.com/api/update/win32-x64-archive/stable/latest'
@@ -861,13 +878,65 @@ jobs:
           if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') { Write-Error 'Code.exe is not validly signed by Microsoft'; exit 1 }
           "VSCODE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      # d5=rows: the D5 #366 button rows (app/e2e/d5-button.mjs), no hosted-AI call. mouse.swift gives the Mac the real
+      # d5=auto (both systems) and auto-ai (Windows): Cursor, from Cursor's update service (its stable "latest" link
+      # redirects to downloads.cursor.com). Mac: the dmg's app copied to /Applications, codesign verified, and its bundle
+      # id the one Unvibe's auto mode allows (com.todesktop.230313mzl4w4u92). Windows: the per-user setup, Authenticode
+      # valid on it and on Cursor.exe, installed silently without starting Cursor. Cursor is not signed in.
+      - name: Install Cursor for the auto-mode rows (Mac)
+        if: inputs.d5 == 'auto' && matrix.label == 'mac'
+        shell: bash
+        run: |
+          dmg="$RUNNER_TEMP/cursor.dmg"
+          final=$(curl -sSfL --retry 3 -o "$dmg" -w '%{url_effective}' 'https://api2.cursor.sh/updates/download/golden/darwin-arm64/cursor/latest')
+          host=$(printf '%s' "$final" | sed -E 's#^https://([^/]+)/.*#\1#')
+          echo "Cursor dmg from $host ($(du -h "$dmg" | cut -f1)), sha256 $(shasum -a 256 "$dmg" | cut -d' ' -f1)"
+          if [ "$host" != downloads.cursor.com ]; then echo "::error::the Cursor dmg did not come from downloads.cursor.com ($final)"; exit 1; fi
+          mnt=$(hdiutil attach -nobrowse -readonly "$dmg" | sed -n 's#^.*\(/Volumes/.*\)$#\1#p' | tail -1)
+          src=$(find "$mnt" -maxdepth 1 -name '*.app' | head -1)
+          if [ -z "$src" ]; then echo "::error::no app in the Cursor dmg"; exit 1; fi
+          ditto "$src" /Applications/Cursor.app
+          hdiutil detach "$mnt" -quiet || true
+          app=/Applications/Cursor.app
+          xattr -dr com.apple.quarantine "$app" || true
+          if ! codesign --verify --deep --strict "$app"; then echo "::error::Cursor's signature does not verify"; exit 1; fi
+          id=$(defaults read "$app/Contents/Info" CFBundleIdentifier)
+          team=$(codesign -dv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+          echo "Cursor $(defaults read "$app/Contents/Info" CFBundleShortVersionString), $id, team $team, signature valid"
+          if [ "$id" != com.todesktop.230313mzl4w4u92 ]; then echo "::error::Cursor's bundle id is $id, not the one Unvibe's auto mode allows"; exit 1; fi
+          echo "CURSOR=$app/Contents/MacOS/$(defaults read "$app/Contents/Info" CFBundleExecutable)" >> "$GITHUB_ENV"
+
+      - name: Install Cursor for the auto-mode rows (Windows)
+        if: (inputs.d5 == 'auto' || inputs.d5 == 'auto-ai') && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $setup = "$env:RUNNER_TEMP\CursorUserSetup-x64.exe"
+          $r = Invoke-WebRequest -Uri 'https://api2.cursor.sh/updates/download/golden/win32-x64-user/cursor/latest' -OutFile $setup -UseBasicParsing -PassThru
+          $final = $r.BaseResponse.RequestMessage.RequestUri
+          "Cursor setup from $($final.Host) ($([IO.Path]::GetFileName($final.AbsolutePath))), sha256 $((Get-FileHash $setup -Algorithm SHA256).Hash.ToLower())"
+          if ($final.Host -ne 'downloads.cursor.com') { Write-Error "the Cursor setup did not come from downloads.cursor.com ($final)"; exit 1 }
+          $sig = Get-AuthenticodeSignature $setup
+          "setup: $($sig.Status), $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { Write-Error "the Cursor setup's signature is $($sig.Status)"; exit 1 }
+          $p = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/MERGETASKS=!runcode' -PassThru
+          if (-not $p.WaitForExit(300000)) { Write-Error 'the Cursor setup did not finish in 5 minutes'; exit 1 }
+          "setup exit code: $($p.ExitCode)"
+          Start-Sleep -Seconds 3
+          Get-Process Cursor -ErrorAction SilentlyContinue | Stop-Process -Force
+          $exe = "$env:LOCALAPPDATA\Programs\cursor\Cursor.exe"
+          if (-not (Test-Path $exe)) { $exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 -Filter Cursor.exe -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
+          if (-not $exe) { Write-Error 'Cursor.exe is not installed'; exit 1 }
+          $sig = Get-AuthenticodeSignature $exe
+          "$exe $((Get-Item $exe).VersionInfo.ProductVersion): $($sig.Status), $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { Write-Error "Cursor.exe's signature is $($sig.Status)"; exit 1 }
+          "CURSOR=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # d5 (every mode; auto and auto-ai: launches X and Y, Cursor's path in CURSOR): the D5 rows (app/e2e/d5-button.mjs); a hosted call only with auto-ai. mouse.swift gives the Mac the real
       # pointer and the window list. A clean Mac for the prompt row: Unvibe's Accessibility row is removed from TCC.db first,
       # the same database the install step adds it to (tccutil said "No such bundle identifier" in run 44668914881 and
       # removed nothing); the script adds it again for its last launch, as the install step does. The raw net log stays in
       # $RUNNER_TEMP/netlog-d5 (never uploaded); the script keeps only time, method, path and status.
       - name: Walk the D5 button rows (d5 rows)
-        if: (inputs.d5 == 'rows' || inputs.d5 == 'fade') && env.UNVIBE_EXE != '' && env.VSCODE != ''
+        if: inputs.d5 != '' && env.UNVIBE_EXE != '' && env.VSCODE != ''
         shell: bash
         env:
           SHOTS_DIR: ${{ runner.temp }}/d5
@@ -1025,7 +1094,7 @@ jobs:
 
       # Leave this run's installs out of founder stats: the walkthrough's profile on both systems,
       # on Windows the portable exe's, rc0154's profiles (walk: two; ai: one, or two with full), rc0155's (walk: the
-      # control's and the RC rows'; ai: one), rc0157's (setup: the Mac's one; Windows 100 % and 150 %) and d5's (a, b on Windows, c). Only this step has the admin token, and Unvibe is stopped
+      # control's and the RC rows'; ai: one), rc0157's (setup: the Mac's one; Windows 100 % and 150 %) and d5's (a, b on Windows, c, x, y). Only this step has the admin token, and Unvibe is stopped
       # first, so the app under test never runs with it. Runs even after a failed check. Fails when
       # the API answers anything but 200 with matched true: a 200 alone does not prove the app's own
       # install row was flagged (Security, 31 Oct).
@@ -1040,7 +1109,7 @@ jobs:
           Get-Process Unvibe -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not $env:UNVIBE_QA_FLAG_TOKEN) { 'QA install flag: no token, so these installs count as real'; exit 1 }
           $failed = 0
-          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150', 'd5-profile-a', 'd5-profile-b', 'd5-profile-f', 'd5-profile-c')
+          $names = @('walkthrough-profile', 'portable-profile', 'rc0154-upgrade-profile', 'rc0154-profile', 'rc0154-ai-profile', 'rc0154-sample-profile', 'rc0154-hero-profile', 'rc0155-control-profile', 'rc0155-profile', 'rc0155-ai-profile', 'setup0157-profile-mac', 'setup0157-profile-100', 'setup0157-profile-150', 'd5-profile-a', 'd5-profile-b', 'd5-profile-f', 'd5-profile-c', 'd5-profile-x', 'd5-profile-y')
           # rc0155 link: the probe's per-way profiles, and the app's default profile it seeded (Combine keeps a rooted path).
           # rc0155 ai-windows: the default profile too, in case a second Unvibe started there (run 44658289654).
           if ($env:RC0155 -eq 'link') { $names += @('rc0155-link54-profile-A', 'rc0155-link54-profile-B', 'rc0155-link-profile-A', 'rc0155-link-profile-B', (Join-Path $env:APPDATA 'Unvibe')) }
@@ -1056,6 +1125,9 @@ jobs:
                 -Body (@{ installId = $installId } | ConvertTo-Json -Compress)
               $matched = ($r.Content | ConvertFrom-Json).matched
               "QA install flag ($name): $($r.StatusCode) matched=$matched"
+              # d5=auto: launch X ran behind the hosts block from start to end, so its install never reached the API;
+              # its id was stored by the pre-flag step, which flags the row if it ever appears.
+              if ($name -eq 'd5-profile-x' -and $r.StatusCode -eq 200 -and $matched -eq $false) { "QA install flag ($name): no install row (launch X never reached the API); the id stays pre-flagged"; continue }
               if ($r.StatusCode -ne 200 -or $matched -ne $true) { "QA install flag ($name): the app's install row was not flagged"; $failed++ }
             } catch { "QA install flag ($name) failed: $($_.Exception.Message)"; $failed++ }
           }
@@ -1120,7 +1192,7 @@ jobs:
       # Fresh website media from the same installed build: real screenshots and window recordings.
       - name: Record website media (Mac)
         id: media
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.d5 == ''
         continue-on-error: true
         shell: bash
         env:
@@ -1136,7 +1208,7 @@ jobs:
           cd "$RUNNER_TEMP/pw" && node marketing-media.mjs
 
       - name: Flag the media install as QA (Mac)
-        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
+        if: always() && matrix.label == 'mac' && env.UNVIBE_EXE != '' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.d5 == ''
         shell: bash
         env:
           UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
@@ -1157,7 +1229,7 @@ jobs:
           echo "QA install flag (media): the app's install row was not flagged"; exit 1
 
       - name: Upload website media
-        if: always() && matrix.label == 'mac' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-')
+        if: always() && matrix.label == 'mac' && env.QA_AI_OK == '1' && !startsWith(inputs.rc0154, 'ai-') && !startsWith(inputs.rc0155, 'ai-') && inputs.d5 == ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unvibe-mac-website-media

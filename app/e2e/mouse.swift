@@ -18,10 +18,80 @@
 //   mouse move <x> <y>                the pointer to x,y (a real move event), no button
 //   mouse activations <seconds>       for that long, one line per NSWorkspace didActivateApplication note:
 //                                     "<userInfo key>\t<value's description>" (#378 reads the pid in "(bundle id - pid)")
+// For d5-button.mjs's auto-mode launches (#384):
+//   mouse key <action>                one key action now, as real key events: paste (⌘V), switch (⌘Tab: ⌘ held, Tab,
+//                                     ⌘ released), copy (⌘C), type:<ascii> (each character typed); prints the time
+//   mouse dragkey <x1> <y1> <x2> <y2> <ms> <action>
+//                                     a drag as `drag`, then <ms> after the release the key action; prints the press
+//                                     reads, then "up=<release ms> key=<key ms>" (ms since 1970)
+//   mouse front                       the frontmost app's bundle id
+//   mouse clip info                   the general pasteboard: change count, types, the PNG's sha256, file URLs, and
+//                                     the text's length and first 80 characters, as one JSON line
+//   mouse clip image <png>            the pasteboard holds that PNG only (as a screenshot copy does)
+//   mouse clip files <path>           the pasteboard holds that file as a file URL (NSURL, the way Finder copies one)
+//   mouse clipwatch                   until stdin closes: every 5 ms the change count; on a change one JSON line
+//                                     {t, c, types, len, text (first 400 characters)}
 import AppKit
 import Carbon
 import CoreGraphics
+import CryptoKit
 import Foundation
+
+func nowMs() -> Int64 { Int64(Date().timeIntervalSince1970 * 1000) }
+
+/// Key events at the HID tap, as a keyboard's (auto-mode rows): the app in front gets them.
+let keySource = CGEventSource(stateID: .hidSystemState)
+func key(_ code: CGKeyCode, _ down: Bool, _ flags: CGEventFlags = []) {
+  guard let e = CGEvent(keyboardEventSource: keySource, virtualKey: code, keyDown: down) else { exit(3) }
+  e.flags = flags
+  e.post(tap: .cghidEventTap)
+}
+/// paste (⌘V), copy (⌘C), switch (⌘ held, Tab, ⌘ released: the app switcher's choice, the last app), type:<ascii>.
+func act(_ a: String) {
+  switch a {
+  case "paste", "copy":
+    let k: CGKeyCode = a == "paste" ? 9 : 8
+    key(55, true, .maskCommand); usleep(20_000)
+    key(k, true, .maskCommand); key(k, false, .maskCommand); usleep(20_000)
+    key(55, false)
+  case "switch":
+    key(55, true, .maskCommand); usleep(40_000)
+    key(48, true, .maskCommand); key(48, false, .maskCommand); usleep(200_000)
+    key(55, false)
+  default:
+    guard a.hasPrefix("type:") else { exit(2) }
+    for unit in a.dropFirst(5).utf16 {
+      var c: UniChar = unit
+      guard let d = CGEvent(keyboardEventSource: keySource, virtualKey: 0, keyDown: true),
+            let u = CGEvent(keyboardEventSource: keySource, virtualKey: 0, keyDown: false) else { exit(3) }
+      d.keyboardSetUnicodeString(stringLength: 1, unicodeString: &c)
+      u.keyboardSetUnicodeString(stringLength: 1, unicodeString: &c)
+      d.post(tap: .cghidEventTap)
+      u.post(tap: .cghidEventTap)
+      usleep(15_000)
+    }
+  }
+}
+
+/// The general pasteboard as one JSON object: change count, types, the PNG's sha256, file URLs, the text's length and
+/// its first `keep` characters.
+func clipState(_ keep: Int) -> [String: Any] {
+  let pb = NSPasteboard.general
+  var o: [String: Any] = ["t": nowMs(), "c": pb.changeCount, "types": (pb.types ?? []).map { $0.rawValue }]
+  if let png = pb.data(forType: .png) { o["png"] = SHA256.hash(data: png).map { String(format: "%02x", $0) }.joined() }
+  if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+    o["files"] = urls.map { $0.path }
+  }
+  let s = pb.string(forType: .string) ?? ""
+  o["len"] = s.count
+  o["text"] = String(s.prefix(keep))
+  return o
+}
+func printJSON(_ o: [String: Any]) {
+  guard let d = try? JSONSerialization.data(withJSONObject: o), let s = String(data: d, encoding: .utf8) else { return }
+  print(s)
+  fflush(stdout)
+}
 
 /// The system cursor as the Mac helper reads it (selection-watch/mac/main.swift: NSCursor.currentSystem's hot spot
 /// against NSCursor.iBeam's), with both images' sizes (lead 2026-11-20, after run 44675654106 read hot=12,11 on text),
@@ -186,6 +256,64 @@ case "activations" where a.count > 2:
   }
   RunLoop.main.run(until: Date(timeIntervalSinceNow: Double(a[2]) ?? 5))
   center.removeObserver(token)
+case "key" where a.count > 2:
+  act(a[2])
+  print(nowMs())
+case "dragkey" where a.count > 7:
+  // The drag as `drag`, then the key action <ms> after the release, timed here (no process start in between).
+  let p1 = CGPoint(x: Double(a[2]) ?? 0, y: Double(a[3]) ?? 0)
+  let p2 = CGPoint(x: Double(a[4]) ?? 0, y: Double(a[5]) ?? 0)
+  settle(p1)
+  let before = cur()
+  post(.leftMouseDown, p1)
+  usleep(40_000)
+  let at40 = cur()
+  usleep(40_000)
+  steps(p1, p2)
+  post(.leftMouseUp, p2)
+  let up = nowMs()
+  let due = up + (Int64(a[6]) ?? 0)
+  while nowMs() < due { usleep(2_000) }
+  act(a[7])
+  print("press: \(before) at40: \(at40)")
+  print("up=\(up) key=\(nowMs())")
+case "front":
+  print(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none")
+case "clip" where a.count > 2:
+  let pb = NSPasteboard.general
+  switch a[2] {
+  case "info":
+    printJSON(clipState(80))
+  case "image" where a.count > 3:
+    guard let png = FileManager.default.contents(atPath: a[3]) else { exit(1) }
+    pb.clearContents()
+    pb.setData(png, forType: .png)
+    printJSON(clipState(80))
+  case "files" where a.count > 3:
+    pb.clearContents()
+    pb.writeObjects([NSURL(fileURLWithPath: a[3])])
+    printJSON(clipState(80))
+  default:
+    exit(2)
+  }
+case "clipwatch":
+  // Every 5 ms the change count (an IPC read, nothing held); one line per change, until stdin closes.
+  DispatchQueue.global().async {
+    while readLine() != nil {}
+    exit(0)
+  }
+  var last = NSPasteboard.general.changeCount
+  var first = clipState(400)
+  first["start"] = 1
+  printJSON(first)
+  while true {
+    usleep(5_000)
+    let c = NSPasteboard.general.changeCount
+    if c != last {
+      last = c
+      printJSON(clipState(400))
+    }
+  }
 default:
   exit(2)
 }
