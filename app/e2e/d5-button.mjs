@@ -96,6 +96,9 @@
 //      didn't (run 44987639357), so the Mac idle check never saw them.
 //   X2 select, then type at the same moments: the file holds the typed word in its place, and no read holds it.
 //   X1 and X2 also fail an explanation that started more than 50 ms after the key: a read the key met was kept.
+//   X1c / X2c (Mac): the same at 700 / 900 / 1200 / 1500 ms with CGEvent keys, which HIDIdleTime misses but the HID
+//      press count sees, so only MUST-A5's count can drop a read they meet. A row whose file comes out wrong logs the
+//      drag against the line ends and the editor's edge, and takes a still.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
 //   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
@@ -2153,6 +2156,9 @@ async function autoEditor(ctx, tag) {
     const b = lineOf(L, k + 1);
     const edge = L.editor.right - 40;
     const s = { x1: Math.min(a.right + 30, edge), y1: a.y, x2: Math.min(b.right + 30, edge), y2: b.y };
+    // For a row whose file comes out wrong (run 44990684755, Mac Cursor: the paste replaced from 2 characters before the
+    // line ends): where the drag went against the line ends and the editor's edge.
+    s.geo = `drag (${Math.round(s.x1)}, ${Math.round(s.y1)}) → (${Math.round(s.x2)}, ${Math.round(s.y2)}); line ends ${Math.round(a.right)} / ${Math.round(b.right)}; the editor's right edge ${Math.round(L.editor.right)}`;
     // Never a drag onto Unvibe's own panel (run 44977282607, Mac Cursor: the drags went to the panel, not the editor).
     const pr = await panelPage(app)?.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight, vis: document.visibilityState })).catch(() => null);
     if (pr?.vis === 'visible') {
@@ -2211,37 +2217,44 @@ async function autoEditor(ctx, tag) {
   }
 
   // X1 / X2: select, then paste or type, at six moments (the lead: 700, 900 and 1500 added after run 44977282607).
-  for (const kind of ['paste', 'type']) {
-    for (const ms of [300, 700, 900, 1200, 1500, 2500]) {
-      const k = nextK();
-      try {
-        await spaced();
-        await reset();
-        const P = person();
-        setClipboard(P);
-        await activateEditor();
-        await watchReads(app);
-        const s = await block(k);
-        const t0 = Date.now();
-        // Mac: the keys through System Events, which reset HIDIdleTime as a keyboard does (run 44987639357: CGEvent keys
-        // didn't, so the Mac idle check never saw them); Windows: SendInput, which GetLastInputInfo sees.
-        const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, `${os === 'mac' ? 'se-' : ''}${kind === 'paste' ? 'paste' : `type:${TYPED}`}`);
-        ctx.lastRead = r.up;
-        await sleep(5500);
-        const got = readFileSync(autoFile, 'utf8');
-        const clip = readClipboard().trim();
-        const said = await autoSays(t0);
-        const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
-        const clipOk = clip === P;
-        // A read that holds the person's key came after it: the idle check missed the key.
-        const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
-        // A start after the key (50 ms slack: the start event's trip to the main window, and System Events' own delay
-        // before its key lands) means a read the key met was kept (Security's acceptance for 19f57c81: a key from +375 to
-        // +1703 ms starts nothing unless the read had already finished).
-        const late = said.st.filter((t) => t > r.key + 50);
-        log(fileOk && clipOk && !readKey && late.length === 0, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
-          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - r.up}`).join(', ')} ms${late.length ? ' (AFTER the key)' : ' (before the key)'}; ` : ''}${said.text}`);
-      } catch (e) { log(false, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind} ${ms} ms after the mouse-up`, `stopped: ${short(e)}`); }
+  // Mac: the keys through System Events first, which reset HIDIdleTime as a keyboard does (run 44987639357: CGEvent
+  // keys didn't), so they test the idle gate; then X1c / X2c with the harness's CGEvent keys, which HIDIdleTime misses
+  // but the HID press count sees (+1 each, run 44990684755 X9a), so they test MUST-A5's count alone, at the moments a
+  // read can be under way. Windows: SendInput, which GetLastInputInfo sees.
+  const keyRuns = os === 'mac' ? [['se', [300, 700, 900, 1200, 1500, 2500]], ['cg', [700, 900, 1200, 1500]]] : [['', [300, 700, 900, 1200, 1500, 2500]]];
+  for (const [via, offsets] of keyRuns) {
+    for (const kind of ['paste', 'type']) {
+      for (const ms of offsets) {
+        const k = nextK();
+        const name = `${kind === 'paste' ? 'X1' : 'X2'}${via === 'cg' ? 'c' : ''} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${via === 'se' ? ' (System Events key)' : via === 'cg' ? ' (CGEvent key: only the press count sees it)' : ''}`;
+        try {
+          await spaced();
+          await reset();
+          const P = person();
+          setClipboard(P);
+          await activateEditor();
+          await watchReads(app);
+          const s = await block(k);
+          const t0 = Date.now();
+          const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, `${via === 'se' ? 'se-' : ''}${kind === 'paste' ? 'paste' : `type:${TYPED}`}`);
+          ctx.lastRead = r.up;
+          await sleep(5500);
+          const got = readFileSync(autoFile, 'utf8');
+          const clip = readClipboard().trim();
+          const said = await autoSays(t0);
+          const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
+          const clipOk = clip === P;
+          if (!fileOk) desktop(`x-${tag}-${kind}${via}-${ms}-file`);
+          // A read that holds the person's key came after it: the idle check missed the key.
+          const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
+          // A start after the key (50 ms slack: the start event's trip to the main window, and System Events' own delay
+          // before its key lands) means a read the key met was kept (Security's acceptance for 19f57c81: a key from +375
+          // to +1703 ms starts nothing unless the read had already finished).
+          const late = said.st.filter((t) => t > r.key + 50);
+          log(fileOk && clipOk && !readKey && late.length === 0, name,
+            `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}${fileOk ? '' : ` (${s.geo})`}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - r.up}`).join(', ')} ms${late.length ? ' (AFTER the key)' : ' (before the key)'}; ` : ''}${said.text}`);
+        } catch (e) { log(false, name, `stopped: ${short(e)}`); }
+      }
     }
   }
 
