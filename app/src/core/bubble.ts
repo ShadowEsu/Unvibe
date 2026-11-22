@@ -352,23 +352,53 @@ export function bigEnoughForAuto(code: string): boolean {
  * The 700 ms wait after a mouse-up. `arm` starts it for the button's state at that moment; `cancel` (called on any
  * change to the button: a click, a scroll, a new selection, a press) stops it; and it fires only if the button is
  * still in that same state.
+ * While the run it fired for that state is under way, `holds(state)` is true, so the button's 4 s idle waits for it
+ * (QA run 6 X8 Cursor: a slow read plus the front-app question passed 4 s, and the idle cancelled a settled start).
+ * Idle isn't input: a click, scroll, new selection or app switch still changes the state, which the run checks.
+ * `held` is called with the armed state when the hold starts and again when it ends.
  */
 export class AutoSettle<S> {
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private running: S | null = null;
 
-  constructor(private readonly current: () => S, private readonly fire: (armed: S) => void, private readonly ms = AUTO_SETTLE_MS) {}
+  constructor(
+    private readonly current: () => S,
+    private readonly fire: (armed: S) => unknown,
+    private readonly ms = AUTO_SETTLE_MS,
+    private readonly held: (armed: S) => void = () => undefined,
+  ) {}
 
   arm(armed: S): void {
     this.cancel();
     this.timer = setTimeout(() => {
       this.timer = null;
-      if (this.current() === armed) this.fire(armed);
+      if (this.current() === armed) void this.run(armed);
     }, this.ms);
   }
 
   cancel(): void {
     clearTimeout(this.timer ?? undefined);
     this.timer = null;
+  }
+
+  holds(state: S): boolean {
+    return this.running !== null && this.running === state;
+  }
+
+  private async run(armed: S): Promise<void> {
+    this.running = armed;
+    this.held(armed);
+    try {
+      await this.fire(armed);
+    } catch {
+      /* the run's own failure; the hold still ends */
+    } finally {
+      // A newer run took over the hold: leave it.
+      if (this.running === armed) {
+        this.running = null;
+        this.held(armed);
+      }
+    }
   }
 }
 

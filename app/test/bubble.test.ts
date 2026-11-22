@@ -198,6 +198,54 @@ test('auto mode waits 700 ms after the mouse-up, and any change to the button in
   }
 });
 
+test('an auto run under way holds the button\'s idle for its state until it ends, failed or not, and a newer run keeps its own hold (QA run 6 X8)', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    let current: object = { look: 'ghost' };
+    const ends: Array<{ settle: () => void; fail: () => void }> = [];
+    const held: Array<[object, boolean]> = [];
+    const settle: AutoSettle<object> = new AutoSettle(
+      () => current,
+      () => new Promise<void>((resolve, reject) => ends.push({ settle: resolve, fail: () => reject(new Error('read failed')) })),
+      AUTO_SETTLE_MS,
+      (armed) => held.push([armed, settle.holds(armed)]),
+    );
+    const first = current;
+    assert.equal(settle.holds(first), false, 'nothing held before the wait ends');
+    settle.arm(first);
+    mock.timers.tick(AUTO_SETTLE_MS);
+    assert.equal(settle.holds(first), true, 'held while the read runs');
+    assert.deepEqual(held, [[first, true]]);
+    assert.equal(settle.holds({ look: 'ghost' }), false, 'only for the state it was armed for');
+    ends[0]!.settle();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settle.holds(first), false, 'released when the run ends');
+    assert.deepEqual(held, [[first, true], [first, false]]);
+
+    // A run that throws releases too.
+    settle.arm(first);
+    mock.timers.tick(AUTO_SETTLE_MS);
+    ends[1]!.fail();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settle.holds(first), false);
+
+    // A new selection's run while the old one is still reading: the old one ending leaves the new hold alone.
+    settle.arm(first);
+    mock.timers.tick(AUTO_SETTLE_MS);
+    current = { look: 'ghost' };
+    settle.arm(current);
+    mock.timers.tick(AUTO_SETTLE_MS);
+    ends[2]!.settle();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settle.holds(current), true, 'the newer run still holds its state');
+    ends[3]!.settle();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(settle.holds(current), false);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
 test('auto mode sends only a selection of at least 2 lines or 40 characters', () => {
   assert.equal(bigEnoughForAuto('x'.repeat(39)), false);
   assert.equal(bigEnoughForAuto('x'.repeat(40)), true);

@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 import {
+  AUTO_SETTLE_MS,
   AutoExplainGate,
   AutoSettle,
   bubbleCopy,
@@ -117,8 +118,11 @@ let preview: { run: number; abort: AbortController; code: string | null; sourceA
 let previewRuns = 0;
 let escapeHeld = false;
 // Auto mode (ledger 646): the 700 ms wait after a mouse-up, when that mouse-up came (the read skips if any input followed
-// it), and the guards' memory.
-const autoSettle = new AutoSettle<GhostState>(() => state, (armed) => void runAuto(armed));
+// it), and the guards' memory. The button's idle waits while a run for its state is under way, and starts over after
+// one that left it showing.
+const autoSettle = new AutoSettle<GhostState>(() => state, runAuto, AUTO_SETTLE_MS, (armed) => {
+  if (state === armed) scheduleIdle();
+});
 let autoSettleStartedAt = 0;
 const autoGate = new AutoExplainGate();
 
@@ -234,6 +238,8 @@ async function runAuto(armed: GhostState): Promise<void> {
     if (before !== 'read') return;
     const capture = await captureForAuto(armed.app, autoSettleStartedAt);
     if (!still() || !capture.code) return;
+    // Not armed.app on the Mac: that's the helper's bundle id, and the panel and Library show frontmostApp()'s
+    // process name ("Cursor", not "com.todesktop.…"). The button's idle waits for this run (AutoSettle's hold).
     const sourceApp = capture.sourceApp ?? (await frontmostApp()) ?? '';
     // A press may have started an explanation while the selection was read: auto mode never replaces it.
     if (!still() || deps.busy()) return;
@@ -278,7 +284,7 @@ function ensureWindow(): BrowserWindow {
 function scheduleIdle(): void {
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
-  if (state.look === 'ghost') idleTimer = setTimeout(() => onInput({ e: 'idle' }), GHOST_IDLE_MS);
+  if (state.look === 'ghost' && !autoSettle.holds(state)) idleTimer = setTimeout(() => onInput({ e: 'idle' }), GHOST_IDLE_MS);
 }
 
 function apply(next: GhostState): void {
