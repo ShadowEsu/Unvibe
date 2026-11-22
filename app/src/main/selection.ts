@@ -338,12 +338,13 @@ const MAC_AUTO_INPUT = [
 ].join('\n');
 
 /**
- * Windows: the clipboard's sequence number, the last input's tick (GetLastInputInfo: a time, never a key), whether
- * Shift, Ctrl, Alt or Win is held right now (it would join the Ctrl+Insert), and a 10 ms watch for the sequence number to
- * move, all in the PowerShell process that sends the keystroke.
+ * Windows: the clipboard's sequence number, the last input's tick (GetLastInputInfo: a time, never a key), and a 10 ms
+ * watch for the sequence number to move, all in the PowerShell process that sends the keystroke. Whether Shift, Ctrl or
+ * Alt is held comes from Forms' managed `Control.ModifierKeys` in PS_AUTO_READ, with no key-state P/Invoke: EDR
+ * keylogger rules match those names in a PowerShell script (Security MUST-A4 on #384).
  */
 const PS_AUTO_CLASS =
-  'Add-Type @"\nusing System;\nusing System.Diagnostics;\nusing System.Runtime.InteropServices;\nusing System.Threading;\npublic class UvAuto {\n  [StructLayout(LayoutKind.Sequential)] struct Lii { public uint cbSize; public uint dwTime; }\n  [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref Lii info);\n  [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();\n  [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);\n  public static uint LastInput() { Lii info = new Lii(); info.cbSize = 8; if (!GetLastInputInfo(ref info)) throw new Exception("GetLastInputInfo"); return info.dwTime; }\n  public static uint IdleMs() { return unchecked((uint)Environment.TickCount - LastInput()); }\n  public static bool ModifierHeld() { foreach (int key in new int[] { 0x10, 0x11, 0x12, 0x5B, 0x5C }) { if ((GetAsyncKeyState(key) & 0x8000) != 0) return true; } return false; }\n  public static uint Seq() { return GetClipboardSequenceNumber(); }\n  public static bool WaitSeq(uint before, int ms) { Stopwatch watch = Stopwatch.StartNew(); while (watch.ElapsedMilliseconds < ms) { if (GetClipboardSequenceNumber() != before) return true; Thread.Sleep(10); } return false; }\n}\n"@\n';
+  'Add-Type @"\nusing System;\nusing System.Diagnostics;\nusing System.Runtime.InteropServices;\nusing System.Threading;\npublic class UvAuto {\n  [StructLayout(LayoutKind.Sequential)] struct Lii { public uint cbSize; public uint dwTime; }\n  [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref Lii info);\n  [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();\n  public static uint LastInput() { Lii info = new Lii(); info.cbSize = 8; if (!GetLastInputInfo(ref info)) throw new Exception("GetLastInputInfo"); return info.dwTime; }\n  public static uint IdleMs() { return unchecked((uint)Environment.TickCount - LastInput()); }\n  public static uint Seq() { return GetClipboardSequenceNumber(); }\n  public static bool WaitSeq(uint before, int ms) { Stopwatch watch = Stopwatch.StartNew(); while (watch.ElapsedMilliseconds < ms) { if (GetClipboardSequenceNumber() != before) return true; Thread.Sleep(10); } return false; }\n}\n"@\n';
 
 /**
  * The app and the settle time arrive as environment variables, never inside the script text. The keystroke goes only to
@@ -356,7 +357,7 @@ const PS_AUTO_READ =
   'if (-not ([bool]$name -and ("$name.exe" -ieq $env:UNVIBE_AUTO_APP) -and $elevated -eq "0")) { [Console]::Out.WriteLine("skip app $name"); exit }; ' +
   '$before = [UvAuto]::Seq(); ' +
   '$need = [Math]::Max([int64]500, [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [int64]$env:UNVIBE_AUTO_SINCE); ' +
-  'if ([UvAuto]::IdleMs() -lt $need -or [UvAuto]::ModifierHeld()) { [Console]::Out.WriteLine("skip busy $name"); exit }; ' +
+  "if ([UvAuto]::IdleMs() -lt $need -or [System.Windows.Forms.Control]::ModifierKeys -ne 'None') { [Console]::Out.WriteLine(\"skip busy $name\"); exit }; " +
   "[System.Windows.Forms.SendKeys]::SendWait('^{INSERT}'); $mark = [UvAuto]::LastInput(); " +
   'if ([UvAuto]::WaitSeq($before, 2000)) { [Console]::Out.WriteLine("copied $mark $name") } else { [Console]::Out.WriteLine("none $mark $name") }';
 

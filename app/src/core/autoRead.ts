@@ -6,8 +6,9 @@ import { autoClipboardReadable } from './clipboardHold';
  * - the clipboard is never emptied: one native call checks the source app and that the person is idle, sends the copy
  *   keystroke, and watches the clipboard's change count (Mac `changeCount`, Windows `GetClipboardSequenceNumber`), so a
  *   paste before the copy lands still gets the person's own clipboard;
- * - the keystroke goes only when no input arrived since the mouse-up's settle began (and none in the last 500 ms);
- *   the native call reads only the time of the last input, never which key;
+ * - the keystroke goes only when no input arrived since the mouse-up's settle began (and none in the last 500 ms) and
+ *   no modifier key is held; the native call reads the time of the last input and whether a modifier key is held right
+ *   then, never what was typed;
  * - the person's clipboard goes back the moment the copy's text is read (clipboardHolder: only over the copy's own
  *   result);
  * - any input between the idle check and that restore drops the result: no explanation, no request;
