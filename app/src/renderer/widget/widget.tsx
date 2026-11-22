@@ -455,6 +455,10 @@ function Widget() {
   const phase = s.phase;
   const answerReady = phase === 'done' && !stillTyping && s.text.length > 0;
   const asking = followUpLive(s.followUps);
+  // An answer is streaming: main drops another new explanation meanwhile (one answer is paid once), so the controls
+  // that would start one are off rather than silently doing nothing. Not in `ready`: after Stop the panel waits there
+  // with nothing running, and before the first words main's `status` sets the depth it runs anyway.
+  const explaining = phase === 'streaming';
   // Vibe in the header (Mono): thinking while it writes, happy (2 hops) for REACTION_HOLD_MS when the answer lands.
   const [landed, setLanded] = useState(false);
   useEffect(() => {
@@ -485,6 +489,19 @@ function Widget() {
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [view]);
 
+  // Each table in a finished answer reports whether it fits the pane (numbers only), so real answers show whether the
+  // stacked layout is ever needed after 0.1.55's wrap (Design).
+  useEffect(() => {
+    if (!answerReady) return undefined;
+    const frame = requestAnimationFrame(() => {
+      for (const table of innerRef.current?.querySelectorAll<HTMLElement>('.ob-answer .rich-table') ?? []) {
+        const columns = table.querySelector('tr')?.children.length ?? 0;
+        window.unvibe.tableFit({ columns, scrollWidth: table.scrollWidth, clientWidth: table.clientWidth });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [answerReady]);
+
   // Autoscroll while the answer (or a follow-up) streams.
   useEffect(() => {
     if ((phase === 'streaming' || asking) && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -493,8 +510,9 @@ function Widget() {
   // One run at a time: while a follow-up streams, a new explanation would cancel it silently and its events would land
   // in the Ask thread while main saved them as the lesson (review MUST). Explain's controls are disabled meanwhile too.
   const followUpBusy = () => followUpLive(stateRef.current.followUps);
+  const explainingNow = () => stateRef.current.phase === 'streaming';
   const request = (opts: Record<string, unknown>) => {
-    if (followUpBusy()) return;
+    if (followUpBusy() || explainingNow()) return;
     if (outOfExplanations) {
       patch({ phase: 'error', error: offer ? offer.body : 'You have reached your monthly explanation limit. Open Plan to upgrade.' });
       return;
@@ -522,7 +540,7 @@ function Widget() {
   };
 
   const pick = (l: ExplanationLevel) => {
-    if (outOfExplanations || followUpBusy()) return;
+    if (outOfExplanations || followUpBusy() || explainingNow()) return;
     patch({ level: l });
     if (stateRef.current.phase === 'done') window.unvibe.request({ level: l });
   };
@@ -757,7 +775,7 @@ function Widget() {
     }
     const top = showDepth ? (
       <>
-        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations || asking} onPick={(id) => { setProGate(false); pick(id); }} />
+        <DepthControl level={s.level} plan={usage?.plan} disabled={outOfExplanations || asking || explaining} onPick={(id) => { setProGate(false); pick(id); }} />
         {s.meta.preview ? <CodeRow id="ob-code" code={s.meta.preview} open={s.codeOpen} onToggle={() => patch({ codeOpen: !stateRef.current.codeOpen })} /> : null}
       </>
     ) : null;
@@ -1019,7 +1037,7 @@ function Widget() {
         <>
           <QuestionChips busy={stillTyping || asking} ask={s.ask} onQuestion={askQuestion} />
           {askField}
-          <ExplainActions busy={stillTyping || asking} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
+          <ExplainActions busy={stillTyping || asking || explaining} understood={s.understood} pinned={s.pinned} onUnderstand={onUnderstand} onSave={() => void toggleSave()} onDifferent={() => request({ variant: 'different' })}>
             {s.mock ? <span className="ob-meta">mock AI. Set ANTHROPIC_API_KEY for real explanations</span> : null}
           </ExplainActions>
         </>

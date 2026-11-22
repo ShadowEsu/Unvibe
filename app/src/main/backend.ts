@@ -105,15 +105,34 @@ export function warmBackend(): void {
 }
 
 /**
+ * Electron's network-stack failures that prove the request never reached the server: the name didn't resolve, no
+ * connection or proxy tunnel was made, or TLS failed before the request was written. A reset, an empty response or a
+ * proxy drop after the request went out proves nothing, so it isn't here.
+ */
+const NOTHING_SENT = /^net::ERR_(NAME_NOT_RESOLVED|NAME_RESOLUTION_FAILED|INTERNET_DISCONNECTED|ADDRESS_UNREACHABLE|ADDRESS_INVALID|UNSAFE_PORT|CONNECTION_REFUSED|CONNECTION_TIMED_OUT|CONNECTION_FAILED|PROXY_CONNECTION_FAILED|TUNNEL_CONNECTION_FAILED|MANDATORY_PROXY_CONFIGURATION_FAILED|CERT_[A-Z_]+)$/;
+
+/**
+ * Whether a request that failed on Electron's path may be sent again on Node's. A GET or HEAD always may. Anything else
+ * (an explanation, a quiz, a deletion) may only when the error proves the server never got it: sending it twice would
+ * spend a second hosted call and a second count of the person's free quota (Security, 0.1.55).
+ */
+export function safeToResend(method: string | undefined, error: unknown): boolean {
+  const m = (method ?? 'GET').toUpperCase();
+  if (m === 'GET' || m === 'HEAD') return true;
+  return error instanceof Error && NOTHING_SENT.test(error.message);
+}
+
+/**
  * Electron's network stack first: it honours the computer's proxy settings and trusts the
  * operating system's certificate store (school, work and antivirus networks often need both).
- * If that path fails outright, try Node's fetch once before giving up.
+ * If that path fails outright, try Node's fetch once before giving up, when sending again is safe.
  */
 export async function networkFetch(url: string, init: RequestInit): Promise<Response> {
   try {
     return await net.fetch(url, init as Parameters<typeof net.fetch>[1]);
   } catch (error) {
     if (init.signal?.aborted || (error instanceof DOMException && (error.name === 'AbortError' || error.name === 'TimeoutError'))) throw error;
+    if (!safeToResend(init.method, error)) throw error;
     return await fetch(url, init);
   }
 }
