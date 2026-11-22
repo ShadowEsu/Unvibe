@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="21 November 2026"
+      updated="22 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -38,11 +38,19 @@ export default function PrivacyPage() {
             in Settings. While it is on, Unvibe watches your mouse clicks and scrolling, the
             pointer&apos;s shape, and which app is in front, on your computer, to notice when you
             select code in a code editor, and shows a small button. It reads no text and sends
-            nothing until you press it, and pressing it does the same as the shortcut. With Quick
-            look also on, pressing the button sends the
-            selected code for a short preview, after the same check for keys and tokens (or to your
-            own provider if you added your own API key). It doesn&apos;t watch your typing, skips
-            password fields and password managers, and doesn&apos;t store or send your mouse clicks.
+            nothing until you press it (unless you also turn on Explain automatically), and
+            pressing it does the same as the shortcut. With Quick look also on, pressing the button
+            sends the selected code for a short preview, after the same check for keys and tokens
+            (or to your own provider if you added your own API key). With Explain automatically on,
+            when you select code in a code editor and leave it selected for a moment, Unvibe copies
+            the selection and sends it to the AI to explain it, without a press. The copy passes
+            through your clipboard, so clipboard history apps may keep it. Before it copies, it
+            checks on your computer when you last used the keyboard or mouse and whether a key like
+            Shift is held down, so it doesn&apos;t copy while you&apos;re typing. After the copy it
+            checks again (on a Mac it also counts key presses and clicks since the first check) and
+            sends nothing if you used the keyboard or mouse in between. It never learns what you
+            type. It doesn&apos;t watch your typing, skips password fields and password managers,
+            and doesn&apos;t store or send your mouse clicks.
           </li>
           <li>
             <strong>Learning records:</strong> which snippets you reviewed (with the file&apos;s

@@ -71,14 +71,14 @@ export const faqItems: FaqItem[] = [
     id: "screen",
     question: "Does it read my entire screen?",
     answer:
-      "No. It never records your screen or uses OCR. It only sees the code you select, or the git changes you ask a Brief about. If you turn on the Unvibe button in Settings (it's off until you do), Unvibe also watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows the button. It reads no text and sends nothing until you press it.",
+      "No. It never records your screen or uses OCR. It only sees the code you select, or the git changes you ask a Brief about. If you turn on the Unvibe button in Settings (it's off until you do), Unvibe also watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows the button. It reads no text and sends nothing until you press it (unless you also turn on Explain automatically). With Explain automatically on, when you select code in a code editor and leave it selected for a moment, Unvibe copies the selection and sends it to the AI to explain it, without a press. The copy passes through your clipboard, so clipboard history apps may keep it.",
     category: "privacy",
   },
   {
     id: "sent",
     question: "What gets sent to the AI?",
     answer:
-      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. If you turned on Quick look for the Unvibe button, pressing the button sends the selected code for a short preview. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded. If you add your own API key in Settings, the app sends the request straight to that provider instead.",
+      "Only what you ask about: the selected code and its language, the file's path inside your project when Unvibe knows which file it came from (like src/lib/retry.ts), and the name of the project folder you last worked in with Unvibe. With Pro, some nearby code is added for context, and Briefs send the git changes you ask the AI to explain. Any question you type is sent too. If you turned on Quick look for the Unvibe button, pressing the button sends the selected code for a short preview. If you turned on Explain automatically, code you select in a code editor and leave selected for a moment is sent to explain it, without a press. Unvibe checks the code for keys and tokens on your computer first, and from version 0.1.44 your questions and Ask Vibe chat messages too. A known key stops the request. Your repo is never uploaded. If you add your own API key in Settings, the app sends the request straight to that provider instead.",
     category: "privacy",
   },
   {
