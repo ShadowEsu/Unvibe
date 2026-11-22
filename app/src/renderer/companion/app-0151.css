@@ -745,6 +745,10 @@
 :root[data-ui="v3"][data-v7] .modal .setrow .sl--danger { color: #b42318; }
 :root[data-ui="v3"][data-v7][data-theme="dark"] .modal .setrow .sl--danger { color: #ff8a80; }
 :root[data-ui="v3"][data-v7] .modal .setrow .sd { max-width: 40rem; margin-top: 4px; color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); letter-spacing: 0; }
+/* Auto mode's both-lines form uses the help's type and rule (Design S-1 on #384). */
+:root[data-ui="v3"][data-v7] .modal .setrow .auto-ask { border-bottom-color: var(--u-line); }
+:root[data-ui="v3"][data-v7] .modal .setrow .auto-ask__text { color: var(--u-ink-3); font: var(--u-w-body) 12.5px/1.5 var(--u-font); letter-spacing: 0; }
+:root[data-ui="v3"][data-v7] .modal .setrow .auto-ask__text strong { color: var(--u-ink); font-weight: 600; }
 :root[data-ui="v3"][data-v7] .modal .setrow--stack { padding-top: 14px; padding-bottom: 16px; }
 :root[data-ui="v3"][data-v7] .modal .setrow__end { display: flex; align-items: center; gap: 10px; }
 

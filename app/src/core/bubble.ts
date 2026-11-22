@@ -298,7 +298,7 @@ export function bubbleCopy(shortcut: string): Record<BubbleItem, { label: string
   return {
     ghost: {
       label: 'Show the Unvibe button when I select code',
-      help: `Off until you turn it on. When it's on, Unvibe watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows a small button. It reads no text and sends nothing until you press it, and pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
+      help: `Off until you turn it on. When it's on, Unvibe watches your mouse clicks and scrolling, the pointer's shape, and which app is in front, on your computer, to notice when you select code in a code editor, and shows a small button. It reads no text and sends nothing until you press it (unless you also turn on Explain automatically). Pressing it does the same as ${shortcut}. It doesn't watch your typing and skips password fields and password managers.`,
     },
     preview: {
       label: 'Quick look when I press the button',
@@ -306,7 +306,7 @@ export function bubbleCopy(shortcut: string): Record<BubbleItem, { label: string
     },
     auto: {
       label: 'Explain automatically when I select code',
-      help: "Off until you turn it on. When you select code in a code editor, Unvibe sends the selection to explain it, without a press. Each one counts as an explanation. The explanation ends with up to 3 suggested fixes for you to consider. It needs the Unvibe button, so turning the button off turns this off too.",
+      help: 'Off until you turn it on. When you select code in a code editor and leave it selected for a moment, Unvibe copies the selection and sends it to the AI to explain it, without a press. The copy passes through your clipboard, so clipboard history apps may keep it. Each one counts as an explanation. The explanation ends with up to 3 suggested fixes for you to consider. It needs the Unvibe button, so turning the button off turns this off too.',
     },
   };
 }
@@ -378,17 +378,19 @@ export type AutoBefore = 'read' | 'busy' | 'cooldown' | 'show-limit' | 'limit';
 export type AutoAfter = 'start' | 'small' | 'repeat';
 
 /**
- * Auto mode's memory, in this process only: when the last auto explanation started, the hashes of the selections it
- * explained in the last 10 minutes (never the text, never stored), and whether the limit was already shown.
+ * Auto mode's memory, in this process only: when it last read a selection, the hashes of the selections it explained in
+ * the last 10 minutes (never the text, never stored), and whether the limit was already shown.
  */
 export class AutoExplainGate {
-  private lastStart = Number.NEGATIVE_INFINITY;
+  private lastRead = Number.NEGATIVE_INFINITY;
   private readonly recent = new Map<string, number>();
   private limitShown = false;
 
   /**
-   * One explanation in flight at a time (a new selection never cancels it), 15 s between auto starts. At a limit the
-   * limit shows once, and nothing more starts until a selection after it has reset.
+   * One explanation in flight at a time (a new selection never cancels it), and 15 s between auto reads, explained or
+   * not, so the clipboard (and any clipboard history) sees at most one auto copy every 15 s (Security MUST-A2 on #384).
+   * At a limit the limit shows once, and nothing more starts until a selection after it has reset. A 'read' answer
+   * starts the 15 s.
    */
   before(now: number, at: { busy: boolean; limited: boolean }): AutoBefore {
     if (at.limited) {
@@ -398,17 +400,17 @@ export class AutoExplainGate {
     }
     this.limitShown = false;
     if (at.busy) return 'busy';
-    if (now - this.lastStart < AUTO_COOLDOWN_MS) return 'cooldown';
+    if (now - this.lastRead < AUTO_COOLDOWN_MS) return 'cooldown';
+    this.lastRead = now;
     return 'read';
   }
 
-  /** The size floor and the 10-minute repeat check; a start is remembered here. */
+  /** The size floor and the 10-minute repeat check, on what was read; a start is remembered here. */
   after(now: number, code: string, hash: string): AutoAfter {
     for (const [seen, at] of this.recent) if (now - at >= AUTO_REPEAT_MS) this.recent.delete(seen);
     if (!bigEnoughForAuto(code)) return 'small';
     if (this.recent.has(hash)) return 'repeat';
     this.recent.set(hash, now);
-    this.lastStart = now;
     return 'start';
   }
 }

@@ -373,7 +373,7 @@ function PermRow() {
         <div className="sl">Accessibility</div>
         <div className="sd">{isWindows
           ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
-          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
+          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U or the Unvibe button, or on its own if you turn on Explain automatically, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
         {row.canAllow && asked && (
           <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
         )}
@@ -426,32 +426,35 @@ function BubbleRows() {
     <>
       <div className="setrow"><div><div className="sl">{bubble.copy.ghost.label}</div><div className="sd">{bubble.copy.ghost.help}</div><div className="sd">Works in {bubble.editors}.</div>{error && <div className="field-err" role="alert">{error}</div>}</div><Toggle label={bubble.copy.ghost.label} on={bubble.ghost} onClick={() => flip('ghost', !bubble.ghost)} /></div>
       {bubble.ghost && <div className="setrow"><div><div className="sl">{bubble.copy.preview.label}</div><div className="sd">{bubble.copy.preview.help}</div></div><Toggle label={bubble.copy.preview.label} on={bubble.preview} onClick={() => flip('preview', !bubble.preview)} /></div>}
-      <div className="setrow"><div><div className="sl">{bubble.copy.auto.label}</div><div className="sd">{bubble.copy.auto.help}</div></div><Toggle label={bubble.copy.auto.label} on={bubble.auto} onClick={flipAuto} /></div>
-      {asking && !bubble.ghost && <AutoWithButton copy={bubble.copy} onConfirm={() => flip('auto', true, true)} onCancel={() => setAsking(false)} />}
+      <div className="setrow"><div><div className="sl">{bubble.copy.auto.label}</div><div className="sd">{bubble.copy.auto.help}</div>{asking && !bubble.ghost && <AutoWithButton copy={bubble.copy} onConfirm={() => flip('auto', true, true)} onCancel={() => setAsking(false)} />}</div><Toggle label={bubble.copy.auto.label} on={bubble.auto} onClick={flipAuto} /></div>
     </>
   );
 }
 
-/** Auto mode needs the button: both consent lines, each its own unticked box; Turn on does nothing until both are ticked. */
+/**
+ * Explaining automatically needs the button: both consent lines, each its own unticked box, inside the row under its help
+ * (Design S-1 on #384); Turn on both does nothing until both are ticked. Focus moves to the first box for keyboard users;
+ * its ring shows on :focus-visible only, so a mouse click on the switch shows none.
+ */
 function AutoWithButton({ copy, onConfirm, onCancel }: { copy: BubbleSettings['copy']; onConfirm: () => void; onCancel: () => void }) {
   const [button, setButton] = useState(false);
   const [auto, setAuto] = useState(false);
   const id = useId();
   const ready = button && auto;
   return (
-    <section className="consent-form" aria-label="Turn on auto mode and the Unvibe button">
-      <p className="consent-form__lead">Auto mode needs the Unvibe button. Tick both to turn them on.</p>
+    <section className="consent-form auto-ask" aria-label={`${copy.auto.label} and ${copy.ghost.label.toLowerCase()}`}>
+      <p className="auto-ask__text">Explaining automatically needs the Unvibe button. Tick both to turn them on.</p>
       <label className="consent-form__row" htmlFor={`${id}-button`}>
         <input id={`${id}-button`} type="checkbox" autoFocus checked={button} onChange={(e) => setButton(e.target.checked)} />
-        <span><strong>{copy.ghost.label}.</strong> {copy.ghost.help}</span>
+        <span className="auto-ask__text"><strong>{copy.ghost.label}.</strong> {copy.ghost.help}</span>
       </label>
       <label className="consent-form__row" htmlFor={`${id}-auto`}>
         <input id={`${id}-auto`} type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
-        <span><strong>{copy.auto.label}.</strong> {copy.auto.help}</span>
+        <span className="auto-ask__text"><strong>{copy.auto.label}.</strong> {copy.auto.help}</span>
       </label>
       <div className="consent-form__actions">
-        <button type="button" className="field-btn" aria-disabled={!ready} onClick={() => { if (ready) onConfirm(); }}>Turn on both</button>
-        <button type="button" className="field-btn ghost" onClick={onCancel}>Not now</button>
+        <button type="button" className="primary-btn" aria-disabled={!ready} onClick={() => { if (ready) onConfirm(); }}>Turn on both</button>
+        <button type="button" className="field-btn" onClick={onCancel}>Not now</button>
       </div>
     </section>
   );

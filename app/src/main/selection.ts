@@ -9,11 +9,12 @@
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
-import { clipboardHolder } from '../core/clipboardHold';
+import { autoClipboardReadable, clipboardHolder } from '../core/clipboardHold';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-// Every synthetic copy, from the shortcut, the button or Quick look, goes through this one at a time (SHOULD-366d).
+// Every synthetic copy, from the shortcut, the button, Quick look or auto mode, goes through this one at a time (SHOULD-366d).
 const holdClipboard = clipboardHolder(clipboard);
+const copiedCode = (result: CaptureResult) => result.code;
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
 const isLinux = process.platform === 'linux';
@@ -254,7 +255,50 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
   }
   if (isLinux) return readLinuxPrimary();
   if (!isMac && !isWindows) return { code: null, error: 'unsupported' };
-  return holdClipboard(() => copySelection(options));
+  return holdClipboard(() => copySelection(options), copiedCode);
+}
+
+/** Mac: the frontmost app's bundle id, which is what the button's helper names (auto mode's source check). */
+const MAC_FRONTMOST_BUNDLE_SCRIPT = 'tell application "System Events" to get bundle identifier of first application process whose frontmost is true';
+
+/**
+ * Auto mode's read (ledger 646). Unlike a press it runs while the person may be editing, so (Security on #384):
+ * - nothing happens when the clipboard holds something that can't be put back, such as an image or files (MUST-A1);
+ * - the copy keystroke goes only to the editor the selection was made in: the frontmost app is checked first, on
+ *   Windows in the same PowerShell call that sends it (SHOULD-384a); no other app is brought forward;
+ * - one keystroke, no retry; the clipboard goes back only over the copy's own result (MUST-A3, in clipboardHolder).
+ * `skipped` says why nothing was read. Linux (the laptop harness only) reads PRIMARY, as a press does.
+ */
+export async function captureForAuto(app: string): Promise<CaptureResult & { skipped?: 'clipboard' | 'app' }> {
+  if (isLinux) return readLinuxPrimary();
+  if (!isMac && !isWindows) return { code: null, error: 'unsupported' };
+  if (!autoClipboardReadable(clipboard.availableFormats())) return { code: null, skipped: 'clipboard' };
+  return holdClipboard(() => copyForAuto(app), copiedCode);
+}
+
+async function copyForAuto(app: string): Promise<CaptureResult & { skipped?: 'app' }> {
+  try {
+    if (isWindows) {
+      clipboard.writeText('');
+      const expected = app.toLowerCase().replace(/'/g, "''");
+      const out = await powershell(`${PS_FOREGROUND}; $go = [bool]$name -and ("$name.exe" -ieq '${expected}') -and $elevated -eq "0"; if ($go) { ${PS_COPY} }; [int]$go; $name; $elevated`);
+      const [flag, ...rest] = out.split(/\r?\n/);
+      const { name } = parseWindowsForeground(rest.join('\n'));
+      if (flag?.trim() !== '1') return { code: null, sourceApp: name, skipped: 'app' };
+      const grabbed = await waitForCopiedText();
+      return grabbed.trim() ? { code: grabbed, sourceApp: name } : { code: null, sourceApp: name, error: 'empty' };
+    }
+    const front = await osascript(MAC_FRONTMOST_BUNDLE_SCRIPT);
+    if (front.toLowerCase() !== app.toLowerCase()) return { code: null, skipped: 'app' };
+    clipboard.writeText('');
+    // As for a press: give macOS a beat to commit the cleared pasteboard before the editor writes into it.
+    await delay(120);
+    await syntheticCopy();
+    const grabbed = await waitForCopiedText();
+    return grabbed.trim() ? { code: grabbed } : { code: null, error: 'empty' };
+  } catch (error) {
+    return { code: null, error: isMac ? macCaptureFailure(error) : 'failed' };
+  }
 }
 
 /** The synthetic copy itself; holdClipboard has saved the person's clipboard and puts it back after. */

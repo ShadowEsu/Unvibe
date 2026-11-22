@@ -36,7 +36,7 @@ import { providerInUse } from './consent';
 import { codeConsented, sendingSwitchedOff } from './consentStore';
 import { buildSelectionPayload, sendNearbyFiles } from './contextBuilder';
 import { buildLocalPreviewSystemPrompt, buildLocalPreviewUserPrompt, streamLocalAi } from './localAi';
-import { captureSelection, frontmostApp } from './selection';
+import { captureForAuto, captureSelection, frontmostApp } from './selection';
 import { settings } from './settings';
 import { store } from './store';
 import { cachedAppUsage } from './usage';
@@ -201,9 +201,10 @@ function onInput(input: GhostInput): void {
   }
   apply(next.state);
   if (next.effect === 'preview') void runPreview(++previewRuns);
-  // Auto mode (ledger 646): once a selection has stayed put for about 700 ms after the mouse-up (no click, scroll, new
-  // selection or app switch: any of them changes the button's state, which cancels the wait), explain it with no press.
-  if (event.e === 'select' && next.state.look === 'ghost' && bubbleStore().state().auto) autoSettle.arm(next.state);
+  // Auto mode (ledger 646): once a drag or triple-click selection has stayed put for about 700 ms after the mouse-up (no
+  // click, scroll, new selection or app switch: any of them changes the button's state, which cancels the wait), explain
+  // it with no press. A double-click picks one word, never enough to explain, so it never reaches the clipboard (MUST-A2).
+  if (event.e === 'select' && event.g !== 'double' && next.state.look === 'ghost' && bubbleStore().state().auto) autoSettle.arm(next.state);
 }
 
 /**
@@ -212,9 +213,12 @@ function onInput(input: GhostInput): void {
  */
 async function runAuto(armed: GhostState): Promise<void> {
   const still = () => state === armed && active() && bubbleStore().state().auto;
+  if (armed.look === 'hidden') return;
   try {
     const usage = await cachedAppUsage();
     if (!still() || !deps) return;
+    // Nothing is read before the AI agreement: a press opens the panel on it instead (Security CC-4).
+    if (!codeConsented(providerInUse(usage.remaining))) return;
     const before = autoGate.before(Date.now(), { busy: deps.busy(), limited: deps.limited(usage.remaining) });
     if (before === 'show-limit') {
       // What a press shows at the limit, once; nothing more starts until a selection after it resets.
@@ -223,9 +227,7 @@ async function runAuto(armed: GhostState): Promise<void> {
       return;
     }
     if (before !== 'read') return;
-    // Nothing is read before the AI agreement: a press opens the panel on it instead (Security CC-4).
-    if (!codeConsented(providerInUse(usage.remaining))) return;
-    const capture = await captureSelection({});
+    const capture = await captureForAuto(armed.app);
     if (!still() || !capture.code) return;
     const sourceApp = capture.sourceApp ?? (await frontmostApp()) ?? '';
     // A press may have started an explanation while the selection was read: auto mode never replaces it.

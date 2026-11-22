@@ -105,6 +105,8 @@ export interface ReviewSession {
   awaitingConfirm?: boolean;
   /** What is waiting: a link's clipboard text, or Linux's last highlight (PRIMARY can be stale). */
   confirmFrom?: ConfirmReason;
+  /** The panel asks about secret-check findings and waits for the person: auto mode never replaces it (SHOULD-384b). */
+  secretQuestion?: boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -454,6 +456,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
   if (session.awaitingConfirm) return 'waiting';
   // Events about a "More detail" run carry part 'detail', so the panel keeps the short answer above it.
   const tag = detailRun ? { part: 'detail' as const } : {};
+  session.secretQuestion = false;
   // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
   const before = consentNeededFor(session, undefined, opts.question);
   if (before) {
@@ -527,6 +530,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
   }
   if (findings.length > 0 && !opts.consented) {
     send(win, session, { type: 'consent', findings });
+    session.secretQuestion = true;
     pulseBar({ phase: 'idle', label: 'Ready' });
     return 'waiting';
   }

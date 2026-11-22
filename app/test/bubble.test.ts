@@ -207,7 +207,7 @@ test('auto mode sends only a selection of at least 2 lines or 40 characters', ()
   assert.equal(bigEnoughForAuto(''), false);
 });
 
-test('auto mode: one explanation in flight, 15 s between starts, no repeat within 10 minutes, too small is skipped', () => {
+test('auto mode: one explanation in flight, 15 s between reads (explained or not), no repeat within 10 minutes, too small is skipped', () => {
   const gate = new AutoExplainGate();
   const big = 'function total(items) {\n  return items.length;\n}';
   const free = { busy: false, limited: false };
@@ -215,18 +215,22 @@ test('auto mode: one explanation in flight, 15 s between starts, no repeat withi
   assert.equal(gate.before(now, { busy: true, limited: false }), 'busy', 'a new selection never cancels the one in flight');
   assert.equal(gate.before(now, free), 'read');
   assert.equal(gate.after(now, 'x', 'h-small'), 'small');
-  assert.equal(gate.before(now, free), 'read', 'a skipped selection starts no cooldown');
+  // MUST-A2: a read that explained nothing still went through the clipboard, so it starts the 15 s too.
+  assert.equal(gate.before(now + AUTO_COOLDOWN_MS - 1, free), 'cooldown', 'at most one auto copy every 15 s');
+  now += AUTO_COOLDOWN_MS;
+  assert.equal(gate.before(now, free), 'read');
   assert.equal(gate.after(now, big, 'h1'), 'start');
+  const firstStart = now;
   assert.equal(gate.before(now + AUTO_COOLDOWN_MS - 1, free), 'cooldown');
   now += AUTO_COOLDOWN_MS;
   assert.equal(gate.before(now, free), 'read');
   assert.equal(gate.after(now, big, 'h1'), 'repeat', 'the same text within 10 minutes');
-  assert.equal(gate.before(now, free), 'read', 'a repeat starts no cooldown either');
+  assert.equal(gate.before(now + AUTO_COOLDOWN_MS - 1, free), 'cooldown', 'a repeat was read too');
+  now += AUTO_COOLDOWN_MS;
+  assert.equal(gate.before(now, free), 'read');
   assert.equal(gate.after(now, big, 'h2'), 'start');
-  now = 1_000_000 + AUTO_REPEAT_MS - 1;
-  assert.equal(gate.after(now, big, 'h1'), 'repeat');
-  now = 1_000_000 + AUTO_REPEAT_MS;
-  assert.equal(gate.after(now, big, 'h1'), 'start', '10 minutes after it started, the same text explains again');
+  assert.equal(gate.after(firstStart + AUTO_REPEAT_MS - 1, big, 'h1'), 'repeat');
+  assert.equal(gate.after(firstStart + AUTO_REPEAT_MS, big, 'h1'), 'start', '10 minutes after it started, the same text explains again');
 });
 
 test('at a limit auto mode shows it once, then starts nothing until a selection after it resets', () => {

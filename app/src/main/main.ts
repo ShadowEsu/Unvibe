@@ -1418,7 +1418,8 @@ app.whenReady().then(() => {
     explain: () => void startReview(),
     explainCaptured: (code, sourceApp) => void startReview({ captured: { code, sourceApp } }),
     explainAuto: (code, sourceApp) => void startReview({ captured: { code, sourceApp }, suggestFixes: true }),
-    busy: () => explanationInFlight(),
+    // Also busy while the open panel waits for the person: a link's Explain or the secret check's question (SHOULD-384b).
+    busy: () => explanationInFlight() || Boolean(currentWidget()?.isVisible() && (panelSession?.awaitingConfirm || panelSession?.secretQuestion)),
     // The limits a press stops at: the explanation allowance (startReview) and a trial build's selected-code prompts.
     limited: (remaining) => remaining <= 0 || (trialBuildEnabled() && !fullProductBuildEnabled() && store().betaSelectedCodeUsage().remaining <= 0),
     // Only Settings (the companion) may change the switches (lead and Security NIT N1).
