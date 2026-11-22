@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy"
-      updated="16 November 2026"
+      updated="21 November 2026"
       intro="Unvibe is a desktop app that helps you understand code. This page describes what it processes and why, in plain language. It reflects how the product actually behaves. It is a summary, not a substitute for the full policy."
     >
       <LegalSection heading="What Unvibe processes">
@@ -32,6 +32,17 @@ export default function PrivacyPage() {
             Unvibe. The full path on your computer is not sent. <strong>Git diffs</strong> are sent
             only when you ask a Brief to explain them. Unvibe does not read your repository in the
             background.
+          </li>
+          <li>
+            <strong>The Unvibe button, if you turn it on.</strong> It is off until you switch it on
+            in Settings. While it is on, Unvibe watches your mouse clicks and scrolling, the
+            pointer&apos;s shape, and which app is in front, on your computer, to notice when you
+            select code in a code editor, and shows a small button. It reads no text and sends
+            nothing until you press it, and pressing it does the same as the shortcut. With Quick
+            look also on, pressing the button sends the
+            selected code for a short preview, after the same check for keys and tokens (or to your
+            own provider if you added your own API key). It doesn&apos;t watch your typing, skips
+            password fields and password managers, and doesn&apos;t store or send your mouse clicks.
           </li>
           <li>
             <strong>Learning records:</strong> which snippets you reviewed (with the file&apos;s
