@@ -95,6 +95,7 @@
 //      through System Events (mouse.swift se-paste / se-type), which reset HIDIdleTime as a keyboard does; CGEvent keys
 //      didn't (run 44987639357), so the Mac idle check never saw them.
 //   X2 select, then type at the same moments: the file holds the typed word in its place, and no read holds it.
+//   X1 and X2 also fail an explanation that started more than 50 ms after the key: a read the key met was kept.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
 //   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
@@ -104,6 +105,12 @@
 //      clipboard's change bursts); then one more after 16 s is read again (the control).
 //   X7 Cmd+Tab / Alt+Tab 250 ms (before the 700 ms) and 800 ms (during the read) after the mouse-up: nothing starts,
 //      nothing is sent, the person's clipboard is back.
+//   Mac, #384 MUST-A5 (19f57c81 counts HID key-downs and clicks across each read):
+//   X9a before the editors: one System Events ⌘C adds exactly 1 key-down and no click to the HID system's counts, as
+//      soon as the keystroke returns and 300 ms later (the constant, and whether the count lags).
+//   X9b after them: Unvibe had no Input Monitoring grant (a runner row for it is removed first), and the reads leave
+//      no Input Monitoring row for Unvibe or osascript (system and user TCC databases), no prompt window on screen,
+//      and no ListenEvent line naming either in the TCC log since the launch began.
 //   Each read is seen from outside: the app's own "explanation started" event (onShortcutFired in the main window),
 //   the panel's init event (what was read), the net log, and the clipboard's changes.
 // d5=auto-defender (Windows only), Security's SHOULD-384c: launch X in VS Code only, X8 and then settled selections 16 s
@@ -1994,8 +2001,53 @@ const AUTO_EDITOR = {
   'editor.dragAndDrop': false,
 };
 
+// Mac, #384 MUST-A5 (19f57c81): auto mode's read counts HID key-downs and clicks (CGEventSourceCounterForEventType,
+// HID system state) and keeps a result only when the count moved by exactly its own ⌘C's key-down.
+/** The HID system's press counts: [key-downs, left mouse-downs, right mouse-downs]. */
+const pressCounts = () => execFileSync(process.env.MOUSE, ['presses'], { encoding: 'utf8' }).trim().split(/\s+/).map(Number);
+const TCC_SYSTEM = '/Library/Application Support/com.apple.TCC/TCC.db';
+const LISTEN_Q = "SELECT client || ' ' || auth_value FROM access WHERE service = 'kTCCServiceListenEvent' AND (client LIKE '%unvibe%' OR client LIKE '%osascript%');";
+/** Input Monitoring (kTCCServiceListenEvent) rows for Unvibe or osascript: the system database and the user's. */
+function listenRows() {
+  const sys = execFileSync('sudo', ['-n', 'sqlite3', TCC_SYSTEM, LISTEN_Q], { encoding: 'utf8' }).trim();
+  let user;
+  try { user = execFileSync('sqlite3', [path.join(process.env.HOME ?? '', 'Library/Application Support/com.apple.TCC/TCC.db'), LISTEN_Q], { encoding: 'utf8' }).trim(); } catch (e) { user = `not read (${short(e)})`; }
+  return { sys, user };
+}
+/** X9a: the key-down count one System Events ⌘C adds (auto mode's MAC_COPY_KEY_DOWNS is 1), read as soon as the
+ * keystroke returns and 300 ms later (does the count lag?); the harness's CGEvent ⌘C beside it. */
+async function copyKeyDowns() {
+  const step = 'X9a (Mac): one System Events ⌘C adds exactly 1 to the HID key-down count and no click (MUST-A5\'s constant)';
+  try {
+    const p0 = pressCounts();
+    osa('tell application "System Events" to key code 8 using command down');
+    const p1 = pressCounts();
+    await sleep(300);
+    const p2 = pressCounts();
+    const q0 = pressCounts();
+    keyNow('copy');
+    await sleep(300);
+    const q1 = pressCounts();
+    const d = (a, b) => (b - a) >>> 0;
+    log(d(p0[0], p2[0]) === 1 && p2[1] === p0[1] && p2[2] === p0[2], step,
+      `key-downs ${p0[0]} → ${p1[0]} as the keystroke returned (+${d(p0[0], p1[0])}${d(p0[0], p1[0]) === d(p0[0], p2[0]) ? ', no lag' : ', LAGS'}) → ${p2[0]} 300 ms later (+${d(p0[0], p2[0])}); left clicks ${p0[1]} → ${p2[1]}, right ${p0[2]} → ${p2[2]}; the harness's CGEvent ⌘C (mouse.swift) adds +${d(q0[0], q1[0])}`);
+  } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+}
 async function runX(app, companion) {
   if (!(await blockHolds('x'))) return;
+  // Security's Mac C-3 row (19f57c81): Unvibe starts with no Input Monitoring grant; the auto reads must add none and
+  // raise no prompt.
+  let listen0 = null;
+  if (os === 'mac') {
+    try {
+      listen0 = listenRows();
+      if (/unvibe/i.test(listen0.sys)) {
+        execFileSync('sudo', ['-n', 'sqlite3', TCC_SYSTEM, "DELETE FROM access WHERE service = 'kTCCServiceListenEvent' AND client LIKE '%unvibe%';"]);
+        note('Input Monitoring', `the runner had a row for Unvibe (${listen0.sys}); removed before the reads`);
+      }
+    } catch (e) { note('Input Monitoring', `not read before the reads (${short(e)})`); }
+  }
+  const xT0 = Date.now();
   await autoOn(app, companion, 'x');
   // The agreement, as launch C: no editor open, the pointer at the screen's bottom right so the panel opens there.
   await closeVsCode();
@@ -2009,6 +2061,7 @@ async function runX(app, companion) {
     try { on = winHistoryOn(); } catch (e) { note('Clipboard history (Win+V)', short(e)); }
     note('Clipboard history (Win+V)', on ? 'turned on (EnableClipboardHistory = 1; IsHistoryEnabled true)' : 'not available on this runner: X6 counts the clipboard\'s change bursts only');
   }
+  if (os === 'mac') await copyKeyDowns();
   startClipWatch();
   // A real PNG for X3 (a corner of the screen) and a file for X4.
   const png = grab(file('x-clipboard-image'), 0, 0, 160, 100);
@@ -2027,6 +2080,24 @@ async function runX(app, companion) {
     const iso = (t) => new Date(t).toISOString();
     writeFileSync(path.join(out, 'auto-reads.txt'), `${st.length}\n${iso(ctx.t0)} ${iso(Date.now())}\n${st.map(iso).join('\n')}\n`);
     note('SHOULD-384c (Defender)', `${st.length} auto read(s) started an explanation in launch X, ${iso(ctx.t0)} to ${iso(Date.now())}; the workflow's Defender step judges the row`);
+  }
+  if (os === 'mac' && !ctx.defender) {
+    const step = 'X9b (Mac): the auto reads raise no Input Monitoring prompt, and Input Monitoring lists neither Unvibe nor osascript';
+    try {
+      const listen1 = listenRows();
+      const prompts = screenWindows().filter((w) => /UserNotificationCenter|universalAccessAuthWarn|tccd|System Settings|System Preferences/i.test(w.owner));
+      const mins = Math.ceil((Date.now() - xT0) / 60000) + 1;
+      let logLines = [];
+      let logNote = '';
+      try {
+        const text = execFileSync('log', ['show', '--last', `${mins}m`, '--style', 'compact', '--predicate', 'subsystem == "com.apple.TCC" AND eventMessage CONTAINS[c] "ListenEvent"'], { encoding: 'utf8', maxBuffer: 64 << 20, timeout: 180000 });
+        logLines = text.split('\n').filter((l) => /ListenEvent/i.test(l));
+      } catch (e) { logNote = `; the TCC log not read (${short(e)})`; }
+      const ours = logLines.filter((l) => /unvibe|osascript/i.test(l));
+      for (const l of ours.slice(0, 3)) note('X9b TCC log', l.replace(/\s+/g, ' ').slice(0, 300));
+      log(!/unvibe|osascript/i.test(listen1.sys) && !/unvibe|osascript/i.test(listen1.user) && prompts.length === 0 && ours.length === 0 && !logNote, step,
+        `Input Monitoring rows for Unvibe/osascript: before ${listen0 ? `system "${listen0.sys || 'none'}", user "${listen0.user || 'none'}"` : 'not read'}; after system "${listen1.sys || 'none'}", user "${listen1.user || 'none'}"; prompt windows on screen: ${prompts.map((w) => w.owner).join(', ') || 'none'}; TCC log, last ${mins} min: ${logLines.length} ListenEvent line(s), ${ours.length} naming Unvibe or osascript${logNote}`);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
   }
 }
 
@@ -2164,8 +2235,12 @@ async function autoEditor(ctx, tag) {
         const clipOk = clip === P;
         // A read that holds the person's key came after it: the idle check missed the key.
         const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
-        log(fileOk && clipOk && !readKey, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
-          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.text}`);
+        // A start after the key (50 ms slack: the start event's trip to the main window, and System Events' own delay
+        // before its key lands) means a read the key met was kept (Security's acceptance for 19f57c81: a key from +375 to
+        // +1703 ms starts nothing unless the read had already finished).
+        const late = said.st.filter((t) => t > r.key + 50);
+        log(fileOk && clipOk && !readKey && late.length === 0, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up`,
+          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - r.up}`).join(', ')} ms${late.length ? ' (AFTER the key)' : ' (before the key)'}; ` : ''}${said.text}`);
       } catch (e) { log(false, `${kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind} ${ms} ms after the mouse-up`, `stopped: ${short(e)}`); }
     }
   }

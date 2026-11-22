@@ -26,6 +26,8 @@
 //                                     reads, then "up=<release ms> key=<ms the key action began> done=<ms it ended>"
 //                                     (ms since 1970). Also se-paste (⌘V) and se-type:<ascii>: the same keys sent
 //                                     through System Events (compiled and System Events warmed before the drag)
+//   mouse presses                     the HID system's press counts, as auto mode's Mac read takes them (#384
+//                                     MUST-A5): "<key-downs> <left mouse-downs> <right mouse-downs>"
 //   mouse front                       the frontmost app's bundle id
 //   mouse clip info                   the general pasteboard: change count, types, the PNG's sha256, file URLs, and
 //                                     the text's length and first 80 characters, as one JSON line
@@ -304,6 +306,9 @@ case "dragkey" where a.count > 7:
   if let s = se { runSE(s) } else { act(a[7]) }
   print("press: \(before) at40: \(at40)")
   print("up=\(up) key=\(k) done=\(nowMs())")
+case "presses":
+  let counts = [CGEventType.keyDown, .leftMouseDown, .rightMouseDown].map { CGEventSource.counterForEventType(.hidSystemState, eventType: $0) }
+  print(counts.map { String($0) }.joined(separator: " "))
 case "front":
   print(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none")
 case "clip" where a.count > 2:
