@@ -62,7 +62,8 @@ name: Real device test
 # C-3 rows) in VS Code and Cursor: a settled selection is read once (the control), select-then-paste and
 # select-then-type at six moments land in the file, an image or a file copied in Finder/Explorer stays on the clipboard,
 # at most one auto copy per 15 s (Windows: the Win+V history), and a double-click or an app switch during the read sends
-# nothing. It runs with the API host blocked (no hosted call).
+# nothing. It runs with the API host blocked (no hosted call). d5=auto-mac runs the same on the Mac only (the scripts
+# see d5=auto), for a Mac-only fix.
 # d5=auto-defender (with build_run, ai off; Windows only) is Security's SHOULD-384c: Microsoft Defender back at its
 # defaults (the runner image turns it off), the AMSI test sample as the control, then launch X's reads only (VS Code, at
 # least 10 auto reads, the API host blocked), then nothing in Protection history or Defender/Operational for Unvibe or
@@ -110,7 +111,7 @@ on:
         required: false
         default: ""
       d5:
-        description: "D5 rows: 'rows' runs app/e2e/d5-button.mjs (#366 button rows) with VS Code on the Mac and Windows; 'fade' runs only its launch F (#378 panel fade) on the Mac; 'auto' runs its launch X (#384 auto mode, VS Code and Cursor) on both with no hosted-AI call (needs ai off); 'auto-defender' runs launch X's reads on Windows with Microsoft Defender at its defaults (SHOULD-384c, ai off); 'auto-ai' runs its launch Y, at most 1 hosted call per system (needs ai on). All need build_run, rc0154, rc0155 and rc0157 empty. Empty: off"
+        description: "D5 rows: 'rows' runs app/e2e/d5-button.mjs (#366 button rows) with VS Code on the Mac and Windows; 'fade' runs only its launch F (#378 panel fade) on the Mac; 'auto' runs its launch X (#384 auto mode, VS Code and Cursor) on both with no hosted-AI call (needs ai off), 'auto-mac' the same on the Mac only; 'auto-defender' runs launch X's reads on Windows with Microsoft Defender at its defaults (SHOULD-384c, ai off); 'auto-ai' runs its launch Y, at most 1 hosted call per system (needs ai on). All need build_run, rc0154, rc0155 and rc0157 empty. Empty: off"
         required: false
         default: ""
 
@@ -128,10 +129,10 @@ jobs:
       fail-fast: false
       matrix:
         # rc0154=ai-<os>-<plan> and rc0155=ai-<os> run on that one system: their hosted calls are planned per system.
-        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac' || inputs.d5 == 'fade') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link' || inputs.d5 == 'auto-defender') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac' || inputs.d5 == 'fade' || inputs.d5 == 'auto-mac') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link' || inputs.d5 == 'auto-defender') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
-    timeout-minutes: ${{ (inputs.rc0155 == 'walk' || inputs.d5 == 'auto' || inputs.d5 == 'auto-defender') && 45 || 30 }}
+    timeout-minutes: ${{ (inputs.rc0155 == 'walk' || inputs.d5 == 'auto' || inputs.d5 == 'auto-mac' || inputs.d5 == 'auto-defender') && 45 || 30 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -142,7 +143,7 @@ jobs:
           RC0154: ${{ inputs.rc0154 }}
           RC0155: ${{ inputs.rc0155 }}
           RC0157: ${{ inputs.rc0157 }}
-          D5: ${{ inputs.d5 }}
+          D5: ${{ inputs.d5 == 'auto-mac' && 'auto' || inputs.d5 }}
           BUILD_RUN: ${{ inputs.build_run }}
           VERSION: ${{ inputs.version }}
           OS_LABEL: ${{ matrix.label }}
@@ -272,7 +273,7 @@ jobs:
           RC0155: ${{ inputs.rc0155 }}
           RC0157: ${{ inputs.rc0157 }}
           SETUP57_ID: qa-setup0157-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
-          D5: ${{ inputs.d5 }}
+          D5: ${{ inputs.d5 == 'auto-mac' && 'auto' || inputs.d5 }}
           D5_ID: qa-d5-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}
           OS_LABEL: ${{ matrix.label }}
         run: |
@@ -895,7 +896,7 @@ jobs:
       # id the one Unvibe's auto mode allows (com.todesktop.230313mzl4w4u92). Windows: the per-user setup, Authenticode
       # valid on it and on Cursor.exe, installed silently without starting Cursor. Cursor is not signed in.
       - name: Install Cursor for the auto-mode rows (Mac)
-        if: inputs.d5 == 'auto' && matrix.label == 'mac'
+        if: (inputs.d5 == 'auto' || inputs.d5 == 'auto-mac') && matrix.label == 'mac'
         shell: bash
         run: |
           dmg="$RUNNER_TEMP/cursor.dmg"
@@ -1021,7 +1022,7 @@ jobs:
         env:
           SHOTS_DIR: ${{ runner.temp }}/d5
           UNVIBE_OS: ${{ matrix.label }}
-          D5: ${{ inputs.d5 }}
+          D5: ${{ inputs.d5 == 'auto-mac' && 'auto' || inputs.d5 }}
           D5_PROFILE: ${{ runner.temp }}/d5-profile
           # Seeded into each new profile and pre-flagged above.
           D5_ID: qa-d5-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.label }}

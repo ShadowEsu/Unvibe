@@ -96,9 +96,7 @@
 //      didn't (run 44987639357), so the Mac idle check never saw them.
 //   X2 select, then type at the same moments: the file holds the typed word in its place, and no read holds it.
 //   X1 and X2 also fail an explanation that started more than 50 ms after the key: a read the key met was kept.
-//   X1c / X2c (Mac): the same at 700 / 900 / 1200 / 1500 ms with CGEvent keys, which HIDIdleTime misses but the HID
-//      press count sees, so only MUST-A5's count can drop a read they meet. A row whose file comes out wrong logs the
-//      drag against the line ends and the editor's edge, and takes a still.
+//   A row whose file comes out wrong logs the drag against the line ends and the editor's edge, and takes a still.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
 //   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
@@ -108,9 +106,12 @@
 //      clipboard's change bursts); then one more after 16 s is read again (the control).
 //   X7 Cmd+Tab / Alt+Tab 250 ms (before the 700 ms) and 800 ms (during the read) after the mouse-up: nothing starts,
 //      nothing is sent, the person's clipboard is back.
-//   Mac, #384 MUST-A5 (19f57c81 counts HID key-downs and clicks across each read):
-//   X9a before the editors: one System Events ⌘C adds exactly 1 key-down and no click to the HID system's counts, as
-//      soon as the keystroke returns and 300 ms later (the constant, and whether the count lags).
+//   Mac, #384 MUST-A5 (d08713d4: any HID key-down or click counted across a read drops it; MAC_COPY_KEY_DOWNS = 0):
+//   X9a before the editors: one System Events ⌘C adds no key-down and no click to the HID system's counts (read as
+//      soon as the keystroke returns and 300 ms later), and the harness's CGEvent ⌘C adds 1 (the count is live).
+//   X9c in each editor, after X1 / X2: select, then paste or type 700 / 900 / 1200 / 1500 ms after the mouse-up with
+//      CGEvent keys, which HIDIdleTime misses but the HID press count sees, so only MUST-A5's count can drop a read
+//      they meet: the same checks as X1 / X2 (file, clipboard, no read holds the key, no start after the key).
 //   X9b after them: Unvibe had no Input Monitoring grant (a runner row for it is removed first), and the reads leave
 //      no Input Monitoring row for Unvibe or osascript (system and user TCC databases), no prompt window on screen,
 //      and no ListenEvent line naming either in the TCC log since the launch began.
@@ -2017,10 +2018,11 @@ function listenRows() {
   try { user = execFileSync('sqlite3', [path.join(process.env.HOME ?? '', 'Library/Application Support/com.apple.TCC/TCC.db'), LISTEN_Q], { encoding: 'utf8' }).trim(); } catch (e) { user = `not read (${short(e)})`; }
   return { sys, user };
 }
-/** X9a: the key-down count one System Events ⌘C adds (auto mode's MAC_COPY_KEY_DOWNS is 1), read as soon as the
- * keystroke returns and 300 ms later (does the count lag?); the harness's CGEvent ⌘C beside it. */
+/** X9a: the key-down count one System Events ⌘C adds (d08713d4's MAC_COPY_KEY_DOWNS is 0), read as soon as the
+ * keystroke returns and 300 ms later (does the count lag?), and the harness's CGEvent ⌘C, which must add 1: the count
+ * is live, so a counted key in a read drops it. */
 async function copyKeyDowns() {
-  const step = 'X9a (Mac): one System Events ⌘C adds exactly 1 to the HID key-down count and no click (MUST-A5\'s constant)';
+  const step = 'X9a (Mac): one System Events ⌘C adds no HID key-down and no click (MAC_COPY_KEY_DOWNS = 0), and a CGEvent ⌘C adds 1 (the count is live)';
   try {
     const p0 = pressCounts();
     osa('tell application "System Events" to key code 8 using command down');
@@ -2032,7 +2034,7 @@ async function copyKeyDowns() {
     await sleep(300);
     const q1 = pressCounts();
     const d = (a, b) => (b - a) >>> 0;
-    log(d(p0[0], p2[0]) === 1 && p2[1] === p0[1] && p2[2] === p0[2], step,
+    log(d(p0[0], p1[0]) === 0 && d(p0[0], p2[0]) === 0 && p2[1] === p0[1] && p2[2] === p0[2] && d(q0[0], q1[0]) === 1, step,
       `key-downs ${p0[0]} → ${p1[0]} as the keystroke returned (+${d(p0[0], p1[0])}${d(p0[0], p1[0]) === d(p0[0], p2[0]) ? ', no lag' : ', LAGS'}) → ${p2[0]} 300 ms later (+${d(p0[0], p2[0])}); left clicks ${p0[1]} → ${p2[1]}, right ${p0[2]} → ${p2[2]}; the harness's CGEvent ⌘C (mouse.swift) adds +${d(q0[0], q1[0])}`);
   } catch (e) { log(false, step, `stopped: ${short(e)}`); }
 }
@@ -2218,15 +2220,15 @@ async function autoEditor(ctx, tag) {
 
   // X1 / X2: select, then paste or type, at six moments (the lead: 700, 900 and 1500 added after run 44977282607).
   // Mac: the keys through System Events first, which reset HIDIdleTime as a keyboard does (run 44987639357: CGEvent
-  // keys didn't), so they test the idle gate; then X1c / X2c with the harness's CGEvent keys, which HIDIdleTime misses
-  // but the HID press count sees (+1 each, run 44990684755 X9a), so they test MUST-A5's count alone, at the moments a
+  // keys didn't), so they test the idle gate; then X9c with the harness's CGEvent keys, which HIDIdleTime misses but
+  // the HID press count sees (+1 each, run 44990684755 X9a), so they test MUST-A5's count alone, at the moments a
   // read can be under way. Windows: SendInput, which GetLastInputInfo sees.
   const keyRuns = os === 'mac' ? [['se', [300, 700, 900, 1200, 1500, 2500]], ['cg', [700, 900, 1200, 1500]]] : [['', [300, 700, 900, 1200, 1500, 2500]]];
   for (const [via, offsets] of keyRuns) {
     for (const kind of ['paste', 'type']) {
       for (const ms of offsets) {
         const k = nextK();
-        const name = `${kind === 'paste' ? 'X1' : 'X2'}${via === 'cg' ? 'c' : ''} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${via === 'se' ? ' (System Events key)' : via === 'cg' ? ' (CGEvent key: only the press count sees it)' : ''}`;
+        const name = `${via === 'cg' ? `X9c (${kind})` : kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${via === 'se' ? ' (System Events key)' : via === 'cg' ? ' (CGEvent key: only the press count sees it)' : ''}`;
         try {
           await spaced();
           await reset();
