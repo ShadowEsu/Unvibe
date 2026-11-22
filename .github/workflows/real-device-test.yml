@@ -964,16 +964,39 @@ jobs:
           $st = Get-MpComputerStatus; $p = Get-MpPreference
           $left = @($p.ExclusionPath | Where-Object { $_ }) + @($p.ExclusionProcess | Where-Object { $_ }) + @($p.ExclusionExtension | Where-Object { $_ })
           Say "Defender now: mode $($st.AMRunningMode), antivirus $($st.AntivirusEnabled), real-time $($st.RealTimeProtectionEnabled), on access $($st.OnAccessProtectionEnabled), behaviour $($st.BehaviorMonitorEnabled), IOAV $($st.IoavProtectionEnabled), script scanning $(-not $p.DisableScriptScanning), cloud (MAPS) $($p.MAPSReporting), block at first sight $(-not $p.DisableBlockAtFirstSeen), exclusions left $($left.Count), tamper protected $($st.IsTamperProtected), engine $($st.AMEngineVersion), signatures $($st.AntivirusSignatureVersion) ($($st.AntivirusSignatureLastUpdated))"
-          # The control: the AMSI test sample (built from two halves, so this script itself holds no sample) in powershell.exe.
+          # Run 44986491757: Defender came back on, but the AMSI control was not blocked and a 5007 (configuration changed)
+          # came only after the window opened. So: what could keep AMSI off (Defender's AMSI provider, Defender policies),
+          # the provider key put back if the image removed it, and the control retried for up to 2 minutes.
+          $prov = '{2781761E-28E0-4109-99FE-B9D127C57AFE}'
+          $provs = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\AMSI\Providers' -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName })
+          $inproc = (Get-ItemProperty "Registry::HKEY_CLASSES_ROOT\CLSID\$prov\InprocServer32" -ErrorAction SilentlyContinue).'(default)'
+          Say "AMSI providers: $(if ($provs) { $provs -join ' ' } else { 'none' }); Defender's ($prov) in-process server: $(if ($inproc) { $inproc } else { 'not registered' })"
+          if ($provs -notcontains $prov -and $inproc) { New-Item -Path "HKLM:\SOFTWARE\Microsoft\AMSI\Providers\$prov" -Force | Out-Null; Say "NOTE  Defender's AMSI provider key was missing: put back" }
+          foreach ($k in 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender', 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection', 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet') {
+            $v = Get-ItemProperty $k -ErrorAction SilentlyContinue
+            $pairs = if ($v) { @($v.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { "$($_.Name)=$($_.Value)" }) } else { @() }
+            Say "policy $($k -replace '^HKLM:\\SOFTWARE\\Policies\\Microsoft\\', ''): $(if ($pairs) { $pairs -join ', ' } else { 'none' })"
+          }
+          # The controls: the AMSI test sample (built from two halves, so this script itself holds no sample) in
+          # powershell.exe, the PowerShell Unvibe's auto read runs in; and the EICAR test file for real-time file scanning.
           $t = Get-Date
           $sample = 'AMSI Test Sa' + 'mple: 7e72c3ce-861b-4339-8740-0ac1484f1386'
           $enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("'$sample'"))
-          $res = (& powershell.exe -NoProfile -NonInteractive -EncodedCommand $enc 2>&1 | Out-String).Trim()
+          $blocked = $false; $tries = 0; $res = ''
+          while (-not $blocked -and $tries -lt 8) {
+            $tries++
+            $res = (& powershell.exe -NoProfile -NonInteractive -EncodedCommand $enc 2>&1 | Out-String).Trim()
+            $blocked = $res -match 'malicious content'
+            if (-not $blocked) { Start-Sleep -Seconds 15 }
+          }
+          $eicar = Join-Path $env:RUNNER_TEMP 'qa-eicar.txt'
+          try { [IO.File]::WriteAllText($eicar, 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR' + '-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*') } catch { }
           Start-Sleep -Seconds 8
-          $blocked = $res -match 'malicious content'
+          $eicarGone = -not (Test-Path $eicar)
+          Remove-Item -Force $eicar -ErrorAction SilentlyContinue
           $ev = @(Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-Windows Defender/Operational'; Id = 1116, 1117; StartTime = $t } -ErrorAction SilentlyContinue)
-          $name = if ($ev) { (($ev[-1].Message -split "`n") | Where-Object { $_ -match '^\s*Name:' } | Select-Object -First 1) -replace '^\s*Name:\s*', '' } else { '' }
-          Say "control: powershell.exe given the AMSI test sample: $(if ($blocked) { 'blocked' } else { "NOT blocked ($($res.Substring(0, [Math]::Min(120, $res.Length))))" }); Defender/Operational 1116/1117 since: $($ev.Count)$(if ($name) { " ($($name.Trim()))" })"
+          $names = @($ev | ForEach-Object { (($_.Message -split "`n") | Where-Object { $_ -match '^\s*Name:' } | Select-Object -First 1) -replace '^\s*Name:\s*', '' } | ForEach-Object { $_.Trim() } | Sort-Object -Unique)
+          Say "control: powershell.exe given the AMSI test sample: $(if ($blocked) { "blocked (try $tries)" } else { "NOT blocked in $tries tries over about $($tries * 15) s ($($res.Substring(0, [Math]::Min(120, $res.Length))))" }); the EICAR test file $(if ($eicarGone) { 'removed' } else { 'NOT removed' }) 8 s after it was written; Defender/Operational 1116/1117 since: $($ev.Count)$(if ($names) { " ($($names -join ', '))" })"
           if ($st.RealTimeProtectionEnabled -and $st.AMRunningMode -eq 'Normal' -and $blocked -and $ev.Count -gt 0) { 'ready' | Set-Content "$env:RUNNER_TEMP\defender-ready.txt" }
           else { Say 'NOTE  Defender is not in a working real-time state on this runner (above), so SHOULD-384c will be untestable; the auto rows still run' }
           Start-Sleep -Seconds 2
