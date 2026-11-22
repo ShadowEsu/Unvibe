@@ -23,9 +23,13 @@
 //                                     ⌘ released), copy (⌘C), type:<ascii> (each character typed); prints the time
 //   mouse dragkey <x1> <y1> <x2> <y2> <ms> <action>
 //                                     a drag as `drag`, then <ms> after the release the key action; prints the press
-//                                     reads, then "up=<release ms> key=<ms the key action began> done=<ms it ended>"
-//                                     (ms since 1970). Also se-paste (⌘V) and se-type:<ascii>: the same keys sent
-//                                     through System Events (compiled and System Events warmed before the drag)
+//                                     reads, then "up=<release ms> key=<ms the key action began> poke=<ms> done=<ms
+//                                     it ended>" (ms since 1970). Also se-paste (⌘V) and se-type:<ascii>: the same
+//                                     keys sent through System Events (compiled and System Events warmed before the
+//                                     drag); and rk-<action> (a real key's two traces): System Events taps Shift, which
+//                                     resets HIDIdleTime (poke= when it began), then <action> as CGEvent keys, which
+//                                     the HID press count sees (key= when they began)
+//   mouse poke                        System Events taps Shift (rk-'s first half); prints when it ended
 //   mouse presses                     the HID system's press counts, as auto mode's Mac read takes them (#384
 //                                     MUST-A5): "<key-downs> <left mouse-downs> <right mouse-downs>"
 //   mouse front                       the frontmost app's bundle id
@@ -85,10 +89,11 @@ func seScript(_ a: String) -> NSAppleScript? {
   let body: String
   if a == "se-paste" { body = "keystroke \"v\" using command down" }
   else if a.hasPrefix("se-type:") { body = "keystroke \"\(a.dropFirst(8))\"" }
+  else if a.hasPrefix("rk-") || a == "poke" { body = "key down shift\nkey up shift" }
   else { return nil }
   var err: NSDictionary?
   guard let warm = NSAppleScript(source: "tell application \"System Events\" to get name"),
-        let s = NSAppleScript(source: "tell application \"System Events\" to \(body)") else { exit(4) }
+        let s = NSAppleScript(source: "tell application \"System Events\"\n\(body)\nend tell") else { exit(4) }
   _ = warm.executeAndReturnError(&err)
   if err == nil { _ = s.compileAndReturnError(&err) }
   if let e = err { FileHandle.standardError.write("System Events: \(e)\n".data(using: .utf8)!); exit(4) }
@@ -302,10 +307,18 @@ case "dragkey" where a.count > 7:
   let up = nowMs()
   let due = up + (Int64(a[6]) ?? 0)
   while nowMs() < due { usleep(2_000) }
-  let k = nowMs()
-  if let s = se { runSE(s) } else { act(a[7]) }
+  let poke = nowMs()
+  var k = poke
+  if let s = se {
+    runSE(s)
+    if a[7].hasPrefix("rk-") { k = nowMs(); act(String(a[7].dropFirst(3))) }
+  } else { act(a[7]) }
   print("press: \(before) at40: \(at40)")
-  print("up=\(up) key=\(k) done=\(nowMs())")
+  print("up=\(up) key=\(k) poke=\(poke) done=\(nowMs())")
+case "poke":
+  guard let s = seScript("poke") else { exit(2) }
+  runSE(s)
+  print(nowMs())
 case "presses":
   let counts = [CGEventType.keyDown, .leftMouseDown, .rightMouseDown].map { CGEventSource.counterForEventType(.hidSystemState, eventType: $0) }
   print(counts.map { String($0) }.joined(separator: " "))

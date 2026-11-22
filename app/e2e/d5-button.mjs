@@ -91,11 +91,16 @@
 //      mouse-up: the file holds the paste in place of the selection, the person's clipboard is theirs again 5 s later,
 //      and no explanation read the pasted text (a read after the key copies the line the paste landed in: run
 //      44987639357, Mac, +468 ms). Run 44977282607 lost the paste at 1200 ms; the #384 fix copies only when no input
-//      came since the mouse-up, never empties the clipboard, and drops a read met by any key. On the Mac the keys go
-//      through System Events (mouse.swift se-paste / se-type), which reset HIDIdleTime as a keyboard does; CGEvent keys
-//      didn't (run 44987639357), so the Mac idle check never saw them.
+//      came since the mouse-up, never empties the clipboard, and drops a read met by any key. On the Mac each key is
+//      an rk- key (mouse.swift), a keyboard's two traces: a System Events Shift tap, which resets HIDIdleTime, then
+//      the CGEvent key, which the HID press count sees (System Events keys alone add no count, CGEvent keys alone
+//      leave HIDIdleTime: runs 44990684755 and 44987639357).
 //   X2 select, then type at the same moments: the file holds the typed word in its place, and no read holds it.
-//   X1 and X2 also fail an explanation that started more than 50 ms after the key: a read the key met was kept.
+//   X1 and X2 also fail a read the key met that was kept. Windows: a start more than 50 ms after the key. Mac: an
+//      input check that began after the counted key and said idle; an osascript wrapper first on the app's PATH logs
+//      when each read and input check ran and what they said (after an idle check the app asks osascript for the
+//      front app, so a start can trail a check the key followed by a few hundred ms). The Mac rows at 700-1500 ms are
+//      Security's X9c (MUST-A5).
 //   A row whose file comes out wrong logs the drag against the line ends and the editor's edge, and takes a still.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
@@ -109,9 +114,8 @@
 //   Mac, #384 MUST-A5 (d08713d4: any HID key-down or click counted across a read drops it; MAC_COPY_KEY_DOWNS = 0):
 //   X9a before the editors: one System Events ⌘C adds no key-down and no click to the HID system's counts (read as
 //      soon as the keystroke returns and 300 ms later), and the harness's CGEvent ⌘C adds 1 (the count is live).
-//   X9c in each editor, after X1 / X2: select, then paste or type 700 / 900 / 1200 / 1500 ms after the mouse-up with
-//      CGEvent keys, which HIDIdleTime misses but the HID press count sees, so only MUST-A5's count can drop a read
-//      they meet: the same checks as X1 / X2 (file, clipboard, no read holds the key, no start after the key).
+//   X9a2 (the harness's model): a System Events Shift tap resets HIDIdleTime and adds no key-down, and a CGEvent ⌘C
+//      leaves HIDIdleTime alone. NOT TESTABLE when the tap doesn't reset it; X1 / X2 then judge only keys after the copy.
 //   X9b after them: Unvibe had no Input Monitoring grant (a runner row for it is removed first), and the reads leave
 //      no Input Monitoring row for Unvibe or osascript (system and user TCC databases), no prompt window on screen,
 //      and no ListenEvent line naming either in the TCC log since the launch began.
@@ -479,11 +483,76 @@ function dragKey(x1, y1, x2, y2, ms, action) {
   const printed = os === 'mac'
     ? execFileSync(process.env.MOUSE, ['dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), action], { encoding: 'utf8' }).trim()
     : winPtr('dragkey', S(x1), S(y1), S(x2), S(y2), String(ms), '0', '0', action);
-  const m = /up=(\d+) key=(\d+)(?: done=(\d+))?/.exec(printed);
+  const m = /up=(\d+) key=(\d+)(?: poke=(\d+))?(?: done=(\d+))?/.exec(printed);
   if (!m) throw new Error(`harness: dragkey printed "${printed.slice(-160)}"`);
   pointer.last = printed.split(/\r?\n/)[0];
-  return { up: Number(m[1]), key: Number(m[2]), done: m[3] ? Number(m[3]) : null };
+  return { up: Number(m[1]), key: Number(m[2]), poke: m[3] ? Number(m[3]) : null, done: m[4] ? Number(m[4]) : null };
 }
+/**
+ * Mac launch X: every osascript Unvibe runs goes through this wrapper, first on the app's PATH (the app runs
+ * `osascript` by name). It logs when each began and ended, the auto read's lines as they come (skip, `copied -`, the
+ * mark) and the input check's answer, so a row can tell when the read and its input check ran against the key. It adds
+ * a zsh start (a few ms) to each, and changes nothing else.
+ */
+const OSA_DIR = path.join(TMP, 'qa-osa');
+const OSA_LOG = path.join(TMP, 'qa-osa.log');
+function osaWrapper() {
+  mkdirSync(OSA_DIR, { recursive: true });
+  writeFileSync(path.join(OSA_DIR, 'osascript'), [
+    '#!/bin/zsh',
+    'zmodload zsh/datetime',
+    't0=$EPOCHREALTIME',
+    'kind=other',
+    'out=',
+    'for a in "$@"; do',
+    '  case $a in',
+    '    (*"keyCode(8"*) kind=read ;;',
+    '    (*"return \'input\'"*) kind=check ;;',
+    '  esac',
+    'done',
+    'if [[ $kind == read ]]; then',
+    '  /usr/bin/osascript "$@" | while IFS= read -r l; do print -r -- "$l"; print -r -- "$EPOCHREALTIME $$ line $l" >> "$QA_OSA_LOG"; done',
+    '  rc=${pipestatus[1]}',
+    'elif [[ $kind == check ]]; then',
+    '  out=$(/usr/bin/osascript "$@"); rc=$?',
+    '  print -r -- "$out"',
+    'else',
+    '  /usr/bin/osascript "$@"; rc=$?',
+    'fi',
+    'print -r -- "$t0 $EPOCHREALTIME $$ $kind $rc $out" >> "$QA_OSA_LOG"',
+    'exit $rc',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  writeFileSync(OSA_LOG, '');
+}
+/** The osascript runs that began from `since` (ms): { start, end, kind (read, check, other), rc, out, lines: [{ t, l }] }. */
+function osaSince(since) {
+  const ms = (s) => Math.round(Number(s) * 1000);
+  const lines = [];
+  const runs = [];
+  for (const l of (existsSync(OSA_LOG) ? readFileSync(OSA_LOG, 'utf8') : '').split('\n')) {
+    let m = /^(\d+\.\d+) (\d+) line (.*)$/.exec(l);
+    if (m) { lines.push({ t: ms(m[1]), pid: m[2], l: m[3] }); continue; }
+    m = /^(\d+\.\d+) (\d+\.\d+) (\d+) (\w+) (\d+) ?(.*)$/.exec(l);
+    if (m) runs.push({ start: ms(m[1]), end: ms(m[2]), pid: m[3], kind: m[4], rc: Number(m[5]), out: m[6].trim() });
+  }
+  return runs.filter((r) => r.start >= since).map((r) => ({ ...r, lines: lines.filter((x) => x.pid === r.pid && x.t >= r.start && x.t <= r.end + 5) }));
+}
+/** One row's osascript runs, relative to the mouse-up: the reads and input checks, and the others (the front-app
+ * question before a start, say) only from the first read to 1.5 s after the last check. */
+const osaText = (runs, up) => {
+  const rel = (t) => `+${t - up}`;
+  const main = runs.filter((r) => r.kind !== 'other');
+  const from = main.length ? main[0].start : Infinity;
+  const to = main.length ? Math.max(...main.map((r) => r.end)) + 1500 : -Infinity;
+  return runs.filter((r) => r.kind !== 'other' || (r.start >= from && r.start <= to)).map((r) => {
+    if (r.kind === 'read') return `read ${rel(r.start)}..${rel(r.end)} (${r.lines.map((x) => `${/^[\d.,]+$/.test(x.l) ? 'mark' : x.l} ${rel(x.t)}`).join(', ') || 'no line'})`;
+    if (r.kind === 'check') return `input check ${rel(r.start)}..${rel(r.end)} = ${r.out || `rc ${r.rc}`}`;
+    return `osascript ${rel(r.start)}..${rel(r.end)}`;
+  }).join('; ') || 'no read';
+};
+/** Set by X9a: System Events' Shift tap resets HIDIdleTime, so an rk- key is seen as a keyboard's is. */
+let rkPoke = false;
 /** The app in front: the Mac's bundle id, Windows' process name. */
 const frontApp = () => {
   try { return os === 'mac' ? execFileSync(process.env.MOUSE, ['front'], { encoding: 'utf8' }).trim() : winPtr('fg', '0', '0', '0', '0', '0'); } catch (e) { return `? (${short(e)})`; }
@@ -942,7 +1011,8 @@ async function launch(tag, extraArgs = []) {
   if (!existsSync(path.join(P, 'unvibe-store.json'))) writeFileSync(path.join(P, 'unvibe-store.json'), JSON.stringify({ installId, loginPromptAsked: true }));
   const net = path.join(netDir, `netlog-d5-${tag}.json`);
   netlogs.push({ tag, file: net });
-  const app = await launchApp({ exe, userData: P, env: { ...baseEnv, UNVIBE_USER_DATA: P }, timeout: 90000, args: [...extraArgs, netLogArg(net)] });
+  const osaEnv = tag === 'x' && os === 'mac' ? (osaWrapper(), { PATH: `${OSA_DIR}:${baseEnv.PATH ?? '/usr/bin:/bin'}`, QA_OSA_LOG: OSA_LOG }) : {};
+  const app = await launchApp({ exe, userData: P, env: { ...baseEnv, ...osaEnv, UNVIBE_USER_DATA: P }, timeout: 90000, args: [...extraArgs, netLogArg(net)] });
   const companion = await app.windowWith('companion.html', 60000);
   if (!companion) throw new Error('the main window did not open');
   await companion.waitForLoadState('domcontentloaded');
@@ -2037,6 +2107,28 @@ async function copyKeyDowns() {
     log(d(p0[0], p1[0]) === 0 && d(p0[0], p2[0]) === 0 && p2[1] === p0[1] && p2[2] === p0[2] && d(q0[0], q1[0]) === 1, step,
       `key-downs ${p0[0]} → ${p1[0]} as the keystroke returned (+${d(p0[0], p1[0])}${d(p0[0], p1[0]) === d(p0[0], p2[0]) ? ', no lag' : ', LAGS'}) → ${p2[0]} 300 ms later (+${d(p0[0], p2[0])}); left clicks ${p0[1]} → ${p2[1]}, right ${p0[2]} → ${p2[2]}; the harness's CGEvent ⌘C (mouse.swift) adds +${d(q0[0], q1[0])}`);
   } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  // The harness's real-key model (rk-): a keyboard's key both resets HIDIdleTime and counts as a key-down. System
+  // Events' keys do only the first (above: +0) and CGEvent keys only the second (run 44987639357), so an rk- key is a
+  // System Events Shift tap, then the CGEvent key. Shown here on HIDIdleTime itself, as auto mode reads it.
+  const step2 = 'X9a2 (harness, Mac): a System Events Shift tap resets HIDIdleTime and adds no key-down, and a CGEvent ⌘C leaves HIDIdleTime alone (the rk- keys model a keyboard)';
+  try {
+    const idle = () => Number(/"HIDIdleTime" = (\d+)/.exec(execFileSync('/usr/sbin/ioreg', ['-c', 'IOHIDSystem', '-r', '-d', '1'], { encoding: 'utf8' }))?.[1]) / 1e9;
+    await sleep(1500);
+    const c0 = pressCounts();
+    const i0 = idle();
+    execFileSync(process.env.MOUSE, ['poke'], { encoding: 'utf8' });
+    const i1 = idle();
+    const c1 = pressCounts();
+    await sleep(1500);
+    const i2 = idle();
+    keyNow('copy');
+    await sleep(100);
+    const i3 = idle();
+    rkPoke = i0 > 1 && i1 < 0.5 && c1[0] === c0[0] && i3 > 1;
+    const detail = `HIDIdleTime ${i0.toFixed(2)} s → ${i1.toFixed(2)} s across the Shift tap (key-downs +${(c1[0] - c0[0]) >>> 0}); ${i2.toFixed(2)} s → ${i3.toFixed(2)} s across a CGEvent ⌘C`;
+    if (rkPoke) log(true, step2, detail);
+    else untestable(step2, `${detail}; so a key before the read's idle sample may go unseen by the harness's model, and the rows judge only keys after the read's copy`);
+  } catch (e) { untestable(step2, `stopped: ${short(e)}`); }
 }
 async function runX(app, companion) {
   if (!(await blockHolds('x'))) return;
@@ -2184,13 +2276,14 @@ async function autoEditor(ctx, tag) {
       await watchReads(app);
       const s = await block(k);
       const t0 = Date.now();
-      ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+      const up = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+      ctx.lastRead = up;
       await sleep(5500);
       const said = await autoSays(t0);
       const got = readFileSync(autoFile, 'utf8');
       const clip = readClipboard().trim();
       log(said.st.length === 1 && said.rd.length >= 1 && said.rd[0].len >= 40 && got === original && clip === P, step,
-        `lines ${k}-${k + 1} (end to end), no key; the file ${got === original ? 'unchanged' : 'CHANGED'}; the person's clipboard 5.5 s later: ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
+        `lines ${k}-${k + 1} (end to end), no key; the file ${got === original ? 'unchanged' : 'CHANGED'}; the person's clipboard 5.5 s later: ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${os === 'mac' ? `${osaText(osaSince(t0), up)}; clipboard changes at ${said.ch.ev.map((e) => `+${e.t - up}`).join(', ') || 'none'}; ${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - up}`).join(', ')} ms; ` : ''}` : ''}${said.text}`);
     } catch (e) { log(false, step, `stopped: ${short(e)}`); }
   }
 
@@ -2219,44 +2312,61 @@ async function autoEditor(ctx, tag) {
   }
 
   // X1 / X2: select, then paste or type, at six moments (the lead: 700, 900 and 1500 added after run 44977282607).
-  // Mac: the keys through System Events first, which reset HIDIdleTime as a keyboard does (run 44987639357: CGEvent
-  // keys didn't), so they test the idle gate; then X9c with the harness's CGEvent keys, which HIDIdleTime misses but
-  // the HID press count sees (+1 each, run 44990684755 X9a), so they test MUST-A5's count alone, at the moments a
-  // read can be under way. Windows: SendInput, which GetLastInputInfo sees.
-  const keyRuns = os === 'mac' ? [['se', [300, 700, 900, 1200, 1500, 2500]], ['cg', [700, 900, 1200, 1500]]] : [['', [300, 700, 900, 1200, 1500, 2500]]];
-  for (const [via, offsets] of keyRuns) {
-    for (const kind of ['paste', 'type']) {
-      for (const ms of offsets) {
-        const k = nextK();
-        const name = `${via === 'cg' ? `X9c (${kind})` : kind === 'paste' ? 'X1' : 'X2'} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${via === 'se' ? ' (System Events key)' : via === 'cg' ? ' (CGEvent key: only the press count sees it)' : ''}`;
-        try {
-          await spaced();
-          await reset();
-          const P = person();
-          setClipboard(P);
-          await activateEditor();
-          await watchReads(app);
-          const s = await block(k);
-          const t0 = Date.now();
-          const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, `${via === 'se' ? 'se-' : ''}${kind === 'paste' ? 'paste' : `type:${TYPED}`}`);
-          ctx.lastRead = r.up;
-          await sleep(5500);
-          const got = readFileSync(autoFile, 'utf8');
-          const clip = readClipboard().trim();
-          const said = await autoSays(t0);
-          const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
-          const clipOk = clip === P;
-          if (!fileOk) desktop(`x-${tag}-${kind}${via}-${ms}-file`);
-          // A read that holds the person's key came after it: the idle check missed the key.
-          const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
-          // A start after the key (50 ms slack: the start event's trip to the main window, and System Events' own delay
-          // before its key lands) means a read the key met was kept (Security's acceptance for 19f57c81: a key from +375
-          // to +1703 ms starts nothing unless the read had already finished).
-          const late = said.st.filter((t) => t > r.key + 50);
-          log(fileOk && clipOk && !readKey && late.length === 0, name,
-            `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}${fileOk ? '' : ` (${s.geo})`}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - r.up}`).join(', ')} ms${late.length ? ' (AFTER the key)' : ' (before the key)'}; ` : ''}${said.text}`);
-        } catch (e) { log(false, name, `stopped: ${short(e)}`); }
-      }
+  // Mac: rk- keys, a keyboard's two traces (X9a2): a System Events Shift tap (HIDIdleTime) and then the CGEvent key (the
+  // HID press count, MUST-A5). System Events keys alone are invisible to the count and CGEvent keys alone to
+  // HIDIdleTime, so either alone fails rows a keyboard passes (run 44992962409). Each Mac row is judged on when the read
+  // and its input check ran (the osascript wrapper), not on the start's time: after an idle check the app asks
+  // osascript for the front app before it starts, so a start can come a few hundred ms after a check the key followed.
+  // The 700-1500 ms rows are Security's X9c. Windows: SendInput, which GetLastInputInfo sees.
+  const offsets = [300, 700, 900, 1200, 1500, 2500];
+  for (const kind of ['paste', 'type']) {
+    for (const ms of offsets) {
+      const via = os === 'mac' ? 'rk' : '';
+      const k = nextK();
+      const name = `${kind === 'paste' ? 'X1' : 'X2'}${os === 'mac' && ms >= 700 && ms <= 1500 ? ' / X9c' : ''} ${ED.name}: select, then ${kind === 'paste' ? 'paste' : 'type'} ${ms} ms after the mouse-up${os === 'mac' ? ' (rk: System Events Shift, then the CGEvent key)' : ''}`;
+      try {
+        await spaced();
+        await reset();
+        const P = person();
+        setClipboard(P);
+        await activateEditor();
+        await watchReads(app);
+        const s = await block(k);
+        const t0 = Date.now();
+        const r = dragKey(s.x1, s.y1, s.x2, s.y2, ms, `${via ? `${via}-` : ''}${kind === 'paste' ? 'paste' : `type:${TYPED}`}`);
+        ctx.lastRead = r.up;
+        await sleep(5500);
+        const got = readFileSync(autoFile, 'utf8');
+        const clip = readClipboard().trim();
+        const said = await autoSays(t0);
+        const fileOk = got === want(k, kind === 'paste' ? P : TYPED);
+        const clipOk = clip === P;
+        if (!fileOk) desktop(`x-${tag}-${kind}${via}-${ms}-file`);
+        // A read that holds the person's key came after it: the idle check missed the key.
+        const readKey = said.rd.some((x) => (x.full ?? '').includes(kind === 'paste' ? P : TYPED));
+        let late = [];
+        let timeline = '';
+        if (os === 'mac') {
+          // The read and its input check against the key (r.key: the counted CGEvent key; r.poke: the Shift tap).
+          const runs = osaSince(t0).filter((x) => x.start <= r.up + 5500);
+          const copiedAt = runs.find((x) => x.kind === 'read' && x.lines.some((l) => l.l === 'copied -'))?.lines.find((l) => l.l === 'copied -').t ?? null;
+          const checks = runs.filter((x) => x.kind === 'check');
+          // Kept although the counted key came before the check began: the check must have said input. With the
+          // Shift tap shown to reset HIDIdleTime (X9a2), any copy means the key came after the idle sample; without
+          // it, only a key after the copy is sure to be after it.
+          late = checks.filter((c) => c.out === 'idle' && r.key < c.start && (rkPoke || (copiedAt !== null && r.key > copiedAt)));
+          const during = checks.filter((c) => c.out === 'idle' && r.key >= c.start && r.key <= c.end);
+          const clipT = said.ch.ev.map((e) => `+${e.t - r.up}${e.text === P ? ' (theirs back)' : ''}`).join(', ');
+          timeline = `Shift tap +${r.poke - r.up}, the counted key +${r.key - r.up}; ${osaText(runs, r.up)}; clipboard changes at ${clipT || 'none'}${during.length ? '; NOTE the key landed while an input check that said idle ran' : ''}${said.st.length && !checks.length ? '; NO input check seen for this start' : ''}; `;
+          if (said.st.length && !checks.length) late = said.st;
+        } else {
+          // A start after the key (50 ms slack: the start event's trip to the main window) means a read the key met was
+          // kept (Security's acceptance: a key from +375 to +1703 ms starts nothing unless the read had already finished).
+          late = said.st.filter((t) => t > r.key + 50);
+        }
+        log(fileOk && clipOk && !readKey && late.length === 0, name,
+          `lines ${k}-${k + 1} (end to end); the key went ${r.key - r.up} ms after the release${r.done ? ` (done ${r.done - r.up} ms)` : ''}; the file: ${fileSays(got, k, kind === 'paste' ? P : TYPED)}${fileOk ? '' : ` (${s.geo})`}; the person's clipboard 5.5 s later: ${clipOk ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${readKey ? `a read HELD the ${kind === 'paste' ? 'pasted text' : 'typed word'}; ` : ''}${late.length ? (os === 'mac' ? 'KEPT: the counted key came before an input check that said idle; ' : 'a start came AFTER the key; ') : ''}${timeline}${said.st.length ? `start(s) at ${said.st.map((t) => `+${t - r.up}`).join(', ')} ms; ` : ''}${said.text}`);
+      } catch (e) { log(false, name, `stopped: ${short(e)}`); }
     }
   }
 
