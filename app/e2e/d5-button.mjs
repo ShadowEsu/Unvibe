@@ -474,7 +474,8 @@ const WIN_CLIP = [
 function clipInfo() {
   const raw = os === 'mac' ? execFileSync(process.env.MOUSE, ['clip', 'info'], { encoding: 'utf8' }) : ps(`${WIN_CLIP}\nInfo`);
   const o = JSON.parse(raw.trim().split(/\r?\n/).pop());
-  for (const k of ['types', 'files']) if (o[k] && !Array.isArray(o[k])) o[k] = [o[k]];
+  // Windows PowerShell 5.1 writes an empty list as {} (run 44977282607's X3: path.basename got an object).
+  for (const k of ['types', 'files']) o[k] = (Array.isArray(o[k]) ? o[k] : [o[k]]).filter((v) => typeof v === 'string');
   return o;
 }
 const clipText = (o) => `change ${o.c}; ${o.types?.length ?? 0} format(s)${o.png ? `; PNG ${o.png.slice(0, 12)}` : ''}${o.image ? `; image ${o.image}` : ''}${o.files?.length ? `; files ${o.files.map((f) => path.basename(f)).join(', ')}` : ''}; text ${o.len} chars`;
@@ -509,12 +510,10 @@ async function clipFileAsPerson(f) {
     spawn('explorer.exe', [`/select,${f}`], { detached: true, stdio: 'ignore' }).unref();
     await sleep(3500);
     let fg = frontApp();
-    if (!/explorer/i.test(fg)) {
-      // A window opened by a background process may not get the foreground: a click on its title bar gives it, as a
-      // person's would (the file stays selected).
-      const r = explorerRect();
-      if (r) { pointer.click(r.x + r.w / 2, r.y + 12); await sleep(700); fg = frontApp(); }
-    }
+    // A window opened by a background process doesn't get the foreground, and the maximized editor covers it (run
+    // 44977282607: a click on its title bar went to the editor); brought forward as the taskbar would (the file stays
+    // selected).
+    if (!/explorer/i.test(fg)) { explorerToFront(); await sleep(700); fg = frontApp(); }
     if (/explorer/i.test(fg)) {
       keyNow('copy');
       await sleep(800);
@@ -577,6 +576,9 @@ const WIN_HISTORY = [
 ].join('\n');
 function winHistoryOn() {
   ps("New-Item -Path 'HKCU:\\Software\\Microsoft\\Clipboard' -Force | Out-Null; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Clipboard' -Name EnableClipboardHistory -Value 1 -Type DWord");
+  // Run 44977282607: the user setting alone left IsHistoryEnabled false (ClipboardHistoryDisabled) on the runner; the
+  // machine policy that allows it, too.
+  try { ps("New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System' -Force | Out-Null; Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System' -Name AllowClipboardHistory -Value 1 -Type DWord"); } catch { /* not admin */ }
   const on = () => ps(`${WIN_HISTORY}\n[Windows.ApplicationModel.DataTransfer.Clipboard]::IsHistoryEnabled()`).split(/\r?\n/).pop();
   let state = on();
   if (state !== 'True') {
@@ -1929,36 +1931,42 @@ async function activateEditor() {
   }
   await sleep(700);
 }
-/** Windows: the last File Explorer window's frame (screen px), or null. */
-function explorerRect() {
-  const r = ps([
+/** Windows: the last File Explorer window brought to the front (restored if minimized; Alt pressed and released first,
+ * the documented way a background process may set the foreground). Returns 'ok' or 'none' (no Explorer window). */
+function explorerToFront() {
+  return ps([
     'Add-Type @"',
     'using System; using System.Runtime.InteropServices;',
-    'public class QaRect { [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }',
-    '  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);',
-    '  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }',
+    'public class QaFront {',
+    '  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);',
+    '  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);',
+    '  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);',
+    '  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, IntPtr extra); }',
     '"@',
-    '[void][QaRect]::SetProcessDPIAware()',
     "$w = @((New-Object -ComObject Shell.Application).Windows()) | Where-Object { $_.FullName -match 'explorer\\.exe$' } | Select-Object -Last 1",
-    'if ($w) { $r = New-Object QaRect+RECT; [void][QaRect]::GetWindowRect([IntPtr]$w.HWND, [ref]$r); "$($r.Left) $($r.Top) $($r.Right) $($r.Bottom)" }',
+    "if (-not $w) { 'none' } else {",
+    '  $h = [IntPtr][long]$w.HWND',
+    '  if ([QaFront]::IsIconic($h)) { [void][QaFront]::ShowWindow($h, 9) }',
+    '  [QaFront]::keybd_event(0x12, 0, 0, [IntPtr]::Zero); [QaFront]::keybd_event(0x12, 0, 2, [IntPtr]::Zero)',
+    "  [void][QaFront]::SetForegroundWindow($h); 'ok' }",
   ].join('\n'));
-  const v = r.split(/\s+/).map(Number);
-  return v.length === 4 && v.every(Number.isFinite) ? { x: v[0], y: v[1], w: v[2] - v[0], h: v[3] - v[1] } : null;
 }
-/** The other app an app switch goes back to, brought to the front: Finder (Mac); a File Explorer window, its title bar
- * clicked (Windows). */
+/** The other app an app switch goes back to, brought to the front: Finder (Mac); a File Explorer window (Windows). */
 async function otherAppInFront() {
   if (os === 'mac') { osa('tell application "Finder" to activate'); await sleep(600); return 'com.apple.finder'; }
-  let r = explorerRect();
-  if (!r) { spawn('explorer.exe', [sampleDir], { detached: true, stdio: 'ignore' }).unref(); await sleep(3500); r = explorerRect(); }
-  if (!r) throw new Error('no File Explorer window to switch to');
-  pointer.click(r.x + r.w / 2, r.y + 12);
+  if (explorerToFront() === 'none') { spawn('explorer.exe', [sampleDir], { detached: true, stdio: 'ignore' }).unref(); await sleep(3500); explorerToFront(); }
   await sleep(700);
+  const fg = frontApp();
+  if (!/explorer/i.test(fg)) throw new Error(`File Explorer did not come to the front (${fg} did)`);
   return 'explorer';
 }
 /** 36 plain lines for one editor, each ending "qa line <tag> <k>" (the Mac's clipboard watcher tells an auto copy by
- * that text); the tag differs per editor, so the 10-minute repeat check never meets a text twice. */
-const autoSample = (tag) => Array.from({ length: 36 }, (_, i) => `function ${tag}Step${i + 1}(value, limit = ${(i + 1) * 10}) { return value > limit ? limit : value + ${i + 1}; } // qa line ${tag} ${i + 1}`);
+ * that text); the tag differs per editor, so the 10-minute repeat check never meets a text twice. About 70 characters,
+ * so every drag point stays in the screen's left 3/5 (run 44977282607: on the Mac's 1280 × 960 screen, Cursor's window
+ * at x 140 put 98-character line ends under Unvibe's panel at the bottom right). Each still passes auto mode's size
+ * floor (40 characters).
+ */
+const autoSample = (tag) => Array.from({ length: 36 }, (_, i) => `function ${tag}S${i + 1}(v, n = ${(i + 1) * 10}) { return v > n ? n : v + ${i + 1}; } // qa line ${tag} ${i + 1}`);
 /** The editor settings for the auto rows: saved 200 ms after each change (the file then holds what the keys did), no
  * suggestion box or inline completion that could take a typed key. */
 const AUTO_EDITOR = {
@@ -2045,7 +2053,15 @@ async function autoEditor(ctx, tag) {
     const a = lineOf(L, k);
     const b = lineOf(L, k + 1);
     const edge = L.editor.right - 40;
-    return { x1: Math.min(a.right + 30, edge), y1: a.y, x2: Math.min(b.right + 30, edge), y2: b.y };
+    const s = { x1: Math.min(a.right + 30, edge), y1: a.y, x2: Math.min(b.right + 30, edge), y2: b.y };
+    // Never a drag onto Unvibe's own panel (run 44977282607, Mac Cursor: the drags went to the panel, not the editor).
+    const pr = await panelPage(app)?.evaluate(() => ({ x: screenX, y: screenY, w: outerWidth, h: outerHeight, vis: document.visibilityState })).catch(() => null);
+    if (pr?.vis === 'visible') {
+      for (const [x, y] of [[s.x1, s.y1], [s.x2, s.y2]]) {
+        if (x >= pr.x * scale && x < (pr.x + pr.w) * scale && y >= pr.y * scale && y < (pr.y + pr.h) * scale) throw new Error(`harness: (${Math.round(x)}, ${Math.round(y)}) is under Unvibe's panel (${pr.x}, ${pr.y}, ${pr.w}×${pr.h}); nothing dragged`);
+      }
+    }
+    return s;
   };
 
   // X1 / X2: select, then paste or type, at three moments.
