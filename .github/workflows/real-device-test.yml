@@ -128,9 +128,7 @@ jobs:
       fail-fast: false
       matrix:
         # rc0154=ai-<os>-<plan> and rc0155=ai-<os> run on that one system: their hosted calls are planned per system.
-        # d5=auto-defender runs on windows-2022: on windows-latest (Server 2025) AMSI never blocked its test sample with
-        # Defender back at its defaults (run 44987641368).
-        include: ${{ fromJSON(inputs.d5 == 'auto-defender' && '[{"os":"windows-2022","label":"windows"}]' || (startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac' || inputs.d5 == 'fade') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
+        include: ${{ fromJSON((startsWith(inputs.rc0154, 'ai-mac-') || inputs.rc0154 == 'hero' || inputs.rc0155 == 'ai-mac' || inputs.d5 == 'fade') && '[{"os":"macos-latest","label":"mac"}]' || (startsWith(inputs.rc0154, 'ai-windows-') || inputs.rc0155 == 'ai-windows' || inputs.rc0155 == 'link' || inputs.d5 == 'auto-defender') && '[{"os":"windows-latest","label":"windows"}]' || '[{"os":"macos-latest","label":"mac"},{"os":"windows-latest","label":"windows"}]') }}
     runs-on: ${{ matrix.os }}
     # rc0155=walk adds the last release first and two sets of RC rows to the usual walk.
     timeout-minutes: ${{ (inputs.rc0155 == 'walk' || inputs.d5 == 'auto' || inputs.d5 == 'auto-defender') && 45 || 30 }}
@@ -349,8 +347,8 @@ jobs:
           # ffmpeg: marketing-media.mjs encodes its window recordings with it.
           npx playwright install chromium ffmpeg
 
-      # The build run names its artifacts after its own runners (macos-latest, windows-latest); d5=auto-defender runs
-      # on windows-2022, so the name comes from the label.
+      # The build run names its artifacts after its own runners (macos-latest, windows-latest), so the name comes from
+      # the label, whatever image this run is on.
       - name: Get the build-only artifacts
         if: inputs.build_run != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
