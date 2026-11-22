@@ -9,7 +9,7 @@
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
-import { autoRead, type AutoReadResult } from '../core/autoRead';
+import { autoRead, type AutoNativeOutput, type AutoReadResult } from '../core/autoRead';
 import { clipboardHolder } from '../core/clipboardHold';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -282,15 +282,20 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
 /**
  * Auto mode's native read on the Mac, one osascript (JXA) launch: the frontmost app's bundle id must be the selection's
  * editor, no hardware input since the settle began (and none in the last 500 ms), no Shift, Control, Option or Command
- * held (it would join the ⌘C), then ⌘C and a 10 ms watch of the pasteboard's change count. The first line goes out the
- * moment it's known, while osascript is still exiting.
+ * held (it would join the ⌘C), then ⌘C and a 5 ms watch of the pasteboard's change count. `copied -` goes out the
+ * moment the count moves, so Node reads the text and puts the clipboard back without waiting for anything else.
  * Idle time comes from IOHIDSystem's HIDIdleTime (kernel). CGEventSourceSecondsSinceLastEventType lags up to about a
  * second after input on macOS 27.2, so it isn't used. The synthetic ⌘C resets HIDIdleTime too (QA run 44982193648: with
- * the mark taken before it, every read dropped), so the mark is a second sample taken once the copy has landed, after
- * the keystroke as on Windows: the uptime before and after that sample and the idle seconds, for the input check after
- * the restore.
+ * the mark taken before it, every read dropped), so the mark is a second sample taken after `copied -` is out, after
+ * the keystroke as on Windows, and printed as the next line: the uptime before and after that sample and the idle
+ * seconds, for the input check after the restore.
+ * A key or click between the idle sample and that mark (a paste that replaces the selection before the ⌘C lands, say)
+ * is invisible to HIDIdleTime, so the mark also carries the HID system's press counts taken with the idle sample:
+ * key-downs, left and right mouse-downs (CGEventSourceCounterForEventType: how many, never which key). The input check
+ * drops the result unless exactly the ⌘C's own key-down and no click came since (Security MUST-A5 on #384).
  */
 const MAC_AUTO_HID = [
+  "ObjC.import('CoreGraphics');",
   "var me = Application.currentApplication(); me.includeStandardAdditions = true;",
   'function hid() {',
   '  var b = $.NSProcessInfo.processInfo.systemUptime;',
@@ -299,7 +304,14 @@ const MAC_AUTO_HID = [
   "  if (!m) throw new Error('HIDIdleTime missing');",
   '  return [b, a, Number(m[1]) / 1e9];',
   '}',
+  // kCGEventSourceStateHIDSystemState = 1; kCGEventKeyDown = 10, kCGEventLeftMouseDown = 1, kCGEventRightMouseDown = 3.
+  'function presses() {',
+  '  return [10, 1, 3].map(function (type) { return Number($.CGEventSourceCounterForEventType(1, type)); });',
+  '}',
 ].join('\n');
+
+/** Key-downs the synthetic ⌘C adds to the HID system's count (the C; Command is a flags change, not a key-down). */
+const MAC_COPY_KEY_DOWNS = 1;
 
 const MAC_AUTO_READ = [
   "ObjC.import('AppKit');",
@@ -313,18 +325,21 @@ const MAC_AUTO_READ = [
   '  var before = pb.changeCount;',
   // The settle's age is taken just before the idle sample, so a mouse-up right before the settle never reads as input.
   '  var since = Date.now() - Number(argv[1]);',
+  '  var p = presses();',
   '  var h = hid();',
   "  if (h[2] < Math.max(0.5, since / 1000) || ($.NSEvent.modifierFlags & 0x1E0000)) { emit('skip busy'); return ''; }",
   "  se.keyCode(8, { using: 'command down' });",
   '  var end = Date.now() + 1300;',
   '  while (Date.now() < end) {',
-  // The copy has landed, so a line must go out or the clipboard isn't restored. A failed sample sends a zero mark, which
-  // MAC_AUTO_INPUT always reads as input: the text is read, the clipboard goes back, and the result is dropped.
+  // The copy has landed: the line goes out first, so the clipboard is put back while the mark is still being sampled
+  // (QA run 3: a paste ~50 ms after the copy landed, before a restore that waited for the mark, got the selection). A
+  // failed sample sends a zero mark, which MAC_AUTO_INPUT always reads as input, so the result is dropped.
   '    if (pb.changeCount !== before) {',
-  "      var mark; try { mark = hid().join(','); } catch (e) { mark = '0,0,0'; }",
-  "      emit('copied ' + mark); return '';",
+  "      emit('copied -');",
+  "      var mark; try { mark = hid().concat(p).join(','); } catch (e) { mark = '0,0,0,0,0,0'; }",
+  "      emit(mark); return '';",
   '    }',
-  '    delay(0.01);',
+  '    delay(0.005);',
   '  }',
   "  emit('none ' + h.join(','));",
   "  return '';",
@@ -332,15 +347,17 @@ const MAC_AUTO_READ = [
 ].join('\n');
 
 /**
- * After the restore: 'input' if any hardware input came after the mark's sample. With no new input the idle time grew by
- * exactly the time between the two samples, which is at least (this sample's start - that sample's end). A mark that
- * isn't 3 numbers reads as input.
+ * After the restore: 'input' if any key-down beyond the ⌘C's own or any click came since the idle sample, or any
+ * hardware input came after the mark's sample. With no new input the idle time grew by exactly the time between the two
+ * samples, which is at least (this sample's start - that sample's end). A mark that isn't 6 numbers reads as input.
  */
 const MAC_AUTO_INPUT = [
   MAC_AUTO_HID,
   'function run(argv) {',
   "  var m = String(argv[0]).split(',').map(Number);",
-  "  if (m.length !== 3 || m.some(isNaN)) return 'input';",
+  "  if (m.length !== 6 || m.some(isNaN)) return 'input';",
+  '  var p = presses();',
+  `  if (((p[0] - m[3]) >>> 0) !== ${MAC_COPY_KEY_DOWNS} || p[1] !== m[4] || p[2] !== m[5]) return 'input';`,
   '  var h = hid();',
   "  return h[2] < m[2] + (h[0] - m[1]) ? 'input' : 'idle';",
   '}',
@@ -372,40 +389,48 @@ const PS_AUTO_READ =
 
 const PS_AUTO_INPUT = `${PS_AUTO_CLASS}[UvAuto]::LastInput()`;
 
-/** Runs a helper and resolves with its first output line as soon as it's printed, not when the process exits. */
-function firstLine(file: string, args: string[], options: { timeout: number; env?: NodeJS.ProcessEnv }): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let out = '';
-    let settled = false;
-    const child = execFile(file, args, { ...options, windowsHide: true }, (err) => {
-      if (settled) return;
-      settled = true;
-      if (err) reject(err);
-      else resolve(out.trim());
-    });
-    child.stdout?.on('data', (chunk: Buffer | string) => {
-      out += String(chunk);
-      const end = out.indexOf('\n');
-      if (end < 0 || settled) return;
-      settled = true;
-      resolve(out.slice(0, end).trim());
-    });
+/**
+ * Runs a helper and streams its output: `first` resolves with the first line the moment it's printed, not when the
+ * process exits, and `next` with the second. A line the helper never printed resolves '' if it exited cleanly, and
+ * rejects if it failed; `next` never counts as an unhandled rejection when nobody waits for it.
+ */
+function streamLines(file: string, args: string[], options: { timeout: number; env?: NodeJS.ProcessEnv }): { first: Promise<string>; next: Promise<string> } {
+  const waiting: Array<{ resolve: (line: string) => void; reject: (err: unknown) => void }> = [];
+  const [first, next] = [0, 1].map(() => new Promise<string>((resolve, reject) => waiting.push({ resolve, reject })));
+  next.catch(() => undefined);
+  let out = '';
+  const child = execFile(file, args, { ...options, windowsHide: true }, (err) => {
+    if (!err && out.trim()) waiting.shift()?.resolve(out.trim());
+    for (const line of waiting.splice(0)) {
+      if (err) line.reject(err);
+      else line.resolve('');
+    }
   });
+  child.stdout?.on('data', (chunk: Buffer | string) => {
+    out += String(chunk);
+    for (let end = out.indexOf('\n'); end >= 0 && waiting.length; end = out.indexOf('\n')) {
+      waiting.shift()?.resolve(out.slice(0, end).trim());
+      out = out.slice(end + 1);
+    }
+  });
+  return { first, next };
 }
 
-function autoNative(app: string, settleStartedAt: number): Promise<string> {
+async function autoNative(app: string, settleStartedAt: number): Promise<AutoNativeOutput> {
   if (isWindows) {
-    return firstLine('powershell.exe', ['-NoProfile', '-NoLogo', '-STA', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', PS_AUTO_READ], {
+    const { first } = streamLines('powershell.exe', ['-NoProfile', '-NoLogo', '-STA', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', PS_AUTO_READ], {
       timeout: 8000,
       env: { ...process.env, UNVIBE_AUTO_APP: app, UNVIBE_AUTO_SINCE: String(settleStartedAt) },
     });
+    return { line: await first };
   }
-  return firstLine('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_READ, app, String(settleStartedAt)], { timeout: 5000 });
+  const { first, next } = streamLines('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_READ, app, String(settleStartedAt)], { timeout: 5000 });
+  return { line: await first, next };
 }
 
 async function autoInputSince(mark: string): Promise<boolean> {
   if (isWindows) return (await powershell(PS_AUTO_INPUT)) !== mark;
-  return (await firstLine('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_INPUT, mark], { timeout: 5000 })) !== 'idle';
+  return (await streamLines('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_INPUT, mark], { timeout: 5000 }).first) !== 'idle';
 }
 
 /**

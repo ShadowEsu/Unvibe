@@ -44,7 +44,7 @@ test('nothing is written to the clipboard before the keystroke, and a paste then
     deps(clip, async () => {
       seenAtKeystroke = { writes: clip.writes, text: clip.readText() };
       clip.editorCopies('const x = compute(input);');
-      return 'copied 1,2,3';
+      return { line: 'copied 1,2,3' };
     }),
     'com.microsoft.VSCode',
     1000,
@@ -65,7 +65,7 @@ test('the person\'s clipboard is back before the input check runs', async () => 
       clip,
       async () => {
         clip.editorCopies('selected code here');
-        return 'copied 42';
+        return { line: 'copied 42' };
       },
       async () => {
         clipboardAtCheck = clip.readText();
@@ -80,7 +80,7 @@ test('the person\'s clipboard is back before the input check runs', async () => 
 
 test('input since the mouse-up skips the read with the clipboard untouched (busy)', async () => {
   const clip = fakeClipboard('my own text');
-  const result = await autoRead(deps(clip, async () => 'skip busy Code'), 'Code.exe', 1000);
+  const result = await autoRead(deps(clip, async () => ({ line: 'skip busy Code' })), 'Code.exe', 1000);
   assert.deepEqual(result, { code: null, sourceApp: 'Code', skipped: 'busy' });
   assert.equal(clip.writes, 0);
   assert.equal(clip.text, 'my own text');
@@ -88,13 +88,13 @@ test('input since the mouse-up skips the read with the clipboard untouched (busy
 
 test('the copy is detected by the change count even when the selection matches the clipboard\'s text', async () => {
   const clip = fakeClipboard('return total;');
-  const result = await autoRead(deps(clip, async () => 'copied 7'), 'com.todesktop.230313mzl4w4u92', 1000);
+  const result = await autoRead(deps(clip, async () => ({ line: 'copied 7' })), 'com.todesktop.230313mzl4w4u92', 1000);
   assert.equal(result.code, 'return total;');
 });
 
 test('no change in the count means nothing was copied, and the clipboard is never written', async () => {
   const clip = fakeClipboard('my own text');
-  const result = await autoRead(deps(clip, async () => 'none 7'), 'com.microsoft.VSCode', 1000);
+  const result = await autoRead(deps(clip, async () => ({ line: 'none 7' })), 'com.microsoft.VSCode', 1000);
   assert.equal(result.code, null);
   assert.equal(result.error, 'empty');
   assert.equal(clip.writes, 0);
@@ -107,7 +107,7 @@ test('input between the idle check and the restore drops the result, after the c
       clip,
       async () => {
         clip.editorCopies('selected code here');
-        return 'copied 42 Code';
+        return { line: 'copied 42 Code' };
       },
       async (mark) => {
         assert.equal(mark, '42');
@@ -121,6 +121,62 @@ test('input between the idle check and the restore drops the result, after the c
   assert.equal(clip.text, 'my own text');
 });
 
+test('Mac: the clipboard is back before the mark arrives, and the check then uses the mark from the next line', async () => {
+  const clip = fakeClipboard('my own text');
+  let sendMark: (mark: string) => void = () => undefined;
+  const next = new Promise<string>((resolve) => (sendMark = resolve));
+  let clipboardWhenMarkSent = '';
+  let checked = '';
+  const reading = autoRead(
+    deps(
+      clip,
+      async () => {
+        clip.editorCopies('selected code here');
+        return { line: 'copied -', next };
+      },
+      async (mark) => {
+        checked = mark;
+        return false;
+      },
+    ),
+    'com.microsoft.VSCode',
+    1000,
+  );
+  // The mark is still being sampled (ioreg): the restore must not wait for it.
+  await tick(20);
+  clipboardWhenMarkSent = clip.readText();
+  sendMark('5.1,5.13,0.02');
+  const result = await reading;
+  assert.equal(clipboardWhenMarkSent, 'my own text');
+  assert.equal(checked, '5.1,5.13,0.02');
+  assert.equal(result.code, 'selected code here');
+});
+
+test('Mac: a mark that never arrives drops the result, with the clipboard put back', async () => {
+  for (const mark of [() => Promise.reject(new Error('osascript exited')), () => Promise.resolve('')]) {
+    const clip = fakeClipboard('my own text');
+    let checked = false;
+    const result = await autoRead(
+      deps(
+        clip,
+        async () => {
+          clip.editorCopies('selected code here');
+          return { line: 'copied -', next: mark() };
+        },
+        async () => {
+          checked = true;
+          return false;
+        },
+      ),
+      'com.microsoft.VSCode',
+      1000,
+    );
+    assert.deepEqual(result, { code: null, sourceApp: null, skipped: 'busy' });
+    assert.equal(checked, false);
+    assert.equal(clip.text, 'my own text');
+  }
+});
+
 test('an input check that fails drops the result too', async () => {
   const clip = fakeClipboard('my own text');
   const result = await autoRead(
@@ -128,7 +184,7 @@ test('an input check that fails drops the result too', async () => {
       clip,
       async () => {
         clip.editorCopies('selected code here');
-        return 'copied 42';
+        return { line: 'copied 42' };
       },
       async () => {
         throw new Error('powershell failed');
@@ -147,7 +203,7 @@ test('an editor that clears the clipboard a beat before writing is still read', 
     deps(clip, async () => {
       clip.editorCopies('');
       setTimeout(() => clip.editorCopies('late but here'), 20);
-      return 'copied 1,2,3';
+      return { line: 'copied 1,2,3' };
     }),
     'com.microsoft.VSCode',
     1000,
@@ -163,7 +219,7 @@ test('an image on the clipboard stops the read before the native call', async ()
   const result = await autoRead(
     deps(clip, async () => {
       called = true;
-      return 'none 1';
+      return { line: 'none 1' };
     }),
     'com.microsoft.VSCode',
     1000,
@@ -179,7 +235,7 @@ test('the native line: app names with spaces, and anything unexpected is a faile
   assert.equal(parseAutoLine('skip later'), null);
   assert.equal(parseAutoLine('copied'), null);
   const clip = fakeClipboard('my own text');
-  const result = await autoRead(deps(clip, async () => 'execution of script failed'), 'Code.exe', 1000);
+  const result = await autoRead(deps(clip, async () => ({ line: 'execution of script failed' })), 'Code.exe', 1000);
   assert.deepEqual(result, { code: null, error: 'failed' });
   assert.equal(clip.text, 'my own text');
 });
