@@ -101,11 +101,13 @@
 //      clipboard's change bursts); then one more after 16 s is read again (the control).
 //   X7 Cmd+Tab / Alt+Tab 250 ms (before the 700 ms) and 800 ms (during the read) after the mouse-up: nothing starts,
 //      nothing is sent, the person's clipboard is back.
-//   Windows, Security's SHOULD-384c: after Cursor's rows, more settled selections until launch X has started 12 auto
-//   explanations (10 extra at most); their count and times go to auto-reads.txt, and the workflow's Defender step (run
-//   with Defender back at its defaults) judges the row from it.
 //   Each read is seen from outside: the app's own "explanation started" event (onShortcutFired in the main window),
 //   the panel's init event (what was read), the net log, and the clipboard's changes.
+// d5=auto-defender (Windows only), Security's SHOULD-384c: launch X in VS Code only, X8 and then settled selections 16 s
+//   apart until the launch has started 12 auto explanations (16 tries at most); their count and times go to
+//   auto-reads.txt, and the workflow's Defender steps (Defender back at its defaults before, Protection history and
+//   Defender/Operational after) judge the row. Its own run: in run 44982193648 Defender at its defaults under all of
+//   launch X ran the Windows job past its 45 minutes with no log.
 // d5=auto-ai: launch Y only (ai on, the only hosted call this script makes): auto on, the agreement, VS Code (Mac) or
 //   Cursor (Windows), one settled selection of a short function with real faults, auto turned off as soon as the
 //   explanation starts (one call at most); the answer must end with Suggested fixes (#383); stills of the panel.
@@ -136,14 +138,16 @@ const codeData = process.env.VSCODE_DATA ?? path.join(TMP, 'd5-vscode');
 const base = process.env.D5_PROFILE ?? mkdtempSync(path.join(tmpdir(), 'unvibe-d5-'));
 const installId = process.env.D5_ID ?? `qa-d5-local-${Date.now()}`;
 // 'rows' (the default): launches A, F and C on the Mac, A, B and C on Windows; 'fade': launch F only (Mac); 'auto':
-// launch X only (VS Code and Cursor); 'auto-ai': launch Y only (VS Code on the Mac, Cursor on Windows).
+// launch X only (VS Code and Cursor); 'auto-defender': launch X's reads only (VS Code, Windows); 'auto-ai': launch Y
+// only (VS Code on the Mac, Cursor on Windows).
 const D5 = process.env.D5 || 'rows';
-if (!['rows', 'fade', 'auto', 'auto-ai'].includes(D5)) throw new Error(`D5 must be rows, fade, auto or auto-ai, not ${D5}`);
+if (!['rows', 'fade', 'auto', 'auto-defender', 'auto-ai'].includes(D5)) throw new Error(`D5 must be rows, fade, auto, auto-defender or auto-ai, not ${D5}`);
 if (!exe) throw new Error('UNVIBE_EXE is not set');
 if (!code) throw new Error('VSCODE is not set');
 if ((D5 === 'auto' || (D5 === 'auto-ai' && os === 'windows')) && !process.env.CURSOR) throw new Error('CURSOR is not set');
 if (os !== 'mac' && os !== 'windows') throw new Error('the Unvibe button exists on a Mac and on Windows only');
 if (D5 === 'fade' && os !== 'mac') throw new Error('D5=fade (launch F, the Mac panel fade) runs on a Mac only');
+if (D5 === 'auto-defender' && os !== 'windows') throw new Error('D5=auto-defender (Security SHOULD-384c, Microsoft Defender) runs on Windows only');
 // The one switch for a hosted call: only D5=auto-ai runs with ai on (one call at most), every other mode with it off.
 if (D5 === 'auto-ai' && process.env.QA_AI_OK !== '1') throw new Error('D5=auto-ai makes one hosted call: run it with ai on');
 if (D5 !== 'auto-ai' && process.env.QA_AI_OK === '1') throw new Error(`D5=${D5} makes no hosted-AI call: run it with ai off`);
@@ -2006,14 +2010,14 @@ async function runX(app, companion) {
   const png = grab(file('x-clipboard-image'), 0, 0, 160, 100);
   const qaFile = path.join(sampleDir, 'qa-notes.txt');
   writeFileSync(qaFile, 'QA file for the auto-mode files row\n');
-  const ctx = { app, companion, png, qaFile, lastRead: 0, t0: Date.now() };
-  for (const which of ['vscode', 'cursor']) {
+  const ctx = { app, companion, png, qaFile, lastRead: 0, t0: Date.now(), defender: D5 === 'auto-defender' };
+  for (const which of ctx.defender ? ['vscode'] : ['vscode', 'cursor']) {
     ED = EDITORS[which];
     try { await autoEditor(ctx, which === 'vscode' ? 'vs' : 'cu'); } catch (e) { log(false, `X ${ED.name}`, `stopped: ${short(e)}`); desktop(`x-${which}-stopped`); } finally { await closeVsCode(); closeExplorerWindows(); }
   }
   ED = EDITORS.vscode;
   stopClipWatch();
-  if (os === 'windows') {
+  if (ctx.defender) {
     // SHOULD-384c: what the workflow's Defender step counts (each start is one auto read that copied and was kept).
     const st = await startsSince(companion, ctx.t0);
     const iso = (t) => new Date(t).toISOString();
@@ -2105,6 +2109,30 @@ async function autoEditor(ctx, tag) {
       log(said.st.length === 1 && said.rd.length >= 1 && said.rd[0].len >= 40 && got === original && clip === P, step,
         `lines ${k}-${k + 1} (end to end), no key; the file ${got === original ? 'unchanged' : 'CHANGED'}; the person's clipboard 5.5 s later: ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
     } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // D5=auto-defender (Windows, Security's SHOULD-384c): after the control, settled selections 16 s apart until the
+  // launch has started 12 auto explanations (16 tries at most, never past the sample's last line); nothing else.
+  if (ctx.defender) {
+    const step = `XD ${ED.name}: settled selections, each read by auto mode, for the Defender check (at least 10)`;
+    let tries = 0;
+    let n = 0;
+    try {
+      n = (await startsSince(companion, ctx.t0)).length;
+      for (; n < 12 && tries < 16 && kNext + 1 <= lines.length; tries++) {
+        const k = nextK();
+        await spaced();
+        await reset();
+        setClipboard(person());
+        await activateEditor();
+        const s = await block(k);
+        ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+        await sleep(5000);
+        n = (await startsSince(companion, ctx.t0)).length;
+      }
+      log(n >= 10, step, `${n} auto start(s) in the launch after ${tries} more selection(s) (the control's included)`);
+    } catch (e) { log(false, step, `stopped after ${tries} more selection(s), ${n} start(s): ${short(e)}`); }
+    return;
   }
 
   // X1 / X2: select, then paste or type, at six moments (the lead: 700, 900 and 1500 added after run 44977282607).
@@ -2255,25 +2283,6 @@ async function autoEditor(ctx, tag) {
       else log(said.st.length === 0 && posts.length === 0 && clip === P, step, detail);
     } catch (e) { log(false, step, `stopped: ${short(e)}`); }
   }
-
-  // SHOULD-384c (Windows, after Cursor's rows): settled selections, 16 s apart, until launch X has started 12 auto
-  // explanations (10 extra at most, and never past the sample's last line).
-  if (os === 'windows' && tag === 'cu') {
-    try {
-      let n = (await startsSince(companion, ctx.t0)).length;
-      for (let extra = 0; n < 12 && extra < 10 && kNext + 1 <= lines.length; extra++) {
-        const k = nextK();
-        await spaced();
-        await reset();
-        setClipboard(person());
-        await activateEditor();
-        const s = await block(k);
-        ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
-        await sleep(5000);
-        n = (await startsSince(companion, ctx.t0)).length;
-      }
-    } catch (e) { note('SHOULD-384c (Defender)', `the extra selections stopped: ${short(e)}`); }
-  }
 }
 
 // Launch Y: one real explanation of a settled selection (ai on; the only hosted call in this script).
@@ -2375,7 +2384,7 @@ if (os === 'windows') {
 }
 vsSettings('light');
 let failedLaunch = false;
-const plan = D5 === 'auto' ? ['x'] : D5 === 'auto-ai' ? ['y'] : os === 'windows' ? ['a', 'b', 'c'] : D5 === 'fade' ? ['f'] : ['a', 'f', 'c'];
+const plan = D5 === 'auto' || D5 === 'auto-defender' ? ['x'] : D5 === 'auto-ai' ? ['y'] : os === 'windows' ? ['a', 'b', 'c'] : D5 === 'fade' ? ['f'] : ['a', 'f', 'c'];
 for (const tag of plan) {
   let app = null;
   try {
@@ -2422,8 +2431,10 @@ if (D5 === 'auto-ai') {
   log(ai.length <= 1 && ai.every((q) => q.tag === 'y'), 'At most one hosted call (launch Y\'s auto start)', `the app's net logs: ${requests.length} request(s) to ${host}; ${aiList}`);
 } else {
   log(answered.length === 0 && ai.every((q) => q.tag === 'c' || q.tag === 'x'), 'No hosted-AI call: nothing reached the server',
-    `the app's net logs: ${requests.length} request(s) to ${host}; ${aiList}. Launch${D5 === 'auto' ? ' X' : ' C'} ran behind the hosts block`);
+    `the app's net logs: ${requests.length} request(s) to ${host}; ${aiList}. Launch${D5 === 'auto' || D5 === 'auto-defender' ? ' X' : ' C'} ran behind the hosts block`);
 }
-const title = D5 === 'auto' ? 'D5 auto mode (#384) rows, VS Code and Cursor, no hosted AI' : D5 === 'auto-ai' ? 'D5 auto mode (#384) with Suggested fixes (#383), at most one hosted call' : 'D5 #366 button rows';
-writeFileSync(path.join(out, `report-d5-${os}.txt`), `Unvibe ${version}: ${title} (${os})${D5 === 'auto' || D5 === 'auto-ai' ? '' : ', no hosted AI'}\n\n${report.join('\n')}\n`);
+const title = D5 === 'auto' ? 'D5 auto mode (#384) rows, VS Code and Cursor, no hosted AI'
+  : D5 === 'auto-defender' ? 'D5 auto mode (#384) reads in VS Code with Microsoft Defender at its defaults (SHOULD-384c), no hosted AI'
+  : D5 === 'auto-ai' ? 'D5 auto mode (#384) with Suggested fixes (#383), at most one hosted call' : 'D5 #366 button rows';
+writeFileSync(path.join(out, `report-d5-${os}.txt`), `Unvibe ${version}: ${title} (${os})${D5.startsWith('auto') ? '' : ', no hosted AI'}\n\n${report.join('\n')}\n`);
 process.exit(failedLaunch || report.some((l) => l.startsWith('FAIL')) ? 1 : 0);
