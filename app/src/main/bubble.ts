@@ -116,8 +116,10 @@ let pillWidth = PILL_WIDTH;
 let preview: { run: number; abort: AbortController; code: string | null; sourceApp: string; view: NonNullable<GhostView['preview']> } | null = null;
 let previewRuns = 0;
 let escapeHeld = false;
-// Auto mode (ledger 646): the 700 ms wait after a mouse-up, and the guards' memory.
+// Auto mode (ledger 646): the 700 ms wait after a mouse-up, when that mouse-up came (the read skips if any input followed
+// it), and the guards' memory.
 const autoSettle = new AutoSettle<GhostState>(() => state, (armed) => void runAuto(armed));
+let autoSettleStartedAt = 0;
 const autoGate = new AutoExplainGate();
 
 function active(): boolean {
@@ -204,7 +206,10 @@ function onInput(input: GhostInput): void {
   // Auto mode (ledger 646): once a drag or triple-click selection has stayed put for about 700 ms after the mouse-up (no
   // click, scroll, new selection or app switch: any of them changes the button's state, which cancels the wait), explain
   // it with no press. A double-click picks one word, never enough to explain, so it never reaches the clipboard (MUST-A2).
-  if (event.e === 'select' && event.g !== 'double' && next.state.look === 'ghost' && bubbleStore().state().auto) autoSettle.arm(next.state);
+  if (event.e === 'select' && event.g !== 'double' && next.state.look === 'ghost' && bubbleStore().state().auto) {
+    autoSettleStartedAt = Date.now();
+    autoSettle.arm(next.state);
+  }
 }
 
 /**
@@ -227,7 +232,7 @@ async function runAuto(armed: GhostState): Promise<void> {
       return;
     }
     if (before !== 'read') return;
-    const capture = await captureForAuto(armed.app);
+    const capture = await captureForAuto(armed.app, autoSettleStartedAt);
     if (!still() || !capture.code) return;
     const sourceApp = capture.sourceApp ?? (await frontmostApp()) ?? '';
     // A press may have started an explanation while the selection was read: auto mode never replaces it.

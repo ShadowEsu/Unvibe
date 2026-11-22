@@ -9,7 +9,8 @@
  */
 import { clipboard } from 'electron';
 import { execFile } from 'node:child_process';
-import { autoClipboardReadable, clipboardHolder } from '../core/clipboardHold';
+import { autoRead, type AutoReadResult } from '../core/autoRead';
+import { clipboardHolder } from '../core/clipboardHold';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Every synthetic copy, from the shortcut, the button, Quick look or auto mode, goes through this one at a time (SHOULD-366d).
@@ -258,46 +259,150 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
   return holdClipboard(() => copySelection(options), copiedCode);
 }
 
-/** Mac: the frontmost app's bundle id, which is what the button's helper names (auto mode's source check). */
-const MAC_FRONTMOST_BUNDLE_SCRIPT = 'tell application "System Events" to get bundle identifier of first application process whose frontmost is true';
+/**
+ * Auto mode's native read on the Mac, one osascript (JXA) launch: the frontmost app's bundle id must be the selection's
+ * editor, no hardware input since the settle began (and none in the last 500 ms), no Shift, Control, Option or Command
+ * held (it would join the ⌘C), then ⌘C and a 10 ms watch of the pasteboard's change count. The first line goes out the
+ * moment it's known, while osascript is still exiting.
+ * Idle time comes from IOHIDSystem's HIDIdleTime (kernel, real keys and pointer only, so the synthetic ⌘C doesn't reset
+ * it). CGEventSourceSecondsSinceLastEventType lags up to about a second after input on macOS 27.2, so it isn't used.
+ * The mark is the uptime before and after the idle sample and the idle seconds, for the input check after the restore.
+ */
+const MAC_AUTO_HID = [
+  "var me = Application.currentApplication(); me.includeStandardAdditions = true;",
+  'function hid() {',
+  '  var b = $.NSProcessInfo.processInfo.systemUptime;',
+  "  var m = /\"HIDIdleTime\" = (\\d+)/.exec(me.doShellScript('/usr/sbin/ioreg -c IOHIDSystem -r -d 1'));",
+  '  var a = $.NSProcessInfo.processInfo.systemUptime;',
+  "  if (!m) throw new Error('HIDIdleTime missing');",
+  '  return [b, a, Number(m[1]) / 1e9];',
+  '}',
+].join('\n');
+
+const MAC_AUTO_READ = [
+  "ObjC.import('AppKit');",
+  MAC_AUTO_HID,
+  "function emit(line) { $.NSFileHandle.fileHandleWithStandardOutput.writeData($(line + '\\n').dataUsingEncoding($.NSUTF8StringEncoding)); }",
+  'function run(argv) {',
+  "  var se = Application('System Events');",
+  '  var front = String(se.processes.whose({ frontmost: true })[0].bundleIdentifier()).toLowerCase();',
+  "  if (front !== String(argv[0]).toLowerCase()) { emit('skip app'); return ''; }",
+  '  var pb = $.NSPasteboard.generalPasteboard;',
+  '  var before = pb.changeCount;',
+  // The settle's age is taken just before the idle sample, so a mouse-up right before the settle never reads as input.
+  '  var since = Date.now() - Number(argv[1]);',
+  '  var h = hid();',
+  "  if (h[2] < Math.max(0.5, since / 1000) || ($.NSEvent.modifierFlags & 0x1E0000)) { emit('skip busy'); return ''; }",
+  "  se.keyCode(8, { using: 'command down' });",
+  '  var end = Date.now() + 1300;',
+  '  while (Date.now() < end) {',
+  "    if (pb.changeCount !== before) { emit('copied ' + h.join(',')); return ''; }",
+  '    delay(0.01);',
+  '  }',
+  "  emit('none ' + h.join(','));",
+  "  return '';",
+  '}',
+].join('\n');
 
 /**
- * Auto mode's read (ledger 646). Unlike a press it runs while the person may be editing, so (Security on #384):
- * - nothing happens when the clipboard holds something that can't be put back, such as an image or files (MUST-A1);
- * - the copy keystroke goes only to the editor the selection was made in: the frontmost app is checked first, on
- *   Windows in the same PowerShell call that sends it (SHOULD-384a); no other app is brought forward;
- * - one keystroke, no retry; the clipboard goes back only over the copy's own result (MUST-A3, in clipboardHolder).
- * `skipped` says why nothing was read. Linux (the laptop harness only) reads PRIMARY, as a press does.
+ * After the restore: 'input' if any hardware input came after the read's idle sample. With no new input the idle time
+ * grew by exactly the time between the two samples, which is at least (this sample's start - that sample's end).
  */
-export async function captureForAuto(app: string): Promise<CaptureResult & { skipped?: 'clipboard' | 'app' }> {
-  if (isLinux) return readLinuxPrimary();
-  if (!isMac && !isWindows) return { code: null, error: 'unsupported' };
-  if (!autoClipboardReadable(clipboard.availableFormats())) return { code: null, skipped: 'clipboard' };
-  return holdClipboard(() => copyForAuto(app), copiedCode);
+const MAC_AUTO_INPUT = [
+  MAC_AUTO_HID,
+  'function run(argv) {',
+  "  var m = String(argv[0]).split(',').map(Number);",
+  '  var h = hid();',
+  "  return h[2] < m[2] + (h[0] - m[1]) ? 'input' : 'idle';",
+  '}',
+].join('\n');
+
+/**
+ * Windows: the clipboard's sequence number, the last input's tick (GetLastInputInfo: a time, never a key), whether
+ * Shift, Ctrl, Alt or Win is held right now (it would join the Ctrl+Insert), and a 10 ms watch for the sequence number to
+ * move, all in the PowerShell process that sends the keystroke.
+ */
+const PS_AUTO_CLASS =
+  'Add-Type @"\nusing System;\nusing System.Diagnostics;\nusing System.Runtime.InteropServices;\nusing System.Threading;\npublic class UvAuto {\n  [StructLayout(LayoutKind.Sequential)] struct Lii { public uint cbSize; public uint dwTime; }\n  [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref Lii info);\n  [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();\n  [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);\n  public static uint LastInput() { Lii info = new Lii(); info.cbSize = 8; if (!GetLastInputInfo(ref info)) throw new Exception("GetLastInputInfo"); return info.dwTime; }\n  public static uint IdleMs() { return unchecked((uint)Environment.TickCount - LastInput()); }\n  public static bool ModifierHeld() { foreach (int key in new int[] { 0x10, 0x11, 0x12, 0x5B, 0x5C }) { if ((GetAsyncKeyState(key) & 0x8000) != 0) return true; } return false; }\n  public static uint Seq() { return GetClipboardSequenceNumber(); }\n  public static bool WaitSeq(uint before, int ms) { Stopwatch watch = Stopwatch.StartNew(); while (watch.ElapsedMilliseconds < ms) { if (GetClipboardSequenceNumber() != before) return true; Thread.Sleep(10); } return false; }\n}\n"@\n';
+
+/**
+ * The app and the settle time arrive as environment variables, never inside the script text. The keystroke goes only to
+ * the selection's editor, not elevated, with no input since the settle began (the settle's age is taken before the idle
+ * sample, so the mouse-up itself never reads as input); the mark is the last input's tick right after the keystroke
+ * (SendKeys counts as input), so any later input changes it.
+ */
+const PS_AUTO_READ =
+  `${PS_FOREGROUND}; Add-Type -AssemblyName System.Windows.Forms; ${PS_AUTO_CLASS}` +
+  'if (-not ([bool]$name -and ("$name.exe" -ieq $env:UNVIBE_AUTO_APP) -and $elevated -eq "0")) { [Console]::Out.WriteLine("skip app $name"); exit }; ' +
+  '$before = [UvAuto]::Seq(); ' +
+  '$need = [Math]::Max([int64]500, [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [int64]$env:UNVIBE_AUTO_SINCE); ' +
+  'if ([UvAuto]::IdleMs() -lt $need -or [UvAuto]::ModifierHeld()) { [Console]::Out.WriteLine("skip busy $name"); exit }; ' +
+  "[System.Windows.Forms.SendKeys]::SendWait('^{INSERT}'); $mark = [UvAuto]::LastInput(); " +
+  'if ([UvAuto]::WaitSeq($before, 2000)) { [Console]::Out.WriteLine("copied $mark $name") } else { [Console]::Out.WriteLine("none $mark $name") }';
+
+const PS_AUTO_INPUT = `${PS_AUTO_CLASS}[UvAuto]::LastInput()`;
+
+/** Runs a helper and resolves with its first output line as soon as it's printed, not when the process exits. */
+function firstLine(file: string, args: string[], options: { timeout: number; env?: NodeJS.ProcessEnv }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let out = '';
+    let settled = false;
+    const child = execFile(file, args, { ...options, windowsHide: true }, (err) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(out.trim());
+    });
+    child.stdout?.on('data', (chunk: Buffer | string) => {
+      out += String(chunk);
+      const end = out.indexOf('\n');
+      if (end < 0 || settled) return;
+      settled = true;
+      resolve(out.slice(0, end).trim());
+    });
+  });
 }
 
-async function copyForAuto(app: string): Promise<CaptureResult & { skipped?: 'app' }> {
+function autoNative(app: string, settleStartedAt: number): Promise<string> {
+  if (isWindows) {
+    return firstLine('powershell.exe', ['-NoProfile', '-NoLogo', '-STA', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', PS_AUTO_READ], {
+      timeout: 8000,
+      env: { ...process.env, UNVIBE_AUTO_APP: app, UNVIBE_AUTO_SINCE: String(settleStartedAt) },
+    });
+  }
+  return firstLine('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_READ, app, String(settleStartedAt)], { timeout: 5000 });
+}
+
+async function autoInputSince(mark: string): Promise<boolean> {
+  if (isWindows) return (await powershell(PS_AUTO_INPUT)) !== mark;
+  return (await firstLine('osascript', ['-l', 'JavaScript', '-e', MAC_AUTO_INPUT, mark], { timeout: 5000 })) !== 'idle';
+}
+
+/**
+ * Auto mode's read (ledger 646; core/autoRead.ts says what it guarantees). `settleStartedAt` is the mouse-up's time:
+ * any input after it means the person is acting, so nothing is copied. Linux (the laptop harness only) reads PRIMARY.
+ */
+export async function captureForAuto(app: string, settleStartedAt: number): Promise<AutoReadResult> {
+  if (isLinux) {
+    const primary = readLinuxPrimary();
+    return primary.code ? { code: primary.code } : { code: null, error: 'empty' };
+  }
+  if (!isMac && !isWindows) return { code: null, error: 'failed' };
   try {
-    if (isWindows) {
-      clipboard.writeText('');
-      const expected = app.toLowerCase().replace(/'/g, "''");
-      const out = await powershell(`${PS_FOREGROUND}; $go = [bool]$name -and ("$name.exe" -ieq '${expected}') -and $elevated -eq "0"; if ($go) { ${PS_COPY} }; [int]$go; $name; $elevated`);
-      const [flag, ...rest] = out.split(/\r?\n/);
-      const { name } = parseWindowsForeground(rest.join('\n'));
-      if (flag?.trim() !== '1') return { code: null, sourceApp: name, skipped: 'app' };
-      const grabbed = await waitForCopiedText();
-      return grabbed.trim() ? { code: grabbed, sourceApp: name } : { code: null, sourceApp: name, error: 'empty' };
-    }
-    const front = await osascript(MAC_FRONTMOST_BUNDLE_SCRIPT);
-    if (front.toLowerCase() !== app.toLowerCase()) return { code: null, skipped: 'app' };
-    clipboard.writeText('');
-    // As for a press: give macOS a beat to commit the cleared pasteboard before the editor writes into it.
-    await delay(120);
-    await syntheticCopy();
-    const grabbed = await waitForCopiedText();
-    return grabbed.trim() ? { code: grabbed } : { code: null, error: 'empty' };
-  } catch (error) {
-    return { code: null, error: isMac ? macCaptureFailure(error) : 'failed' };
+    return await autoRead(
+      {
+        formats: () => clipboard.availableFormats(),
+        readText: () => clipboard.readText(),
+        hold: holdClipboard,
+        native: autoNative,
+        inputSince: autoInputSince,
+        wait: delay,
+      },
+      app,
+      settleStartedAt,
+    );
+  } catch {
+    return { code: null, error: 'failed' };
   }
 }
 
