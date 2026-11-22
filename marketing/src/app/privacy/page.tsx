@@ -45,9 +45,11 @@ export default function PrivacyPage() {
             when you select code in a code editor and leave it selected for a moment, Unvibe copies
             the selection and sends it to the AI to explain it, without a press. The copy passes
             through your clipboard, so clipboard history apps may keep it. Before it copies, it
-            checks on your computer how long ago your last key press or click was and how many
-            there have been since, never which keys, so it doesn&apos;t copy while you&apos;re
-            typing. It doesn&apos;t watch your typing, skips password fields and password managers,
+            checks on your computer when you last used the keyboard or mouse and whether a key like
+            Shift is held down, so it doesn&apos;t copy while you&apos;re typing. After the copy it
+            checks again (on a Mac it also counts key presses and clicks since the first check) and
+            sends nothing if you used the keyboard or mouse in between. It never learns what you
+            type. It doesn&apos;t watch your typing, skips password fields and password managers,
             and doesn&apos;t store or send your mouse clicks.
           </li>
           <li>
