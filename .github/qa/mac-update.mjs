@@ -1,10 +1,12 @@
-// QA (mac-update.sh): in the running Unvibe (debug port 9229), the app's own update check and install, the calls its
-// Home card's "Update" button makes (window.unvibe.updateCheck / updateInstall). Prints PASS/FAIL/NOTE lines.
-// Usage: node mac-update.mjs <out dir> <to version> <arm64|x64>
+// QA (mac-update.sh, win-update.ps1): in the running Unvibe (debug port 9229), the app's own update check and install,
+// the calls its Home card's "Update" button makes (window.unvibe.updateCheck / updateInstall). Prints PASS/FAIL/NOTE lines.
+// Usage: node mac-update.mjs <out dir> <to version> <arm64|x64> [asset: the file the update must offer; default the
+// Mac DMG for that arch, e.g. Unvibe-<to>-win-x64-setup.exe on Windows]
 import { chromium } from "playwright";
 import { join } from "node:path";
 
-const [out, to, arch] = process.argv.slice(2);
+const [out, to, arch, assetArg] = process.argv.slice(2);
+const asset = assetArg || `Unvibe-${to}-mac-${arch}.dmg`;
 const browser = await chromium.connectOverCDP("http://127.0.0.1:9229");
 let page = null;
 for (let i = 0; i < 60 && !page; i++) {
@@ -24,9 +26,9 @@ for (let i = 1; i <= 8; i++) {
   if (check?.ok) break;
   await page.waitForTimeout(45000);
 }
-const wantUrl = `https://github.com/ShadowEsu/Unvibe/releases/download/v${to}/Unvibe-${to}-mac-${arch}.dmg`;
+const wantUrl = `https://github.com/ShadowEsu/Unvibe/releases/download/v${to}/${asset}`;
 const offered = check?.ok && check.available && check.latest === to && check.url === wantUrl;
-console.log(`${offered ? "PASS" : "FAIL"}  update offered: available ${check?.available}, latest ${check?.latest}, url ${check?.url === wantUrl ? "= the " + arch + " DMG of v" + to : check?.url}`);
+console.log(`${offered ? "PASS" : "FAIL"}  update offered: available ${check?.available}, latest ${check?.latest}, url ${check?.url === wantUrl ? `= ${asset} of v${to}` : check?.url}`);
 await page.waitForTimeout(1500);
 await page.screenshot({ path: join(out, "2-from-home-update-offered.png") }).catch(() => {});
 if (!offered) process.exit(1);

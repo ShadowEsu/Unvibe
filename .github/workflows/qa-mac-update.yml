@@ -4,6 +4,9 @@ name: QA Mac update
 # app's own check and install (mac-update.sh): offered, downloaded, SHA256SUMS + codesign -R pin + version checked by
 # the app's helper, swapped in, reopened; the installed app passes codesign -R=<release pin>, its app.asar is the
 # release's, the profile is kept. No hosted-AI call. Runs only when the commit message holds "[mac-update]".
+# The windows job (win-update.ps1, "[win-update]"): the released FROM setup installed per user updates itself the
+# same way (the app's own check and install: SHA256SUMS-windows check, the setup run silently into the same folder),
+# and TO is then installed in place and running, its app.asar the release's, one Apps & features entry at TO.
 # Each install's id is qa- prefixed before its first launch, flagged before launch, after first contact and at the end.
 on:
   push:
@@ -35,9 +38,9 @@ jobs:
     timeout-minutes: 60
     env:
       INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
-      FROM: "0.1.52"
-      TO: "0.1.54"
-      WANT_ASAR: ad942b3e82a182e976512b773a6d7c257df91c45c425523b8304e2f3b8720be5
+      FROM: "0.1.54"
+      TO: "0.1.55"
+      WANT_ASAR: 2c508e8e1a064082d6fa6b89be541de360a5bbc037b3851d4794cca0063c671f
       ARCH: ${{ matrix.arch }}
     steps:
       - name: Require the QA flag token
@@ -85,5 +88,71 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mac-update-${{ matrix.runner }}
+          path: ${{ runner.temp }}/m
+          retention-days: 14
+
+  windows:
+    if: contains(github.event.head_commit.message, '[win-update]')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      INSTALL_ID: qa-update-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner }}
+      FROM: "0.1.54"
+      TO: "0.1.55"
+      WANT_ASAR: bb492f365c62d5ad1373122f210d7673df65fa19c6f8f3b1a8a22378a9485402
+    steps:
+      - name: Require the QA flag token
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          if (-not $env:UNVIBE_QA_FLAG_TOKEN) { Write-Error 'UNVIBE_QA_FLAG_TOKEN is not set. Nothing was installed.'; exit 1 }
+          'QA flag token present'
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: .github
+
+      - name: Playwright (to press the app's own update through its debug port)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null && npm install playwright@1.48.2 >/dev/null
+
+      - name: FROM installed, the app's own update to TO, then the installed app checked
+        shell: powershell
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: .github\qa\win-update.ps1 -Out "$env:RUNNER_TEMP\m"
+
+      - name: Flag the install as QA (again, whatever happened)
+        if: always()
+        shell: pwsh
+        env:
+          UNVIBE_QA_FLAG_TOKEN: ${{ secrets.UNVIBE_QA_FLAG_TOKEN }}
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -like 'Unvibe*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          $ids = @($env:INSTALL_ID)
+          Get-ChildItem $env:APPDATA, $env:LOCALAPPDATA -Recurse -Filter 'unvibe-store.json' -ErrorAction SilentlyContinue | ForEach-Object {
+            $i = (Get-Content $_.FullName -Raw | ConvertFrom-Json -AsHashtable)['installId']; if ($i) { $ids += $i }; "store $($_.FullName): $i"
+          }
+          foreach ($x in ($ids | Sort-Object -Unique)) {
+            try {
+              $r = Invoke-WebRequest -Method Post -Uri 'https://api.unvibe.site/api/v1/admin/qa-install' -UseBasicParsing `
+                -Headers @{ authorization = "Bearer $env:UNVIBE_QA_FLAG_TOKEN" } -ContentType 'application/json' `
+                -Body (@{ installId = $x } | ConvertTo-Json -Compress)
+              "QA install flag ${x}: $($r.StatusCode) matched=$(($r.Content | ConvertFrom-Json).matched)"
+            } catch { "QA install flag ${x}: $($_.Exception.Message)" }
+          }
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: win-update-${{ matrix.runner }}
           path: ${{ runner.temp }}/m
           retention-days: 14
