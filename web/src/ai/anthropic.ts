@@ -8,6 +8,11 @@ export const ANTHROPIC_MAX_TOKENS = 2048;
 /** Output budget for a short answer (2 to 4 sentences, owner 2026-11-02): roomy for that, a fifth of the full budget. */
 export const SHORT_MAX_TOKENS = 400;
 /**
+ * Output budget for a short answer with its "Suggested fixes" section (auto mode, ledger 646): the 75 words plus at most
+ * 3 fixes of 1 or 2 sentences, about 200 words, at up to 3.2 tokens a word on code-heavy text (F-20 eval) is about 640.
+ */
+export const SHORT_FIXES_MAX_TOKENS = 800;
+/**
  * Output budget for full-depth answers at the advanced and expert levels. These ran past 2048 tokens on 28-30-line
  * snippets (BUGS F-20). The prompt asks every full answer for about 750 words: about 2.8 tokens a word on average and
  * 3.2 on code-heavy answers (F-20 eval, 11 Nov) puts that at about 2,100-2,400 tokens, so 2560 is the margin.

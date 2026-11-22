@@ -42,6 +42,8 @@ export interface ReviewRequestPayload {
   /** With detail 'full' after a short answer ("More detail"): that answer, so the detail goes on from it without repeating it. */
   shortAnswer?: string;
   quizMode?: QuizMode;
+  /** Auto mode in the app (ledger 646): end a short selection explanation with a "Suggested fixes" section. Only `true` turns it on. */
+  suggestFixes?: boolean;
   /** Optional OpenRouter free-chat model id. Ignored unless the backend key is OpenRouter. */
   model?: string;
 }
