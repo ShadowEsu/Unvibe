@@ -292,7 +292,8 @@ export async function captureSelection(options: { preferClipboard?: boolean; fro
  * A key or click between the idle sample and that mark (a paste that replaces the selection before the ⌘C lands, say)
  * is invisible to HIDIdleTime, so the mark also carries the HID system's press counts taken with the idle sample:
  * key-downs, left and right mouse-downs (CGEventSourceCounterForEventType: how many, never which key). The input check
- * drops the result unless exactly the ⌘C's own key-down and no click came since (Security MUST-A5 on #384).
+ * drops the result if any key-down or click came since (Security MUST-A5 on #384). The System Events ⌘C itself adds
+ * nothing to the HID system's key-down count (QA run 44990684755 X9a: +0), so any key-down counts as input.
  */
 const MAC_AUTO_HID = [
   "ObjC.import('CoreGraphics');",
@@ -310,8 +311,11 @@ const MAC_AUTO_HID = [
   '}',
 ].join('\n');
 
-/** Key-downs the synthetic ⌘C adds to the HID system's count (the C; Command is a flags change, not a key-down). */
-const MAC_COPY_KEY_DOWNS = 1;
+/**
+ * Key-downs the System Events ⌘C adds to the HID system's count: none (QA run 44990684755 X9a measured +0, no lag).
+ * A count that did move with it would drop every read (fail safe).
+ */
+const MAC_COPY_KEY_DOWNS = 0;
 
 const MAC_AUTO_READ = [
   "ObjC.import('AppKit');",
@@ -347,11 +351,12 @@ const MAC_AUTO_READ = [
 ].join('\n');
 
 /**
- * After the restore: 'input' if any key-down beyond the ⌘C's own or any click came since the idle sample, or any
- * hardware input came after the mark's sample. With no new input the idle time grew by exactly the time between the two
- * samples, which is at least (this sample's start - that sample's end). A mark that isn't 6 numbers reads as input.
+ * After the restore: 'input' if any key-down (MAC_COPY_KEY_DOWNS: the ⌘C adds none) or click came since the idle
+ * sample, or any hardware input came after the mark's sample. With no new input the idle time grew by exactly the time
+ * between the two samples, which is at least (this sample's start - that sample's end). A mark that isn't 6 numbers
+ * reads as input.
  */
-const MAC_AUTO_INPUT = [
+export const MAC_AUTO_INPUT = [
   MAC_AUTO_HID,
   'function run(argv) {',
   "  var m = String(argv[0]).split(',').map(Number);",
