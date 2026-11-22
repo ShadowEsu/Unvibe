@@ -5,8 +5,11 @@
 // and Design's real-device captures (requests/unvibe-app/20261119-1659-design-s1-d5-bubble-366.md L48-55).
 //
 // Launch A (Mac and Windows 100 %), a new qa- profile, setup skipped, the main window minimized, VS Code maximized:
+//   A0 off by default (the lead, RC4): Settings say the button and Quick look are off, no choice on file, no helper,
+//      a real drag shows no button; Quick look can't be turned on while the button is off, and nothing is recorded.
 //   A1 (Mac) no new permission prompt when the button is turned on: the on-screen windows before and after (and after
-//      the press, A4), with Unvibe's Accessibility reset by the workflow first (a clean Mac); the helper is running.
+//      the press, A4), with Unvibe's Accessibility reset by the workflow first (a clean Mac); the helper is running;
+//      the choice is on file (unvibe-bubble.json: one choice, the button on, its copy version and time).
 //   A2 a real drag in VS Code shows the button: mouse-up → button in the page, ms, 5 times (the brief's target
 //      ≤ 150 ms; the first one also creates the window); the button (its own box in its page, 32 px) placed 8 px
 //      right of the mouse-up, centred on it. It leaves 3.5-4.5 s after the mouse-up untouched (round 1; 4 s from the
@@ -915,6 +918,28 @@ async function runA(app, companion, tag) {
   pointer.click(L.lines[0].right + 60, L.lines[0].y);
   await sleep(600);
 
+  // A0 (the lead, RC4 02b46bda: off by default, opt-in): in this fresh profile Settings say the button and Quick look
+  // are off, no choice is on file (unvibe-bubble.json, main's record), no helper runs, and a real drag in VS Code shows
+  // no button; Quick look can't be turned on while the button is off and nothing is recorded (bubbleStore.set).
+  const bubbleFile = path.join(`${base}-a`, 'unvibe-bubble.json');
+  try {
+    const s0 = await companion.evaluate(() => window.unvibe.bubbleSettings());
+    const helper0 = processTree(app.process.pid).filter(isHelper);
+    const file0 = existsSync(bubbleFile);
+    const row0 = (await vsLines()).lines[2];
+    pointer.drag(row0.left + 2, row0.y, Math.min(row0.right - 2, row0.left + 420), row0.y);
+    const g0 = await waitShown(app, 2500);
+    const sel0 = await vsSelected();
+    pointer.click(L.lines[1].right + 80, L.lines[1].y);
+    await sleep(600);
+    log(s0?.ghost === false && s0?.preview === false && !file0 && helper0.length === 0 && sel0 > 0 && !g0, `A0 ${tag}: the button is off by default (a real drag in VS Code shows none)`,
+      `settings ghost ${s0?.ghost}, preview ${s0?.preview}; unvibe-bubble.json ${file0 ? 'on file' : 'none'}; helper processes ${helper0.map((p) => `${p.name}#${p.pid}`).join(', ') || 'none'}; the drag on line 3: VS Code selection boxes ${sel0}, button ${g0 ? 'SHOWN' : 'none in 2.5 s'}`);
+    const q0 = await companion.evaluate(() => window.unvibe.setBubble('preview', true));
+    const file1 = existsSync(bubbleFile);
+    log(q0?.preview === false && q0?.ghost === false && !file1, `A0 ${tag}: Quick look can't be turned on while the button is off (nothing recorded)`,
+      `setBubble('preview', true) gave ghost ${q0?.ghost}, preview ${q0?.preview}; unvibe-bubble.json ${file1 ? 'on file' : 'none'}`);
+  } catch (e) { log(false, `A0 ${tag}: off by default`, `stopped: ${short(e)}`); }
+
   // A1: turning the button on (Settings, the main window) starts the helper; on a Mac, no permission prompt.
   const before = os === 'mac' ? screenWindows() : [];
   const settingsOn = await companion.evaluate(() => window.unvibe.setBubble('ghost', true));
@@ -922,6 +947,15 @@ async function runA(app, companion, tag) {
   const helperOn = processTree(app.process.pid).filter(isHelper);
   log(settingsOn.ghost === true && settingsOn.preview === false && helperOn.length === 1, `A1 ${tag}: the button turned on in Settings starts the helper (Quick look stays off)`,
     `settings ghost ${settingsOn.ghost}, preview ${settingsOn.preview}, available ${settingsOn.available}; helper processes ${helperOn.map((p) => `${p.name}#${p.pid}`).join(', ') || 'none'}`);
+  // Opt-in on file (Security G1): main records the choice with the copy version and the time it was made.
+  try {
+    const choices = JSON.parse(readFileSync(bubbleFile, 'utf8')).choices ?? [];
+    const last = choices.at(-1);
+    const age = last ? Date.now() - Date.parse(last.at) : NaN;
+    log(choices.length === 1 && last?.item === 'ghost' && last?.on === true && last?.copyVersion !== undefined && age >= 0 && age < 120000,
+      `A1 ${tag}: turning it on is recorded as one choice (the button on, its copy version and time)`,
+      `${choices.length} choice(s); the last: item ${last?.item}, on ${last?.on}, copy version ${last?.copyVersion}, made ${Number.isFinite(age) ? `${Math.round(age / 1000)} s ago` : '?'}`);
+  } catch (e) { log(false, `A1 ${tag}: turning it on is recorded`, `no record read: ${short(e)}`); }
   if (os === 'mac') {
     const after = screenWindows();
     const owners = new Set(before.map((w) => w.owner));
