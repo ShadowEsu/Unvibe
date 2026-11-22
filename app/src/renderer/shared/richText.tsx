@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const KEYWORDS =
   /\b(const|let|var|function|return|if|else|for|while|class|import|export|from|def|fn|pub|async|await|new|try|catch|throw|interface|type|extends|implements|switch|case|break|continue|struct|impl|match|use|package|func|select|where|in|of|not|and|or|None|null|undefined|true|false|self|this)\b/;
@@ -100,10 +100,35 @@ function wrapWords(text: string, words: WordCounter): ReactNode[] {
 }
 
 /**
+ * Break opportunities inside code at its own seams (Design, 0.1.55 tables): after `(`, `,`, `;`, an assignment `=`
+ * (not inside `==` or `=>`) and a member-access `.` (not a spread's dots, nor a dot between digits, so `0.97` and
+ * `1.2.3` stay whole). So `fn(...argsFromCall5)` can wrap as "fn(" / "...argsFromCall5)" in a narrow table cell
+ * instead of pushing the table wider than the pane.
+ */
+export function codeSeams(code: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let start = 0;
+  for (let i = 0; i < code.length - 1; i += 1) {
+    const ch = code[i]!;
+    const next = code[i + 1]!;
+    const seam = ch === '(' || ch === ',' || ch === ';'
+      || (ch === '=' && next !== '=' && next !== '>')
+      || (ch === '.' && /[\w)\]]/.test(code[i - 1] ?? '') && /[\w$]/.test(next)
+        && !(/\d/.test(code[i - 1] ?? '') && /\d/.test(next)));
+    if (!seam) continue;
+    out.push(code.slice(start, i + 1), <wbr key={i} />);
+    start = i + 1;
+  }
+  out.push(code.slice(start));
+  return out;
+}
+
+/**
  * Turn [[cite:...]], **bold**, and `code` into calm inline nodes. Strips leftover bracket junk outside code spans only,
  * so code like df[['a']] or {{ name }} stays as written (lead review on #348). With `words`, plain words fade in one by one.
+ * With `seams` (table cells), code gets break opportunities at its seams.
  */
-export function renderInline(text: string, words?: WordCounter): ReactNode[] {
+export function renderInline(text: string, words?: WordCounter, seams = false): ReactNode[] {
   const cleaned = text
     .split(/(`[^`\n]+`)/)
     .map((part, i) => (i % 2 === 1 ? part : part
@@ -139,14 +164,14 @@ export function renderInline(text: string, words?: WordCounter): ReactNode[] {
     } else if (m[3]) {
       out.push(
         <code key={k++} className={words ? 'inline rich-w' : 'inline'}>
-          {m[3]}
+          {seams ? codeSeams(m[3]) : m[3]}
         </code>,
       );
     } else if (m[4]) {
       // A bold label can hold inline code (e.g. **The check (`!user`):**); render its inside too, word by word.
-      out.push(<strong key={k++}>{renderInline(m[4], words)}</strong>);
+      out.push(<strong key={k++}>{renderInline(m[4], words, seams)}</strong>);
     } else {
-      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words)}</em>);
+      out.push(<em key={k++}>{renderInline((m[5] ?? m[6])!, words, seams)}</em>);
     }
     last = m.index + m[0].length;
   }
@@ -226,24 +251,59 @@ function tableAt(lines: string[], i: number): { header: string[]; aligns: Align[
   return aligns ? { header, aligns } : null;
 }
 
+/**
+ * A table wider than its pane (a narrow overlay, 4+ columns) scrolls sideways in its own frame. Then, and only then,
+ * the frame is a focusable region the arrow keys scroll, and one line under it says so: macOS hides scrollbars, and the
+ * column off to the right is often the one that explains (Design S-1, 0.1.55). Rows, streaming and density re-check;
+ * a focused frame stays a region until it loses focus, so a switch to Compact never drops focus to the page, but the
+ * line under it shows only while the table really overflows.
+ */
+function RichTable({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const check = () => {
+    const el = box.current;
+    if (!el) return;
+    setOverflows(el.scrollWidth > el.clientWidth + 1);
+    setFocused(el === document.activeElement);
+  };
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return undefined;
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    check();
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <>
+      <div ref={box} className="rich-table" onBlur={check} {...(overflows || focused ? { role: 'region', 'aria-label': 'Table, scrolls sideways', tabIndex: 0 } : {})}>
+        {children}
+      </div>
+      {overflows ? <p className="rich-table__cue">Scroll sideways for the rest of the table.</p> : null}
+    </>
+  );
+}
+
 function renderTable(header: string[], aligns: Align[], rows: string[][], key: string): ReactNode {
   const cls = (c: number) => (aligns[c] ? `is-${aligns[c]}` : undefined);
   return (
-    // Wide tables scroll sideways inside a narrow panel; the region is focusable so the keyboard can scroll it.
-    <div key={key} className="rich-table" role="region" aria-label={`Table: ${header.join(', ').replace(/[`*]/g, '')}`} tabIndex={0}>
+    <RichTable key={key}>
       <table>
         <thead>
-          <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell)}</th>)}</tr>
+          <tr>{header.map((cell, c) => <th key={c} scope="col" className={cls(c)}>{renderInline(cell, undefined, true)}</th>)}</tr>
         </thead>
         {rows.length ? (
           <tbody>
             {rows.map((row, r) => (
-              <tr key={r}>{header.map((_, c) => <td key={c} className={cls(c)}>{renderInline(row[c] ?? '')}</td>)}</tr>
+              <tr key={r}>{header.map((_, c) => <td key={c} className={cls(c)}>{renderInline(row[c] ?? '', undefined, true)}</td>)}</tr>
             ))}
           </tbody>
         ) : null}
       </table>
-    </div>
+    </RichTable>
   );
 }
 

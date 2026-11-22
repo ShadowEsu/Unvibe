@@ -45,8 +45,10 @@ export type WidgetEvent =
   /**
    * `part: 'detail'`: about a "More detail" run, shown under the short answer; the answer itself stays.
    * `short`: the answer on its way is the short default (its "Not sure:" line shows in the quiet style).
+   * `level`: the depth a new explanation runs at, so the panel's depth control shows the one main is running (a press
+   * main dropped while another explanation ran must not stay selected).
    */
-  | { type: 'status'; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean }
+  | { type: 'status'; message: string; resetQuiz?: boolean; part?: 'detail'; short?: boolean; level?: ExplanationLevel }
   | { type: 'consent'; findings: SecretFinding[] }
   | { type: 'blocked'; findings: SecretFinding[] }
   | { type: 'token'; text: string; part?: 'detail' }
@@ -420,16 +422,44 @@ export function explanationInFlight(): boolean {
   return runsInFlight > 0;
 }
 
+/** New explanations still running, per panel session, whoever started them (the panel, ⌃U, a held capture, Study, the sample). */
+const explaining = new WeakMap<ReviewSession, number>();
+
+/** A question or More detail goes on from the answer; anything else asks for a new explanation. */
+const newExplanation = (opts: RequestOpts) => !opts.question && !opts.moreDetail;
+
+/**
+ * Whether the panel's request would start a second new explanation while one is still running. A double press on
+ * Explain or Retry lands before the panel hears back. The second would abort the first after the service had already
+ * counted it, so the person would pay twice for one answer (Security, 0.1.55). A question or More detail passes: the
+ * panel allows one of those at a time itself. A new capture doesn't ask here; it starts over.
+ */
+export function panelRequestBusy(session: ReviewSession, opts: RequestOpts): boolean {
+  return newExplanation(opts) && (explaining.get(session) ?? 0) > 0;
+}
+
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   runsInFlight += 1;
   try {
-    await runCountedReview(win, session, opts);
+    await runSessionReview(win, session, opts);
   } finally {
     runsInFlight -= 1;
   }
 }
 
-async function runCountedReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+async function runSessionReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  if (!newExplanation(opts)) return runReviewOnce(win, session, opts);
+  explaining.set(session, (explaining.get(session) ?? 0) + 1);
+  try {
+    await runReviewOnce(win, session, opts);
+  } finally {
+    const left = (explaining.get(session) ?? 1) - 1;
+    if (left > 0) explaining.set(session, left);
+    else explaining.delete(session);
+  }
+}
+
+async function runReviewOnce(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   // "More detail" goes on from the short answer this panel already has; anything else is a new answer.
   const detailRun = Boolean(opts.moreDetail) && !opts.question && Boolean(session.shortText?.trim());
   // Only a new explanation of the selection uses its credit; follow-ups and More detail never do.
@@ -547,7 +577,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
     watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, STREAM_IDLE_MS);
   };
 
-  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question && !detailRun, short: shortRun, ...tag });
+  send(win, session, { type: 'status', message: 'thinking', resetQuiz: !opts.question && !detailRun, short: shortRun, ...(!opts.question && !detailRun ? { level: opts.level } : {}), ...tag });
   try {
     const token = store().token();
     const usage = await cachedAppUsage();

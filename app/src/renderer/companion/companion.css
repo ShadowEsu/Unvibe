@@ -1328,6 +1328,7 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .rich-text .rich-table td { border-top: 1px solid var(--line); }
 .rich-text .rich-table .is-center { text-align: center; }
 .rich-text .rich-table .is-right { text-align: right; }
+.rich-text .rich-table__cue { margin: -6px 0 12px; color: var(--muted); font-family: var(--font-sans); font-size: 12px; line-height: 16px; }
 .rich-text .cite {
   display: inline-block;
   font-family: var(--font-mono);

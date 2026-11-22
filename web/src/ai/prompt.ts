@@ -25,6 +25,23 @@ export function isMoreDetail(payload: ReviewRequestPayload): boolean {
   return payload.detail === 'full' && !payload.question && typeof payload.shortAnswer === 'string' && payload.shortAnswer.trim() !== '';
 }
 
+/** A short selection explanation that ends with "Suggested fixes" (auto mode, ledger 646). Only `true` counts. */
+export function wantsSuggestedFixes(payload: ReviewRequestPayload): boolean {
+  return payload.suggestFixes === true && isShortExplanation(payload);
+}
+
+/**
+ * The "Suggested fixes" rules: question the AI code, don't rewrite it. They come after the short-answer rules and
+ * name themselves as the one exception to their no-heading, no-bullet and length limits.
+ */
+const SUGGESTED_FIXES_RULES = [
+  '- After the explanation (and after any "Not sure:" sentence), end with a blank line, the line "### Suggested fixes", then at most 3 bullets that each start with "- ". This section is the one exception to the rules above about headings, bullets and length.',
+  '- Each bullet names the line or construct, what could go wrong there, and the change to consider, in one or two plain sentences.',
+  '- Only suggest a fix for a problem the code plainly shows or that clearly follows from it; never invent one to fill the list. If there is nothing to fix, put the single line "Nothing to fix that I can see." under the heading instead of bullets.',
+  '- No rewritten code and no code blocks in this section. A one-line change in single backticks is fine.',
+  '- You suggest; the reader decides. Never say a fix was made.',
+];
+
 /**
  * System prompt. Enforces the anti-hallucination contract: use only provided context,
  * distinguish what is visible vs inferred vs uncertain, and cite file + line.
@@ -44,6 +61,7 @@ export function buildSystemPrompt(payload: ReviewRequestPayload): string {
         '- Answer in 2 to 4 short, plain sentences (each under about 25 words, 75 words at most in all) that say what the selected code does. However long the selection is, never more than 4 sentences: say what it does overall, not every detail.',
         '- No headings, no bullets, no lists, no bold, no code blocks, no cite markers. One paragraph. Put names from the code (functions, variables, files) in single backticks, like `total`.',
         '- Only say what the code plainly shows. If part of it depends on code you cannot see, or you are inferring, add one last short sentence that starts with "Not sure:" and names what is uncertain.',
+        ...(wantsSuggestedFixes(payload) ? SUGGESTED_FIXES_RULES : []),
       ]
       : [
         '- Clearly separate: what the code plainly SHOWS, what you INFER, and what is UNCERTAIN.',
@@ -75,7 +93,9 @@ export function buildUserPrompt(payload: ReviewRequestPayload): string {
   if (payload.question) {
     parts.push(`\n## Follow-up question\n${payload.question}`);
   } else if (isShortExplanation(payload)) {
-    parts.push('\n## Task\nSay what this code does in 2 to 4 plain sentences.');
+    parts.push(wantsSuggestedFixes(payload)
+      ? '\n## Task\nSay what this code does in 2 to 4 plain sentences, then end with the Suggested fixes section.'
+      : '\n## Task\nSay what this code does in 2 to 4 plain sentences.');
   } else {
     const shown = isMoreDetail(payload) ? String(payload.shortAnswer).trim().slice(0, SHORT_ANSWER_MAX_CHARS) : '';
     if (shown) {

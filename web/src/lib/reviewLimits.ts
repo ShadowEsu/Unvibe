@@ -26,6 +26,9 @@ export function payloadSizeError(payload: ReviewRequestPayload): Response | null
   if (payload.question !== undefined && typeof payload.question !== 'string') {
     return Response.json({ error: 'invalid_question', message: 'The follow-up question must be text.' }, { status: 400 });
   }
+  if (payload.suggestFixes !== undefined && typeof payload.suggestFixes !== 'boolean') {
+    return Response.json({ error: 'invalid_suggest_fixes', message: 'suggestFixes must be true or false.' }, { status: 400 });
+  }
   if (payload.question && payload.question.length > MAX_QUESTION_CHARS) {
     return Response.json({
       error: 'question_too_long',

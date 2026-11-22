@@ -103,11 +103,25 @@ test('a markdown table in an answer renders as a table, with no raw | rows', () 
   assert.equal(html.match(/<th scope="col">/g)?.length, 3);
   assert.equal(html.match(/<tr>/g)?.length, 7);
   assert.match(html, /<th scope="col">t \(ms\)<\/th>/);
-  assert.match(html, /<td>call 1: <code class="inline">clearTimeout\(undefined\)<\/code> is a no-op; schedule A for t=300<\/td>/);
-  assert.match(html, /<td>~500<\/td><td>E fires: <code class="inline">fn\(\.\.\.argsFromCall5\)<\/code><\/td><td>none<\/td>/);
+  // Code in a cell can wrap at its seams (0.1.55: the 320 px overlay), so a long call never widens the table.
+  assert.match(html, /<td>call 1: <code class="inline">clearTimeout\(<wbr\/>undefined\)<\/code> is a no-op; schedule A for t=300<\/td>/);
+  assert.match(html, /<td>~500<\/td><td>E fires: <code class="inline">fn\(<wbr\/>\.\.\.argsFromCall5\)<\/code><\/td><td>none<\/td>/);
   assert.doesNotMatch(html, /\|/);
   // The line after the last row isn't a row: it stays its own paragraph.
   assert.match(html, /<\/table><\/div><p>Each call resets the countdown/);
+});
+
+test('code in a table cell breaks only at its seams, never inside a name, a spread, == or =>', () => {
+  const seams = (code: string) => markup(`| c |\n|---|\n| \`${code}\` |`).match(/<code class="inline">(.*?)<\/code>/)![1]!.replace(/<wbr\/>/g, '|');
+  assert.equal(seams('fn(...argsFromCall5)'), 'fn(|...argsFromCall5)');
+  assert.equal(seams('this.timer = setTimeout(run, wait);'), 'this.|timer =| setTimeout(|run,| wait);');
+  assert.equal(seams('a === b && f => f.x'), 'a ===| b &amp;&amp; f =&gt; f.|x');
+  assert.equal(seams('items[0].price'), 'items[0].|price');
+  // Digits on both sides of a dot are a number or a version, never a member: they stay whole.
+  assert.equal(seams('scale(0.97)'), 'scale(|0.97)');
+  assert.equal(seams('1.5e3 v1.2.3 row1.cells'), '1.5e3 v1.2.3 row1.|cells');
+  // Outside tables, code is untouched: prose already wraps around it.
+  assert.doesNotMatch(markup('Call `fn(a, b)` once.'), /<wbr/);
 });
 
 test('a pipe inside a code span or escaped as \\| stays in its cell', () => {
@@ -143,7 +157,10 @@ test('a line with pipes but no matching separator row is not a table', () => {
   }
   for (const text of prose.slice(4, 8)) assert.doesNotMatch(markup(text, true), /<table/, `${text} (streaming)`);
   // A paragraph line directly above a table stays a paragraph; the table still renders.
-  assert.match(markup('Here it is:\n| a | b |\n|---|---|\n| 1 | 2 |'), /<p>Here it is:<\/p><div class="rich-table"[^>]*><table>/);
+  // A table that fits (the only state without layout) is plain: no region, no tab stop, no scroll cue.
+  const fits = markup('Here it is:\n| a | b |\n|---|---|\n| 1 | 2 |');
+  assert.match(fits, /<p>Here it is:<\/p><div class="rich-table"><table>/);
+  assert.doesNotMatch(fits, /tabindex|role=|aria-label|rich-table__cue|Scroll sideways/);
 });
 
 test('a saved explanation preview shows no raw heading or citation markup (QA 0.1.46 P3)', () => {

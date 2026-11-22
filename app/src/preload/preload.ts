@@ -61,6 +61,8 @@ const api = {
   widgetReady: () => ipcRenderer.send('widget:ready'),
   /** Overlay B: the content's natural height; main fits the window between 360 and 560. */
   fitHeight: (height: number) => ipcRenderer.send('widget:fitHeight', height),
+  /** A finished answer's table: how wide it is against the 320 px pane, numbers only (main logs it; Design, 0.1.55). */
+  tableFit: (fit: { columns: number; scrollWidth: number; clientWidth: number }) => ipcRenderer.send('widget:tableFit', fit),
   /** Moving the panel by its header: drag (pointer travel since the drag began), arrow keys, double-click to put it back. */
   panelDragStart: () => ipcRenderer.send('widget:dragStart'),
   panelDragMove: (dx: number, dy: number) => ipcRenderer.send('widget:dragMove', dx, dy),
@@ -250,6 +252,10 @@ const api = {
   signUp: (email: string) => ipcRenderer.invoke('account:signUp', email),
   startDeviceAuth: () => ipcRenderer.invoke('account:startDevice'),
   openDeviceAuth: () => ipcRenderer.invoke('account:openDeviceAuth'),
+  /** The sign-in card closed: drop its waiting code (`userCode`), so approving it later signs nobody in. */
+  cancelDeviceAuth: (userCode: string) => ipcRenderer.invoke('account:cancelDevice', userCode),
+  /** The sign-in card closed while main was still asking the server for its code: open no browser and poll nothing for it. */
+  cancelDeviceStart: () => ipcRenderer.invoke('account:cancelDeviceStart'),
   onDeviceAuth: (cb: (result: { ok: boolean; email?: string; name?: string; error?: string }) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, r: { ok: boolean; email?: string; name?: string; error?: string }) => cb(r);
     ipcRenderer.on('account:device', listener);

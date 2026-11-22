@@ -42,6 +42,7 @@ import {
   hideBar,
   islandDirection,
   islandDraggable,
+  keepWindowOnDisplays,
   moveWindowDrag,
   nudgePanel,
   positionBar,
@@ -54,12 +55,13 @@ import {
   startWindowDrag,
   whilePanelDialog,
 } from './windows';
-import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
+import { captureConfirmReason, captureSelection, frontmostApp, nextCaptureBlock, pulseThenUsage, restoresOpenPanel, startFrontmostWatch, type CaptureBlock, type ConfirmReason } from './selection';
 import { rendererSettingsPatch } from './spots';
 import type { ExplanationLevel } from '../core/protocol';
 import {
   initWidget,
   explanationInFlight,
+  panelRequestBusy,
   runReview,
   startComprehension,
   gradeComprehension,
@@ -74,6 +76,7 @@ import { onLearningChanged, store, type ChatThread } from './store';
 import { applyLoginItem, loginItemState, settings, type Settings } from './settings';
 import { capGiftUsed, giftCodeFromInput, GIFT_LIMIT } from './gift';
 import { deviceVerificationUrl } from '../core/deviceAuth';
+import { createDevicePoll, OWNER_GONE_EVENTS, type DevicePollOwner } from './devicePoll';
 import { isLevelAnswer, levelAfterAnswer } from '../core/levelAnswer';
 import { SUPPORT_EMAIL } from '../core/support';
 import { isLoginLaunch, launchBringsWindowFront, launchOpensWindow, loginItemFallback, loginPromptStep } from '../core/loginItem';
@@ -104,7 +107,7 @@ import {
 } from './backend';
 import { dismissPmf, PMF_SEND_FAILED, pmfCardState, savePmfDraft, sendPmfAnswer, type PmfDeps } from './pmf';
 import { completedExplanations, EMPTY_PMF_DRAFT } from '../core/pmf';
-import { setBar, notify, pulseBar } from './notify';
+import { setBar, notify, pulseBar, settleBar } from './notify';
 import { setShortcutRecording } from './commandUHint';
 import { computeProfile, computeLearningItems, computeReviewQueue, computeToday, localDayKey } from '../core/learning';
 import { sendFeedback, type FeedbackInput } from './feedback';
@@ -141,6 +144,7 @@ import { gradeTeachBack } from '../core/teachBack';
 import { capHunks, collectDiffHunks, blameRange, fileHistory, gitHeadState, readRepoFile } from '../core/gitDiff';
 import { productEvent } from '../core/productEvents';
 import { isProPlan } from '../core/plan';
+import { tableFitLine } from '../core/tableFit';
 import { refreshBubble, registerBubble } from './bubble';
 
 function osUserName(): string {
@@ -176,8 +180,38 @@ const isMac = process.platform === 'darwin';
 let tray: Tray | null = null;
 let bar: BrowserWindow | null = null;
 let companion: BrowserWindow | null = null;
-let devicePoll: NodeJS.Timeout | null = null;
-let currentDeviceVerificationUrl: string | null = null;
+/** Google sign-in by device code: the one code main polls for, dropped when its card or window closes or the app quits. */
+const devicePoll = createDevicePoll({
+  redeem: redeemDeviceAuth,
+  approved: async (token, stillCurrent) => {
+    let account: Awaited<ReturnType<typeof accountInfo>>;
+    try {
+      account = await accountInfo(token);
+    } catch (err) {
+      // Lead N3 on #354: the code is spent, so nobody will ever hold this token; end its session before giving up.
+      endUnheldSession(token, 'its account could not be read');
+      throw err;
+    }
+    // The card closed while the account was read: nobody is signed in.
+    if (!stillCurrent()) return false;
+    await persistAccount({ userId: account.userId, email: account.email ?? 'Signed-in user', token });
+    void flush();
+    companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
+    return true;
+  },
+  // Security NIT-3 on #354: no orphaned session for a token nobody holds.
+  abandoned: (token) => endUnheldSession(token, 'it was approved after its card closed'),
+  ended: (error) => companion?.webContents.send('account:device', { ok: false, error }),
+});
+/** End the server session of a device-code token nobody holds, so none is left orphaned. */
+function endUnheldSession(token: string, why: string): void {
+  void revokeSession(token).then(
+    () => console.info(`[auth] ended the session of a sign-in: ${why}`),
+    () => console.warn(`[auth] could not end the session of a sign-in: ${why}`),
+  );
+}
+/** Device-code starts still waiting on the server, by the page that asked; a card that closes meanwhile drops its start. */
+const deviceStarts = new Map<Electron.WebContents, () => void>();
 /** The one review session inside the single shared panel (overlay B has no review tabs). */
 let panelSession: ReviewSession | undefined;
 let panelReady = false;
@@ -286,6 +320,8 @@ function openPanel(): { win: BrowserWindow; fresh: boolean } {
   clearPanelSessions();
   win.on('closed', () => {
     clearPanelSessions();
+    // Before any hide: a pulse shows the Island, and the hide below must win.
+    settleBar();
     if (settings().all().barVisibility === 'during-review') hideBar(bar);
     // The companion's paste step stops saying the explanation is opening if none came.
     if (companion && !companion.isDestroyed()) companion.webContents.send('panel:closed');
@@ -472,6 +508,7 @@ function repairAccessibilityAfterUpdate(): void {
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
+  devicePoll.cancel();
 });
 
 /** Menu items call this as `click`, so it takes no arguments (Electron passes the menu item first). */
@@ -603,9 +640,14 @@ let heldClipboardReview: HeldClipboardReview | null = null;
  */
 async function startReview(options: { preferClipboard?: boolean; sample?: boolean; confirm?: boolean; captured?: { code: string; sourceApp: string; meta?: FileMeta }; suggestFixes?: boolean } = {}): Promise<void> {
   broadcastShortcut();
-  pulseBar({ phase: 'loading', label: 'Loading' });
-  // A recent snapshot keeps ⌘U instant; the server still enforces the real limit.
-  const usage = await cachedAppUsage();
+  // The Island at once, before the usage round trip, but only when something will be read. Past the limit check below
+  // `remaining` is above 0, where the provider doesn't depend on it, so this is the same answer as `agreed` there.
+  // A recent usage snapshot keeps ⌘U instant; the server still enforces the real limit.
+  const usage = await pulseThenUsage(
+    { agreed: codeConsented(providerInUse()), sample: options.sample },
+    () => pulseBar({ phase: 'loading', label: 'Loading' }),
+    cachedAppUsage,
+  );
   if (usage.remaining <= 0) {
     pulseBar({ phase: 'error', label: 'Limit reached' });
     showBar(bar);
@@ -722,6 +764,9 @@ if (process.platform === 'win32') app.setAppUserModelId('com.unvibe.app');
 // ⌘U and leave a review panel open with no captured selection.
 // The lock carries this copy's version and path so an older running copy can hand over to it.
 const hasSingleInstanceLock = app.requestSingleInstanceLock({ version: app.getVersion(), execPath: process.execPath });
+// The copy that lost the lock has already handed its link to the running one (second-instance). It quits, but Electron
+// still goes ready first, so nothing below may start for it: it used to open its own Island, companion and panel, try
+// for the shortcut and write the shared store for about a second, on every unvibe:// link (Run A 44835707720).
 if (!hasSingleInstanceLock) app.quit();
 /** Windows and Linux deliver `unvibe://` links as command-line arguments, not via open-url. */
 function protocolUrlFrom(argv: readonly string[]): string | null {
@@ -743,7 +788,7 @@ app.on('second-instance', (_event, argv, _cwd, additionalData) => {
 });
 
 // A protocol link can also cold-start the app on Windows; macOS uses open-url for this.
-if (!isMac) {
+if (!isMac && hasSingleInstanceLock) {
   const launchUrl = protocolUrlFrom(process.argv);
   if (launchUrl) handleExternalReviewUrl(launchUrl);
 }
@@ -765,6 +810,7 @@ if (process.defaultApp) {
 }
 
 app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return;
   cleanupPortableUpdate();
   // Theme "system": the companion's window chrome follows the OS appearance as it changes.
   nativeTheme.on('updated', () => {
@@ -833,11 +879,13 @@ app.whenReady().then(() => {
   if (s.onboarded && s.barVisibility === 'always') showBar(bar);
   else hideBar(bar);
 
-  // Keep the learning strip correctly placed and above full-screen Spaces after display changes.
+  // Keep the learning strip correctly placed and above full-screen Spaces after display changes, and bring an open
+  // overlay back from a display that went away (the Island is placed again by showBar).
   const restoreFloatingWindows = () => {
     if (bar && !bar.isDestroyed() && bar.isVisible()) showBar(bar);
     const panel = currentWidget();
     if (!panel || panel.isDestroyed()) return;
+    keepWindowOnDisplays(panel);
     panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
     panel.moveTop();
   };
@@ -972,6 +1020,13 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     if (win && win === currentWidget() && typeof height === 'number') fitPanelHeight(win, height);
   });
+  // Whether a finished answer's tables fit the pane; real answers decide if stacking is ever built. Only the open panel
+  // reports (every window shares the preload).
+  ipcMain.on('widget:tableFit', (e, fit: unknown) => {
+    const win = widgetOf(e);
+    const line = win && win === currentWidget() ? tableFitLine(fit) : null;
+    if (line) console.info(line);
+  });
   // The panel moves by its header (0.1.54): drag, arrow keys (16 px) and a double-click that puts it back; the spot is
   // remembered per display. Only the open panel can move itself.
   const thePanel = (e: Electron.IpcMainEvent) => { const win = widgetOf(e); return win && win === currentWidget() ? win : null; };
@@ -1014,6 +1069,8 @@ app.whenReady().then(() => {
     const win = widgetOf(e);
     const session = panelSession;
     if (!win || !session) return;
+    // A second press while the first new explanation runs is dropped, before it can take a credit or abort that run.
+    if (panelRequestBusy(session, opts)) return;
     if (session.awaitingConfirm) {
       // Explain on a link-started capture: the person chose to send it.
       const credit = takeSelectionCredit();
@@ -1792,13 +1849,23 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle('account:startDevice', async (e) => {
+    // The page may close, reload or crash while the server makes the code (seconds on a cold server): then no card
+    // shows it, so neither the browser nor the poll starts.
+    const page: DevicePollOwner = e.sender;
+    let pageGone = false;
+    const onPageGone = () => { pageGone = true; };
+    for (const event of OWNER_GONE_EVENTS) page.once(event, onPageGone);
+    deviceStarts.set(e.sender, onPageGone);
     try {
       const asked = Date.now();
       const device = await startDeviceAuth();
       console.info(`[auth] device code from the server in ${Date.now() - asked} ms`);
+      if (pageGone || e.sender.isDestroyed()) {
+        console.info('[auth] device code not used: the card or page that asked for it is gone');
+        return { ok: false, error: 'Sign-in was closed.' };
+      }
       // Use user_code — never ?code= (that collides with Google/Supabase OAuth).
       const verificationUrl = deviceVerificationUrl(device.verificationUri, device.userCode);
-      currentDeviceVerificationUrl = verificationUrl;
       // The code goes back to the window at once and the browser opens alongside: openExternal settles only once the
       // browser has taken the URL, so a slow browser launch would otherwise hold the code back. A failure arrives as
       // an event naming its link, so a Retry's newer link is never marked as failed by an older one. The durations
@@ -1811,46 +1878,36 @@ app.whenReady().then(() => {
           if (!e.sender.isDestroyed()) e.sender.send('account:deviceBrowserFailed', { verificationUri: verificationUrl });
         },
       );
-      if (devicePoll) clearInterval(devicePoll);
-      const expires = Date.now() + 10 * 60_000;
-      devicePoll = setInterval(() => void (async () => {
-        if (Date.now() > expires) {
-          if (devicePoll) clearInterval(devicePoll);
-          devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          companion?.webContents.send('account:device', { ok: false, error: 'Sign-in timed out. Use Retry to create a new secure link.' });
-          return;
-        }
-        try {
-          const redeemed = await redeemDeviceAuth(device.deviceCode);
-          if (!redeemed) return;
-          const account = await accountInfo(redeemed.token);
-          await persistAccount({
-            userId: account.userId,
-            email: account.email ?? 'Signed-in user',
-            token: redeemed.token,
-          });
-          if (devicePoll) clearInterval(devicePoll); devicePoll = null;
-          currentDeviceVerificationUrl = null;
-          void flush();
-          companion?.webContents.send('account:device', { ok: true, email: account.email ?? 'Signed-in user', name: account.name });
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'The secure sign-in request ended.';
-          if (/expired|unknown|already redeemed/i.test(message)) {
-            if (devicePoll) clearInterval(devicePoll);
-            devicePoll = null;
-            currentDeviceVerificationUrl = null;
-            companion?.webContents.send('account:device', { ok: false, error: 'This sign-in link is no longer valid. Use Retry to create a new one.' });
-          }
-        }
-      })(), Math.max(2, device.interval) * 1000);
+      // Polling is tied to the page that asked: its window closing (Mac close, ⌘W), a reload or a crash drops the code,
+      // since none of those runs the card's own cleanup (lead M1 / Security SHOULD-1 on #354).
+      devicePoll.start(device, verificationUrl, e.sender);
       return { ok: true, userCode: device.userCode, verificationUri: verificationUrl };
-    } catch (err) { return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' }; }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not start secure sign-in.' };
+    } finally {
+      if (deviceStarts.get(e.sender) === onPageGone) deviceStarts.delete(e.sender);
+      if (!e.sender.isDestroyed()) for (const event of OWNER_GONE_EVENTS) page.removeListener(event, onPageGone);
+    }
+  });
+  // The sign-in card closed while its code was still being made: open no browser and poll nothing for it (lead N2).
+  ipcMain.handle('account:cancelDeviceStart', (e) => {
+    const drop = deviceStarts.get(e.sender);
+    drop?.();
+    return { ok: Boolean(drop) };
+  });
+  // The sign-in card closed with its code still waiting: stop polling and forget it. Only the page that started the
+  // code may drop it, and only that card's own code.
+  ipcMain.handle('account:cancelDevice', (e, userCode: unknown) => {
+    if (typeof userCode !== 'string' || e.sender !== devicePoll.owner()) return { ok: false };
+    const dropped = devicePoll.cancel(userCode);
+    if (dropped) console.info('[auth] device sign-in cancelled: the card closed');
+    return { ok: dropped };
   });
   ipcMain.handle('account:openDeviceAuth', async () => {
-    if (!currentDeviceVerificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
+    const verificationUrl = devicePoll.verificationUrl();
+    if (!verificationUrl) return { ok: false, error: 'Start sign-in again to create a fresh link.' };
     try {
-      await shell.openExternal(currentDeviceVerificationUrl);
+      await shell.openExternal(verificationUrl);
       console.info('[auth] reopened device verification browser');
       return { ok: true };
     } catch {
@@ -1891,7 +1948,7 @@ app.whenReady().then(() => {
 app.on('browser-window-focus', () => void flush());
 app.on('activate', () => {
   // Dock / Cmd-Tab selection — bring the home window back.
-  openCompanion();
+  if (hasSingleInstanceLock) openCompanion();
 });
 app.on('will-quit', () => {
   stopSync();
