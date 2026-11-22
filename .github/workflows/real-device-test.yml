@@ -565,11 +565,12 @@ jobs:
 
       # rc0155: the RC under test is a build Security read: RC1 run 44647459465 (requests/security/20261119-1640-…), RC2 run
       # 44669559646 (601fc29d + #374, 9b93b329; Security's build read 20 Nov), RC3 run 44837135919 (9b93b329 + #375,
-      # 3048d838; only dist/main/main.cjs differs from RC2's app.asar). Mac: the installed app.asar against Security's pin
-      # for that build. Windows: the app.asar inside the setup that was run and the installed one must be the same file,
-      # and equal that build's pin (RC1: Run W2 44655124085; RC2: QA's read of the build's setup 904904fd, whose app.asar
-      # is 7f581ce4; RC3: the same read of the build's setup e2b87db0 gives 55c43f2a, and the Mac zips c3614d0e on both
-      # arches; the same read of the RC1 setup gives RC1's pin 6e9c97fc).
+      # 3048d838; only dist/main/main.cjs differs from RC2's app.asar), RC4 run 44970928102 (3048d838 + #366, 02b46bda).
+      # Mac: the installed app.asar against Security's pin for that build. Windows: the app.asar inside the setup that was
+      # run and the installed one must be the same file, and equal that build's pin (RC1: Run W2 44655124085; RC2: QA's
+      # read of the build's setup 904904fd, whose app.asar is 7f581ce4; RC3: the same read of the build's setup e2b87db0
+      # gives 55c43f2a, and the Mac zips c3614d0e on both arches; RC4: setup 7d31db31 gives bb492f36 (= the portable's),
+      # the Mac zips 2c508e8e on both arches; the same read of the RC1 setup gives RC1's pin 6e9c97fc).
       - name: Check the RC's app.asar (rc0155, Mac)
         if: inputs.rc0155 != '' && env.UNVIBE_EXE != '' && matrix.label == 'mac'
         shell: bash
@@ -580,6 +581,7 @@ jobs:
             44647459465) want=fbd2412cd255d9ac0698d5796f58b5843b4643c4e6c13ce29a2eaba27e263cfe ;;
             44669559646) want=035d813ea2319d797e13f0d0fdad9808df506a11a80fc7c7c4c098bc48a91c70 ;;
             44837135919) want=c3614d0e26cdea20ed210874167ec3f29d41735fdb40a8f0a4c5223b82113dea ;;
+            44970928102) want=2c508e8e1a064082d6fa6b89be541de360a5bbc037b3851d4794cca0063c671f ;;
             *) echo "::error::no Security pin for build run $BUILD_RUN"; exit 1 ;;
           esac
           got=$(shasum -a 256 /Applications/Unvibe.app/Contents/Resources/app.asar | cut -d' ' -f1)
@@ -593,7 +595,7 @@ jobs:
         env:
           BUILD_RUN: ${{ inputs.build_run }}
         run: |
-          $want = @{ '44647459465' = '6e9c97fc41cb6861289716c0fa41ca9e079545fb22c97e684a9ee7887e6c810d'; '44669559646' = '7f581ce46c6fd0035140f8e48c336c082b29f0165a9d22214cf4eaf6765a8c00'; '44837135919' = '55c43f2a7ebbfa2f22a8b4dd98fa5e8e725dcc64d9f3bd500b20925a3774231f' }[$env:BUILD_RUN]
+          $want = @{ '44647459465' = '6e9c97fc41cb6861289716c0fa41ca9e079545fb22c97e684a9ee7887e6c810d'; '44669559646' = '7f581ce46c6fd0035140f8e48c336c082b29f0165a9d22214cf4eaf6765a8c00'; '44837135919' = '55c43f2a7ebbfa2f22a8b4dd98fa5e8e725dcc64d9f3bd500b20925a3774231f'; '44970928102' = 'bb492f365c62d5ad1373122f210d7673df65fa19c6f8f3b1a8a22378a9485402' }[$env:BUILD_RUN]
           if (-not $want) { Write-Error "no pin for build run $env:BUILD_RUN"; exit 1 }
           # electron-builder's NSIS setup holds the app as $PLUGINSDIR\app-64.7z; app.asar is inside that (run 44653582285
           # read the setup's top level and found no app.asar).
