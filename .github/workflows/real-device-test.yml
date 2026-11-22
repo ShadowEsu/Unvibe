@@ -59,9 +59,12 @@ name: Real device test
 # "Hide" as the click-away setting, a click on the panel itself keeps it on screen and leaving it hides it. It needs no
 # Unvibe button, so it runs on a build without #366.
 # d5=auto (with build_run, ai off; Mac and Windows) runs only d5-button.mjs's launch X for auto mode (#384, Security's
-# C-3 rows) in VS Code and Cursor: select-then-paste and select-then-type land in the file, an image or a file copied
-# in Finder/Explorer stays on the clipboard, at most one auto copy per 15 s (Windows: the Win+V history), and a
-# double-click or an app switch during the read sends nothing. It runs with the API host blocked (no hosted call).
+# C-3 rows) in VS Code and Cursor: a settled selection is read once (the control), select-then-paste and
+# select-then-type at six moments land in the file, an image or a file copied in Finder/Explorer stays on the clipboard,
+# at most one auto copy per 15 s (Windows: the Win+V history), and a double-click or an app switch during the read sends
+# nothing. It runs with the API host blocked (no hosted call). On Windows it also runs Security's SHOULD-384c: Microsoft
+# Defender back at its defaults (the runner image turns it off), the AMSI test sample as the control, at least 10 auto
+# reads, then nothing in Protection history or Defender/Operational for Unvibe or powershell.exe.
 # d5=auto-ai (with build_run, ai on; Mac and Windows) runs only launch Y: one settled selection explained with no
 # press (VS Code on the Mac, Cursor on Windows), auto mode turned off as soon as it starts: at most one hosted call per
 # system, and the answer's Suggested fixes (#383). Cursor: the user setup from Cursor's update service, its signature
@@ -930,6 +933,47 @@ jobs:
           if ($sig.Status -ne 'Valid') { Write-Error "Cursor.exe's signature is $($sig.Status)"; exit 1 }
           "CURSOR=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      # d5=auto (Windows), Security's SHOULD-384c: Microsoft Defender back at its defaults for the auto reads. The runner
+      # image turns it off (actions/runner-images Configure-WindowsDefender.ps1: real-time, behaviour, IOAV, script
+      # scanning, cloud and block at first sight off; C:\ and D:\ excluded). Each is set back one at a time, every
+      # exclusion removed, the signatures updated, and the AMSI test sample run in powershell.exe as the control: it must
+      # be blocked and logged, or a quiet log after the reads proves nothing. The check's window opens after the control.
+      - name: Turn Microsoft Defender back on (d5=auto, Windows)
+        if: inputs.d5 == 'auto' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $out = "$env:RUNNER_TEMP\d5"; New-Item -ItemType Directory -Force $out | Out-Null
+          $rep = "$out\report-defender.txt"
+          function Say([string]$s) { $s; Add-Content -Path $rep -Value $s -Encoding utf8 }
+          $st = Get-MpComputerStatus; $p = Get-MpPreference
+          Say "Defender as the image left it: mode $($st.AMRunningMode), real-time $($st.RealTimeProtectionEnabled), behaviour $($st.BehaviorMonitorEnabled), IOAV $($st.IoavProtectionEnabled), script scanning $(-not $p.DisableScriptScanning), cloud (MAPS) $($p.MAPSReporting), excluded paths: $(@($p.ExclusionPath | Where-Object { $_ }) -join ' ')"
+          $prefs = [ordered]@{ DisableRealtimeMonitoring = $false; DisableBehaviorMonitoring = $false; DisableIOAVProtection = $false; DisableScriptScanning = $false; DisableArchiveScanning = $false; DisableBlockAtFirstSeen = $false; DisableIntrusionPreventionSystem = $false; DisableScanningNetworkFiles = $false; DisableAutoExclusions = $false; MAPSReporting = 2; SubmitSamplesConsent = 1 }
+          foreach ($k in $prefs.Keys) { try { $a = @{ $k = $prefs[$k] }; Set-MpPreference @a -ErrorAction Stop } catch { Say "NOTE  Set-MpPreference -$k $($prefs[$k]): $($_.Exception.Message)" } }
+          foreach ($x in @($p.ExclusionPath | Where-Object { $_ })) { Remove-MpPreference -ExclusionPath $x }
+          foreach ($x in @($p.ExclusionProcess | Where-Object { $_ })) { Remove-MpPreference -ExclusionProcess $x }
+          foreach ($x in @($p.ExclusionExtension | Where-Object { $_ })) { Remove-MpPreference -ExclusionExtension $x }
+          try { Update-MpSignature -ErrorAction Stop } catch { Say "NOTE  Update-MpSignature: $($_.Exception.Message)" }
+          Start-Sleep -Seconds 5
+          $st = Get-MpComputerStatus; $p = Get-MpPreference
+          $left = @($p.ExclusionPath | Where-Object { $_ }) + @($p.ExclusionProcess | Where-Object { $_ }) + @($p.ExclusionExtension | Where-Object { $_ })
+          Say "Defender now: mode $($st.AMRunningMode), antivirus $($st.AntivirusEnabled), real-time $($st.RealTimeProtectionEnabled), on access $($st.OnAccessProtectionEnabled), behaviour $($st.BehaviorMonitorEnabled), IOAV $($st.IoavProtectionEnabled), script scanning $(-not $p.DisableScriptScanning), cloud (MAPS) $($p.MAPSReporting), block at first sight $(-not $p.DisableBlockAtFirstSeen), exclusions left $($left.Count), tamper protected $($st.IsTamperProtected), engine $($st.AMEngineVersion), signatures $($st.AntivirusSignatureVersion) ($($st.AntivirusSignatureLastUpdated))"
+          # The control: the AMSI test sample (built from two halves, so this script itself holds no sample) in powershell.exe.
+          $t = Get-Date
+          $sample = 'AMSI Test Sa' + 'mple: 7e72c3ce-861b-4339-8740-0ac1484f1386'
+          $enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("'$sample'"))
+          $res = (& powershell.exe -NoProfile -NonInteractive -EncodedCommand $enc 2>&1 | Out-String).Trim()
+          Start-Sleep -Seconds 8
+          $blocked = $res -match 'malicious content'
+          $ev = @(Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-Windows Defender/Operational'; Id = 1116, 1117; StartTime = $t } -ErrorAction SilentlyContinue)
+          $name = if ($ev) { (($ev[-1].Message -split "`n") | Where-Object { $_ -match '^\s*Name:' } | Select-Object -First 1) -replace '^\s*Name:\s*', '' } else { '' }
+          Say "control: powershell.exe given the AMSI test sample: $(if ($blocked) { 'blocked' } else { "NOT blocked ($($res.Substring(0, [Math]::Min(120, $res.Length))))" }); Defender/Operational 1116/1117 since: $($ev.Count)$(if ($name) { " ($($name.Trim()))" })"
+          if ($st.RealTimeProtectionEnabled -and $st.AMRunningMode -eq 'Normal' -and $blocked -and $ev.Count -gt 0) { 'ready' | Set-Content "$env:RUNNER_TEMP\defender-ready.txt" }
+          else { Say 'NOTE  Defender is not in a working real-time state on this runner (above), so SHOULD-384c will be untestable; the auto rows still run' }
+          Start-Sleep -Seconds 2
+          $t0 = (Get-Date).ToUniversalTime().ToString('o')
+          $t0 | Set-Content "$env:RUNNER_TEMP\defender-t0.txt"
+          Say "the check's window opens at $t0"
+
       # d5 (every mode; auto and auto-ai: launches X and Y, Cursor's path in CURSOR): the D5 rows (app/e2e/d5-button.mjs); a hosted call only with auto-ai. mouse.swift gives the Mac the real
       # pointer and the window list. A clean Mac for the prompt row: Unvibe's Accessibility row is removed from TCC.db first,
       # the same database the install step adds it to (tccutil said "No such bundle identifier" in run 44668914881 and
@@ -963,6 +1007,42 @@ jobs:
           rm -rf "$NETLOG_DIR"
           cat "$SHOTS_DIR/report-d5-$UNVIBE_OS.txt" || true
           exit $status
+
+      # d5=auto (Windows), SHOULD-384c judged: launch X's auto reads (auto-reads.txt, at least 10), then Protection
+      # history (Get-MpThreatDetection) and Defender/Operational since the window opened: no detection, and no event naming
+      # Unvibe or powershell.exe. PowerShell's own script-block warnings (4104, level 3) are counted too, not judged.
+      - name: Check Microsoft Defender after the auto reads (d5=auto, Windows)
+        if: always() && inputs.d5 == 'auto' && matrix.label == 'windows'
+        shell: pwsh
+        run: |
+          $out = "$env:RUNNER_TEMP\d5"; New-Item -ItemType Directory -Force $out | Out-Null
+          $rep = "$out\report-defender.txt"
+          function Say([string]$s) { $s; Add-Content -Path $rep -Value $s -Encoding utf8 }
+          $t0f = "$env:RUNNER_TEMP\defender-t0.txt"
+          if (-not (Test-Path $t0f)) { Say 'FAIL  SHOULD-384c: the Defender step did not run'; exit 1 }
+          $t0 = [datetime]::Parse((Get-Content $t0f -Raw).Trim(), [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
+          $readsF = "$out\auto-reads.txt"
+          $reads = if (Test-Path $readsF) { [int](Get-Content $readsF -TotalCount 1) } else { 0 }
+          $st = Get-MpComputerStatus
+          $det = @(Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { $_.InitialDetectionTime -ge $t0 })
+          $ev = @(Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-Windows Defender/Operational'; StartTime = $t0 } -ErrorAction SilentlyContinue)
+          $ids = ($ev | Group-Object Id | Sort-Object { [int]$_.Name } | ForEach-Object { "$($_.Name) x$($_.Count)" }) -join ', '
+          # Security's row: nothing for Unvibe or powershell.exe. Any other detection in the window is listed, not judged.
+          $named = '(?i)unvibe|powershell'
+          $bad = @(1006, 1007, 1008, 1015, 1116, 1117, 1118, 1119, 1120, 1121, 1122, 1125, 1126, 1127, 1128, 1160)
+          $hits = @($ev | Where-Object { $_.Message -match $named })
+          $other = @($ev | Where-Object { $bad -contains $_.Id -and $_.Message -notmatch $named })
+          $detU = @($det | Where-Object { "$($_.ProcessName) $(@($_.Resources) -join ' ')" -match $named })
+          foreach ($h in @($hits + $other) | Select-Object -First 8) { $m = $h.Message -replace '\s+', ' '; Say "  event $($h.Id) at $($h.TimeCreated.ToUniversalTime().ToString('HH:mm:ss'))Z: $($m.Substring(0, [Math]::Min(300, $m.Length)))" }
+          foreach ($d in $det | Select-Object -First 5) { $th = Get-MpThreat -ThreatID $d.ThreatID -ErrorAction SilentlyContinue; Say "  detection $($th.ThreatName) at $($d.InitialDetectionTime.ToUniversalTime().ToString('HH:mm:ss'))Z: $($d.ProcessName) $(@($d.Resources) -join ' ')" }
+          $ps = @(Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-PowerShell/Operational'; Id = 4104; Level = 3; StartTime = $t0 } -ErrorAction SilentlyContinue)
+          $psU = @($ps | Where-Object { $_.Message -match 'GetClipboardSequenceNumber|GetLastInputInfo' })
+          Say "NOTE  PowerShell/Operational in the window: $($ps.Count) script-block warning(s) (4104, level 3), $($psU.Count) of them Unvibe's auto script (GetLastInputInfo / GetClipboardSequenceNumber in it); not part of the row"
+          $detail = "$reads auto read(s) started an explanation (auto-reads.txt) from $($t0.ToUniversalTime().ToString('HH:mm:ss'))Z; Defender at the end: mode $($st.AMRunningMode), real-time $($st.RealTimeProtectionEnabled), cloud (MAPS) $((Get-MpPreference).MAPSReporting); Protection history in the window: $($det.Count) detection(s), $($detU.Count) for Unvibe/powershell; Defender/Operational in the window: $($ev.Count) event(s)$(if ($ids) { " ($ids)" }), $($hits.Count) naming Unvibe/powershell, $($other.Count) other detection(s)"
+          if (-not (Test-Path "$env:RUNNER_TEMP\defender-ready.txt") -or -not $st.RealTimeProtectionEnabled -or $st.AMRunningMode -ne 'Normal') { Say "NOT TESTABLE  SHOULD-384c: Defender was not in a working real-time state (see the control); $detail"; exit 1 }
+          if ($reads -lt 10) { Say "FAIL  SHOULD-384c: fewer than 10 auto reads; $detail"; exit 1 }
+          if ($detU.Count -or $hits.Count) { Say "FAIL  SHOULD-384c: Defender logged Unvibe or powershell.exe in the window; $detail"; exit 1 }
+          Say "PASS  SHOULD-384c: Defender at its defaults saw the auto reads and logged nothing for Unvibe or powershell.exe; $detail"
 
       # d5: whatever happened above, the hosts file holds none of this run's lines (the script put it back from its copy
       # and checked it byte for byte; a stopped script's copy is put back here), and no raw net log is left.

@@ -81,11 +81,17 @@
 //   X0 consent: auto can't turn on alone while the button is off; with the button (Settings' "Turn on both") main
 //      records both choices in one write at copy version 2026-11-21. D5-a, then the agreement, as launch C.
 //   Then in each editor (a 36-line sample on disk saved by the editor itself 200 ms after each change, so the file
-//   holds what the person's keys did; each selection runs from one line's end to the next one's end, 2 lines, and
-//   waits until 16 s after the last auto read, so the 15 s spacing never decides a row):
-//   X1 select, then paste (the person's own clipboard text) 300 / 1200 / 2500 ms after the mouse-up: the file holds
-//      the paste in place of the selection, and the person's clipboard is theirs again 5 s later.
-//   X2 select, then type 300 / 1200 / 2500 ms after the mouse-up: the file holds the typed word in its place.
+//   holds what the person's keys did; each selection runs from one line's end to the next one's end, 2 lines, one line
+//   further down each row, so no two rows read the same text; each row waits until 16 s after the last mouse-up, so the
+//   15 s spacing never decides a row):
+//   X8 the control first: a settled selection with no key is read once (one start, the panel reads that line), the
+//      file unchanged and the person's clipboard theirs again. Without it every row below could pass with auto mode
+//      never reading at all.
+//   X1 select, then paste (the person's own clipboard text) 300 / 700 / 900 / 1200 / 1500 / 2500 ms after the
+//      mouse-up: the file holds the paste in place of the selection, and the person's clipboard is theirs again 5 s
+//      later (run 44977282607 lost the paste at 1200 ms; the #384 fix f7e12828 copies only when no input came since the
+//      mouse-up, never empties the clipboard, and drops a read met by any key).
+//   X2 select, then type at the same moments: the file holds the typed word in its place.
 //   X3 an image on the clipboard (a PNG, as a screenshot copy): a settled selection leaves the clipboard untouched
 //      (no change seen from outside), the image the same, and nothing starts.
 //   X4 a file copied in Finder / Explorer: the same, the file still on the clipboard.
@@ -95,6 +101,9 @@
 //      clipboard's change bursts); then one more after 16 s is read again (the control).
 //   X7 Cmd+Tab / Alt+Tab 250 ms (before the 700 ms) and 800 ms (during the read) after the mouse-up: nothing starts,
 //      nothing is sent, the person's clipboard is back.
+//   Windows, Security's SHOULD-384c: after Cursor's rows, more settled selections until launch X has started 12 auto
+//   explanations (10 extra at most); their count and times go to auto-reads.txt, and the workflow's Defender step (run
+//   with Defender back at its defaults) judges the row from it.
 //   Each read is seen from outside: the app's own "explanation started" event (onShortcutFired in the main window),
 //   the panel's init event (what was read), the net log, and the clipboard's changes.
 // d5=auto-ai: launch Y only (ai on, the only hosted call this script makes): auto on, the agreement, VS Code (Mac) or
@@ -1968,11 +1977,13 @@ async function otherAppInFront() {
  */
 const autoSample = (tag) => Array.from({ length: 36 }, (_, i) => `function ${tag}S${i + 1}(v, n = ${(i + 1) * 10}) { return v > n ? n : v + ${i + 1}; } // qa line ${tag} ${i + 1}`);
 /** The editor settings for the auto rows: saved 200 ms after each change (the file then holds what the keys did), no
- * suggestion box or inline completion that could take a typed key. */
+ * suggestion box or inline completion that could take a typed key, and no drag-and-drop of text (a row's drag starts
+ * where the last row's selection ended). */
 const AUTO_EDITOR = {
   'files.autoSave': 'afterDelay', 'files.autoSaveDelay': 200, 'editor.quickSuggestions': { other: 'off', comments: 'off', strings: 'off' },
   'editor.suggestOnTriggerCharacters': false, 'editor.wordBasedSuggestions': 'off', 'editor.acceptSuggestionOnEnter': 'off',
   'editor.inlineSuggest.enabled': false, 'editor.parameterHints.enabled': false, 'editor.autoClosingBrackets': 'never',
+  'editor.dragAndDrop': false,
 };
 
 async function runX(app, companion) {
@@ -1995,13 +2006,20 @@ async function runX(app, companion) {
   const png = grab(file('x-clipboard-image'), 0, 0, 160, 100);
   const qaFile = path.join(sampleDir, 'qa-notes.txt');
   writeFileSync(qaFile, 'QA file for the auto-mode files row\n');
-  const ctx = { app, companion, png, qaFile, lastRead: 0 };
+  const ctx = { app, companion, png, qaFile, lastRead: 0, t0: Date.now() };
   for (const which of ['vscode', 'cursor']) {
     ED = EDITORS[which];
     try { await autoEditor(ctx, which === 'vscode' ? 'vs' : 'cu'); } catch (e) { log(false, `X ${ED.name}`, `stopped: ${short(e)}`); desktop(`x-${which}-stopped`); } finally { await closeVsCode(); closeExplorerWindows(); }
   }
   ED = EDITORS.vscode;
   stopClipWatch();
+  if (os === 'windows') {
+    // SHOULD-384c: what the workflow's Defender step counts (each start is one auto read that copied and was kept).
+    const st = await startsSince(companion, ctx.t0);
+    const iso = (t) => new Date(t).toISOString();
+    writeFileSync(path.join(out, 'auto-reads.txt'), `${st.length}\n${iso(ctx.t0)} ${iso(Date.now())}\n${st.map(iso).join('\n')}\n`);
+    note('SHOULD-384c (Defender)', `${st.length} auto read(s) started an explanation in launch X, ${iso(ctx.t0)} to ${iso(Date.now())}; the workflow's Defender step judges the row`);
+  }
 }
 
 async function autoEditor(ctx, tag) {
@@ -2047,7 +2065,9 @@ async function autoEditor(ctx, tag) {
     };
   };
   let kNext = 1;
-  const nextK = () => { const k = kNext; kNext += 2; return k; };
+  // One line further down per row: each selection ("\n" + the next line) is a text no other row reads, so the
+  // 10-minute repeat check never decides a row, and 36 lines hold every row.
+  const nextK = () => { const k = kNext; kNext += 1; return k; };
   const block = async (k) => {
     const L = await vsLines();
     const a = lineOf(L, k);
@@ -2064,9 +2084,32 @@ async function autoEditor(ctx, tag) {
     return s;
   };
 
-  // X1 / X2: select, then paste or type, at three moments.
+  // X8 the control: a settled selection with no key is read once (else the rows below prove nothing).
+  {
+    const k = nextK();
+    const step = `X8 ${ED.name}: a settled selection with no key is read once (the control)`;
+    try {
+      await spaced();
+      await reset();
+      const P = person();
+      setClipboard(P);
+      await activateEditor();
+      await watchReads(app);
+      const s = await block(k);
+      const t0 = Date.now();
+      ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+      await sleep(5500);
+      const said = await autoSays(t0);
+      const got = readFileSync(autoFile, 'utf8');
+      const clip = readClipboard().trim();
+      log(said.st.length === 1 && said.rd.length >= 1 && said.rd[0].len >= 40 && got === original && clip === P, step,
+        `lines ${k}-${k + 1} (end to end), no key; the file ${got === original ? 'unchanged' : 'CHANGED'}; the person's clipboard 5.5 s later: ${clip === P ? 'theirs' : `NOT theirs ("${clip.slice(0, 60)}")`}; ${said.text}`);
+    } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // X1 / X2: select, then paste or type, at six moments (the lead: 700, 900 and 1500 added after run 44977282607).
   for (const kind of ['paste', 'type']) {
-    for (const ms of [300, 1200, 2500]) {
+    for (const ms of [300, 700, 900, 1200, 1500, 2500]) {
       const k = nextK();
       try {
         await spaced();
@@ -2211,6 +2254,25 @@ async function autoEditor(ctx, tag) {
       if (!switched) untestable(step, `the switch did not bring ${other} to the front; ${detail}`);
       else log(said.st.length === 0 && posts.length === 0 && clip === P, step, detail);
     } catch (e) { log(false, step, `stopped: ${short(e)}`); }
+  }
+
+  // SHOULD-384c (Windows, after Cursor's rows): settled selections, 16 s apart, until launch X has started 12 auto
+  // explanations (10 extra at most, and never past the sample's last line).
+  if (os === 'windows' && tag === 'cu') {
+    try {
+      let n = (await startsSince(companion, ctx.t0)).length;
+      for (let extra = 0; n < 12 && extra < 10 && kNext + 1 <= lines.length; extra++) {
+        const k = nextK();
+        await spaced();
+        await reset();
+        setClipboard(person());
+        await activateEditor();
+        const s = await block(k);
+        ctx.lastRead = pointer.drag(s.x1, s.y1, s.x2, s.y2);
+        await sleep(5000);
+        n = (await startsSince(companion, ctx.t0)).length;
+      }
+    } catch (e) { note('SHOULD-384c (Defender)', `the extra selections stopped: ${short(e)}`); }
   }
 }
 
