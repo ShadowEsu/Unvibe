@@ -114,8 +114,8 @@
 //   Mac, #384 MUST-A5 (d08713d4: any HID key-down or click counted across a read drops it; MAC_COPY_KEY_DOWNS = 0):
 //   X9a before the editors: one System Events ⌘C adds no key-down and no click to the HID system's counts (read as
 //      soon as the keystroke returns and 300 ms later), and the harness's CGEvent ⌘C adds 1 (the count is live).
-//   X9a2 (the harness's model): a System Events Shift tap resets HIDIdleTime and adds no key-down, and a CGEvent ⌘C
-//      leaves HIDIdleTime alone. NOT TESTABLE when the tap doesn't reset it; X1 / X2 then judge only keys after the copy.
+//   X9a2 (the harness's model): a System Events Shift tap resets HIDIdleTime and adds no key-down (a CGEvent ⌘C's
+//      HIDIdleTime is printed too). NOT TESTABLE when the tap doesn't reset it; X1 / X2 then judge only keys after the copy.
 //   X9b after them: Unvibe had no Input Monitoring grant (a runner row for it is removed first), and the reads leave
 //      no Input Monitoring row for Unvibe or osascript (system and user TCC databases), no prompt window on screen,
 //      and no ListenEvent line naming either in the TCC log since the launch began.
@@ -2108,9 +2108,9 @@ async function copyKeyDowns() {
       `key-downs ${p0[0]} → ${p1[0]} as the keystroke returned (+${d(p0[0], p1[0])}${d(p0[0], p1[0]) === d(p0[0], p2[0]) ? ', no lag' : ', LAGS'}) → ${p2[0]} 300 ms later (+${d(p0[0], p2[0])}); left clicks ${p0[1]} → ${p2[1]}, right ${p0[2]} → ${p2[2]}; the harness's CGEvent ⌘C (mouse.swift) adds +${d(q0[0], q1[0])}`);
   } catch (e) { log(false, step, `stopped: ${short(e)}`); }
   // The harness's real-key model (rk-): a keyboard's key both resets HIDIdleTime and counts as a key-down. System
-  // Events' keys do only the first (above: +0) and CGEvent keys only the second (run 44987639357), so an rk- key is a
-  // System Events Shift tap, then the CGEvent key. Shown here on HIDIdleTime itself, as auto mode reads it.
-  const step2 = 'X9a2 (harness, Mac): a System Events Shift tap resets HIDIdleTime and adds no key-down, and a CGEvent ⌘C leaves HIDIdleTime alone (the rk- keys model a keyboard)';
+  // Events' keys don't count (above: +0), so an rk- key is a System Events Shift tap, then the CGEvent key, which
+  // counts (whether a CGEvent key also resets HIDIdleTime varied: run 44987639357 suggested not, run 44995380816 did).
+  const step2 = 'X9a2 (harness, Mac): a System Events Shift tap resets HIDIdleTime and adds no key-down (the rk- keys model a keyboard)';
   try {
     const idle = () => Number(/"HIDIdleTime" = (\d+)/.exec(execFileSync('/usr/sbin/ioreg', ['-c', 'IOHIDSystem', '-r', '-d', '1'], { encoding: 'utf8' }))?.[1]) / 1e9;
     await sleep(1500);
@@ -2124,8 +2124,8 @@ async function copyKeyDowns() {
     keyNow('copy');
     await sleep(100);
     const i3 = idle();
-    rkPoke = i0 > 1 && i1 < 0.5 && c1[0] === c0[0] && i3 > 1;
-    const detail = `HIDIdleTime ${i0.toFixed(2)} s → ${i1.toFixed(2)} s across the Shift tap (key-downs +${(c1[0] - c0[0]) >>> 0}); ${i2.toFixed(2)} s → ${i3.toFixed(2)} s across a CGEvent ⌘C`;
+    rkPoke = i0 > 1 && i1 < 0.5 && c1[0] === c0[0];
+    const detail = `HIDIdleTime ${i0.toFixed(2)} s → ${i1.toFixed(2)} s across the Shift tap (key-downs +${(c1[0] - c0[0]) >>> 0}); for the record, ${i2.toFixed(2)} s → ${i3.toFixed(2)} s across a CGEvent ⌘C`;
     if (rkPoke) log(true, step2, detail);
     else untestable(step2, `${detail}; so a key before the read's idle sample may go unseen by the harness's model, and the rows judge only keys after the read's copy`);
   } catch (e) { untestable(step2, `stopped: ${short(e)}`); }
