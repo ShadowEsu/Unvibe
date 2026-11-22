@@ -1511,6 +1511,12 @@ h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter
 .setrow .sl { font-family: var(--font-sans); font-weight: 600; font-size: 14px; }
 .setrow .sd { font-family: var(--font-sans); font-size: 12.5px; color: var(--muted); line-height: 1.45; }
 .setrow .sd { font-family: var(--font-sans); font-size: 12.5px; color: var(--muted); margin-top: 4px; max-width: 46rem; line-height: 1.5; }
+/* Auto mode's both-lines form, inside its row under the help: the help column's edge and width, the help's type, closed by
+   the row's rule; the switch stays by the title (Design S-1 on #384). */
+.setrow:has(.auto-ask) { align-items: start; }
+.setrow .auto-ask { max-width: none; gap: 8px; margin-top: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line-soft); }
+.setrow .auto-ask__text { margin: 0; font: 12.5px/1.5 var(--font-sans); color: var(--muted); }
+.setrow .auto-ask__text strong { font-weight: 600; }
 .act {
   background: var(--accent);
   color: var(--on-accent);

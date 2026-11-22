@@ -11,7 +11,7 @@ app.getPath = (): string => userData;
 
 import type { BrowserWindow } from 'electron';
 import type { ReviewRequestPayload } from '../src/core/protocol';
-import { applyBuiltReview, gradeComprehension, initWidget, markUnderstood, panelRequestBusy, runReview, startComprehension, type ReviewSession } from '../src/main/review';
+import { applyBuiltReview, explanationInFlight, gradeComprehension, initWidget, markUnderstood, panelRequestBusy, runReview, startComprehension, type ReviewSession } from '../src/main/review';
 import { store } from '../src/main/store';
 import { computeToday } from '../src/core/learning';
 import { CONSENT_ITEMS } from '../src/core/consent';
@@ -163,6 +163,45 @@ test('More detail without a finished short answer is an ordinary explanation; fo
   await runReview(win, s, { level: 'beginner', question: 'Why wait?' });
   assert.equal(reviewBodies().at(-1)?.detail, 'full');
   assert.equal(reviewBodies().at(-1)?.shortAnswer, undefined);
+});
+
+test('an auto-mode capture asks for Suggested fixes on its explanation only; follow-ups, More detail and pressed captures never', async () => {
+  received.length = 0;
+  const { win } = panel();
+  const auto: ReviewSession = { ...session('beginner'), suggestFixes: true };
+  await runReview(win, auto, { level: 'beginner' });
+  assert.equal(reviewBodies().at(-1)?.suggestFixes, true);
+  assert.equal(reviewBodies().at(-1)?.detail, 'short');
+  await runReview(win, auto, { level: 'beginner', moreDetail: true });
+  assert.equal(reviewBodies().at(-1)?.suggestFixes, undefined, 'More detail');
+  await runReview(win, auto, { level: 'beginner', question: 'Why wait?' });
+  assert.equal(reviewBodies().at(-1)?.suggestFixes, undefined, 'a follow-up');
+  await runReview(win, auto, { level: 'beginner', variant: 'different' });
+  assert.equal(reviewBodies().at(-1)?.suggestFixes, true, 'Explain differently is still this selection\'s explanation');
+  await startComprehension(win, auto);
+  assert.ok(received.filter((r) => r.path === '/api/v1/comprehension').every((r) => r.body.suggestFixes === undefined), 'Test me');
+  await runReview(win, session('beginner'), { level: 'beginner' });
+  assert.equal(reviewBodies().at(-1)?.suggestFixes, undefined, 'a pressed capture');
+});
+
+test('an explanation counts as in flight from its start until its answer ends', async () => {
+  const { win } = panel();
+  let during: boolean | null = null;
+  beforeReviewAnswer = () => { during = explanationInFlight(); };
+  try {
+    assert.equal(explanationInFlight(), false);
+    const run = runReview(win, session('beginner'), { level: 'beginner' });
+    assert.equal(explanationInFlight(), true, 'from the start');
+    await run;
+    assert.equal(during, true, 'while the request is out');
+    assert.equal(explanationInFlight(), false, 'after the answer');
+    reviewRefusal = { status: 500, body: { error: 'boom' } };
+    await runReview(win, session('beginner'), { level: 'beginner' });
+    assert.equal(explanationInFlight(), false, 'after a failure');
+  } finally {
+    beforeReviewAnswer = null;
+    reviewRefusal = null;
+  }
 });
 
 test('a link-captured review sends nothing until Explain, then exactly one request', async () => {

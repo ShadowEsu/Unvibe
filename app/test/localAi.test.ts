@@ -60,4 +60,24 @@ describe('localAi prompt boundaries', () => {
     assert.match(user, /Do not repeat the short answer\./);
     assert.doesNotMatch(buildLocalUserPrompt({ ...more, question: 'why?' } as ReviewRequestPayload), /Short answer the reader/);
   });
+
+  it('with your own key, auto mode\'s Suggested fixes come only on the short selection answer, and nothing else changes', () => {
+    const base = { scope: 'selection', level: 'beginner', context: { language: 'ts', projectStructure: [], imports: [], code: 'let x = 1;' } } as unknown as ReviewRequestPayload;
+    const short = { ...base, detail: 'short' } as ReviewRequestPayload;
+    const fixes = { ...short, suggestFixes: true } as ReviewRequestPayload;
+    assert.match(buildLocalSystemPrompt(fixes), /"### Suggested fixes", then at most 3 bullets/);
+    assert.match(buildLocalSystemPrompt(fixes), /"Nothing to fix that I can see\."/);
+    assert.match(buildLocalSystemPrompt(fixes), /No rewritten code and no code blocks in this section/);
+    assert.match(buildLocalUserPrompt(fixes), /## Task\nSay what this code does in 2 to 4 plain sentences, then end with the Suggested fixes section\.$/);
+    const kinds = [short, base, { ...base, detail: 'full', shortAnswer: 'It sets x.' }, { ...base, question: 'why?' }, { ...short, scope: 'diff' }] as ReviewRequestPayload[];
+    for (const payload of kinds) {
+      for (const flag of [undefined, false]) {
+        assert.equal(buildLocalSystemPrompt({ ...payload, suggestFixes: flag }), buildLocalSystemPrompt(payload));
+        assert.equal(buildLocalUserPrompt({ ...payload, suggestFixes: flag }), buildLocalUserPrompt(payload));
+      }
+      if (payload === short) continue;
+      assert.equal(buildLocalSystemPrompt({ ...payload, suggestFixes: true }), buildLocalSystemPrompt(payload), 'ignored off the short selection answer');
+      assert.equal(buildLocalUserPrompt({ ...payload, suggestFixes: true }), buildLocalUserPrompt(payload));
+    }
+  });
 });

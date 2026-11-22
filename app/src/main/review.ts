@@ -86,6 +86,8 @@ export interface ReviewSession {
   selectionCredit?: 'held' | 'returned';
   /** Prevents a pulse event for every streamed token. */
   islandStreaming?: boolean;
+  /** Auto mode started this capture (ledger 646): its explanation asks for the "Suggested fixes" section. */
+  suggestFixes?: boolean;
   payload?: ReviewRequestPayload;
   file?: string;
   project?: string;
@@ -105,6 +107,8 @@ export interface ReviewSession {
   awaitingConfirm?: boolean;
   /** What is waiting: a link's clipboard text, or Linux's last highlight (PRIMARY can be stale). */
   confirmFrom?: ConfirmReason;
+  /** The panel asks about secret-check findings and waits for the person: auto mode never replaces it (SHOULD-384b). */
+  secretQuestion?: boolean;
   onRecorded?: () => void;
   onUnderstood?: () => void;
   /** store().wipeGeneration() when the latest run started: a run that outlives a wipe records nothing. */
@@ -394,6 +398,14 @@ export function withDetail(payload: ReviewRequestPayload, detailRun: boolean, sh
 }
 
 /**
+ * An auto-mode capture's own explanation asks for Suggested fixes; follow-ups and More detail never do. The built
+ * payload (kept on the session for follow-ups) never carries the flag itself: it's added per run.
+ */
+export function withFixes(payload: ReviewRequestPayload, fixes: boolean): ReviewRequestPayload {
+  return fixes ? { ...payload, suggestFixes: true } : payload;
+}
+
+/**
  * How a run ended, for the selection credit: 'explained' (it was used), 'failed' (refused or broken, with
  * no explanation: it goes back), 'waiting' (paused for the person or replaced by a newer run: kept).
  */
@@ -401,6 +413,14 @@ type RunOutcome = 'explained' | 'failed' | 'waiting';
 
 const SELECTION_CREDITS_USED_UP = (limit: number) =>
   `Your 30-day beta includes ${limit} selected-code prompts. Your saved learning is still available.`;
+
+/** Explanations running now, from the start of a run to its end (streamed, refused, failed or replaced). */
+let runsInFlight = 0;
+
+/** Whether an explanation is being fetched: auto mode never starts or cancels one then (ledger 646). */
+export function explanationInFlight(): boolean {
+  return runsInFlight > 0;
+}
 
 /** New explanations still running, per panel session, whoever started them (the panel, ⌃U, a held capture, Study, the sample). */
 const explaining = new WeakMap<ReviewSession, number>();
@@ -419,6 +439,15 @@ export function panelRequestBusy(session: ReviewSession, opts: RequestOpts): boo
 }
 
 export async function runReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
+  runsInFlight += 1;
+  try {
+    await runSessionReview(win, session, opts);
+  } finally {
+    runsInFlight -= 1;
+  }
+}
+
+async function runSessionReview(win: BrowserWindow, session: ReviewSession, opts: RequestOpts): Promise<void> {
   if (!newExplanation(opts)) return runReviewOnce(win, session, opts);
   explaining.set(session, (explaining.get(session) ?? 0) + 1);
   try {
@@ -457,6 +486,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
   if (session.awaitingConfirm) return 'waiting';
   // Events about a "More detail" run carry part 'detail', so the panel keeps the short answer above it.
   const tag = detailRun ? { part: 'detail' as const } : {};
+  session.secretQuestion = false;
   // Fails closed: nothing of the person's is sent before they agree; the panel shows the form.
   const before = consentNeededFor(session, undefined, opts.question);
   if (before) {
@@ -505,7 +535,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
 
   let payload: ReviewRequestPayload;
   try {
-    payload = withDetail(await ensurePayload(session, opts), detailRun, session.shortText);
+    payload = withFixes(withDetail(await ensurePayload(session, opts), detailRun, session.shortText), Boolean(session.suggestFixes) && !opts.question && !detailRun);
   } catch (err) {
     send(win, session, { type: 'error', message: err instanceof Error ? err.message : 'Could not build review context.', ...tag });
     return 'failed';
@@ -530,6 +560,7 @@ async function explain(win: BrowserWindow, session: ReviewSession, opts: Request
   }
   if (findings.length > 0 && !opts.consented) {
     send(win, session, { type: 'consent', findings });
+    session.secretQuestion = true;
     pulseBar({ phase: 'idle', label: 'Ready' });
     return 'waiting';
   }

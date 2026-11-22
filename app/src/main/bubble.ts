@@ -1,9 +1,13 @@
 import { app, globalShortcut, ipcMain, screen, type BrowserWindow } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 import {
+  AUTO_SETTLE_MS,
+  AutoExplainGate,
+  AutoSettle,
   bubbleCopy,
   EDITOR_NAMES,
   ghostPlacement,
@@ -33,7 +37,7 @@ import { providerInUse } from './consent';
 import { codeConsented, sendingSwitchedOff } from './consentStore';
 import { buildSelectionPayload, sendNearbyFiles } from './contextBuilder';
 import { buildLocalPreviewSystemPrompt, buildLocalPreviewUserPrompt, streamLocalAi } from './localAi';
-import { captureSelection, frontmostApp } from './selection';
+import { captureForAuto, captureSelection, frontmostApp } from './selection';
 import { settings } from './settings';
 import { store } from './store';
 import { cachedAppUsage } from './usage';
@@ -87,6 +91,12 @@ export interface BubbleDeps {
   explain: () => void;
   /** The full explanation of a selection Quick look already read: counts as one explanation. */
   explainCaptured: (code: string, sourceApp: string) => void;
+  /** Auto mode's explanation of a selection it read: the same as explainCaptured, with Suggested fixes (ledger 646). */
+  explainAuto: (code: string, sourceApp: string) => void;
+  /** An explanation is being fetched now. */
+  busy: () => boolean;
+  /** A press would stop at a limit now (the allowance with `remaining` left, or a trial build's selected-code prompts). */
+  limited: (remaining: number) => boolean;
   /** Whether a sender is Settings (the companion): only it may change the switches. */
   fromSettings: (sender: Electron.WebContents) => boolean;
 }
@@ -107,6 +117,14 @@ let pillWidth = PILL_WIDTH;
 let preview: { run: number; abort: AbortController; code: string | null; sourceApp: string; view: NonNullable<GhostView['preview']> } | null = null;
 let previewRuns = 0;
 let escapeHeld = false;
+// Auto mode (ledger 646): the 700 ms wait after a mouse-up, when that mouse-up came (the read skips if any input followed
+// it), and the guards' memory. The button's idle waits while a run for its state is under way, and starts over after
+// one that left it showing.
+const autoSettle = new AutoSettle<GhostState>(() => state, runAuto, AUTO_SETTLE_MS, (armed) => {
+  if (state === armed) scheduleIdle();
+});
+let autoSettleStartedAt = 0;
+const autoGate = new AutoExplainGate();
 
 function active(): boolean {
   return bubblePlatform() !== null && bubbleStore().state().ghost && !sendingSwitchedOff();
@@ -189,6 +207,50 @@ function onInput(input: GhostInput): void {
   }
   apply(next.state);
   if (next.effect === 'preview') void runPreview(++previewRuns);
+  // Auto mode (ledger 646): once a drag or triple-click selection has stayed put for about 700 ms after the mouse-up (no
+  // click, scroll, new selection or app switch: any of them changes the button's state, which cancels the wait), explain
+  // it with no press. A double-click picks one word, never enough to explain, so it never reaches the clipboard (MUST-A2).
+  if (event.e === 'select' && event.g !== 'double' && next.state.look === 'ghost' && bubbleStore().state().auto) {
+    autoSettleStartedAt = Date.now();
+    autoSettle.arm(next.state);
+  }
+}
+
+/**
+ * The guards, then the same explanation a press starts. Anything that stops it leaves the button showing, so a press
+ * still works. Nothing here retries: a skipped or failed start waits for the next selection.
+ */
+async function runAuto(armed: GhostState): Promise<void> {
+  const still = () => state === armed && active() && bubbleStore().state().auto;
+  if (armed.look === 'hidden') return;
+  try {
+    const usage = await cachedAppUsage();
+    if (!still() || !deps) return;
+    // Nothing is read before the AI agreement: a press opens the panel on it instead (Security CC-4).
+    if (!codeConsented(providerInUse(usage.remaining))) return;
+    const before = autoGate.before(Date.now(), { busy: deps.busy(), limited: deps.limited(usage.remaining) });
+    if (before === 'show-limit') {
+      // What a press shows at the limit, once; nothing more starts until a selection after it resets.
+      apply({ look: 'hidden' });
+      deps.explain();
+      return;
+    }
+    if (before !== 'read') return;
+    const capture = await captureForAuto(armed.app, autoSettleStartedAt);
+    if (!still() || !capture.code) return;
+    // Not armed.app on the Mac: that's the helper's bundle id, and the panel and Library show frontmostApp()'s
+    // process name ("Cursor", not "com.todesktop.…"). The button's idle waits for this run (AutoSettle's hold).
+    const sourceApp = capture.sourceApp ?? (await frontmostApp()) ?? '';
+    // A press may have started an explanation while the selection was read: auto mode never replaces it.
+    if (!still() || deps.busy()) return;
+    // The repeat check keeps a hash of the text, in memory only.
+    const hash = createHash('sha256').update(capture.code).digest('hex');
+    if (autoGate.after(Date.now(), capture.code, hash) !== 'start') return;
+    apply({ look: 'hidden' });
+    deps.explainAuto(capture.code, sourceApp);
+  } catch {
+    /* the button stays; a press still works */
+  }
 }
 
 function shortcut(): string {
@@ -222,13 +284,15 @@ function ensureWindow(): BrowserWindow {
 function scheduleIdle(): void {
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
-  if (state.look === 'ghost') idleTimer = setTimeout(() => onInput({ e: 'idle' }), GHOST_IDLE_MS);
+  if (state.look === 'ghost' && !autoSettle.holds(state)) idleTimer = setTimeout(() => onInput({ e: 'idle' }), GHOST_IDLE_MS);
 }
 
 function apply(next: GhostState): void {
   // Leaving the card for any reason, from any path (an event, the switch going off, the helper exiting), drops its
   // request, its result and its Esc (Security A4; SHOULD-366a / lead S1).
   if (state.look === 'preview' && next.look !== 'preview') endPreview();
+  // Any change to the button (a click, a scroll, a new selection, a press, the switch going off) ends a pending auto start.
+  if (next !== state) autoSettle.cancel();
   state = next;
   scheduleIdle();
   if (next.look === 'hidden') {
@@ -405,6 +469,7 @@ export interface BubbleSettings {
   available: boolean;
   ghost: boolean;
   preview: boolean;
+  auto: boolean;
   editors: string;
   copy: ReturnType<typeof bubbleCopy>;
 }
@@ -448,9 +513,10 @@ export function registerBubble(d: BubbleDeps): void {
     if (state.look === 'pill') apply(state);
   });
   ipcMain.handle('bubble:get', () => bubbleSettings());
-  ipcMain.handle('bubble:set', (e, item: unknown, on: unknown) => {
-    if (!deps?.fromSettings(e.sender) || (item !== 'ghost' && item !== 'preview') || typeof on !== 'boolean') return bubbleSettings();
-    bubbleStore().set(item as BubbleItem, on);
+  // `withButton`: auto mode turned on from Settings with both lines ticked, the button's and its own (ledger 646 rule 1).
+  ipcMain.handle('bubble:set', (e, item: unknown, on: unknown, withButton: unknown) => {
+    if (!deps?.fromSettings(e.sender) || (item !== 'ghost' && item !== 'preview' && item !== 'auto') || typeof on !== 'boolean') return bubbleSettings();
+    bubbleStore().set(item as BubbleItem, on, new Date(), item === 'auto' && withButton === true);
     refreshBubble();
     return bubbleSettings();
   });

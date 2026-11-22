@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { UpdateCard } from './update';
 import { createRoot } from 'react-dom/client';
 import { LogoMark } from '../shared/logo';
@@ -377,7 +377,7 @@ function PermRow() {
         <div className="sl">Accessibility</div>
         <div className="sd">{isWindows
           ? `Nothing to allow on Windows. Ctrl+Alt+U copies the code you selected in any app, then sends it to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it.`
-          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
+          : `macOS asks once. Unvibe uses it only to copy the code you selected when you press Control+U or the Unvibe button, or on its own if you turn on Explain automatically, then sends that code to ${CONSENT_PROVIDERS.unvibe} through Unvibe to explain it. It never reads your keystrokes or your screen.`}</div>
         {row.canAllow && asked && (
           <p className="perm-steps">In the list that opened, switch <b>Unvibe</b> on. This screen updates by itself.</p>
         )}
@@ -401,25 +401,66 @@ function PermRow() {
 }
 
 /**
- * The Unvibe button (D5 A) and Quick look (T3): each its own unticked switch with Security's words (file 1235); main
- * keeps every choice with its version and time. Quick look shows only while the button is on. Mac and Windows only.
+ * The Unvibe button (D5 A), Quick look (T3) and auto mode (ledger 646): each its own unticked switch with Security's
+ * words (file 1235; 646 S-2); main keeps every choice with its version and time. Quick look shows only while the button
+ * is on. Auto mode always shows: turned on while the button is off, it asks for both lines, ticked one by one, and
+ * turns both on together. Mac and Windows only.
  */
 function BubbleRows() {
   const [bubble, setBubble] = useState<BubbleSettings | null>(null);
   const [error, setError] = useState('');
+  const [asking, setAsking] = useState(false);
   useEffect(() => {
     void window.unvibe.bubbleSettings().then(setBubble);
   }, []);
   if (!bubble?.available) return null;
-  const flip = (item: 'ghost' | 'preview', on: boolean) => {
+  const flip = (item: 'ghost' | 'preview' | 'auto', on: boolean, withButton = false) => {
     setError('');
-    window.unvibe.setBubble(item, on).then(setBubble, () => setError("Couldn't save that. Try again."));
+    window.unvibe.setBubble(item, on, withButton).then((next) => {
+      setBubble(next);
+      setAsking(false);
+    }, () => setError("Couldn't save that. Try again."));
+  };
+  const flipAuto = () => {
+    if (bubble.auto) flip('auto', false);
+    else if (bubble.ghost) flip('auto', true);
+    else setAsking(true);
   };
   return (
     <>
       <div className="setrow"><div><div className="sl">{bubble.copy.ghost.label}</div><div className="sd">{bubble.copy.ghost.help}</div><div className="sd">Works in {bubble.editors}.</div>{error && <div className="field-err" role="alert">{error}</div>}</div><Toggle label={bubble.copy.ghost.label} on={bubble.ghost} onClick={() => flip('ghost', !bubble.ghost)} /></div>
       {bubble.ghost && <div className="setrow"><div><div className="sl">{bubble.copy.preview.label}</div><div className="sd">{bubble.copy.preview.help}</div></div><Toggle label={bubble.copy.preview.label} on={bubble.preview} onClick={() => flip('preview', !bubble.preview)} /></div>}
+      <div className="setrow"><div><div className="sl">{bubble.copy.auto.label}</div><div className="sd">{bubble.copy.auto.help}</div>{asking && !bubble.ghost && <AutoWithButton copy={bubble.copy} onConfirm={() => flip('auto', true, true)} onCancel={() => setAsking(false)} />}</div><Toggle label={bubble.copy.auto.label} on={bubble.auto} onClick={flipAuto} /></div>
     </>
+  );
+}
+
+/**
+ * Explaining automatically needs the button: both consent lines, each its own unticked box, inside the row under its help
+ * (Design S-1 on #384); Turn on both does nothing until both are ticked. Focus moves to the first box for keyboard users;
+ * its ring shows on :focus-visible only, so a mouse click on the switch shows none.
+ */
+function AutoWithButton({ copy, onConfirm, onCancel }: { copy: BubbleSettings['copy']; onConfirm: () => void; onCancel: () => void }) {
+  const [button, setButton] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const id = useId();
+  const ready = button && auto;
+  return (
+    <section className="consent-form auto-ask" aria-label={`${copy.auto.label} and ${copy.ghost.label.toLowerCase()}`}>
+      <p className="auto-ask__text">Explaining automatically needs the Unvibe button. Tick both to turn them on.</p>
+      <label className="consent-form__row" htmlFor={`${id}-button`}>
+        <input id={`${id}-button`} type="checkbox" autoFocus checked={button} onChange={(e) => setButton(e.target.checked)} />
+        <span className="auto-ask__text"><strong>{copy.ghost.label}.</strong> {copy.ghost.help}</span>
+      </label>
+      <label className="consent-form__row" htmlFor={`${id}-auto`}>
+        <input id={`${id}-auto`} type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+        <span className="auto-ask__text"><strong>{copy.auto.label}.</strong> {copy.auto.help}</span>
+      </label>
+      <div className="consent-form__actions">
+        <button type="button" className="primary-btn" aria-disabled={!ready} onClick={() => { if (ready) onConfirm(); }}>Turn on both</button>
+        <button type="button" className="field-btn" onClick={onCancel}>Not now</button>
+      </div>
+    </section>
   );
 }
 
