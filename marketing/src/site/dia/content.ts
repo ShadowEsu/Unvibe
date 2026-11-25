@@ -23,10 +23,10 @@ export const D_NAV = [
 export const D_NAV_CTA = "Download free";
 
 export const D_HERO = {
-  /** Ledger 636 (Vitalii's feedback, Preston 17 Nov): the live H1, extended with the promise (unvibe-content's line). */
-  h1: "Understand the code your AI writes, well enough to question it.",
-  /** Who it's for (ledger 636; Design: no "junior" on the page). One line at every width; the H1 carries the promise. */
-  sub: "For developers who build with AI tools.",
+  /** Ledger 649 (Preston, 24 Nov): the "uncover your coding potential" message. Short enough to stay one line at desktop. */
+  h1: "Uncover the coder in you.",
+  /** Ledger 649: the ledger-636 promise moves here word for word, so it still matches the share card (og-home). */
+  sub: "Understand the code your AI writes, well enough to question it.",
   wordmark: "Unvibe",
   cta: "Download Unvibe for free",
   available: "Available for macOS and Windows",
